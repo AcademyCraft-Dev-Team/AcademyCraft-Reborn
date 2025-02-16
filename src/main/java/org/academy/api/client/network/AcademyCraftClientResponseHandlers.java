@@ -14,7 +14,7 @@ public class AcademyCraftClientResponseHandlers {
 
     static {
         RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_CHANGE_ABILITY_CATEGORY_REQUEST, listener -> NetworkSystemClient.sendPacket(new C2SResponsePacket("boolean", AcademyCraftNetworkResourceLocations.C2S_CHANGE_ABILITY_CATEGORY_RESPONSE, List.of(true))));
-        RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_SKILL_LIST_RESPONSE, new ClientResponseHandler() {
+        RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, new ClientResponseHandler() {
             @Override
             public void handle(ClientPacketListener listener) {
 

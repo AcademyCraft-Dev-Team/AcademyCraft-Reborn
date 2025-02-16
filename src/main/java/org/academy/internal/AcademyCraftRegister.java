@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import org.academy.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategoryList;
+import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategories;
 import org.academy.internal.client.renderer.entity.AcademyCraftEntityRenderers;
 import org.academy.internal.common.commands.AcademyCraftCommand;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
@@ -86,7 +86,7 @@ public class AcademyCraftRegister {
     }
 
     private static void registerAbilityCategory() {
-        for (AbilityCategory abilityCategory : AcademyCraftAbilityCategoryList.ABILITY_CATEGORY_LIST) {
+        for (AbilityCategory abilityCategory : AcademyCraftAbilityCategories.ABILITY_CATEGORY_LIST) {
             AbilitySystem.registerAbilityCategory(abilityCategory);
         }
     }

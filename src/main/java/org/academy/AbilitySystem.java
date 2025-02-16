@@ -3,6 +3,7 @@ package org.academy;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.AbilityCategoryIdentities;
 import org.academy.api.common.ability.Skill;
 
 import java.util.HashMap;

@@ -11,5 +11,6 @@ public abstract class AbilityCategory {
         this.name = name;
     }
 
-    public abstract void init();
+    public void init() {
+    }
 }

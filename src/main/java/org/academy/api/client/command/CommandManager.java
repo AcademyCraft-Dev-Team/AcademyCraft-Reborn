@@ -31,12 +31,15 @@ public class CommandManager {
     private static void registerCommands() {
         dispatcher.register(
                 LiteralArgumentBuilder.<ConsoleSource>literal("help")
-                        .executes(CommandManager::helpCommand)
+                        .executes(CommandManager::executeHelpCommand)
         );
 
         dispatcher.register(
                 LiteralArgumentBuilder.<ConsoleSource>literal("skill_list")
-                        .executes(CommandManager::skillList)
+                        .then(LiteralArgumentBuilder.<ConsoleSource>literal("all")
+                                .executes(CommandManager::fetchAllSkill))
+                        .then(LiteralArgumentBuilder.<ConsoleSource>literal("learned")
+                                .executes(CommandManager::fetchLearnedSkill))
         );
 
         dispatcher.register(
@@ -46,21 +49,33 @@ public class CommandManager {
         );
     }
 
-    private static int helpCommand(CommandContext<ConsoleSource> context) {
+    private static int executeHelpCommand(CommandContext<ConsoleSource> context) {
         Map<CommandNode<ConsoleSource>, String> map = dispatcher.getSmartUsage(dispatcher.getRoot(), context.getSource());
         HISTORY.addAll(map.values());
         return 1;
     }
 
-    private static int skillList(CommandContext<ConsoleSource> context) {
+    private static int fetchLearnedSkill(CommandContext<ConsoleSource> context) {
         Response response = new Response();
         response.runnable = () -> {
             for (Object o : response.dataList) {
                 HISTORY.add((String) o);
             }
         };
-        NetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_SKILL_LIST_RESPONSE, response);
-        NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_SKILL_LIST_REQUEST));
+        NetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_LEARNED_SKILL_RESPONSE, response);
+        NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_LEARNED_SKILL_REQUEST));
+        return 1;
+    }
+
+    private static int fetchAllSkill(CommandContext<ConsoleSource> context) {
+        Response response = new Response();
+        response.runnable = () -> {
+            for (Object o : response.dataList) {
+                HISTORY.add((String) o);
+            }
+        };
+        NetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, response);
+        NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_ALL_SKILL_REQUEST));
         return 1;
     }
 
