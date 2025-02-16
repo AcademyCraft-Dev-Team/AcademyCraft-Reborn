@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "org.academy.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "DimensionDataStorageMixin",
+    "ServerGamePacketListenerImplMixin"
+  ],
+  "client": [
+    "ClientPacketListenerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

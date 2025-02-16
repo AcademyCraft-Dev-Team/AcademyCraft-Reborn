@@ -1,0 +1,51 @@
+plugins {
+    id 'fabric-loom' version '1.9.2'
+}
+
+java {
+    withSourcesJar()
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/academy.accesswidener")
+}
+
+version = project.mod_version
+archivesBaseName = project.archives_base_name
+
+repositories {
+    maven {
+        name = "IzzelAliz Maven"
+        url = "https://maven.izzel.io/releases/"
+    }
+    maven {
+        name = "FelNull Maven"
+        url = "https://maven.felnull.dev"
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    modApi "icyllis.modernui:ModernUI-Core:3.11.1"
+    modApi "icyllis.modernui:ModernUI-Markdown:3.11.1"
+    modApi "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.1"
+
+    modApi "dev.felnull:special-model-loader:1.2.0"
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "loader_version", project.loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": project.minecraft_version,
+                "loader_version": project.loader_version
+    }
+}

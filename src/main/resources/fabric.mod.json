@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "academy",
+  "version": "${version}",
+  "name": "academy",
+  "description": "A Minecraft mod about superability.",
+  "authors": [],
+  "contact": {},
+  "license": "GPL-3.0",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "org.academy.AcademyCraftClient",
+      "org.academy.AbilitySystemClient"
+    ],
+    "server": [
+      "org.academy.AcademyCraftServer",
+      "org.academy.AbilitySystemServer"
+    ],
+    "main": [
+      "org.academy.AcademyCraft",
+      "org.academy.AbilitySystem"
+    ]
+  },
+  "mixins": [
+    "academy.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  },
+  "accessWidener": "academy.accesswidener",
+  "custom": {
+
+  }
+}
