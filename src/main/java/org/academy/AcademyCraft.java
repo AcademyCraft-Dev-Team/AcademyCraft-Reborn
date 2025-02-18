@@ -42,6 +42,7 @@ public class AcademyCraft implements ModInitializer {
             serverConfig = AcademyCraftConfig.loadConfig(serverConfigFile, AcademyCraftConfig.Env.SERVER);
             academyCraftWorldData = AcademyCraftWorldData.getWorldData(worldDataFile);
         });
+        AbilitySystem.init();
     }
 
     public static void checkFile(File file) {

@@ -10,10 +10,6 @@ public class Electromaster extends AbilityCategory {
 
     public Electromaster() {
         super(AbilityCategoryIdentities.ELECTROMASTER);
-    }
-
-    @Override
-    public void init() {
         this.skillList.add(railgun);
     }
 }

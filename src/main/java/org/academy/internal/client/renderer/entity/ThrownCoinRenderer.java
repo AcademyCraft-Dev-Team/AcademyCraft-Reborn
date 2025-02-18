@@ -2,6 +2,8 @@ package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -26,6 +28,7 @@ import static net.minecraft.client.renderer.entity.ItemRenderer.getFoilBufferDir
 /**
  * Some shit.
  */
+@Environment(EnvType.CLIENT)
 public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
     private final ItemRenderer itemRenderer;
     public static float a = 0.05f;
@@ -33,7 +36,7 @@ public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
     public static float c = 0.05f;
     private static final Matrix4f matrix = new Matrix4f();
 
-    public ThrownCoinRenderer(EntityRendererProvider.Context context) {
+    protected ThrownCoinRenderer(EntityRendererProvider.Context context) {
         super(context, 1.0f, false);
         this.itemRenderer = context.getItemRenderer();
     }

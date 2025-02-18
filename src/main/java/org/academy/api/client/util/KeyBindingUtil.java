@@ -12,6 +12,6 @@ import java.util.List;
 public class KeyBindingUtil {
     public static void registerSkillKeyBinding(Skill skill, Runnable runnable, List<Integer> defaultValue) {
         List<Integer> key = AcademyCraft.clientConfig.getKey(skill.name, defaultValue);
-        InputSystem.addKeyRelease(key, runnable);
+        InputSystem.KEY_RELEASE_MAP.put(key, runnable);
     }
 }

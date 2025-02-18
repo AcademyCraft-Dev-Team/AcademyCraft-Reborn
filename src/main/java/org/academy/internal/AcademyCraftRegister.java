@@ -2,7 +2,6 @@ package org.academy.internal;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -16,9 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import org.academy.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategories;
 import org.academy.internal.client.renderer.entity.AcademyCraftEntityRenderers;
-import org.academy.internal.common.commands.AcademyCraftCommand;
+import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
@@ -27,7 +25,6 @@ import org.academy.internal.common.world.item.AcademyCraftItems;
 public class AcademyCraftRegister {
     public static void init() {
         registerItem();
-        registerCommand();
         registerAuxGui();
         registerCreativeModeTab();
         registerEntityType();
@@ -46,10 +43,6 @@ public class AcademyCraftRegister {
     }
 
     private static void registerBlock() {
-    }
-
-    private static void registerCommand() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> AcademyCraftCommand.register(dispatcher));
     }
 
     private static void registerAuxGui() {
