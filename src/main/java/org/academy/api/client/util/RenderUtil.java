@@ -6,6 +6,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
@@ -14,7 +16,17 @@ import static net.minecraft.client.renderer.RenderStateShard.*;
 public class RenderUtil {
     public static final RenderType.CompositeRenderType GLOWING_CYLINDER = RenderType.create("glowing_cylinder", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLE_STRIP, 10240, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setCullState(NO_CULL).createCompositeState(false));
 
-    public static void addVertex(Matrix4f matrix4f, Matrix3f matrix3f, VertexConsumer vertexConsumer, float r, float g, float b, float a, float x, float y, float z, float nx, float ny, float nz) {
+    public static void translateToForward(final PoseStack poseStack, final LivingEntity livingEntity, final float distance) {
+        final Vec3 lookVec = livingEntity.getLookAngle();
+
+        poseStack.translate(
+                lookVec.x * distance,
+                lookVec.y * distance,
+                lookVec.z * distance
+        );
+    }
+
+    public static void addVertex(Matrix4f matrix4f, Matrix3f matrix3f, final VertexConsumer vertexConsumer, float r, float g, float b, float a, float x, float y, float z, float nx, float ny, float nz) {
         vertexConsumer.vertex(matrix4f, x, y, z).color(r, g, b, a).overlayCoords(OverlayTexture.NO_OVERLAY).normal(matrix3f, nx, ny, nz).endVertex();
     }
 
