@@ -8,7 +8,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderBuffers;
-import net.minecraft.world.phys.Vec3;
 import org.academy.AbilitySystemClient;
 import org.academy.api.client.util.RenderUtil;
 import org.joml.Matrix4f;
@@ -35,14 +34,9 @@ public class RenderSystem {
 
                 poseStack.pushPose();
 
-                final double RAY_DISTANCE = 10.0;
-                final Vec3 lookVec = player.getLookAngle();
+                final float RAY_DISTANCE = 10f;
 
-                poseStack.translate(
-                        lookVec.x * RAY_DISTANCE,
-                        lookVec.y * RAY_DISTANCE,
-                        lookVec.z * RAY_DISTANCE
-                );
+                RenderUtil.translateToForward(poseStack, player, RAY_DISTANCE);
 
                 final RenderBuffers renderBuffers = mc.renderBuffers();
                 final VertexConsumer buffer = renderBuffers.bufferSource().getBuffer(RenderUtil.GLOWING_CYLINDER);
