@@ -53,4 +53,10 @@ public class RenderUtil {
             }
         }
     }
+
+    public static class DummyRenderer {
+        public static void renderDummy(float x, float y, float z, VertexConsumer vertexConsumer) {
+
+        }
+    }
 }

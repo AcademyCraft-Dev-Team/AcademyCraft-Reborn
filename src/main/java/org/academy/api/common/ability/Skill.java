@@ -2,6 +2,7 @@ package org.academy.api.common.ability;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.server.MinecraftServer;
 
 public abstract class Skill {
     public String name;
@@ -12,16 +13,10 @@ public abstract class Skill {
         this.level = level;
     }
 
-    public abstract void init();
-
-    /**
-     * Like KeyBinding.
-     */
     @Environment(EnvType.CLIENT)
-    public abstract void initClient();
+    public void initClient() {
+    }
 
-    /**
-     * Like Event.
-     */
-    public abstract void initServer();
+    public void initServer(MinecraftServer server) {
+    }
 }

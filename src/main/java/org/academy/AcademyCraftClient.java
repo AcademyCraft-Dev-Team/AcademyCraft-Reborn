@@ -12,8 +12,6 @@ import java.io.File;
 
 @Environment(EnvType.CLIENT)
 public class AcademyCraftClient implements ClientModInitializer {
-    public static final Minecraft MINECRAFT = Minecraft.getInstance();
-
     @Override
     public void onInitializeClient() {
         AcademyCraft.clientConfigFile = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
@@ -21,5 +19,6 @@ public class AcademyCraftClient implements ClientModInitializer {
         AcademyCraft.clientConfig = AcademyCraftConfig.loadConfig(AcademyCraft.clientConfigFile, AcademyCraftConfig.Env.CLIENT);
         SpecialModelLoaderEvents.LOAD_SCOPE.register(location -> AcademyCraft.MOD_ID.equals(location.getNamespace()));
         InputSystem.init();
+        AbilitySystemClient.init();
     }
 }
