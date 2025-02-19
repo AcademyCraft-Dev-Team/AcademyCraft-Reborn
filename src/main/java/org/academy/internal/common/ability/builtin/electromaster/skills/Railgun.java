@@ -9,7 +9,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.client.util.KeyBindingUtil;
@@ -25,7 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Railgun extends Skill {
-    public Railgun() {
+    public static final Skill INSTANCE = new Railgun();
+
+    private Railgun() {
         super("railgun", 5);
     }
 
@@ -63,12 +64,9 @@ public class Railgun extends Skill {
     @Environment(EnvType.CLIENT)
     @Override
     public void initClient() {
-        Runnable runnable = () -> {
-            NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
-        };
+        Runnable runnable = () -> NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
         List<Integer> keys = new ArrayList<>();
         keys.add(GLFW.GLFW_KEY_X);
-        AcademyCraft.LOGGER.info("Why001");
         KeyBindingUtil.registerSkillKeyBinding(this, runnable, keys);
     }
 }

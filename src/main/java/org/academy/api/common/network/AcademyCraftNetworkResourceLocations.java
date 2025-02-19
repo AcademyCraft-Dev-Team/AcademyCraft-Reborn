@@ -3,6 +3,7 @@ package org.academy.api.common.network;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 
+// 模组内置的
 public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_response");
     public static final ResourceLocation S2C_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_request");
@@ -20,6 +21,8 @@ public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_LEARN_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_learn_skill_response");
     public static final ResourceLocation C2S_GET_LEARNED_SKILL_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_get_learned_skill_request");
     public static final ResourceLocation S2C_GET_LEARNED_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_get_learned_skill_response");
+    public static final ResourceLocation C2S_SELF_TELEPORT_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_self_teleport_request");
+    public static final ResourceLocation S2C_SELF_TELEPORT_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_self_teleport_response");
 
     private AcademyCraftNetworkResourceLocations() {
     }

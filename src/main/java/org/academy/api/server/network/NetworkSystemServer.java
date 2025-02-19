@@ -8,4 +8,7 @@ import java.util.Map;
 
 public class NetworkSystemServer {
     public static final Map<ResourceLocation, Response> SERVER_RESPONSE_MAP = new HashMap<>();
+
+    private NetworkSystemServer() {
+    }
 }

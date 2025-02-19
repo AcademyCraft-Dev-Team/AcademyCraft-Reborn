@@ -2,14 +2,13 @@ package org.academy.internal.common.ability.builtin.electromaster;
 
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityCategoryIdentities;
-import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.ability.builtin.electromaster.skills.Railgun;
 
-public class Electromaster extends AbilityCategory {
-    private static final Skill railgun = new Railgun();
+public final class Electromaster extends AbilityCategory {
+    public static final Electromaster INSTANCE = new Electromaster();
 
-    public Electromaster() {
+    private Electromaster() {
         super(AbilityCategoryIdentities.ELECTROMASTER);
-        this.skillList.add(railgun);
+        this.skillList.add(Railgun.INSTANCE);
     }
 }

@@ -10,7 +10,7 @@ import org.academy.internal.common.world.level.storage.AcademyCraftWorldData;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AbilitySystem {
+public final class AbilitySystem {
     public static final Map<String, AbilityCategory> abilityCategoryMap = new HashMap<>();
 
     public static void init() {
@@ -24,6 +24,9 @@ public class AbilitySystem {
         });
     }
 
+    /**
+     * 会在 ServerLifecycleEvents.SERVER_STARTING 和 ClientLifecycleEvents.CLIENT_STARTED 的时候统一初始化，所以只需要在onInitialize的时候或之前注册即可
+     */
     public static void registerAbilityCategory(final AbilityCategory abilityCategory) {
         abilityCategoryMap.put(abilityCategory.name, abilityCategory);
     }
