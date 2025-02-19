@@ -13,7 +13,7 @@ import org.joml.Matrix4f;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
-public class RenderUtil {
+public final class RenderUtil {
     public static final RenderType.CompositeRenderType GLOWING_CYLINDER = RenderType.create("glowing_cylinder", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLE_STRIP, 10240, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setCullState(NO_CULL).createCompositeState(false));
 
     public static void translateToForward(final PoseStack poseStack, final LivingEntity livingEntity, final float distance) {
@@ -26,11 +26,11 @@ public class RenderUtil {
         );
     }
 
-    public static void addVertex(Matrix4f matrix4f, Matrix3f matrix3f, final VertexConsumer vertexConsumer, float r, float g, float b, float a, float x, float y, float z, float nx, float ny, float nz) {
+    public static void addVertex(final Matrix4f matrix4f, final Matrix3f matrix3f, final VertexConsumer vertexConsumer, final float r, final float g, final float b, final float a, final float x, final float y, final float z, final float nx, final float ny, final float nz) {
         vertexConsumer.vertex(matrix4f, x, y, z).color(r, g, b, a).overlayCoords(OverlayTexture.NO_OVERLAY).normal(matrix3f, nx, ny, nz).endVertex();
     }
 
-    public static class RayRenderer {
+    public static final class RayRenderer {
         /**
          * 按照指定面数生成光束侧面四边形
          *
@@ -45,30 +45,22 @@ public class RenderUtil {
          * @param radius         用于计算顶点位置的半径
          * @param faces          光束侧面的面数（例如4、8、16等）
          */
-        public static void renderRay(PoseStack poseStack, VertexConsumer vertexConsumer, float red, float green, float blue, float alpha, float yBottom, float yTop, float radius, int faces) {
-            PoseStack.Pose pose = poseStack.last();
-            Matrix4f matrix4f = pose.pose();
-            Matrix3f matrix3f = pose.normal();
+        public static void renderRay(final PoseStack poseStack, final VertexConsumer vertexConsumer, final float red, final float green, float blue, float alpha, final float yBottom, final float yTop, final float radius, final int faces) {
+            final PoseStack.Pose pose = poseStack.last();
+            final Matrix4f matrix4f = pose.pose();
+            final Matrix3f matrix3f = pose.normal();
 
-            // 计算每个面的角度步长（单位：弧度）
-            double angleStep = 2 * Math.PI / faces;
+            final double angleStep = 2 * Math.PI / faces;
 
-            // 遍历所有面，使用 TRIANGLE_STRIP 方式优化顶点排列
-            for (int i = 0; i <= faces; i++) { // i <= faces 保证首尾相连
-                double angle = i * angleStep;
+            for (int i = 0; i <= faces; i++) {
+                final double angle = i * angleStep;
 
-                float x = (float) (radius * Math.cos(angle));
-                float z = (float) (radius * Math.sin(angle));
+                final float x = (float) (radius * Math.cos(angle));
+                final float z = (float) (radius * Math.sin(angle));
 
                 addVertex(matrix4f, matrix3f, vertexConsumer, red, green, blue, alpha, x, yTop, z, 0, 1, 0);
                 addVertex(matrix4f, matrix3f, vertexConsumer, red, green, blue, alpha, x, yBottom, z, 0, 1, 0);
             }
-        }
-    }
-
-    public static class DummyRenderer {
-        public static void renderDummy(float x, float y, float z, VertexConsumer vertexConsumer) {
-
         }
     }
 }

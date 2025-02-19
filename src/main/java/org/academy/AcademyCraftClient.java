@@ -11,7 +11,7 @@ import org.academy.internal.AcademyCraftConfig;
 import java.io.File;
 
 @Environment(EnvType.CLIENT)
-public class AcademyCraftClient implements ClientModInitializer {
+public final class AcademyCraftClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         AcademyCraft.clientConfigFile = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");

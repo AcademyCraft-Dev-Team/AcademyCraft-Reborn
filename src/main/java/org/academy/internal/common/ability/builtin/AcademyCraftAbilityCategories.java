@@ -10,9 +10,9 @@ import java.util.List;
 
 public class AcademyCraftAbilityCategories {
     public static final List<AbilityCategory> ABILITY_CATEGORY_LIST = new ArrayList<>();
-    public static final AbilityCategory LEVEL0 = new Level0();
-    public static final AbilityCategory ELECTROMASTER = new Electromaster();
-    public static final AbilityCategory TELEPORTER = new Teleporter();
+    public static final AbilityCategory LEVEL0 = Level0.INSTANCE;
+    public static final AbilityCategory ELECTROMASTER = Electromaster.INSTANCE;
+    public static final AbilityCategory TELEPORTER = Teleporter.INSTANCE;
 
     static {
         ABILITY_CATEGORY_LIST.add(LEVEL0);

@@ -15,7 +15,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.io.IOException;
 
-public class AcademyCraft implements ModInitializer {
+public final class AcademyCraft implements ModInitializer {
     public static File worldDataFile;
     @Environment(EnvType.CLIENT)
     public static File clientConfigFile;
