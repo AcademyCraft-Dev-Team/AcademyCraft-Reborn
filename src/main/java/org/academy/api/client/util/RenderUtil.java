@@ -4,9 +4,11 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -30,20 +32,25 @@ public final class RenderUtil {
         vertexConsumer.vertex(matrix4f, x, y, z).color(r, g, b, a).overlayCoords(OverlayTexture.NO_OVERLAY).normal(matrix3f, nx, ny, nz).endVertex();
     }
 
+    private static void addLine(VertexConsumer vertexConsumer, PoseStack.Pose pose, float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float b, float a) {
+        vertexConsumer.vertex(pose.pose(), x1, y1, z1).color(r, g, b, a).normal(pose.normal(), 0, 1, 0).endVertex();
+        vertexConsumer.vertex(pose.pose(), x2, y2, z2).color(r, g, b, a).normal(pose.normal(), 0, 1, 0).endVertex();
+    }
+
     public static final class RayRenderer {
         /**
-         * 按照指定面数生成光束侧面四边形
+         * 按照指定面数生渲染圆柱
          *
-         * @param poseStack      渲染矩阵栈
-         * @param vertexConsumer 用于绘制顶点的对象
-         * @param red            红色分量
-         * @param green          绿色分量
-         * @param blue           蓝色分量
+         * @param poseStack      PoseStack
+         * @param vertexConsumer VertexConsumer
+         * @param red            红色
+         * @param green          绿色
+         * @param blue           蓝色
          * @param alpha          透明度
-         * @param yBottom        光束底部 Y 坐标
-         * @param yTop           光束顶部 Y 坐标
-         * @param radius         用于计算顶点位置的半径
-         * @param faces          光束侧面的面数（例如4、8、16等）
+         * @param yBottom        底部 Y 坐标
+         * @param yTop           顶部 Y 坐标
+         * @param radius         半径
+         * @param faces          面数
          */
         public static void renderRay(final PoseStack poseStack, final VertexConsumer vertexConsumer, final float red, final float green, float blue, float alpha, final float yBottom, final float yTop, final float radius, final int faces) {
             final PoseStack.Pose pose = poseStack.last();
@@ -60,6 +67,38 @@ public final class RenderUtil {
 
                 addVertex(matrix4f, matrix3f, vertexConsumer, red, green, blue, alpha, x, yTop, z, 0, 1, 0);
                 addVertex(matrix4f, matrix3f, vertexConsumer, red, green, blue, alpha, x, yBottom, z, 0, 1, 0);
+            }
+        }
+    }
+
+    public static final class BoxRenderer {
+        /**
+         * 渲染一个线框方块
+         *
+         * @param poseStack PoseStack
+         * @param bufferSource MultiBufferSource
+         * @param box AABB 大小
+         * @param r 红色
+         * @param g 绿色
+         * @param b 蓝色
+         * @param a 透明度
+         */
+        public static void renderWireframeBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box, float r, float g, float b, float a) {
+            VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+            PoseStack.Pose pose = poseStack.last();
+
+            float x1 = (float) box.minX, y1 = (float) box.minY, z1 = (float) box.minZ;
+            float x2 = (float) box.maxX, y2 = (float) box.maxY, z2 = (float) box.maxZ;
+
+            // 十二条边的顶点
+            float[][] edges = {
+                    {x1, y1, z1, x2, y1, z1}, {x2, y1, z1, x2, y1, z2}, {x2, y1, z2, x1, y1, z2}, {x1, y1, z2, x1, y1, z1},
+                    {x1, y2, z1, x2, y2, z1}, {x2, y2, z1, x2, y2, z2}, {x2, y2, z2, x1, y2, z2}, {x1, y2, z2, x1, y2, z1},
+                    {x1, y1, z1, x1, y2, z1}, {x2, y1, z1, x2, y2, z1}, {x2, y1, z2, x2, y2, z2}, {x1, y1, z2, x1, y2, z2}
+            };
+
+            for (float[] edge : edges) {
+                addLine(vertexConsumer, pose, edge[0], edge[1], edge[2], edge[3], edge[4], edge[5], r, g, b, a);
             }
         }
     }
