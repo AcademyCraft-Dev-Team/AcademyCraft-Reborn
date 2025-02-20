@@ -3,7 +3,9 @@ package org.academy.api.common.network;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 
-// 模组内置的
+/**
+ * 模组所使用的所有网络包标识
+ */
 public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_response");
     public static final ResourceLocation S2C_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_request");

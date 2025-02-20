@@ -15,9 +15,6 @@ import java.util.List;
 public final class AcademyCraftRenderSystem {
     public static final Minecraft mc = Minecraft.getInstance();
     public static final LocalPlayer player = mc.player;
-    /**
-     * 直接渲染是在摄像机的位置渲染，请注意
-     */
     public static final List<Renderer> RENDERER_LIST = new ArrayList<>();
 
     public interface Renderer {
