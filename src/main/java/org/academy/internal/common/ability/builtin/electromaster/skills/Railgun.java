@@ -50,7 +50,7 @@ public class Railgun extends Skill {
                 coin.setBaseDamage(1000D);
                 coin.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 100F, 1.0F);
                 RailgunRay railgunRay = new RailgunRay(AcademyCraftEntityTypes.RAILGUN_RAY_ENTITY_TYPE, player.level());
-                railgunRay.setPos(player.position());
+                railgunRay.setPos(player.getEyePosition().add(0, -0.5, 0));
                 railgunRay.setYRot(player.getYRot());
                 railgunRay.setXRot(player.getXRot());
 

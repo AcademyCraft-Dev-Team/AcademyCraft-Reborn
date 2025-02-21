@@ -38,11 +38,7 @@ public final class AbilitySystem {
 
             MathUtil.WeightedRandom weightedRandom = new MathUtil.WeightedRandom();
             for (AbilityCategory abilityCategory : abilityCategoryMap.values()) {
-                if (abilityCategory.customProbability) {
-                    weightedRandom.addItem(abilityCategory.name, abilityCategory.probability);
-                } else {
-                    weightedRandom.addItem(abilityCategory.name, 1);
-                }
+                weightedRandom.addItem(abilityCategory.name, abilityCategory.probability);
             }
 
             data.setAbilityCategory(weightedRandom.getRandomItem());
