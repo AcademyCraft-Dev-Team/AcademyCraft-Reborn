@@ -13,6 +13,8 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
+import java.util.Random;
+
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
 public final class RenderUtil {
@@ -75,13 +77,13 @@ public final class RenderUtil {
         /**
          * 渲染一个线框方块
          *
-         * @param poseStack PoseStack
+         * @param poseStack    PoseStack
          * @param bufferSource MultiBufferSource
-         * @param box AABB 大小
-         * @param r 红色
-         * @param g 绿色
-         * @param b 蓝色
-         * @param a 透明度
+         * @param box          AABB 大小
+         * @param r            红色
+         * @param g            绿色
+         * @param b            蓝色
+         * @param a            透明度
          */
         public static void renderWireframeBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box, float r, float g, float b, float a) {
             VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lines());
@@ -100,6 +102,91 @@ public final class RenderUtil {
             for (float[] edge : edges) {
                 addLine(vertexConsumer, pose, edge[0], edge[1], edge[2], edge[3], edge[4], edge[5], r, g, b, a);
             }
+        }
+    }
+
+    public static final class ArcRenderer {
+        private static final Random RANDOM = new Random();
+
+        /**
+         * 渲染空气中的电弧
+         *
+         * @param poseStack    当前矩阵堆栈
+         * @param bufferSource 渲染缓冲
+         * @param startPos     电弧起点
+         * @param endPos       电弧终点
+         * @param r            红色通道
+         * @param g            绿色通道
+         * @param b            蓝色通道
+         * @param alpha        透明度
+         * @param radius       电弧的宽度
+         * @param segments     细分数（越高越平滑）
+         */
+        public static void renderArc(
+                PoseStack poseStack, MultiBufferSource bufferSource,
+                Vec3 startPos, Vec3 endPos,
+                float r, float g, float b, float alpha,
+                float radius, int segments
+        ) {
+            VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lightning()); // 使用 Minecraft 自带的闪电渲染
+            PoseStack.Pose pose = poseStack.last();
+            Matrix4f matrix4f = pose.pose();
+            Matrix3f matrix3f = pose.normal();
+
+            Vec3[] arcPoints = generateArcPoints(startPos, endPos, segments);
+
+            // 遍历点，使用 Triangle Strip 绘制带状电弧
+            for (int i = 0; i < arcPoints.length; i++) {
+                Vec3 point = arcPoints[i];
+
+                float x = (float) point.x;
+                float y = (float) point.y;
+                float z = (float) point.z;
+
+                // 计算法线方向（让电弧有宽度）
+                float nx = (float) -Math.sin(i * 0.3);
+                float nz = (float) Math.cos(i * 0.3);
+
+                float x1 = x + nx * radius;
+                float z1 = z + nz * radius;
+                float x2 = x - nx * radius;
+                float z2 = z - nz * radius;
+
+                addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, x1, y, z1, 1, 1, 1);
+                addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, x2, y, z2, 1, 1, 1);
+            }
+        }
+
+        /**
+         * 生成扭曲的电弧路径
+         *
+         * @param startPos 起点
+         * @param endPos   终点
+         * @param segments 细分数
+         * @return 随机扭曲的电弧路径
+         */
+        private static Vec3[] generateArcPoints(Vec3 startPos, Vec3 endPos, int segments) {
+            Vec3[] points = new Vec3[segments + 1];
+            points[0] = startPos;
+            points[segments] = endPos;
+
+            for (int i = 1; i < segments; i++) {
+                double t = (double) i / segments;
+
+                // 线性插值计算基础点
+                double x = startPos.x + (endPos.x - startPos.x) * t;
+                double y = startPos.y + (endPos.y - startPos.y) * t;
+                double z = startPos.z + (endPos.z - startPos.z) * t;
+
+                // 随机偏移，制造“跳跃感”
+                double xOffset = (RANDOM.nextDouble() - 0.5) * 0.5;
+                double yOffset = (RANDOM.nextDouble() - 0.5) * 0.5;
+                double zOffset = (RANDOM.nextDouble() - 0.5) * 0.5;
+
+                points[i] = new Vec3(x + xOffset, y + yOffset, z + zOffset);
+            }
+
+            return points;
         }
     }
 }

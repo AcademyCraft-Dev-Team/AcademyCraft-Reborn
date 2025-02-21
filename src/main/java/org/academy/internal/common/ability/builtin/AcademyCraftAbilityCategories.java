@@ -1,23 +1,22 @@
 package org.academy.internal.common.ability.builtin;
 
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.academy.internal.common.ability.builtin.electromaster.Electromaster;
 import org.academy.internal.common.ability.builtin.level0.Level0;
-import org.academy.internal.common.ability.builtin.teleporter.Teleporter;
+import org.academy.internal.common.ability.builtin.teleport.Teleport;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AcademyCraftAbilityCategories {
     public static final List<AbilityCategory> ABILITY_CATEGORY_LIST = new ArrayList<>();
-    public static final AbilityCategory LEVEL0 = Level0.INSTANCE;
-    public static final AbilityCategory ELECTROMASTER = Electromaster.INSTANCE;
-    public static final AbilityCategory TELEPORTER = Teleporter.INSTANCE;
 
     static {
-        ABILITY_CATEGORY_LIST.add(LEVEL0);
-        ABILITY_CATEGORY_LIST.add(ELECTROMASTER);
-        ABILITY_CATEGORY_LIST.add(TELEPORTER);
+        ABILITY_CATEGORY_LIST.add(Level0.INSTANCE);
+        ABILITY_CATEGORY_LIST.add(Electromaster.INSTANCE);
+        ABILITY_CATEGORY_LIST.add(Teleport.INSTANCE);
+        ABILITY_CATEGORY_LIST.add(Accelerator.INSTANCE);
     }
 
     private AcademyCraftAbilityCategories() {

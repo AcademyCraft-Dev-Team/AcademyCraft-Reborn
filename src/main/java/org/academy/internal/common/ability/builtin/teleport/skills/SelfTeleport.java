@@ -1,4 +1,4 @@
-package org.academy.internal.common.ability.builtin.teleporter.skills;
+package org.academy.internal.common.ability.builtin.teleport.skills;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
