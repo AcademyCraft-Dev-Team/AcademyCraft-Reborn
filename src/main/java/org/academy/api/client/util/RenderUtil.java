@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -23,18 +24,14 @@ public final class RenderUtil {
     public static void translateToForward(final PoseStack poseStack, final LivingEntity livingEntity, final float distance) {
         final Vec3 lookVec = livingEntity.getLookAngle();
 
-        poseStack.translate(
-                lookVec.x * distance,
-                lookVec.y * distance,
-                lookVec.z * distance
-        );
+        poseStack.translate(lookVec.x * distance, lookVec.y * distance, lookVec.z * distance);
     }
 
     public static void addVertex(final Matrix4f matrix4f, final Matrix3f matrix3f, final VertexConsumer vertexConsumer, final float r, final float g, final float b, final float a, final float x, final float y, final float z, final float nx, final float ny, final float nz) {
         vertexConsumer.vertex(matrix4f, x, y, z).color(r, g, b, a).overlayCoords(OverlayTexture.NO_OVERLAY).normal(matrix3f, nx, ny, nz).endVertex();
     }
 
-    private static void addLine(VertexConsumer vertexConsumer, PoseStack.Pose pose, float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float b, float a) {
+    public static void addLine(VertexConsumer vertexConsumer, PoseStack.Pose pose, float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float b, float a) {
         vertexConsumer.vertex(pose.pose(), x1, y1, z1).color(r, g, b, a).normal(pose.normal(), 0, 1, 0).endVertex();
         vertexConsumer.vertex(pose.pose(), x2, y2, z2).color(r, g, b, a).normal(pose.normal(), 0, 1, 0).endVertex();
     }
@@ -93,11 +90,7 @@ public final class RenderUtil {
             float x2 = (float) box.maxX, y2 = (float) box.maxY, z2 = (float) box.maxZ;
 
             // 十二条边的顶点
-            float[][] edges = {
-                    {x1, y1, z1, x2, y1, z1}, {x2, y1, z1, x2, y1, z2}, {x2, y1, z2, x1, y1, z2}, {x1, y1, z2, x1, y1, z1},
-                    {x1, y2, z1, x2, y2, z1}, {x2, y2, z1, x2, y2, z2}, {x2, y2, z2, x1, y2, z2}, {x1, y2, z2, x1, y2, z1},
-                    {x1, y1, z1, x1, y2, z1}, {x2, y1, z1, x2, y2, z1}, {x2, y1, z2, x2, y2, z2}, {x1, y1, z2, x1, y2, z2}
-            };
+            float[][] edges = {{x1, y1, z1, x2, y1, z1}, {x2, y1, z1, x2, y1, z2}, {x2, y1, z2, x1, y1, z2}, {x1, y1, z2, x1, y1, z1}, {x1, y2, z1, x2, y2, z1}, {x2, y2, z1, x2, y2, z2}, {x2, y2, z2, x1, y2, z2}, {x1, y2, z2, x1, y2, z1}, {x1, y1, z1, x1, y2, z1}, {x2, y1, z1, x2, y2, z1}, {x2, y1, z2, x2, y2, z2}, {x1, y1, z2, x1, y2, z2}};
 
             for (float[] edge : edges) {
                 addLine(vertexConsumer, pose, edge[0], edge[1], edge[2], edge[3], edge[4], edge[5], r, g, b, a);
@@ -105,88 +98,64 @@ public final class RenderUtil {
         }
     }
 
-    public static final class ArcRenderer {
-        private static final Random RANDOM = new Random();
-
+    public static final class LightningRenderer {
         /**
-         * 渲染空气中的电弧
+         * 渲染闪电/电弧，但是比原版更加自定义
          *
-         * @param poseStack    当前矩阵堆栈
-         * @param bufferSource 渲染缓冲
-         * @param startPos     电弧起点
-         * @param endPos       电弧终点
-         * @param r            红色通道
-         * @param g            绿色通道
-         * @param b            蓝色通道
-         * @param alpha        透明度
-         * @param radius       电弧的宽度
-         * @param segments     细分数（越高越平滑）
+         * @param poseStack PoseStack
+         * @param bufferSource MultiBufferSource
+         * @param seed 随机路径种子
+         * @param r 红色
+         * @param g 绿色
+         * @param b 蓝色
+         * @param alpha 透明度
+         * @param startY 起点
+         * @param endY 终点
+         * @param size 大小
+         * @param segments 边数
+         * @param points 细分点
+         * @param amplitude 幅度
          */
-        public static void renderArc(
-                PoseStack poseStack, MultiBufferSource bufferSource,
-                Vec3 startPos, Vec3 endPos,
-                float r, float g, float b, float alpha,
-                float radius, int segments
-        ) {
-            VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lightning()); // 使用 Minecraft 自带的闪电渲染
-            PoseStack.Pose pose = poseStack.last();
-            Matrix4f matrix4f = pose.pose();
-            Matrix3f matrix3f = pose.normal();
+        public static void renderLightning(PoseStack poseStack, MultiBufferSource bufferSource, long seed, float r, float g, float b, float alpha, float startY, float endY, float size, int segments, int points, float amplitude) {
+            VertexConsumer vertexConsumer = bufferSource.getBuffer(GLOWING_CYLINDER);
+            Matrix4f matrix4f = poseStack.last().pose();
+            Matrix3f matrix3f = poseStack.last().normal();
 
-            Vec3[] arcPoints = generateArcPoints(startPos, endPos, segments);
+            RandomSource randomSource = RandomSource.create(seed);
+            float[] lightningX = new float[points];
+            float[] lightningY = new float[points];
+            float[] lightningZ = new float[points];
 
-            // 遍历点，使用 Triangle Strip 绘制带状电弧
-            for (int i = 0; i < arcPoints.length; i++) {
-                Vec3 point = arcPoints[i];
+            float dy = (endY - startY) / (points - 1);
 
-                float x = (float) point.x;
-                float y = (float) point.y;
-                float z = (float) point.z;
-
-                // 计算法线方向（让电弧有宽度）
-                float nx = (float) -Math.sin(i * 0.3);
-                float nz = (float) Math.cos(i * 0.3);
-
-                float x1 = x + nx * radius;
-                float z1 = z + nz * radius;
-                float x2 = x - nx * radius;
-                float z2 = z - nz * radius;
-
-                addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, x1, y, z1, 1, 1, 1);
-                addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, x2, y, z2, 1, 1, 1);
+            lightningX[0] = 0;
+            lightningY[0] = startY;
+            lightningZ[0] = 0;
+            for (int i = 1; i < points - 1; i++) {
+                lightningX[i] = (randomSource.nextFloat() - 0.5f) * amplitude;
+                lightningY[i] = startY + dy * i + (randomSource.nextFloat() - 0.5f) * amplitude;
+                lightningZ[i] = (randomSource.nextFloat() - 0.5f) * amplitude;
             }
-        }
+            lightningX[points - 1] = 0;
+            lightningY[points - 1] = endY;
+            lightningZ[points - 1] = 0;
 
-        /**
-         * 生成扭曲的电弧路径
-         *
-         * @param startPos 起点
-         * @param endPos   终点
-         * @param segments 细分数
-         * @return 随机扭曲的电弧路径
-         */
-        private static Vec3[] generateArcPoints(Vec3 startPos, Vec3 endPos, int segments) {
-            Vec3[] points = new Vec3[segments + 1];
-            points[0] = startPos;
-            points[segments] = endPos;
+            for (int i = 1; i < points; i++) {
+                float sx = lightningX[i - 1], sy = lightningY[i - 1], sz = lightningZ[i - 1];
+                float ex = lightningX[i], ey = lightningY[i], ez = lightningZ[i];
+                float segDx = ex - sx;
+                float segDy = ey - sy;
+                float segDz = ez - sz;
 
-            for (int i = 1; i < segments; i++) {
-                double t = (double) i / segments;
+                for (int j = 0; j <= segments; j++) {
+                    double angle = (j * Math.PI * 2) / segments;
+                    float nx = (float) Math.cos(angle) * size;
+                    float nz = (float) Math.sin(angle) * size;
 
-                // 线性插值计算基础点
-                double x = startPos.x + (endPos.x - startPos.x) * t;
-                double y = startPos.y + (endPos.y - startPos.y) * t;
-                double z = startPos.z + (endPos.z - startPos.z) * t;
-
-                // 随机偏移，制造“跳跃感”
-                double xOffset = (RANDOM.nextDouble() - 0.5) * 0.5;
-                double yOffset = (RANDOM.nextDouble() - 0.5) * 0.5;
-                double zOffset = (RANDOM.nextDouble() - 0.5) * 0.5;
-
-                points[i] = new Vec3(x + xOffset, y + yOffset, z + zOffset);
+                    addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, sx + nx, sy, sz + nz, segDx, segDy, segDz);
+                    addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, ex + nx, ey, ez + nz, segDx, segDy, segDz);
+                }
             }
-
-            return points;
         }
     }
 }

@@ -7,6 +7,8 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
@@ -17,18 +19,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/**
- * You can register command.
- */
+@Environment(EnvType.CLIENT)
 public class CommandManager {
     public static final List<String> HISTORY = Collections.synchronizedList(new ArrayList<>());
     public static final CommandDispatcher<ConsoleSource> dispatcher = new CommandDispatcher<>();
+    public static final LiteralArgumentBuilder<ConsoleSource> CONFIG;
 
     static {
-        registerCommands();
+        CONFIG = LiteralArgumentBuilder.literal("config");
     }
 
-    private static void registerCommands() {
+    public static void registerCommands() {
+        dispatcher.register(CONFIG);
+
         dispatcher.register(
                 LiteralArgumentBuilder.<ConsoleSource>literal("help")
                         .executes(CommandManager::executeHelpCommand)
