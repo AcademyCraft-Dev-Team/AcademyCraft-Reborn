@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.internal.common.world.entity.RailgunRay;
 import org.jetbrains.annotations.NotNull;
@@ -23,8 +24,10 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay> {
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()))
         );
-        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource.getBuffer(RenderUtil.GLOWING_CYLINDER), 1f, 0.5f, 0, 1f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.125f), 32);
-        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource.getBuffer(RenderUtil.GLOWING_CYLINDER), 1f, 0.5f, 0, 0.25f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.15f), 32);
+        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource.getBuffer(RenderUtil.GLOWING_CYLINDER), 1f, 0.5f, 0, 1f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.125f), 8);
+        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource.getBuffer(RenderUtil.GLOWING_CYLINDER), 1f, 0.5f, 0, 0.25f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.15f), 8);
+        RenderUtil.LightningRenderer.renderLightning(poseStack, multiBufferSource, entity.effectTime, 0.5f, 0.975f, 1.0f, 0.125f, -0.5f, 0, 0.0125f, 8, 16, 0.5f);
+        RenderUtil.LightningRenderer.renderLightning(poseStack, multiBufferSource, entity.effectTime, 0.5f, 0.975f, 1.0f, 0.35f, -0.5f, 0, 0.015f, 8, 16, 0.5f);
         poseStack.popPose();
     }
 

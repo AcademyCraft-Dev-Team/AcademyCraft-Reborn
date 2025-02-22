@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
@@ -35,14 +36,10 @@ public class Railgun extends Skill {
         AcademyCraftServerRequestHandlers.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST, (serverGamePacketListenerImpl) -> {
             Player player = serverGamePacketListenerImpl.player;
             EntityType<?> targetEntity = AcademyCraftEntityTypes.THROWN_COIN_ENTITY_TYPE;
-            double depth = 5;
-            double width = 5;
-            double height = 5;
-            Vec3 lookVec = player.getViewVector(1.0F);
-            Vec3 center = player.position().add(lookVec.scale(depth / 2));
-            Vec3 rightVec = new Vec3(-lookVec.z, 0, lookVec.x).normalize();
+            Vec3 lookVec = player.getLookAngle().scale(2);
+            BlockPos pos = new BlockPos((int) (lookVec.x + player.getX()), (int) (lookVec.y + player.getEyeY()), (int) (lookVec.z + player.getZ()));
 
-            AABB box = new AABB(center.x - (width / 2) * rightVec.x, center.y, center.z - (width / 2) * rightVec.z, center.x + (width / 2) * rightVec.x, center.y + height, center.z + (width / 2) * rightVec.z);
+            AABB box = new AABB(pos).inflate(2);
             List<Entity> entities = player.level().getEntities(player, box, entity -> entity.getType() == targetEntity);
             if (!entities.isEmpty()) {
                 player.sendSystemMessage(Component.literal("Yes"));

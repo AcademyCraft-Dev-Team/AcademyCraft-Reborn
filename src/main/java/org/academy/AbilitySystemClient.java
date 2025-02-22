@@ -1,6 +1,7 @@
 package org.academy;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import org.academy.api.client.command.CommandManager;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
@@ -20,6 +21,7 @@ public final class AbilitySystemClient {
                     skill.initClient();
                 }
             }
+            CommandManager.registerCommands();
         });
     }
 }
