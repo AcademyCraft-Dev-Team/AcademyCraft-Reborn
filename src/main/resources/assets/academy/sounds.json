@@ -2,7 +2,19 @@
   "coin": {
     "subtitle": "academy.coin",
     "sounds": [
-      "academy:coin"
+      "academy:item/coin"
+    ]
+  },
+  "railgun": {
+    "subtitle": "academy.railgun",
+    "sounds": [
+      "academy:skill/electromaster/railgun"
+    ]
+  },
+  "arc_weak": {
+    "subtitle": "academy.arc_weak",
+    "sounds": [
+      "academy:skill/electromaster/arc_weak"
     ]
   }
 }
