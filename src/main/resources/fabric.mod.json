@@ -25,5 +25,8 @@
     "fabric": "*",
     "minecraft": "${minecraft_version}"
   },
-  "accessWidener": "academy.accesswidener"
+  "accessWidener": "academy.accesswidener",
+  "custom": {
+
+  }
 }

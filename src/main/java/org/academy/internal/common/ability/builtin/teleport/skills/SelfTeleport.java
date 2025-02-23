@@ -10,14 +10,14 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.client.render.AcademyCraftRenderSystem;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.server.network.AcademyCraftServerRequestHandlers;
-import org.academy.api.server.network.ServerRequestHandler;
+import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
+import org.academy.api.server.network.AcademyCraftRequestHandlerServer;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -41,7 +41,7 @@ public final class SelfTeleport extends Skill {
             @Override
             public void run() {
                 AcademyCraftRenderSystem.RENDERER_LIST.remove(Client.RENDERER);
-                NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
+                AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
             }
         };
         InputSystem.KEY_PRESS_MAP.put(List.of(GLFW.GLFW_KEY_E), start);
@@ -50,7 +50,7 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServerRequestHandlers.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST, new ServerRequestHandler() {
+        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST, new AcademyCraftRequestHandlerServer() {
             @Override
             public void handle(ServerGamePacketListenerImpl serverGamePacketListenerImpl) {
                 ServerPlayer serverPlayer = serverGamePacketListenerImpl.player;

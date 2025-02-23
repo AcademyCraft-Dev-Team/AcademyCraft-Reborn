@@ -3,3 +3,5 @@ transitive-accessible method net/minecraft/client/renderer/entity/EntityRenderer
 transitive-accessible field net/minecraft/network/ConnectionProtocol PROTOCOL_BY_PACKET Ljava/util/Map;
 transitive-accessible class net/minecraft/client/renderer/RenderType$CompositeRenderType
 transitive-accessible class net/minecraft/client/renderer/RenderType$CompositeState
+transitive-accessible class net/minecraft/client/renderer/RenderStateShard$TextureStateShard
+transitive-accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer addLayer (Lnet/minecraft/client/renderer/entity/layers/RenderLayer;)Z

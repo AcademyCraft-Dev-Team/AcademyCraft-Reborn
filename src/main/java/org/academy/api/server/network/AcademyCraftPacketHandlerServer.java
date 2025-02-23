@@ -4,6 +4,6 @@ import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
 @FunctionalInterface
-public interface PacketHandlerServer {
+public interface AcademyCraftPacketHandlerServer {
     void handle(ServerGamePacketListenerImpl listener, ServerboundCustomPayloadPacket packet);
 }

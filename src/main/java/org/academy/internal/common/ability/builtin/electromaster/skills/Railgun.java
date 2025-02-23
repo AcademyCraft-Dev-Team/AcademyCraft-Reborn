@@ -10,12 +10,12 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.client.util.KeyBindingUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.server.network.AcademyCraftServerRequestHandlers;
+import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.RailgunRay;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -33,7 +33,7 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServerRequestHandlers.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST, (serverGamePacketListenerImpl) -> {
+        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST, (serverGamePacketListenerImpl) -> {
             Player player = serverGamePacketListenerImpl.player;
             EntityType<?> targetEntity = AcademyCraftEntityTypes.THROWN_COIN_ENTITY_TYPE;
             Vec3 lookVec = player.getLookAngle().scale(2);
@@ -61,7 +61,7 @@ public class Railgun extends Skill {
     @Environment(EnvType.CLIENT)
     @Override
     public void initClient() {
-        Runnable runnable = () -> NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
+        Runnable runnable = () -> AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
         List<Integer> keys = new ArrayList<>();
         keys.add(GLFW.GLFW_KEY_X);
         KeyBindingUtil.registerSkillKeyBinding(this, runnable, keys);

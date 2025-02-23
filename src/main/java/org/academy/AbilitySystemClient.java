@@ -8,6 +8,7 @@ import org.academy.api.common.ability.Skill;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Collections;
+import java.util.List;
 
 public final class AbilitySystemClient {
     public static boolean active = false;

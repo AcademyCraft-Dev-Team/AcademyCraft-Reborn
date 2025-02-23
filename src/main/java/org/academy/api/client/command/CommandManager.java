@@ -9,7 +9,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.Response;
@@ -65,8 +65,8 @@ public class CommandManager {
                 HISTORY.add((String) o);
             }
         };
-        NetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_LEARNED_SKILL_RESPONSE, response);
-        NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_LEARNED_SKILL_REQUEST));
+        AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_LEARNED_SKILL_RESPONSE, response);
+        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_LEARNED_SKILL_REQUEST));
         return 1;
     }
 
@@ -77,8 +77,8 @@ public class CommandManager {
                 HISTORY.add((String) o);
             }
         };
-        NetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, response);
-        NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_ALL_SKILL_REQUEST));
+        AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, response);
+        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_ALL_SKILL_REQUEST));
         return 1;
     }
 
@@ -92,8 +92,8 @@ public class CommandManager {
                 HISTORY.add("Fail," + response.dataList.get(1));
             }
         };
-        NetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_RESPONSE, response);
-        NetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST));
+        AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_RESPONSE, response);
+        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST));
         return 1;
     }
 

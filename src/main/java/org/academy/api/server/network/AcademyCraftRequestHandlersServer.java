@@ -16,13 +16,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
-public class AcademyCraftServerRequestHandlers {
-    public static final Map<ResourceLocation, ServerRequestHandler> REQUEST_HANDLER_MAP = new HashMap<>();
+public class AcademyCraftRequestHandlersServer {
+    public static final Map<ResourceLocation, AcademyCraftRequestHandlerServer> REQUEST_HANDLER_MAP = new HashMap<>();
 
     static {
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_LEARN_ABILITY_REQUEST, serverGamePacketListenerImpl -> {
             Response response = new Response();
-            NetworkSystemServer.SERVER_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.C2S_CHANGE_ABILITY_CATEGORY_RESPONSE, response);
+            AcademyCraftNetworkSystemServer.SERVER_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.C2S_CHANGE_ABILITY_CATEGORY_RESPONSE, response);
             serverGamePacketListenerImpl.send(new S2CRequestPacket(AcademyCraftNetworkResourceLocations.S2C_CHANGE_ABILITY_CATEGORY_REQUEST));
 
             Executors.newCachedThreadPool().execute(() -> Executors.newCachedThreadPool().execute(() -> {
@@ -64,6 +64,6 @@ public class AcademyCraftServerRequestHandlers {
         });
     }
 
-    private AcademyCraftServerRequestHandlers() {
+    private AcademyCraftRequestHandlersServer() {
     }
 }

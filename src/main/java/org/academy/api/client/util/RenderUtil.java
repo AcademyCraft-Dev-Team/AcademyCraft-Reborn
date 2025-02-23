@@ -5,12 +5,15 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
@@ -19,7 +22,35 @@ import java.util.Random;
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
 public final class RenderUtil {
-    public static final RenderType.CompositeRenderType GLOWING_CYLINDER = RenderType.create("glowing_cylinder", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLE_STRIP, 10240, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setCullState(NO_CULL).createCompositeState(false));
+    public static final RenderType.CompositeRenderType TRIANGLE_STRIP_POSITION_COLOR_TRANSLUCENT_TRANSPARENCY_NO_CULL = RenderType.create(
+            "triangle_strip_position_color",
+            DefaultVertexFormat.POSITION_COLOR,
+            VertexFormat.Mode.TRIANGLE_STRIP,
+            1024,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(POSITION_COLOR_SHADER)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .createCompositeState(false));
+
+    public static final RenderType.CompositeRenderType QUADS_POSITION_TEX_TRANSLUCENT_TRANSPARENCY_NO_CULL_COLOR_WRITE = RenderType.create(
+            "quads_position_tex_translucent_transparency_no_cull_color_write",
+            DefaultVertexFormat.POSITION_TEX,
+            VertexFormat.Mode.QUADS,
+            512,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderType.POSITION_TEX_SHADER)
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setTextureState(new RenderStateShard.TextureStateShard(new ResourceLocation(AcademyCraft.MOD_ID, "textures/skills/effects/line_segment.png"), true, false))
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .createCompositeState(false)
+
+    );
 
     public static void translateToForward(final PoseStack poseStack, final LivingEntity livingEntity, final float distance) {
         final Vec3 lookVec = livingEntity.getLookAngle();
@@ -94,6 +125,7 @@ public final class RenderUtil {
 
             for (float[] edge : edges) {
                 addLine(vertexConsumer, pose, edge[0], edge[1], edge[2], edge[3], edge[4], edge[5], r, g, b, a);
+
             }
         }
     }
@@ -102,22 +134,22 @@ public final class RenderUtil {
         /**
          * 渲染闪电/电弧，但是比原版更加自定义
          *
-         * @param poseStack PoseStack
+         * @param poseStack    PoseStack
          * @param bufferSource MultiBufferSource
-         * @param seed 随机路径种子
-         * @param r 红色
-         * @param g 绿色
-         * @param b 蓝色
-         * @param alpha 透明度
-         * @param startY 起点
-         * @param endY 终点
-         * @param size 大小
-         * @param segments 边数
-         * @param points 细分点
-         * @param amplitude 幅度
+         * @param seed         随机路径种子
+         * @param r            红色
+         * @param g            绿色
+         * @param b            蓝色
+         * @param alpha        透明度
+         * @param startY       起点
+         * @param endY         终点
+         * @param size         大小
+         * @param segments     边数
+         * @param points       细分点
+         * @param amplitude    幅度
          */
         public static void renderLightning(PoseStack poseStack, MultiBufferSource bufferSource, long seed, float r, float g, float b, float alpha, float startY, float endY, float size, int segments, int points, float amplitude) {
-            VertexConsumer vertexConsumer = bufferSource.getBuffer(GLOWING_CYLINDER);
+            VertexConsumer vertexConsumer = bufferSource.getBuffer(TRIANGLE_STRIP_POSITION_COLOR_TRANSLUCENT_TRANSPARENCY_NO_CULL);
             Matrix4f matrix4f = poseStack.last().pose();
             Matrix3f matrix3f = poseStack.last().normal();
 
@@ -155,6 +187,63 @@ public final class RenderUtil {
                     addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, sx + nx, sy, sz + nz, segDx, segDy, segDz);
                     addVertex(matrix4f, matrix3f, vertexConsumer, r, g, b, alpha, ex + nx, ey, ez + nz, segDx, segDy, segDz);
                 }
+            }
+        }
+    }
+
+    public static final class ArcRenderer {
+        public static void renderArc(PoseStack poseStack, MultiBufferSource bufferSource, long seed,
+                                     float startX, float startY, float startZ,
+                                     float endX, float endY, float endZ,
+                                     float radius, int segments) {
+            VertexConsumer vc = bufferSource.getBuffer(QUADS_POSITION_TEX_TRANSLUCENT_TRANSPARENCY_NO_CULL_COLOR_WRITE);
+            Matrix4f matrix = poseStack.last().pose();
+            Random random = new Random(seed);
+
+            float dx = endX - startX, dy = endY - startY, dz = endZ - startZ;
+            float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (length == 0) return;
+            float nx = dx / length, ny = dy / length, nz = dz / length;
+
+            float ux = (Math.abs(ny) > 0.99f) ? 1 : 0, uy = 1, uz = 0;
+            float sx = ny * uz - nz * uy, sy = nz * ux - nx * uz, sz = nx * uy - ny * ux;
+            float sl = (float) Math.sqrt(sx * sx + sy * sy + sz * sz);
+            sx /= sl; sy /= sl; sz /= sl;
+
+            float px = ny * sz - nz * sy, py = nz * sx - nx * sz, pz = nx * sy - ny * sx;
+            float hw = radius / 2;
+
+            float prevLx = 0, prevLy = 0, prevLz = 0;
+            float prevRx = 0, prevRy = 0, prevRz = 0;
+
+            for (int i = 0; i <= segments; i++) {
+                float t = (float) i / segments, fx = 1 - 2 * Math.abs(t - 0.5f);
+                float angle = random.nextFloat() * (float) (2 * Math.PI), mag = random.nextFloat() * radius * fx;
+                float ox = sx * (float) Math.cos(angle) * mag + px * (float) Math.sin(angle) * mag;
+                float oy = sy * (float) Math.cos(angle) * mag + py * (float) Math.sin(angle) * mag;
+                float oz = sz * (float) Math.cos(angle) * mag + pz * (float) Math.sin(angle) * mag;
+                float cx = startX + dx * t + ox;
+                float cy = startY + dy * t + oy;
+                float cz = startZ + dz * t + oz;
+
+                float wx = ny * oz - nz * oy, wy = nz * ox - nx * oz, wz = nx * oy - ny * ox;
+                float wl = (float) Math.sqrt(wx * wx + wy * wy + wz * wz);
+                wx = (wl < 1e-6) ? sx : wx / wl;
+                wy = (wl < 1e-6) ? sy : wy / wl;
+                wz = (wl < 1e-6) ? sz : wz / wl;
+
+                float lx = cx - wx * hw, ly = cy - wy * hw, lz = cz - wz * hw;
+                float rx = cx + wx * hw, ry = cy + wy * hw, rz = cz + wz * hw;
+
+                if (i > 0) {
+                    float t0 = (float) (i - 1) / segments, t1 = (float) i / segments;
+                    vc.vertex(matrix, prevLx, prevLy, prevLz).uv(t0, 0).endVertex();
+                    vc.vertex(matrix, prevRx, prevRy, prevRz).uv(t0, 1).endVertex();
+                    vc.vertex(matrix, rx, ry, rz).uv(t1, 1).endVertex();
+                    vc.vertex(matrix, lx, ly, lz).uv(t1, 0).endVertex();
+                }
+                prevLx = lx; prevLy = ly; prevLz = lz;
+                prevRx = rx; prevRy = ry; prevRz = rz;
             }
         }
     }

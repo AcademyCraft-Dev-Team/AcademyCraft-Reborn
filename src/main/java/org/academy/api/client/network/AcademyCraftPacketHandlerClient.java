@@ -4,6 +4,6 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
 
 @FunctionalInterface
-public interface ClientHandler {
+public interface AcademyCraftPacketHandlerClient {
     void handle(ClientPacketListener listener, ClientboundCustomPayloadPacket packet);
 }
