@@ -13,22 +13,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class PlayerMixin {
     @Inject(method = "hurt", at = @At("HEAD"), cancellable = true)
     public void hurt(DamageSource damageSource, float f, CallbackInfoReturnable<Boolean> cir) {
+        Player player = (Player) (Object) this;
         Entity source = damageSource.getEntity();
         Entity directEntity = damageSource.getDirectEntity();
-        if (source != null) {
-            if (!damageSource.is(DamageTypes.THROWN)) {
-                source.hurt(damageSource, f);
-                cir.setReturnValue(false);
+        if (source != player) {
+            if (source != null) {
+                if (!damageSource.is(DamageTypes.THROWN)) {
+                    source.hurt(damageSource, f);
+                    cir.setReturnValue(false);
+                }
             }
-        }
-        if (directEntity != null) {
-            if (damageSource.is(DamageTypes.THROWN)) {
-                directEntity.setDeltaMovement(directEntity.getDeltaMovement().scale(10));
-                cir.setReturnValue(false);
+            if (directEntity != null) {
+                if (damageSource.is(DamageTypes.THROWN)) {
+                    directEntity.setDeltaMovement(directEntity.getDeltaMovement().scale(10));
+                    cir.setReturnValue(false);
+                }
             }
-        }
-        if (directEntity != null && source != null) {
-
         }
         cir.setReturnValue(false);
     }

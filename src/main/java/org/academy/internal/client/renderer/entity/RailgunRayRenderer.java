@@ -23,10 +23,8 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay> {
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()))
         );
-        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource.getBuffer(RenderUtil.TRIANGLE_STRIP_POSITION_COLOR_TRANSLUCENT_TRANSPARENCY_NO_CULL), 1f, 0.5f, 0, 1f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.125f), 8);
-        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource.getBuffer(RenderUtil.TRIANGLE_STRIP_POSITION_COLOR_TRANSLUCENT_TRANSPARENCY_NO_CULL), 1f, 0.5f, 0, 0.25f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.15f), 8);
-        RenderUtil.LightningRenderer.renderLightning(poseStack, multiBufferSource, entity.effectTime, 0.5f, 0.975f, 1.0f, 0.125f, -0.5f, 0, 0.0125f, 8, 16, 0.5f);
-        RenderUtil.LightningRenderer.renderLightning(poseStack, multiBufferSource, entity.effectTime, 0.5f, 0.975f, 1.0f, 0.35f, -0.5f, 0, 0.015f, 8, 16, 0.5f);
+        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource, 0.906f, 0.827f, 0.694f, 1f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.125f), 8);
+        RenderUtil.RayRenderer.renderRay(poseStack, multiBufferSource, 0.906f, 0.827f, 0.694f, 0.25f, 0, 50, (((float) entity.currentLifetime / RailgunRay.defaultLifetime) * 0.15f), 8);
         poseStack.popPose();
     }
 
