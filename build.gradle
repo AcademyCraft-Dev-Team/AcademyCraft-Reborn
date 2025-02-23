@@ -7,11 +7,16 @@ java {
 }
 
 loom {
+    mixin {
+        defaultRefmapName = "${project.mod_id}.refmap.json"
+    }
     accessWidenerPath = file("src/main/resources/academy.accesswidener")
 }
 
-version = project.mod_version
-archivesBaseName = project.archives_base_name
+jar {
+    version = project.mod_version
+    archivesBaseName = project.archives_base_name
+}
 
 repositories {
     maven {
