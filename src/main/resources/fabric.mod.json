@@ -23,10 +23,11 @@
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
-    "minecraft": "${minecraft_version}"
+    "minecraft": "${minecraft_version}",
+    "modernui": "*",
+    "special-model-loader": "*"
   },
   "accessWidener": "academy.accesswidener",
   "custom": {
-
   }
 }
