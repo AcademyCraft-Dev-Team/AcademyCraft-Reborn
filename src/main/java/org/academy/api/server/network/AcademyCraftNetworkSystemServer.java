@@ -6,9 +6,9 @@ import org.academy.api.common.network.Response;
 import java.util.HashMap;
 import java.util.Map;
 
-public class NetworkSystemServer {
+public class AcademyCraftNetworkSystemServer {
     public static final Map<ResourceLocation, Response> SERVER_RESPONSE_MAP = new HashMap<>();
 
-    private NetworkSystemServer() {
+    private AcademyCraftNetworkSystemServer() {
     }
 }

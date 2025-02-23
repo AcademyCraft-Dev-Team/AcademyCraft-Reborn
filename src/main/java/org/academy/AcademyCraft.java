@@ -7,7 +7,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.world.level.storage.LevelResource;
 import org.academy.internal.AcademyCraftConfig;
 import org.academy.internal.AcademyCraftRegister;
-import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.AcademyCraftNetworkSystem;
 import org.academy.internal.common.world.level.storage.AcademyCraftWorldData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +33,7 @@ public final class AcademyCraft implements ModInitializer {
     @Override
     public void onInitialize() {
         AcademyCraftRegister.init();
-        NetworkSystem.init();
+        AcademyCraftNetworkSystem.init();
         ServerLifecycleEvents.SERVER_STARTING.register((server) -> {
             serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
             worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();

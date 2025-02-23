@@ -12,10 +12,12 @@ public class AcademyCraftEntityTypes {
     public static final List<Type<?>> TYPE_LIST = new ArrayList<>();
     public static final EntityType<ThrownCoin> THROWN_COIN_ENTITY_TYPE = EntityType.Builder.of(ThrownCoin::new, MobCategory.MISC).sized(0.5F, 0.5F).build("thrown_coin");
     public static final EntityType<RailgunRay> RAILGUN_RAY_ENTITY_TYPE = EntityType.Builder.of(RailgunRay::new, MobCategory.MISC).sized(0, 0).build("railgun_ray");
+    public static final EntityType<Arc> ARC_ENTITY_TYPE = EntityType.Builder.<Arc>of(Arc::new, MobCategory.MISC).sized(0, 0).build("arc");
 
     static {
         TYPE_LIST.add(new Type<>(THROWN_COIN_ENTITY_TYPE, "thrown_coin"));
         TYPE_LIST.add(new Type<>(RAILGUN_RAY_ENTITY_TYPE, "railgun_ray"));
+        TYPE_LIST.add(new Type<>(ARC_ENTITY_TYPE, "arc"));
     }
 
     public record Type<T extends Entity>(EntityType<T> entityType, String name) {

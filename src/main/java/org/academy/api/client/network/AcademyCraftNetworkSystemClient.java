@@ -8,7 +8,7 @@ import org.academy.api.common.network.Response;
 import java.util.HashMap;
 import java.util.Map;
 
-public class NetworkSystemClient {
+public class AcademyCraftNetworkSystemClient {
     public static final Map<ResourceLocation, Response> CLIENT_RESPONSE_MAP = new HashMap<>();
     public static Connection connection;
 
@@ -16,6 +16,6 @@ public class NetworkSystemClient {
         connection.send(packet);
     }
 
-    private NetworkSystemClient() {
+    private AcademyCraftNetworkSystemClient() {
     }
 }

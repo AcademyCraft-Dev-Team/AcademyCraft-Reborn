@@ -1,7 +1,8 @@
 package org.academy.internal.common.world.entity.projectile;
 
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.item.ItemStack;
@@ -12,8 +13,6 @@ import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.jetbrains.annotations.NotNull;
 
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
-    public Player player;
-
     public ThrownCoin(EntityType<? extends AbstractArrow> entityType, Level level) {
         super(entityType, level);
     }
@@ -31,11 +30,14 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     @Override
     protected void onHitEntity(@NotNull EntityHitResult entityHitResult) {
         if (!level().isClientSide()) {
-            if (!(entityHitResult.getEntity() == player)) {
-                level().explode(this, entityHitResult.getEntity().getX(), entityHitResult.getEntity().getY(), entityHitResult.getEntity().getZ(), 10.0F, Level.ExplosionInteraction.TNT);
-                super.onHitEntity(entityHitResult);
-            }
+            super.onHitEntity(entityHitResult);
+            level().explode(this, entityHitResult.getEntity().getX(), entityHitResult.getEntity().getY(), entityHitResult.getEntity().getZ(), 10.0F, Level.ExplosionInteraction.TNT);
         }
+    }
+
+    @Override
+    protected @NotNull SoundEvent getDefaultHitGroundSoundEvent() {
+        return SoundEvents.EMPTY;
     }
 
     @Override

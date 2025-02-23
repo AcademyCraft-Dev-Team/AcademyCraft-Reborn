@@ -37,7 +37,6 @@ public class CoinItem extends Item {
                     itemStack.setCount(itemStack.getCount() - 1);
                 }
                 ThrownCoin thrownCoin = new ThrownCoin(AcademyCraftEntityTypes.THROWN_COIN_ENTITY_TYPE, level);
-                thrownCoin.player = player;
                 thrownCoin.setPos(player.position().x, player.position().y + 1, player.position().z);
                 thrownCoin.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 0.5F + Math.min(-i, 10) * 0.05F, 1.0F);
                 thrownCoin.pickup = AbstractArrow.Pickup.ALLOWED;

@@ -4,8 +4,8 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.api.client.network.AcademyCraftClientPacketHandlers;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.AcademyCraftPacketHandlersClient;
+import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -25,14 +25,14 @@ public class ClientPacketListenerMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {
         instance = (ClientPacketListener) (Object) this;
-        NetworkSystemClient.connection = this.connection;
+        AcademyCraftNetworkSystemClient.connection = this.connection;
     }
 
     @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
     public void handleCustomPayload(ClientboundCustomPayloadPacket packet, CallbackInfo ci) {
         ResourceLocation identifier = packet.getIdentifier();
-        if (AcademyCraftClientPacketHandlers.HANDLER_MAP.containsKey(identifier)) {
-            AcademyCraftClientPacketHandlers.HANDLER_MAP.get(identifier).handle(instance, packet);
+        if (AcademyCraftPacketHandlersClient.HANDLER_MAP.containsKey(identifier)) {
+            AcademyCraftPacketHandlersClient.HANDLER_MAP.get(identifier).handle(instance, packet);
             ci.cancel();
         }
     }

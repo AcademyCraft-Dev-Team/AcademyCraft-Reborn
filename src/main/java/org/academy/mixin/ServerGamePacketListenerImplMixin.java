@@ -5,7 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AbilitySystem;
-import org.academy.api.server.network.AcademyCraftServerPacketHandlers;
+import org.academy.api.server.network.AcademyCraftPacketHandlersServer;
 import org.academy.internal.common.world.level.storage.AcademyCraftWorldData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -31,8 +31,8 @@ public class ServerGamePacketListenerImplMixin {
     @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
     public void handleCustomPayload(ServerboundCustomPayloadPacket packet, CallbackInfo ci) {
         ResourceLocation identifier = packet.getIdentifier();
-        if (AcademyCraftServerPacketHandlers.HANDLER_MAP.containsKey(identifier)) {
-            AcademyCraftServerPacketHandlers.HANDLER_MAP.get(identifier).handle(instance, packet);
+        if (AcademyCraftPacketHandlersServer.HANDLER_MAP.containsKey(identifier)) {
+            AcademyCraftPacketHandlersServer.HANDLER_MAP.get(identifier).handle(instance, packet);
             ci.cancel();
         }
     }
