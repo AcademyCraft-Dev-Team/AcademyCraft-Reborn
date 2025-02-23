@@ -16,6 +16,7 @@ import org.academy.api.client.util.KeyBindingUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.RailgunRay;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -52,6 +53,7 @@ public class Railgun extends Skill {
                 railgunRay.setXRot(player.getXRot());
 
                 player.level().addFreshEntity(railgunRay);
+                railgunRay.playSound(AcademyCraftSoundEvents.RAILGUN);
             } else {
                 player.sendSystemMessage(Component.literal("No"));
             }

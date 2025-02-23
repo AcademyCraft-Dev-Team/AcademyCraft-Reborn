@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class Arc extends Entity {
     public static final int defaultLifetime = 8;
-    public int currentLifetime = 8;
+    public int currentLifetime = defaultLifetime;
 
     public Arc(EntityType<?> entityType, Level level) {
         super(entityType, level);

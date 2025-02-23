@@ -6,13 +6,14 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.jetbrains.annotations.NotNull;
 
 // Only for render ray.
 public class RailgunRay extends Entity {
     // tick
     public static final int defaultLifetime = 8;
-    public int currentLifetime = 8;
+    public int currentLifetime = defaultLifetime;
     public int effectTime = 10;
 
     public RailgunRay(EntityType<?> entityType, Level level) {
