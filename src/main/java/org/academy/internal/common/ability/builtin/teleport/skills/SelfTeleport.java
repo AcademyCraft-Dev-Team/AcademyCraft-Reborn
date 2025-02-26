@@ -16,8 +16,8 @@ import org.academy.api.client.render.AcademyCraftRenderSystem;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.academy.api.server.network.AcademyCraftRequestHandlerServer;
+import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -44,8 +44,8 @@ public final class SelfTeleport extends Skill {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
             }
         };
-        InputSystem.KEY_PRESS_MAP.put(List.of(GLFW.GLFW_KEY_E), start);
-        InputSystem.KEY_RELEASE_MAP.put(List.of(GLFW.GLFW_KEY_E), stop);
+        InputSystem.KEY_PRESS_MAP.put("self_teleport.start", new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_E), start));
+        InputSystem.KEY_RELEASE_MAP.put("self_teleport.stop", new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_E), stop));
     }
 
     @Override
@@ -68,18 +68,14 @@ public final class SelfTeleport extends Skill {
         public static final AcademyCraftRenderSystem.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
             poseStack.pushPose();
 
-            final float RAY_DISTANCE = 10f;
+            final float DISTANCE = 10f;
 
-            // 准心前方 10 格
-            RenderUtil.translateToForward(poseStack, mc.player, RAY_DISTANCE);
+            RenderUtil.translateToForward(poseStack, mc.player, DISTANCE);
 
             final RenderBuffers renderBuffers = mc.renderBuffers();
 
-            // 到方框的中心
             poseStack.translate(-0.5f, -1f, -0.5f);
-            // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             RenderUtil.BoxRenderer.renderWireframeBox(poseStack, renderBuffers.bufferSource(), new AABB(0, 0, 0, 1, 2, 1), 1f, 1f, 1f, 1f);
-            //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             poseStack.popPose();
         };
     }
