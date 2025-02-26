@@ -9,6 +9,7 @@ import org.academy.internal.common.world.level.storage.AcademyCraftWorldData;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public final class AbilitySystem {
     public static final Map<String, AbilityCategory> abilityCategoryMap = new HashMap<>();
@@ -21,6 +22,14 @@ public final class AbilitySystem {
                     skill.initServer(server);
                 }
             }
+        });
+
+        ServerLifecycleEvents.SERVER_STARTED.register((server) -> {
+            AcademyCraft.executorService.scheduleAtFixedRate(() -> {
+                if (server.isRunning()) {
+                    // none
+                }
+            }, 0, 50, TimeUnit.MILLISECONDS);
         });
     }
 

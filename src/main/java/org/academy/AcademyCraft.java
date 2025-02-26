@@ -14,8 +14,11 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public final class AcademyCraft implements ModInitializer {
+    public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();;
     public static File worldDataFile;
     @Environment(EnvType.CLIENT)
     public static File clientConfigFile;
