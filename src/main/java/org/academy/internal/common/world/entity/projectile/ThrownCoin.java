@@ -31,7 +31,9 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     protected void onHitEntity(@NotNull EntityHitResult entityHitResult) {
         if (!level().isClientSide()) {
             super.onHitEntity(entityHitResult);
-            level().explode(this, entityHitResult.getEntity().getX(), entityHitResult.getEntity().getY(), entityHitResult.getEntity().getZ(), 10.0F, Level.ExplosionInteraction.TNT);
+            if (getBaseDamage() == 1000D) {
+                level().explode(this, entityHitResult.getEntity().getX(), entityHitResult.getEntity().getY(), entityHitResult.getEntity().getZ(), 10.0F, Level.ExplosionInteraction.TNT);
+            }
         }
     }
 

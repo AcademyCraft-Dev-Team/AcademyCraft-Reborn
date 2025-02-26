@@ -9,16 +9,16 @@ import org.lwjgl.glfw.GLFWScrollCallback;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class InputSystem {
-    public static final Map<List<Integer>, Runnable> KEY_PRESS_MAP = new ConcurrentHashMap<>();
-    public static final Map<List<Integer>, Runnable> KEY_RELEASE_MAP = new ConcurrentHashMap<>();
-    public static final Map<List<Integer>, Runnable> KEY_HOLD_MAP = new ConcurrentHashMap<>();
+    public static final Map<String, KeyBinding> KEY_PRESS_MAP = new ConcurrentHashMap<>();
+    public static final Map<String, KeyBinding> KEY_RELEASE_MAP = new ConcurrentHashMap<>();
+    public static final Map<String, KeyBinding> KEY_HOLD_MAP = new ConcurrentHashMap<>();
 
-    public static final List<Consumer<Integer>> scrollListeners = new CopyOnWriteArrayList<>();
+    public static final Map<String, Consumer<Integer>> scrollListeners = new ConcurrentHashMap<>();
     public static double accumulatedScrollDelta = 0;
     public static long windowHandle = -1;
     public static GLFWScrollCallback previousScrollCallback = null;
@@ -39,7 +39,7 @@ public class InputSystem {
         ClientTickEvents.START_CLIENT_TICK.register(client -> {
             processKeyEvents();
             if (accumulatedScrollDelta != 0) {
-                scrollListeners.forEach(listener -> listener.accept((int) accumulatedScrollDelta));
+                scrollListeners.values().forEach(listener -> listener.accept((int) accumulatedScrollDelta));
                 accumulatedScrollDelta = 0;
             }
         });
@@ -48,14 +48,18 @@ public class InputSystem {
     private static void processKeyEvents() {
         Map<Integer, Boolean> currentStates = new HashMap<>();
         Set<Integer> allKeys = new HashSet<>();
-        KEY_PRESS_MAP.keySet().forEach(allKeys::addAll);
-        KEY_RELEASE_MAP.keySet().forEach(allKeys::addAll);
-        KEY_HOLD_MAP.keySet().forEach(allKeys::addAll);
 
+        // 获取所有按键绑定
+        collectKeys(KEY_PRESS_MAP, allKeys);
+        collectKeys(KEY_RELEASE_MAP, allKeys);
+        collectKeys(KEY_HOLD_MAP, allKeys);
+
+        // 获取当前按键状态
         for (Integer key : allKeys) {
             currentStates.put(key, GLFW.glfwGetKey(windowHandle, key) == GLFW.GLFW_PRESS);
         }
 
+        // 处理按键事件
         handleKeyEvent(KEY_PRESS_MAP, currentStates, (wasPressed, isPressed) -> !wasPressed && isPressed);
         handleKeyEvent(KEY_RELEASE_MAP, currentStates, (wasPressed, isPressed) -> wasPressed && !isPressed);
         handleKeyEvent(KEY_HOLD_MAP, currentStates, (wasPressed, isPressed) -> isPressed);
@@ -63,13 +67,24 @@ public class InputSystem {
         keyStateMap.putAll(currentStates);
     }
 
-    private static void handleKeyEvent(Map<List<Integer>, Runnable> keyMap, Map<Integer, Boolean> currentStates, BiPredicate<Boolean, Boolean> condition) {
-        keyMap.forEach((keys, action) -> {
-            if (keys.stream().allMatch(key ->
+    private static void collectKeys(Map<String, KeyBinding> keyMap, Set<Integer> allKeys) {
+        keyMap.values().forEach(keyBinding ->
+                keyBinding.keys().forEach(supplier -> allKeys.add(supplier.get()))
+        );
+    }
+
+    private static void handleKeyEvent(Map<String, KeyBinding> keyMap, Map<Integer, Boolean> currentStates, BiPredicate<Boolean, Boolean> condition) {
+        keyMap.values().forEach(keyBinding -> {
+            List<Integer> keys = keyBinding.keys().stream().map(Supplier::get).toList();
+            boolean shouldTrigger = keys.stream().allMatch(key ->
                     condition.test(keyStateMap.getOrDefault(key, false), currentStates.getOrDefault(key, false))
-            )) {
-                action.run();
+            );
+            if (shouldTrigger) {
+                keyBinding.runnable().run();
             }
         });
+    }
+
+    public record KeyBinding(List<Supplier<Integer>> keys, Runnable runnable) {
     }
 }

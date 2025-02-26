@@ -73,6 +73,6 @@ public class ArcGenerate extends Skill {
             AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST));
             AcademyCraft.LOGGER.info("Arc Generation request handled");
         };
-        InputSystem.KEY_RELEASE_MAP.put(List.of(GLFW.GLFW_KEY_V), runnable);
+        InputSystem.KEY_RELEASE_MAP.put("arc_generate.generate", new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_V), runnable));
     }
 }
