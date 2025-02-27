@@ -17,7 +17,7 @@ public class AcademyCraftPacketHandlersServer {
         HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_REQUEST, (listener, packet) -> {
             ResourceLocation key = packet.getData().readResourceLocation();
             if (AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.containsKey(key)) {
-                AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.get(key).handle(listener);
+                AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.get(key).handle(listener, packet);
             } else {
                 throw new NoSuchElementException("Response Handler " + key + " not found");
             }

@@ -58,12 +58,17 @@ public final class AbilitySystemClient {
                             .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                             .createCompositeState(false)
             );
+            private float smoothProgress = 0.0f;
 
             @Override
             public void onHudRender(GuiGraphics guiGraphics, float partialTicks) {
                 final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(CP);
 
-                final float progress = AcademyCraftHUDSystem.cp;
+                final float targetProgress = AcademyCraftHUDSystem.cp;
+
+                smoothProgress += (targetProgress - smoothProgress) * 0.025f;
+
+                final float progress = smoothProgress;
 
                 final float userScale = 1.0f;
                 final float defaultScale = 0.2f;

@@ -12,13 +12,13 @@ public class AcademyCraftFriendlyByteBufParser {
 
     static {
         // [int]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentities.INTEGER, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readVarInt()));
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.INTEGER, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readVarInt()));
         // [string]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentities.STRING, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readUtf()));
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.STRING, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readUtf()));
         // [boolean]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentities.BOOLEAN, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readBoolean()));
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.BOOLEAN, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readBoolean()));
         // [value,value,...]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentities.LIST, (friendlyByteBuf, response) -> {
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.LIST, (friendlyByteBuf, response) -> {
             AcademyCraft.LOGGER.info("Debug 10");
             int length = friendlyByteBuf.readVarInt();
             String identifier = friendlyByteBuf.readUtf();
@@ -31,7 +31,7 @@ public class AcademyCraftFriendlyByteBufParser {
             }
         });
         // [value,value,...]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentities.CUSTOM, (friendlyByteBuf, response) -> {
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.CUSTOM, (friendlyByteBuf, response) -> {
             int typeAmount = friendlyByteBuf.readVarInt();
             List<String> typeList = new ArrayList<>();
             for (int i = 0; i < typeAmount; i++) {

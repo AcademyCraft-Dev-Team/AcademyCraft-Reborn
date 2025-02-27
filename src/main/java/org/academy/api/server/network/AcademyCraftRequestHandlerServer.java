@@ -1,7 +1,8 @@
 package org.academy.api.server.network;
 
+import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
 public interface AcademyCraftRequestHandlerServer {
-    void handle(ServerGamePacketListenerImpl serverGamePacketListenerImpl);
+    void handle(ServerGamePacketListenerImpl serverGamePacketListenerImpl, ServerboundCustomPayloadPacket packet);
 }

@@ -1,7 +1,7 @@
 package org.academy.api.common.network;
 
 // builtin
-public class AcademyCraftFriendlyByteBufIdentities {
+public class AcademyCraftFriendlyByteBufIdentifiers {
     public static final String STRING = "string";
     public static final String BOOLEAN = "boolean";
     public static final String CUSTOM = "custom";

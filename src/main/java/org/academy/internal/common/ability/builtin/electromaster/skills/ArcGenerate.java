@@ -31,7 +31,7 @@ public class ArcGenerate extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST, serverGamePacketListenerImpl -> {
+        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             Player player = serverGamePacketListenerImpl.getPlayer();
             Level level = player.level();
             if (level instanceof ServerLevel) {
