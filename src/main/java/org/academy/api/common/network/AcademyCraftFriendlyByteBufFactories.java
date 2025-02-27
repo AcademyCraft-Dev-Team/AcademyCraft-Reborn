@@ -11,23 +11,23 @@ public class AcademyCraftFriendlyByteBufFactories {
 
     static {
         // [int]
-        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentities.INTEGER, (friendlyByteBuf, value) -> friendlyByteBuf.writeVarInt((int) value.get(0)));
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.INTEGER, (friendlyByteBuf, value) -> friendlyByteBuf.writeVarInt((int) value.get(0)));
         // [string]
-        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentities.STRING, (friendlyByteBuf, value) -> friendlyByteBuf.writeUtf((String) value.get(0)));
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.STRING, (friendlyByteBuf, value) -> friendlyByteBuf.writeUtf((String) value.get(0)));
         // [boolean]
-        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentities.BOOLEAN, (friendlyByteBuf, value) -> {
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.BOOLEAN, (friendlyByteBuf, value) -> {
             friendlyByteBuf.writeBoolean((Boolean) value.get(0));
             return friendlyByteBuf;
         });
         // [int,string,value,value,...]
-        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentities.LIST, (friendlyByteBuf, value) -> {
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.LIST, (friendlyByteBuf, value) -> {
             for (Object o : value) {
                 AcademyCraft.LOGGER.info(o.toString());
             }
             String identifier = (String) value.get(0);
 
             AcademyCraft.LOGGER.info(identifier);
-            AcademyCraftFriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(AcademyCraftFriendlyByteBufIdentities.INTEGER).create(friendlyByteBuf, List.of(value.size() + 1));
+            AcademyCraftFriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(AcademyCraftFriendlyByteBufIdentifiers.INTEGER).create(friendlyByteBuf, List.of(value.size() + 1));
             for (Object o : value) {
                 AcademyCraftFriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(identifier).create(friendlyByteBuf, List.of(o));
             }
@@ -35,13 +35,13 @@ public class AcademyCraftFriendlyByteBufFactories {
             return friendlyByteBuf;
         });
         // [int,string,string...,value,value,...]
-        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentities.CUSTOM, (friendlyByteBuf, value) -> {
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.CUSTOM, (friendlyByteBuf, value) -> {
             int typeAmount = (int) value.get(0);
 
-            AcademyCraftFriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(AcademyCraftFriendlyByteBufIdentities.INTEGER).create(friendlyByteBuf,List.of(typeAmount));
+            AcademyCraftFriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(AcademyCraftFriendlyByteBufIdentifiers.INTEGER).create(friendlyByteBuf,List.of(typeAmount));
 
             for (int i = 1; i < (typeAmount + 1); i++) {
-                FRIENDLY_BYTE_BUF_FACTORY_MAP.get(AcademyCraftFriendlyByteBufIdentities.STRING).create(friendlyByteBuf, List.of(value.get(i)));
+                FRIENDLY_BYTE_BUF_FACTORY_MAP.get(AcademyCraftFriendlyByteBufIdentifiers.STRING).create(friendlyByteBuf, List.of(value.get(i)));
             }
 
             for (int i = 1; i < (typeAmount + 1); i++) {

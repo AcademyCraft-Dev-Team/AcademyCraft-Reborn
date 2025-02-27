@@ -49,17 +49,14 @@ public class InputSystem {
         Map<Integer, Boolean> currentStates = new HashMap<>();
         Set<Integer> allKeys = new HashSet<>();
 
-        // 获取所有按键绑定
         collectKeys(KEY_PRESS_MAP, allKeys);
         collectKeys(KEY_RELEASE_MAP, allKeys);
         collectKeys(KEY_HOLD_MAP, allKeys);
 
-        // 获取当前按键状态
         for (Integer key : allKeys) {
             currentStates.put(key, GLFW.glfwGetKey(windowHandle, key) == GLFW.GLFW_PRESS);
         }
 
-        // 处理按键事件
         handleKeyEvent(KEY_PRESS_MAP, currentStates, (wasPressed, isPressed) -> !wasPressed && isPressed);
         handleKeyEvent(KEY_RELEASE_MAP, currentStates, (wasPressed, isPressed) -> wasPressed && !isPressed);
         handleKeyEvent(KEY_HOLD_MAP, currentStates, (wasPressed, isPressed) -> isPressed);

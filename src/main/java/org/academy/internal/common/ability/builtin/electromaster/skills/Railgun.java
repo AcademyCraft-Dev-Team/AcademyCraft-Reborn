@@ -33,7 +33,7 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST, (serverGamePacketListenerImpl) -> {
+        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             Player player = serverGamePacketListenerImpl.player;
             EntityType<?> targetEntity = AcademyCraftEntityTypes.THROWN_COIN_ENTITY_TYPE;
             Vec3 lookVec = player.getLookAngle().scale(2);
@@ -63,6 +63,6 @@ public class Railgun extends Skill {
     @Override
     public void initClient() {
         Runnable runnable = () -> AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
-        InputSystem.KEY_RELEASE_MAP.put("railgun.shoot",new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_X ),runnable));
+        InputSystem.KEY_RELEASE_MAP.put("railgun.shoot", new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_X), runnable));
     }
 }

@@ -4,6 +4,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBuffers;
+import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -52,7 +53,7 @@ public final class SelfTeleport extends Skill {
     public void initServer(MinecraftServer server) {
         AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST, new AcademyCraftRequestHandlerServer() {
             @Override
-            public void handle(ServerGamePacketListenerImpl serverGamePacketListenerImpl) {
+            public void handle(ServerGamePacketListenerImpl serverGamePacketListenerImpl, ServerboundCustomPayloadPacket packet) {
                 ServerPlayer serverPlayer = serverGamePacketListenerImpl.player;
                 Vec3 lookDirection = serverPlayer.getLookAngle();
                 Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale(10));

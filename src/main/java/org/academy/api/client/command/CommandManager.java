@@ -11,8 +11,10 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
+import org.academy.api.common.network.AcademyCraftFriendlyByteBufIdentifiers;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.Response;
+import org.academy.internal.common.curriculum.MaximumComputingPowerCurriculum;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,15 +42,25 @@ public class CommandManager {
         dispatcher.register(
                 LiteralArgumentBuilder.<ConsoleSource>literal("skill_list")
                         .then(LiteralArgumentBuilder.<ConsoleSource>literal("all")
-                                .executes(CommandManager::fetchAllSkill))
+                                .executes(CommandManager::fetchAllSkill)
+                        )
                         .then(LiteralArgumentBuilder.<ConsoleSource>literal("learned")
-                                .executes(CommandManager::fetchLearnedSkill))
+                                .executes(CommandManager::fetchLearnedSkill)
+                        )
         );
 
         dispatcher.register(
                 LiteralArgumentBuilder.<ConsoleSource>literal("learn")
-                        .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("name", StringArgumentType.word())
-                                .executes(CommandManager::learnSkill))
+                        .then(LiteralArgumentBuilder.<ConsoleSource>literal("skill")
+                                .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
+                                        .executes(CommandManager::learnSkill)
+                                )
+                        )
+                        .then(LiteralArgumentBuilder.<ConsoleSource>literal("curriculum")
+                                .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
+                                        .executes(CommandManager::learnCurriculum)
+                                )
+                        )
         );
     }
 
@@ -94,6 +106,21 @@ public class CommandManager {
         };
         AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_RESPONSE, response);
         AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST));
+        return 1;
+    }
+
+    private static int learnCurriculum(CommandContext<ConsoleSource> context) {
+        Response response = new Response();
+        response.runnable = () -> {
+            if ((boolean) response.dataList.get(0)) {
+                HISTORY.add("Success");
+
+            } else {
+                HISTORY.add("Fail," + response.dataList.get(1));
+            }
+        };
+        AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, response);
+        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, AcademyCraftFriendlyByteBufIdentifiers.STRING, MaximumComputingPowerCurriculum.INSTANCE.identifier));
         return 1;
     }
 
