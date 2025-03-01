@@ -1,5 +1,8 @@
 package org.academy.internal.client.ui;
 
+import com.mojang.brigadier.ParseResults;
+import com.mojang.brigadier.suggestion.Suggestion;
+import com.mojang.brigadier.suggestion.Suggestions;
 import icyllis.arc3d.core.Color;
 import icyllis.modernui.core.Context;
 import icyllis.modernui.core.Handler;
@@ -20,14 +23,20 @@ import icyllis.modernui.widget.ScrollView;
 import icyllis.modernui.widget.TextView;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import org.academy.AcademyCraft;
 import org.academy.api.client.command.CommandManager;
 import org.academy.api.client.command.ConsoleSource;
+import org.academy.api.client.input.InputSystem;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.academy.api.client.command.CommandManager.HISTORY;
 
 @Environment(EnvType.CLIENT)
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "DataFlowIssue"})
 public class DeveloperFragment extends Fragment {
     private static Handler handler;
     private static ScrollView scrollView;
@@ -89,7 +98,7 @@ public class DeveloperFragment extends Fragment {
                 if (editable.toString().endsWith("\n")) {
                     if (!command.isEmpty()) {
                         HISTORY.add("MisakaCloud: " + command);
-                        CommandManager.executeCommand(command, consoleSource);
+                        AcademyCraft.executorService.execute(() -> CommandManager.executeCommand(command, consoleSource));
                     }
                     editText.setText("");
                 }
@@ -117,6 +126,20 @@ public class DeveloperFragment extends Fragment {
 
         handler = new Handler(Looper.myLooper());
         handler.post(updateHistory);
+        InputSystem.KEY_RELEASE_MAP.put("tab", new InputSystem.KeyBinding(() -> List.of(GLFW.GLFW_KEY_TAB), new Runnable() {
+            @Override
+            public void run() {
+                ParseResults<ConsoleSource> parseResults = CommandManager.dispatcher.parse(editText.getText().toString(), consoleSource);
+                CompletableFuture<Suggestions> suggestionsCompletableFuture = CommandManager.dispatcher.getCompletionSuggestions(parseResults);
+                suggestionsCompletableFuture.thenAccept(suggestions -> {
+                    AcademyCraft.LOGGER.info(Thread.currentThread().getName() + ": " + 114514);
+                    for (Suggestion suggestion : suggestions.getList()) {
+                        String suggestionText = suggestion.getText();
+                        HISTORY.add(suggestionText);
+                    }
+                });
+            }
+        }));
         return base;
     }
 
@@ -124,5 +147,6 @@ public class DeveloperFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(updateHistory);
+        InputSystem.KEY_RELEASE_MAP.remove("tab");
     }
 }
