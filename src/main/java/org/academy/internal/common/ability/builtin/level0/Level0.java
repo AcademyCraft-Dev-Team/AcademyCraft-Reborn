@@ -7,6 +7,6 @@ public class Level0 extends AbilityCategory {
     public static final Level0 INSTANCE = new Level0();
 
     private Level0() {
-        super(AbilityCategoryIdentities.LEVEL0, 10);
+        super(AbilityCategoryIdentities.LEVEL0, 100);
     }
 }
