@@ -2,7 +2,10 @@ package org.academy.internal.common.world.entity.projectile;
 
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.item.ItemStack;
@@ -12,6 +15,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("resource")
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     public ThrownCoin(EntityType<? extends AbstractArrow> entityType, Level level) {
         super(entityType, level);
@@ -29,11 +33,37 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
 
     @Override
     protected void onHitEntity(@NotNull EntityHitResult entityHitResult) {
-        if (!level().isClientSide()) {
-            super.onHitEntity(entityHitResult);
-            if (getBaseDamage() == 1000D) {
-                level().explode(this, entityHitResult.getEntity().getX(), entityHitResult.getEntity().getY(), entityHitResult.getEntity().getZ(), 10.0F, Level.ExplosionInteraction.TNT);
+        if (level().isClientSide()) {
+            return;
+        }
+
+        float speed = (float) this.getDeltaMovement().length();
+
+        float damage = (float) Math.min(Math.max(speed * this.getBaseDamage(), 0), Integer.MAX_VALUE);
+
+        Entity entity = entityHitResult.getEntity();
+        double x = entity.getX();
+        double y = entity.getY();
+        double z = entity.getZ();
+
+        Entity owner = this.getOwner();
+
+        DamageSource damageSource;
+        if (owner == null) {
+            damageSource = this.damageSources().arrow(this, this);
+        } else {
+            damageSource = this.damageSources().arrow(this, owner);
+            if (owner instanceof LivingEntity) {
+                ((LivingEntity) owner).setLastHurtMob(entity);
             }
+        }
+
+        if (entity instanceof LivingEntity) {
+            ((LivingEntity) entity).actuallyHurt(damageSource, damage);
+        }
+
+        if (this.getBaseDamage() == 1000D) {
+            level().explode(this, x, y, z, 10.0F, Level.ExplosionInteraction.TNT);
         }
     }
 
