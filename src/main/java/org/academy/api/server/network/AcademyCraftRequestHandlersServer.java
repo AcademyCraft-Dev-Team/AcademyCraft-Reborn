@@ -4,7 +4,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.academy.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.AcademyCraftFriendlyByteBufIdentifiers;
+import org.academy.api.common.network.FriendlyByteBufIdentifiers;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.Response;
 import org.academy.api.server.network.packet.S2CRequestPacket;
@@ -28,7 +28,7 @@ public class AcademyCraftRequestHandlersServer {
             Executors.newCachedThreadPool().execute(() -> Executors.newCachedThreadPool().execute(() -> {
                 while (true) {
                     if ((boolean) response.dataList.get(0)) {
-                        serverGamePacketListenerImpl.send(new S2CResponsePacket(AcademyCraftFriendlyByteBufIdentifiers.BOOLEAN, AcademyCraftNetworkResourceLocations.S2C_LEARN_ABILITY_RESPONSE, List.of("see u again")));
+                        serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.BOOLEAN, AcademyCraftNetworkResourceLocations.S2C_LEARN_ABILITY_RESPONSE, List.of("see u again")));
                         break;
                     }
 
@@ -42,29 +42,29 @@ public class AcademyCraftRequestHandlersServer {
         });
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_GET_ALL_SKILL_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             List<String> list = new ArrayList<>();
-            list.add(AcademyCraftFriendlyByteBufIdentifiers.STRING);
+            list.add(FriendlyByteBufIdentifiers.STRING);
             for (Skill skill : AbilitySystem.abilityCategoryMap.get(AcademyCraft.academyCraftWorldData.getPlayers().get(serverGamePacketListenerImpl.getPlayer().getUUID().toString()).getAbilityCategory()).skillList) {
                 list.add(skill.name);
             }
-            serverGamePacketListenerImpl.send(new S2CResponsePacket(AcademyCraftFriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, list));
+            serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, list));
         });
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             boolean randomBoolean = Math.random() < 0.5;
-            serverGamePacketListenerImpl.send(new S2CResponsePacket(AcademyCraftFriendlyByteBufIdentifiers.CUSTOM, AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_RESPONSE, List.of(2, AcademyCraftFriendlyByteBufIdentifiers.BOOLEAN, AcademyCraftFriendlyByteBufIdentifiers.STRING, randomBoolean, "test")));
+            serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.CUSTOM, AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_RESPONSE, List.of(2, FriendlyByteBufIdentifiers.BOOLEAN, FriendlyByteBufIdentifiers.STRING, randomBoolean, "test")));
         });
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_GET_LEARNED_SKILL_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             List<String> list = new ArrayList<>();
-            list.add(AcademyCraftFriendlyByteBufIdentifiers.STRING);
+            list.add(FriendlyByteBufIdentifiers.STRING);
             list.addAll(AcademyCraft.academyCraftWorldData.getPlayers().get(serverGamePacketListenerImpl.getPlayer().getUUID().toString()).getSkills());
             for (String skill : list) {
                 AcademyCraft.LOGGER.info(skill);
             }
             AcademyCraft.LOGGER.info(list.toString());
-            serverGamePacketListenerImpl.send(new S2CResponsePacket(AcademyCraftFriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_GET_LEARNED_SKILL_RESPONSE, list));
+            serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_GET_LEARNED_SKILL_RESPONSE, list));
         });
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             AcademyCraft.LOGGER.info(packet.getData().readUtf());
-            serverGamePacketListenerImpl.send(new S2CResponsePacket(AcademyCraftFriendlyByteBufIdentifiers.BOOLEAN, AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, List.of(true)));
+            serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.BOOLEAN, AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, List.of(true)));
         });
     }
 

@@ -3,10 +3,9 @@ package org.academy.api.client.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
-import org.academy.api.common.network.AcademyCraftFriendlyByteBufParser;
+import org.academy.api.common.network.FriendlyByteBufParsers;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.Response;
-import org.academy.api.server.network.AcademyCraftPacketHandlerServer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,14 +19,14 @@ public class AcademyCraftPacketHandlersClient {
             FriendlyByteBuf friendlyByteBuf = packet.getData();
             String identifier = friendlyByteBuf.readUtf();
             AcademyCraft.LOGGER.info("Debug 01");
-            if (AcademyCraftFriendlyByteBufParser.FRIENDLY_BYTE_BUF_PARSER_MAP.containsKey(identifier)) {
+            if (FriendlyByteBufParsers.FRIENDLY_BYTE_BUF_PARSER_MAP.containsKey(identifier)) {
                 ResourceLocation key = friendlyByteBuf.readResourceLocation();
                 AcademyCraft.LOGGER.info("Debug 02");
                 if (AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.containsKey(key)) {
                     AcademyCraft.LOGGER.info("Debug 03");
                     Response response = AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.get(key);
                     AcademyCraft.LOGGER.info("Debug 04");
-                    AcademyCraftFriendlyByteBufParser.FRIENDLY_BYTE_BUF_PARSER_MAP.get(identifier).parse(friendlyByteBuf, response);
+                    FriendlyByteBufParsers.FRIENDLY_BYTE_BUF_PARSER_MAP.get(identifier).parse(friendlyByteBuf, response);
                     AcademyCraft.LOGGER.info("Debug 05");
                     if (response.runnable != null) {
                         AcademyCraft.LOGGER.info("Debug 06");
