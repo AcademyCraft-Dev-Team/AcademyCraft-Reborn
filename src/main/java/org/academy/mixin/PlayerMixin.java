@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Player.class)
@@ -31,5 +32,27 @@ public class PlayerMixin {
             }
         }
         cir.setReturnValue(false);
+    }
+
+    @Inject(method = "actuallyHurt", at = @At("HEAD"), cancellable = true)
+    public void actuallyHurt(DamageSource damageSource, float f, CallbackInfo ci) {
+        Player player = (Player) (Object) this;
+        Entity source = damageSource.getEntity();
+        Entity directEntity = damageSource.getDirectEntity();
+        if (source != player) {
+            if (source != null) {
+                if (!damageSource.is(DamageTypes.THROWN)) {
+                    source.hurt(damageSource, f);
+                    ci.cancel();
+                }
+            }
+            if (directEntity != null) {
+                if (damageSource.is(DamageTypes.THROWN)) {
+                    directEntity.setDeltaMovement(directEntity.getDeltaMovement().scale(10));
+                    ci.cancel();
+                }
+            }
+        }
+        ci.cancel();
     }
 }
