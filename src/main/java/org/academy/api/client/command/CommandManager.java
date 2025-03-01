@@ -6,22 +6,22 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.common.network.AcademyCraftFriendlyByteBufIdentifiers;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.Response;
-import org.academy.internal.common.curriculum.MaximumComputingPowerCurriculum;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
-@Environment(EnvType.CLIENT)
 public class CommandManager {
     public static final List<String> HISTORY = Collections.synchronizedList(new ArrayList<>());
     public static final CommandDispatcher<ConsoleSource> dispatcher = new CommandDispatcher<>();
@@ -53,12 +53,17 @@ public class CommandManager {
                 LiteralArgumentBuilder.<ConsoleSource>literal("learn")
                         .then(LiteralArgumentBuilder.<ConsoleSource>literal("skill")
                                 .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
-                                        .executes(CommandManager::learnSkill)
+                                        .executes(context -> CommandManager.learnSkill(context, StringArgumentType.getString(context, "identifier")))
                                 )
                         )
                         .then(LiteralArgumentBuilder.<ConsoleSource>literal("curriculum")
-                                .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
-                                        .executes(CommandManager::learnCurriculum)
+                                .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string()).suggests(new SuggestionProvider<ConsoleSource>() {
+                                                    @Override
+                                                    public CompletableFuture<Suggestions> getSuggestions(CommandContext<ConsoleSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
+                                                        return null;
+                                                    }
+                                                })
+                                                .executes(context -> CommandManager.learnCurriculum(context, StringArgumentType.getString(context, "identifier")))
                                 )
                         )
         );
@@ -94,7 +99,7 @@ public class CommandManager {
         return 1;
     }
 
-    private static int learnSkill(CommandContext<ConsoleSource> context) {
+    private static int learnSkill(CommandContext<ConsoleSource> context, String identifier) {
         Response response = new Response();
         response.runnable = () -> {
             if ((boolean) response.dataList.get(0)) {
@@ -109,7 +114,7 @@ public class CommandManager {
         return 1;
     }
 
-    private static int learnCurriculum(CommandContext<ConsoleSource> context) {
+    private static int learnCurriculum(CommandContext<ConsoleSource> context, String identifier) {
         Response response = new Response();
         response.runnable = () -> {
             if ((boolean) response.dataList.get(0)) {
@@ -120,7 +125,7 @@ public class CommandManager {
             }
         };
         AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, response);
-        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, AcademyCraftFriendlyByteBufIdentifiers.STRING, MaximumComputingPowerCurriculum.INSTANCE.identifier));
+        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, AcademyCraftFriendlyByteBufIdentifiers.STRING, identifier));
         return 1;
     }
 

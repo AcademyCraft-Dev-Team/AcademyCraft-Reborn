@@ -10,10 +10,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.client.render.AcademyCraftRenderSystem;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
@@ -22,9 +24,14 @@ import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 public final class SelfTeleport extends Skill {
     public static final Skill INSTANCE = new SelfTeleport();
+    public static final String KEY_NAME_START = "self_teleport.start";
+    public static final String KEY_NAME_END = "self_teleport.end";
+    public static final Supplier<List<Integer>> KEY_START = () -> AcademyCraft.clientConfig.getKey(KEY_NAME_START, List.of(GLFW.GLFW_KEY_E));
+    public static final Supplier<List<Integer>> KEY_END = () -> AcademyCraft.clientConfig.getKey(KEY_NAME_END, List.of(GLFW.GLFW_KEY_E));
 
     private SelfTeleport() {
         super("self_teleport", 2);
@@ -35,18 +42,22 @@ public final class SelfTeleport extends Skill {
         Runnable start = new Runnable() {
             @Override
             public void run() {
-                AcademyCraftRenderSystem.RENDERER_LIST.add(Client.RENDERER);
+                if (!ClientUtil.hasScreen()) {
+                    AcademyCraftRenderSystem.RENDERER_LIST.add(Client.RENDERER);
+                }
             }
         };
-        Runnable stop = new Runnable() {
+        Runnable end = new Runnable() {
             @Override
             public void run() {
-                AcademyCraftRenderSystem.RENDERER_LIST.remove(Client.RENDERER);
-                AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
+                if (!ClientUtil.hasScreen()) {
+                    AcademyCraftRenderSystem.RENDERER_LIST.remove(Client.RENDERER);
+                    AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
+                }
             }
         };
-        InputSystem.KEY_PRESS_MAP.put("self_teleport.start", new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_E), start));
-        InputSystem.KEY_RELEASE_MAP.put("self_teleport.stop", new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_E), stop));
+        InputSystem.KEY_PRESS_MAP.put(KEY_NAME_START, new InputSystem.KeyBinding(KEY_START, start));
+        InputSystem.KEY_RELEASE_MAP.put(KEY_NAME_END, new InputSystem.KeyBinding(KEY_END, end));
     }
 
     @Override
