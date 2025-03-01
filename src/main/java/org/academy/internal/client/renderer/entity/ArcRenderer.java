@@ -23,7 +23,7 @@ public class ArcRenderer extends EntityRenderer<Arc> {
         matrix4f.rotateY((float) Math.toRadians(-entity.getYRot() - 90));
         matrix4f.rotateZ((float) Math.toRadians(-entity.getXRot() - 90));
         poseStack.mulPoseMatrix(matrix4f);
-        RenderUtil.ArcRenderer.renderArc(poseStack, multiBufferSource, entity.currentLifetime,
+        RenderUtil.ArcRenderer.renderArc(poseStack, multiBufferSource, entity.random,
                 0, 0, 0, 0, 10, 0,
                 0.1f, 16);
         poseStack.popPose();
