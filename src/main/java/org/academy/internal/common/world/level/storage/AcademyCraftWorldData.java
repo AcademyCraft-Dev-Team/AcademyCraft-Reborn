@@ -3,11 +3,17 @@ package org.academy.internal.common.world.level.storage;
 import com.google.gson.*;
 import com.google.gson.annotations.SerializedName;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.Skill;
+import org.academy.api.common.util.GsonUtil;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class AcademyCraftWorldData {
     @SerializedName("players")
@@ -27,6 +33,7 @@ public class AcademyCraftWorldData {
 
         public void setAbilityCategory(String abilityCategory) {
             this.abilityCategory = abilityCategory;
+            saveData();
         }
 
         @SerializedName("skills")
@@ -45,6 +52,7 @@ public class AcademyCraftWorldData {
 
         public void setLevel(int level) {
             this.level = level;
+            saveData();
         }
     }
 
@@ -66,30 +74,7 @@ public class AcademyCraftWorldData {
 
             Field[] fields = AcademyCraftWorldData.class.getDeclaredFields();
 
-            for (Field field : fields) {
-                String fieldName = field.getName();
-
-                if (!jsonObject.has(fieldName)) {
-                    return false;
-                }
-
-                JsonElement element = jsonObject.get(fieldName);
-                if (!element.isJsonObject()) {
-                    return false;
-                }
-
-                JsonObject nestedObject = element.getAsJsonObject();
-
-                for (Field nestedField : field.getType().getDeclaredFields()) {
-                    String nestedFieldName = nestedField.getName();
-
-                    if (!nestedObject.has(nestedFieldName)) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
+            return GsonUtil.isValidField(jsonObject, fields);
         } catch (IOException e) {
             return false;
         }

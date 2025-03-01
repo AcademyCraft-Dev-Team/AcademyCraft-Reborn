@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import org.academy.AcademyCraft;
+import org.academy.api.common.util.GsonUtil;
 
 import java.io.File;
 import java.io.FileReader;
@@ -31,18 +32,14 @@ public class AcademyCraftConfig {
         return generic;
     }
 
-    @SerializedName("gui")
-    private final Map<String, Node> gui = new HashMap<>();
-
-    public Map<String, Node> getGui() {
-        return gui;
-    }
-
     @SerializedName("key")
     private final Map<Object, List<Integer>> key = new HashMap<>();
 
     public List<Integer> getKey(String name, List<Integer> defaultValue) {
-        return key.getOrDefault(name, defaultValue);
+        if (!key.containsKey(name)) {
+            setKey(name, defaultValue);
+        }
+        return key.get(name);
     }
 
     public void setKey(String name, List<Integer> value) {
@@ -125,27 +122,6 @@ public class AcademyCraftConfig {
         }
     }
 
-    public static class Node {
-        @SerializedName("pos")
-        double[] pos;
-
-        private Node(double[] pos) {
-            this.pos = pos;
-        }
-
-        public double[] getPos() {
-            return pos;
-        }
-
-        public void setPos(double[] pos) {
-            this.pos = pos;
-            saveConfig();
-        }
-
-        private Node() {
-        }
-    }
-
     public static AcademyCraftConfig loadConfig(File file, Env env) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         if (!isValidConfig(file, env)) {
@@ -177,51 +153,7 @@ public class AcademyCraftConfig {
             Field[] fields = AcademyCraftConfig.class.getDeclaredFields();
             AcademyCraftConfig defaultConfig = getDefaultConfig(env);
 
-            for (Field field : fields) {
-                String fieldName = field.getName();
-
-                if (!jsonObject.has(fieldName)) {
-                    return false;
-                }
-
-                JsonElement element = jsonObject.get(fieldName);
-                if (!element.isJsonObject()) {
-                    return false;
-                }
-
-                JsonObject nestedObject = element.getAsJsonObject();
-
-                // ability
-                for (Field nestedField : field.getType().getDeclaredFields()) {
-                    String nestedFieldName = nestedField.getName();
-
-                    if (!nestedObject.has(nestedFieldName)) {
-                        return false;
-                    }
-                }
-
-                // gui
-                if (field.getType().equals(Map.class)) {
-                    Map<String, Node> gui = defaultConfig.getGui();
-                    JsonObject guiObject = element.getAsJsonObject();
-
-                    for (String string : gui.keySet()) {
-                        if (!guiObject.has(string)) {
-                            return false;
-                        }
-
-                        JsonObject nodeObject = nestedObject.get(string).getAsJsonObject();
-                        for (Field nodeField : Node.class.getDeclaredFields()) {
-                            String nodeFieldName = nodeField.getName();
-                            if (!nodeObject.has(nodeFieldName)) {
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return true;
+            return GsonUtil.isValidField(jsonObject, fields);
         } catch (IOException e) {
             return false;
         }
@@ -277,13 +209,7 @@ public class AcademyCraftConfig {
                 generic.getBooleanMap().put("genOres", true);
                 generic.getBooleanMap().put("genPhaseLiquid", true);
             case CLIENT:
-                Map<String, Node> gui = defaultConfig.getGui();
-                Map<String, Integer> key = new HashMap<>();
                 generic.getBooleanMap().put("useMouseWheel", true);
-                gui.put("cpbar", new Node(new double[]{-12, 12}));
-                gui.put("keyhint", new Node(new double[]{0, 30}));
-                gui.put("media", new Node(new double[]{-6, -6}));
-                gui.put("notification", new Node(new double[]{0, 15}));
         }
         return defaultConfig;
     }

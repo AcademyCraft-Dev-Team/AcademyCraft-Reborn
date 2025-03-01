@@ -5,9 +5,9 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.world.level.storage.LevelResource;
+import org.academy.api.common.network.AcademyCraftNetworkSystem;
 import org.academy.internal.AcademyCraftConfig;
 import org.academy.internal.AcademyCraftRegister;
-import org.academy.api.common.network.AcademyCraftNetworkSystem;
 import org.academy.internal.common.world.level.storage.AcademyCraftWorldData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public final class AcademyCraft implements ModInitializer {
-    public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();;
+    public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     public static File worldDataFile;
     @Environment(EnvType.CLIENT)
     public static File clientConfigFile;

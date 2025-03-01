@@ -5,6 +5,8 @@ import java.util.Random;
 import java.util.TreeMap;
 
 public class MathUtil {
+    public static final Random RANDOM = new Random();
+
     public static class WeightedRandom {
         private final NavigableMap<Double, String> map = new TreeMap<>();
         private final Random random = new Random();
