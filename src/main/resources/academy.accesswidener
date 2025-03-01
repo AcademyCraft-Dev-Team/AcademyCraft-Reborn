@@ -8,3 +8,4 @@ transitive-accessible class net/minecraft/client/renderer/RenderStateShard$Shade
 transitive-accessible class net/minecraft/client/renderer/RenderStateShard$WriteMaskStateShard
 transitive-accessible class net/minecraft/client/renderer/RenderStateShard$TransparencyStateShard
 transitive-accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer addLayer (Lnet/minecraft/client/renderer/entity/layers/RenderLayer;)Z
+transitive-accessible method net/minecraft/world/entity/LivingEntity actuallyHurt (Lnet/minecraft/world/damagesource/DamageSource;F)V
