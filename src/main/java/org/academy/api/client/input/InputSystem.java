@@ -66,13 +66,13 @@ public class InputSystem {
 
     private static void collectKeys(Map<String, KeyBinding> keyMap, Set<Integer> allKeys) {
         keyMap.values().forEach(keyBinding ->
-                keyBinding.keys().forEach(supplier -> allKeys.add(supplier.get()))
+                allKeys.addAll(keyBinding.keys().get())
         );
     }
 
     private static void handleKeyEvent(Map<String, KeyBinding> keyMap, Map<Integer, Boolean> currentStates, BiPredicate<Boolean, Boolean> condition) {
         keyMap.values().forEach(keyBinding -> {
-            List<Integer> keys = keyBinding.keys().stream().map(Supplier::get).toList();
+            List<Integer> keys = keyBinding.keys().get();
             boolean shouldTrigger = keys.stream().allMatch(key ->
                     condition.test(keyStateMap.getOrDefault(key, false), currentStates.getOrDefault(key, false))
             );
@@ -82,6 +82,6 @@ public class InputSystem {
         });
     }
 
-    public record KeyBinding(List<Supplier<Integer>> keys, Runnable runnable) {
+    public record KeyBinding(Supplier<List<Integer>> keys, Runnable runnable) {
     }
 }

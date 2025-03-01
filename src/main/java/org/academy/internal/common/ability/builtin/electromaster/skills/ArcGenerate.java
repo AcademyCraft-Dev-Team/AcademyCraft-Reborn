@@ -11,6 +11,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
@@ -21,9 +22,12 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
+    public static final String KEY_NAME = "arc_generate.generate";
+    public static final Supplier<List<Integer>> KEY = () -> AcademyCraft.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
 
     private ArcGenerate() {
         super("arc_generate", 1);
@@ -70,9 +74,11 @@ public class ArcGenerate extends Skill {
     @Override
     public void initClient() {
         Runnable runnable = () -> {
-            AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST));
-            AcademyCraft.LOGGER.info("Arc Generation request handled");
+            if (!ClientUtil.hasScreen()) {
+                AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST));
+                AcademyCraft.LOGGER.info("Arc Generation request handled");
+            }
         };
-        InputSystem.KEY_RELEASE_MAP.put("arc_generate.generate", new InputSystem.KeyBinding(List.of(() -> GLFW.GLFW_KEY_V), runnable));
+        InputSystem.KEY_RELEASE_MAP.put(KEY_NAME, new InputSystem.KeyBinding(KEY, runnable));
     }
 }

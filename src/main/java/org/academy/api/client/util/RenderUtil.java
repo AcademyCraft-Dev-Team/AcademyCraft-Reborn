@@ -160,4 +160,7 @@ public final class RenderUtil {
             }
         }
     }
+
+    private RenderUtil() {
+    }
 }
