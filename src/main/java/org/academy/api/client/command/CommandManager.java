@@ -1,6 +1,7 @@
 package org.academy.api.client.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -12,18 +13,18 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
-import org.academy.api.common.network.AcademyCraftFriendlyByteBufIdentifiers;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
+import org.academy.api.common.network.FriendlyByteBufIdentifiers;
 import org.academy.api.common.network.Response;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 
 public class CommandManager {
-    public static final List<String> HISTORY = Collections.synchronizedList(new ArrayList<>());
+    public static final List<String> HISTORY = new CopyOnWriteArrayList<>();
     public static final CommandDispatcher<ConsoleSource> dispatcher = new CommandDispatcher<>();
     public static final LiteralArgumentBuilder<ConsoleSource> CONFIG;
 
@@ -53,17 +54,29 @@ public class CommandManager {
                 LiteralArgumentBuilder.<ConsoleSource>literal("learn")
                         .then(LiteralArgumentBuilder.<ConsoleSource>literal("skill")
                                 .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
+                                        .suggests(new SuggestionProvider<ConsoleSource>() {
+                                            @Override
+                                            public CompletableFuture<Suggestions> getSuggestions(CommandContext<ConsoleSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
+                                                return CompletableFuture.supplyAsync(new Supplier<Suggestions>() {
+                                                    @Override
+                                                    public Suggestions get() {
+                                                        builder.suggest("learn");
+                                                        return builder.build();
+                                                    }
+                                                });
+                                            }
+                                        })
                                         .executes(context -> CommandManager.learnSkill(context, StringArgumentType.getString(context, "identifier")))
                                 )
                         )
                         .then(LiteralArgumentBuilder.<ConsoleSource>literal("curriculum")
-                                .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string()).suggests(new SuggestionProvider<ConsoleSource>() {
-                                                    @Override
-                                                    public CompletableFuture<Suggestions> getSuggestions(CommandContext<ConsoleSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
-                                                        return null;
-                                                    }
-                                                })
-                                                .executes(context -> CommandManager.learnCurriculum(context, StringArgumentType.getString(context, "identifier")))
+                                .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
+                                        .suggests((context, builder) -> CompletableFuture.supplyAsync(() -> {
+                                            builder.suggest("computing_power_recovery_speed_curriculum");
+                                            builder.suggest("maximum_computing_power_curriculum");
+                                            return builder.build();
+                                        }))
+                                        .executes(context -> CommandManager.learnCurriculum(context, StringArgumentType.getString(context, "identifier")))
                                 )
                         )
         );
@@ -125,7 +138,7 @@ public class CommandManager {
             }
         };
         AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, response);
-        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, AcademyCraftFriendlyByteBufIdentifiers.STRING, identifier));
+        AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, FriendlyByteBufIdentifiers.STRING, identifier));
         return 1;
     }
 
@@ -135,5 +148,9 @@ public class CommandManager {
         } catch (CommandSyntaxException e) {
             HISTORY.add(e.getMessage());
         }
+    }
+
+    public static ParseResults<ConsoleSource> parse(String input, ConsoleSource source) {
+        return dispatcher.parse(input, source);
     }
 }
