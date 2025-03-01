@@ -7,18 +7,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AcademyCraftFriendlyByteBufParser {
+public class FriendlyByteBufParsers {
     public static final Map<String, FriendlyByteBufParser> FRIENDLY_BYTE_BUF_PARSER_MAP = new HashMap<>();
 
     static {
         // [int]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.INTEGER, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readVarInt()));
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.INTEGER, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readVarInt()));
         // [string]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.STRING, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readUtf()));
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.STRING, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readUtf()));
         // [boolean]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.BOOLEAN, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readBoolean()));
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.BOOLEAN, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readBoolean()));
         // [value,value,...]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.LIST, (friendlyByteBuf, response) -> {
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.LIST, (friendlyByteBuf, response) -> {
             AcademyCraft.LOGGER.info("Debug 10");
             int length = friendlyByteBuf.readVarInt();
             String identifier = friendlyByteBuf.readUtf();
@@ -31,7 +31,7 @@ public class AcademyCraftFriendlyByteBufParser {
             }
         });
         // [value,value,...]
-        FRIENDLY_BYTE_BUF_PARSER_MAP.put(AcademyCraftFriendlyByteBufIdentifiers.CUSTOM, (friendlyByteBuf, response) -> {
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.CUSTOM, (friendlyByteBuf, response) -> {
             int typeAmount = friendlyByteBuf.readVarInt();
             List<String> typeList = new ArrayList<>();
             for (int i = 0; i < typeAmount; i++) {
@@ -44,6 +44,6 @@ public class AcademyCraftFriendlyByteBufParser {
         });
     }
 
-    private AcademyCraftFriendlyByteBufParser() {
+    private FriendlyByteBufParsers() {
     }
 }

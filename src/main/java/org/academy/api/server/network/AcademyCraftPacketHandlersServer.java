@@ -2,7 +2,7 @@ package org.academy.api.server.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.api.common.network.AcademyCraftFriendlyByteBufParser;
+import org.academy.api.common.network.FriendlyByteBufParsers;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.Response;
 
@@ -25,11 +25,11 @@ public class AcademyCraftPacketHandlersServer {
         HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RESPONSE, (listener, packet) -> {
             FriendlyByteBuf friendlyByteBuf = packet.getData();
             String identifier = friendlyByteBuf.readUtf();
-            if (AcademyCraftFriendlyByteBufParser.FRIENDLY_BYTE_BUF_PARSER_MAP.containsKey(identifier)) {
+            if (FriendlyByteBufParsers.FRIENDLY_BYTE_BUF_PARSER_MAP.containsKey(identifier)) {
                 ResourceLocation key = friendlyByteBuf.readResourceLocation();
                 if (AcademyCraftNetworkSystemServer.SERVER_RESPONSE_MAP.containsKey(key)) {
                     Response response = AcademyCraftNetworkSystemServer.SERVER_RESPONSE_MAP.get(key);
-                    AcademyCraftFriendlyByteBufParser.FRIENDLY_BYTE_BUF_PARSER_MAP.get(identifier).parse(friendlyByteBuf, response);
+                    FriendlyByteBufParsers.FRIENDLY_BYTE_BUF_PARSER_MAP.get(identifier).parse(friendlyByteBuf, response);
                     if (response.runnable != null) {
                         response.runnable.run();
                     }

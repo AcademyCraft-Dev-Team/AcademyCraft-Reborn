@@ -4,7 +4,7 @@ import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.api.common.network.AcademyCraftFriendlyByteBufFactories;
+import org.academy.api.common.network.FriendlyByteBufFactories;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 
 import java.util.List;
@@ -26,7 +26,7 @@ public class C2SRequestPacket extends ServerboundCustomPayloadPacket {
         for (int i = 0; i < objects.length; i += 2) {
             String identifier = (String) objects[i];
             Object value = objects[i + 1];
-            AcademyCraftFriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(identifier).create(buf, List.of(value));
+            FriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(identifier).create(buf, List.of(value));
         }
         return buf;
     }
