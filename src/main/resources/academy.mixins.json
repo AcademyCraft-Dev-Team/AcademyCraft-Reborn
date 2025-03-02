@@ -10,6 +10,7 @@
   ],
   "client": [
     "ClientPacketListenerMixin",
+    "IntegratedServerMixin",
     "LevelRendererMixin",
     "LocalPlayerMixin"
   ],
