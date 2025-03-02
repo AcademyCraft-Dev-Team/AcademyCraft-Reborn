@@ -24,7 +24,7 @@ public class ServerGamePacketListenerImplMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {
         instance = (ServerGamePacketListenerImpl) (Object) this;
-        AbilitySystemServer.initPlayer(player);
+        AbilitySystemServer.MinecraftServerThread.initPlayer(player);
         AcademyCraftWorldData.saveData();
     }
 

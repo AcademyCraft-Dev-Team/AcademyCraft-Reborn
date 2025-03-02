@@ -1,7 +1,6 @@
 package org.academy;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import org.academy.api.common.network.AcademyCraftNetworkSystem;
 import org.academy.internal.AcademyCraftRegister;
 import org.apache.logging.log4j.LogManager;
@@ -23,8 +22,6 @@ public final class AcademyCraft implements ModInitializer {
     public void onInitialize() {
         AcademyCraftRegister.init();
         AcademyCraftNetworkSystem.init();
-        ServerLifecycleEvents.SERVER_STARTING.register(AcademyCraftServer::init);
-        AbilitySystem.init();
     }
 
     public static void checkFile(File file) {

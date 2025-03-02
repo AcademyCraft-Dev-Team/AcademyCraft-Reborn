@@ -51,9 +51,9 @@ public final class SelfTeleport extends Skill {
             @Override
             public void run() {
                 if (!ClientUtil.hasScreen()) {
-                    AcademyCraftRenderSystem.RENDERER_LIST.remove(Client.RENDERER);
                     AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
                 }
+                AcademyCraftRenderSystem.RENDERER_LIST.remove(Client.RENDERER);
             }
         };
         InputSystem.KEY_PRESS_MAP.put(KEY_NAME_START, new InputSystem.KeyBinding(KEY_START, start));
