@@ -36,6 +36,7 @@ public class AcademyCraftServerConfig extends AcademyCraftConfig<AcademyCraftSer
         metalEntities.put("academy", academyMetalEntities);
 
         ability.getSkills().put("railgun", railGun);
+        Generic generic = getGeneric();
         generic.getBooleanMap().put("attackPlayer", true);
         generic.getBooleanMap().put("destroyBlocks", true);
         generic.getBooleanMap().put("genOres", true);
