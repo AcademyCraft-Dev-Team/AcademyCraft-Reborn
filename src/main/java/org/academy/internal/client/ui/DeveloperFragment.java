@@ -132,7 +132,6 @@ public class DeveloperFragment extends Fragment {
                 ParseResults<ConsoleSource> parseResults = CommandManager.dispatcher.parse(editText.getText().toString(), consoleSource);
                 CompletableFuture<Suggestions> suggestionsCompletableFuture = CommandManager.dispatcher.getCompletionSuggestions(parseResults);
                 suggestionsCompletableFuture.thenAccept(suggestions -> {
-                    AcademyCraft.LOGGER.info(Thread.currentThread().getName() + ": " + 114514);
                     for (Suggestion suggestion : suggestions.getList()) {
                         String suggestionText = suggestion.getText();
                         HISTORY.add(suggestionText);

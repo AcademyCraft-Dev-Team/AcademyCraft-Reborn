@@ -1,7 +1,5 @@
 package org.academy.api.common.network;
 
-import org.academy.AcademyCraft;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,17 +17,14 @@ public class FriendlyByteBufParsers {
         FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.BOOLEAN, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readBoolean()));
         // [value,value,...]
         FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.LIST, (friendlyByteBuf, response) -> {
-            AcademyCraft.LOGGER.info("Debug 10");
             int length = friendlyByteBuf.readVarInt();
             String identifier = friendlyByteBuf.readUtf();
-            AcademyCraft.LOGGER.info(identifier + " : " + length);
             for (int i = 2; i < length; i++) {
                 FRIENDLY_BYTE_BUF_PARSER_MAP.get(identifier).parse(friendlyByteBuf, response);
             }
-            for (Object o : response.dataList) {
-                AcademyCraft.LOGGER.info(o.toString());
-            }
         });
+        // [int]
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.FLOAT, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readFloat()));
         // [value,value,...]
         FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.CUSTOM, (friendlyByteBuf, response) -> {
             int typeAmount = friendlyByteBuf.readVarInt();

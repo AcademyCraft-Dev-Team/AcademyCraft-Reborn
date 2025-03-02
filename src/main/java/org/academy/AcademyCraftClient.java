@@ -12,11 +12,16 @@ import java.io.File;
 
 @Environment(EnvType.CLIENT)
 public final class AcademyCraftClient implements ClientModInitializer {
+    @Environment(EnvType.CLIENT)
+    public static File clientConfigFile;
+    @Environment(EnvType.CLIENT)
+    public static AcademyCraftConfig clientConfig;
+
     @Override
     public void onInitializeClient() {
-        AcademyCraft.clientConfigFile = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
-        AcademyCraft.checkFile(AcademyCraft.clientConfigFile);
-        AcademyCraft.clientConfig = AcademyCraftConfig.loadConfig(AcademyCraft.clientConfigFile, AcademyCraftConfig.Env.CLIENT);
+        clientConfigFile = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
+        AcademyCraft.checkFile(clientConfigFile);
+        clientConfig = AcademyCraftConfig.loadConfig(clientConfigFile, AcademyCraftConfig.Env.CLIENT);
         SpecialModelLoaderEvents.LOAD_SCOPE.register(location -> AcademyCraft.MOD_ID.equals(location.getNamespace()));
         InputSystem.init();
         AbilitySystemClient.init();

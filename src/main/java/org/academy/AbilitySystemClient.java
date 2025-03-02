@@ -16,12 +16,13 @@ import java.util.function.Supplier;
 public final class AbilitySystemClient {
     private static volatile boolean active = false;
     private static volatile float computingPower;
+    private static volatile float maximumComputingPower;
     public static final String KEY_NAME = "activate_ability";
-    public static final Supplier<List<Integer>> KEY = () -> AcademyCraft.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
+    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
 
     public static void init() {
         ClientLifecycleEvents.CLIENT_STARTED.register(minecraft -> {
-            for (AbilityCategory abilityCategory : AbilitySystem.abilityCategoryMap.values()) {
+            for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
                 abilityCategory.initClient();
                 for (Skill skill : abilityCategory.skillList) {
                     skill.initClient();
@@ -32,12 +33,6 @@ public final class AbilitySystemClient {
 
             AcademyCraft.executorService.scheduleAtFixedRate(() -> {
                 if (minecraft.level != null) {
-                    float currentPower = AbilitySystemClient.getComputingPower();
-                    if (currentPower >= 1f) {
-                        AbilitySystemClient.setComputingPower(0);
-                    } else {
-                        AbilitySystemClient.setComputingPower(currentPower + 0.0025f);
-                    }
                 }
             }, 0, 50, TimeUnit.MILLISECONDS);
         });
@@ -51,6 +46,14 @@ public final class AbilitySystemClient {
 
     public static void setComputingPower(float computingPower) {
         Minecraft.getInstance().execute(() -> AbilitySystemClient.computingPower = computingPower);
+    }
+
+    public static float getMaximumComputingPower() {
+        return maximumComputingPower;
+    }
+
+    public static void setMaximumComputingPower(float maximumComputingPower) {
+        Minecraft.getInstance().execute(() -> AbilitySystemClient.maximumComputingPower = maximumComputingPower);
     }
 
     public static boolean isActive() {

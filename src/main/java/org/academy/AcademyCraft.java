@@ -1,14 +1,9 @@
 package org.academy;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.minecraft.world.level.storage.LevelResource;
 import org.academy.api.common.network.AcademyCraftNetworkSystem;
-import org.academy.internal.AcademyCraftConfig;
 import org.academy.internal.AcademyCraftRegister;
-import org.academy.internal.common.world.level.storage.AcademyCraftWorldData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,15 +14,6 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public final class AcademyCraft implements ModInitializer {
     public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-    public static File worldDataFile;
-    @Environment(EnvType.CLIENT)
-    public static File clientConfigFile;
-    public static File serverConfigFile;
-    @Environment(EnvType.CLIENT)
-    public static AcademyCraftConfig clientConfig;
-    public static AcademyCraftConfig serverConfig;
-    public static AcademyCraftWorldData academyCraftWorldData;
-
     public static final boolean DEBUG_MODE = true;
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
@@ -37,14 +23,7 @@ public final class AcademyCraft implements ModInitializer {
     public void onInitialize() {
         AcademyCraftRegister.init();
         AcademyCraftNetworkSystem.init();
-        ServerLifecycleEvents.SERVER_STARTING.register((server) -> {
-            serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
-            worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
-            AcademyCraft.checkFile(serverConfigFile);
-            AcademyCraft.checkFile(worldDataFile);
-            serverConfig = AcademyCraftConfig.loadConfig(serverConfigFile, AcademyCraftConfig.Env.SERVER);
-            academyCraftWorldData = AcademyCraftWorldData.getWorldData(worldDataFile);
-        });
+        ServerLifecycleEvents.SERVER_STARTING.register(AcademyCraftServer::init);
         AbilitySystem.init();
     }
 

@@ -29,6 +29,8 @@ public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_ARC_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_arc_response");
     public static final ResourceLocation C2S_LEARN_CURRICULUM_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_learn_curriculum_request");
     public static final ResourceLocation S2C_LEARN_CURRICULUM_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_learn_curriculum_response");
+    public static final ResourceLocation C2S_SYNC_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_sync_request");
+    public static final ResourceLocation S2C_SYNC_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_sync_response");
 
     private AcademyCraftNetworkResourceLocations() {
     }

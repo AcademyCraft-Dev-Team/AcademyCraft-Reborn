@@ -10,8 +10,8 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AbilitySystemClient;
 import org.academy.AcademyCraft;
+import org.academy.api.common.util.MathUtil;
 
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static net.minecraft.client.renderer.RenderStateShard.POSITION_TEX_SHADER;
@@ -57,7 +57,7 @@ public class AcademyCraftHUDSystem {
     public static final Supplier<Float> SCALE_FACTOR = () -> 1.0f;
     public static final float DEFAULT_SCALA = 0.2F;
 
-    public static final AtomicReference<Float> smoothProgress = new AtomicReference<>(0.0f);
+    public static float smoothProgress;
 
     public static void init() {
         HudRenderCallback.EVENT.register(AcademyCraftHUDSystem::render);
@@ -71,10 +71,15 @@ public class AcademyCraftHUDSystem {
     @SuppressWarnings("UnnecessaryLocalVariable")
     public static void renderComputingPowerBar(GuiGraphics guiGraphics) {
         final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(COMPUTING_POWER_BAR);
-
-        smoothProgress.updateAndGet(oldVal -> oldVal + (AbilitySystemClient.getComputingPower() - oldVal) * 0.025f);
-        final float progress = smoothProgress.get();
-
+        final float computingPower = AbilitySystemClient.getComputingPower();
+        final float maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
+        final float progress;
+        if (computingPower != 0 || maximumComputingPower != 0) {
+            progress = AbilitySystemClient.getComputingPower() / AbilitySystemClient.getMaximumComputingPower();
+        } else {
+            progress = 0;
+        }
+        smoothProgress = MathUtil.lerp(smoothProgress, progress, 0.125f);
         final float userScale = SCALE_FACTOR.get();
         final float scale = DEFAULT_SCALA * userScale;
 
@@ -89,7 +94,7 @@ public class AcademyCraftHUDSystem {
         final float barLength = imageBarLength * scale;
 
         final float sin = (float) Math.sin(Math.toRadians(55));
-        final float barWidthOffset = barLength * (1.0f - progress);
+        final float barWidthOffset = barLength * (1.0f - smoothProgress);
         final float leftTopOffset = barWidthOffset + leftSafeZoneWidth;
         final float leftBottomOffset = (leftTopOffset + (height * sin));
 

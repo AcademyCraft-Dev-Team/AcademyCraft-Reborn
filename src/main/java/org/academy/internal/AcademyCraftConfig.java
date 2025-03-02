@@ -1,10 +1,14 @@
 package org.academy.internal;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
-import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
 
 import java.io.File;
@@ -216,9 +220,9 @@ public class AcademyCraftConfig {
 
     private static void saveConfig() {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        File configFile = (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) ? AcademyCraft.clientConfigFile : AcademyCraft.serverConfigFile;
+        File configFile = (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) ? AcademyCraftClient.clientConfigFile : AcademyCraftServer.serverConfigFile;
         try (FileWriter writer = new FileWriter(configFile)) {
-            gson.toJson(FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT ? AcademyCraft.clientConfig : AcademyCraft.serverConfig, writer);
+            gson.toJson(FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT ? AcademyCraftClient.clientConfig : AcademyCraftServer.serverConfig, writer);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save config file: " + configFile.getAbsolutePath(), e);
         }
