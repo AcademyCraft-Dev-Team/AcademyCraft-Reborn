@@ -10,6 +10,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AbilitySystemServer;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
@@ -27,6 +28,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 import java.util.function.Supplier;
 
+@SuppressWarnings("resource")
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
     public static final String KEY_NAME = "railgun.shoot";
@@ -40,6 +42,11 @@ public class Railgun extends Skill {
     public void initServer(MinecraftServer server) {
         AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             Player player = serverGamePacketListenerImpl.player;
+            String uuid = player.getStringUUID();
+            float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
+            if (computingPower < 100) {
+                return;
+            }
             EntityType<?> targetEntity = AcademyCraftEntityTypes.THROWN_COIN_ENTITY_TYPE;
             Vec3 lookVec = player.getLookAngle().scale(2);
             BlockPos pos = new BlockPos((int) (lookVec.x + player.getX()), (int) (lookVec.y + player.getEyeY()), (int) (lookVec.z + player.getZ()));
@@ -47,6 +54,7 @@ public class Railgun extends Skill {
             AABB box = new AABB(pos).inflate(2);
             List<Entity> entities = player.level().getEntities(player, box, entity -> entity.getType() == targetEntity);
             if (!entities.isEmpty()) {
+                AbilitySystemServer.setPlayerComputingPower(uuid, computingPower - 100);
                 player.sendSystemMessage(Component.literal("Yes"));
                 ThrownCoin coin = (ThrownCoin) entities.get(0);
                 coin.setBaseDamage(1000D);

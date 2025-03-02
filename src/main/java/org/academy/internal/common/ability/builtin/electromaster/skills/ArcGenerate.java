@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AbilitySystemServer;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.input.InputSystem;
@@ -30,6 +31,7 @@ public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
     public static final String KEY_NAME = "arc_generate.generate";
     public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
+    public static final float BASE_DAMAGE = 2.0F;
 
     private ArcGenerate() {
         super("arc_generate", 1);
@@ -72,7 +74,8 @@ public class ArcGenerate extends Skill {
                     if (entity == player) {
                         return;
                     }
-                    entity.hurt(player.damageSources().playerAttack(player), 2);
+                    float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
+                    entity.hurt(player.damageSources().playerAttack(player), damage);
                 });
             }
         });

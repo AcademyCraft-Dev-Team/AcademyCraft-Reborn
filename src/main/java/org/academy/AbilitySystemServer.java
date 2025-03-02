@@ -1,5 +1,7 @@
 package org.academy;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.AbilityCategory;
@@ -25,8 +27,12 @@ public class AbilitySystemServer {
     public static final List<String> UUID_LIST = new CopyOnWriteArrayList<>();
     @ApiStatus.Internal
     public static volatile boolean running;
+    @ApiStatus.Internal
+    public static volatile boolean paused = false;
 
     public static void init(final MinecraftServer server) {
+        playerMap = AcademyCraftServer.academyCraftWorldData.getPlayers();
+
         for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initServer(server);
             for (Skill skill : abilityCategory.skillList) {
@@ -35,18 +41,16 @@ public class AbilitySystemServer {
         }
 
         AcademyCraft.executorService.scheduleAtFixedRate(AbilitySystemServerThread::tick, 0, 50, TimeUnit.MILLISECONDS);
-        playerMap = AcademyCraftServer.academyCraftWorldData.getPlayers();
-
         AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SYNC_REQUEST, (listener, packet) -> MinecraftServerThread.sync(listener.player));
     }
 
     public static final class AbilitySystemServerThread {
         public static void tick() {
-            for (Runnable runnable : RUNNABLE_LIST) {
-                runnable.run();
-                RUNNABLE_LIST.remove(runnable);
-            }
-            if (running) {
+            if (running && !paused) {
+                for (Runnable runnable : RUNNABLE_LIST) {
+                    runnable.run();
+                    RUNNABLE_LIST.remove(runnable);
+                }
                 for (String uuid : UUID_LIST) {
                     tickPlayer(uuid);
                 }
@@ -90,6 +94,9 @@ public class AbilitySystemServer {
 
         public static void tickMinecraftServerThread(final MinecraftServer server) {
             running = server.isRunning();
+            if (server instanceof IntegratedServer) {
+                paused = Minecraft.getInstance().isPaused();
+            }
             UUID_LIST.clear();
             server.getPlayerList().getPlayers().forEach(player -> UUID_LIST.add(player.getStringUUID()));
         }
@@ -125,6 +132,10 @@ public class AbilitySystemServer {
 
     public static void setPlayerComputingPowerRecoverySpeed(String uuid, float speed) {
         playerMap.get(uuid).setComputingPowerRecoverySpeed(speed);
+    }
+
+    public static float getDamageMultiplier() {
+        return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();
     }
 
     public static void addTask(Runnable runnable) {

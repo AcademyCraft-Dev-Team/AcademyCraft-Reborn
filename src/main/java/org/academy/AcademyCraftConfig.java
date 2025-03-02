@@ -29,13 +29,24 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
     }
 
     @SerializedName("generic")
-    protected final Generic generic = new Generic();
+    private final Generic generic = new Generic();
 
     public Generic getGeneric() {
         return generic;
     }
 
     public static class Ability {
+        @SerializedName("damageMultiplier")
+        private volatile float damageMultiplier;
+
+        public float getDamageMultiplier() {
+            return damageMultiplier;
+        }
+
+        public void setDamageMultiplier(float damageMultiplier) {
+            AbilitySystemServer.addTask(() -> this.damageMultiplier = damageMultiplier);
+        }
+
         @SerializedName("cpRecoverSpeed")
         private float cpRecoverSpeed;
 
