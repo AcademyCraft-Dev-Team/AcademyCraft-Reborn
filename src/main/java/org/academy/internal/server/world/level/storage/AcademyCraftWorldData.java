@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import net.minecraft.client.Minecraft;
+import org.academy.AbilitySystemServer;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
@@ -48,7 +48,7 @@ public class AcademyCraftWorldData {
         }
 
         @SerializedName("level")
-        private int level;
+        private volatile int level;
 
         public final int getLevel() {
             return level;
@@ -66,7 +66,7 @@ public class AcademyCraftWorldData {
         }
 
         public final void setComputingPower(float computingPower) {
-            Minecraft.getInstance().execute(() -> this.computingPower = Math.min(getMaximumComputingPower(), computingPower));
+            AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaximumComputingPower(), computingPower));
         }
 
         @SerializedName("maximumComputingPower")
@@ -77,7 +77,7 @@ public class AcademyCraftWorldData {
         }
 
         public void setMaximumComputingPower(float maximumComputingPower) {
-            Minecraft.getInstance().execute(() -> this.maximumComputingPower = maximumComputingPower);
+            AbilitySystemServer.addTask(() -> this.maximumComputingPower = maximumComputingPower);
         }
 
         @SerializedName("computingPowerRecoverySpeed")
@@ -88,7 +88,7 @@ public class AcademyCraftWorldData {
         }
 
         public void setComputingPowerRecoverySpeed(float computingPowerRecoverySpeed) {
-            Minecraft.getInstance().execute(() -> this.computingPowerRecoverySpeed = computingPowerRecoverySpeed);
+            AbilitySystemServer.addTask(() -> this.computingPowerRecoverySpeed = computingPowerRecoverySpeed);
         }
     }
 

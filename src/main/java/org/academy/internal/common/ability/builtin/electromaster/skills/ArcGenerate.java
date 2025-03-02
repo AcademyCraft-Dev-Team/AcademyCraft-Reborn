@@ -7,7 +7,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.input.InputSystem;
@@ -43,8 +42,9 @@ public class ArcGenerate extends Skill {
             Level level = player.level();
             if (level instanceof ServerLevel) {
                 AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getStringUUID());
-                if (data.getComputingPower() > 10) {
-                    data.setComputingPower(data.getComputingPower() - 10);
+                float currentComputingPower = data.getComputingPower();
+                if (currentComputingPower > 10) {
+                    data.setComputingPower(currentComputingPower - 10);
                 } else {
                     return;
                 }
@@ -83,7 +83,6 @@ public class ArcGenerate extends Skill {
         Runnable runnable = () -> {
             if (!ClientUtil.hasScreen()) {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST));
-                AcademyCraft.LOGGER.info("Arc Generation request handled");
             }
         };
         InputSystem.KEY_RELEASE_MAP.put(KEY_NAME, new InputSystem.KeyBinding(KEY, runnable));
