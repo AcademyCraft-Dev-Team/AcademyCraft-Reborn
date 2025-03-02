@@ -1,7 +1,5 @@
 package org.academy;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.AbilityCategory;
@@ -94,9 +92,6 @@ public class AbilitySystemServer {
 
         public static void tickMinecraftServerThread(final MinecraftServer server) {
             running = server.isRunning();
-            if (server instanceof IntegratedServer) {
-                paused = Minecraft.getInstance().isPaused();
-            }
             UUID_LIST.clear();
             server.getPlayerList().getPlayers().forEach(player -> UUID_LIST.add(player.getStringUUID()));
         }

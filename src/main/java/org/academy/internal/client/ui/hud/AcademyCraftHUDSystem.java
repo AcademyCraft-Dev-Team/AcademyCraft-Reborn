@@ -74,7 +74,7 @@ public class AcademyCraftHUDSystem {
         final float computingPower = AbilitySystemClient.getComputingPower();
         final float maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
         final float progress;
-        if (computingPower != 0 || maximumComputingPower != 0) {
+        if (computingPower != 0 && maximumComputingPower != 0) {
             progress = AbilitySystemClient.getComputingPower() / AbilitySystemClient.getMaximumComputingPower();
         } else {
             progress = 0;
