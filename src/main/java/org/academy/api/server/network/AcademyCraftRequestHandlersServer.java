@@ -2,10 +2,10 @@ package org.academy.api.server.network;
 
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AbilitySystem;
-import org.academy.AcademyCraft;
+import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.FriendlyByteBufIdentifiers;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
+import org.academy.api.common.network.FriendlyByteBufIdentifiers;
 import org.academy.api.common.network.Response;
 import org.academy.api.server.network.packet.S2CRequestPacket;
 import org.academy.api.server.network.packet.S2CResponsePacket;
@@ -43,7 +43,7 @@ public class AcademyCraftRequestHandlersServer {
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_GET_ALL_SKILL_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             List<String> list = new ArrayList<>();
             list.add(FriendlyByteBufIdentifiers.STRING);
-            for (Skill skill : AbilitySystem.abilityCategoryMap.get(AcademyCraft.academyCraftWorldData.getPlayers().get(serverGamePacketListenerImpl.getPlayer().getUUID().toString()).getAbilityCategory()).skillList) {
+            for (Skill skill : AbilitySystem.ABILITY_CATEGORY_MAP.get(AcademyCraftServer.academyCraftWorldData.getPlayers().get(serverGamePacketListenerImpl.getPlayer().getUUID().toString()).getAbilityCategory()).skillList) {
                 list.add(skill.name);
             }
             serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, list));
@@ -55,15 +55,10 @@ public class AcademyCraftRequestHandlersServer {
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_GET_LEARNED_SKILL_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             List<String> list = new ArrayList<>();
             list.add(FriendlyByteBufIdentifiers.STRING);
-            list.addAll(AcademyCraft.academyCraftWorldData.getPlayers().get(serverGamePacketListenerImpl.getPlayer().getUUID().toString()).getSkills());
-            for (String skill : list) {
-                AcademyCraft.LOGGER.info(skill);
-            }
-            AcademyCraft.LOGGER.info(list.toString());
+            list.addAll(AcademyCraftServer.academyCraftWorldData.getPlayers().get(serverGamePacketListenerImpl.getPlayer().getUUID().toString()).getSkills());
             serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_GET_LEARNED_SKILL_RESPONSE, list));
         });
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, (serverGamePacketListenerImpl, packet) -> {
-            AcademyCraft.LOGGER.info(packet.getData().readUtf());
             serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.BOOLEAN, AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, List.of(true)));
         });
     }

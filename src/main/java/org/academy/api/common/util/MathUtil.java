@@ -7,6 +7,10 @@ import java.util.TreeMap;
 public class MathUtil {
     public static final Random RANDOM = new Random();
 
+    public static float lerp(float a, float b, float t) {
+        return a + t * (b - a);
+    }
+
     public static class WeightedRandom {
         private final NavigableMap<Double, String> map = new TreeMap<>();
         private final Random random = new Random();

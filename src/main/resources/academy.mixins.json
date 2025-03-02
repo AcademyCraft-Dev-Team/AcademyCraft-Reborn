@@ -9,7 +9,8 @@
   ],
   "client": [
     "ClientPacketListenerMixin",
-    "LevelRendererMixin"
+    "LevelRendererMixin",
+    "LocalPlayerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

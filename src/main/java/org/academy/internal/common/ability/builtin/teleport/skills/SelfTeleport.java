@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
@@ -30,8 +30,8 @@ public final class SelfTeleport extends Skill {
     public static final Skill INSTANCE = new SelfTeleport();
     public static final String KEY_NAME_START = "self_teleport.start";
     public static final String KEY_NAME_END = "self_teleport.end";
-    public static final Supplier<List<Integer>> KEY_START = () -> AcademyCraft.clientConfig.getKey(KEY_NAME_START, List.of(GLFW.GLFW_KEY_E));
-    public static final Supplier<List<Integer>> KEY_END = () -> AcademyCraft.clientConfig.getKey(KEY_NAME_END, List.of(GLFW.GLFW_KEY_E));
+    public static final Supplier<List<Integer>> KEY_START = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME_START, List.of(GLFW.GLFW_KEY_E));
+    public static final Supplier<List<Integer>> KEY_END = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME_END, List.of(GLFW.GLFW_KEY_E));
 
     private SelfTeleport() {
         super("self_teleport", 2);

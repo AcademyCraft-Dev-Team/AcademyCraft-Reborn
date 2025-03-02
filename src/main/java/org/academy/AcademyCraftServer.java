@@ -1,0 +1,24 @@
+package org.academy;
+
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.storage.LevelResource;
+import org.academy.internal.AcademyCraftConfig;
+import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
+
+import java.io.File;
+
+public class AcademyCraftServer {
+    public static AcademyCraftConfig serverConfig;
+    public static AcademyCraftWorldData academyCraftWorldData;
+    public static File serverConfigFile;
+    public static File worldDataFile;
+
+    public static void init(MinecraftServer server) {
+        serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
+        worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
+        AcademyCraft.checkFile(serverConfigFile);
+        AcademyCraft.checkFile(worldDataFile);
+        serverConfig = AcademyCraftConfig.loadConfig(serverConfigFile, AcademyCraftConfig.Env.SERVER);
+        academyCraftWorldData = AcademyCraftWorldData.getWorldData(worldDataFile);
+    }
+}

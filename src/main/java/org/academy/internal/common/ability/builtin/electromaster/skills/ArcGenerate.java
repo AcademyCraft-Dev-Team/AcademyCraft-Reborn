@@ -8,6 +8,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftServer;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
@@ -17,6 +19,7 @@ import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.Arc;
+import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashSet;
@@ -27,7 +30,7 @@ import java.util.function.Supplier;
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
     public static final String KEY_NAME = "arc_generate.generate";
-    public static final Supplier<List<Integer>> KEY = () -> AcademyCraft.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
+    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
 
     private ArcGenerate() {
         super("arc_generate", 1);
@@ -39,6 +42,13 @@ public class ArcGenerate extends Skill {
             Player player = serverGamePacketListenerImpl.getPlayer();
             Level level = player.level();
             if (level instanceof ServerLevel) {
+                AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getStringUUID());
+                if (data.getComputingPower() > 10) {
+                    data.setComputingPower(data.getComputingPower() - 10);
+                } else {
+                    return;
+                }
+
                 Arc arc = new Arc(level, player);
                 level.addFreshEntity(arc);
                 arc.playSound(AcademyCraftSoundEvents.ARC_WEAK);
@@ -63,10 +73,7 @@ public class ArcGenerate extends Skill {
                         return;
                     }
                     entity.hurt(player.damageSources().playerAttack(player), 2);
-                    AcademyCraft.LOGGER.info(entity.toString());
                 });
-
-                AcademyCraft.LOGGER.info("Arc generated");
             }
         });
     }

@@ -6,7 +6,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.jetbrains.annotations.NotNull;
 
 // Only for render ray.
@@ -15,6 +14,8 @@ public class RailgunRay extends Entity {
     public static final int defaultLifetime = 8;
     public int currentLifetime = defaultLifetime;
     public int effectTime = 10;
+    public float progress = 1f;
+    public float renderProgress = 1f;
 
     public RailgunRay(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -24,14 +25,15 @@ public class RailgunRay extends Entity {
     public void tick() {
         super.tick();
         effectTime--;
-        if (effectTime <= 0) {
+        if (effectTime <= -1) {
             currentLifetime--;
-            if (currentLifetime <= 0) {
+            if (currentLifetime <= -1) {
                 if (!level().isClientSide()) {
                     kill();
                 }
             }
         }
+        this.progress = (float) currentLifetime / defaultLifetime;
     }
 
     @Override

@@ -10,7 +10,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
@@ -30,7 +30,7 @@ import java.util.function.Supplier;
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
     public static final String KEY_NAME = "railgun.shoot";
-    public static final Supplier<List<Integer>> KEY = () -> AcademyCraft.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_X));
+    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_X));
 
     private Railgun() {
         super("railgun", 5);

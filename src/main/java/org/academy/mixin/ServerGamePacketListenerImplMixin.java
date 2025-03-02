@@ -4,9 +4,9 @@ import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.AbilitySystem;
+import org.academy.AbilitySystemServer;
 import org.academy.api.server.network.AcademyCraftPacketHandlersServer;
-import org.academy.internal.common.world.level.storage.AcademyCraftWorldData;
+import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -24,7 +24,7 @@ public class ServerGamePacketListenerImplMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {
         instance = (ServerGamePacketListenerImpl) (Object) this;
-        AbilitySystem.initPlayer(player);
+        AbilitySystemServer.initPlayer(player);
         AcademyCraftWorldData.saveData();
     }
 
