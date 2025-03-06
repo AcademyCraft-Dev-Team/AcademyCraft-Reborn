@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import org.academy.api.client.util.RenderUtil;
-import org.academy.internal.common.world.entity.Arc;
+import org.academy.internal.common.world.entity.skill.Arc;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 

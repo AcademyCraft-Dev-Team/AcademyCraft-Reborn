@@ -4,8 +4,8 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
-import org.academy.internal.common.world.entity.Arc;
-import org.academy.internal.common.world.entity.RailgunRay;
+import org.academy.internal.common.world.entity.skill.Arc;
+import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 
 import java.util.ArrayList;

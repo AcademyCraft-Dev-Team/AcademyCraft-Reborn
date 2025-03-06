@@ -75,7 +75,11 @@ public class AbilitySystemServer {
             player.connection.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_SYNC_RESPONSE, List.of(FriendlyByteBufIdentifiers.FLOAT, currentComputingPower, maxComputingPower, computingPowerRecoverySpeed)));
         }
 
+        // On player login
         public static void initPlayer(ServerPlayer player) {
+            if (AcademyCraftServer.academyCraftWorldData == null) {
+                return;
+            }
             if (!AcademyCraftServer.academyCraftWorldData.getPlayers().containsKey(player.getUUID().toString())) {
                 AcademyCraftWorldData.Player data = new AcademyCraftWorldData.Player();
                 data.setLevel(0);

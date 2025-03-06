@@ -16,7 +16,7 @@ public final class AcademyCraft implements ModInitializer {
     public static final boolean DEBUG_MODE = true;
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
-    public static final Logger LOGGER = LogManager.getLogger("AcademyCraft");
+    public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
 
     @Override
     public void onInitialize() {

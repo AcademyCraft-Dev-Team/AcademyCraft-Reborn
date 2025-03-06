@@ -9,3 +9,4 @@ transitive-accessible class net/minecraft/client/renderer/RenderStateShard$Write
 transitive-accessible class net/minecraft/client/renderer/RenderStateShard$TransparencyStateShard
 transitive-accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer addLayer (Lnet/minecraft/client/renderer/entity/layers/RenderLayer;)Z
 transitive-accessible method net/minecraft/world/entity/LivingEntity actuallyHurt (Lnet/minecraft/world/damagesource/DamageSource;F)V
+accessible method net/minecraft/world/item/BlockItem updateBlockStateFromTag (Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/state/BlockState;

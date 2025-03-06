@@ -21,7 +21,7 @@ import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
-import org.academy.internal.common.world.entity.RailgunRay;
+import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.lwjgl.glfw.GLFW;
 
@@ -76,7 +76,7 @@ public class Railgun extends Skill {
     @Override
     public void initClient() {
         Runnable runnable = () -> {
-            if (!ClientUtil.hasScreen()) {
+            if (ClientUtil.isScreenNull()) {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
             }
         };
