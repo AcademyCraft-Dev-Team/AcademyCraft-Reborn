@@ -42,7 +42,7 @@ public final class SelfTeleport extends Skill {
         Runnable start = new Runnable() {
             @Override
             public void run() {
-                if (!ClientUtil.hasScreen()) {
+                if (ClientUtil.isScreenNull()) {
                     AcademyCraftRenderSystem.RENDERER_LIST.add(Client.RENDERER);
                 }
             }
@@ -50,7 +50,7 @@ public final class SelfTeleport extends Skill {
         Runnable end = new Runnable() {
             @Override
             public void run() {
-                if (!ClientUtil.hasScreen()) {
+                if (ClientUtil.isScreenNull()) {
                     AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
                 }
                 AcademyCraftRenderSystem.RENDERER_LIST.remove(Client.RENDERER);

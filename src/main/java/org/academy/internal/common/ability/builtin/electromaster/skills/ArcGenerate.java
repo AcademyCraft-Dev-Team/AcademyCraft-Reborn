@@ -18,7 +18,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
-import org.academy.internal.common.world.entity.Arc;
+import org.academy.internal.common.world.entity.skill.Arc;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 import org.lwjgl.glfw.GLFW;
 
@@ -84,7 +84,7 @@ public class ArcGenerate extends Skill {
     @Override
     public void initClient() {
         Runnable runnable = () -> {
-            if (!ClientUtil.hasScreen()) {
+            if (ClientUtil.isScreenNull()) {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST));
             }
         };

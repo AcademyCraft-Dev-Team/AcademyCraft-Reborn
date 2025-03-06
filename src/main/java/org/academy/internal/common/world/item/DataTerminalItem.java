@@ -15,7 +15,7 @@ public class DataTerminalItem extends Item {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(@NotNull Level level, Player player, @NotNull InteractionHand interactionHand) {
+    public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, Player player, @NotNull InteractionHand interactionHand) {
         AcademyCraft.LOGGER.info("Player " + player.getName() + " used Data Terminal Item");
         return InteractionResultHolder.consume(player.getItemInHand(interactionHand));
     }

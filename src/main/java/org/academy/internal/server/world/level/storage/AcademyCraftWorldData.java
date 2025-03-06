@@ -137,6 +137,9 @@ public class AcademyCraftWorldData {
     }
 
     public static void saveData() {
+        if (AcademyCraftServer.academyCraftWorldData == null) {
+            return;
+        }
         final Gson gson = new GsonBuilder().setPrettyPrinting().create();
         final File configFile = AcademyCraftServer.worldDataFile;
 

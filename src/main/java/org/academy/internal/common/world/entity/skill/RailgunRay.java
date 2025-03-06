@@ -1,4 +1,4 @@
-package org.academy.internal.common.world.entity;
+package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
