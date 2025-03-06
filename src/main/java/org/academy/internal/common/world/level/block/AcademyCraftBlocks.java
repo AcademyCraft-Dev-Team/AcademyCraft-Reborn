@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class AcademyCraftBlocks {
     public static final Map<ResourceLocation, Block> BLOCKS = new HashMap<>();
-    public static final AbilityDeveloperBlock ABILITY_DEVELOPER_BLOCK = new AbilityDeveloperBlock(BlockBehaviour.Properties.of());
+    public static final AbilityDeveloperBlock ABILITY_DEVELOPER_BLOCK = new AbilityDeveloperBlock(BlockBehaviour.Properties.of().noOcclusion());
 
     static {
         BLOCKS.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer_block"), ABILITY_DEVELOPER_BLOCK);

@@ -7,7 +7,11 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -15,6 +19,7 @@ import org.academy.AcademyCraft;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
+import java.util.List;
 import java.util.Random;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
@@ -157,6 +162,57 @@ public final class RenderUtil {
                 prevRx = rx;
                 prevRy = ry;
                 prevRz = rz;
+            }
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    public static final class BakedModelRenderer {
+        public static final RenderType BAKED_MODEL_NO_TRANSPARENCY_RENDER_TYPE = RenderType.create(
+                "baked_model_no_transparency_render_type",
+                DefaultVertexFormat.NEW_ENTITY,
+                VertexFormat.Mode.QUADS,
+                1024,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
+                        .setTextureState(new RenderStateShard.TextureStateShard(
+                                TextureAtlas.LOCATION_BLOCKS,
+                                false,
+                                true
+                        ))
+                        .setLightmapState(LIGHTMAP)
+                        .setOverlayState(OVERLAY)
+                        .setTransparencyState(NO_TRANSPARENCY)
+                        .createCompositeState(true)
+        );
+        public static final RenderType BAKED_MODEL_TRANSPARENCY_RENDER_TYPE = RenderType.create(
+                "baked_model_transparency_render_type",
+                DefaultVertexFormat.NEW_ENTITY,
+                VertexFormat.Mode.QUADS,
+                1024,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
+                        .setTextureState(new RenderStateShard.TextureStateShard(
+                                TextureAtlas.LOCATION_BLOCKS,
+                                false,
+                                true
+                        ))
+                        .setLightmapState(LIGHTMAP)
+                        .setOverlayState(OVERLAY)
+                        .setCullState(NO_CULL)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(true)
+        );
+
+        public static void render(PoseStack poseStack, BakedModel bakedModel, MultiBufferSource multiBufferSource, RandomSource randomSource, boolean transparency, int light, int overlay) {
+            VertexConsumer vertexConsumer = multiBufferSource.getBuffer(transparency ? BAKED_MODEL_TRANSPARENCY_RENDER_TYPE : BAKED_MODEL_NO_TRANSPARENCY_RENDER_TYPE);
+            List<BakedQuad> bakedQuadList = bakedModel.getQuads(null, null, randomSource);
+            for (BakedQuad bakedQuad : bakedQuadList) {
+                vertexConsumer.putBulkData(poseStack.last(), bakedQuad, 1, 1, 1, light, overlay);
             }
         }
     }
