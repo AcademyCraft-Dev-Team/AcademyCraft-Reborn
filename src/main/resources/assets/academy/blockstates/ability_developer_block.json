@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "academy:block/ability_developer_block"
+      }
+    ]
+  }
+}

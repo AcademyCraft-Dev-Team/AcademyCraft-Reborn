@@ -9,7 +9,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -28,14 +30,14 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final EnumProperty<MultiBlockType> TYPE = EnumProperty.create("type", MultiBlockType.class);
     public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
-            // 以 North
+            // 以 South
             new Vec3i(0, 1, 0),   // 上
-            new Vec3i(0, 0, 1),   // 后
-            new Vec3i(0, 1, 1),   // 后上
-            new Vec3i(0, 1, 2),   // 后上上
-            new Vec3i(0, 0, 2),   // 后后
-            new Vec3i(0, 1, 2),   // 后后上
-            new Vec3i(0, 2, 2)    // 后后上上
+            new Vec3i(0, 0, 1),   // 前
+            new Vec3i(0, 1, 1),   // 前上
+            new Vec3i(0, 2, 1),   // 前上上
+            new Vec3i(0, 0, 2),   // 前前
+            new Vec3i(0, 1, 2),   // 前前上
+            new Vec3i(0, 2, 2)    // 前前上上
     );
 
     public AbilityDeveloperBlock(Properties properties) {
@@ -83,18 +85,8 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
     @SuppressWarnings("DataFlowIssue")
     @Override
     public @Nullable BlockState getStateForPlacement(@NotNull BlockPlaceContext context) {
-        Direction direction = context.getHorizontalDirection().getOpposite();
+        Direction direction = context.getHorizontalDirection();
         return super.getStateForPlacement(context).setValue(FACING, direction);
-    }
-
-    @Override
-    public @NotNull BlockState rotate(BlockState state, Rotation rotation) {
-        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
-    }
-
-    @Override
-    public @NotNull RenderShape getRenderShape(@NotNull BlockState p_49545_) {
-        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
     @Override
@@ -107,10 +99,10 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
 
         for (Vec3i vec3i : SUBJECT_BLOCKS) {
             BlockPos offsetPos = switch (direction) {
-                case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), vec3i.getZ());
-                case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), -vec3i.getZ());
-                case EAST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
-                case WEST -> pos.offset(vec3i.getZ(), vec3i.getY(), vec3i.getX());
+                case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), -vec3i.getZ());
+                case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), vec3i.getZ());
+                case EAST -> pos.offset(vec3i.getZ(), vec3i.getY(), vec3i.getX());
+                case WEST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
                 default -> pos;
             };
             subjectBlocks.add(offsetPos);
