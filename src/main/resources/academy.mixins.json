@@ -4,15 +4,19 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "DimensionDataStorageMixin",
+    "MainMixin",
     "MinecraftServerMixin",
     "PlayerMixin",
     "ServerGamePacketListenerImplMixin"
   ],
   "client": [
     "ClientPacketListenerMixin",
+    "GuiMixin",
     "IntegratedServerMixin",
     "LevelRendererMixin",
-    "LocalPlayerMixin"
+    "LocalPlayerMixin",
+    "MinecraftMixin",
+    "WindowMixin"
   ],
   "injectors": {
     "defaultRequire": 1
