@@ -17,8 +17,17 @@ import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
+    public int angle;
+    public float renderAngle;
+
     public ThrownCoin(EntityType<? extends AbstractArrow> entityType, Level level) {
         super(entityType, level);
+    }
+
+    @Override
+    public void tick() {
+        angle++;
+        super.tick();
     }
 
     @Override
