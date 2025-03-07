@@ -1,7 +1,5 @@
 package org.academy.api.common.ability;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.server.MinecraftServer;
 
 /**
@@ -16,7 +14,6 @@ public abstract class Skill {
         this.level = level;
     }
 
-    @Environment(EnvType.CLIENT)
     public void initClient() {
     }
 
