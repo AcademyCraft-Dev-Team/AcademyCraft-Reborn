@@ -3,7 +3,6 @@ package org.academy.internal.client.ui.hud;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
@@ -59,13 +58,11 @@ public class AcademyCraftHUDSystem {
 
     public static float smoothProgress;
 
-    public static void init() {
-        HudRenderCallback.EVENT.register(AcademyCraftHUDSystem::render);
-    }
-
     public static void render(GuiGraphics guiGraphics, float partialTicks) {
-        AcademyCraftHUDSystem.renderComputingPowerBarBackground(guiGraphics);
-        AcademyCraftHUDSystem.renderComputingPowerBar(guiGraphics);
+        if (AbilitySystemClient.isActiveHUD()) {
+            AcademyCraftHUDSystem.renderComputingPowerBarBackground(guiGraphics);
+            AcademyCraftHUDSystem.renderComputingPowerBar(guiGraphics);
+        }
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")

@@ -30,7 +30,7 @@ import java.util.function.Supplier;
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
     public static final String KEY_NAME = "arc_generate.generate";
-    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
+    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_G));
     public static final float BASE_DAMAGE = 2.0F;
 
     private ArcGenerate() {

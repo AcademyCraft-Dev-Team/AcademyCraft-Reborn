@@ -5,8 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.api.FabricLoader;
+import org.academy.api.common.util.GameUtil;
 import org.academy.api.common.util.GsonUtil;
 
 import java.io.File;
@@ -37,7 +36,7 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
 
     public static class Ability {
         @SerializedName("damageMultiplier")
-        private volatile float damageMultiplier;
+        private volatile float damageMultiplier = 1.0f;
 
         public float getDamageMultiplier() {
             return damageMultiplier;
@@ -188,10 +187,10 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
 
     public static void saveConfig() {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        File configFile = (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) ? AcademyCraftClient.clientConfigFile : AcademyCraftServer.serverConfigFile;
+        File configFile = GameUtil.getEnvType() == GameUtil.EnvType.CLIENT ? AcademyCraftClient.clientConfigFile : AcademyCraftServer.serverConfigFile;
 
         try (FileWriter writer = new FileWriter(configFile)) {
-            gson.toJson(FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT ? AcademyCraftClient.clientConfig : AcademyCraftServer.serverConfig, writer);
+            gson.toJson(GameUtil.getEnvType() == GameUtil.EnvType.CLIENT ? AcademyCraftClient.clientConfig : AcademyCraftServer.serverConfig, writer);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save config file: " + configFile.getAbsolutePath(), e);
         }

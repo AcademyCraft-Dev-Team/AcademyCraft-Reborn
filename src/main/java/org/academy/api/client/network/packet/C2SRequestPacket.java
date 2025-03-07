@@ -1,11 +1,11 @@
 package org.academy.api.client.network.packet;
 
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.api.common.network.FriendlyByteBufFactories;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
+import org.academy.api.common.network.FriendlyByteBufFactories;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ public class C2SRequestPacket extends ServerboundCustomPayloadPacket {
     }
 
     private static FriendlyByteBuf createByteBuf(ResourceLocation key, Object... objects) {
-        FriendlyByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
         buf.writeResourceLocation(key);
         for (int i = 0; i < objects.length; i += 2) {
             String identifier = (String) objects[i];

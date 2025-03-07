@@ -1,8 +1,5 @@
 package org.academy.internal;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -11,12 +8,14 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import org.academy.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.util.GameUtil;
 import org.academy.internal.client.renderer.blockentity.AcademyCraftBlockEntityRenderers;
 import org.academy.internal.client.renderer.entity.AcademyCraftEntityRenderers;
 import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategories;
@@ -35,7 +34,7 @@ public class AcademyCraftRegister {
 
         registerCreativeModeTab();
         registerEntityType();
-        if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
+        if (GameUtil.getEnvType() == GameUtil.EnvType.CLIENT) {
             registerEntityRenderer();
             registerBlockEntityRenderer();
         }
@@ -69,7 +68,7 @@ public class AcademyCraftRegister {
     }
 
     private static void registerCreativeModeTab() {
-        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(AcademyCraft.MOD_ID, "item_group"), FabricItemGroup.builder().icon(() -> new ItemStack(AcademyCraftItems.ACADEMY_CRAFT_ICON_ITEM)).displayItems((itemDisplayParameters, output) -> {
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(AcademyCraft.MOD_ID, "item_group"), new CreativeModeTab.Builder(CreativeModeTab.Row.TOP, 0).icon(() -> new ItemStack(AcademyCraftItems.ACADEMY_CRAFT_ICON_ITEM)).displayItems((itemDisplayParameters, output) -> {
             for (ResourceLocation resourceLocation : AcademyCraftItems.ITEMS.keySet()) {
                 Item item = AcademyCraftItems.ITEMS.get(resourceLocation);
                 if (!(item instanceof AcademyCraftIconItem)) {

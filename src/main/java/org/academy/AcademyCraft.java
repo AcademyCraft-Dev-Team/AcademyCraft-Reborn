@@ -1,6 +1,5 @@
 package org.academy;
 
-import net.fabricmc.api.ModInitializer;
 import org.academy.api.common.network.AcademyCraftNetworkSystem;
 import org.academy.internal.AcademyCraftRegister;
 import org.apache.logging.log4j.LogManager;
@@ -11,15 +10,14 @@ import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-public final class AcademyCraft implements ModInitializer {
+public final class AcademyCraft {
     public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     public static final boolean DEBUG_MODE = true;
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
 
-    @Override
-    public void onInitialize() {
+    public static void init() {
         AcademyCraftRegister.init();
         AcademyCraftNetworkSystem.init();
     }

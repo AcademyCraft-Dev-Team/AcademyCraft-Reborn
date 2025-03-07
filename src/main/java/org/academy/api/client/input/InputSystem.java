@@ -1,9 +1,5 @@
 package org.academy.api.client.input;
 
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.Minecraft;
-import org.academy.AcademyCraft;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWScrollCallback;
 
@@ -20,29 +16,17 @@ public class InputSystem {
 
     public static final Map<String, Consumer<Integer>> scrollListeners = new ConcurrentHashMap<>();
     public static double accumulatedScrollDelta = 0;
-    public static long windowHandle = -1;
-    public static GLFWScrollCallback previousScrollCallback = null;
+    public static long window = -1;
+    public static GLFWScrollCallback scrollCallback = null;
 
     public static final Map<Integer, Boolean> keyStateMap = new ConcurrentHashMap<>();
 
-    public static void init() {
-        AcademyCraft.LOGGER.info("Initializing InputSystem");
-
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-            windowHandle = Minecraft.getInstance().getWindow().getWindow();
-            previousScrollCallback = GLFW.glfwSetScrollCallback(windowHandle, (w, x, y) -> {
-                accumulatedScrollDelta += y;
-                if (previousScrollCallback != null) previousScrollCallback.invoke(w, x, y);
-            });
-        });
-
-        ClientTickEvents.START_CLIENT_TICK.register(client -> {
-            processKeyEvents();
-            if (accumulatedScrollDelta != 0) {
-                scrollListeners.values().forEach(listener -> listener.accept((int) accumulatedScrollDelta));
-                accumulatedScrollDelta = 0;
-            }
-        });
+    public static void handleTick() {
+        processKeyEvents();
+        if (accumulatedScrollDelta != 0) {
+            scrollListeners.values().forEach(listener -> listener.accept((int) accumulatedScrollDelta));
+            accumulatedScrollDelta = 0;
+        }
     }
 
     private static void processKeyEvents() {
@@ -54,7 +38,7 @@ public class InputSystem {
         collectKeys(KEY_HOLD_MAP, allKeys);
 
         for (Integer key : allKeys) {
-            currentStates.put(key, GLFW.glfwGetKey(windowHandle, key) == GLFW.GLFW_PRESS);
+            currentStates.put(key, GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS);
         }
 
         handleKeyEvent(KEY_PRESS_MAP, currentStates, (wasPressed, isPressed) -> !wasPressed && isPressed);
