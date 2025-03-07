@@ -1,7 +1,5 @@
 package org.academy.internal.common.ability.builtin.teleport.skills;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
@@ -74,7 +72,6 @@ public final class SelfTeleport extends Skill {
         });
     }
 
-    @Environment(EnvType.CLIENT)
     private static final class Client {
         public static final Minecraft mc = Minecraft.getInstance();
         public static final AcademyCraftRenderSystem.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {

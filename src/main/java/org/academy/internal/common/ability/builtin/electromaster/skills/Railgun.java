@@ -1,7 +1,5 @@
 package org.academy.internal.common.ability.builtin.electromaster.skills;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -21,8 +19,8 @@ import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
-import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
+import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -72,7 +70,6 @@ public class Railgun extends Skill {
         });
     }
 
-    @Environment(EnvType.CLIENT)
     @Override
     public void initClient() {
         Runnable runnable = () -> {

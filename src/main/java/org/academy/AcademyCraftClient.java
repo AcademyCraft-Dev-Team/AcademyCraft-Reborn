@@ -2,18 +2,13 @@ package org.academy;
 
 import dev.felnull.specialmodelloader.api.event.SpecialModelLoaderEvents;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.input.InputSystem;
 
 import java.io.File;
 
-@Environment(EnvType.CLIENT)
 public final class AcademyCraftClient implements ClientModInitializer {
-    @Environment(EnvType.CLIENT)
     public static File clientConfigFile;
-    @Environment(EnvType.CLIENT)
     public static AcademyCraftClientConfig clientConfig;
 
     @Override

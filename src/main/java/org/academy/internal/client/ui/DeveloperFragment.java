@@ -21,8 +21,6 @@ import icyllis.modernui.widget.EditText;
 import icyllis.modernui.widget.FrameLayout;
 import icyllis.modernui.widget.ScrollView;
 import icyllis.modernui.widget.TextView;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import org.academy.AcademyCraft;
 import org.academy.api.client.command.CommandManager;
 import org.academy.api.client.command.ConsoleSource;
@@ -35,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.academy.api.client.command.CommandManager.HISTORY;
 
-@Environment(EnvType.CLIENT)
 @SuppressWarnings({"UnstableApiUsage", "DataFlowIssue"})
 public class DeveloperFragment extends Fragment {
     private static Handler handler;

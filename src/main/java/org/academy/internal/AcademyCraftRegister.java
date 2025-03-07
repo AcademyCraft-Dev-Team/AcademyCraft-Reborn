@@ -1,7 +1,6 @@
 package org.academy.internal;
 
 import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -33,11 +32,12 @@ public class AcademyCraftRegister {
         registerItem();
         registerBlock();
         registerBlockEntityType();
-        registerBlockEntityRenderer();
+
         registerCreativeModeTab();
         registerEntityType();
         if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
             registerEntityRenderer();
+            registerBlockEntityRenderer();
         }
         registerSoundEvent();
         registerAbilityCategory();
@@ -86,7 +86,6 @@ public class AcademyCraftRegister {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Environment(EnvType.CLIENT)
     private static void registerEntityRenderer() {
         for (AcademyCraftEntityRenderers.Renderer renderer : AcademyCraftEntityRenderers.RENDERER_LIST) {
             EntityRenderers.register(renderer.entityType(), renderer.entityRenderer());

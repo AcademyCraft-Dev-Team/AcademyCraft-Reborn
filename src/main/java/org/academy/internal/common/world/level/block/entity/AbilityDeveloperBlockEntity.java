@@ -19,6 +19,9 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
 
     public AbilityDeveloperBlockEntity(BlockPos pos, BlockState blockState) {
         super(AcademyCraftBlockEntityTypes.ABILITY_DEVELOPER, pos, blockState);
+        if (isMain()){
+            setMainPos(pos);
+        }
         AcademyCraft.LOGGER.info(blockState.getValue(AbilityDeveloperBlock.TYPE).name);
         AcademyCraft.LOGGER.info(blockState.getValue(AbilityDeveloperBlock.FACING).getName());
     }
@@ -80,16 +83,20 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
-        tag.putInt("mainPosX", mainPos.getX());
-        tag.putInt("mainPosY", mainPos.getY());
-        tag.putInt("mainPosZ", mainPos.getZ());
+        if (!isMain()) {
+            tag.putInt("mainPosX", mainPos.getX());
+            tag.putInt("mainPosY", mainPos.getY());
+            tag.putInt("mainPosZ", mainPos.getZ());
+        }
         super.saveAdditional(tag);
     }
 
     @Override
     public void load(CompoundTag tag) {
-        setMainPos(new BlockPos(tag.getInt("mainPosX"), tag.getInt("mainPosY"), tag.getInt("mainPosZ")));
-        AcademyCraft.LOGGER.info(mainPos.toString());
+        if (!isMain()) {
+            setMainPos(new BlockPos(tag.getInt("mainPosX"), tag.getInt("mainPosY"), tag.getInt("mainPosZ")));
+            AcademyCraft.LOGGER.info(mainPos.toString());
+        }
         super.load(tag);
     }
 }

@@ -1,8 +1,6 @@
 package org.academy.internal.common.world.item;
 
 import icyllis.modernui.mc.fabric.MuiFabricApi;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -28,7 +26,6 @@ public class PortableDeveloperItem extends Item {
         return InteractionResultHolder.consume(player.getItemInHand(interactionHand));
     }
 
-    @Environment(EnvType.CLIENT)
     private void openScreen() {
         MuiFabricApi.openScreen(new DeveloperFragment());
     }
