@@ -9,7 +9,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import org.academy.AcademyCraft;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,11 +18,9 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
 
     public AbilityDeveloperBlockEntity(BlockPos pos, BlockState blockState) {
         super(AcademyCraftBlockEntityTypes.ABILITY_DEVELOPER, pos, blockState);
-        if (isMain()){
+        if (isMain()) {
             setMainPos(pos);
         }
-        AcademyCraft.LOGGER.info(blockState.getValue(AbilityDeveloperBlock.TYPE).name);
-        AcademyCraft.LOGGER.info(blockState.getValue(AbilityDeveloperBlock.FACING).getName());
     }
 
     public void setMainPos(BlockPos pos) {
@@ -95,7 +92,6 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
     public void load(CompoundTag tag) {
         if (!isMain()) {
             setMainPos(new BlockPos(tag.getInt("mainPosX"), tag.getInt("mainPosY"), tag.getInt("mainPosZ")));
-            AcademyCraft.LOGGER.info(mainPos.toString());
         }
         super.load(tag);
     }
