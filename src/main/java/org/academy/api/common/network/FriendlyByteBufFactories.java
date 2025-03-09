@@ -1,5 +1,8 @@
 package org.academy.api.common.network;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +56,15 @@ public class FriendlyByteBufFactories {
 
             return friendlyByteBuf;
         });
+        // [long]
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(FriendlyByteBufIdentifiers.LONG, (friendlyByteBuf, value) -> {
+            friendlyByteBuf.writeLong((long) value.get(0));
+            return friendlyByteBuf;
+        });
+        // [long(BlockPos)]
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(FriendlyByteBufIdentifiers.BLOCK_POS, (friendlyByteBuf, value) -> friendlyByteBuf.writeBlockPos((BlockPos) value.get(0)));
+        // [string)]
+        FRIENDLY_BYTE_BUF_FACTORY_MAP.put(FriendlyByteBufIdentifiers.RESOURCE_LOCATION, (friendlyByteBuf, value) -> friendlyByteBuf.writeResourceLocation((ResourceLocation) value.get(0)));
     }
 
     private FriendlyByteBufFactories() {

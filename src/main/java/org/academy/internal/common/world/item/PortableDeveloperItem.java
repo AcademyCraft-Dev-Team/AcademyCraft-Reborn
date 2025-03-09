@@ -1,6 +1,6 @@
 package org.academy.internal.common.world.item;
 
-import icyllis.modernui.mc.fabric.MuiFabricApi;
+import icyllis.modernui.mc.MuiModApi;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -27,6 +27,6 @@ public class PortableDeveloperItem extends Item {
     }
 
     private void openScreen() {
-        MuiFabricApi.openScreen(new PhoneFragment());
+        MuiModApi.openScreen(new PhoneFragment());
     }
 }
