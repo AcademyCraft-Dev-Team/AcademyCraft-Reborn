@@ -37,9 +37,9 @@ public class InputSystem {
                     keySuccess = true;
                 }
             }
-            if (modSuccess) {
+            if (keySuccess) {
                 requiredKeys.forEach(KEY_STATE::remove);
-                if (keySuccess) {
+                if (modSuccess) {
                     keyBinding.runnable.run();
                 }
             }
@@ -47,7 +47,6 @@ public class InputSystem {
     }
 
     public static void handleMouseButton(int button, int action, int modifiers) {
-        AcademyCraft.LOGGER.info("Handling Mouse button " + button + " action " + action + " modifiers " + modifiers);
         KEY_STATE.put(button, action);
         MOUSE_KEY_BINDINGS.values().forEach(keyBinding -> {
             Set<Integer> requiredKeys = keyBinding.inputEvent.inputs;
