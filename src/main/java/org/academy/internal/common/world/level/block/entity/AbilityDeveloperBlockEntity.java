@@ -32,14 +32,26 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
         return 1;
     }
 
+    @SuppressWarnings("DataFlowIssue")
     @Override
     public boolean isEmpty() {
-        return items.stream().allMatch(ItemStack::isEmpty);
+        if (isMain()) {
+            return items.stream().allMatch(ItemStack::isEmpty);
+        } else {
+            AbilityDeveloperBlockEntity abilityDeveloperBlockEntity = (AbilityDeveloperBlockEntity) level.getBlockEntity(mainPos);
+            return abilityDeveloperBlockEntity.isEmpty();
+        }
     }
 
+    @SuppressWarnings("DataFlowIssue")
     @Override
     public @NotNull ItemStack getItem(int slot) {
-        return items.get(slot);
+        if (isMain()) {
+            return items.get(slot);
+        } else {
+            AbilityDeveloperBlockEntity abilityDeveloperBlockEntity = (AbilityDeveloperBlockEntity) level.getBlockEntity(mainPos);
+            return abilityDeveloperBlockEntity.getItem(slot);
+        }
     }
 
     @Override
@@ -58,9 +70,15 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
 
     @Override
     public void setItem(int slot, @NotNull ItemStack stack) {
-        items.set(slot, stack);
-        if (stack.getCount() > this.getMaxStackSize()) {
-            stack.setCount(this.getMaxStackSize());
+        if (isMain()) {
+            items.set(slot, stack);
+            if (stack.getCount() > this.getMaxStackSize()) {
+                stack.setCount(this.getMaxStackSize());
+            }
+        } else {
+            if (level != null && level.getBlockEntity(mainPos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+                abilityDeveloperBlockEntity.setItem(slot, stack);
+            }
         }
         this.setChanged();
     }
@@ -79,20 +97,22 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
+    protected void saveAdditional(@NotNull CompoundTag tag) {
         if (!isMain()) {
             tag.putInt("mainPosX", mainPos.getX());
             tag.putInt("mainPosY", mainPos.getY());
             tag.putInt("mainPosZ", mainPos.getZ());
+        } else {
+            ContainerHelper.saveAllItems(tag, items);
         }
-        super.saveAdditional(tag);
     }
 
     @Override
-    public void load(CompoundTag tag) {
+    public void load(@NotNull CompoundTag tag) {
         if (!isMain()) {
             setMainPos(new BlockPos(tag.getInt("mainPosX"), tag.getInt("mainPosY"), tag.getInt("mainPosZ")));
+        } else {
+            ContainerHelper.loadAllItems(tag, items);
         }
-        super.load(tag);
     }
 }

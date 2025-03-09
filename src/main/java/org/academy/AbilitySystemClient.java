@@ -7,25 +7,30 @@ import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.List;
-import java.util.function.Supplier;
+import java.util.Set;
 
 public final class AbilitySystemClient {
     private static volatile boolean activeHUD = false;
     private static volatile float computingPower;
     private static volatile float maximumComputingPower;
+    private static AbilityCategory category;
     public static final String KEY_NAME = "activate_ability";
-    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_V));
+    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
+            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                    Set.of(GLFW.GLFW_KEY_V),
+                    GLFW.GLFW_PRESS,
+                    Set.of()
+            )));
 
     public static void initClient() {
-        InputSystem.KEY_RELEASE_MAP.put(KEY_NAME, new InputSystem.KeyBinding(KEY, () -> setActiveHUD(!activeHUD)));
+        Runnable runnable = () -> setActiveHUD(!activeHUD);
+        InputSystem.registerKeyBinding(KEY_NAME, KEY, runnable);
         for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initClient();
             for (Skill skill : abilityCategory.skillList) {
                 skill.initClient();
             }
         }
-
         CommandManager.registerCommands();
     }
 

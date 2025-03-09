@@ -26,7 +26,7 @@ public class AcademyCraftHUDSystem {
             true,
             RenderType.CompositeState.builder()
                     .setTextureState(new RenderStateShard.TextureStateShard(
-                            new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/computing_power_bar.png"),
+                            new ResourceLocation(AcademyCraft.MOD_ID, "textures/ui/hud/computing_power_bar.png"),
                             false,
                             false
                     ))
@@ -44,7 +44,7 @@ public class AcademyCraftHUDSystem {
             true,
             RenderType.CompositeState.builder()
                     .setTextureState(new RenderStateShard.TextureStateShard(
-                            new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/computing_power_bar_background.png"),
+                            new ResourceLocation(AcademyCraft.MOD_ID, "textures/ui/hud/computing_power_bar_background.png"),
                             false,
                             false
                     ))

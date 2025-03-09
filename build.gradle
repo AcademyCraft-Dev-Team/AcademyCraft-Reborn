@@ -54,6 +54,8 @@ dependencies {
     modApi "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
 
     modApi "dev.felnull:special-model-loader:1.2.0"
+
+    include modApi('teamreborn:energy:3.0.0')
 }
 
 processResources {

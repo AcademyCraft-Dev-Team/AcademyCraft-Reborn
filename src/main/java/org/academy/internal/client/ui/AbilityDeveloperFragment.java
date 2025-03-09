@@ -21,6 +21,7 @@ import icyllis.modernui.widget.EditText;
 import icyllis.modernui.widget.FrameLayout;
 import icyllis.modernui.widget.ScrollView;
 import icyllis.modernui.widget.TextView;
+import net.minecraft.core.BlockPos;
 import org.academy.AcademyCraft;
 import org.academy.api.client.command.CommandManager;
 import org.academy.api.client.command.ConsoleSource;
@@ -34,10 +35,10 @@ import java.util.concurrent.CompletableFuture;
 import static org.academy.api.client.command.CommandManager.HISTORY;
 
 @SuppressWarnings({"UnstableApiUsage", "DataFlowIssue"})
-public class DeveloperFragment extends Fragment {
+public class AbilityDeveloperFragment extends Fragment {
     private static Handler handler;
     private static ScrollView scrollView;
-    private static final ConsoleSource consoleSource = new ConsoleSource();
+    private final ConsoleSource consoleSource;
     private static TextView historyTextView;
     private static EditText editText;
     private static final StringBuilder historyContent = new StringBuilder();
@@ -58,6 +59,12 @@ public class DeveloperFragment extends Fragment {
             handler.postDelayed(this, 500);
         }
     };
+
+    public AbilityDeveloperFragment(@NotNull BlockPos mainPos) {
+        super();
+        consoleSource = new ConsoleSource();
+        consoleSource.mainPos = mainPos;
+    }
 
     @Override
     public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container, DataSet savedInstanceState) {
@@ -123,7 +130,7 @@ public class DeveloperFragment extends Fragment {
 
         handler = new Handler(Looper.myLooper());
         handler.post(updateHistory);
-        InputSystem.KEY_RELEASE_MAP.put("tab", new InputSystem.KeyBinding(() -> List.of(GLFW.GLFW_KEY_TAB), new Runnable() {
+/*        InputSystem.RELEASE_BINDINGS.put("tab", new InputSystem.KeyBinding(() -> List.of(GLFW.GLFW_KEY_TAB), new Runnable() {
             @Override
             public void run() {
                 ParseResults<ConsoleSource> parseResults = CommandManager.dispatcher.parse(editText.getText().toString(), consoleSource);
@@ -135,7 +142,7 @@ public class DeveloperFragment extends Fragment {
                     }
                 });
             }
-        }));
+        }));*/
         return base;
     }
 
@@ -143,6 +150,6 @@ public class DeveloperFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(updateHistory);
-        InputSystem.KEY_RELEASE_MAP.remove("tab");
+    //    InputSystem.RELEASE_BINDINGS.remove("tab");
     }
 }

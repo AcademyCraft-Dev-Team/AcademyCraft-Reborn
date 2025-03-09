@@ -1,8 +1,8 @@
 package org.academy.api.client.command;
 
-import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 
 public class ConsoleSource {
-    public LocalPlayer localPlayer;
+    public BlockPos mainPos;
     public String currentResponse;
 }

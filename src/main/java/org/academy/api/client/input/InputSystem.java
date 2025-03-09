@@ -1,71 +1,101 @@
 package org.academy.api.client.input;
 
+import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClientConfig;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWScrollCallback;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiPredicate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class InputSystem {
-    public static final Map<String, KeyBinding> KEY_PRESS_MAP = new ConcurrentHashMap<>();
-    public static final Map<String, KeyBinding> KEY_RELEASE_MAP = new ConcurrentHashMap<>();
-    public static final Map<String, KeyBinding> KEY_HOLD_MAP = new ConcurrentHashMap<>();
+    public static final Map<String, KeyBinding> MOUSE_KEY_BINDINGS = new HashMap<>();
+    public static final Map<String, KeyBinding> KEYBOARD_KEY_BINDING_MAP = new HashMap<>();
 
-    public static final Map<String, Consumer<Integer>> scrollListeners = new ConcurrentHashMap<>();
-    public static double accumulatedScrollDelta = 0;
-    public static long window = -1;
-    public static GLFWScrollCallback scrollCallback = null;
+    public static final Map<String, Consumer<Integer>> scrollListeners = new HashMap<>();
 
-    public static final Map<Integer, Boolean> keyStateMap = new ConcurrentHashMap<>();
+    public static final Map<Integer, Integer> KEY_STATE = new HashMap<>();
 
-    public static void handleTick() {
-        processKeyEvents();
-        if (accumulatedScrollDelta != 0) {
-            scrollListeners.values().forEach(listener -> listener.accept((int) accumulatedScrollDelta));
-            accumulatedScrollDelta = 0;
-        }
-    }
-
-    private static void processKeyEvents() {
-        Map<Integer, Boolean> currentStates = new HashMap<>();
-        Set<Integer> allKeys = new HashSet<>();
-
-        collectKeys(KEY_PRESS_MAP, allKeys);
-        collectKeys(KEY_RELEASE_MAP, allKeys);
-        collectKeys(KEY_HOLD_MAP, allKeys);
-
-        for (Integer key : allKeys) {
-            currentStates.put(key, GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS);
-        }
-
-        handleKeyEvent(KEY_PRESS_MAP, currentStates, (wasPressed, isPressed) -> !wasPressed && isPressed);
-        handleKeyEvent(KEY_RELEASE_MAP, currentStates, (wasPressed, isPressed) -> wasPressed && !isPressed);
-        handleKeyEvent(KEY_HOLD_MAP, currentStates, (wasPressed, isPressed) -> isPressed);
-
-        keyStateMap.putAll(currentStates);
-    }
-
-    private static void collectKeys(Map<String, KeyBinding> keyMap, Set<Integer> allKeys) {
-        keyMap.values().forEach(keyBinding ->
-                allKeys.addAll(keyBinding.keys().get())
-        );
-    }
-
-    private static void handleKeyEvent(Map<String, KeyBinding> keyMap, Map<Integer, Boolean> currentStates, BiPredicate<Boolean, Boolean> condition) {
-        keyMap.values().forEach(keyBinding -> {
-            List<Integer> keys = keyBinding.keys().get();
-            boolean shouldTrigger = keys.stream().allMatch(key ->
-                    condition.test(keyStateMap.getOrDefault(key, false), currentStates.getOrDefault(key, false))
-            );
-            if (shouldTrigger) {
-                keyBinding.runnable().run();
+    public static void handleKeyCallback(int key, int action, int modifiers) {
+        KEY_STATE.put(key, action);
+        KEYBOARD_KEY_BINDING_MAP.values().forEach(keyBinding -> {
+            Set<Integer> requiredKeys = keyBinding.inputEvent.inputs;
+            Set<Integer> requiredModifiers = keyBinding.inputEvent.modifiers;
+            int requiredAction = keyBinding.inputEvent.action;
+            boolean modSuccess = false;
+            boolean keySuccess = false;
+            if (requiredModifiers.isEmpty()) {
+                modSuccess = true;
+            } else {
+                if (requiredModifiers.stream().allMatch(modifier -> (modifiers & modifier) != 0)) modSuccess = true;
+            }
+            if (requiredKeys.isEmpty()) {
+                throw new RuntimeException("Missing required keys");
+            } else if (requiredKeys.stream().allMatch(KEY_STATE::containsKey)) {
+                if ((requiredKeys.stream().allMatch(requiredKey -> KEY_STATE.get(requiredKey) == requiredAction))) {
+                    keySuccess = true;
+                }
+            }
+            if (modSuccess) {
+                requiredKeys.forEach(KEY_STATE::remove);
+                if (keySuccess) {
+                    keyBinding.runnable.run();
+                }
             }
         });
     }
 
-    public record KeyBinding(Supplier<List<Integer>> keys, Runnable runnable) {
+    public static void handleMouseButton(int button, int action, int modifiers) {
+        AcademyCraft.LOGGER.info("Handling Mouse button " + button + " action " + action + " modifiers " + modifiers);
+        KEY_STATE.put(button, action);
+        MOUSE_KEY_BINDINGS.values().forEach(keyBinding -> {
+            Set<Integer> requiredKeys = keyBinding.inputEvent.inputs;
+            Set<Integer> requiredModifiers = keyBinding.inputEvent.modifiers;
+            int requiredAction = keyBinding.inputEvent.action;
+            boolean modSuccess = false;
+            boolean keySuccess = false;
+            if (requiredModifiers.isEmpty()) {
+                modSuccess = true;
+            } else {
+                if (requiredModifiers.stream().allMatch(modifier -> (modifiers & modifier) != 0)) modSuccess = true;
+            }
+            if (requiredKeys.isEmpty()) {
+                throw new RuntimeException("Missing required keys");
+            } else if (requiredKeys.stream().allMatch(KEY_STATE::containsKey)) {
+                if ((requiredKeys.stream().allMatch(requiredKey -> KEY_STATE.get(requiredKey) == requiredAction))) {
+                    keySuccess = true;
+                }
+            }
+            if (modSuccess) {
+                requiredKeys.forEach(KEY_STATE::remove);
+                if (keySuccess) {
+                    keyBinding.runnable.run();
+                }
+            }
+        });
+    }
+
+    public static void handleMouseScroll(long windowPointer, double xOffset, double yOffset) {
+        if (yOffset != 0) {
+            scrollListeners.values().forEach(listener -> listener.accept((int) yOffset));
+        }
+    }
+
+    public static void registerKeyBinding(String keyName, AcademyCraftClientConfig.InputPair key, Runnable runnable) {
+        switch (key.inputType()) {
+            case MOUSE:
+                InputSystem.MOUSE_KEY_BINDINGS.put(keyName, new InputSystem.KeyBinding(key.inputEvent(), runnable));
+                break;
+            case KEYBOARD:
+                InputSystem.KEYBOARD_KEY_BINDING_MAP.put(keyName, new InputSystem.KeyBinding(key.inputEvent(), runnable));
+                break;
+        }
+    }
+
+    public record InputEvent(Set<Integer> inputs, int action, Set<Integer> modifiers) {
+    }
+
+    public record KeyBinding(InputEvent inputEvent, Runnable runnable) {
     }
 }
