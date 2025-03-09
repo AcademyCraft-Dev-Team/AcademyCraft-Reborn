@@ -13,10 +13,11 @@
     "ClientPacketListenerMixin",
     "GuiMixin",
     "IntegratedServerMixin",
+    "KeyboardHandlerMixin",
     "LevelRendererMixin",
     "LocalPlayerMixin",
     "MinecraftMixin",
-    "WindowMixin"
+    "MouseHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

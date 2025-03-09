@@ -101,6 +101,10 @@ public class AbilitySystemServer {
         }
     }
 
+    public static List<String> getPlayerSkillList(String uuid) {
+        return playerMap.get(uuid).getSkills();
+    }
+
     public static int getPlayerLevel(String uuid) {
         return playerMap.get(uuid).getLevel();
     }

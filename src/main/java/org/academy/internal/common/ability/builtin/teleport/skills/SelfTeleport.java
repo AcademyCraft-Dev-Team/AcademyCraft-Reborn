@@ -9,6 +9,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
@@ -21,15 +22,24 @@ import org.academy.api.server.network.AcademyCraftRequestHandlerServer;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.List;
-import java.util.function.Supplier;
+import java.util.Set;
 
 public final class SelfTeleport extends Skill {
     public static final Skill INSTANCE = new SelfTeleport();
     public static final String KEY_NAME_START = "self_teleport.start";
     public static final String KEY_NAME_END = "self_teleport.end";
-    public static final Supplier<List<Integer>> KEY_START = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME_START, List.of(GLFW.GLFW_KEY_E));
-    public static final Supplier<List<Integer>> KEY_END = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME_END, List.of(GLFW.GLFW_KEY_E));
+    public static final AcademyCraftClientConfig.InputPair KEY_START = AcademyCraftClient.clientConfig.getKey(KEY_NAME_START,
+            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                    Set.of(GLFW.GLFW_KEY_E),
+                    GLFW.GLFW_PRESS,
+                    Set.of()
+            )));
+    public static final AcademyCraftClientConfig.InputPair KEY_END = AcademyCraftClient.clientConfig.getKey(KEY_NAME_END,
+            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                    Set.of(GLFW.GLFW_KEY_E),
+                    GLFW.GLFW_RELEASE,
+                    Set.of()
+            )));
 
     private SelfTeleport() {
         super("self_teleport", 2);
@@ -54,8 +64,9 @@ public final class SelfTeleport extends Skill {
                 AcademyCraftRenderSystem.RENDERER_LIST.remove(Client.RENDERER);
             }
         };
-        InputSystem.KEY_PRESS_MAP.put(KEY_NAME_START, new InputSystem.KeyBinding(KEY_START, start));
-        InputSystem.KEY_RELEASE_MAP.put(KEY_NAME_END, new InputSystem.KeyBinding(KEY_END, end));
+
+        InputSystem.registerKeyBinding(KEY_NAME_START, KEY_START, start);
+        InputSystem.registerKeyBinding(KEY_NAME_END, KEY_END, end);
     }
 
     @Override

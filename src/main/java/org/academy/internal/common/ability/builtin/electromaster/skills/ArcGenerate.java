@@ -9,6 +9,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AbilitySystemServer;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
@@ -25,12 +26,16 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
     public static final String KEY_NAME = "arc_generate.generate";
-    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_G));
+    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
+            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                    Set.of(GLFW.GLFW_KEY_G),
+                    GLFW.GLFW_RELEASE,
+                    Set.of(GLFW.GLFW_MOD_ALT)
+            )));
     public static final float BASE_DAMAGE = 2.0F;
 
     private ArcGenerate() {
@@ -88,6 +93,6 @@ public class ArcGenerate extends Skill {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST));
             }
         };
-        InputSystem.KEY_RELEASE_MAP.put(KEY_NAME, new InputSystem.KeyBinding(KEY, runnable));
+        InputSystem.registerKeyBinding(KEY_NAME, KEY, runnable);
     }
 }

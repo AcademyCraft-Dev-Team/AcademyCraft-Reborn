@@ -7,9 +7,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
@@ -21,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Supplier;
 
 public class CommandManager {
     public static final List<String> HISTORY = new CopyOnWriteArrayList<>();
@@ -54,18 +50,6 @@ public class CommandManager {
                 LiteralArgumentBuilder.<ConsoleSource>literal("learn")
                         .then(LiteralArgumentBuilder.<ConsoleSource>literal("skill")
                                 .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
-                                        .suggests(new SuggestionProvider<ConsoleSource>() {
-                                            @Override
-                                            public CompletableFuture<Suggestions> getSuggestions(CommandContext<ConsoleSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
-                                                return CompletableFuture.supplyAsync(new Supplier<Suggestions>() {
-                                                    @Override
-                                                    public Suggestions get() {
-                                                        builder.suggest("learn");
-                                                        return builder.build();
-                                                    }
-                                                });
-                                            }
-                                        })
                                         .executes(context -> CommandManager.learnSkill(context, StringArgumentType.getString(context, "identifier")))
                                 )
                         )

@@ -8,7 +8,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.academy.AcademyCraft;
-import org.academy.internal.client.ui.DeveloperFragment;
+import org.academy.internal.client.ui.PhoneFragment;
 import org.jetbrains.annotations.NotNull;
 
 public class PortableDeveloperItem extends Item {
@@ -27,6 +27,6 @@ public class PortableDeveloperItem extends Item {
     }
 
     private void openScreen() {
-        MuiFabricApi.openScreen(new DeveloperFragment());
+        MuiFabricApi.openScreen(new PhoneFragment());
     }
 }

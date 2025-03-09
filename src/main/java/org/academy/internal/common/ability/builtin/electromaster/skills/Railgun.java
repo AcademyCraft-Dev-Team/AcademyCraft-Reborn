@@ -10,6 +10,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AbilitySystemServer;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
@@ -24,13 +25,18 @@ import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.Set;
 
 @SuppressWarnings("resource")
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
     public static final String KEY_NAME = "railgun.shoot";
-    public static final Supplier<List<Integer>> KEY = () -> AcademyCraftClient.clientConfig.getKey(KEY_NAME, List.of(GLFW.GLFW_KEY_X));
+    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
+            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                    Set.of(GLFW.GLFW_KEY_X),
+                    GLFW.GLFW_RELEASE,
+                    Set.of()
+            )));
 
     private Railgun() {
         super("railgun", 5);
@@ -77,6 +83,7 @@ public class Railgun extends Skill {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
             }
         };
-        InputSystem.KEY_RELEASE_MAP.put(KEY_NAME, new InputSystem.KeyBinding(KEY, runnable));
+
+        InputSystem.registerKeyBinding(KEY_NAME, KEY, runnable);
     }
 }

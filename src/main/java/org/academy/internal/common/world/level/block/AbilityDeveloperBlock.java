@@ -1,9 +1,12 @@
 package org.academy.internal.common.world.level.block;
 
+import icyllis.modernui.mc.MuiModApi;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -17,6 +20,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.BlockHitResult;
+import org.academy.internal.client.ui.AbilityDeveloperFragment;
+import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -52,7 +58,11 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
 
     @Override
     protected void spawnDestroyParticles(@NotNull Level level, @NotNull Player player, @NotNull BlockPos pos, @NotNull BlockState state) {
-        // 粒子不合适
+    }
+
+    @Override
+    public boolean canBeReplaced(@NotNull BlockState state, @NotNull BlockPlaceContext useContext) {
+        return false;
     }
 
     @Override
@@ -68,6 +78,27 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
                 }
             }
         }
+    }
+
+    @Override
+    public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
+        if (player.isShiftKeyDown()) {
+            if (!level.isClientSide()) {
+                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+                    if (!abilityDeveloperBlockEntity.isEmpty()) {
+                        abilityDeveloperBlockEntity.setItem(0, ItemStack.EMPTY);
+                        player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_CORE_ITEM));
+                    }
+                }
+            }
+        } else {
+            if (level.isClientSide()) {
+                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+                    MuiModApi.openScreen(new AbilityDeveloperFragment(abilityDeveloperBlockEntity.mainPos));
+                }
+            }
+        }
+        return InteractionResult.CONSUME;
     }
 
     @Override
