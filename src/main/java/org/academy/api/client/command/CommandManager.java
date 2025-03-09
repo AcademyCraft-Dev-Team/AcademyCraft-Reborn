@@ -8,6 +8,9 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.FriendlyByteBuf;
+import org.academy.AcademyCraft;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
@@ -30,6 +33,17 @@ public class CommandManager {
 
     public static void registerCommands() {
         dispatcher.register(CONFIG);
+
+        if (AcademyCraft.DEBUG_MODE) {
+            dispatcher.register(
+                    LiteralArgumentBuilder.<ConsoleSource>literal("debug")
+                            .then(LiteralArgumentBuilder.<ConsoleSource>literal("energy")
+                                    .then(LiteralArgumentBuilder.<ConsoleSource>literal("full")
+                                            .executes(DebugCommand::fullEnergy)
+                                    )
+                            )
+            );
+        }
 
         dispatcher.register(
                 LiteralArgumentBuilder.<ConsoleSource>literal("help")
@@ -64,6 +78,13 @@ public class CommandManager {
                                 )
                         )
         );
+    }
+
+    public static final class DebugCommand {
+        public static int fullEnergy(CommandContext<ConsoleSource> context) {
+            AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(new FriendlyByteBuf(Unpooled.buffer()).writeResourceLocation(AcademyCraftNetworkResourceLocations.C2S_DEBUG_FULL_ENERGY).writeBlockPos(context.getSource().mainPos)));
+            return 1;
+        }
     }
 
     private static int executeHelpCommand(CommandContext<ConsoleSource> context) {

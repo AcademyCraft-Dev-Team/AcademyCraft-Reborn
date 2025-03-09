@@ -6,6 +6,7 @@ import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.FriendlyByteBufFactories;
+import org.academy.api.common.network.FriendlyByteBufIdentifiers;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ public class C2SRequestPacket extends ServerboundCustomPayloadPacket {
 
     private static FriendlyByteBuf createByteBuf(ResourceLocation key, Object... objects) {
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeResourceLocation(key);
+        FriendlyByteBufFactories.FRIENDLY_BYTE_BUF_FACTORY_MAP.get(FriendlyByteBufIdentifiers.RESOURCE_LOCATION).create(buf,List.of(key));
         for (int i = 0; i < objects.length; i += 2) {
             String identifier = (String) objects[i];
             Object value = objects[i + 1];

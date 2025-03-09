@@ -12,8 +12,8 @@ import net.minecraft.world.phys.HitResult;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class AbilityDeveloperCoreItem extends Item {
-    public AbilityDeveloperCoreItem(Properties properties) {
+public class AbilityDeveloperComputationalChipItem extends Item {
+    public AbilityDeveloperComputationalChipItem(Properties properties) {
         super(properties);
     }
 

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "academy:block/radio_frequency_energy_output_bridge_block"
+    }
+  }
+}

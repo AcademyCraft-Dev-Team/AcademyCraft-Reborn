@@ -37,6 +37,10 @@ public class FriendlyByteBufParsers {
                 FRIENDLY_BYTE_BUF_PARSER_MAP.get(type).parse(friendlyByteBuf, response);
             }
         });
+        // [long]
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.LONG, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readLong()));
+        // [BlockPos]
+        FRIENDLY_BYTE_BUF_PARSER_MAP.put(FriendlyByteBufIdentifiers.BLOCK_POS, (friendlyByteBuf, response) -> response.dataList.add(friendlyByteBuf.readBlockPos()));
     }
 
     private FriendlyByteBufParsers() {

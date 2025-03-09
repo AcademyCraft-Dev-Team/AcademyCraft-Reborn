@@ -9,8 +9,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import org.academy.AcademyCraft;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
+import org.academy.internal.common.world.level.block.RadioFrequencyEnergyOutputBridgeBlock;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import team.reborn.energy.api.base.SimpleEnergyStorage;
 
 public class AbilityDeveloperBlockEntity extends BlockEntity implements Container {
     public final NonNullList<ItemStack> items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
@@ -21,6 +25,7 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
         if (isMain()) {
             setMainPos(pos);
         }
+        AcademyCraft.LOGGER.info(mainPos);
     }
 
     public void setMainPos(BlockPos pos) {
@@ -30,6 +35,31 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
     @Override
     public int getContainerSize() {
         return 1;
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Nullable
+    public SimpleEnergyStorage getEnergyStorage() {
+        if (hasRadioFrequencyEnergyOutputBridgeBlock() && hasRadioFrequencyEnergyOutputBridgeBlockEntity()) {
+            RadioFrequencyEnergyOutputBridgeBlockEntity radioFrequencyEnergyOutputBridgeBlockEntity = (RadioFrequencyEnergyOutputBridgeBlockEntity) level.getBlockEntity(mainPos.below());
+            return radioFrequencyEnergyOutputBridgeBlockEntity.energyStorage;
+        } else {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    public boolean hasRadioFrequencyEnergyOutputBridgeBlockEntity() {
+        if (hasRadioFrequencyEnergyOutputBridgeBlock()) {
+            return level.getBlockEntity(mainPos.below()) != null;
+        } else {
+            return false;
+        }
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    public boolean hasRadioFrequencyEnergyOutputBridgeBlock() {
+        return level.getBlockState(mainPos.below()).getBlock() instanceof RadioFrequencyEnergyOutputBridgeBlock;
     }
 
     @SuppressWarnings("DataFlowIssue")

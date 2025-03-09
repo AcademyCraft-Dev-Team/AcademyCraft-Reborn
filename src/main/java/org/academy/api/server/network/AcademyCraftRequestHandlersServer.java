@@ -1,14 +1,19 @@
 package org.academy.api.server.network;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AbilitySystem;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.FriendlyByteBufIdentifiers;
+import org.academy.api.common.network.FriendlyByteBufParsers;
 import org.academy.api.common.network.Response;
 import org.academy.api.server.network.packet.S2CRequestPacket;
 import org.academy.api.server.network.packet.S2CResponsePacket;
+import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import team.reborn.energy.api.base.SimpleEnergyStorage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,6 +65,19 @@ public class AcademyCraftRequestHandlersServer {
         });
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.BOOLEAN, AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, List.of(true)));
+        });
+        REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_DEBUG_FULL_ENERGY, (serverGamePacketListenerImpl, packet) -> {
+            Response response = new Response();
+            FriendlyByteBufParsers.FRIENDLY_BYTE_BUF_PARSER_MAP.get(FriendlyByteBufIdentifiers.BLOCK_POS).parse(packet.getData(), response);
+            BlockPos blockPos = (BlockPos) response.dataList.get(0);
+            AcademyCraft.LOGGER.info(blockPos);
+            serverGamePacketListenerImpl.player.server.execute(() -> {
+                AbilityDeveloperBlockEntity abilityDeveloperBlockEntity = (AbilityDeveloperBlockEntity) serverGamePacketListenerImpl.player.level().getBlockEntity(blockPos);
+                SimpleEnergyStorage simpleEnergyStorage = abilityDeveloperBlockEntity.getEnergyStorage();
+                if (simpleEnergyStorage != null) {
+                    simpleEnergyStorage.amount = simpleEnergyStorage.getCapacity();
+                }
+            });
         });
     }
 

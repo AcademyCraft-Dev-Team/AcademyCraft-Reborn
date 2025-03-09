@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import org.academy.AcademyCraft;
 import org.academy.internal.client.ui.AbilityDeveloperFragment;
 import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -87,13 +88,14 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
                 if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                     if (!abilityDeveloperBlockEntity.isEmpty()) {
                         abilityDeveloperBlockEntity.setItem(0, ItemStack.EMPTY);
-                        player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_CORE_ITEM));
+                        player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_COMPUTATIONAL_CHIP_ITEM.asItem()));
                     }
                 }
             }
         } else {
             if (level.isClientSide()) {
                 if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+                    AcademyCraft.LOGGER.info(abilityDeveloperBlockEntity.mainPos);
                     MuiModApi.openScreen(new AbilityDeveloperFragment(abilityDeveloperBlockEntity.mainPos));
                 }
             }
