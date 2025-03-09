@@ -28,18 +28,8 @@ public final class SelfTeleport extends Skill {
     public static final Skill INSTANCE = new SelfTeleport();
     public static final String KEY_NAME_START = "self_teleport.start";
     public static final String KEY_NAME_END = "self_teleport.end";
-    public static final AcademyCraftClientConfig.InputPair KEY_START = AcademyCraftClient.clientConfig.getKey(KEY_NAME_START,
-            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
-                    Set.of(GLFW.GLFW_KEY_E),
-                    GLFW.GLFW_PRESS,
-                    Set.of()
-            )));
-    public static final AcademyCraftClientConfig.InputPair KEY_END = AcademyCraftClient.clientConfig.getKey(KEY_NAME_END,
-            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
-                    Set.of(GLFW.GLFW_KEY_E),
-                    GLFW.GLFW_RELEASE,
-                    Set.of()
-            )));
+    public static AcademyCraftClientConfig.InputPair KEY_START;
+    public static AcademyCraftClientConfig.InputPair KEY_END;
 
     private SelfTeleport() {
         super("self_teleport", 2);
@@ -47,6 +37,19 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initClient() {
+        KEY_START = AcademyCraftClient.clientConfig.getKey(KEY_NAME_START,
+                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                        Set.of(GLFW.GLFW_KEY_E),
+                        GLFW.GLFW_PRESS,
+                        Set.of()
+                )));
+        KEY_END = AcademyCraftClient.clientConfig.getKey(KEY_NAME_END,
+                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                        Set.of(GLFW.GLFW_KEY_E),
+                        GLFW.GLFW_RELEASE,
+                        Set.of()
+                )));
+
         Runnable start = new Runnable() {
             @Override
             public void run() {

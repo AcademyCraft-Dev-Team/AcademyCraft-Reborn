@@ -9,6 +9,14 @@
   "license": "GPL-3.0",
   "icon": "icon.png",
   "environment": "*",
+  "entrypoints": {
+    "main": [
+      "org.academy.AcademyCraft"
+    ],
+    "client": [
+      "org.academy.AcademyCraftClient"
+    ]
+  },
   "mixins": [
     "academy.mixins.json"
   ],

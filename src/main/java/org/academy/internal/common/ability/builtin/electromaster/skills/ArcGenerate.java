@@ -30,12 +30,7 @@ import java.util.Set;
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
     public static final String KEY_NAME = "arc_generate.generate";
-    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
-            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
-                    Set.of(GLFW.GLFW_KEY_G),
-                    GLFW.GLFW_RELEASE,
-                    Set.of(GLFW.GLFW_MOD_ALT)
-            )));
+    public static AcademyCraftClientConfig.InputPair KEY;
     public static final float BASE_DAMAGE = 2.0F;
 
     private ArcGenerate() {
@@ -88,6 +83,12 @@ public class ArcGenerate extends Skill {
 
     @Override
     public void initClient() {
+        KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
+                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                        Set.of(GLFW.GLFW_KEY_G),
+                        GLFW.GLFW_RELEASE,
+                        Set.of(GLFW.GLFW_MOD_ALT)
+                )));
         Runnable runnable = () -> {
             if (ClientUtil.isScreenNull()) {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_REQUEST));

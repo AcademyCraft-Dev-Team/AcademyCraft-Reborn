@@ -31,12 +31,7 @@ import java.util.Set;
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
     public static final String KEY_NAME = "railgun.shoot";
-    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
-            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
-                    Set.of(GLFW.GLFW_KEY_X),
-                    GLFW.GLFW_RELEASE,
-                    Set.of()
-            )));
+    public static AcademyCraftClientConfig.InputPair KEY;
 
     private Railgun() {
         super("railgun", 5);
@@ -78,6 +73,13 @@ public class Railgun extends Skill {
 
     @Override
     public void initClient() {
+        KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
+                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+                        Set.of(GLFW.GLFW_KEY_X),
+                        GLFW.GLFW_RELEASE,
+                        Set.of()
+                )));
+
         Runnable runnable = () -> {
             if (ClientUtil.isScreenNull()) {
                 AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST));
