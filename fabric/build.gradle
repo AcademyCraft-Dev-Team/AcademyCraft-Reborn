@@ -1,0 +1,69 @@
+plugins {
+    id 'com.github.johnrengelman.shadow'
+}
+
+architectury {
+    platformSetupLoomIde()
+    fabric()
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/academy.accesswidener")
+}
+
+configurations {
+    common {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentFabric.extendsFrom common
+
+    // Files in this configuration will be bundled into your mod using the Shadow plugin.
+    // Don't use the `shadow` configuration from the plugin itself as it's meant for excluding files.
+    shadowBundle {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:$rootProject.fabric_loader_version"
+
+    // Fabric API. This is technically optional, but you probably want it anyway.
+    modImplementation "net.fabricmc.fabric-api:fabric-api:$rootProject.fabric_api_version"
+
+    modApi "icyllis.modernui:ModernUI-Core:3.11.1"
+    modApi "icyllis.modernui:ModernUI-Markdown:3.11.1"
+    modImplementation "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
+
+    modApi "dev.felnull:special-model-loader:1.2.0"
+    modImplementation("maven.modrinth:forge-config-api-port:v8.0.1-1.20.1-Fabric")
+    include modApi('teamreborn:energy:3.0.0')
+    common(project(path: ':common', configuration: 'namedElements')) { transitive false }
+    shadowBundle project(path: ':common', configuration: 'transformProductionFabric')
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "fabric_loader_version", project.fabric_loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": project.minecraft_version,
+                "fabric_loader_version": project.fabric_loader_version
+    }
+}
+
+shadowJar {
+    configurations = [project.configurations.shadowBundle]
+    archiveClassifier = 'dev-shadow'
+    exclude("**/PlatformMethods.class")
+}
+
+remapJar {
+    inputFile.set shadowJar.archiveFile
+}

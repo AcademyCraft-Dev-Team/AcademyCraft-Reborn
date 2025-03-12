@@ -1,6 +1,6 @@
 # About
 ## 版本，加载器？
-目前仅考虑 1.20.1 Fabric
+目前支持 Fabric/Forge/NeoForge 1.20.1
 ## 下载？
 Actions 不定时构建
 ## 我想要支持
