@@ -1,23 +1,34 @@
-# eclipse
-bin
-*.launch
-.settings
-.metadata
+.metadata/
+.settings/
 .classpath
 .project
+*.launch
 
-# idea
-out
-*.ipr
-*.iws
+.idea/
 *.iml
-.idea
+*.iws
+*.ipr
+out/
 
-# gradle
-build
-.gradle
+.vscode/
 
-# other
-eclipse
-libs
-run
+.gradle/
+build/
+gradle-app.setting
+gradle.log
+
+bin/
+output/
+classes/
+
+run/
+libs/
+log/
+*.gz
+*.log
+*.tmp
+*.lock
+
+.DS_Store  # macOS
+Thumbs.db  # Windows
+/fabric/run/

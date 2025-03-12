@@ -1,0 +1,21 @@
+architectury {
+    common rootProject.enabled_platforms.split(',')
+}
+
+loom {
+    mixin {
+        defaultRefmapName = "${project.mod_id}.refmap.json"
+    }
+    accessWidenerPath = file("src/main/others/academy.accesswidener")
+}
+
+dependencies {
+    // We depend on Fabric Loader here to use the Fabric @Environment annotations,
+    // which get remapped to the correct annotations on each platform.
+    // Do NOT use other classes from Fabric Loader.
+    modImplementation "net.fabricmc:fabric-loader:$rootProject.fabric_loader_version"
+    compileOnly "icyllis.modernui:ModernUI-Core:3.11.1"
+    compileOnly "icyllis.modernui:ModernUI-Markdown:3.11.1"
+    // Only for icyllis.modernui.mc.MuiModApi
+    compileOnly "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
+}
