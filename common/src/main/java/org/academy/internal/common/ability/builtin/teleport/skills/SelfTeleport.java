@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.builtin.teleport.skills;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +18,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
+import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.lwjgl.glfw.GLFW;
 
@@ -29,6 +32,7 @@ public final class SelfTeleport extends Skill {
     public static final String KEY_NAME_END = "self_teleport.end";
     public static AcademyCraftClientConfig.InputPair KEY_START;
     public static AcademyCraftClientConfig.InputPair KEY_END;
+    public static final float DISTANCE = 10f;
 
     private SelfTeleport() {
         super(NAME, 2);
@@ -70,7 +74,7 @@ public final class SelfTeleport extends Skill {
         AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             ServerPlayer serverPlayer = serverGamePacketListenerImpl.player;
             Vec3 lookDirection = serverPlayer.getLookAngle();
-            Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale(10));
+            Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale((float) LevelUtil.getValidViewDistance(serverPlayer, DISTANCE)));
             serverPlayer.teleportTo(targetPosition.x, targetPosition.y, targetPosition.z);
             serverPlayer.resetFallDistance();
         });
@@ -78,18 +82,30 @@ public final class SelfTeleport extends Skill {
 
     private static final class Client {
         public static final Minecraft mc = Minecraft.getInstance();
+        public static final ClientLevel level = mc.level;
+        public static final LocalPlayer localPlayer = mc.player;
+
         public static final AcademyCraftRenderSystem.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
-            poseStack.pushPose();
+            if (level != null && localPlayer != null) {
+                poseStack.pushPose();
+                final AABB aabb = new AABB(0, 0, 0, 1, 2, 1);
 
-            final float DISTANCE = 10f;
+                final Vec3 lookVec = localPlayer.getLookAngle();
+                final Vec3 offsetVec = lookVec.scale(DISTANCE);
 
-            RenderUtil.translateToForward(poseStack, mc.player, DISTANCE);
+                final Vec3 playerPos = localPlayer.position();
 
-            final RenderBuffers renderBuffers = mc.renderBuffers();
+                final Vec3 validOffset = LevelUtil.getValidOffset(level, playerPos, aabb, offsetVec);
 
-            poseStack.translate(-0.5f, -1f, -0.5f);
-            RenderUtil.BoxRenderer.renderWireframeBox(poseStack, renderBuffers.bufferSource(), new AABB(0, 0, 0, 1, 2, 1), 1f, 1f, 1f, 1f);
-            poseStack.popPose();
+                RenderUtil.applyCameraOffset(poseStack, Minecraft.getInstance().options.getCameraType(), lookVec);
+                RenderUtil.applyOffset(poseStack, validOffset);
+
+                final RenderBuffers renderBuffers = mc.renderBuffers();
+
+                poseStack.translate(-0.5f, -1f, -0.5f);
+                RenderUtil.BoxRenderer.renderWireframeBox(poseStack, renderBuffers.bufferSource(), aabb, 1f, 1f, 1f, 1f);
+                poseStack.popPose();
+            }
         };
     }
 }

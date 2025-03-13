@@ -84,7 +84,7 @@ public class AcademyCraftRegisterForge {
 
     private static void registerEntityType(RegisterEvent event) {
         for (AcademyCraftEntityTypes.Type<?> type : AcademyCraftEntityTypes.TYPE_LIST) {
-            event.register(ForgeRegistries.Keys.ENTITY_TYPES, ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, type.name()), type::entityType);
+            event.register(ForgeRegistries.Keys.ENTITY_TYPES, new ResourceLocation(AcademyCraft.MOD_ID, type.name()), type::entityType);
         }
     }
 

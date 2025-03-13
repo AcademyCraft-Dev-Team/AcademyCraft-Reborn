@@ -8,6 +8,9 @@ architectury {
 }
 
 loom {
+    mixin {
+        defaultRefmapName = "${project.mod_id}-${project.name}.refmap.json"
+    }
     accessWidenerPath = file("src/main/resources/academy.accesswidener")
 }
 
