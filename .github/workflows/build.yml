@@ -21,14 +21,23 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          cache: 'gradle'
           distribution: 'zulu'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       - name: Build with Gradle
         run: .\gradlew.bat build
 
-      - name: Upload JAR file
+      - name: Upload JAR files
         uses: actions/upload-artifact@v4
         with:
           name: AcademyCraft
-          path: build/libs/*.jar
+          path: '**/libs/*.jar'
