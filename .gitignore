@@ -21,9 +21,9 @@ bin/
 output/
 classes/
 
-run/
-libs/
-log/
+**/run/
+**/libs/
+**/log/
 *.gz
 *.log
 *.tmp
@@ -31,4 +31,3 @@ log/
 
 .DS_Store  # macOS
 Thumbs.db  # Windows
-/fabric/run/
