@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "org.academy.mixin",
+  "package": "org.academy.fabric.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
     "GuiMixin"

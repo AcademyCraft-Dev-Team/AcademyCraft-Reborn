@@ -16,8 +16,8 @@ public class AcademyCraftBlockEntityTypesImpl {
     public static final BlockEntityType<RadioFrequencyEnergyOutputBridgeBlockEntity> RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE = BlockEntityType.Builder.of(RadioFrequencyEnergyOutputBridgeBlockEntity::new, AcademyCraftBlocksImpl.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "radio_frequency_energy_output_bridge"));
 
     public static void init(Map<ResourceLocation, BlockEntityType<?>> blockEntityTypeMap) {
-        blockEntityTypeMap.put(ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "ability_developer"), ABILITY_DEVELOPER);
-        blockEntityTypeMap.put(ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "radio_frequency_energy_output_bridge"), RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE);
+        blockEntityTypeMap.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer"), ABILITY_DEVELOPER);
+        blockEntityTypeMap.put(new ResourceLocation(AcademyCraft.MOD_ID, "radio_frequency_energy_output_bridge"), RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE);
     }
 
     private AcademyCraftBlockEntityTypesImpl() {
