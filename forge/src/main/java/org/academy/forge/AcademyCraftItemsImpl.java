@@ -11,7 +11,7 @@ public class AcademyCraftItemsImpl {
     public static final AbilityDeveloperBlockItem ABILITY_DEVELOPER_BLOCK_ITEM = new AbilityDeveloperBlockItem();
 
     public static void init(Map<ResourceLocation, Item> itemMap) {
-        itemMap.put(ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "ability_developer_block_item"), ABILITY_DEVELOPER_BLOCK_ITEM);
+        itemMap.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer_block_item"), ABILITY_DEVELOPER_BLOCK_ITEM);
     }
 
     private AcademyCraftItemsImpl() {

@@ -1,4 +1,4 @@
-package org.academy.mixin;
+package org.academy.fabric.mixin;
 
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;

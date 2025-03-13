@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
@@ -12,7 +13,6 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
@@ -25,10 +25,15 @@ import java.util.Random;
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
 public final class RenderUtil {
-    public static void translateToForward(final PoseStack poseStack, final LivingEntity livingEntity, final float distance) {
-        final Vec3 lookVec = livingEntity.getLookAngle();
+    public static void applyOffset(final PoseStack poseStack, final Vec3 vec3) {
+        poseStack.translate(vec3.x, vec3.y, vec3.z);
+    }
 
-        poseStack.translate(lookVec.x * distance, lookVec.y * distance, lookVec.z * distance);
+    public static void applyCameraOffset(final PoseStack poseStack, final CameraType cameraType, final Vec3 lookVec) {
+        switch (cameraType) {
+            case THIRD_PERSON_BACK -> applyOffset(poseStack, lookVec.scale(4));
+            case THIRD_PERSON_FRONT -> applyOffset(poseStack, lookVec.scale(-4));
+        }
     }
 
     public static final class BallRenderer {

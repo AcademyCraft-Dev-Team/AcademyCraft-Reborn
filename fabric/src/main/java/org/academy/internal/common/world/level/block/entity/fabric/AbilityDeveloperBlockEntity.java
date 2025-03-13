@@ -9,8 +9,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import org.academy.internal.common.world.level.block.fabric.AbilityDeveloperBlock;
 import org.academy.fabric.AcademyCraftBlockEntityTypesImpl;
+import org.academy.internal.common.world.level.block.fabric.AbilityDeveloperBlock;
 import org.jetbrains.annotations.NotNull;
 
 public class AbilityDeveloperBlockEntity extends BlockEntity implements Container {

@@ -14,8 +14,8 @@ public class AcademyCraftBlocksImpl {
     public static final RadioFrequencyEnergyOutputBridgeBlock RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK = new RadioFrequencyEnergyOutputBridgeBlock(BlockBehaviour.Properties.of());
 
     public static void init(Map<ResourceLocation, Block> blockMap) {
-        blockMap.put(ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "ability_developer_block"), ABILITY_DEVELOPER_BLOCK);
-        blockMap.put(ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "radio_frequency_energy_output_bridge_block"), RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK);
+        blockMap.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer_block"), ABILITY_DEVELOPER_BLOCK);
+        blockMap.put(new ResourceLocation(AcademyCraft.MOD_ID, "radio_frequency_energy_output_bridge_block"), RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK);
     }
 
     private AcademyCraftBlocksImpl() {
