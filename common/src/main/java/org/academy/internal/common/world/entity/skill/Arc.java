@@ -8,7 +8,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.util.MathUtil;
-import org.academy.AcademyCraftEntityTypes;
+import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")

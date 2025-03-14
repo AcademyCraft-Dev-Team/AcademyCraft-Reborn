@@ -1,14 +1,10 @@
 package org.academy.api.common.util;
 
-import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.stream.StreamSupport;
 
 public class LevelUtil {
     @SuppressWarnings("resource")
@@ -22,7 +18,7 @@ public class LevelUtil {
 
         Vec3 targetPos = startPos.add(direction.scale(targetDistance));
 
-        ClipContext context = new ClipContext(startPos, targetPos, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, entity);
+        ClipContext context = new ClipContext(startPos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity);
         HitResult hitResult = level.clip(context);
 
         if (hitResult.getType() != HitResult.Type.MISS) {

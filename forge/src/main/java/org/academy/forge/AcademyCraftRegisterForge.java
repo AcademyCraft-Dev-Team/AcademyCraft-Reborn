@@ -23,8 +23,19 @@ import net.minecraftforge.registries.RegistryObject;
 import org.academy.*;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.GameUtil;
+import org.academy.forge.internal.client.renderer.blockentity.AcademyCraftBlockEntityRenderersForge;
+import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
+import org.academy.forge.internal.common.world.level.block.entity.forge.AcademyCraftBlockEntityTypesForge;
+import org.academy.forge.internal.common.world.level.block.forge.AcademyCraftBlocksForge;
+import org.academy.internal.client.renderer.blockentity.AcademyCraftBlockEntityRenderers;
+import org.academy.internal.client.renderer.blockentity.AcademyCraftEntityRenderers;
 import org.academy.internal.client.ui.hud.AcademyCraftHUDSystem;
+import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategories;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
+import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
+import org.academy.internal.common.world.item.AcademyCraftItems;
+import org.academy.internal.common.world.level.block.AcademyCraftBlocks;
 import org.academy.internal.common.world.level.block.entity.AcademyCraftBlockEntityTypes;
 
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -58,18 +69,21 @@ public class AcademyCraftRegisterForge {
     }
 
     private static void registerItem(RegisterEvent event) {
+        AcademyCraftItemsForge.init();
         for (ResourceLocation resourceLocation : AcademyCraftItems.ITEMS.keySet()) {
             event.register(ForgeRegistries.Keys.ITEMS, resourceLocation, () -> AcademyCraftItems.ITEMS.get(resourceLocation));
         }
     }
 
     private static void registerBlock(RegisterEvent event) {
+        AcademyCraftBlocksForge.init();
         for (ResourceLocation resourceLocation : AcademyCraftBlocks.BLOCKS.keySet()) {
             event.register(ForgeRegistries.Keys.BLOCKS, resourceLocation, () -> AcademyCraftBlocks.BLOCKS.get(resourceLocation));
         }
     }
 
     private static void registerBlockEntityType(RegisterEvent event) {
+        AcademyCraftBlockEntityTypesForge.init();
         for (ResourceLocation resourceLocation : AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.keySet()) {
             event.register(ForgeRegistries.Keys.BLOCK_ENTITY_TYPES, resourceLocation, () -> AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.get(resourceLocation));
         }
@@ -77,6 +91,7 @@ public class AcademyCraftRegisterForge {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void registerBlockEntityRenderer() {
+        AcademyCraftBlockEntityRenderersForge.init();
         for (BlockEntityType<?> blockEntityType : AcademyCraftBlockEntityRenderers.BLOCK_ENTITY_RENDERERS.keySet()) {
             BlockEntityRenderers.register(blockEntityType, context -> (BlockEntityRenderer) AcademyCraftBlockEntityRenderers.BLOCK_ENTITY_RENDERERS.get(blockEntityType));
         }
