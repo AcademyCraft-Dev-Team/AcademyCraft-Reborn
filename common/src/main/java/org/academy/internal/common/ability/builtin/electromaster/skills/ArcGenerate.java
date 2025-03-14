@@ -18,7 +18,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
-import org.academy.AcademyCraftSoundEvents;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 import org.lwjgl.glfw.GLFW;
@@ -60,7 +60,7 @@ public class ArcGenerate extends Skill {
             Player player = serverGamePacketListenerImpl.getPlayer();
             Level level = player.level();
             if (level instanceof ServerLevel) {
-                AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getStringUUID());
+                AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getUUID());
                 float currentComputingPower = data.getComputingPower();
                 if (currentComputingPower > 10) {
                     data.setComputingPower(currentComputingPower - 10);

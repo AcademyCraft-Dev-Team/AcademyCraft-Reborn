@@ -7,8 +7,8 @@ import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import org.academy.AcademyCraftSoundEvents;
-import org.academy.AcademyCraftEntityTypes;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
+import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.jetbrains.annotations.NotNull;
 

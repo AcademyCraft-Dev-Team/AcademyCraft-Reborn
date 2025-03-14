@@ -14,15 +14,16 @@ import org.jetbrains.annotations.ApiStatus;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import static org.academy.AbilitySystem.ABILITY_CATEGORY_MAP;
 
 public class AbilitySystemServer {
-    public static Map<String, AcademyCraftWorldData.Player> playerMap;
+    public static Map<UUID, AcademyCraftWorldData.Player> playerMap;
     private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
-    public static final List<String> UUID_LIST = new CopyOnWriteArrayList<>();
+    public static final List<UUID> UUID_LIST = new CopyOnWriteArrayList<>();
     @ApiStatus.Internal
     public static volatile boolean running;
     @ApiStatus.Internal
@@ -49,13 +50,13 @@ public class AbilitySystemServer {
                     runnable.run();
                     RUNNABLE_LIST.remove(runnable);
                 }
-                for (String uuid : UUID_LIST) {
+                for (UUID uuid : UUID_LIST) {
                     tickPlayer(uuid);
                 }
             }
         }
 
-        public static void tickPlayer(final String uuid) {
+        public static void tickPlayer(final UUID uuid) {
             AcademyCraftWorldData.Player playerData = playerMap.get(uuid);
             float currentComputingPower = playerData.getComputingPower();
             float maxComputingPower = playerData.getMaximumComputingPower();
@@ -68,7 +69,7 @@ public class AbilitySystemServer {
 
     public static final class MinecraftServerThread {
         public static void sync(final ServerPlayer player) {
-            final String uuid = player.getStringUUID();
+            final UUID uuid = player.getUUID();
             final float currentComputingPower = getPlayerComputingPower(uuid);
             final float maxComputingPower = getPlayerMaximumComputingPower(uuid);
             final float computingPowerRecoverySpeed = getPlayerComputingPowerRecoverySpeed(uuid);
@@ -90,50 +91,50 @@ public class AbilitySystemServer {
                 }
 
                 data.setAbilityCategory(weightedRandom.getRandomItem());
-                AcademyCraftServer.academyCraftWorldData.getPlayers().put(player.getUUID().toString(), data);
+                AcademyCraftServer.academyCraftWorldData.getPlayers().put(player.getUUID(), data);
             }
         }
 
         public static void tickMinecraftServerThread(final MinecraftServer server) {
             running = server.isRunning();
             UUID_LIST.clear();
-            server.getPlayerList().getPlayers().forEach(player -> UUID_LIST.add(player.getStringUUID()));
+            server.getPlayerList().getPlayers().forEach(player -> UUID_LIST.add(player.getUUID()));
         }
     }
 
-    public static List<String> getPlayerSkillList(String uuid) {
+    public static List<String> getPlayerSkillList(UUID uuid) {
         return playerMap.get(uuid).getSkills();
     }
 
-    public static int getPlayerLevel(String uuid) {
+    public static int getPlayerLevel(UUID uuid) {
         return playerMap.get(uuid).getLevel();
     }
 
-    public static void setPlayerLevel(String uuid, int level) {
+    public static void setPlayerLevel(UUID uuid, int level) {
         playerMap.get(uuid).setLevel(level);
     }
 
-    public static float getPlayerComputingPower(String uuid) {
+    public static float getPlayerComputingPower(UUID uuid) {
         return playerMap.get(uuid).getComputingPower();
     }
 
-    public static void setPlayerComputingPower(String uuid, float power) {
+    public static void setPlayerComputingPower(UUID uuid, float power) {
         playerMap.get(uuid).setComputingPower(power);
     }
 
-    public static float getPlayerMaximumComputingPower(String uuid) {
+    public static float getPlayerMaximumComputingPower(UUID uuid) {
         return playerMap.get(uuid).getMaximumComputingPower();
     }
 
-    public static void setPlayerMaximumComputingPower(String uuid, float power) {
+    public static void setPlayerMaximumComputingPower(UUID uuid, float power) {
         playerMap.get(uuid).setMaximumComputingPower(power);
     }
 
-    public static float getPlayerComputingPowerRecoverySpeed(String uuid) {
+    public static float getPlayerComputingPowerRecoverySpeed(UUID uuid) {
         return playerMap.get(uuid).getComputingPowerRecoverySpeed();
     }
 
-    public static void setPlayerComputingPowerRecoverySpeed(String uuid, float speed) {
+    public static void setPlayerComputingPowerRecoverySpeed(UUID uuid, float speed) {
         playerMap.get(uuid).setComputingPowerRecoverySpeed(speed);
     }
 

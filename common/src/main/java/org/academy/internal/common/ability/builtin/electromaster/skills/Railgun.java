@@ -19,8 +19,8 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
-import org.academy.AcademyCraftSoundEvents;
-import org.academy.AcademyCraftEntityTypes;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
+import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.lwjgl.glfw.GLFW;
@@ -28,6 +28,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @SuppressWarnings("resource")
 public class Railgun extends Skill {
@@ -43,7 +44,7 @@ public class Railgun extends Skill {
     public void initServer(MinecraftServer server) {
         AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             Player player = serverGamePacketListenerImpl.player;
-            String uuid = player.getStringUUID();
+            UUID uuid = player.getUUID();
             float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
             if (computingPower < 100) {
                 return;

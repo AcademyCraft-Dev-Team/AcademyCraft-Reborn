@@ -18,7 +18,6 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.lwjgl.glfw.GLFW;
 
@@ -74,7 +73,7 @@ public final class SelfTeleport extends Skill {
         AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             ServerPlayer serverPlayer = serverGamePacketListenerImpl.player;
             Vec3 lookDirection = serverPlayer.getLookAngle();
-            Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale((float) LevelUtil.getValidViewDistance(serverPlayer, DISTANCE)));
+            Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale(DISTANCE));
             serverPlayer.teleportTo(targetPosition.x, targetPosition.y, targetPosition.z);
             serverPlayer.resetFallDistance();
         });
@@ -93,12 +92,8 @@ public final class SelfTeleport extends Skill {
                 final Vec3 lookVec = localPlayer.getLookAngle();
                 final Vec3 offsetVec = lookVec.scale(DISTANCE);
 
-                final Vec3 playerPos = localPlayer.position();
-
-                final Vec3 validOffset = LevelUtil.getValidOffset(level, playerPos, aabb, offsetVec);
-
                 RenderUtil.applyCameraOffset(poseStack, Minecraft.getInstance().options.getCameraType(), lookVec);
-                RenderUtil.applyOffset(poseStack, validOffset);
+                RenderUtil.applyOffset(poseStack, offsetVec);
 
                 final RenderBuffers renderBuffers = mc.renderBuffers();
 

@@ -16,14 +16,18 @@ import org.academy.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.GameUtil;
-import org.academy.AcademyCraftEntityRenderers;
-import org.academy.AcademyCraftBlockEntityRenderers;
-import org.academy.AcademyCraftAbilityCategories;
-import org.academy.AcademyCraftSoundEvents;
-import org.academy.AcademyCraftEntityTypes;
+import org.academy.internal.client.renderer.blockentity.AcademyCraftEntityRenderers;
+import org.academy.fabric.internal.client.renderer.blockentity.fabric.AcademyCraftBlockEntityRenderersFabric;
+import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
+import org.academy.fabric.internal.common.world.level.block.entity.fabric.AcademyCraftBlockEntityTypesFabric;
+import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftBlocksFabric;
+import org.academy.internal.client.renderer.blockentity.AcademyCraftBlockEntityRenderers;
+import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategories;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
+import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
-import org.academy.AcademyCraftItems;
-import org.academy.AcademyCraftBlocks;
+import org.academy.internal.common.world.item.AcademyCraftItems;
+import org.academy.internal.common.world.level.block.AcademyCraftBlocks;
 import org.academy.internal.common.world.level.block.entity.AcademyCraftBlockEntityTypes;
 
 public class AcademyCraftRegisterFabric {
@@ -43,18 +47,21 @@ public class AcademyCraftRegisterFabric {
     }
 
     private static void registerItem() {
+        AcademyCraftItemsFabric.init();
         for (ResourceLocation resourceLocation : AcademyCraftItems.ITEMS.keySet()) {
             Registry.register(BuiltInRegistries.ITEM, resourceLocation, AcademyCraftItems.ITEMS.get(resourceLocation));
         }
     }
 
     private static void registerBlock() {
+        AcademyCraftBlocksFabric.init();
         for (ResourceLocation resourceLocation : AcademyCraftBlocks.BLOCKS.keySet()) {
             Registry.register(BuiltInRegistries.BLOCK, resourceLocation, AcademyCraftBlocks.BLOCKS.get(resourceLocation));
         }
     }
 
     private static void registerBlockEntityType() {
+        AcademyCraftBlockEntityTypesFabric.init();
         for (ResourceLocation resourceLocation : AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.keySet()) {
             Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, resourceLocation, AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.get(resourceLocation));
         }
@@ -62,6 +69,7 @@ public class AcademyCraftRegisterFabric {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void registerBlockEntityRenderer() {
+        AcademyCraftBlockEntityRenderersFabric.init();
         for (BlockEntityType<?> blockEntityType : AcademyCraftBlockEntityRenderers.BLOCK_ENTITY_RENDERERS.keySet()) {
             BlockEntityRenderers.register(blockEntityType, context -> (BlockEntityRenderer) AcademyCraftBlockEntityRenderers.BLOCK_ENTITY_RENDERERS.get(blockEntityType));
         }

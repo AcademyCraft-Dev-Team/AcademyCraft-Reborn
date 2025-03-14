@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.item;
 
-import dev.architectury.injectables.annotations.ExpectPlatform;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -13,6 +12,8 @@ import net.minecraft.world.phys.HitResult;
 import org.jetbrains.annotations.NotNull;
 
 public class AbilityDeveloperComputationalChipItem extends Item {
+    public static AbilityDeveloperComputationalChipItemInterface itemInterface;
+
     public AbilityDeveloperComputationalChipItem(Properties properties) {
         super(properties);
     }
@@ -30,7 +31,7 @@ public class AbilityDeveloperComputationalChipItem extends Item {
                 if (hitResult.getType() == HitResult.Type.BLOCK) {
                     BlockHitResult blockHitResult = (BlockHitResult) hitResult;
                     if (level.getBlockState(blockHitResult.getBlockPos()).hasBlockEntity()) {
-
+                        itemInterface.run(level, player, blockHitResult);
                     }
                 }
                 return new InteractionResultHolder<>(InteractionResult.CONSUME, player.getItemInHand(usedHand));
@@ -39,8 +40,7 @@ public class AbilityDeveloperComputationalChipItem extends Item {
         return new InteractionResultHolder<>(InteractionResult.SUCCESS, player.getItemInHand(usedHand));
     }
 
-    @ExpectPlatform
-    public static void check(@NotNull Level level, @NotNull Player player, @NotNull BlockHitResult blockHitResult) {
-        throw new AssertionError();
+    public interface AbilityDeveloperComputationalChipItemInterface {
+        void run(@NotNull Level level, @NotNull Player player, @NotNull BlockHitResult blockHitResult);
     }
 }
