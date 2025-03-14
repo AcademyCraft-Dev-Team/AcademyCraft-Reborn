@@ -15,16 +15,13 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class AcademyCraftWorldData {
     @SerializedName("players")
-    private final Map<String, Player> players = new HashMap<>();
+    private final Map<UUID, Player> players = new HashMap<>();
 
-    public Map<String, Player> getPlayers() {
+    public Map<UUID, Player> getPlayers() {
         return players;
     }
 

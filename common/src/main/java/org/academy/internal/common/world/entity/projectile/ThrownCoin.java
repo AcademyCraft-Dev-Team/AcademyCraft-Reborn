@@ -12,7 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
-import org.academy.AcademyCraftItems;
+import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")

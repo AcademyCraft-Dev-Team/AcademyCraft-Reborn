@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.builtin.meltdowner.skills;
 
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.server.MinecraftServer;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -16,8 +17,7 @@ import org.academy.api.common.network.Response;
 import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 public class HighSpeedElectronBeam extends Skill {
     public static final Skill INSTANCE = new HighSpeedElectronBeam();
@@ -78,5 +78,9 @@ public class HighSpeedElectronBeam extends Skill {
         public static boolean pressed = false;
         public static long pressTime = 0;
         public static long releaseTime = 0;
+    }
+
+    public static final class Server {
+        public static final Map<UUID, UUID> PLAYER_BEAM = new HashMap<>();
     }
 }
