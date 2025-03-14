@@ -9,6 +9,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.forge.internal.common.world.level.block.forge.AbilityDeveloperBlock;
 import org.jetbrains.annotations.NotNull;
 
@@ -114,5 +116,12 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
         } else {
             ContainerHelper.loadAllItems(tag, items);
         }
+    }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        Vec3 pos = this.getBlockPos().getCenter();
+        double radius = 5.0;
+        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }
