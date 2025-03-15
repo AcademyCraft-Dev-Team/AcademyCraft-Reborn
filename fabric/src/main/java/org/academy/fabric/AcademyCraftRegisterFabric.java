@@ -16,7 +16,7 @@ import org.academy.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.GameUtil;
-import org.academy.internal.client.renderer.blockentity.AcademyCraftEntityRenderers;
+import org.academy.internal.client.renderer.entity.AcademyCraftEntityRenderers;
 import org.academy.fabric.internal.client.renderer.blockentity.fabric.AcademyCraftBlockEntityRenderersFabric;
 import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.AcademyCraftBlockEntityTypesFabric;

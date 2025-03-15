@@ -3,8 +3,10 @@ package org.academy;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.command.CommandManager;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -16,14 +18,10 @@ public final class AbilitySystemClient {
     private static volatile float maximumComputingPower;
     private static AbilityCategory category;
     public static final String KEY_NAME = "activate_ability";
-    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
-            new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
-                    new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)),
-                    GLFW.GLFW_PRESS,
-                    new LinkedHashSet<>()
-            )));
+    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME, new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)), GLFW.GLFW_PRESS, new LinkedHashSet<>())));
 
     public static void initClient() {
+        AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.S2C_SYNC_PACKET, (handler, packet) -> synchronizeServerToClient(packet.friendlyByteBuf.readFloat(), packet.friendlyByteBuf.readFloat()));
         Runnable runnable = () -> setActiveHUD(!activeHUD);
         InputSystem.registerKeyBinding(KEY_NAME, KEY, runnable);
         for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
@@ -33,6 +31,11 @@ public final class AbilitySystemClient {
             }
         }
         CommandManager.registerCommands();
+    }
+
+    public static void synchronizeServerToClient(float currentComputingPower, float maxComputingPower) {
+        AbilitySystemClient.setComputingPower(currentComputingPower);
+        AbilitySystemClient.setMaximumComputingPower(maxComputingPower);
     }
 
     public static float getComputingPower() {

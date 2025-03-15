@@ -4,6 +4,7 @@
   "package": "org.academy.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "ConnectionProtocolMixin",
     "DimensionDataStorageMixin",
     "MinecraftServerMixin",
     "PlayerMixin",
@@ -14,7 +15,6 @@
     "IntegratedServerMixin",
     "KeyboardHandlerMixin",
     "LevelRendererMixin",
-    "LocalPlayerMixin",
     "MinecraftMixin",
     "MouseHandlerMixin"
   ],

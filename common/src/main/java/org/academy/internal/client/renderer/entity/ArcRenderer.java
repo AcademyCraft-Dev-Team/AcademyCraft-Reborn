@@ -1,4 +1,4 @@
-package org.academy.internal.client.entity;
+package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
