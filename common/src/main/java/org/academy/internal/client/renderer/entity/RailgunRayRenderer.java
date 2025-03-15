@@ -1,4 +1,4 @@
-package org.academy.internal.client.entity;
+package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -28,7 +28,6 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay> {
         );
         RenderUtil.RayRenderer.renderRay(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, 50, entity.renderProgress * 0.125f, 8);
         RenderUtil.RayRenderer.renderRay(poseStack, buffer, 0.906f, 0.827f, 0.694f, 0.25f, 0, 50, entity.renderProgress * 0.15f, 8);
-      //  RenderUtil.BallRenderer.renderBall(poseStack, buffer, 0.25f, 8, 0.906f, 0.827f, 0.694f, 1f);
         poseStack.popPose();
     }
 

@@ -10,10 +10,9 @@ import org.jetbrains.annotations.NotNull;
 
 // Only for render ray.
 public class RailgunRay extends Entity {
-    // tick
-    public static final int defaultLifetime = 8;
-    public int currentLifetime = defaultLifetime;
-    public int effectTime = 10;
+    public static final int defaultLifeTicks = 8;
+    public int currentLifetime = defaultLifeTicks;
+    public int effectTicks = 10;
     public float progress = 1f;
     public float renderProgress = 1f;
 
@@ -21,19 +20,22 @@ public class RailgunRay extends Entity {
         super(entityType, level);
     }
 
+    @SuppressWarnings("resource")
     @Override
     public void tick() {
         super.tick();
-        effectTime--;
-        if (effectTime <= -1) {
-            currentLifetime--;
-            if (currentLifetime <= -1) {
-                if (!level().isClientSide()) {
+        if (effectTicks <= 0) {
+            if (currentLifetime <= 0) {
+                if (!level().isClientSide) {
                     kill();
                 }
+            } else {
+                currentLifetime--;
             }
+        } else {
+            effectTicks--;
         }
-        this.progress = (float) currentLifetime / defaultLifetime;
+        this.progress = (float) currentLifetime / defaultLifeTicks;
     }
 
     @Override

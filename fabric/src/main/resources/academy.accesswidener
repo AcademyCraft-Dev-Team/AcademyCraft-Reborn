@@ -11,3 +11,9 @@ accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer addL
 accessible method net/minecraft/world/entity/LivingEntity actuallyHurt (Lnet/minecraft/world/damagesource/DamageSource;F)V
 accessible field net/minecraft/client/Minecraft instance Lnet/minecraft/client/Minecraft;
 accessible method net/minecraft/world/item/BlockItem updateBlockStateFromTag (Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/state/BlockState;
+accessible field net/minecraft/world/entity/ai/attributes/DefaultAttributes SUPPLIERS Ljava/util/Map;
+accessible class net/minecraft/network/ConnectionProtocol$ProtocolBuilder
+accessible class net/minecraft/network/ConnectionProtocol$PacketSet
+accessible method net/minecraft/network/ConnectionProtocol protocol ()Lnet/minecraft/network/ConnectionProtocol$ProtocolBuilder;
+accessible field net/minecraft/network/ConnectionProtocol$ProtocolBuilder flows Ljava/util/Map;
+
