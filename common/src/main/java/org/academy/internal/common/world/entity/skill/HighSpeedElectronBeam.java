@@ -7,13 +7,21 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.util.LevelUtil;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
 public class HighSpeedElectronBeam extends Entity {
     public static final int maxChargerTicks = 40;
     public int currentChargerTicks = 0;
-    public float progress = 0f;
+    public static final int maxRayLifeTicks = 15;
+    public int currentRayLifeTicks = maxRayLifeTicks;
+    public float rayProgress = 0;
+    public boolean shouldStopRay = true;
+    public int endShootTicks = 0;
+    public float progress = 0;
+    public float smoothProgress;
+    public float smoothRayProgress;
 
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -44,21 +52,28 @@ public class HighSpeedElectronBeam extends Entity {
             push(offsetX, offsetY, offsetZ);
         }
 
-        // 充能逻辑
         if (currentChargerTicks >= maxChargerTicks) {
-            shoot();
+            if (shouldStopRay) {
+                if (currentRayLifeTicks <= 0) {
+                    kill();
+                } else {
+                    currentRayLifeTicks--;
+                    if (!(endShootTicks > 15)) {
+                        endShootTicks++;
+                    }
+                }
+            }
+            rayProgress = (float) currentRayLifeTicks / maxRayLifeTicks;
         } else {
             currentChargerTicks++;
         }
-
-        // 更新进度
-        this.progress = (float) currentChargerTicks / maxChargerTicks;
-        this.move(MoverType.SELF, this.getDeltaMovement());
-    }
-
-    public void shoot() {
-        if (!level().isClientSide) {
-            kill();
+        progress = (float) currentChargerTicks / (float) maxChargerTicks - (float) endShootTicks / 15;
+        move(MoverType.SELF, this.getDeltaMovement());
+        if (rayProgress > 0.125f) {
+            if (!level().isClientSide) {
+                LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(50)), 1);
+                LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(50)), 1, 100);
+            }
         }
     }
 

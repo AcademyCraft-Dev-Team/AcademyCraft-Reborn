@@ -43,6 +43,7 @@ dependencies {
 
     modApi "dev.felnull:special-model-loader:1.2.0"
     modImplementation("maven.modrinth:forge-config-api-port:v8.0.1-1.20.1-Fabric")
+    modImplementation("maven.modrinth:sodium:mc1.20.1-0.5.11")
     include modApi('teamreborn:energy:3.0.0')
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionFabric')
