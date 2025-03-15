@@ -1,14 +1,14 @@
 package org.academy;
 
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.network.FriendlyByteBufIdentifiers;
+import org.academy.api.common.network.packet.ServerToClientPacket;
 import org.academy.api.common.util.MathUtil;
-import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
-import org.academy.api.server.network.packet.S2CResponsePacket;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -40,7 +40,6 @@ public class AbilitySystemServer {
         }
 
         AcademyCraft.executorService.scheduleAtFixedRate(AbilitySystemServerThread::tick, 0, 50, TimeUnit.MILLISECONDS);
-        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SYNC_REQUEST, (listener, packet) -> MinecraftServerThread.sync(listener.player));
     }
 
     public static final class AbilitySystemServerThread {
@@ -68,20 +67,11 @@ public class AbilitySystemServer {
     }
 
     public static final class MinecraftServerThread {
-        public static void sync(final ServerPlayer player) {
-            final UUID uuid = player.getUUID();
-            final float currentComputingPower = getPlayerComputingPower(uuid);
-            final float maxComputingPower = getPlayerMaximumComputingPower(uuid);
-            final float computingPowerRecoverySpeed = getPlayerComputingPowerRecoverySpeed(uuid);
-            player.connection.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.LIST, AcademyCraftNetworkResourceLocations.S2C_SYNC_RESPONSE, List.of(FriendlyByteBufIdentifiers.FLOAT, currentComputingPower, maxComputingPower, computingPowerRecoverySpeed)));
-        }
-
-        // On player login
         public static void initPlayer(ServerPlayer player) {
             if (AcademyCraftServer.academyCraftWorldData == null) {
                 return;
             }
-            if (!AcademyCraftServer.academyCraftWorldData.getPlayers().containsKey(player.getUUID().toString())) {
+            if (!AcademyCraftServer.academyCraftWorldData.getPlayers().containsKey(player.getUUID())) {
                 AcademyCraftWorldData.Player data = new AcademyCraftWorldData.Player();
                 data.setLevel(0);
 
@@ -98,8 +88,21 @@ public class AbilitySystemServer {
         public static void tickMinecraftServerThread(final MinecraftServer server) {
             running = server.isRunning();
             UUID_LIST.clear();
-            server.getPlayerList().getPlayers().forEach(player -> UUID_LIST.add(player.getUUID()));
+            server.getPlayerList().getPlayers().forEach(player -> {
+                final UUID uuid = player.getUUID();
+                UUID_LIST.add(uuid);
+                player.connection.send(new ServerToClientPacket(AcademyCraftNetworkResourceLocations.S2C_SYNC_PACKET, getSyncFriendlyByteBuf(uuid)));
+            });
         }
+    }
+
+    public static FriendlyByteBuf getSyncFriendlyByteBuf(UUID uuid) {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        final float currentComputingPower = getPlayerComputingPower(uuid);
+        final float maxComputingPower = getPlayerMaximumComputingPower(uuid);
+        buffer.writeFloat(currentComputingPower);
+        buffer.writeFloat(maxComputingPower);
+        return buffer;
     }
 
     public static List<String> getPlayerSkillList(UUID uuid) {

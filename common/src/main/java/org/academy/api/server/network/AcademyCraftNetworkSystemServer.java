@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AcademyCraftNetworkSystemServer {
+    public static final Map<ResourceLocation, ClientToServerPacketHandler> CLIENT_TO_SERVER_PACKET_HANDLER_MAP = new HashMap<>();
     public static final Map<ResourceLocation, Response> SERVER_RESPONSE_MAP = new HashMap<>();
 
     private AcademyCraftNetworkSystemServer() {
