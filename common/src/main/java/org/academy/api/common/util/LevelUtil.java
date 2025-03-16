@@ -1,13 +1,17 @@
 package org.academy.api.common.util;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.EnderDragonPart;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
+import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -80,15 +84,20 @@ public class LevelUtil {
         });
     }
 
-    public static void attackEntitiesAlongPath(Level level, Vec3 start, Vec3 end, float size, float damage) {
+    public static void attackEntitiesAlongPath(Level level, Vec3 start, Vec3 end, float size, DamageSource damageSource, float damage) {
         traversePath(level, start, end, (lvl, pos) -> {
             AABB boundingBox = new AABB(pos.x - size, pos.y - size, pos.z - size,
                     pos.x + size, pos.y + size, pos.z + size);
             List<Entity> entities = lvl.getEntities(null, boundingBox);
 
             for (Entity entity : entities) {
-                if (entity instanceof LivingEntity) {
-                    entity.hurt(lvl.damageSources().magic(), damage);
+                if (entity.getType() != AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE) {
+                    AcademyCraft.LOGGER.info(entity.getName());
+                    if (entity instanceof EnderDragon enderDragon) {
+                        enderDragon.actuallyHurt(damageSource, damage);
+                    } else {
+                        entity.hurt(damageSource, damage);
+                    }
                 }
             }
         });

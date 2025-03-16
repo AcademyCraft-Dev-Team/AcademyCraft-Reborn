@@ -11,7 +11,6 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.packet.ClientToServerPacket;
@@ -21,14 +20,11 @@ import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class SingleHighSpeedElectronBeam extends Skill {
     public static final Skill INSTANCE = new SingleHighSpeedElectronBeam();
-    public static final String KEY_NAME_START = "single_high_speed_electron_beam.start_shoot";
-    public static final String KEY_NAME_END = "single_high_speed_electron_beam.end_shoot";
-    public static AcademyCraftClientConfig.InputPair KEY_START;
-    public static AcademyCraftClientConfig.InputPair KEY_END;
 
     private SingleHighSpeedElectronBeam() {
         super("single_high_speed_electron_beam", 1);
@@ -36,63 +32,36 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initClient() {
-        KEY_START = AcademyCraftClient.clientConfig.getKey(
-                KEY_NAME_START,
-                new AcademyCraftClientConfig.InputPair(
-                        AcademyCraftClientConfig.InputType.MOUSE,
-                        new InputSystem.InputEvent(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOUSE_BUTTON_LEFT)),
-                                GLFW.GLFW_PRESS,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT))
-                        )
-                )
-        );
-        KEY_END = AcademyCraftClient.clientConfig.getKey(
-                KEY_NAME_END,
+        Client.KEY = AcademyCraftClient.clientConfig.getKey(
+                Client.KEY_NAME,
                 new AcademyCraftClientConfig.InputPair(
                         AcademyCraftClientConfig.InputType.MOUSE,
                         new InputSystem.InputEvent(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_MOUSE_BUTTON_LEFT)),
                                 GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>()
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT))
                         )
                 )
         );
-        InputSystem.registerKeyBinding(KEY_NAME_START, KEY_START, Client::handleKeyStart);
-        InputSystem.registerKeyBinding(KEY_NAME_END, KEY_END, Client::handleKeyEnd);
+        InputSystem.registerKeyBinding(Client.KEY_NAME, Client.KEY, Client::handleKey);
     }
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, (serverGamePacketListenerImpl, packet) -> Server.handle(((ServerGamePacketListenerImpl) serverGamePacketListenerImpl).player, packet.friendlyByteBuf.readLong()));
+        AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, (serverGamePacketListenerImpl, packet) -> Server.handle(((ServerGamePacketListenerImpl) serverGamePacketListenerImpl).player));
     }
 
     public static final class Client {
-        public static boolean pressed = false;
-        public static long pressTime = 0;
-        public static long releaseTime = 0;
+        public static AcademyCraftClientConfig.InputPair KEY;
+        public static final String KEY_NAME = "single_high_speed_electron_beam.shoot";
 
-        public static void handleKeyStart() {
-            if (ClientUtil.isScreenNull()) {
-                pressTime = System.currentTimeMillis();
-                pressed = true;
-            }
-        }
-
-        public static void handleKeyEnd() {
-            if (pressed) {
-                releaseTime = System.currentTimeMillis();
-                final long time = releaseTime - pressTime;
-                AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer().writeLong(time))));
-                pressed = false;
-            }
+        public static void handleKey() {
+            AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }
 
     public static final class Server {
-        public static final Map<UUID, UUID> PLAYER_BEAM = new HashMap<>();
-
-        public static void handle(final @NotNull ServerPlayer player, final long time) {
+        public static void handle(final @NotNull ServerPlayer player) {
             final Level level = player.level();
             final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
 
@@ -103,9 +72,9 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
             final double offsetFactor = 2;
 
-            final double randomOffsetX = ((Math.random() * 1.5) - 0.75) * offsetFactor; // (-0.75 ~ 0.75) * offsetFactor
-            final double randomOffsetZ = ((Math.random() * 1.5) - 0.75) * offsetFactor; // (-0.75 ~ 0.75) * offsetFactor
-            final double randomOffsetY = ((Math.random() * 0.5) - 0.25) * offsetFactor; // (-0.25 ~ 0.25) * offsetFactor
+            final double randomOffsetX = ((Math.random() * 1.5) - 0.75) * offsetFactor;
+            final double randomOffsetZ = ((Math.random() * 1.5) - 0.75) * offsetFactor;
+            final double randomOffsetY = ((Math.random() * 0.5) - 0.25) * offsetFactor;
 
             final double beamDistance = 1.75;
             final double yawRad = Math.toRadians(yaw);
