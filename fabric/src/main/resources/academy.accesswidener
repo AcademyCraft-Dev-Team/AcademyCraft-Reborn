@@ -16,4 +16,5 @@ accessible class net/minecraft/network/ConnectionProtocol$ProtocolBuilder
 accessible class net/minecraft/network/ConnectionProtocol$PacketSet
 accessible method net/minecraft/network/ConnectionProtocol protocol ()Lnet/minecraft/network/ConnectionProtocol$ProtocolBuilder;
 accessible field net/minecraft/network/ConnectionProtocol$ProtocolBuilder flows Ljava/util/Map;
+accessible field net/minecraft/world/damagesource/DamageSources damageTypes Lnet/minecraft/core/Registry;
 

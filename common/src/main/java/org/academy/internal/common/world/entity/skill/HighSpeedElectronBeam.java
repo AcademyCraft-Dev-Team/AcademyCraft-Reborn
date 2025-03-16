@@ -1,6 +1,9 @@
 package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
@@ -70,9 +73,9 @@ public class HighSpeedElectronBeam extends Entity {
         progress = (float) currentChargerTicks / (float) maxChargerTicks - (float) endShootTicks / 15;
         move(MoverType.SELF, this.getDeltaMovement());
         if (rayProgress > 0.125f) {
-            if (!level().isClientSide) {
-                LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(50)), 1);
-                LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(50)), 1, 100);
+            if (level() instanceof ServerLevel serverLevel) {
+                LevelUtil.destroyBlocksAlongPath(serverLevel, position(), position().add(getLookAngle().scale(50)), 1);
+                LevelUtil.attackEntitiesAlongPath(serverLevel, position(), position().add(getLookAngle().scale(50)), 1, new DamageSource(serverLevel.damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
             }
         }
     }
