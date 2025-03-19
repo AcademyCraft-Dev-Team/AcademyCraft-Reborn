@@ -7,6 +7,8 @@ import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
+import org.academy.api.common.network.FriendlyByteBufDeserializers;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -22,6 +24,7 @@ public final class AbilitySystemClient {
 
     public static void initClient() {
         AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.S2C_SYNC_PACKET, (handler, packet) -> synchronizeServerToClient(packet.friendlyByteBuf.readFloat(), packet.friendlyByteBuf.readFloat()));
+        AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.S2C_INIT_PACKET, (handler, packet) -> initServerPlayerToClient(FriendlyByteBufDeserializers.getDeserializer(AbilityCategory.class).isPresent() ? FriendlyByteBufDeserializers.getDeserializer(AbilityCategory.class).get().deserialize(packet.friendlyByteBuf) : null));
         Runnable runnable = () -> setActiveHUD(!activeHUD);
         InputSystem.registerKeyBinding(KEY_NAME, KEY, runnable);
         for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
@@ -33,7 +36,15 @@ public final class AbilitySystemClient {
         CommandManager.registerCommands();
     }
 
-    public static void synchronizeServerToClient(float currentComputingPower, float maxComputingPower) {
+    public static void initServerPlayerToClient(@Nullable AbilityCategory abilityCategory) {
+        if (abilityCategory == null) {
+            AcademyCraft.LOGGER.warn("Init: AbilityCategory is null");
+        } else {
+            category = abilityCategory;
+        }
+    }
+
+    public static void synchronizeServerToClient(final float currentComputingPower, final float maxComputingPower) {
         AbilitySystemClient.setComputingPower(currentComputingPower);
         AbilitySystemClient.setMaximumComputingPower(maxComputingPower);
     }

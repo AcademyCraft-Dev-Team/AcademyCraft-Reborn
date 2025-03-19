@@ -4,5 +4,5 @@ import net.minecraft.network.FriendlyByteBuf;
 
 @FunctionalInterface
 public interface FriendlyByteBufSerializer<T> {
-    void serialize(FriendlyByteBuf buffer, T value);
+    FriendlyByteBuf serialize(FriendlyByteBuf buffer, T value);
 }
