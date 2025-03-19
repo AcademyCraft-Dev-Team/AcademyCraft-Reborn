@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
+import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.packet.ServerToClientPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
@@ -83,6 +84,7 @@ public class AbilitySystemServer {
                 data.setAbilityCategory(weightedRandom.getRandomItem());
                 AcademyCraftServer.academyCraftWorldData.getPlayers().put(player.getUUID(), data);
             }
+            player.connection.send(new ServerToClientPacket(AcademyCraftNetworkResourceLocations.S2C_INIT_PACKET, FriendlyByteBufSerializers.ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_SERIALIZER.serialize(new FriendlyByteBuf(Unpooled.buffer()),getAbilityCategory(player.getUUID()))));
         }
 
         public static void tickMinecraftServerThread(final MinecraftServer server) {
@@ -103,6 +105,10 @@ public class AbilitySystemServer {
         buffer.writeFloat(currentComputingPower);
         buffer.writeFloat(maxComputingPower);
         return buffer;
+    }
+
+    public static AbilityCategory getAbilityCategory(UUID uuid) {
+        return ABILITY_CATEGORY_MAP.get(playerMap.get(uuid).getAbilityCategory());
     }
 
     public static List<String> getPlayerSkillList(UUID uuid) {
