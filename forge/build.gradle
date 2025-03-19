@@ -35,7 +35,8 @@ dependencies {
     forge "net.minecraftforge:forge:$rootProject.forge_version"
     implementation(forgeRuntimeLibrary("icyllis.modernui:ModernUI-Core:3.11.1"))
     implementation(forgeRuntimeLibrary("icyllis.modernui:ModernUI-Markdown:3.11.1"))
-    modImplementation("icyllis.modernui:ModernUI-Forge:${minecraft_version}-3.11.1.6")
+    modImplementation "icyllis.modernui:ModernUI-Forge:${minecraft_version}-3.11.1.6"
+    modImplementation "maven.modrinth:jade:11.13.1+forge"
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionForge')
 }

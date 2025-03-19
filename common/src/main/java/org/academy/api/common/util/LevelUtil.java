@@ -1,105 +1,114 @@
 package org.academy.api.common.util;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.boss.EnderDragonPart;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.Optional;
 
 public class LevelUtil {
     @SuppressWarnings("resource")
     public static double getValidViewDistance(Entity entity, double targetDistance) {
-        Level level = entity.level();
         Vec3 startPos = entity.position();
+        Vec3 direction = Vec3.directionFromRotation(entity.getXRot(), entity.getYRot()).scale(targetDistance);
+        Vec3 targetPos = startPos.add(direction);
 
-        float yaw = entity.getYRot();
-        float pitch = entity.getXRot();
-        Vec3 direction = Vec3.directionFromRotation(pitch, yaw);
-
-        Vec3 targetPos = startPos.add(direction.scale(targetDistance));
-
-        ClipContext context = new ClipContext(startPos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity);
-        HitResult hitResult = level.clip(context);
-
-        if (hitResult.getType() != HitResult.Type.MISS) {
-            return hitResult.getLocation().distanceTo(startPos);
-        }
-
-        return targetDistance;
+        HitResult hitResult = entity.level().clip(new ClipContext(startPos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
+        return (hitResult.getType() != HitResult.Type.MISS) ? hitResult.getLocation().distanceTo(startPos) : targetDistance;
     }
 
-    private static void traversePath(Level level, Vec3 start, Vec3 end, BiConsumer<Level, Vec3> action) {
-        double dx = end.x - start.x;
-        double dy = end.y - start.y;
-        double dz = end.z - start.z;
-
-        int steps = (int) Math.ceil(Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz))));
-        double stepX = dx / steps;
-        double stepY = dy / steps;
-        double stepZ = dz / steps;
-
-        double x = start.x;
-        double y = start.y;
-        double z = start.z;
-
-        for (int i = 0; i <= steps; i++) {
-            action.accept(level, new Vec3(x, y, z));
-
-            x += stepX;
-            y += stepY;
-            z += stepZ;
-        }
+    @SuppressWarnings("DataFlowIssue")
+    public static boolean canBreakBlock(BlockState blockState, int miningLevel) {
+        if (blockState.getDestroySpeed(null, null) < 0) return false;
+        return switch (miningLevel) {
+            case 3 ->
+                    blockState.is(BlockTags.NEEDS_DIAMOND_TOOL) || blockState.is(BlockTags.NEEDS_IRON_TOOL) || blockState.is(BlockTags.NEEDS_STONE_TOOL);
+            case 2 -> blockState.is(BlockTags.NEEDS_IRON_TOOL) || blockState.is(BlockTags.NEEDS_STONE_TOOL);
+            case 1 -> blockState.is(BlockTags.NEEDS_STONE_TOOL);
+            default -> true;
+        };
     }
 
-    public static void destroyBlocksAlongPath(Level level, Vec3 start, Vec3 end, float size) {
-        traversePath(level, start, end, (lvl, pos) -> {
-            double minX = pos.x - size;
-            double maxX = pos.x + size;
-            double minY = pos.y - size;
-            double maxY = pos.y + size;
-            double minZ = pos.z - size;
-            double maxZ = pos.z + size;
-
-            for (double bx = minX; bx <= maxX; bx += 0.5) {
-                for (double by = minY; by <= maxY; by += 0.5) {
-                    for (double bz = minZ; bz <= maxZ; bz += 0.5) {
-                        Vec3 blockCenter = new Vec3(Math.floor(bx) + 0.5, Math.floor(by) + 0.5, Math.floor(bz) + 0.5);
-
-                        if (blockCenter.distanceTo(pos) <= size) {
-                            lvl.destroyBlock(new BlockPos((int) blockCenter.x, (int) blockCenter.y, (int) blockCenter.z), false);
+    public static Optional<Pair<Boolean, Double>> destroyBlocksAlongPath(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean dropBlock, boolean spawnParticles, boolean canBlock) {
+        double pathLength = start.distanceTo(end);
+        Vec3 direction = end.subtract(start).normalize();
+        double stepSize = 0.2;
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
+        BlockState blockState;
+        final BlockState air = Blocks.AIR.defaultBlockState();
+        double radiusSquared = radius * radius;
+        for (double distanceTraveled = 0; distanceTraveled <= pathLength; distanceTraveled += stepSize) {
+            Vec3 currentPosition = start.add(direction.scale(distanceTraveled));
+            for (double offsetX = -radius; offsetX <= radius; offsetX += stepSize) {
+                for (double offsetY = -radius; offsetY <= radius; offsetY += stepSize) {
+                    for (double offsetZ = -radius; offsetZ <= radius; offsetZ += stepSize) {
+                        double distSquared = offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ;
+                        if (distSquared <= radiusSquared) {
+                            blockPos.set(Mth.floor(currentPosition.x + offsetX), Mth.floor(currentPosition.y + offsetY), Mth.floor(currentPosition.z + offsetZ));
+                            blockState = level.getBlockState(blockPos);
+                            if (canBreakBlock(blockState, miningLevel)) {
+                                if (level instanceof ServerLevel serverLevel) {
+                                    serverLevel.setBlock(blockPos, air, 2);
+                                    if (spawnParticles) {
+                                        serverLevel.levelEvent(2001, blockPos, Block.getId(blockState));
+                                    }
+                                    if (dropBlock) {
+                                        BlockEntity blockEntity = blockState.hasBlockEntity() ? serverLevel.getBlockEntity(blockPos) : null;
+                                        Block.dropResources(blockState, serverLevel, blockPos, blockEntity, null, ItemStack.EMPTY);
+                                    }
+                                }
+                            } else if (canBlock) {
+                                return Optional.of(Pair.of(true, distanceTraveled));
+                            }
                         }
                     }
                 }
             }
-        });
+        }
+        return Optional.of(Pair.of(false, pathLength));
     }
 
     public static void attackEntitiesAlongPath(Level level, Vec3 start, Vec3 end, float size, DamageSource damageSource, float damage) {
-        traversePath(level, start, end, (lvl, pos) -> {
-            AABB boundingBox = new AABB(pos.x - size, pos.y - size, pos.z - size,
-                    pos.x + size, pos.y + size, pos.z + size);
-            List<Entity> entities = lvl.getEntities(null, boundingBox);
+        if (!(level instanceof ServerLevel serverLevel)) return;
 
+        Vec3 direction = end.subtract(start).normalize();
+        double stepSize = 0.2;
+        double totalDistance = start.distanceTo(end);
+        double sizeSquared = size * size;
+
+        for (double traveled = 0; traveled <= totalDistance; traveled += stepSize) {
+            Vec3 currentPos = start.add(direction.scale(traveled));
+            AABB area = new AABB(currentPos.x - size, currentPos.y - size, currentPos.z - size, currentPos.x + size, currentPos.y + size, currentPos.z + size);
+
+            List<Entity> entities = serverLevel.getEntities(null, area);
             for (Entity entity : entities) {
-                if (entity.getType() != AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE) {
-                    AcademyCraft.LOGGER.info(entity.getName());
+                if (entity.getType() == AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE) continue;
+
+                if (entity.position().distanceToSqr(currentPos) <= sizeSquared) {
                     if (entity instanceof EnderDragon enderDragon) {
-                        enderDragon.actuallyHurt(damageSource, damage);
+                        enderDragon.reallyHurt(damageSource, damage);
                     } else {
                         entity.hurt(damageSource, damage);
                     }
                 }
             }
-        });
+        }
     }
 }

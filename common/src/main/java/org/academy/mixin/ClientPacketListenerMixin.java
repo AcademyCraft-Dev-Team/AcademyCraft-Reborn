@@ -23,20 +23,20 @@ public class ClientPacketListenerMixin {
     private Connection connection;
     @Shadow @Final private Minecraft minecraft;
     @Unique
-    ClientPacketListener instance;
+    ClientPacketListener academyCraft$instance;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {
-        instance = (ClientPacketListener) (Object) this;
+        academyCraft$instance = (ClientPacketListener) (Object) this;
         AcademyCraftNetworkSystemClient.connection = this.connection;
     }
 
     @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
     public void handleCustomPayload(ClientboundCustomPayloadPacket packet, CallbackInfo ci) {
-        PacketUtils.ensureRunningOnSameThread(packet, instance, this.minecraft);
+        PacketUtils.ensureRunningOnSameThread(packet, academyCraft$instance, this.minecraft);
         ResourceLocation identifier = packet.getIdentifier();
         if (AcademyCraftPacketHandlersClient.HANDLER_MAP.containsKey(identifier)) {
-            AcademyCraftPacketHandlersClient.HANDLER_MAP.get(identifier).handle(instance, packet);
+            AcademyCraftPacketHandlersClient.HANDLER_MAP.get(identifier).handle(academyCraft$instance, packet);
             ci.cancel();
         }
     }
