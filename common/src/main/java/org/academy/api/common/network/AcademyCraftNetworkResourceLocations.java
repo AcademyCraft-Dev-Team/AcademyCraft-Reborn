@@ -29,6 +29,7 @@ public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation C2S_DEBUG_FULL_ENERGY = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_debug_full_energy");
 
     public static final ResourceLocation S2C_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_sync_packet");
+    public static final ResourceLocation S2C_INIT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_init_packet");
     public static final ResourceLocation C2S_RAILGUN_SHOOT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID,"s2c_railgun_shoot_packet");
     public static final ResourceLocation C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_single_high_speed_electron_beam_packet");
 
