@@ -1,7 +1,6 @@
 package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
@@ -11,7 +10,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.util.LevelUtil;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Optional;
 
 @SuppressWarnings("resource")
 public class HighSpeedElectronBeam extends Entity {
@@ -25,6 +27,7 @@ public class HighSpeedElectronBeam extends Entity {
     public float progress = 0;
     public float smoothProgress;
     public float smoothRayProgress;
+    public float length = 50f;
 
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -73,10 +76,12 @@ public class HighSpeedElectronBeam extends Entity {
         progress = (float) currentChargerTicks / (float) maxChargerTicks - (float) endShootTicks / 15;
         move(MoverType.SELF, this.getDeltaMovement());
         if (rayProgress > 0.125f) {
-            if (level() instanceof ServerLevel serverLevel) {
-                LevelUtil.destroyBlocksAlongPath(serverLevel, position(), position().add(getLookAngle().scale(50)), 1);
-                LevelUtil.attackEntitiesAlongPath(serverLevel, position(), position().add(getLookAngle().scale(50)), 1, new DamageSource(serverLevel.damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
+            Optional<Pair<Boolean, Double>> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.125f, 10, false, false, true);
+            if (result.isPresent()) {
+                double d = result.get().getValue();
+                length = (float) d;
             }
+            LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 1, new DamageSource(level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
         }
     }
 
