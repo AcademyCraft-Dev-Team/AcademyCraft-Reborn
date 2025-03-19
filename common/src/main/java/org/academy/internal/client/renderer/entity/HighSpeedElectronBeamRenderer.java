@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
+import org.academy.AcademyCraft;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
@@ -28,7 +29,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         entity.smoothProgress = MathUtil.lerp(entity.smoothProgress, entity.progress, partialTick);
         entity.smoothRayProgress = MathUtil.lerp(entity.smoothRayProgress, entity.rayProgress, partialTick);
         RenderUtil.BallRenderer.renderBall(poseStack, buffer, entity.smoothProgress * 0.25f, 16, 0.906f, 0.827f, 0.694f, 1f);
-        RenderUtil.RayRenderer.renderRay(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, 50, entity.smoothRayProgress * 0.125f, 8);
+        RenderUtil.RayRenderer.renderRay(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, entity.length, entity.smoothRayProgress * 0.125f, 8);
         poseStack.popPose();
     }
 
