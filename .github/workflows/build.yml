@@ -11,11 +11,25 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.gradle/daemon
+            ~/.gradle/native
+            ~/.gradle/notifications
+            ~/.gradle/jdks
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -23,21 +37,14 @@ jobs:
           java-version: '17'
           distribution: 'zulu'
 
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: .\gradlew.bat build
+      - name: Build
+        run: ./gradlew build
 
-      - name: Upload JAR files
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: AcademyCraft
-          path: '**/libs/*.jar'
+          path: '**/build/libs/*.jar'
