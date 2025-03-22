@@ -1,8 +1,7 @@
-package org.academy.forge.internal.client.renderer.blockentity;
+package org.academy.forge.internal.client.renderer.blockentity.forge;
 
 import org.academy.forge.internal.common.world.level.block.entity.forge.AcademyCraftBlockEntityTypesForge;
 import org.academy.internal.client.renderer.blockentity.AcademyCraftBlockEntityRenderers;
-import org.academy.forge.internal.client.renderer.blockentity.forge.AbilityDeveloperBlockEntityRenderer;
 
 public class AcademyCraftBlockEntityRenderersForge {
     public static void init() {

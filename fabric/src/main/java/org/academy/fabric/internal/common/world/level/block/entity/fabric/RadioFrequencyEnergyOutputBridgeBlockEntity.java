@@ -8,7 +8,13 @@ import org.jetbrains.annotations.NotNull;
 import team.reborn.energy.api.base.SimpleEnergyStorage;
 
 public class RadioFrequencyEnergyOutputBridgeBlockEntity extends BlockEntity {
-    public SimpleEnergyStorage energyStorage = new SimpleEnergyStorage(160000L, 128, 128);
+    public SimpleEnergyStorage energyStorage = new SimpleEnergyStorage(40000,32,32){
+        @SuppressWarnings("UnstableApiUsage")
+        @Override
+        protected void onFinalCommit() {
+            setChanged();
+        }
+    };
 
     public RadioFrequencyEnergyOutputBridgeBlockEntity(BlockPos pos, BlockState blockState) {
         super(AcademyCraftBlockEntityTypesFabric.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE, pos, blockState);

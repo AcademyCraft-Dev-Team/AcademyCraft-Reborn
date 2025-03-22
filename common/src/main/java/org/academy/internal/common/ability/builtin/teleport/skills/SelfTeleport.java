@@ -33,7 +33,7 @@ public final class SelfTeleport extends Skill {
     public static final String KEY_NAME_END = "self_teleport.end";
     public static AcademyCraftClientConfig.InputPair KEY_START;
     public static AcademyCraftClientConfig.InputPair KEY_END;
-    public static final float DISTANCE = 10f;
+    public static final float DISTANCE = 10F;
 
     private SelfTeleport() {
         super(NAME, 2);
