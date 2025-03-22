@@ -5,6 +5,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.api.common.network.Response;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,6 +16,14 @@ public class AcademyCraftNetworkSystemClient {
 
     public static void sendPacket(Packet<?> packet) {
         connection.send(packet);
+    }
+
+    public static void registerPacketHandler(ResourceLocation resourceLocation, Method method) {
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Class<?> parameterType = parameterTypes[i];
+            if (parameterType.isAssignableFrom(Connection.class)) {}
+        }
     }
 
     private AcademyCraftNetworkSystemClient() {

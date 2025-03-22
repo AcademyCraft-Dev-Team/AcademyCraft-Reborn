@@ -1,68 +1,103 @@
 package org.academy;
 
 import io.netty.buffer.Unpooled;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.packet.ServerToClientPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
-import org.jetbrains.annotations.ApiStatus;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static org.academy.AbilitySystem.ABILITY_CATEGORY_MAP;
 
 public class AbilitySystemServer {
     public static Map<UUID, AcademyCraftWorldData.Player> playerMap;
     private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
-    public static final List<UUID> UUID_LIST = new CopyOnWriteArrayList<>();
-    @ApiStatus.Internal
-    public static volatile boolean running;
-    @ApiStatus.Internal
-    public static volatile boolean paused = false;
+    public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
+    public static volatile MinecraftServer minecraftServer;
+    public static volatile ScheduledFuture<?> scheduledFuture;
 
     public static void init(final MinecraftServer server) {
+        minecraftServer = server;
         playerMap = AcademyCraftServer.academyCraftWorldData.getPlayers();
-
         for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initServer(server);
             for (Skill skill : abilityCategory.skillList) {
                 skill.initServer(server);
             }
         }
-
-        AcademyCraft.executorService.scheduleAtFixedRate(AbilitySystemServerThread::tick, 0, 50, TimeUnit.MILLISECONDS);
+        scheduledFuture = AcademyCraft.executorService.scheduleAtFixedRate(
+                AbilitySystemServerThread::tick, 0, 50, TimeUnit.MILLISECONDS
+        );
     }
 
     public static final class AbilitySystemServerThread {
         public static void tick() {
-            if (running && !paused) {
-                for (Runnable runnable : RUNNABLE_LIST) {
-                    runnable.run();
-                    RUNNABLE_LIST.remove(runnable);
-                }
-                for (UUID uuid : UUID_LIST) {
-                    tickPlayer(uuid);
-                }
+            if (minecraftServer instanceof IntegratedServer integratedServer) {
+                if (integratedServer.paused) return;
             }
+            for (Runnable runnable : RUNNABLE_LIST) {
+                runnable.run();
+                RUNNABLE_LIST.remove(runnable);
+            }
+            for (Player player : LIVE_PLAYER_MAP.values()) {
+                tickPlayer(player);
+            }
+            LIVE_PLAYER_MAP.values().forEach(player -> {
+                final Consumer<Packet<?>> packetConsumer = player.packetConsumer;
+                final UUID uuid = player.uuid;
+                player.syncQueue.forEach(syncType -> {
+                    switch (syncType) {
+                        case COMPUTING_POWER -> packetConsumer.accept(
+                                new ServerToClientPacket(
+                                        AcademyCraftNetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
+                                        new FriendlyByteBuf(Unpooled.buffer()
+                                                .writeFloat(getPlayerComputingPower(uuid))
+                                        )
+                                )
+                        );
+                        case ABILITY_CATEGORY -> packetConsumer.accept(
+                                new ServerToClientPacket(
+                                        AcademyCraftNetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
+                                        new FriendlyByteBuf(Unpooled.buffer())
+                                                .writeUtf(getPlayerAbilityCategory(uuid).name)
+                                )
+                        );
+                        case MAX_COMPUTING_POWER -> packetConsumer.accept(
+                                new ServerToClientPacket(
+                                        AcademyCraftNetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
+                                        new FriendlyByteBuf(Unpooled.buffer()
+                                                .writeFloat(getPlayerMaxComputingPower(uuid))
+                                        )
+                                )
+                        );
+                    }
+                });
+                player.syncQueue.clear();
+            });
         }
 
-        public static void tickPlayer(final UUID uuid) {
-            AcademyCraftWorldData.Player playerData = playerMap.get(uuid);
-            float currentComputingPower = playerData.getComputingPower();
-            float maxComputingPower = playerData.getMaximumComputingPower();
-            float computingPowerRecoverySpeed = playerData.getComputingPowerRecoverySpeed();
+        public static void tickPlayer(Player player) {
+            final UUID uuid = player.uuid;
+            final float currentComputingPower = getPlayerComputingPower(uuid);
+            final float maxComputingPower = getPlayerMaxComputingPower(uuid);
+            final float computingPowerRecoverySpeed = getPlayerComputingPowerRecoverySpeed(uuid);
             if (currentComputingPower < maxComputingPower) {
-                playerData.setComputingPower(currentComputingPower + computingPowerRecoverySpeed);
+                setPlayerComputingPower(uuid, currentComputingPower + computingPowerRecoverySpeed);
             }
         }
     }
@@ -72,7 +107,7 @@ public class AbilitySystemServer {
             if (AcademyCraftServer.academyCraftWorldData == null) {
                 return;
             }
-            if (!AcademyCraftServer.academyCraftWorldData.getPlayers().containsKey(player.getUUID())) {
+            if (!playerMap.containsKey(player.getUUID())) {
                 AcademyCraftWorldData.Player data = new AcademyCraftWorldData.Player();
                 data.setLevel(0);
 
@@ -82,33 +117,41 @@ public class AbilitySystemServer {
                 }
 
                 data.setAbilityCategory(weightedRandom.getRandomItem());
-                AcademyCraftServer.academyCraftWorldData.getPlayers().put(player.getUUID(), data);
+                playerMap.put(player.getUUID(), data);
             }
-            player.connection.send(new ServerToClientPacket(AcademyCraftNetworkResourceLocations.S2C_INIT_PACKET, FriendlyByteBufSerializers.ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_SERIALIZER.serialize(new FriendlyByteBuf(Unpooled.buffer()),getAbilityCategory(player.getUUID()))));
         }
 
         public static void tickMinecraftServerThread(final MinecraftServer server) {
-            running = server.isRunning();
-            UUID_LIST.clear();
-            server.getPlayerList().getPlayers().forEach(player -> {
-                final UUID uuid = player.getUUID();
-                UUID_LIST.add(uuid);
-                player.connection.send(new ServerToClientPacket(AcademyCraftNetworkResourceLocations.S2C_SYNC_PACKET, getSyncFriendlyByteBuf(uuid)));
+            server.getPlayerList().getPlayers().forEach(serverPlayer -> {
+                final UUID uuid = serverPlayer.getUUID();
+                if (!LIVE_PLAYER_MAP.containsKey(uuid)) {
+                    LIVE_PLAYER_MAP.put(uuid, new Player(
+                            uuid, playerMap.get(uuid), packet -> serverPlayer.connection.send(packet))
+                    );
+                    addAllPlayerSyncTask(uuid);
+                }
             });
+            Set<UUID> onlinePlayerUUIDs = server.getPlayerList().getPlayers().stream()
+                    .map(Entity::getUUID)
+                    .collect(Collectors.toSet());
+
+            LIVE_PLAYER_MAP.keySet().removeIf(uuid -> !onlinePlayerUUIDs.contains(uuid));
         }
     }
 
-    public static FriendlyByteBuf getSyncFriendlyByteBuf(UUID uuid) {
-        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
-        final float currentComputingPower = getPlayerComputingPower(uuid);
-        final float maxComputingPower = getPlayerMaximumComputingPower(uuid);
-        buffer.writeFloat(currentComputingPower);
-        buffer.writeFloat(maxComputingPower);
-        return buffer;
+    public static void addAllPlayerSyncTask(final UUID uuid) {
+        for (SyncType syncType : SyncType.values()) {
+            addPlayerSyncTask(uuid, syncType);
+        }
     }
 
-    public static AbilityCategory getAbilityCategory(UUID uuid) {
+    public static AbilityCategory getPlayerAbilityCategory(UUID uuid) {
         return ABILITY_CATEGORY_MAP.get(playerMap.get(uuid).getAbilityCategory());
+    }
+
+    public static void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        playerMap.get(uuid).setAbilityCategory(abilityCategory.name);
+        addPlayerSyncTask(uuid, SyncType.ABILITY_CATEGORY);
     }
 
     public static List<String> getPlayerSkillList(UUID uuid) {
@@ -129,14 +172,16 @@ public class AbilitySystemServer {
 
     public static void setPlayerComputingPower(UUID uuid, float power) {
         playerMap.get(uuid).setComputingPower(power);
+        addPlayerSyncTask(uuid, SyncType.COMPUTING_POWER);
     }
 
-    public static float getPlayerMaximumComputingPower(UUID uuid) {
-        return playerMap.get(uuid).getMaximumComputingPower();
+    public static float getPlayerMaxComputingPower(UUID uuid) {
+        return playerMap.get(uuid).getMaxComputingPower();
     }
 
-    public static void setPlayerMaximumComputingPower(UUID uuid, float power) {
-        playerMap.get(uuid).setMaximumComputingPower(power);
+    public static void setPlayerMaxComputingPower(UUID uuid, float power) {
+        playerMap.get(uuid).setMaxComputingPower(power);
+        addPlayerSyncTask(uuid, SyncType.MAX_COMPUTING_POWER);
     }
 
     public static float getPlayerComputingPowerRecoverySpeed(UUID uuid) {
@@ -151,7 +196,32 @@ public class AbilitySystemServer {
         return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();
     }
 
+    public static void addPlayerSyncTask(final UUID uuid, final SyncType syncType) {
+        if (LIVE_PLAYER_MAP.containsKey(uuid)) {
+            LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
+        }
+    }
+
     public static void addTask(Runnable runnable) {
         RUNNABLE_LIST.add(runnable);
+    }
+
+    public enum SyncType {
+        COMPUTING_POWER,
+        MAX_COMPUTING_POWER,
+        ABILITY_CATEGORY,
+    }
+
+    public static class Player {
+        public final UUID uuid;
+        public final AcademyCraftWorldData.Player data;
+        private final Consumer<Packet<?>> packetConsumer;
+        public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
+
+        public Player(final UUID uuid, final AcademyCraftWorldData.Player data, final Consumer<Packet<?>> packetConsumer) {
+            this.uuid = uuid;
+            this.data = data;
+            this.packetConsumer = packetConsumer;
+        }
     }
 }

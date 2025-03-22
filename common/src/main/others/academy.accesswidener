@@ -28,3 +28,7 @@ accessible method net/minecraft/network/ConnectionProtocol protocol ()Lnet/minec
 accessible field net/minecraft/network/ConnectionProtocol$ProtocolBuilder flows Ljava/util/Map;
 accessible field net/minecraft/world/damagesource/DamageSources damageTypes Lnet/minecraft/core/Registry;
 accessible method net/minecraft/world/entity/boss/enderdragon/EnderDragon reallyHurt (Lnet/minecraft/world/damagesource/DamageSource;F)Z
+accessible field net/minecraft/client/server/IntegratedServer paused Z
+accessible field net/minecraft/client/renderer/RenderStateShard POSITION_COLOR_TEX_SHADER Lnet/minecraft/client/renderer/RenderStateShard$ShaderStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard COLOR_WRITE Lnet/minecraft/client/renderer/RenderStateShard$WriteMaskStateShard;
+
