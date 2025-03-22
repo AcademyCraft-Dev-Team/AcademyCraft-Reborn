@@ -23,7 +23,7 @@ import net.minecraftforge.registries.RegistryObject;
 import org.academy.*;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.GameUtil;
-import org.academy.forge.internal.client.renderer.blockentity.AcademyCraftBlockEntityRenderersForge;
+import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraftBlockEntityRenderersForge;
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
 import org.academy.forge.internal.common.world.level.block.entity.forge.AcademyCraftBlockEntityTypesForge;
 import org.academy.forge.internal.common.world.level.block.forge.AcademyCraftBlocksForge;
