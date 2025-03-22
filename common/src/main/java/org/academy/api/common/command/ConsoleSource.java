@@ -1,4 +1,4 @@
-package org.academy.api.client.command;
+package org.academy.api.common.command;
 
 import net.minecraft.core.BlockPos;
 

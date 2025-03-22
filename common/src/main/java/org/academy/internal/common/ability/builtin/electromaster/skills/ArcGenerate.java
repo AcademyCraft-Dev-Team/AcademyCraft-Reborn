@@ -63,7 +63,7 @@ public class ArcGenerate extends Skill {
                 AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getUUID());
                 float currentComputingPower = data.getComputingPower();
                 if (currentComputingPower > 10) {
-                    data.setComputingPower(currentComputingPower - 10);
+                    AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
                 } else {
                     return;
                 }

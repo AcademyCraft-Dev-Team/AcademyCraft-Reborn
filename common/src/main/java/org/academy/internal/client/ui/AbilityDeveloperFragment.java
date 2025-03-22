@@ -20,11 +20,11 @@ import icyllis.modernui.widget.ScrollView;
 import icyllis.modernui.widget.TextView;
 import net.minecraft.core.BlockPos;
 import org.academy.AcademyCraft;
-import org.academy.api.client.command.CommandManager;
-import org.academy.api.client.command.ConsoleSource;
+import org.academy.api.common.command.CommandManager;
+import org.academy.api.common.command.ConsoleSource;
 import org.jetbrains.annotations.NotNull;
 
-import static org.academy.api.client.command.CommandManager.HISTORY;
+import static org.academy.api.common.command.CommandManager.HISTORY;
 
 @SuppressWarnings({"UnstableApiUsage", "DataFlowIssue"})
 public class AbilityDeveloperFragment extends Fragment {

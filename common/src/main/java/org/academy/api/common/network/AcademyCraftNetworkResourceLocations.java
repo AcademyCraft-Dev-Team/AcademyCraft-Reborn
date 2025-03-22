@@ -22,16 +22,18 @@ public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_LEARN_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_learn_skill_response");
     public static final ResourceLocation C2S_GET_LEARNED_SKILL_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_get_learned_skill_request");
     public static final ResourceLocation S2C_GET_LEARNED_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_get_learned_skill_response");
-    public static final ResourceLocation C2S_SELF_TELEPORT_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_self_teleport_request");
     public static final ResourceLocation C2S_ARC_GENERATE_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_arc_generate_request");
     public static final ResourceLocation C2S_LEARN_CURRICULUM_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_learn_curriculum_request");
     public static final ResourceLocation S2C_LEARN_CURRICULUM_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_learn_curriculum_response");
     public static final ResourceLocation C2S_DEBUG_FULL_ENERGY = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_debug_full_energy");
 
-    public static final ResourceLocation S2C_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_sync_packet");
-    public static final ResourceLocation S2C_INIT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_init_packet");
-    public static final ResourceLocation C2S_RAILGUN_SHOOT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID,"s2c_railgun_shoot_packet");
+    public static final ResourceLocation C2S_RAILGUN_SHOOT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_railgun_shoot_packet");
     public static final ResourceLocation C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_single_high_speed_electron_beam_packet");
+    public static final ResourceLocation C2S_SELF_TELEPORT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_self_teleport_packet");
+    public static final ResourceLocation C2S_DEBUG_CHANGE_CATEGORY_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_debug_change_category_packet");
+    public static final ResourceLocation S2C_COMPUTING_POWER_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_computing_power_sync_packet");
+    public static final ResourceLocation S2C_MAX_COMPUTING_POWER_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_max_computing_power_sync_packet");
+    public static final ResourceLocation S2C_ABILITY_CATEGORY_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_ability_category_sync_packet");
 
     private AcademyCraftNetworkResourceLocations() {
     }

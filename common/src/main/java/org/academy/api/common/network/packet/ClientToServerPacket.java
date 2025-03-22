@@ -30,8 +30,9 @@ public class ClientToServerPacket implements Packet<ServerGamePacketListener> {
 
     @Override
     public void handle(@NotNull ServerGamePacketListener handler) {
-        ((ServerGamePacketListenerImpl) handler).player.server.execute(() -> {
-            AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.get(resourceLocation).handle(handler, this);
+        final ServerGamePacketListenerImpl serverPacketListener = (ServerGamePacketListenerImpl) handler;
+        serverPacketListener.player.server.execute(() -> {
+            AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.get(resourceLocation).handle(serverPacketListener, this);
             friendlyByteBuf.release();
         });
     }

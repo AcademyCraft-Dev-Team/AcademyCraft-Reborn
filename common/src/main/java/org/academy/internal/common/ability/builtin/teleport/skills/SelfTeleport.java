@@ -1,9 +1,11 @@
 package org.academy.internal.common.ability.builtin.teleport.skills;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderBuffers;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
@@ -12,13 +14,13 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
-import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.client.render.AcademyCraftRenderSystem;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
+import org.academy.api.common.network.packet.ClientToServerPacket;
+import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -52,39 +54,43 @@ public final class SelfTeleport extends Skill {
                         new LinkedHashSet<>()
                 )));
 
-        Runnable start = () -> {
-            if (ClientUtil.isScreenNull()) {
-                AcademyCraftRenderSystem.RENDERER_MAP.put(NAME, Client.RENDERER);
-            }
-        };
-        Runnable end = () -> {
-            if (ClientUtil.isScreenNull()) {
-                AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST));
-            }
-            AcademyCraftRenderSystem.RENDERER_MAP.remove(NAME);
-        };
-
-        InputSystem.registerKeyBinding(KEY_NAME_START, KEY_START, start);
-        InputSystem.registerKeyBinding(KEY_NAME_END, KEY_END, end);
+        InputSystem.registerKeyBinding(KEY_NAME_START, KEY_START, Client::start);
+        InputSystem.registerKeyBinding(KEY_NAME_END, KEY_END, Client::end);
     }
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_REQUEST, (serverGamePacketListenerImpl, packet) -> {
-            ServerPlayer serverPlayer = serverGamePacketListenerImpl.player;
+        AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, (serverPacketListener, packet) -> Server.handleTeleport(serverPacketListener.player));
+    }
+
+    private static final class Server {
+        private static void handleTeleport(ServerPlayer serverPlayer) {
             Vec3 lookDirection = serverPlayer.getLookAngle();
             Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale(DISTANCE));
             serverPlayer.teleportTo(targetPosition.x, targetPosition.y, targetPosition.z);
             serverPlayer.resetFallDistance();
-        });
+        }
     }
 
     private static final class Client {
-        public static final Minecraft mc = Minecraft.getInstance();
-        public static final ClientLevel level = mc.level;
-        public static final LocalPlayer localPlayer = mc.player;
+        private static final Minecraft mc = Minecraft.getInstance();
+        private static final ClientLevel level = mc.level;
+        private static final LocalPlayer localPlayer = mc.player;
 
-        public static final AcademyCraftRenderSystem.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
+        private static void start() {
+            if (ClientUtil.isScreenNull()) {
+                AcademyCraftRenderSystem.RENDERER_MAP.put(NAME, Client.RENDERER);
+            }
+        }
+
+        private static void end() {
+            if (ClientUtil.isScreenNull()) {
+                AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
+            }
+            AcademyCraftRenderSystem.RENDERER_MAP.remove(NAME);
+        }
+
+        private static final AcademyCraftRenderSystem.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
             if (level != null && localPlayer != null) {
                 poseStack.pushPose();
                 final AABB aabb = new AABB(0, 0, 0, 1, 2, 1);
