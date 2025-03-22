@@ -63,18 +63,18 @@ public class AcademyCraftWorldData {
         }
 
         public final void setComputingPower(float computingPower) {
-            AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaximumComputingPower(), computingPower));
+            AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaxComputingPower(), computingPower));
         }
 
-        @SerializedName("maximumComputingPower")
-        private volatile float maximumComputingPower = 100f;
+        @SerializedName("maxComputingPower")
+        private volatile float maxComputingPower = 100f;
 
-        public float getMaximumComputingPower() {
-            return maximumComputingPower;
+        public float getMaxComputingPower() {
+            return maxComputingPower;
         }
 
-        public void setMaximumComputingPower(float maximumComputingPower) {
-            AbilitySystemServer.addTask(() -> this.maximumComputingPower = maximumComputingPower);
+        public void setMaxComputingPower(float maxComputingPower) {
+            AbilitySystemServer.addTask(() -> this.maxComputingPower = maxComputingPower);
         }
 
         @SerializedName("computingPowerRecoverySpeed")

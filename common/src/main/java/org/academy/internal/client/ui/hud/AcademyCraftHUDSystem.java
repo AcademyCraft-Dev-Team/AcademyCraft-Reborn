@@ -9,17 +9,18 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AbilitySystemClient;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.MathUtil;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static net.minecraft.client.renderer.RenderStateShard.POSITION_TEX_SHADER;
-import static net.minecraft.client.renderer.RenderStateShard.TRANSLUCENT_TRANSPARENCY;
+import static net.minecraft.client.renderer.RenderStateShard.*;
 
 public class AcademyCraftHUDSystem {
     public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR = RenderType.create(
             "computing_power_bar",
-            DefaultVertexFormat.POSITION_TEX,
+            DefaultVertexFormat.POSITION_COLOR_TEX,
             VertexFormat.Mode.QUADS,
             16,
             false,
@@ -30,7 +31,7 @@ public class AcademyCraftHUDSystem {
                             false,
                             false
                     ))
-                    .setShaderState(POSITION_TEX_SHADER)
+                    .setShaderState(POSITION_COLOR_TEX_SHADER)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
@@ -44,17 +45,54 @@ public class AcademyCraftHUDSystem {
             true,
             RenderType.CompositeState.builder()
                     .setTextureState(new RenderStateShard.TextureStateShard(
-                            new ResourceLocation(AcademyCraft.MOD_ID, "textures/ui/hud/computing_power_bar_background.png"),
+                            new ResourceLocation(AcademyCraft.MOD_ID,
+                                    "textures/ui/hud/computing_power_bar_background.png"
+                            ),
                             false,
                             false
                     ))
                     .setShaderState(POSITION_TEX_SHADER)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setWriteMaskState(COLOR_WRITE)
                     .createCompositeState(false)
     );
 
+    public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
+            RenderType.create(
+                    "ability_icon",
+                    DefaultVertexFormat.POSITION_COLOR_TEX,
+                    VertexFormat.Mode.QUADS,
+                    16,
+                    false,
+                    true,
+                    RenderType.CompositeState.builder()
+                            .setTextureState(new RenderStateShard.TextureStateShard(
+                                    new ResourceLocation(AcademyCraft.MOD_ID,
+                                            "textures/ui/hud/ability/" + abilityCategory.name + "/icon_overlay.png"
+                                    ),
+                                    false,
+                                    false
+                            ))
+                            .setShaderState(POSITION_COLOR_TEX_SHADER)
+                            .setWriteMaskState(COLOR_WRITE)
+                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                            .createCompositeState(false)
+            );
+
     public static final Supplier<Float> SCALE_FACTOR = () -> 1.0f;
     public static final float DEFAULT_SCALA = 0.2F;
+    public static final int COMPUTING_POWER_BAR_WIDTH = 964;
+    public static final int COMPUTING_POWER_BAR_HEIGHT = 147;
+    public static final int COMPUTING_POWER_BAR_CONSUMABLE_WIDTH = 743;
+    public static final int COMPUTING_POWER_BAR_LEFT_SAFE_ZONE = 46;
+    public static final int COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE = 34;
+    public static final int COMPUTING_POWER_BAR_TOP_SAFE_ZONE = 30;
+    public static final float COMPUTING_POWER_BAR_ANGLE = 50F;
+    public static final float COMPUTING_POWER_BAR_TANGENT = (float) Math.tan(Math.toRadians(COMPUTING_POWER_BAR_ANGLE));
+    public static final int ABILITY_ICON_WIDTH = 64;
+    public static final int ABILITY_ICON_HEIGHT = 64;
+    public static final int ABILITY_ICON_RIGHT_SAFE_ZONE = 10;
+    public static final int ABILITY_ICON_TOP_SAFE_ZONE = 10;
 
     public static float smoothProgress;
 
@@ -62,7 +100,42 @@ public class AcademyCraftHUDSystem {
         if (AbilitySystemClient.isActiveHUD()) {
             AcademyCraftHUDSystem.renderComputingPowerBarBackground(guiGraphics);
             AcademyCraftHUDSystem.renderComputingPowerBar(guiGraphics);
+            AcademyCraftHUDSystem.renderAbilityIcon(guiGraphics);
         }
+    }
+
+    public static void renderAbilityIcon(GuiGraphics guiGraphics) {
+        final AbilityCategory abilityCategory = AbilitySystemClient.getCategory();
+        if (abilityCategory == null) return;
+        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(ABILITY_ICON.apply(abilityCategory));
+        final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
+
+        final float width = ABILITY_ICON_WIDTH * scale;
+        final float height = ABILITY_ICON_HEIGHT * scale;
+        final float rightSafeZone = (COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
+        final float topSafeZone = (COMPUTING_POWER_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
+
+        final float z = 8;
+
+        final float rightTopX = guiGraphics.guiWidth() - rightSafeZone;
+        final float rightTopY = topSafeZone;
+
+        final float rightBottomX = rightTopX;
+        final float rightBottomY = rightTopY + height;
+
+        final float leftTopX = rightTopX - width;
+        final float leftTopY = rightTopY;
+
+        final float leftBottomX = rightBottomX - width;
+        final float leftBottomY = rightBottomY;
+        // Left Top
+        vertexConsumer.vertex(leftTopX, leftTopY, z).color(255, 255, 255, 255).uv(0, 0).endVertex();
+        // Left Bottom
+        vertexConsumer.vertex(leftBottomX, leftBottomY, z).color(255, 255, 255, 255).uv(0, 1).endVertex();
+        // Right Bottom
+        vertexConsumer.vertex(rightBottomX, rightBottomY, z).color(255, 255, 255, 255).uv(1, 1).endVertex();
+        // Right Top
+        vertexConsumer.vertex(rightTopX, rightTopY, z).color(255, 255, 255, 255).uv(1, 0).endVertex();
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
@@ -72,30 +145,23 @@ public class AcademyCraftHUDSystem {
         final float maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
         final float progress;
         if (computingPower != 0 && maximumComputingPower != 0) {
-            progress = AbilitySystemClient.getComputingPower() / AbilitySystemClient.getMaximumComputingPower();
+            progress = computingPower / maximumComputingPower;
         } else {
             progress = 0;
         }
         smoothProgress = MathUtil.lerp(smoothProgress, progress, 0.125f);
-        final float userScale = SCALE_FACTOR.get();
-        final float scale = DEFAULT_SCALA * userScale;
+        final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
-        final int imageWidth = 946;
-        final int imageHeight = 147;
-        final int imageLeftSafeZoneLength = 20;
-        final int imageBarLength = 730;
+        final float width = COMPUTING_POWER_BAR_WIDTH * scale;
+        final float height = COMPUTING_POWER_BAR_HEIGHT * scale;
+        final float leftSafeZoneWidth = (COMPUTING_POWER_BAR_LEFT_SAFE_ZONE - (COMPUTING_POWER_BAR_TOP_SAFE_ZONE / COMPUTING_POWER_BAR_TANGENT)) * scale;
+        final float barLength = COMPUTING_POWER_BAR_CONSUMABLE_WIDTH * scale;
 
-        final float width = imageWidth * scale;
-        final float height = imageHeight * scale;
-        final float leftSafeZoneWidth = imageLeftSafeZoneLength * scale;
-        final float barLength = imageBarLength * scale;
-
-        final float sin = (float) Math.sin(Math.toRadians(55));
         final float barWidthOffset = barLength * (1.0f - smoothProgress);
         final float leftTopOffset = barWidthOffset + leftSafeZoneWidth;
-        final float leftBottomOffset = (leftTopOffset + (height * sin));
+        final float leftBottomOffset = leftTopOffset + (height / COMPUTING_POWER_BAR_TANGENT);
 
-        final float z = 0;
+        final float z = 4;
 
         final float rightTopX = guiGraphics.guiWidth();
         final float rightTopY = 0;
@@ -114,13 +180,13 @@ public class AcademyCraftHUDSystem {
         final float leftBottomUv = 1 - ((width - leftBottomOffset) / width);
 
         // Left Top
-        vertexConsumer.vertex(leftTopX, leftTopY, z).uv(leftTopUv, 0).endVertex();
+        vertexConsumer.vertex(leftTopX, leftTopY, z).color(255, 255, 255, 255).uv(leftTopUv, 0).endVertex();
         // Left Bottom
-        vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(leftBottomUv, 1).endVertex();
+        vertexConsumer.vertex(leftBottomX, leftBottomY, z).color(255, 255, 255, 255).uv(leftBottomUv, 1).endVertex();
         // Right Bottom
-        vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
+        vertexConsumer.vertex(rightBottomX, rightBottomY, z).color(255, 255, 255, 255).uv(1, 1).endVertex();
         // Right Top
-        vertexConsumer.vertex(rightTopX, rightTopY, z).uv(1, 0).endVertex();
+        vertexConsumer.vertex(rightTopX, rightTopY, z).color(255, 255, 255, 255).uv(1, 0).endVertex();
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")

@@ -2,6 +2,7 @@ package org.academy.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import org.academy.AbilitySystemServer;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,6 +23,7 @@ public class MinecraftServerMixin {
 
     @Inject(method = "halt", at = @At("HEAD"))
     private void halt(boolean waitForServer, CallbackInfo ci) {
-        AbilitySystemServer.running = false;
+        AcademyCraft.LOGGER.info("Halting MinecraftServer");
+        AbilitySystemServer.scheduledFuture.cancel(true);
     }
 }

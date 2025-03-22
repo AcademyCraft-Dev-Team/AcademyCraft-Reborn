@@ -1,4 +1,4 @@
-package org.academy.api.client.command;
+package org.academy.api.common.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
@@ -10,12 +10,19 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.AbilitySystem;
+import org.academy.AbilitySystemServer;
 import org.academy.AcademyCraft;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
 import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.FriendlyByteBufIdentifiers;
 import org.academy.api.common.network.Response;
+import org.academy.api.common.network.packet.ClientToServerPacket;
+import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
+import org.academy.api.server.network.ClientToServerPacketHandler;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
@@ -37,9 +44,9 @@ public class CommandManager {
         if (AcademyCraft.DEBUG_MODE) {
             dispatcher.register(
                     LiteralArgumentBuilder.<ConsoleSource>literal("debug")
-                            .then(LiteralArgumentBuilder.<ConsoleSource>literal("energy")
-                                    .then(LiteralArgumentBuilder.<ConsoleSource>literal("full")
-                                            .executes(DebugCommand::fullEnergy)
+                            .then(LiteralArgumentBuilder.<ConsoleSource>literal("category")
+                                    .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("category", StringArgumentType.string())
+                                            .executes(DebugCommand::changeCategory)
                                     )
                             )
             );
@@ -81,8 +88,8 @@ public class CommandManager {
     }
 
     public static final class DebugCommand {
-        public static int fullEnergy(CommandContext<ConsoleSource> context) {
-            AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(new FriendlyByteBuf(Unpooled.buffer()).writeResourceLocation(AcademyCraftNetworkResourceLocations.C2S_DEBUG_FULL_ENERGY).writeBlockPos(context.getSource().mainPos)));
+        public static int changeCategory(CommandContext<ConsoleSource> context) {
+            AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET, new FriendlyByteBuf(Unpooled.buffer()).writeUtf(StringArgumentType.getString(context, "category"))));
             return 1;
         }
     }
@@ -157,5 +164,19 @@ public class CommandManager {
 
     public static ParseResults<ConsoleSource> parse(String input, ConsoleSource source) {
         return dispatcher.parse(input, source);
+    }
+
+    public static final class Client {
+    }
+
+    public static final class Server {
+        public static void init() {
+            AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET, new ClientToServerPacketHandler() {
+                @Override
+                public void handle(@NotNull ServerGamePacketListenerImpl serverPacketListener, @NotNull ClientToServerPacket packet) {
+                    AbilitySystemServer.setPlayerAbilityCategory(serverPacketListener.player.getUUID(), AbilitySystem.ABILITY_CATEGORY_MAP.get(packet.friendlyByteBuf.readUtf()));
+                }
+            });
+        }
     }
 }

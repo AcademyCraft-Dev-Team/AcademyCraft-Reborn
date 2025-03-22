@@ -12,7 +12,6 @@
   ],
   "client": [
     "ClientPacketListenerMixin",
-    "IntegratedServerMixin",
     "KeyboardHandlerMixin",
     "LevelRendererMixin",
     "MinecraftMixin",

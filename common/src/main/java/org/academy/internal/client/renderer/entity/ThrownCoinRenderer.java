@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
-import org.academy.AcademyCraft;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -43,7 +42,6 @@ public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
 
     @Override
     public boolean shouldRender(@NotNull ThrownCoin livingEntity, @NotNull Frustum camera, double camX, double camY, double camZ) {
-        AcademyCraft.LOGGER.info(livingEntity.getDeltaMovement().length());
         return livingEntity.getDeltaMovement().length() < 2;
     }
 }
