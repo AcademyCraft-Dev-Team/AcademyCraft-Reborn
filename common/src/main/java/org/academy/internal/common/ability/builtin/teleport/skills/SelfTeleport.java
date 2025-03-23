@@ -54,8 +54,8 @@ public final class SelfTeleport extends Skill {
                         new LinkedHashSet<>()
                 )));
 
-        InputSystem.registerKeyBinding(KEY_NAME_START, KEY_START, Client::start);
-        InputSystem.registerKeyBinding(KEY_NAME_END, KEY_END, Client::end);
+        InputSystem.addKeyBinding(KEY_NAME_START, KEY_START, Client::start);
+        InputSystem.addKeyBinding(KEY_NAME_END, KEY_END, Client::end);
     }
 
     @Override
