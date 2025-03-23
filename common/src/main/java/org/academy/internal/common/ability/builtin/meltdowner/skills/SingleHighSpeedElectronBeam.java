@@ -42,7 +42,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
                         )
                 )
         );
-        InputSystem.registerKeyBinding(Client.KEY_NAME, Client.KEY, Client::handleKey);
+        InputSystem.addKeyBinding(Client.KEY_NAME, Client.KEY, Client::handleKey);
     }
 
     @Override

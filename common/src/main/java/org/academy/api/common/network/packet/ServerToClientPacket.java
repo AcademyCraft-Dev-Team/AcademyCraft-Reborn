@@ -1,11 +1,15 @@
 package org.academy.api.common.network.packet;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
+import org.academy.api.common.network.FriendlyByteBufSerializer;
+import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.jetbrains.annotations.NotNull;
 
 public class ServerToClientPacket implements Packet<ClientGamePacketListener> {
@@ -22,6 +26,15 @@ public class ServerToClientPacket implements Packet<ClientGamePacketListener> {
         this.friendlyByteBuf = friendlyByteBuf;
     }
 
+    public ServerToClientPacket(@NotNull ResourceLocation resourceLocation, Object... values) {
+        this.resourceLocation = resourceLocation;
+        friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
+        for (Object value : values) {
+            final FriendlyByteBufSerializer<Object> friendlyByteBufSerializer = (FriendlyByteBufSerializer<Object>) FriendlyByteBufSerializers.getRequiredSerializer(value.getClass());
+            friendlyByteBufSerializer.serialize(friendlyByteBuf, value);
+        }
+    }
+
     @Override
     public void write(@NotNull FriendlyByteBuf buffer) {
         friendlyByteBuf.writeResourceLocation(resourceLocation);
@@ -31,7 +44,7 @@ public class ServerToClientPacket implements Packet<ClientGamePacketListener> {
     @Override
     public void handle(@NotNull ClientGamePacketListener handler) {
         Minecraft.getInstance().execute(() -> {
-            AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.get(resourceLocation).handle(handler, this);
+            AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.get(resourceLocation).handle((ClientPacketListener) handler, this);
             friendlyByteBuf.release();
         });
     }

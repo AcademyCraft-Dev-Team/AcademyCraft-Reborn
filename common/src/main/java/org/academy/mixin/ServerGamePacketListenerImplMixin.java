@@ -23,21 +23,21 @@ public class ServerGamePacketListenerImplMixin {
     public ServerPlayer player;
     @Shadow @Final private MinecraftServer server;
     @Unique
-    ServerGamePacketListenerImpl instance;
+    ServerGamePacketListenerImpl academyCraft$instance;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {
-        instance = (ServerGamePacketListenerImpl) (Object) this;
+        academyCraft$instance = (ServerGamePacketListenerImpl) (Object) this;
         AbilitySystemServer.MinecraftServerThread.initPlayer(player);
         AcademyCraftWorldData.saveData();
     }
 
     @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
     public void handleCustomPayload(ServerboundCustomPayloadPacket packet, CallbackInfo ci) {
-        PacketUtils.ensureRunningOnSameThread(packet, instance, this.server);
+        PacketUtils.ensureRunningOnSameThread(packet, academyCraft$instance, this.server);
         ResourceLocation identifier = packet.getIdentifier();
         if (AcademyCraftPacketHandlersServer.HANDLER_MAP.containsKey(identifier)) {
-            AcademyCraftPacketHandlersServer.HANDLER_MAP.get(identifier).handle(instance, packet);
+            AcademyCraftPacketHandlersServer.HANDLER_MAP.get(identifier).handle(academyCraft$instance, packet);
             ci.cancel();
         }
     }
