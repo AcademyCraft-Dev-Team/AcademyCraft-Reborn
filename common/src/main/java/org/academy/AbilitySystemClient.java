@@ -33,14 +33,14 @@ public final class AbilitySystemClient {
 
     public static void initClient() {
         registerPacketHandler();
-        InputSystem.registerKeyBinding(KEY_NAME, KEY, () -> setActiveHUD(!activeHUD));
+        InputSystem.addKeyBinding(KEY_NAME, KEY, () -> setActiveHUD(!activeHUD));
         for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initClient();
             for (Skill skill : abilityCategory.skillList) {
                 skill.initClient();
             }
         }
-        CommandManager.registerCommands();
+        CommandManager.Client.registerCommands();
     }
 
     public static void registerPacketHandler() {

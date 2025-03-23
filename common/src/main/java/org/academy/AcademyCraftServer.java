@@ -21,6 +21,6 @@ public class AcademyCraftServer {
         serverConfig = new AcademyCraftServerConfig().loadConfig(serverConfigFile);
         academyCraftWorldData = AcademyCraftWorldData.getWorldData(worldDataFile);
         AbilitySystemServer.init(server);
-        CommandManager.Server.init();
+        CommandManager.Server.registerPacketHandler();
     }
 }

@@ -1,12 +1,14 @@
 package org.academy;
 
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.Skill;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public final class AbilitySystem {
     public static final Map<String, AbilityCategory> ABILITY_CATEGORY_MAP = new HashMap<>();
+    public static final Map<String, Skill> SKILL_MAP = new HashMap<>();
 
     /**
      * 在 onInitialize 的时候注册即可

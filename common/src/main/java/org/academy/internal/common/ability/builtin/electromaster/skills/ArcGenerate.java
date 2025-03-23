@@ -2,9 +2,8 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AbilitySystemServer;
@@ -13,14 +12,15 @@ import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
-import org.academy.api.client.network.packet.C2SRequestPacket;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.server.network.AcademyCraftRequestHandlersServer;
+import org.academy.api.common.network.packet.ClientToServerPacket;
+import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashSet;
@@ -46,55 +46,62 @@ public class ArcGenerate extends Skill {
                         GLFW.GLFW_RELEASE,
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT))
                 )));
-        Runnable runnable = () -> {
-            if (ClientUtil.isScreenNull()) {
-                AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_REQUEST));
-            }
-        };
-        InputSystem.registerKeyBinding(KEY_NAME, KEY, runnable);
+        InputSystem.addKeyBinding(KEY_NAME, KEY, Client::handler);
     }
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftRequestHandlersServer.REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_REQUEST, (serverGamePacketListenerImpl, packet) -> {
-            Player player = serverGamePacketListenerImpl.getPlayer();
-            Level level = player.level();
-            if (level instanceof ServerLevel) {
-                AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getUUID());
-                float currentComputingPower = data.getComputingPower();
-                if (currentComputingPower > 10) {
-                    AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
-                } else {
+        try {
+            AcademyCraftNetworkSystemServer.registerServerToClientPacketHandler(AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_PACKET, Server.class.getMethod("handle", ServerPlayer.class, ServerLevel.class), null);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static final class Client {
+        public static void handler() {
+            if (ClientUtil.isScreenNull()) {
+                AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
+            }
+        }
+    }
+
+    public static final class Server {
+        public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
+            AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getUUID());
+            float currentComputingPower = data.getComputingPower();
+            if (currentComputingPower > 10) {
+                AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
+            } else {
+                return;
+            }
+
+            Arc arc = new Arc(level, player);
+            level.addFreshEntity(arc);
+            arc.playSound(AcademyCraftSoundEvents.ARC_WEAK);
+            Vec3 lookVec = arc.getLookAngle();
+            Vec3 start = arc.position();
+            int steps = 10;
+
+            Set<LivingEntity> detectedEntities = new HashSet<>();
+
+            for (int i = 0; i < steps; i++) {
+                Vec3 segmentStart = start.add(lookVec.scale(i));
+                Vec3 segmentEnd = start.add(lookVec.scale(i + 1));
+
+                AABB box = new AABB(segmentStart, segmentEnd);
+                List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, box);
+
+                detectedEntities.addAll(entities);
+            }
+
+            detectedEntities.forEach(entity -> {
+                if (entity == player) {
                     return;
                 }
-
-                Arc arc = new Arc(level, player);
-                level.addFreshEntity(arc);
-                arc.playSound(AcademyCraftSoundEvents.ARC_WEAK);
-                Vec3 lookVec = arc.getLookAngle();
-                Vec3 start = arc.position();
-                int steps = 10;
-
-                Set<LivingEntity> detectedEntities = new HashSet<>();
-
-                for (int i = 0; i < steps; i++) {
-                    Vec3 segmentStart = start.add(lookVec.scale(i));
-                    Vec3 segmentEnd = start.add(lookVec.scale(i + 1));
-
-                    AABB box = new AABB(segmentStart, segmentEnd);
-                    List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, box);
-
-                    detectedEntities.addAll(entities);
-                }
-
-                detectedEntities.forEach(entity -> {
-                    if (entity == player) {
-                        return;
-                    }
-                    float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
-                    entity.hurt(player.damageSources().playerAttack(player), damage);
-                });
-            }
-        });
+                float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
+                entity.hurt(player.damageSources().playerAttack(player), damage);
+            });
+        }
     }
 }

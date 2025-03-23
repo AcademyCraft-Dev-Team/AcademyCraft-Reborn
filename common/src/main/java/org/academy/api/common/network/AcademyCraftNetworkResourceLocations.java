@@ -3,9 +3,6 @@ package org.academy.api.common.network;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 
-/**
- * 模组所使用的所有网络包标识
- */
 public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_response");
     public static final ResourceLocation S2C_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_request");
@@ -22,7 +19,6 @@ public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_LEARN_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_learn_skill_response");
     public static final ResourceLocation C2S_GET_LEARNED_SKILL_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_get_learned_skill_request");
     public static final ResourceLocation S2C_GET_LEARNED_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_get_learned_skill_response");
-    public static final ResourceLocation C2S_ARC_GENERATE_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_arc_generate_request");
     public static final ResourceLocation C2S_LEARN_CURRICULUM_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_learn_curriculum_request");
     public static final ResourceLocation S2C_LEARN_CURRICULUM_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_learn_curriculum_response");
     public static final ResourceLocation C2S_DEBUG_FULL_ENERGY = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_debug_full_energy");
@@ -34,6 +30,9 @@ public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation S2C_COMPUTING_POWER_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_computing_power_sync_packet");
     public static final ResourceLocation S2C_MAX_COMPUTING_POWER_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_max_computing_power_sync_packet");
     public static final ResourceLocation S2C_ABILITY_CATEGORY_SYNC_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_ability_category_sync_packet");
+    public static final ResourceLocation C2S_INFO_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_info_packet");
+    public static final ResourceLocation S2C_INFO_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_info_packet");
+    public static final ResourceLocation C2S_ARC_GENERATE_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_arc_generate_packet");
 
     private AcademyCraftNetworkResourceLocations() {
     }

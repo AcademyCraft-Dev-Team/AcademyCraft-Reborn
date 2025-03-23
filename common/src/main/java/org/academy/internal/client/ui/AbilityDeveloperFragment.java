@@ -1,5 +1,8 @@
 package org.academy.internal.client.ui;
 
+import com.mojang.brigadier.ParseResults;
+import com.mojang.brigadier.suggestion.Suggestion;
+import com.mojang.brigadier.suggestion.Suggestions;
 import icyllis.arc3d.core.Color;
 import icyllis.modernui.core.Context;
 import icyllis.modernui.core.Handler;
@@ -14,17 +17,18 @@ import icyllis.modernui.view.Gravity;
 import icyllis.modernui.view.LayoutInflater;
 import icyllis.modernui.view.View;
 import icyllis.modernui.view.ViewGroup;
-import icyllis.modernui.widget.EditText;
-import icyllis.modernui.widget.FrameLayout;
-import icyllis.modernui.widget.ScrollView;
-import icyllis.modernui.widget.TextView;
+import icyllis.modernui.widget.*;
 import net.minecraft.core.BlockPos;
 import org.academy.AcademyCraft;
 import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.command.ConsoleSource;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
-import static org.academy.api.common.command.CommandManager.HISTORY;
+import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+
+import static org.academy.api.common.command.CommandManager.Client.HISTORY;
 
 @SuppressWarnings({"UnstableApiUsage", "DataFlowIssue"})
 public class AbilityDeveloperFragment extends Fragment {
@@ -35,7 +39,7 @@ public class AbilityDeveloperFragment extends Fragment {
     private static EditText editText;
     private static final StringBuilder historyContent = new StringBuilder();
     private static int lastHistorySize = -1;
-
+    private static PopupWindow popupWindow;
     private static final Runnable updateHistory = new Runnable() {
         @Override
         public void run() {
@@ -94,7 +98,7 @@ public class AbilityDeveloperFragment extends Fragment {
                 if (editable.toString().endsWith("\n")) {
                     if (!command.isEmpty()) {
                         HISTORY.add("MisakaCloud: " + command);
-                        AcademyCraft.executorService.execute(() -> CommandManager.executeCommand(command, consoleSource));
+                        AcademyCraft.executorService.execute(() -> CommandManager.Client.executeCommand(command, consoleSource));
                     }
                     editText.setText("");
                 }
@@ -122,19 +126,54 @@ public class AbilityDeveloperFragment extends Fragment {
 
         handler = new Handler(Looper.myLooper());
         handler.post(updateHistory);
-/*        InputSystem.RELEASE_BINDINGS.put("tab", new InputSystem.KeyBinding(() -> List.of(GLFW.GLFW_KEY_TAB), new Runnable() {
-            @Override
-            public void run() {
-                ParseResults<ConsoleSource> parseResults = CommandManager.dispatcher.parse(editText.getText().toString(), consoleSource);
-                CompletableFuture<Suggestions> suggestionsCompletableFuture = CommandManager.dispatcher.getCompletionSuggestions(parseResults);
-                suggestionsCompletableFuture.thenAccept(suggestions -> {
-                    for (Suggestion suggestion : suggestions.getList()) {
-                        String suggestionText = suggestion.getText();
-                        HISTORY.add(suggestionText);
+        editText.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == GLFW.GLFW_RELEASE) {
+                if (keyCode == GLFW.GLFW_KEY_TAB) {
+                    if (popupWindow != null && popupWindow.isShowing()) {
+                        popupWindow.dismiss();
                     }
-                });
+                    ParseResults<ConsoleSource> parseResults =
+                            CommandManager.Client.dispatcher.parse(editText.getText().toString(), consoleSource);
+                    CompletableFuture<Suggestions> suggestionsCompletableFuture =
+                            CommandManager.Client.dispatcher.getCompletionSuggestions(parseResults);
+                    suggestionsCompletableFuture.thenAccept(suggestions -> {
+                        ArrayList<String> list = new ArrayList<>();
+                        for (Suggestion suggestion : suggestions.getList()) {
+                            String suggestionText = suggestion.getText();
+                            list.add(suggestionText);
+                        }
+                        handler.post(() -> {
+                            ListView listView = new ListView(requireContext());
+                            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), list);
+                            listView.setAdapter(adapter);
+                            popupWindow = new PopupWindow(listView, base.dp(135), base.dp(240), false);
+                            listView.setOnItemClickListener((parent, view, position, id) -> {
+                                popupWindow.dismiss();
+                                String selectedItem = adapter.getItem(position);
+                                String currentText = editText.getText().toString().trim();
+                                StringBuilder newText = new StringBuilder();
+                                if (!currentText.isEmpty()) {
+                                    newText.append(currentText).append(" ");
+                                }
+                                newText.append(selectedItem);
+                                editText.setText(newText.toString());
+                                editText.requestFocus();
+                                editText.setSelection(editText.getText().length());
+                            });
+                            GradientDrawable popupWindowBack = new GradientDrawable();
+                            popupWindowBack.setAlpha(128);
+                            popupWindowBack.setColor(Color.BLACK);
+                            popupWindowBack.setCornerRadius(32);
+                            popupWindow.setBackgroundDrawable(popupWindowBack);
+                            popupWindow.showAsDropDown(editText, 0, -base.dp(256));
+                        });
+                    });
+                }
             }
-        }));*/
+            return false;
+        });
+        editText.requestFocus();
+        HISTORY.clear();
         return base;
     }
 
@@ -142,6 +181,6 @@ public class AbilityDeveloperFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(updateHistory);
-    //    InputSystem.RELEASE_BINDINGS.remove("tab");
+        popupWindow.dismiss();
     }
 }

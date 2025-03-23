@@ -16,9 +16,6 @@ import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
-/**
- * Some shit.
- */
 public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
     public ThrownCoinRenderer(EntityRendererProvider.Context context) {
         super(context, 1.0f, false);

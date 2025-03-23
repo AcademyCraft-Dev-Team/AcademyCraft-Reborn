@@ -76,7 +76,7 @@ public class HighSpeedElectronBeam extends Entity {
         progress = (float) currentChargerTicks / (float) maxChargerTicks - (float) endShootTicks / 15;
         move(MoverType.SELF, this.getDeltaMovement());
         if (rayProgress > 0.125f) {
-            Optional<Pair<Boolean, Double>> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.125f, 10, false, false, true);
+            Optional<Pair<Boolean, Double>> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.25f, 10, false, false, true);
             if (result.isPresent()) {
                 double d = result.get().getValue();
                 length = (float) d;

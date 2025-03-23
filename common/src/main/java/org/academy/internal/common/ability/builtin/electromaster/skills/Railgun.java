@@ -55,7 +55,7 @@ public class Railgun extends Skill {
                         new LinkedHashSet<>()
                 )));
 
-        InputSystem.registerKeyBinding(KEY_NAME, Client.KEY, Client::handleKey);
+        InputSystem.addKeyBinding(KEY_NAME, Client.KEY, Client::handleKey);
     }
 
     public static final class Client {
@@ -88,6 +88,7 @@ public class Railgun extends Skill {
                 }
                 player.sendSystemMessage(Component.literal("Yes"));
                 ThrownCoin coin = (ThrownCoin) entities.get(0);
+                coin.setFired(true);
                 coin.damage = computingPower;
                 coin.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 10F, 0);
                 RailgunRay railgunRay = new RailgunRay(AcademyCraftEntityTypes.RAILGUN_RAY_ENTITY_TYPE, player.level());

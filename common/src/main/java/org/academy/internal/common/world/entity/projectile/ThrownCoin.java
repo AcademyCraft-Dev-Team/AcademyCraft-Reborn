@@ -1,5 +1,8 @@
 package org.academy.internal.common.world.entity.projectile;
 
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -19,9 +22,17 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     public int angle;
     public float renderAngle;
     public float damage = 0.25f;
+    public int canDestroy = 10;
+    public static final EntityDataAccessor<Boolean> ID_FIRED = SynchedEntityData.defineId(ThrownCoin.class, EntityDataSerializers.BOOLEAN);
 
     public ThrownCoin(EntityType<? extends AbstractArrow> entityType, Level level) {
         super(entityType, level);
+    }
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        entityData.define(ID_FIRED, false);
     }
 
     @Override
@@ -46,9 +57,6 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
         float damage = Math.min(Math.max(speed * this.damage, 0), Integer.MAX_VALUE);
 
         Entity entity = entityHitResult.getEntity();
-        double x = entity.getX();
-        double y = entity.getY();
-        double z = entity.getZ();
 
         Entity owner = this.getOwner();
 
@@ -63,17 +71,16 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
         if (entity instanceof LivingEntity) {
             ((LivingEntity) entity).actuallyHurt(damageSource, damage);
         }
-
-        if (this.damage >= 100) {
-            level().explode(this, x, y, z, 10.0F, Level.ExplosionInteraction.TNT);
-        }
     }
 
     @Override
     protected void onHitBlock(@NotNull BlockHitResult blockHitResult) {
         if (!level().isClientSide()) {
-            if (damage >= 100) {
-                level().explode(this, blockHitResult.getBlockPos().getX(), blockHitResult.getBlockPos().getY(), blockHitResult.getBlockPos().getZ(), 10.0F, Level.ExplosionInteraction.TNT);
+            if (isFired()) {
+                if (canDestroy > 0) {
+                    level().destroyBlock(blockHitResult.getBlockPos(), false, this);
+                    canDestroy--;
+                }
             } else {
                 this.spawnAtLocation(this.getPickupItem(), 0.1F);
                 this.discard();
@@ -84,5 +91,13 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     @Override
     protected @NotNull ItemStack getPickupItem() {
         return getItem();
+    }
+
+    public boolean isFired() {
+        return entityData.get(ID_FIRED);
+    }
+
+    public void setFired(boolean fired) {
+        entityData.set(ID_FIRED, fired);
     }
 }
