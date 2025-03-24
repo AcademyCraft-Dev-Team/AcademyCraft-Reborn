@@ -26,40 +26,20 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
-
-import static org.academy.api.common.command.CommandManager.Client.HISTORY;
 
 @SuppressWarnings({"UnstableApiUsage", "DataFlowIssue"})
 public class AbilityDeveloperFragment extends Fragment {
+    private static BlockPos blockPos;
     private static Handler handler;
-    private static ScrollView scrollView;
-    private final ConsoleSource consoleSource;
-    private static TextView historyTextView;
     private static EditText editText;
-    private static final StringBuilder historyContent = new StringBuilder();
-    private static int lastHistorySize = -1;
     private static PopupWindow popupWindow;
-    private static final Runnable updateHistory = new Runnable() {
-        @Override
-        public void run() {
-            if (HISTORY.size() > lastHistorySize) {
-                lastHistorySize = HISTORY.size();
-                historyContent.setLength(0);
-                for (String entry : HISTORY) {
-                    historyContent.append(entry).append("\n");
-                }
-                historyTextView.setText(historyContent.toString());
-                scrollView.post(() -> scrollView.fullScroll(ScrollView.FOCUS_DOWN));
-            }
-            handler.postDelayed(this, 500);
-        }
-    };
+    public static ConsoleSource consoleSource;
 
     public AbilityDeveloperFragment(@NotNull BlockPos mainPos) {
         super();
-        consoleSource = new ConsoleSource();
-        consoleSource.mainPos = mainPos;
+        blockPos = mainPos;
     }
 
     @Override
@@ -68,7 +48,7 @@ public class AbilityDeveloperFragment extends Fragment {
         FrameLayout base = new FrameLayout(context);
         FrameLayout terminalLayout = new FrameLayout(context);
 
-        scrollView = new ScrollView(context);
+        ScrollView scrollView = new ScrollView(context);
         FrameLayout.LayoutParams scrollParams = new FrameLayout.LayoutParams(
                 context.getResources().getDisplayMetrics().widthPixels * 2 / 3,
                 context.getResources().getDisplayMetrics().heightPixels * 2 / 3,
@@ -76,7 +56,7 @@ public class AbilityDeveloperFragment extends Fragment {
         );
         scrollView.setLayoutParams(scrollParams);
 
-        historyTextView = new TextView(context);
+        TextView historyTextView = new TextView(context);
         historyTextView.setTextColor(Color.GREEN);
         historyTextView.setPadding(16, 16, 16, 16);
         historyTextView.setMovementMethod(new ScrollingMovementMethod());
@@ -91,28 +71,6 @@ public class AbilityDeveloperFragment extends Fragment {
                 Gravity.BOTTOM
         ));
 
-        editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void afterTextChanged(Editable editable) {
-                String command = editable.toString().trim();
-                if (editable.toString().endsWith("\n")) {
-                    if (!command.isEmpty()) {
-                        HISTORY.add("MisakaCloud: " + command);
-                        AcademyCraft.executorService.execute(() -> CommandManager.Client.executeCommand(command, consoleSource));
-                    }
-                    editText.setText("");
-                }
-            }
-
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-        });
-
         GradientDrawable background = new GradientDrawable();
         background.setAlpha(128);
         background.setColor(Color.BLACK);
@@ -125,7 +83,6 @@ public class AbilityDeveloperFragment extends Fragment {
         base.addView(terminalLayout);
 
         handler = new Handler(Looper.myLooper());
-        handler.post(updateHistory);
         editText.setOnKeyListener((v, keyCode, event) -> {
             if (event.getAction() == GLFW.GLFW_RELEASE) {
                 if (keyCode == GLFW.GLFW_KEY_TAB) {
@@ -173,14 +130,47 @@ public class AbilityDeveloperFragment extends Fragment {
             return false;
         });
         editText.requestFocus();
-        HISTORY.clear();
+        consoleSource = new ConsoleSource(blockPos, handler, scrollView, historyTextView);
+        consoleSource.clearHistory();
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable editable) {
+                String command = editable.toString().trim();
+                if (editable.toString().endsWith("\n")) {
+                    if (!command.isEmpty()) {
+                        consoleSource.addHistory("MisakaCloud: " + command);
+                        AcademyCraft.executorService.execute(() -> CommandManager.Client.executeCommand(command, consoleSource));
+                    }
+                    editText.setText("");
+                }
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+        });
         return base;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        handler.removeCallbacks(updateHistory);
         popupWindow.dismiss();
+    }
+
+    public static void addHistory(String history) {
+        if (consoleSource != null) {
+            consoleSource.addHistory(history);
+        }
+    }
+
+    public static void addHistory(Collection<String> history) {
+        if (consoleSource != null) {
+            consoleSource.addHistory(history);
+        }
     }
 }

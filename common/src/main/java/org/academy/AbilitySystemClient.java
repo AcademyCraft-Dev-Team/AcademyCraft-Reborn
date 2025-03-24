@@ -41,22 +41,23 @@ public final class AbilitySystemClient {
             }
         }
         CommandManager.Client.registerCommands();
+        CommandManager.Client.registerPacketHandler();
     }
 
     public static void registerPacketHandler() {
-        AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(
+        AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
                 AcademyCraftNetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
                 (handler, packet) ->
                         category = FriendlyByteBufDeserializers
                                 .ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER
                                 .deserialize(packet.friendlyByteBuf)
         );
-        AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(
+        AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
                 AcademyCraftNetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
                 (handler, packet) ->
                         setComputingPower(packet.friendlyByteBuf.readFloat())
         );
-        AcademyCraftNetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(
+        AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
                 AcademyCraftNetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
                 (handler, packet) ->
                         setMaximumComputingPower(packet.friendlyByteBuf.readFloat())

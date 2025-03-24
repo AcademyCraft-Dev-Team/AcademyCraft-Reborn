@@ -8,12 +8,11 @@ import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.academy.api.common.network.Response;
 import org.academy.api.common.network.packet.ClientToServerPacket;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 public class AcademyCraftNetworkSystemServer {
     public static final Map<ResourceLocation, ClientToServerPacketHandler> CLIENT_TO_SERVER_PACKET_HANDLER_MAP = new HashMap<>();
@@ -28,10 +27,19 @@ public class AcademyCraftNetworkSystemServer {
      *
      * @param resourceLocation 数据包 ResourceLocation
      * @param method           需要调用的 Method
-     * @param instance         如果静态方法则为 Null
+     * @param consumer         负责将生成的参数传入方法
      */
-    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Method method, @Nullable Object instance) {
+    public static void registerClientToServerPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Method method, @NotNull Consumer<Object[]> consumer) {
         final Class<?>[] parameterTypes = method.getParameterTypes();
+        registerClientToServerPacketHandler(resourceLocation, parameterTypes, consumer);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> void registerClientToServerPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<T> clazz, @NotNull Consumer<T> consumer) {
+        registerClientToServerPacketHandler(resourceLocation, new Class[]{clazz}, objects -> consumer.accept((T) objects[0]));
+    }
+
+    public static void registerClientToServerPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<?>[] parameterTypes, @NotNull Consumer<Object[]> consumer) {
         final byte parameterCount = (byte) parameterTypes.length;
         final List<BiFunction<ServerGamePacketListenerImpl, ClientToServerPacket, Object>> biFunctions =
                 new ArrayList<>(Collections.nCopies(parameterCount, null));
@@ -54,7 +62,10 @@ public class AcademyCraftNetworkSystemServer {
                         listener, packet) ->
                         listener.player.level());
             } else {
-                biFunctions.set(i, (listener, packet) -> FriendlyByteBufDeserializers.getRequiredDeserializer(parameterType).deserialize(packet.friendlyByteBuf));
+                biFunctions.set(i, (listener, packet) ->
+                        FriendlyByteBufDeserializers.getRequiredDeserializer(parameterType)
+                                .deserialize(packet.friendlyByteBuf)
+                );
             }
         }
         registerClientToServerPacketHandler(resourceLocation, (listener, packet) -> {
@@ -62,11 +73,7 @@ public class AcademyCraftNetworkSystemServer {
             for (byte i = 0; i < parameterCount; i++) {
                 args[i] = biFunctions.get(i).apply(listener, packet);
             }
-            try {
-                method.invoke(instance, args);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
+            consumer.accept(args);
         });
     }
 
