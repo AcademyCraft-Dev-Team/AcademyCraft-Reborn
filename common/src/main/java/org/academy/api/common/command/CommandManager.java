@@ -1,7 +1,6 @@
 package org.academy.api.common.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -9,19 +8,23 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
 import io.netty.buffer.Unpooled;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import org.academy.AbilitySystem;
 import org.academy.AbilitySystemServer;
 import org.academy.AcademyCraft;
 import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
-import org.academy.api.client.network.packet.C2SRequestPacket;
+import org.academy.api.client.network.ServerToClientPacketHandler;
+import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.FriendlyByteBufIdentifiers;
-import org.academy.api.common.network.Response;
 import org.academy.api.common.network.packet.ClientToServerPacket;
+import org.academy.api.common.network.packet.ServerToClientPacket;
 import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
+import org.academy.internal.client.ui.AbilityDeveloperFragment;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -49,7 +52,7 @@ public class CommandManager {
 
             dispatcher.register(
                     LiteralArgumentBuilder.<ConsoleSource>literal("help")
-                            .executes(CommandManager.Client::executeHelpCommand)
+                            .executes(CommandManager.Client::help)
             );
 
             dispatcher.register(
@@ -87,6 +90,25 @@ public class CommandManager {
             );
         }
 
+        @SuppressWarnings("unchecked")
+        public static void registerPacketHandler() {
+            AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
+                    AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_PACKET, new ServerToClientPacketHandler() {
+                        @Override
+                        public void handle(@NotNull ClientPacketListener listener, @NotNull ServerToClientPacket packet) {
+                        }
+                    }
+            );
+            AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
+                    AcademyCraftNetworkResourceLocations.S2C_FETCH_ALL_SKILL_PACKET, ArrayList.class, list -> {
+                        ArrayList<Skill> skills = (ArrayList<Skill>) list;
+                        for (Skill skill : skills) {
+                            AbilityDeveloperFragment.addHistory(skill.name);
+                        }
+                    }
+            );
+        }
+
         public static final class DebugCommand {
             public static int changeCategory(CommandContext<ConsoleSource> context) {
                 AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET, new FriendlyByteBuf(Unpooled.buffer()).writeUtf(StringArgumentType.getString(context, "category"))));
@@ -98,63 +120,29 @@ public class CommandManager {
             return 1;
         }
 
-        private static int executeHelpCommand(CommandContext<ConsoleSource> context) {
+        private static int help(CommandContext<ConsoleSource> context) {
             Map<CommandNode<ConsoleSource>, String> map = dispatcher.getSmartUsage(dispatcher.getRoot(), context.getSource());
-            HISTORY.addAll(map.values());
+            AbilityDeveloperFragment.addHistory(map.values());
             return 1;
         }
 
         private static int fetchLearnedSkill(CommandContext<ConsoleSource> context) {
-            Response response = new Response();
-            response.runnable = () -> {
-                for (Object o : response.dataList) {
-                    HISTORY.add((String) o);
-                }
-            };
-            AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_LEARNED_SKILL_RESPONSE, response);
-            AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_LEARNED_SKILL_REQUEST));
             return 1;
         }
 
         private static int fetchAllSkill(CommandContext<ConsoleSource> context) {
-            Response response = new Response();
-            response.runnable = () -> {
-                for (Object o : response.dataList) {
-                    HISTORY.add((String) o);
-                }
-            };
-            AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_GET_ALL_SKILL_RESPONSE, response);
-            AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_GET_ALL_SKILL_REQUEST));
+            AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_FETCH_ALL_SKILL_PACKET));
             return 1;
         }
 
         private static int learnSkill(CommandContext<ConsoleSource> context, String identifier) {
-            Response response = new Response();
-            response.runnable = () -> {
-                if ((boolean) response.dataList.get(0)) {
-                    HISTORY.add("Success");
-
-                } else {
-                    HISTORY.add("Fail," + response.dataList.get(1));
-                }
-            };
-            AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_RESPONSE, response);
-            AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST));
+            AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(
+                    AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST, identifier, context.getSource().mainPos)
+            );
             return 1;
         }
 
         private static int learnCurriculum(CommandContext<ConsoleSource> context, String identifier) {
-            Response response = new Response();
-            response.runnable = () -> {
-                if ((boolean) response.dataList.get(0)) {
-                    HISTORY.add("Success");
-
-                } else {
-                    HISTORY.add("Fail," + response.dataList.get(1));
-                }
-            };
-            AcademyCraftNetworkSystemClient.CLIENT_RESPONSE_MAP.put(AcademyCraftNetworkResourceLocations.S2C_LEARN_CURRICULUM_RESPONSE, response);
-            AcademyCraftNetworkSystemClient.sendPacket(new C2SRequestPacket(AcademyCraftNetworkResourceLocations.C2S_LEARN_CURRICULUM_REQUEST, FriendlyByteBufIdentifiers.STRING, identifier));
             return 1;
         }
 
@@ -162,18 +150,35 @@ public class CommandManager {
             try {
                 dispatcher.execute(input, source);
             } catch (CommandSyntaxException e) {
-                HISTORY.add(e.getMessage());
+                AbilityDeveloperFragment.addHistory(e.getMessage());
             }
-        }
-
-        public static ParseResults<ConsoleSource> parse(String input, ConsoleSource source) {
-            return dispatcher.parse(input, source);
         }
     }
 
     public static final class Server {
         public static void registerPacketHandler() {
-            AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET, (serverPacketListener, packet) -> AbilitySystemServer.setPlayerAbilityCategory(serverPacketListener.player.getUUID(), FriendlyByteBufDeserializers.ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER.deserialize(packet.friendlyByteBuf)));
+            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(
+                    AcademyCraftNetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET,
+                    (serverPacketListener, packet) ->
+                            AbilitySystemServer.setPlayerAbilityCategory(serverPacketListener.player.getUUID(),
+                                    FriendlyByteBufDeserializers.ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER
+                                            .deserialize(packet.friendlyByteBuf))
+            );
+            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(
+                    AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_PACKET,
+                    (serverPacketListener, packet) -> {
+
+                    }
+            );
+            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(
+                    AcademyCraftNetworkResourceLocations.C2S_FETCH_ALL_SKILL_PACKET,
+                    (listener, packet) -> {
+                        List<Skill> skills = new ArrayList<>(AbilitySystem.SKILL_MAP.values());
+                        listener.send(new ServerToClientPacket(
+                                AcademyCraftNetworkResourceLocations.S2C_FETCH_ALL_SKILL_PACKET, skills)
+                        );
+                    }
+            );
         }
     }
 }

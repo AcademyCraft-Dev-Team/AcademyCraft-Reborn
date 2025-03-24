@@ -60,7 +60,11 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, (serverPacketListener, packet) -> Server.handleTeleport(serverPacketListener.player));
+        try {
+            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, Server.class.getDeclaredMethod("handleTeleport", ServerPlayer.class), objects -> Server.handleTeleport((ServerPlayer) objects[0]));
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static final class Server {

@@ -52,7 +52,11 @@ public class ArcGenerate extends Skill {
     @Override
     public void initServer(MinecraftServer server) {
         try {
-            AcademyCraftNetworkSystemServer.registerServerToClientPacketHandler(AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_PACKET, Server.class.getMethod("handle", ServerPlayer.class, ServerLevel.class), null);
+            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(
+                    AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_PACKET,
+                    Server.class.getMethod("handle", ServerPlayer.class, ServerLevel.class),
+                    objects -> Server.handle((ServerPlayer) objects[0], (ServerLevel) objects[1])
+            );
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }

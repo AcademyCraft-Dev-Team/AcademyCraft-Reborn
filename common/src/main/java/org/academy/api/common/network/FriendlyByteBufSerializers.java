@@ -2,16 +2,17 @@ package org.academy.api.common.network;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,27 +37,26 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<UUID> UUID_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(UUID.class, FriendlyByteBuf::writeUUID);
     public static final FriendlyByteBufSerializer<Component> COMPONENT_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Component.class, FriendlyByteBuf::writeComponent);
     public static final FriendlyByteBufSerializer<Vector3f> VECTOR_3_F_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Vector3f.class, FriendlyByteBuf::writeVector3f);
-    public static final FriendlyByteBufSerializer<CompoundTag> COMPOUND_TAG_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(CompoundTag.class, FriendlyByteBuf::writeNbt);
-    public static final FriendlyByteBufSerializer<List> LIST_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(List.class, (buffer, value) -> {
-        buffer.writeVarInt(value.size());
-        buffer.writeBoolean(value.isEmpty());
+    public static final FriendlyByteBufSerializer<Tag> COMPOUND_TAG_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Tag.class, (buffer, value) -> buffer.writeNbt((CompoundTag) value));
+    public static final FriendlyByteBufSerializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ArrayList.class, (buffer, value) -> {
         if (!value.isEmpty()) {
-            buffer.writeUtf(value.get(0).getClass().getCanonicalName());
+            buffer.writeBoolean(true);
+            buffer.writeVarInt(value.size());
+            Class<?> commonSuperclass = value.get(0).getClass();
+            for (Object obj : value) {
+                while (!commonSuperclass.isAssignableFrom(obj.getClass())) {
+                    commonSuperclass = commonSuperclass.getSuperclass();
+                }
+            }
+            AcademyCraft.LOGGER.info(commonSuperclass.getCanonicalName());
+            buffer.writeUtf(commonSuperclass.getCanonicalName());
             for (Object o : value) {
-                FriendlyByteBufSerializer serializer = getRequiredSerializer(value.getClass());
+                AcademyCraft.LOGGER.info(o.toString());
+                FriendlyByteBufSerializer serializer = getRequiredSerializer(commonSuperclass);
                 serializer.serialize(buffer, o);
             }
-        }
-    });
-    public static final FriendlyByteBufSerializer<Set> SET_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Set.class, (buffer, value) -> {
-        buffer.writeVarInt(value.size());
-        buffer.writeBoolean(value.isEmpty());
-        if (!value.isEmpty()) {
-            buffer.writeUtf(value.iterator().next().getClass().getCanonicalName());
-            for (Object o : value) {
-                FriendlyByteBufSerializer serializer = getRequiredSerializer(value.getClass());
-                serializer.serialize(buffer, o);
-            }
+        } else {
+            buffer.writeBoolean(false);
         }
     });
     public static final FriendlyByteBufSerializer<Map> MAP_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Map.class, (buffer, value) -> {
@@ -73,6 +73,11 @@ public class FriendlyByteBufSerializers {
             });
         }
     });
+    public static final FriendlyByteBufSerializer<FriendlyByteBufSerializers> FRIENDLY_BYTE_BUF_SERIALIZERS_FRIENDLY_BYTE_BUF_SERIALIZERS = registerSerializer(FriendlyByteBufSerializers.class, (buffer, value) -> {
+        buffer.writeUtf(value.getClass().getCanonicalName());
+
+    });
+    public static final FriendlyByteBufSerializer<Class> CLASS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Class.class, (buffer, value) -> buffer.writeUtf(value.getCanonicalName()));
 
     public static <T> FriendlyByteBufSerializer<T> registerSerializer(Class<T> clazz, FriendlyByteBufSerializer<T> serializer) {
         FRIENDLY_BYTE_BUF_SERIALIZER_MAP.put(clazz, serializer);
@@ -84,12 +89,17 @@ public class FriendlyByteBufSerializers {
         return (FriendlyByteBufSerializer<T>) FRIENDLY_BYTE_BUF_SERIALIZER_MAP.get(clazz);
     }
 
+    /**
+     * 所有单接口类，但是没有注册的，则会使用接口的，见 Collection
+     */
     public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<T> clazz) {
+        AcademyCraft.LOGGER.info("Get required serializer for {}", clazz);
         FriendlyByteBufSerializer<T> serializer = getSerializer(clazz);
         if (serializer == null) {
             throw new NullPointerException("Serializer for " + clazz.getCanonicalName() + " was null");
+        } else {
+            return serializer;
         }
-        return serializer;
     }
 
     private FriendlyByteBufSerializers() {
