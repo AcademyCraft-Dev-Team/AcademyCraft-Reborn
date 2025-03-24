@@ -32,14 +32,6 @@ public class AcademyCraftPacketHandlersClient {
                 throw new NoSuchElementException("FriendlyByteBuf.parse() returned null for identifier '" + identifier + "'");
             }
         });
-        HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.S2C_REQUEST, (listener, packet) -> {
-            ResourceLocation key = packet.getData().readResourceLocation();
-            if (AcademyCraftRequestHandlersClient.RESPONSE_MAP.containsKey(key)) {
-                AcademyCraftRequestHandlersClient.RESPONSE_MAP.get(key).handle(listener);
-            } else {
-                throw new NoSuchElementException("Response Handler " + key + " not found");
-            }
-        });
     }
 
     private AcademyCraftPacketHandlersClient() {

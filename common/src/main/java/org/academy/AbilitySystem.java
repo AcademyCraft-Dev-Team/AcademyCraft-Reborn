@@ -15,5 +15,8 @@ public final class AbilitySystem {
      */
     public static void registerAbilityCategory(final AbilityCategory abilityCategory) {
         ABILITY_CATEGORY_MAP.put(abilityCategory.name, abilityCategory);
+        for (Skill skill : abilityCategory.skillList) {
+            SKILL_MAP.put(skill.name, skill);
+        }
     }
 }
