@@ -8,8 +8,6 @@ public class AcademyCraftNetworkResourceLocations {
     public static final ResourceLocation C2S_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_request");
     public static final ResourceLocation C2S_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_response");
 
-    public static final ResourceLocation C2S_LEARN_SKILL_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_learn_skill_request");
-    public static final ResourceLocation S2C_LEARN_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_learn_skill_response");
     public static final ResourceLocation C2S_GET_LEARNED_SKILL_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_get_learned_skill_request");
     public static final ResourceLocation S2C_GET_LEARNED_SKILL_RESPONSE = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_get_learned_skill_response");
     public static final ResourceLocation C2S_LEARN_CURRICULUM_REQUEST = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_learn_curriculum_request");
