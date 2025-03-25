@@ -15,10 +15,6 @@ public class AcademyCraftRequestHandlersServer {
     public static final Map<ResourceLocation, AcademyCraftRequestHandlerServer> REQUEST_HANDLER_MAP = new HashMap<>();
 
     static {
-        REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST, (serverGamePacketListenerImpl, packet) -> {
-            boolean randomBoolean = Math.random() < 0.5;
-            serverGamePacketListenerImpl.send(new S2CResponsePacket(FriendlyByteBufIdentifiers.CUSTOM, AcademyCraftNetworkResourceLocations.S2C_LEARN_SKILL_RESPONSE, List.of(2, FriendlyByteBufIdentifiers.BOOLEAN, FriendlyByteBufIdentifiers.STRING, randomBoolean, "test")));
-        });
         REQUEST_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_GET_LEARNED_SKILL_REQUEST, (serverGamePacketListenerImpl, packet) -> {
             List<String> list = new ArrayList<>();
             list.add(FriendlyByteBufIdentifiers.STRING);

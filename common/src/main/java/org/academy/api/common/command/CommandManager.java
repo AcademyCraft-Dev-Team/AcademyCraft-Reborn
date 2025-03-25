@@ -28,11 +28,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class CommandManager {
     public static final class Client {
-        public static final List<String> HISTORY = new CopyOnWriteArrayList<>();
         public static final CommandDispatcher<ConsoleSource> dispatcher = new CommandDispatcher<>();
         public static final LiteralArgumentBuilder<ConsoleSource> CONFIG = LiteralArgumentBuilder.literal("config");
 
@@ -73,8 +71,8 @@ public class CommandManager {
             dispatcher.register(
                     LiteralArgumentBuilder.<ConsoleSource>literal("learn")
                             .then(LiteralArgumentBuilder.<ConsoleSource>literal("skill")
-                                    .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("identifier", StringArgumentType.string())
-                                            .executes(context -> CommandManager.Client.learnSkill(context, StringArgumentType.getString(context, "identifier")))
+                                    .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("name", StringArgumentType.string())
+                                            .executes(context -> CommandManager.Client.learnSkill(context, context.getArgument("name", String.class)))
                                     )
                             )
                             .then(LiteralArgumentBuilder.<ConsoleSource>literal("curriculum")
@@ -135,14 +133,15 @@ public class CommandManager {
             return 1;
         }
 
-        private static int learnSkill(CommandContext<ConsoleSource> context, String identifier) {
+        private static int learnSkill(CommandContext<ConsoleSource> context, String skillName) {
             AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(
-                    AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_REQUEST, identifier, context.getSource().mainPos)
+                    AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_PACKET, skillName, context.getSource().mainPos)
             );
             return 1;
         }
 
         private static int learnCurriculum(CommandContext<ConsoleSource> context, String identifier) {
+            AcademyCraft.LOGGER.info("Learned curriculum: " + identifier);
             return 1;
         }
 
@@ -163,12 +162,6 @@ public class CommandManager {
                             AbilitySystemServer.setPlayerAbilityCategory(serverPacketListener.player.getUUID(),
                                     FriendlyByteBufDeserializers.ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER
                                             .deserialize(packet.friendlyByteBuf))
-            );
-            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(
-                    AcademyCraftNetworkResourceLocations.C2S_LEARN_SKILL_PACKET,
-                    (serverPacketListener, packet) -> {
-
-                    }
             );
             AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(
                     AcademyCraftNetworkResourceLocations.C2S_FETCH_ALL_SKILL_PACKET,

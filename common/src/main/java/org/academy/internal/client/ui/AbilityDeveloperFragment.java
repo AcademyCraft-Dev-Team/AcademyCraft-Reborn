@@ -23,9 +23,9 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.command.ConsoleSource;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
@@ -34,7 +34,7 @@ public class AbilityDeveloperFragment extends Fragment {
     private static BlockPos blockPos;
     private static Handler handler;
     private static EditText editText;
-    private static PopupWindow popupWindow;
+    private static final PopupWindow popupWindow = new PopupWindow();
     public static ConsoleSource consoleSource;
 
     public AbilityDeveloperFragment(@NotNull BlockPos mainPos) {
@@ -83,51 +83,69 @@ public class AbilityDeveloperFragment extends Fragment {
         base.addView(terminalLayout);
 
         handler = new Handler(Looper.myLooper());
-        editText.setOnKeyListener((v, keyCode, event) -> {
-            if (event.getAction() == GLFW.GLFW_RELEASE) {
-                if (keyCode == GLFW.GLFW_KEY_TAB) {
-                    if (popupWindow != null && popupWindow.isShowing()) {
-                        popupWindow.dismiss();
-                    }
-                    ParseResults<ConsoleSource> parseResults =
-                            CommandManager.Client.dispatcher.parse(editText.getText().toString(), consoleSource);
-                    CompletableFuture<Suggestions> suggestionsCompletableFuture =
-                            CommandManager.Client.dispatcher.getCompletionSuggestions(parseResults);
-                    suggestionsCompletableFuture.thenAccept(suggestions -> {
-                        ArrayList<String> list = new ArrayList<>();
-                        for (Suggestion suggestion : suggestions.getList()) {
-                            String suggestionText = suggestion.getText();
-                            list.add(suggestionText);
-                        }
-                        handler.post(() -> {
-                            ListView listView = new ListView(requireContext());
-                            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), list);
-                            listView.setAdapter(adapter);
-                            popupWindow = new PopupWindow(listView, base.dp(135), base.dp(240), false);
-                            listView.setOnItemClickListener((parent, view, position, id) -> {
-                                popupWindow.dismiss();
-                                String selectedItem = adapter.getItem(position);
-                                String currentText = editText.getText().toString().trim();
-                                StringBuilder newText = new StringBuilder();
-                                if (!currentText.isEmpty()) {
-                                    newText.append(currentText).append(" ");
-                                }
-                                newText.append(selectedItem);
-                                editText.setText(newText.toString());
-                                editText.requestFocus();
-                                editText.setSelection(editText.getText().length());
-                            });
-                            GradientDrawable popupWindowBack = new GradientDrawable();
-                            popupWindowBack.setAlpha(128);
-                            popupWindowBack.setColor(Color.BLACK);
-                            popupWindowBack.setCornerRadius(32);
-                            popupWindow.setBackgroundDrawable(popupWindowBack);
-                            popupWindow.showAsDropDown(editText, 0, -base.dp(256));
-                        });
-                    });
-                }
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
-            return false;
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int start, int before, int count) {
+                popupWindow.dismiss();
+                ParseResults<ConsoleSource> parseResults =
+                        CommandManager.Client.dispatcher.parse(editText.getText().toString(), consoleSource);
+                CompletableFuture<Suggestions> suggestionsCompletableFuture =
+                        CommandManager.Client.dispatcher.getCompletionSuggestions(parseResults);
+                suggestionsCompletableFuture.thenAccept(suggestions -> {
+                    ArrayList<String> list = new ArrayList<>();
+                    for (Suggestion suggestion : suggestions.getList()) {
+                        String suggestionText = suggestion.getText();
+                        list.add(suggestionText);
+                    }
+                    handler.post(() -> {
+                        ListView listView = new ListView(requireContext());
+                        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), list);
+                        listView.setAdapter(adapter);
+                        popupWindow.setContentView(listView);
+                        popupWindow.setWidth(base.dp(135));
+                        popupWindow.setHeight(base.dp(240));
+                        popupWindow.setFocusable(false);
+                        listView.setOnItemClickListener((parent, view, position, id) -> {
+                            popupWindow.dismiss();
+                            String selectedItem = adapter.getItem(position);
+                            String currentText = editText.getText().toString();
+
+                            if (currentText.isEmpty()) {
+                                editText.setText(selectedItem);
+                            } else {
+                                String[] strings = currentText.split(" ");
+                                String lastWord = strings[strings.length - 1];
+
+                                if (selectedItem.startsWith(lastWord) && !lastWord.equals(selectedItem)) {
+                                    String prefix = String.join(" ", Arrays.copyOf(strings, strings.length - 1));
+                                    String newText = prefix.isEmpty() ? selectedItem : prefix + " " + selectedItem;
+                                    editText.setText(newText);
+                                } else {
+                                    String trimmedText = currentText.trim();
+                                    editText.setText(trimmedText + " " + selectedItem);
+                                }
+                            }
+
+                            editText.requestFocus();
+                            editText.setSelection(editText.getText().length());
+                        });
+                        GradientDrawable popupWindowBack = new GradientDrawable();
+                        popupWindowBack.setAlpha(128);
+                        popupWindowBack.setColor(Color.BLACK);
+                        popupWindowBack.setCornerRadius(32);
+                        popupWindow.setBackgroundDrawable(popupWindowBack);
+                        popupWindow.showAsDropDown(editText, 0, -base.dp(256));
+                    });
+                });
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
         });
         editText.requestFocus();
         consoleSource = new ConsoleSource(blockPos, handler, scrollView, historyTextView);
