@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.academy.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "ConnectionProtocolMixin",
+    "DimensionDataStorageMixin",
+    "MinecraftServerMixin",
+    "PlayerMixin",
+    "ServerGamePacketListenerImplMixin"
+  ],
+  "client": [
+    "ClientPacketListenerMixin",
+    "KeyboardHandlerMixin",
+    "LevelRendererMixin",
+    "MinecraftMixin",
+    "MouseHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

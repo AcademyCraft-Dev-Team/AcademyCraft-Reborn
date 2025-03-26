@@ -1,0 +1,21 @@
+accessWidener v2 named
+accessible field net/minecraft/client/server/IntegratedServer paused Z
+accessible field net/minecraft/client/Minecraft instance Lnet/minecraft/client/Minecraft;
+
+accessible class net/minecraft/network/ConnectionProtocol$PacketSet
+accessible class net/minecraft/network/ConnectionProtocol$ProtocolBuilder
+accessible field net/minecraft/network/ConnectionProtocol$ProtocolBuilder flows Ljava/util/Map;
+accessible field net/minecraft/network/ConnectionProtocol PROTOCOL_BY_PACKET Ljava/util/Map;
+accessible method net/minecraft/network/ConnectionProtocol protocol ()Lnet/minecraft/network/ConnectionProtocol$ProtocolBuilder;
+
+accessible field net/minecraft/world/damagesource/DamageSources damageTypes Lnet/minecraft/core/Registry;
+accessible method net/minecraft/world/entity/LivingEntity actuallyHurt (Lnet/minecraft/world/damagesource/DamageSource;F)V
+accessible method net/minecraft/world/entity/boss/enderdragon/EnderDragon reallyHurt (Lnet/minecraft/world/damagesource/DamageSource;F)Z
+
+accessible class net/minecraft/client/renderer/RenderType$CompositeRenderType
+accessible class net/minecraft/client/renderer/RenderType$CompositeState
+accessible class net/minecraft/client/renderer/RenderStateShard$TextureStateShard
+accessible class net/minecraft/client/renderer/RenderStateShard$ShaderStateShard
+accessible class net/minecraft/client/renderer/RenderStateShard$WriteMaskStateShard
+accessible class net/minecraft/client/renderer/RenderStateShard$TransparencyStateShard
+accessible method net/minecraft/client/renderer/entity/EntityRenderers register (Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/client/renderer/entity/EntityRendererProvider;)V

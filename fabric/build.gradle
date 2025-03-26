@@ -1,0 +1,53 @@
+plugins {
+    id 'multiloader-loader'
+    id 'fabric-loom'
+}
+
+repositories {
+    maven {
+        url 'https://raw.githubusercontent.com/Fuzss/modresources/main/maven/'
+        content {
+            includeGroup 'fuzs.forgeconfigapiport'
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.layered {
+        officialMojangMappings()
+        parchment("org.parchmentmc.data:parchment-${parchment_minecraft}:${parchment_version}@zip")
+    }
+    modApi "icyllis.modernui:ModernUI-Core:3.11.1"
+    modApi "icyllis.modernui:ModernUI-Markdown:3.11.1"
+    modImplementation "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
+
+    modApi "dev.felnull:special-model-loader:1.2.0"
+    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.1"
+    include modApi('teamreborn:energy:3.0.0')
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.1'
+    implementation project(":common")
+}
+
+loom {
+    accessWidenerPath.set(file("src/main/resources/academy.accesswidener"))
+    mixin {
+        defaultRefmapName.set("${mod_id}.refmap.json")
+    }
+    runs {
+        client {
+            client()
+            setConfigName("Fabric Client")
+            ideConfigGenerated(true)
+            runDir("run")
+        }
+        server {
+            server()
+            setConfigName("Fabric Server")
+            ideConfigGenerated(true)
+            runDir("run")
+        }
+    }
+}
