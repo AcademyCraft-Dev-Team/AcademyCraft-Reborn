@@ -1,0 +1,59 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev.legacyforge'
+}
+
+mixin {
+    add(sourceSets.main, "${mod_id}.refmap.json")
+
+    config("${mod_id}.mixins.json")
+}
+
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
+
+    validateAccessTransformers = false
+
+    accessTransformers = ["src/main/resources/META-INF/accesstransformer.cfg"]
+
+    parchment {
+        minecraftVersion = parchment_minecraft
+        mappingsVersion = parchment_version
+    }
+    runs {
+        client {
+            client()
+        }
+        data {
+            data()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+        server {
+            server()
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+sourceSets.main.resources.srcDir 'src/generated/resources'
+
+dependencies {
+    compileOnly project(":common")
+    annotationProcessor("org.spongepowered:mixin:0.8.7:processor")
+    implementation(additionalRuntimeClasspath("icyllis.modernui:ModernUI-Core:3.11.1"))
+    implementation(additionalRuntimeClasspath("icyllis.modernui:ModernUI-Markdown:3.11.1"))
+    modImplementation "icyllis.modernui:ModernUI-Forge:${minecraft_version}-3.11.1.6"
+    modImplementation "maven.modrinth:jade:11.13.1+forge"
+}
+
+jar {
+    finalizedBy('reobfJar')
+    manifest.attributes([
+            "MixinConfigs": "${mod_id}.mixins.json,${mod_id}.forge.mixins.json"
+    ])
+}

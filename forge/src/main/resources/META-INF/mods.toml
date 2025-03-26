@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+#issueTrackerURL = ""
+license = "GPL-3.0"
+
+[[mods]]
+modId = "academy"
+version = "${version}"
+displayName = "AcademyCraft"
+authors = "LovelyCane"
+description = '''
+A Minecraft mod about Academy City.
+'''
+logoFile = "logo.png"
+
+[[dependencies.academy]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.academy]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1,)"
+ordering = "NONE"
+side = "BOTH"
