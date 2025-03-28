@@ -24,8 +24,8 @@ dependencies {
     modImplementation "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
 
     modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.1"
-    include (modApi( "dev.felnull:special-model-loader:1.2.0"))
-    include (modApi('teamreborn:energy:3.0.0'))
+    include(modApi("dev.felnull:special-model-loader:1.2.0"))
+    include(modApi('teamreborn:energy:3.0.0'))
     modImplementation "maven.modrinth:jade:11.12.3+fabric"
     modImplementation "curse.maven:techreborn-233564:6168112"
     modImplementation "curse.maven:reborncore-237903:6168111"
@@ -53,4 +53,16 @@ loom {
             runDir("run")
         }
     }
+}
+
+remapSourcesJar {
+    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+}
+
+javadocJar {
+    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+}
+
+remapJar {
+    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
 }
