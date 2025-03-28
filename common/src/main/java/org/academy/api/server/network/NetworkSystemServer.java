@@ -5,8 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.Response;
-import org.academy.api.common.network.packet.ClientToServerPacket;
+import org.academy.api.common.network.packet.C2SPacket;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
@@ -14,12 +13,11 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-public class AcademyCraftNetworkSystemServer {
-    public static final Map<ResourceLocation, ClientToServerPacketHandler> CLIENT_TO_SERVER_PACKET_HANDLER_MAP = new HashMap<>();
-    public static final Map<ResourceLocation, Response> SERVER_RESPONSE_MAP = new HashMap<>();
+public class NetworkSystemServer {
+    public static final Map<ResourceLocation, C2SPacketHandler> C2S_PACKET_HANDLER_MAP = new HashMap<>();
 
-    public static void registerClientToServerPacketHandler(ResourceLocation resourceLocation, ClientToServerPacketHandler handler) {
-        CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(resourceLocation, handler);
+    public static void registerC2SPacketHandler(ResourceLocation resourceLocation, C2SPacketHandler handler) {
+        C2S_PACKET_HANDLER_MAP.put(resourceLocation, handler);
     }
 
     /**
@@ -29,19 +27,19 @@ public class AcademyCraftNetworkSystemServer {
      * @param method           需要调用的 Method
      * @param consumer         负责将生成的参数传入方法
      */
-    public static void registerClientToServerPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Method method, @NotNull Consumer<Object[]> consumer) {
+    public static void registerC2SPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Method method, @NotNull Consumer<Object[]> consumer) {
         final Class<?>[] parameterTypes = method.getParameterTypes();
-        registerClientToServerPacketHandler(resourceLocation, parameterTypes, consumer);
+        registerC2SPacketHandler(resourceLocation, parameterTypes, consumer);
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> void registerClientToServerPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<T> clazz, @NotNull Consumer<T> consumer) {
-        registerClientToServerPacketHandler(resourceLocation, new Class[]{clazz}, objects -> consumer.accept((T) objects[0]));
+    public static <T> void registerC2SPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<T> clazz, @NotNull Consumer<T> consumer) {
+        registerC2SPacketHandler(resourceLocation, new Class[]{clazz}, objects -> consumer.accept((T) objects[0]));
     }
 
-    public static void registerClientToServerPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<?>[] parameterTypes, @NotNull Consumer<Object[]> consumer) {
+    public static void registerC2SPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<?>[] parameterTypes, @NotNull Consumer<Object[]> consumer) {
         final byte parameterCount = (byte) parameterTypes.length;
-        final List<BiFunction<ServerGamePacketListenerImpl, ClientToServerPacket, Object>> biFunctions =
+        final List<BiFunction<ServerGamePacketListenerImpl, C2SPacket, Object>> biFunctions =
                 new ArrayList<>(Collections.nCopies(parameterCount, null));
         for (byte i = 0; i < parameterCount; i++) {
             Class<?> parameterType = parameterTypes[i];
@@ -53,7 +51,7 @@ public class AcademyCraftNetworkSystemServer {
                 biFunctions.set(i, (
                         listener, packet) ->
                         listener);
-            } else if (parameterType.equals(ClientToServerPacket.class)) {
+            } else if (parameterType.equals(C2SPacket.class)) {
                 biFunctions.set(i, (
                         listener, packet) ->
                         packet);
@@ -68,7 +66,7 @@ public class AcademyCraftNetworkSystemServer {
                 );
             }
         }
-        registerClientToServerPacketHandler(resourceLocation, (listener, packet) -> {
+        registerC2SPacketHandler(resourceLocation, (listener, packet) -> {
             Object[] args = new Object[parameterCount];
             for (byte i = 0; i < parameterCount; i++) {
                 args[i] = biFunctions.get(i).apply(listener, packet);
@@ -77,6 +75,6 @@ public class AcademyCraftNetworkSystemServer {
         });
     }
 
-    private AcademyCraftNetworkSystemServer() {
+    private NetworkSystemServer() {
     }
 }

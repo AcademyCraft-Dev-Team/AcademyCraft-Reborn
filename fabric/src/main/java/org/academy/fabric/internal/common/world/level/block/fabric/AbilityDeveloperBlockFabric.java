@@ -1,9 +1,11 @@
 package org.academy.fabric.internal.common.world.level.block.fabric;
 
-import icyllis.modernui.mc.MuiModApi;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -16,24 +18,28 @@ import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.AcademyCraft;
-import org.academy.internal.client.ui.AbilityDeveloperFragment;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.fabric.internal.common.world.level.block.entity.fabric.AbilityDeveloperBlockEntityFabric;
+import org.academy.fabric.internal.common.world.level.block.entity.fabric.RadioFrequencyEnergyOutputBridgeBlockEntity;
 import org.academy.internal.common.world.item.AcademyCraftItems;
-import org.academy.fabric.internal.common.world.level.block.entity.fabric.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import team.reborn.energy.api.base.SimpleEnergyStorage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@SuppressWarnings("deprecation")
-public class AbilityDeveloperBlock extends BaseEntityBlock {
+@SuppressWarnings({"deprecation", "UnstableApiUsage"})
+public class AbilityDeveloperBlockFabric extends BaseEntityBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final EnumProperty<MultiBlockType> TYPE = EnumProperty.create("type", MultiBlockType.class);
     public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
@@ -47,9 +53,37 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
             new Vec3i(0, 2, 2)    // 前前上上
     );
 
-    public AbilityDeveloperBlock(Properties properties) {
+    public AbilityDeveloperBlockFabric(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(TYPE, MultiBlockType.MAIN).setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
+        if (level.isClientSide() || state.getValue(TYPE) == MultiBlockType.SUBJECT) return null;
+        return (serverLevel, blockPos, blockState, blockEntity) -> {
+            if (blockEntity instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
+                BlockEntity radio = serverLevel.getBlockEntity(blockPos.below());
+                if (radio instanceof RadioFrequencyEnergyOutputBridgeBlockEntity radioFrequencyEnergyOutputBridgeBlockEntity) {
+                    SimpleEnergyStorage source = radioFrequencyEnergyOutputBridgeBlockEntity.energyStorage;
+                    try (Transaction transaction = Transaction.openOuter()) {
+                        if (abilityDeveloperBlockEntity.energyStored < abilityDeveloperBlockEntity.maxStored) {
+                            long amountExtracted;
+                            long shouldExtract;
+                            shouldExtract = abilityDeveloperBlockEntity.maxStored - abilityDeveloperBlockEntity.energyStored;
+                            if (abilityDeveloperBlockEntity.maxStored - abilityDeveloperBlockEntity.energyStored >= abilityDeveloperBlockEntity.maxStored) {
+                                shouldExtract = source.maxExtract;
+                            }
+                            amountExtracted = source.extract(shouldExtract, transaction);
+                            if (amountExtracted == source.maxExtract) {
+                                abilityDeveloperBlockEntity.energyStored += amountExtracted;
+                                transaction.commit();
+                            }
+                        }
+                    }
+                }
+            }
+        };
     }
 
     @Override
@@ -69,10 +103,10 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
     @Override
     public void neighborChanged(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Block neighborBlock, @NotNull BlockPos neighborPos, boolean movedByPiston) {
         BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+        if (blockEntity instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
             List<BlockPos> blockPosList = getRotatedSubjectBlocks(abilityDeveloperBlockEntity.mainPos, state.getValue(FACING));
             blockPosList.add(abilityDeveloperBlockEntity.mainPos);
-            boolean broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof AbilityDeveloperBlockEntity));
+            boolean broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof AbilityDeveloperBlockEntityFabric));
             if (broken) {
                 for (BlockPos subjectBlock : blockPosList) {
                     level.destroyBlock(subjectBlock, false);
@@ -85,7 +119,7 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
     public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
         if (player.isShiftKeyDown()) {
             if (!level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
                     if (!abilityDeveloperBlockEntity.isEmpty()) {
                         abilityDeveloperBlockEntity.setItem(0, ItemStack.EMPTY);
                         player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_COMPUTATIONAL_CHIP_ITEM.asItem()));
@@ -93,10 +127,12 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
                 }
             }
         } else {
-            if (level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                    AcademyCraft.LOGGER.info(abilityDeveloperBlockEntity.mainPos);
-                    MuiModApi.openScreen(new AbilityDeveloperFragment(abilityDeveloperBlockEntity.mainPos));
+            if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+                if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
+                    serverPlayer.connection.send(new S2CPacket(
+                            NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET,
+                            new BlockPos(abilityDeveloperBlockEntity.mainPos)
+                    ));
                 }
             }
         }
@@ -109,7 +145,7 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
         for (BlockPos subjectBlock : subjectBlocks) {
             level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
             BlockEntity blockEntity = level.getBlockEntity(subjectBlock);
-            if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+            if (blockEntity instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
                 abilityDeveloperBlockEntity.setMainPos(pos);
             }
         }
@@ -124,7 +160,7 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
-        return new AbilityDeveloperBlockEntity(pos, state);
+        return new AbilityDeveloperBlockEntityFabric(pos, state);
     }
 
     public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction) {

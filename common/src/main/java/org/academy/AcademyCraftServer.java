@@ -3,6 +3,7 @@ package org.academy;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import org.academy.api.common.command.CommandManager;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 
 import java.io.File;

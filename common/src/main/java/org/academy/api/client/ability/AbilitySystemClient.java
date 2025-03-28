@@ -1,15 +1,21 @@
-package org.academy;
+package org.academy.api.client.ability;
 
 import net.minecraft.client.Minecraft;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.command.CommandManager;
-import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -18,6 +24,7 @@ public final class AbilitySystemClient {
     private static volatile float computingPower;
     private static volatile float maximumComputingPower;
     public static volatile AbilityCategory category;
+    public static final Set<Skill> SKILLS = new HashSet<>();
     public static final String KEY_NAME = "activate_ability";
     public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(
             KEY_NAME,
@@ -44,23 +51,33 @@ public final class AbilitySystemClient {
         CommandManager.Client.registerPacketHandler();
     }
 
+    @SuppressWarnings("unchecked")
     public static void registerPacketHandler() {
-        AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
-                AcademyCraftNetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
+        NetworkSystemClient.registerServerToClientPacketHandler(
+                NetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
                 (handler, packet) ->
                         category = FriendlyByteBufDeserializers
                                 .ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER
                                 .deserialize(packet.friendlyByteBuf)
         );
-        AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
-                AcademyCraftNetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
+        NetworkSystemClient.registerServerToClientPacketHandler(
+                NetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
                 (handler, packet) ->
                         setComputingPower(packet.friendlyByteBuf.readFloat())
         );
-        AcademyCraftNetworkSystemClient.registerServerToClientPacketHandler(
-                AcademyCraftNetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
+        NetworkSystemClient.registerServerToClientPacketHandler(
+                NetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
                 (handler, packet) ->
                         setMaximumComputingPower(packet.friendlyByteBuf.readFloat())
+        );
+        NetworkSystemClient.registerServerToClientPacketHandler(
+                NetworkResourceLocations.S2C_SKILLS_SYC_PACKET,
+                new FriendlyByteBufDeserializer[]{FriendlyByteBufDeserializers.getArrayListFriendlyByteBufDeserializer(Skill.class)},
+                objects -> {
+                    ArrayList<Skill> skills = (ArrayList<Skill>) objects[0];
+                    SKILLS.clear();
+                    SKILLS.addAll(skills);
+                }
         );
     }
 

@@ -10,7 +10,7 @@ import org.academy.internal.common.world.level.block.entity.AcademyCraftBlockEnt
 
 @SuppressWarnings("DataFlowIssue")
 public class AcademyCraftBlockEntityTypesForge {
-    public static final BlockEntityType<AbilityDeveloperBlockEntity> ABILITY_DEVELOPER = BlockEntityType.Builder.of(AbilityDeveloperBlockEntity::new, AcademyCraftBlocksForge.ABILITY_DEVELOPER_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "ability_developer"));
+    public static final BlockEntityType<AbilityDeveloperBlockEntityForge> ABILITY_DEVELOPER = BlockEntityType.Builder.of(AbilityDeveloperBlockEntityForge::new, AcademyCraftBlocksForge.ABILITY_DEVELOPER_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "ability_developer"));
     public static final BlockEntityType<RadioFrequencyEnergyOutputBridgeBlockEntity> RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE = BlockEntityType.Builder.of(RadioFrequencyEnergyOutputBridgeBlockEntity::new, AcademyCraftBlocksForge.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "radio_frequency_energy_output_bridge"));
 
     public static void init() {

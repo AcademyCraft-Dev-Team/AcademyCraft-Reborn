@@ -22,9 +22,9 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.AcademyCraft;
+import org.academy.forge.internal.common.world.level.block.entity.forge.AbilityDeveloperBlockEntityForge;
 import org.academy.internal.client.ui.AbilityDeveloperFragment;
 import org.academy.internal.common.world.item.AcademyCraftItems;
-import org.academy.forge.internal.common.world.level.block.entity.forge.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @SuppressWarnings("deprecation")
-public class AbilityDeveloperBlock extends BaseEntityBlock {
+public class AbilityDeveloperBlockForge extends BaseEntityBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final EnumProperty<MultiBlockType> TYPE = EnumProperty.create("type", MultiBlockType.class);
     public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
@@ -47,7 +47,7 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
             new Vec3i(0, 2, 2)    // 前前上上
     );
 
-    public AbilityDeveloperBlock(Properties properties) {
+    public AbilityDeveloperBlockForge(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(TYPE, MultiBlockType.MAIN).setValue(FACING, Direction.NORTH));
     }
@@ -69,10 +69,10 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
     @Override
     public void neighborChanged(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Block neighborBlock, @NotNull BlockPos neighborPos, boolean movedByPiston) {
         BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-            List<BlockPos> blockPosList = getRotatedSubjectBlocks(abilityDeveloperBlockEntity.mainPos, state.getValue(FACING));
-            blockPosList.add(abilityDeveloperBlockEntity.mainPos);
-            boolean broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof AbilityDeveloperBlockEntity));
+        if (blockEntity instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge) {
+            List<BlockPos> blockPosList = getRotatedSubjectBlocks(abilityDeveloperBlockEntityForge.mainPos, state.getValue(FACING));
+            blockPosList.add(abilityDeveloperBlockEntityForge.mainPos);
+            boolean broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof AbilityDeveloperBlockEntityForge));
             if (broken) {
                 for (BlockPos subjectBlock : blockPosList) {
                     level.destroyBlock(subjectBlock, false);
@@ -85,18 +85,18 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
     public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
         if (player.isShiftKeyDown()) {
             if (!level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                    if (!abilityDeveloperBlockEntity.isEmpty()) {
-                        abilityDeveloperBlockEntity.setItem(0, ItemStack.EMPTY);
+                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge) {
+                    if (!abilityDeveloperBlockEntityForge.isEmpty()) {
+                        abilityDeveloperBlockEntityForge.setItem(0, ItemStack.EMPTY);
                         player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_COMPUTATIONAL_CHIP_ITEM.asItem()));
                     }
                 }
             }
         } else {
             if (level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                    AcademyCraft.LOGGER.info(abilityDeveloperBlockEntity.mainPos);
-                    MuiModApi.openScreen(new AbilityDeveloperFragment(abilityDeveloperBlockEntity.mainPos));
+                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge) {
+                    AcademyCraft.LOGGER.info(abilityDeveloperBlockEntityForge.mainPos);
+                    MuiModApi.openScreen(new AbilityDeveloperFragment(abilityDeveloperBlockEntityForge.mainPos));
                 }
             }
         }
@@ -109,8 +109,8 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
         for (BlockPos subjectBlock : subjectBlocks) {
             level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
             BlockEntity blockEntity = level.getBlockEntity(subjectBlock);
-            if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                abilityDeveloperBlockEntity.setMainPos(pos);
+            if (blockEntity instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge) {
+                abilityDeveloperBlockEntityForge.setMainPos(pos);
             }
         }
     }
@@ -124,7 +124,7 @@ public class AbilityDeveloperBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
-        return new AbilityDeveloperBlockEntity(pos, state);
+        return new AbilityDeveloperBlockEntityForge(pos, state);
     }
 
     public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction) {

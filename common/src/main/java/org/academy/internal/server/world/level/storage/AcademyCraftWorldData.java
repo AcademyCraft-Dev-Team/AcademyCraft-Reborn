@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import org.academy.AbilitySystemServer;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
@@ -38,9 +38,9 @@ public class AcademyCraftWorldData {
         }
 
         @SerializedName("skills")
-        private final List<String> skills = new ArrayList<>();
+        private final Set<String> skills = new HashSet<>();
 
-        public final List<String> getSkills() {
+        public final Set<String> getSkills() {
             return skills;
         }
 
