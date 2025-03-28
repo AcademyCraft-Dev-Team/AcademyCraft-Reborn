@@ -46,4 +46,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AcademyCraft
-          path: '**/build/libs/*academy-fabric*.jar,**/build/libs/*academy-forge*.jar'
+          path: '**/build/libs/*.jar'
