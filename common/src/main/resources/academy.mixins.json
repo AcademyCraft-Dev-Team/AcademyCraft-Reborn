@@ -19,5 +19,6 @@
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "refmap": "academy.refmap.json"
 }

@@ -5,7 +5,6 @@ plugins {
 
 mixin {
     add(sourceSets.main, "${mod_id}.refmap.json")
-
     config("${mod_id}.mixins.json")
 }
 
@@ -48,12 +47,12 @@ dependencies {
     implementation(additionalRuntimeClasspath("icyllis.modernui:ModernUI-Core:3.11.1"))
     implementation(additionalRuntimeClasspath("icyllis.modernui:ModernUI-Markdown:3.11.1"))
     modImplementation "icyllis.modernui:ModernUI-Forge:${minecraft_version}-3.11.1.6"
-    modImplementation "maven.modrinth:jade:11.13.1+forge"
+    modImplementation "maven.modrinth:jade:11.12.3+forge"
 }
 
 jar {
     finalizedBy('reobfJar')
     manifest.attributes([
-            "MixinConfigs": "${mod_id}.mixins.json,${mod_id}.forge.mixins.json"
+            "MixinConfigs": "${mod_id}.mixins.json"
     ])
 }

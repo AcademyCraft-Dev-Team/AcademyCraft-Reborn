@@ -1,7 +1,7 @@
 package org.academy.mixin;
 
 import net.minecraft.client.Minecraft;
-import org.academy.AbilitySystemClient;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

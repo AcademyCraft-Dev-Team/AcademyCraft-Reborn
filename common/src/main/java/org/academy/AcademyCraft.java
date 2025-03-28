@@ -1,6 +1,6 @@
 package org.academy;
 
-import org.academy.api.common.network.AcademyCraftNetworkSystem;
+import org.academy.api.common.network.NetworkSystem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,7 +17,7 @@ public final class AcademyCraft {
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
 
     public static void init() {
-        AcademyCraftNetworkSystem.init();
+        NetworkSystem.init();
     }
 
     public static void checkFile(File file) {

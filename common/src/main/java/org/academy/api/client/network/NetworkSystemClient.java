@@ -2,11 +2,12 @@ package org.academy.api.client.network;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.Connection;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.resources.ResourceLocation;
+import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.Response;
-import org.academy.api.common.network.packet.ServerToClientPacket;
+import org.academy.api.common.network.packet.S2CPacket;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
@@ -14,9 +15,9 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-public class AcademyCraftNetworkSystemClient {
+@SuppressWarnings({"rawtypes", "unchecked"})
+public class NetworkSystemClient {
     public static final Map<ResourceLocation, ServerToClientPacketHandler> SERVER_TO_CLIENT_PACKET_HANDLER_MAP = new HashMap<>();
-    public static final Map<ResourceLocation, Response> CLIENT_RESPONSE_MAP = new HashMap<>();
     public static Connection connection;
 
     public static void sendPacket(Packet<?> packet) {
@@ -39,22 +40,21 @@ public class AcademyCraftNetworkSystemClient {
         registerServerToClientPacketHandler(resourceLocation, parameterTypes, consumer);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<T> clazz, @NotNull Consumer<T> consumer) {
         registerServerToClientPacketHandler(resourceLocation, new Class<?>[]{clazz}, objects -> consumer.accept((T) objects[0]));
     }
 
-    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<?>[] parameterTypes, @NotNull Consumer<Object[]> consumer) {
+    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class[] parameterTypes, @NotNull Consumer<Object[]> consumer) {
         final byte parameterCount = (byte) parameterTypes.length;
-        final List<BiFunction<ClientPacketListener, ServerToClientPacket, Object>> biFunctions =
+        final List<BiFunction<ClientPacketListener, S2CPacket, Object>> biFunctions =
                 new ArrayList<>(Collections.nCopies(parameterCount, null));
         for (byte i = 0; i < parameterCount; i++) {
-            Class<?> parameterType = parameterTypes[i];
+            Class parameterType = parameterTypes[i];
             if (parameterType.equals(ClientPacketListener.class)) {
                 biFunctions.set(i, (
                         listener, packet) ->
                         listener);
-            } else if (parameterType.equals(ServerToClientPacket.class)) {
+            } else if (parameterType.equals(S2CPacket.class)) {
                 biFunctions.set(i, (
                         listener, packet) ->
                         packet);
@@ -74,6 +74,28 @@ public class AcademyCraftNetworkSystemClient {
         });
     }
 
-    private AcademyCraftNetworkSystemClient() {
+    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull BiFunction<ClientPacketListener, S2CPacket, Object>[] biFunctions, @NotNull Consumer<Object[]> consumer) {
+        registerServerToClientPacketHandler(resourceLocation, (listener, packet) -> {
+            Object[] args = new Object[biFunctions.length];
+            for (int i = 0; i < biFunctions.length; i++) {
+                args[i] = biFunctions[i].apply(listener, packet);
+            }
+            consumer.accept(args);
+        });
+    }
+
+    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull FriendlyByteBufDeserializer[] friendlyByteBufDeserializers, @NotNull Consumer<Object[]> consumer) {
+        registerServerToClientPacketHandler(resourceLocation, (listener, packet) -> {
+            Object[] args = new Object[friendlyByteBufDeserializers.length];
+            FriendlyByteBuf friendlyByteBuf = packet.friendlyByteBuf;
+            for (int i = 0; i < friendlyByteBufDeserializers.length; i++) {
+                FriendlyByteBufDeserializer deserializer = friendlyByteBufDeserializers[i];
+                args[i] = deserializer.deserialize(friendlyByteBuf);
+            }
+            consumer.accept(args);
+        });
+    }
+
+    private NetworkSystemClient() {
     }
 }

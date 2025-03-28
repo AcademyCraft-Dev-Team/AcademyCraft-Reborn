@@ -6,17 +6,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AbilitySystemServer;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.network.packet.ClientToServerPacket;
-import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
@@ -52,8 +52,8 @@ public class ArcGenerate extends Skill {
     @Override
     public void initServer(MinecraftServer server) {
         try {
-            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(
-                    AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_PACKET,
+            NetworkSystemServer.registerC2SPacketHandler(
+                    NetworkResourceLocations.C2S_ARC_GENERATE_PACKET,
                     Server.class.getMethod("handle", ServerPlayer.class, ServerLevel.class),
                     objects -> Server.handle((ServerPlayer) objects[0], (ServerLevel) objects[1])
             );
@@ -65,7 +65,7 @@ public class ArcGenerate extends Skill {
     public static final class Client {
         public static void handler() {
             if (ClientUtil.isScreenNull()) {
-                AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
+                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
             }
         }
     }

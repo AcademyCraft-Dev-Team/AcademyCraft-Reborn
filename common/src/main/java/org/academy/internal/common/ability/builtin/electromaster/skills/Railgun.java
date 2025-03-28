@@ -10,17 +10,17 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AbilitySystemServer;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.network.packet.ClientToServerPacket;
-import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -43,7 +43,7 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET, (serverPacketListener, packet) -> Server.handleShoot((serverPacketListener).player));
+        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET, (serverPacketListener, packet) -> Server.handleShoot((serverPacketListener).player));
     }
 
     @Override
@@ -63,7 +63,7 @@ public class Railgun extends Skill {
 
         public static void handleKey() {
             if (ClientUtil.isScreenNull()) {
-                AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
+                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
             }
         }
     }
