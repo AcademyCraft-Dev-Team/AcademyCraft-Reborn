@@ -56,3 +56,15 @@ jar {
             "MixinConfigs": "${mod_id}.mixins.json"
     ])
 }
+
+javadocJar {
+    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+}
+
+sourcesJar {
+    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+}
+
+reobfJar {
+    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+}
