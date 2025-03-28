@@ -1,14 +1,11 @@
-package org.academy;
+package org.academy.api.common.ability;
 
-import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.Skill;
-
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class AbilitySystem {
-    public static final Map<String, AbilityCategory> ABILITY_CATEGORY_MAP = new HashMap<>();
-    public static final Map<String, Skill> SKILL_MAP = new HashMap<>();
+    public static final Map<String, AbilityCategory> ABILITY_CATEGORY_MAP = new ConcurrentHashMap<>();
+    public static final Map<String, Skill> SKILL_MAP = new ConcurrentHashMap<>();
 
     /**
      * 在 onInitialize 的时候注册即可

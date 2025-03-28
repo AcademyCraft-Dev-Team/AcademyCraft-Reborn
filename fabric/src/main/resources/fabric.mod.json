@@ -14,7 +14,7 @@
       "org.academy.fabric.AcademyCraftFabric"
     ],
     "client": [
-      "org.academy.fabric.AcademyCraftClientFabric"
+      "org.academy.fabric.AcademyCraftFabricClient"
     ]
   },
   "mixins": [
@@ -28,7 +28,5 @@
     "modernui": "*",
     "special-model-loader": "*"
   },
-  "accessWidener": "academy.accesswidener",
-  "custom": {
-  }
+  "accessWidener": "academy.accesswidener"
 }

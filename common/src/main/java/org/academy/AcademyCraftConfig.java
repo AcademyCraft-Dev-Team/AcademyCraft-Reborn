@@ -7,6 +7,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 import org.academy.api.common.util.GameUtil;
 import org.academy.api.common.util.GsonUtil;
+import org.academy.api.server.ability.AbilitySystemServer;
 
 import java.io.File;
 import java.io.FileReader;

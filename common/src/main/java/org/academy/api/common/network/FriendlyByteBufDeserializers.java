@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import org.academy.AbilitySystem;
+import org.academy.api.common.ability.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
@@ -42,23 +42,15 @@ public class FriendlyByteBufDeserializers {
     public static final FriendlyByteBufDeserializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(ArrayList.class, buffer -> {
         ArrayList<Object> list;
         boolean nonEmpty = buffer.readBoolean();
-        AcademyCraft.LOGGER.info(nonEmpty);
         if (nonEmpty) {
-            int size = buffer.readVarInt();
-            list = new ArrayList<>(size);
             Class<?> clazz;
-
             try {
                 clazz = Class.forName(buffer.readUtf());
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException("The data transmission may be corrupted." + e);
             }
-            for (int i = 0; i < size; i++) {
-                FriendlyByteBufDeserializer serializer = getRequiredDeserializer(clazz);
-                Object o = serializer.deserialize(buffer);
-                AcademyCraft.LOGGER.info(o.toString());
-                list.add(o);
-            }
+            FriendlyByteBufDeserializer deserializer = getArrayListFriendlyByteBufDeserializer(clazz);
+            list = (ArrayList<Object>) deserializer.deserialize(buffer);
         } else {
             list = new ArrayList<>();
         }
@@ -95,6 +87,18 @@ public class FriendlyByteBufDeserializers {
         }
     });
 
+    public static <T> FriendlyByteBufDeserializer<ArrayList<T>> getArrayListFriendlyByteBufDeserializer(Class<T> clazz) {
+        return buffer -> {
+            ArrayList<T> result = new ArrayList<>();
+            int size = buffer.readVarInt();
+            FriendlyByteBufDeserializer<T> deserializer = getRequiredDeserializer(clazz);
+            for (int i = 0; i < size; i++) {
+                result.add(deserializer.deserialize(buffer));
+            }
+            return result;
+        };
+    }
+
     public static <T> FriendlyByteBufDeserializer<T> registerDeserializer(
             Class<T> clazz, FriendlyByteBufDeserializer<T> deserializer
     ) {
@@ -108,7 +112,7 @@ public class FriendlyByteBufDeserializers {
     }
 
     public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(Class<T> clazz) {
-        AcademyCraft.LOGGER.info("Get required serializer for {}", clazz);
+        AcademyCraft.LOGGER.info("Get required deserializer for {}", clazz);
         FriendlyByteBufDeserializer<T> deserializer = getDeserializer(clazz);
         if (deserializer == null) {
             throw new NullPointerException("Deserializer for " + clazz.getCanonicalName() + " was null");

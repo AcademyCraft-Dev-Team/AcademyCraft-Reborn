@@ -13,14 +13,14 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.render.AcademyCraftRenderSystem;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.network.packet.ClientToServerPacket;
-import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -61,7 +61,7 @@ public final class SelfTeleport extends Skill {
     @Override
     public void initServer(MinecraftServer server) {
         try {
-            AcademyCraftNetworkSystemServer.registerClientToServerPacketHandler(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, Server.class.getDeclaredMethod("handleTeleport", ServerPlayer.class), objects -> Server.handleTeleport((ServerPlayer) objects[0]));
+            NetworkSystemServer.registerC2SPacketHandler(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, Server.class.getDeclaredMethod("handleTeleport", ServerPlayer.class), objects -> Server.handleTeleport((ServerPlayer) objects[0]));
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -89,7 +89,7 @@ public final class SelfTeleport extends Skill {
 
         private static void end() {
             if (ClientUtil.isScreenNull()) {
-                AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
+                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
             }
             AcademyCraftRenderSystem.RENDERER_MAP.remove(NAME);
         }

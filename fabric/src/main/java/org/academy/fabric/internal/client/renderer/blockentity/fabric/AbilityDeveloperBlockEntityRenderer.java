@@ -11,14 +11,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
-import org.academy.fabric.internal.common.world.level.block.fabric.AbilityDeveloperBlock;
-import org.academy.fabric.internal.common.world.level.block.entity.fabric.AbilityDeveloperBlockEntity;
+import org.academy.fabric.internal.common.world.level.block.fabric.AbilityDeveloperBlockFabric;
+import org.academy.fabric.internal.common.world.level.block.entity.fabric.AbilityDeveloperBlockEntityFabric;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
-public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntity> {
+public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntityFabric> {
     @Override
-    public void render(@NotNull AbilityDeveloperBlockEntity blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
+    public void render(@NotNull AbilityDeveloperBlockEntityFabric blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (blockEntity.isMain()) {
             poseStack.pushPose();
             ItemStack itemStack = new ItemStack(AcademyCraftItemsFabric.ABILITY_DEVELOPER_BLOCK_ITEM.asItem());
@@ -29,7 +29,7 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
             Matrix4f matrix4f = new Matrix4f();
             matrix4f.translate(0.5f, 0, 0.5f);
             float yRot;
-            switch (blockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING)) {
+            switch (blockEntity.getBlockState().getValue(AbilityDeveloperBlockFabric.FACING)) {
                 case NORTH -> yRot = 180;
                 case EAST -> yRot = 90;
                 case WEST -> yRot = 270;
@@ -44,12 +44,12 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
     }
 
     @Override
-    public boolean shouldRenderOffScreen(@NotNull AbilityDeveloperBlockEntity blockEntity) {
+    public boolean shouldRenderOffScreen(@NotNull AbilityDeveloperBlockEntityFabric blockEntity) {
         return true;
     }
 
     @Override
-    public boolean shouldRender(@NotNull AbilityDeveloperBlockEntity blockEntity, @NotNull Vec3 cameraPos) {
+    public boolean shouldRender(@NotNull AbilityDeveloperBlockEntityFabric blockEntity, @NotNull Vec3 cameraPos) {
         return true;
     }
 }

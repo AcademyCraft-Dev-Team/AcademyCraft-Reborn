@@ -9,6 +9,7 @@ import icyllis.modernui.core.Handler;
 import icyllis.modernui.core.Looper;
 import icyllis.modernui.fragment.Fragment;
 import icyllis.modernui.graphics.drawable.GradientDrawable;
+import icyllis.modernui.mc.MuiModApi;
 import icyllis.modernui.text.Editable;
 import icyllis.modernui.text.TextWatcher;
 import icyllis.modernui.text.method.ScrollingMovementMethod;
@@ -20,8 +21,10 @@ import icyllis.modernui.view.ViewGroup;
 import icyllis.modernui.widget.*;
 import net.minecraft.core.BlockPos;
 import org.academy.AcademyCraft;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.command.ConsoleSource;
+import org.academy.api.common.network.NetworkResourceLocations;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -36,6 +39,16 @@ public class AbilityDeveloperFragment extends Fragment {
     private static EditText editText;
     private static final PopupWindow popupWindow = new PopupWindow();
     public static ConsoleSource consoleSource;
+
+    public static void init() {
+        NetworkSystemClient.registerServerToClientPacketHandler(
+                NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET,
+                (listener, packet) -> {
+                    BlockPos mainPos = packet.friendlyByteBuf.readBlockPos();
+                    MuiModApi.openScreen(new AbilityDeveloperFragment(mainPos));
+                }
+        );
+    }
 
     public AbilityDeveloperFragment(@NotNull BlockPos mainPos) {
         super();

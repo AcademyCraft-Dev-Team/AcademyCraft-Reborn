@@ -11,14 +11,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
-import org.academy.forge.internal.common.world.level.block.forge.AbilityDeveloperBlock;
-import org.academy.forge.internal.common.world.level.block.entity.forge.AbilityDeveloperBlockEntity;
+import org.academy.forge.internal.common.world.level.block.entity.forge.AbilityDeveloperBlockEntityForge;
+import org.academy.forge.internal.common.world.level.block.forge.AbilityDeveloperBlockForge;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
-public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntity> {
+public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntityForge> {
     @Override
-    public void render(@NotNull AbilityDeveloperBlockEntity blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
+    public void render(@NotNull AbilityDeveloperBlockEntityForge blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (blockEntity.isMain()) {
             poseStack.pushPose();
             ItemStack itemStack = new ItemStack(AcademyCraftItemsForge.ABILITY_DEVELOPER_BLOCK_ITEM.asItem());
@@ -29,7 +29,7 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
             Matrix4f matrix4f = new Matrix4f();
             matrix4f.translate(0.5f, 0, 0.5f);
             float yRot;
-            switch (blockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING)) {
+            switch (blockEntity.getBlockState().getValue(AbilityDeveloperBlockForge.FACING)) {
                 case NORTH -> yRot = 180;
                 case EAST -> yRot = 90;
                 case WEST -> yRot = 270;
@@ -44,12 +44,12 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
     }
 
     @Override
-    public boolean shouldRenderOffScreen(@NotNull AbilityDeveloperBlockEntity blockEntity) {
+    public boolean shouldRenderOffScreen(@NotNull AbilityDeveloperBlockEntityForge blockEntity) {
         return true;
     }
 
     @Override
-    public boolean shouldRender(@NotNull AbilityDeveloperBlockEntity blockEntity, @NotNull Vec3 cameraPos) {
+    public boolean shouldRender(@NotNull AbilityDeveloperBlockEntityForge blockEntity, @NotNull Vec3 cameraPos) {
         return true;
     }
 }

@@ -9,11 +9,11 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.AcademyCraftNetworkSystemClient;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.network.packet.ClientToServerPacket;
-import org.academy.api.server.network.AcademyCraftNetworkSystemServer;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
@@ -47,7 +47,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftNetworkSystemServer.CLIENT_TO_SERVER_PACKET_HANDLER_MAP.put(AcademyCraftNetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, (serverPacketListener, packet) -> Server.handle(serverPacketListener.player));
+        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(NetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, (serverPacketListener, packet) -> Server.handle(serverPacketListener.player));
     }
 
     public static final class Client {
@@ -55,7 +55,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
         public static final String KEY_NAME = "single_high_speed_electron_beam.shoot";
 
         public static void handleKey() {
-            AcademyCraftNetworkSystemClient.sendPacket(new ClientToServerPacket(AcademyCraftNetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
+            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }
 

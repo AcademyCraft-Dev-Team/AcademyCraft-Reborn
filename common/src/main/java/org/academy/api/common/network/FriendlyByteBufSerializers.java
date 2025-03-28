@@ -41,20 +41,15 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ArrayList.class, (buffer, value) -> {
         if (!value.isEmpty()) {
             buffer.writeBoolean(true);
-            buffer.writeVarInt(value.size());
             Class<?> commonSuperclass = value.get(0).getClass();
             for (Object obj : value) {
                 while (!commonSuperclass.isAssignableFrom(obj.getClass())) {
                     commonSuperclass = commonSuperclass.getSuperclass();
                 }
             }
-            AcademyCraft.LOGGER.info(commonSuperclass.getCanonicalName());
             buffer.writeUtf(commonSuperclass.getCanonicalName());
-            for (Object o : value) {
-                AcademyCraft.LOGGER.info(o.toString());
-                FriendlyByteBufSerializer serializer = getRequiredSerializer(commonSuperclass);
-                serializer.serialize(buffer, o);
-            }
+            FriendlyByteBufSerializer serializer = getArrayListFriendlyByteBufSerializer(commonSuperclass);
+            serializer.serialize(buffer, value);
         } else {
             buffer.writeBoolean(false);
         }
@@ -78,6 +73,17 @@ public class FriendlyByteBufSerializers {
 
     });
     public static final FriendlyByteBufSerializer<Class> CLASS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Class.class, (buffer, value) -> buffer.writeUtf(value.getCanonicalName()));
+    public static final FriendlyByteBufSerializer<ArrayList<Skill>> SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = getArrayListFriendlyByteBufSerializer(Skill.class);
+
+    public static <T> FriendlyByteBufSerializer<ArrayList<T>> getArrayListFriendlyByteBufSerializer(Class<T> clazz) {
+        return (buffer, value) -> {
+            buffer.writeVarInt(value.size());
+            FriendlyByteBufSerializer<T> serializer = getRequiredSerializer(clazz);
+            for (T t : value) {
+                serializer.serialize(buffer, t);
+            }
+        };
+    }
 
     public static <T> FriendlyByteBufSerializer<T> registerSerializer(Class<T> clazz, FriendlyByteBufSerializer<T> serializer) {
         FRIENDLY_BYTE_BUF_SERIALIZER_MAP.put(clazz, serializer);
@@ -89,9 +95,6 @@ public class FriendlyByteBufSerializers {
         return (FriendlyByteBufSerializer<T>) FRIENDLY_BYTE_BUF_SERIALIZER_MAP.get(clazz);
     }
 
-    /**
-     * 所有单接口类，但是没有注册的，则会使用接口的，见 Collection
-     */
     public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<T> clazz) {
         AcademyCraft.LOGGER.info("Get required serializer for {}", clazz);
         FriendlyByteBufSerializer<T> serializer = getSerializer(clazz);

@@ -22,6 +22,7 @@ import net.minecraftforge.registries.RegisterEvent;
 import net.minecraftforge.registries.RegistryObject;
 import org.academy.*;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.util.GameUtil;
 import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraftBlockEntityRenderersForge;
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;

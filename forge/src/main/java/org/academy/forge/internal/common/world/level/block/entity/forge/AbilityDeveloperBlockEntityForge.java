@@ -11,14 +11,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.forge.internal.common.world.level.block.forge.AbilityDeveloperBlock;
+import org.academy.forge.internal.common.world.level.block.forge.AbilityDeveloperBlockForge;
 import org.jetbrains.annotations.NotNull;
 
-public class AbilityDeveloperBlockEntity extends BlockEntity implements Container {
+public class AbilityDeveloperBlockEntityForge extends BlockEntity implements Container {
     public final NonNullList<ItemStack> items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
-    public BlockPos mainPos = BlockPos.ZERO;
+    public BlockPos mainPos;
 
-    public AbilityDeveloperBlockEntity(BlockPos pos, BlockState blockState) {
+    public AbilityDeveloperBlockEntityForge(BlockPos pos, BlockState blockState) {
         super(AcademyCraftBlockEntityTypesForge.ABILITY_DEVELOPER, pos, blockState);
         if (isMain()) {
             setMainPos(pos);
@@ -40,8 +40,8 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
         if (isMain()) {
             return items.stream().allMatch(ItemStack::isEmpty);
         } else {
-            AbilityDeveloperBlockEntity abilityDeveloperBlockEntity = (AbilityDeveloperBlockEntity) level.getBlockEntity(mainPos);
-            return abilityDeveloperBlockEntity.isEmpty();
+            AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge = (AbilityDeveloperBlockEntityForge) level.getBlockEntity(mainPos);
+            return abilityDeveloperBlockEntityForge.isEmpty();
         }
     }
 
@@ -51,8 +51,8 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
         if (isMain()) {
             return items.get(slot);
         } else {
-            AbilityDeveloperBlockEntity abilityDeveloperBlockEntity = (AbilityDeveloperBlockEntity) level.getBlockEntity(mainPos);
-            return abilityDeveloperBlockEntity.getItem(slot);
+            AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge = (AbilityDeveloperBlockEntityForge) level.getBlockEntity(mainPos);
+            return abilityDeveloperBlockEntityForge.getItem(slot);
         }
     }
 
@@ -78,8 +78,8 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
                 stack.setCount(this.getMaxStackSize());
             }
         } else {
-            if (level != null && level.getBlockEntity(mainPos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                abilityDeveloperBlockEntity.setItem(slot, stack);
+            if (level != null && level.getBlockEntity(mainPos) instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge) {
+                abilityDeveloperBlockEntityForge.setItem(slot, stack);
             }
         }
         this.setChanged();
@@ -95,25 +95,28 @@ public class AbilityDeveloperBlockEntity extends BlockEntity implements Containe
     }
 
     public boolean isMain() {
-        return this.getBlockState().getValue(AbilityDeveloperBlock.TYPE).equals(AbilityDeveloperBlock.MultiBlockType.MAIN);
+        return this.getBlockState().getValue(AbilityDeveloperBlockForge.TYPE).equals(AbilityDeveloperBlockForge.MultiBlockType.MAIN);
     }
 
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
-        if (!isMain()) {
-            tag.putInt("mainPosX", mainPos.getX());
-            tag.putInt("mainPosY", mainPos.getY());
-            tag.putInt("mainPosZ", mainPos.getZ());
-        } else {
+        tag.putInt("mainPosX", mainPos.getX());
+        tag.putInt("mainPosY", mainPos.getY());
+        tag.putInt("mainPosZ", mainPos.getZ());
+        if (isMain()) {
             ContainerHelper.saveAllItems(tag, items);
         }
     }
 
     @Override
     public void load(@NotNull CompoundTag tag) {
-        if (!isMain()) {
-            setMainPos(new BlockPos(tag.getInt("mainPosX"), tag.getInt("mainPosY"), tag.getInt("mainPosZ")));
-        } else {
+        setMainPos(new BlockPos(
+                        tag.getInt("mainPosX"),
+                        tag.getInt("mainPosY"),
+                        tag.getInt("mainPosZ")
+                )
+        );
+        if (isMain()) {
             ContainerHelper.loadAllItems(tag, items);
         }
     }

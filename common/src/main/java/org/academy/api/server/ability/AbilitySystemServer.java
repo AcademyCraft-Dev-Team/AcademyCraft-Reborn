@@ -1,4 +1,4 @@
-package org.academy;
+package org.academy.api.server.ability;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.server.IntegratedServer;
@@ -7,22 +7,23 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import org.academy.AcademyCraft;
+import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.AcademyCraftNetworkResourceLocations;
-import org.academy.api.common.network.packet.ServerToClientPacket;
+import org.academy.api.common.network.FriendlyByteBufSerializers;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static org.academy.AbilitySystem.ABILITY_CATEGORY_MAP;
+import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
 
 public class AbilitySystemServer {
     public static Map<UUID, AcademyCraftWorldData.Player> playerMap;
@@ -41,7 +42,13 @@ public class AbilitySystemServer {
             }
         }
         scheduledFuture = AcademyCraft.executorService.scheduleAtFixedRate(
-                AbilitySystemServerThread::tick, 0, 50, TimeUnit.MILLISECONDS
+                () -> {
+                    try {
+                        AbilitySystemServerThread.tick();
+                    } catch (Exception e) {
+                        AcademyCraft.LOGGER.error(e.getMessage());
+                    }
+                }, 0, 50, TimeUnit.MILLISECONDS
         );
     }
 
@@ -63,28 +70,40 @@ public class AbilitySystemServer {
                 player.syncQueue.forEach(syncType -> {
                     switch (syncType) {
                         case COMPUTING_POWER -> packetConsumer.accept(
-                                new ServerToClientPacket(
-                                        AcademyCraftNetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
+                                new S2CPacket(
+                                        NetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
                                         new FriendlyByteBuf(Unpooled.buffer()
                                                 .writeFloat(getPlayerComputingPower(uuid))
                                         )
                                 )
                         );
                         case ABILITY_CATEGORY -> packetConsumer.accept(
-                                new ServerToClientPacket(
-                                        AcademyCraftNetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
+                                new S2CPacket(
+                                        NetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
                                         new FriendlyByteBuf(Unpooled.buffer())
                                                 .writeUtf(getPlayerAbilityCategory(uuid).name)
                                 )
                         );
                         case MAX_COMPUTING_POWER -> packetConsumer.accept(
-                                new ServerToClientPacket(
-                                        AcademyCraftNetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
+                                new S2CPacket(
+                                        NetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
                                         new FriendlyByteBuf(Unpooled.buffer()
                                                 .writeFloat(getPlayerMaxComputingPower(uuid))
                                         )
                                 )
                         );
+                        case SKILLS -> {
+                            ArrayList<Skill> skillList = new ArrayList<>();
+                            for (String string : getPlayerSkills(uuid)) {
+                                skillList.add(AbilitySystem.SKILL_MAP.get(string));
+                            }
+                            FriendlyByteBuf friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
+                            FriendlyByteBufSerializers.SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER
+                                    .serialize(friendlyByteBuf, skillList);
+                            packetConsumer.accept(
+                                    new S2CPacket(NetworkResourceLocations.S2C_SKILLS_SYC_PACKET, friendlyByteBuf)
+                            );
+                        }
                     }
                 });
                 player.syncQueue.clear();
@@ -154,8 +173,18 @@ public class AbilitySystemServer {
         addPlayerSyncTask(uuid, SyncType.ABILITY_CATEGORY);
     }
 
-    public static List<String> getPlayerSkillList(UUID uuid) {
+    public static Set<String> getPlayerSkills(UUID uuid) {
         return playerMap.get(uuid).getSkills();
+    }
+
+    public static void addPlayerSkill(UUID uuid, String skill) {
+        playerMap.get(uuid).getSkills().add(skill);
+        addPlayerSyncTask(uuid, SyncType.SKILLS);
+    }
+
+    public static void removePlayerSkill(UUID uuid, String skill) {
+        playerMap.get(uuid).getSkills().remove(skill);
+        addPlayerSyncTask(uuid, SyncType.SKILLS);
     }
 
     public static int getPlayerLevel(UUID uuid) {
@@ -210,6 +239,7 @@ public class AbilitySystemServer {
         COMPUTING_POWER,
         MAX_COMPUTING_POWER,
         ABILITY_CATEGORY,
+        SKILLS,
     }
 
     public static class Player {
