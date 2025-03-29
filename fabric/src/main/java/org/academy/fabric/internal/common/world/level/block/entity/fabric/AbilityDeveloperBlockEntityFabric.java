@@ -37,21 +37,18 @@ public class AbilityDeveloperBlockEntityFabric extends BlockEntity implements Co
                     AcademyCraft.LOGGER.info("Received server learn skill packet for {}", name);
                     BlockPos blockPos = friendlyByteBuf.readBlockPos();
                     Skill skill = AbilitySystem.SKILL_MAP.get(name);
+                    if (skill == null) return;
                     BlockEntity blockEntity = listener.player.level().getBlockEntity(blockPos);
-                    if (blockEntity instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntityFabric) {
-                        abilityDeveloperBlockEntityFabric = (AbilityDeveloperBlockEntityFabric) listener.player.level().getBlockEntity(abilityDeveloperBlockEntityFabric.mainPos);
-                        if (skill != null) {
-                            long needEnergy = skill.level * 10000L;
-                            AcademyCraft.LOGGER.info(needEnergy);
-                            assert abilityDeveloperBlockEntityFabric != null;
-                            AcademyCraft.LOGGER.info(abilityDeveloperBlockEntityFabric.energyStored);
-                            if (abilityDeveloperBlockEntityFabric.energyStored >= needEnergy) {
-                                abilityDeveloperBlockEntityFabric.energyStored -= skill.level * 10000L;
-                                AbilitySystemServer.addPlayerSkill(listener.player.getUUID(), name);
-                                Set<String> skillList = AbilitySystemServer.getPlayerSkills(listener.player.getUUID());
-                                for (String skillName : skillList) {
-                                    AcademyCraft.LOGGER.info(skillName);
-                                }
+                    if (blockEntity instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
+                        long needEnergy = skill.level * 10000L;
+                        AcademyCraft.LOGGER.info(needEnergy);
+                        AcademyCraft.LOGGER.info(abilityDeveloperBlockEntity.energyStored);
+                        if (abilityDeveloperBlockEntity.energyStored >= needEnergy) {
+                            abilityDeveloperBlockEntity.energyStored -= skill.level * 10000L;
+                            AbilitySystemServer.addPlayerSkill(listener.player.getUUID(), name);
+                            Set<String> skillList = AbilitySystemServer.getPlayerSkills(listener.player.getUUID());
+                            for (String skillName : skillList) {
+                                AcademyCraft.LOGGER.info(skillName);
                             }
                         } else {
                             AcademyCraft.LOGGER.info(name);
@@ -171,7 +168,7 @@ public class AbilityDeveloperBlockEntityFabric extends BlockEntity implements Co
             ContainerHelper.loadAllItems(tag, items);
             energyStored = tag.getLong("energyStored");
         }
-        mainPos= new BlockPos(
+        mainPos = new BlockPos(
                 tag.getInt("mainPosX"),
                 tag.getInt("mainPosY"),
                 tag.getInt("mainPosZ")
