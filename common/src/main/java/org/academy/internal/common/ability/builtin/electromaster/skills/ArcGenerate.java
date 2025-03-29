@@ -106,9 +106,8 @@ public class ArcGenerate extends Skill {
             }
 
             detectedEntities.forEach(entity -> {
-                if (entity == player) {
-                    return;
-                }
+                if (entity == player) return;
+
                 float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
                 entity.hurt(player.damageSources().playerAttack(player), damage);
             });
