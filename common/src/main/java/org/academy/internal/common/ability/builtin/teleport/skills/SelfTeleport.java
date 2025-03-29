@@ -11,7 +11,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.render.AcademyCraftRenderSystem;
@@ -21,6 +20,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.server.util.ServerUtil;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -31,8 +31,8 @@ public final class SelfTeleport extends Skill {
     public static final String NAME = "self_teleport";
     public static final String KEY_NAME_START = "self_teleport.start";
     public static final String KEY_NAME_END = "self_teleport.end";
-    public static AcademyCraftClientConfig.InputPair KEY_START;
-    public static AcademyCraftClientConfig.InputPair KEY_END;
+    public static InputSystem.InputPair KEY_START;
+    public static InputSystem.InputPair KEY_END;
     public static final float DISTANCE = 10F;
 
     private SelfTeleport() {
@@ -41,14 +41,14 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initClient() {
-        KEY_START = AcademyCraftClient.clientConfig.getKey(KEY_NAME_START,
-                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+        KEY_START = AcademyCraftClient.CLIENT_CONFIG.getKey(KEY_NAME_START,
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_E)),
                         GLFW.GLFW_PRESS,
                         new LinkedHashSet<>()
                 )));
-        KEY_END = AcademyCraftClient.clientConfig.getKey(KEY_NAME_END,
-                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+        KEY_END = AcademyCraftClient.CLIENT_CONFIG.getKey(KEY_NAME_END,
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_E)),
                         GLFW.GLFW_RELEASE,
                         new LinkedHashSet<>()
@@ -69,6 +69,7 @@ public final class SelfTeleport extends Skill {
 
     private static final class Server {
         private static void handleTeleport(ServerPlayer serverPlayer) {
+            if (ServerUtil.lacksSkill(serverPlayer.getUUID(), INSTANCE)) return;
             Vec3 lookDirection = serverPlayer.getLookAngle();
             Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale(DISTANCE));
             serverPlayer.teleportTo(targetPosition.x, targetPosition.y, targetPosition.z);
@@ -82,9 +83,8 @@ public final class SelfTeleport extends Skill {
         private static final LocalPlayer localPlayer = mc.player;
 
         private static void start() {
-            if (ClientUtil.isScreenNull()) {
-                AcademyCraftRenderSystem.RENDERER_MAP.put(NAME, Client.RENDERER);
-            }
+            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            AcademyCraftRenderSystem.RENDERER_MAP.put(NAME, Client.RENDERER);
         }
 
         private static void end() {

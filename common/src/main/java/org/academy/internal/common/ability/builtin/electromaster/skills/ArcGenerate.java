@@ -6,17 +6,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
@@ -31,7 +32,6 @@ import java.util.Set;
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
     public static final String KEY_NAME = "arc_generate.generate";
-    public static AcademyCraftClientConfig.InputPair KEY;
     public static final float BASE_DAMAGE = 2.0F;
 
     private ArcGenerate() {
@@ -40,13 +40,14 @@ public class ArcGenerate extends Skill {
 
     @Override
     public void initClient() {
-        KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
-                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
+        AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
+        InputSystem.addKeyBinding(KEY_NAME, Client.CONFIG.getKeyBinding(KEY_NAME,
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_G)),
                         GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT))
-                )));
-        InputSystem.addKeyBinding(KEY_NAME, KEY, Client::handler);
+                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))
+                )
+        ), Client::handler);
     }
 
     @Override
@@ -63,15 +64,20 @@ public class ArcGenerate extends Skill {
     }
 
     public static final class Client {
+        public static final ArcGenerateSKillConfig CONFIG = new ArcGenerateSKillConfig();
+
         public static void handler() {
-            if (ClientUtil.isScreenNull()) {
-                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
-            }
+            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
+        }
+
+        public static final class ArcGenerateSKillConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
         }
     }
 
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
+            if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getUUID());
             float currentComputingPower = data.getComputingPower();
             if (currentComputingPower > 10) {
