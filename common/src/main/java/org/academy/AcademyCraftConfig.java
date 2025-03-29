@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import org.academy.api.common.util.GameUtil;
 import org.academy.api.common.util.GsonUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 
@@ -77,7 +76,7 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
 
         public void setCpRecoverSpeed(float cpRecoverSpeed) {
             this.cpRecoverSpeed = cpRecoverSpeed;
-            saveConfig();
+            AcademyCraft.saveConfig();
         }
 
         private Ability() {
@@ -184,16 +183,5 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
     }
 
     protected void writeDefaultConfig(T academyCraftConfig) {
-    }
-
-    public static void saveConfig() {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        File configFile = GameUtil.getEnvType() == GameUtil.EnvType.CLIENT ? AcademyCraftClient.clientConfigFile : AcademyCraftServer.serverConfigFile;
-
-        try (FileWriter writer = new FileWriter(configFile)) {
-            gson.toJson(GameUtil.getEnvType() == GameUtil.EnvType.CLIENT ? AcademyCraftClient.clientConfig : AcademyCraftServer.serverConfig, writer);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to save config file: " + configFile.getAbsolutePath(), e);
-        }
     }
 }

@@ -1,18 +1,20 @@
 package org.academy;
 
 import net.minecraft.client.Minecraft;
+import org.academy.api.client.config.AcademyCraftClientConfig;
+import org.academy.api.client.config.SkillClientConfig;
 import org.academy.internal.client.ui.AbilityDeveloperFragment;
 
 import java.io.File;
 
 public final class AcademyCraftClient {
-    public static File clientConfigFile;
-    public static AcademyCraftClientConfig clientConfig;
+    public static final File CLIENT_CONFIG_FILE;
+    public static final AcademyCraftClientConfig<SkillClientConfig> CLIENT_CONFIG;
 
     static {
-        clientConfigFile = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
-        AcademyCraft.checkFile(clientConfigFile);
-        clientConfig = new AcademyCraftClientConfig().loadConfig(clientConfigFile);
+        CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
+        AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
+        CLIENT_CONFIG = new AcademyCraftClientConfig<>();
         AbilityDeveloperFragment.init();
     }
 }

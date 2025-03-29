@@ -1,6 +1,5 @@
 package org.academy.api.client.input;
 
-import org.academy.AcademyCraftClientConfig;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -49,7 +48,7 @@ public class InputSystem {
         }
     }
 
-    public static void addKeyBinding(@NotNull String keyName, @NotNull AcademyCraftClientConfig.InputPair key, @NotNull Runnable runnable) {
+    public static void addKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputPair key, @NotNull Runnable runnable) {
         switch (key.inputType()) {
             case MOUSE -> MOUSE_KEY_BINDINGS.put(keyName, new KeyBinding(key.inputEvent(), runnable));
             case KEYBOARD -> KEYBOARD_KEY_BINDING_MAP.put(keyName, new KeyBinding(key.inputEvent(), runnable));
@@ -67,14 +66,14 @@ public class InputSystem {
         KEYBOARD_KEY_BINDING_MAP.keySet().removeIf(keyName::equals);
     }
 
-    public static void removeKeyBinding(@NotNull String keyName, @NotNull AcademyCraftClientConfig.InputType inputType) {
+    public static void removeKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputType inputType) {
         switch (inputType) {
             case MOUSE -> MOUSE_KEY_BINDINGS.remove(keyName);
             case KEYBOARD -> KEYBOARD_KEY_BINDING_MAP.remove(keyName);
         }
     }
 
-    public static void removeKeyBinding(@NotNull String keyName, @NotNull AcademyCraftClientConfig.InputPair key) {
+    public static void removeKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputPair key) {
         switch (key.inputType()) {
             case MOUSE -> MOUSE_KEY_BINDINGS.remove(keyName);
             case KEYBOARD -> KEYBOARD_KEY_BINDING_MAP.remove(keyName);
@@ -92,5 +91,13 @@ public class InputSystem {
     }
 
     public record KeyBinding(InputEvent inputEvent, Runnable runnable) {
+    }
+
+    public record InputPair(InputType inputType, InputEvent inputEvent) {
+    }
+
+    public enum InputType {
+        MOUSE,
+        KEYBOARD
     }
 }

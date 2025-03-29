@@ -1,8 +1,6 @@
 package org.academy.internal.common.ability.builtin.electromaster.skills;
 
-import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
@@ -10,17 +8,18 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -43,34 +42,41 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET, (serverPacketListener, packet) -> Server.handleShoot((serverPacketListener).player));
+        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET,
+                (serverPacketListener, packet) ->
+                        Server.handleShoot(serverPacketListener.player)
+        );
     }
 
     @Override
     public void initClient() {
-        Client.KEY = AcademyCraftClient.clientConfig.getKey(KEY_NAME,
-                new AcademyCraftClientConfig.InputPair(AcademyCraftClientConfig.InputType.KEYBOARD, new InputSystem.InputEvent(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
-                        GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>()
-                )));
-
-        InputSystem.addKeyBinding(KEY_NAME, Client.KEY, Client::handleKey);
+        AcademyCraftClient.CLIENT_CONFIG.setSkillClientConfig(INSTANCE.name, Client.CLIENT_CONFIG);
+        InputSystem.addKeyBinding(KEY_NAME, Client.CLIENT_CONFIG.getKeyBinding(KEY_NAME,
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD,
+                        new InputSystem.InputEvent(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
+                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>())
+                )
+        ), Client::handleKey);
     }
 
     public static final class Client {
-        public static AcademyCraftClientConfig.InputPair KEY;
+        public static RailgunClientConfig CLIENT_CONFIG = new RailgunClientConfig();
 
         public static void handleKey() {
-            if (ClientUtil.isScreenNull()) {
-                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
-            }
+            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET));
+        }
+
+        public static final class RailgunClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
         }
     }
 
     @SuppressWarnings("resource")
     public static final class Server {
         public static void handleShoot(final @NotNull Player player) {
+            if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final UUID uuid = player.getUUID();
             final float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
             if (computingPower < 100) {

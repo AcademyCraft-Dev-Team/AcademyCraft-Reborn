@@ -7,13 +7,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
@@ -31,10 +32,10 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initClient() {
-        Client.KEY = AcademyCraftClient.clientConfig.getKey(
+        Client.KEY = AcademyCraftClient.CLIENT_CONFIG.getKey(
                 Client.KEY_NAME,
-                new AcademyCraftClientConfig.InputPair(
-                        AcademyCraftClientConfig.InputType.MOUSE,
+                new InputSystem.InputPair(
+                        InputSystem.InputType.MOUSE,
                         new InputSystem.InputEvent(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_MOUSE_BUTTON_LEFT)),
                                 GLFW.GLFW_RELEASE,
@@ -51,16 +52,18 @@ public class SingleHighSpeedElectronBeam extends Skill {
     }
 
     public static final class Client {
-        public static AcademyCraftClientConfig.InputPair KEY;
+        public static InputSystem.InputPair KEY;
         public static final String KEY_NAME = "single_high_speed_electron_beam.shoot";
 
         public static void handleKey() {
+            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }
 
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player) {
+            if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final Level level = player.level();
             final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
 

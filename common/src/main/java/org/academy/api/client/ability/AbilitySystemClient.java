@@ -2,16 +2,15 @@ package org.academy.api.client.ability;
 
 import net.minecraft.client.Minecraft;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.command.CommandManager;
-import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
+import org.academy.api.common.network.NetworkResourceLocations;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -26,10 +25,10 @@ public final class AbilitySystemClient {
     public static volatile AbilityCategory category;
     public static final Set<Skill> SKILLS = new HashSet<>();
     public static final String KEY_NAME = "activate_ability";
-    public static final AcademyCraftClientConfig.InputPair KEY = AcademyCraftClient.clientConfig.getKey(
+    public static final InputSystem.InputPair KEY = AcademyCraftClient.CLIENT_CONFIG.getKey(
             KEY_NAME,
-            new AcademyCraftClientConfig.InputPair(
-                    AcademyCraftClientConfig.InputType.KEYBOARD,
+            new InputSystem.InputPair(
+                    InputSystem.InputType.KEYBOARD,
                     new InputSystem.InputEvent(
                             new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)),
                             GLFW.GLFW_PRESS,
@@ -51,14 +50,12 @@ public final class AbilitySystemClient {
         CommandManager.Client.registerPacketHandler();
     }
 
-    @SuppressWarnings("unchecked")
     public static void registerPacketHandler() {
         NetworkSystemClient.registerServerToClientPacketHandler(
                 NetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
                 (handler, packet) ->
                         category = FriendlyByteBufDeserializers
-                                .ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER
-                                .deserialize(packet.friendlyByteBuf)
+                                .ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER.deserialize(packet.friendlyByteBuf)
         );
         NetworkSystemClient.registerServerToClientPacketHandler(
                 NetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
@@ -72,11 +69,12 @@ public final class AbilitySystemClient {
         );
         NetworkSystemClient.registerServerToClientPacketHandler(
                 NetworkResourceLocations.S2C_SKILLS_SYC_PACKET,
-                new FriendlyByteBufDeserializer[]{FriendlyByteBufDeserializers.getArrayListFriendlyByteBufDeserializer(Skill.class)},
-                objects -> {
-                    ArrayList<Skill> skills = (ArrayList<Skill>) objects[0];
+                (listener, packet) -> {
+                    FriendlyByteBufDeserializer<ArrayList<Skill>> friendlyByteBufDeserializer =
+                            FriendlyByteBufDeserializers.getArrayListFriendlyByteBufDeserializer(Skill.class);
+                    ArrayList<Skill> skillList = friendlyByteBufDeserializer.deserialize(packet.friendlyByteBuf);
                     SKILLS.clear();
-                    SKILLS.addAll(skills);
+                    SKILLS.addAll(skillList);
                 }
         );
     }

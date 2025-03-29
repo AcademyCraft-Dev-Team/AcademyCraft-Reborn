@@ -1,10 +1,16 @@
 package org.academy.api.client.util;
 
 import net.minecraft.client.Minecraft;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.common.ability.Skill;
 
 public class ClientUtil {
     public static boolean isScreenNull() {
         return Minecraft.getInstance().screen == null;
+    }
+
+    public static boolean lacksSkill(Skill skill) {
+        return !AbilitySystemClient.SKILLS.contains(skill);
     }
 
     private ClientUtil() {
