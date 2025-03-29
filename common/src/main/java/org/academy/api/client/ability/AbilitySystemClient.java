@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
@@ -39,7 +40,10 @@ public final class AbilitySystemClient {
 
     public static void initClient() {
         registerPacketHandler();
-        InputSystem.addKeyBinding(KEY_NAME, KEY, () -> setActiveHUD(!activeHUD));
+        InputSystem.addKeyBinding(KEY_NAME, KEY, () -> {
+            if (!ClientUtil.isScreenNull()) return;
+            setActiveHUD(!activeHUD);
+        });
         for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initClient();
             for (Skill skill : abilityCategory.skillList) {
