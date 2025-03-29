@@ -5,10 +5,10 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
+import org.academy.api.server.ability.AbilitySystemServer;
 
 import java.io.File;
 import java.io.FileReader;
@@ -19,13 +19,13 @@ import java.util.*;
 
 public class AcademyCraftWorldData {
     @SerializedName("players")
-    private final Map<UUID, Player> players = new HashMap<>();
+    private final Map<UUID, Player<? extends Player.SkillData>> players = new HashMap<>();
 
-    public Map<UUID, Player> getPlayers() {
+    public Map<UUID, Player<? extends Player.SkillData>> getPlayers() {
         return players;
     }
 
-    public static class Player {
+    public static class Player<SD extends Player.SkillData> {
         @SerializedName("abilityCategory")
         private String abilityCategory;
 
@@ -42,6 +42,13 @@ public class AcademyCraftWorldData {
 
         public final Set<String> getSkills() {
             return skills;
+        }
+
+        @SerializedName("skillData")
+        private final Map<String, SD> skillData = new HashMap<>();
+
+        public final Map<String, SD> getSkillData() {
+            return skillData;
         }
 
         @SerializedName("level")
@@ -63,6 +70,10 @@ public class AcademyCraftWorldData {
         }
 
         public final void setComputingPower(float computingPower) {
+            if (Float.isNaN(computingPower) || Float.isInfinite(computingPower)) {
+                AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaxComputingPower(), 0));
+                return;
+            }
             AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaxComputingPower(), computingPower));
         }
 
@@ -86,6 +97,9 @@ public class AcademyCraftWorldData {
 
         public void setComputingPowerRecoverySpeed(float computingPowerRecoverySpeed) {
             AbilitySystemServer.addTask(() -> this.computingPowerRecoverySpeed = computingPowerRecoverySpeed);
+        }
+
+        public static abstract class SkillData {
         }
     }
 

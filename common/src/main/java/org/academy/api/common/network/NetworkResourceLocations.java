@@ -21,6 +21,7 @@ public class NetworkResourceLocations {
     public static final ResourceLocation C2S_FETCH_ALL_SKILL_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_fetch_all_skill_packet");
     public static final ResourceLocation S2C_FETCH_ALL_SKILL_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_fetch_all_skill_packet");
     public static final ResourceLocation S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID,"s2c_open_ability_developer_fragment_packet");
+    public static final ResourceLocation C2S_TOGGLE_REFLECTION_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_toggle_reflection_packet");
 
     private NetworkResourceLocations() {
     }

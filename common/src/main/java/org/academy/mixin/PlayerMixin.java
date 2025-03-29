@@ -1,58 +1,23 @@
 package org.academy.mixin;
 
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import org.academy.internal.common.ability.builtin.accelerator.skills.VectorManipulation;
+import org.apache.commons.lang3.tuple.Pair;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Player.class)
 public class PlayerMixin {
     @Inject(method = "hurt", at = @At("HEAD"), cancellable = true)
-    public void hurt(DamageSource damageSource, float f, CallbackInfoReturnable<Boolean> cir) {
-        Player player = (Player) (Object) this;
-        Entity source = damageSource.getEntity();
-        Entity directEntity = damageSource.getDirectEntity();
-        if (source != player) {
-            if (source != null) {
-                if (!damageSource.is(DamageTypes.THROWN)) {
-                    source.hurt(damageSource, f);
-                    cir.setReturnValue(false);
-                }
-            }
-            if (directEntity != null) {
-                if (damageSource.is(DamageTypes.THROWN)) {
-                    directEntity.setDeltaMovement(directEntity.getDeltaMovement().scale(10));
-                    cir.setReturnValue(false);
-                }
-            }
+    public void hurt(DamageSource damageSource, float amount, CallbackInfoReturnable<Boolean> cir) {
+        Pair<Boolean,Float> pair=VectorManipulation.Server.handleHurt((Player) (Object) this, damageSource, amount);
+        if (!pair.getLeft()) {
+            cir.setReturnValue(false);
+        } else {
+            amount = pair.getRight();
         }
-        cir.setReturnValue(false);
-    }
-
-    @Inject(method = "actuallyHurt", at = @At("HEAD"), cancellable = true)
-    public void actuallyHurt(DamageSource damageSource, float f, CallbackInfo ci) {
-        Player player = (Player) (Object) this;
-        Entity source = damageSource.getEntity();
-        Entity directEntity = damageSource.getDirectEntity();
-        if (source != player) {
-            if (source != null) {
-                if (!damageSource.is(DamageTypes.THROWN)) {
-                    source.hurt(damageSource, f);
-                    ci.cancel();
-                }
-            }
-            if (directEntity != null) {
-                if (damageSource.is(DamageTypes.THROWN)) {
-                    directEntity.setDeltaMovement(directEntity.getDeltaMovement().scale(10));
-                    ci.cancel();
-                }
-            }
-        }
-        ci.cancel();
     }
 }

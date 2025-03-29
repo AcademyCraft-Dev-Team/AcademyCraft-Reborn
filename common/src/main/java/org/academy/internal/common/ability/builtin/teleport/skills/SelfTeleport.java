@@ -21,6 +21,7 @@ import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
+import org.academy.internal.common.ability.builtin.SkillNames;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -28,7 +29,6 @@ import java.util.Set;
 
 public final class SelfTeleport extends Skill {
     public static final Skill INSTANCE = new SelfTeleport();
-    public static final String NAME = "self_teleport";
     public static final String KEY_NAME_START = "self_teleport.start";
     public static final String KEY_NAME_END = "self_teleport.end";
     public static InputSystem.InputPair KEY_START;
@@ -36,20 +36,20 @@ public final class SelfTeleport extends Skill {
     public static final float DISTANCE = 10F;
 
     private SelfTeleport() {
-        super(NAME, 2);
+        super(SkillNames.SELF_TELEPORT, 2);
     }
 
     @Override
     public void initClient() {
         KEY_START = AcademyCraftClient.CLIENT_CONFIG.getKey(KEY_NAME_START,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_E)),
+                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Z)),
                         GLFW.GLFW_PRESS,
                         new LinkedHashSet<>()
                 )));
         KEY_END = AcademyCraftClient.CLIENT_CONFIG.getKey(KEY_NAME_END,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_E)),
+                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Z)),
                         GLFW.GLFW_RELEASE,
                         new LinkedHashSet<>()
                 )));
@@ -61,7 +61,11 @@ public final class SelfTeleport extends Skill {
     @Override
     public void initServer(MinecraftServer server) {
         try {
-            NetworkSystemServer.registerC2SPacketHandler(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, Server.class.getDeclaredMethod("handleTeleport", ServerPlayer.class), objects -> Server.handleTeleport((ServerPlayer) objects[0]));
+            NetworkSystemServer.registerC2SPacketHandler(
+                    NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET,
+                    Server.class.getDeclaredMethod("handleTeleport", ServerPlayer.class),
+                    objects -> Server.handleTeleport((ServerPlayer) objects[0])
+            );
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -84,14 +88,13 @@ public final class SelfTeleport extends Skill {
 
         private static void start() {
             if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            AcademyCraftRenderSystem.RENDERER_MAP.put(NAME, Client.RENDERER);
+            AcademyCraftRenderSystem.RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.RENDERER);
         }
 
         private static void end() {
-            if (ClientUtil.isScreenNull()) {
-                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
-            }
-            AcademyCraftRenderSystem.RENDERER_MAP.remove(NAME);
+            AcademyCraftRenderSystem.RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
+            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
 
         private static final AcademyCraftRenderSystem.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
