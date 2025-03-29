@@ -12,16 +12,17 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import org.academy.api.common.ability.AbilitySystem;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.AcademyCraft;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.network.ServerToClientPacketHandler;
+import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
+import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.ui.AbilityDeveloperFragment;
 import org.jetbrains.annotations.NotNull;
@@ -74,7 +75,19 @@ public class CommandManager {
                     LiteralArgumentBuilder.<ConsoleSource>literal("learn")
                             .then(LiteralArgumentBuilder.<ConsoleSource>literal("skill")
                                     .then(RequiredArgumentBuilder.<ConsoleSource, String>argument("name", StringArgumentType.string())
-                                            .executes(context -> Client.learnSkill(context, context.getArgument("name", String.class)))
+                                            .suggests((commandContext, builder) ->
+                                                    CompletableFuture.supplyAsync(() -> {
+                                                        if (AbilitySystemClient.getCategory() != null) {
+                                                            for (Skill skill : AbilitySystemClient.getCategory().skillList) {
+                                                                builder.suggest(skill.name);
+                                                            }
+                                                        }
+                                                        return builder.build();
+                                                    }))
+                                            .executes(context ->
+                                                    Client.learnSkill(context, context.getArgument(
+                                                            "name", String.class))
+                                            )
                                     )
                             )
                             .then(LiteralArgumentBuilder.<ConsoleSource>literal("curriculum")

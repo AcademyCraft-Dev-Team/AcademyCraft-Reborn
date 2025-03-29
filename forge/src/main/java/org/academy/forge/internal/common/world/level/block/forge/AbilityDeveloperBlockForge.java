@@ -1,9 +1,10 @@
 package org.academy.forge.internal.common.world.level.block.forge;
 
-import icyllis.modernui.mc.MuiModApi;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -16,14 +17,18 @@ import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.AcademyCraft;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.forge.internal.common.world.level.block.entity.forge.AbilityDeveloperBlockEntityForge;
-import org.academy.internal.client.ui.AbilityDeveloperFragment;
+import org.academy.forge.internal.common.world.level.block.entity.forge.RadioFrequencyEnergyOutputBridgeBlockEntity;
 import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -50,6 +55,24 @@ public class AbilityDeveloperBlockForge extends BaseEntityBlock {
     public AbilityDeveloperBlockForge(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(TYPE, MultiBlockType.MAIN).setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
+        if (level.isClientSide() || state.getValue(TYPE) == MultiBlockType.SUBJECT) return null;
+        return (serverLevel, blockPos, blockState, blockEntity) -> {
+            if (blockEntity instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntity) {
+                BlockEntity radio = serverLevel.getBlockEntity(blockPos.below());
+                if (radio instanceof RadioFrequencyEnergyOutputBridgeBlockEntity radioFrequencyEnergyOutputBridgeBlockEntity) {
+                    radioFrequencyEnergyOutputBridgeBlockEntity.getCapability(ForgeCapabilities.ENERGY).ifPresent(iEnergyStorage -> {
+                        int extractEnergy = iEnergyStorage.extractEnergy(iEnergyStorage.getEnergyStored(), false);
+                        if (extractEnergy > 0) {
+                            abilityDeveloperBlockEntity.energyStored += extractEnergy;
+                        }
+                    });
+                }
+            }
+        };
     }
 
     @Override
@@ -85,18 +108,20 @@ public class AbilityDeveloperBlockForge extends BaseEntityBlock {
     public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
         if (player.isShiftKeyDown()) {
             if (!level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge) {
-                    if (!abilityDeveloperBlockEntityForge.isEmpty()) {
-                        abilityDeveloperBlockEntityForge.setItem(0, ItemStack.EMPTY);
+                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntity) {
+                    if (!abilityDeveloperBlockEntity.isEmpty()) {
+                        abilityDeveloperBlockEntity.setItem(0, ItemStack.EMPTY);
                         player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_COMPUTATIONAL_CHIP_ITEM.asItem()));
                     }
                 }
             }
         } else {
-            if (level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntityForge) {
-                    AcademyCraft.LOGGER.info(abilityDeveloperBlockEntityForge.mainPos);
-                    MuiModApi.openScreen(new AbilityDeveloperFragment(abilityDeveloperBlockEntityForge.mainPos));
+            if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+                if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntity) {
+                    serverPlayer.connection.send(new S2CPacket(
+                            NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET,
+                            new BlockPos(abilityDeveloperBlockEntity.mainPos)
+                    ));
                 }
             }
         }

@@ -48,6 +48,10 @@ dependencies {
     implementation(additionalRuntimeClasspath("icyllis.modernui:ModernUI-Markdown:3.11.1"))
     modImplementation "icyllis.modernui:ModernUI-Forge:${minecraft_version}-3.11.1.6"
     modImplementation "maven.modrinth:jade:11.12.3+forge"
+  /*  modImplementation "maven.modrinth:brandons-core:3.2.1.302"
+    modImplementation "maven.modrinth:codechicken-lib:3.2.3.358"
+    modImplementation "maven.modrinth:draconic-evolution:3.1.2.604"
+*/
 }
 
 jar {
