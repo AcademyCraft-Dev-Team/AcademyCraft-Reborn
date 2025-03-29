@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
 
 public class AbilitySystemServer {
-    public static Map<UUID, AcademyCraftWorldData.Player> playerMap;
+    public static Map<UUID, AcademyCraftWorldData.Player<? extends AcademyCraftWorldData.Player.SkillData>> playerMap;
     private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
     public static volatile MinecraftServer minecraftServer;
@@ -127,7 +127,8 @@ public class AbilitySystemServer {
                 return;
             }
             if (!playerMap.containsKey(player.getUUID())) {
-                AcademyCraftWorldData.Player data = new AcademyCraftWorldData.Player();
+                AcademyCraftWorldData.Player<AcademyCraftWorldData.Player.SkillData> data =
+                        new AcademyCraftWorldData.Player<>();
                 data.setLevel(0);
 
                 MathUtil.WeightedRandom weightedRandom = new MathUtil.WeightedRandom();
@@ -244,11 +245,11 @@ public class AbilitySystemServer {
 
     public static class Player {
         public final UUID uuid;
-        public final AcademyCraftWorldData.Player data;
+        public final AcademyCraftWorldData.Player<? extends AcademyCraftWorldData.Player.SkillData> data;
         private final Consumer<Packet<?>> packetConsumer;
         public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
 
-        public Player(final UUID uuid, final AcademyCraftWorldData.Player data, final Consumer<Packet<?>> packetConsumer) {
+        public Player(final UUID uuid, final AcademyCraftWorldData.Player<? extends AcademyCraftWorldData.Player.SkillData> data, final Consumer<Packet<?>> packetConsumer) {
             this.uuid = uuid;
             this.data = data;
             this.packetConsumer = packetConsumer;

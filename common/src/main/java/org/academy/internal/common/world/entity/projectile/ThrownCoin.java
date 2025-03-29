@@ -7,6 +7,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.item.ItemStack;
@@ -69,7 +70,11 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
         }
 
         if (entity instanceof LivingEntity) {
-            ((LivingEntity) entity).actuallyHurt(damageSource, damage);
+            if (entity instanceof EnderMan enderMan) {
+                enderMan.actuallyHurt(damageSource, damage);
+            } else {
+                entity.hurt(damageSource, damage);
+            }
         }
     }
 

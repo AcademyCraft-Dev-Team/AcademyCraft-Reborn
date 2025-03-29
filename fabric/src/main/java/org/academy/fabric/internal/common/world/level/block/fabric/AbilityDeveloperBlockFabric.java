@@ -3,59 +3,28 @@ package org.academy.fabric.internal.common.world.level.block.fabric;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.phys.BlockHitResult;
-import org.academy.api.common.network.NetworkResourceLocations;
-import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.AbilityDeveloperBlockEntityFabric;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.RadioFrequencyEnergyOutputBridgeBlockEntity;
-import org.academy.internal.common.world.item.AcademyCraftItems;
+import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import team.reborn.energy.api.base.SimpleEnergyStorage;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-@SuppressWarnings({"deprecation", "UnstableApiUsage"})
-public class AbilityDeveloperBlockFabric extends BaseEntityBlock {
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
-    public static final EnumProperty<MultiBlockType> TYPE = EnumProperty.create("type", MultiBlockType.class);
-    public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
-            // 以 South
-            new Vec3i(0, 1, 0),   // 上
-            new Vec3i(0, 0, 1),   // 前
-            new Vec3i(0, 1, 1),   // 前上
-            new Vec3i(0, 2, 1),   // 前上上
-            new Vec3i(0, 0, 2),   // 前前
-            new Vec3i(0, 1, 2),   // 前前上
-            new Vec3i(0, 2, 2)    // 前前上上
-    );
-
+@SuppressWarnings({"UnstableApiUsage"})
+public class AbilityDeveloperBlockFabric extends AbilityDeveloperBlock {
     public AbilityDeveloperBlockFabric(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(TYPE, MultiBlockType.MAIN).setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+        return new AbilityDeveloperBlockEntityFabric(pos, state);
     }
 
     @Override
@@ -67,11 +36,11 @@ public class AbilityDeveloperBlockFabric extends BaseEntityBlock {
                 if (radio instanceof RadioFrequencyEnergyOutputBridgeBlockEntity radioFrequencyEnergyOutputBridgeBlockEntity) {
                     SimpleEnergyStorage source = radioFrequencyEnergyOutputBridgeBlockEntity.energyStorage;
                     try (Transaction transaction = Transaction.openOuter()) {
-                        if (abilityDeveloperBlockEntity.energyStored < abilityDeveloperBlockEntity.maxStored) {
+                        if (abilityDeveloperBlockEntity.energyStored < abilityDeveloperBlockEntity.getMaxStored()) {
                             long amountExtracted;
                             long shouldExtract;
-                            shouldExtract = abilityDeveloperBlockEntity.maxStored - abilityDeveloperBlockEntity.energyStored;
-                            if (abilityDeveloperBlockEntity.maxStored - abilityDeveloperBlockEntity.energyStored >= abilityDeveloperBlockEntity.maxStored) {
+                            shouldExtract = abilityDeveloperBlockEntity.getMaxStored() - abilityDeveloperBlockEntity.energyStored;
+                            if (abilityDeveloperBlockEntity.getMaxStored() - abilityDeveloperBlockEntity.energyStored >= abilityDeveloperBlockEntity.getMaxStored()) {
                                 shouldExtract = source.maxExtract;
                             }
                             amountExtracted = source.extract(shouldExtract, transaction);
@@ -84,120 +53,5 @@ public class AbilityDeveloperBlockFabric extends BaseEntityBlock {
                 }
             }
         };
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
-        builder.add(TYPE, FACING);
-    }
-
-    @Override
-    protected void spawnDestroyParticles(@NotNull Level level, @NotNull Player player, @NotNull BlockPos pos, @NotNull BlockState state) {
-    }
-
-    @Override
-    public boolean canBeReplaced(@NotNull BlockState state, @NotNull BlockPlaceContext useContext) {
-        return false;
-    }
-
-    @Override
-    public void neighborChanged(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Block neighborBlock, @NotNull BlockPos neighborPos, boolean movedByPiston) {
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (blockEntity instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
-            List<BlockPos> blockPosList = getRotatedSubjectBlocks(abilityDeveloperBlockEntity.mainPos, state.getValue(FACING));
-            blockPosList.add(abilityDeveloperBlockEntity.mainPos);
-            boolean broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof AbilityDeveloperBlockEntityFabric));
-            if (broken) {
-                for (BlockPos subjectBlock : blockPosList) {
-                    level.destroyBlock(subjectBlock, false);
-                }
-            }
-        }
-    }
-
-    @Override
-    public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
-        if (player.isShiftKeyDown()) {
-            if (!level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
-                    if (!abilityDeveloperBlockEntity.isEmpty()) {
-                        abilityDeveloperBlockEntity.setItem(0, ItemStack.EMPTY);
-                        player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_COMPUTATIONAL_CHIP_ITEM.asItem()));
-                    }
-                }
-            }
-        } else {
-            if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-                if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
-                    serverPlayer.connection.send(new S2CPacket(
-                            NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET,
-                            new BlockPos(abilityDeveloperBlockEntity.mainPos)
-                    ));
-                }
-            }
-        }
-        return InteractionResult.CONSUME;
-    }
-
-    @Override
-    public void setPlacedBy(@NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState state, @Nullable LivingEntity placer, @NotNull ItemStack stack) {
-        List<BlockPos> subjectBlocks = getRotatedSubjectBlocks(pos, state.getValue(FACING));
-        for (BlockPos subjectBlock : subjectBlocks) {
-            level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
-            BlockEntity blockEntity = level.getBlockEntity(subjectBlock);
-            if (blockEntity instanceof AbilityDeveloperBlockEntityFabric abilityDeveloperBlockEntity) {
-                abilityDeveloperBlockEntity.setMainPos(pos);
-            }
-        }
-    }
-
-    @SuppressWarnings("DataFlowIssue")
-    @Override
-    public @Nullable BlockState getStateForPlacement(@NotNull BlockPlaceContext context) {
-        Direction direction = context.getHorizontalDirection();
-        return super.getStateForPlacement(context).setValue(FACING, direction);
-    }
-
-    @Override
-    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
-        return new AbilityDeveloperBlockEntityFabric(pos, state);
-    }
-
-    public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction) {
-        final List<BlockPos> subjectBlocks = new ArrayList<>();
-
-        for (Vec3i vec3i : SUBJECT_BLOCKS) {
-            BlockPos offsetPos = switch (direction) {
-                case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), -vec3i.getZ());
-                case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), vec3i.getZ());
-                case EAST -> pos.offset(vec3i.getZ(), vec3i.getY(), vec3i.getX());
-                case WEST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
-                default -> pos;
-            };
-            subjectBlocks.add(offsetPos);
-        }
-
-        return subjectBlocks;
-    }
-
-    @Override
-    public boolean skipRendering(@NotNull BlockState state, @NotNull BlockState adjacentState, @NotNull Direction direction) {
-        return false;
-    }
-
-    public enum MultiBlockType implements StringRepresentable {
-        MAIN("main"),
-        SUBJECT("subject");
-
-        public final String name;
-
-        MultiBlockType(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public @NotNull String getSerializedName() {
-            return name;
-        }
     }
 }

@@ -20,6 +20,7 @@ import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
+import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -37,7 +38,7 @@ public class Railgun extends Skill {
     public static final String KEY_NAME = "railgun.shoot";
 
     private Railgun() {
-        super("railgun", 5);
+        super(SkillNames.SELF_TELEPORT, 5);
     }
 
     @Override
