@@ -16,5 +16,11 @@
     "sounds": [
       "academy:skill/electromaster/arc_weak"
     ]
+  },
+  "vector_reflection": {
+    "subtitle": "academy.vector_reflection",
+    "sounds": [
+      "academy:skill/accelerator/vector_reflection"
+    ]
   }
 }
