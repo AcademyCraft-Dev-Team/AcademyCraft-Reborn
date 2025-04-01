@@ -2,13 +2,14 @@ package org.academy.api.common.ability;
 
 import net.minecraft.server.MinecraftServer;
 
-/**
- * 为了简化开发与使用难度，以 Skill 为单位来实现原著中的能力
- */
 public abstract class Skill {
     public String name;
     public int level;
 
+    /**
+     * @param name  技能名称
+     * @param level 推荐学习等级
+     */
     protected Skill(String name, int level) {
         this.name = name;
         this.level = level;

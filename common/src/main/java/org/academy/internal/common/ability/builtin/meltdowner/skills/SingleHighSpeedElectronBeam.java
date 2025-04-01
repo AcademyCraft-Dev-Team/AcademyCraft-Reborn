@@ -15,6 +15,7 @@ import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
+import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +28,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
     public static final Skill INSTANCE = new SingleHighSpeedElectronBeam();
 
     private SingleHighSpeedElectronBeam() {
-        super("single_high_speed_electron_beam", 1);
+        super(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM, 1);
     }
 
     @Override
@@ -56,14 +57,14 @@ public class SingleHighSpeedElectronBeam extends Skill {
         public static final String KEY_NAME = "single_high_speed_electron_beam.shoot";
 
         public static void handleKey() {
-            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+     //       if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }
 
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player) {
-            if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
+     //       if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final Level level = player.level();
             final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
 

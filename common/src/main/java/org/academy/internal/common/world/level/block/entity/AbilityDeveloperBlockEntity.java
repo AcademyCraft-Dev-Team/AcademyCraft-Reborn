@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Set;
 
 public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements Container {
-    public final NonNullList<ItemStack> items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
+    private final NonNullList<ItemStack> items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
     public BlockPos mainPos;
     public long energyStored;
 
@@ -36,15 +36,12 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
                 (listener, packet) -> {
                     FriendlyByteBuf friendlyByteBuf = packet.friendlyByteBuf;
                     String name = friendlyByteBuf.readUtf();
-                    AcademyCraft.LOGGER.info("Received server learn skill packet for {}", name);
                     BlockPos blockPos = friendlyByteBuf.readBlockPos();
                     Skill skill = AbilitySystem.SKILL_MAP.get(name);
                     if (skill == null) return;
                     BlockEntity blockEntity = listener.player.level().getBlockEntity(blockPos);
                     if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                         long needEnergy = skill.level * 10000L;
-                        AcademyCraft.LOGGER.info(needEnergy);
-                        AcademyCraft.LOGGER.info(abilityDeveloperBlockEntity.energyStored);
                         if (abilityDeveloperBlockEntity.energyStored >= needEnergy) {
                             abilityDeveloperBlockEntity.energyStored -= skill.level * 10000L;
                             AbilitySystemServer.addPlayerSkill(listener.player.getUUID(), name);
@@ -52,13 +49,10 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
                             for (String skillName : skillList) {
                                 AcademyCraft.LOGGER.info(skillName);
                             }
-                        } else {
-                            AcademyCraft.LOGGER.info(name);
                         }
                     } else {
                         AcademyCraft.LOGGER.info("Invalid server learn skill packet for {}", name);
                     }
-                    AcademyCraft.LOGGER.info(blockPos + " : " + skill);
                 }
         );
     }
@@ -83,8 +77,12 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
         if (isMain()) {
             return items.stream().allMatch(ItemStack::isEmpty);
         } else {
+            if (mainPos == null) return true;
+            AcademyCraft.LOGGER.warn("isEmpty: mainPos is null");
             AbilityDeveloperBlockEntity abilityDeveloperBlockEntity =
                     (AbilityDeveloperBlockEntity) level.getBlockEntity(mainPos);
+            if (abilityDeveloperBlockEntity == null) return true;
+            AcademyCraft.LOGGER.warn("isEmpty: abilityDeveloperBlockEntity is null");
             return abilityDeveloperBlockEntity.isEmpty();
         }
     }
@@ -95,9 +93,17 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
         if (isMain()) {
             return items.get(slot);
         } else {
-            AbilityDeveloperBlockEntity abilityDeveloperBlockEntity =
-                    (AbilityDeveloperBlockEntity) level.getBlockEntity(mainPos);
-            return abilityDeveloperBlockEntity.getItem(slot);
+            if (mainPos == null) {
+                AcademyCraft.LOGGER.warn("getItem: mainPos is null");
+                return ItemStack.EMPTY;
+            }
+            BlockEntity blockEntity = level.getBlockEntity(mainPos);
+            if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+                return abilityDeveloperBlockEntity.getItem(slot);
+            } else {
+                AcademyCraft.LOGGER.warn("getItem: blockEntity is null/wrong{}", blockEntity);
+                return ItemStack.EMPTY;
+            }
         }
     }
 
@@ -123,9 +129,8 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
                 stack.setCount(this.getMaxStackSize());
             }
         } else {
-            if (level != null && level.getBlockEntity(mainPos) instanceof
-                    AbilityDeveloperBlockEntity abilityDeveloperBlockEntity
-            ) {
+            if (level != null &&
+                    level.getBlockEntity(mainPos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                 abilityDeveloperBlockEntity.setItem(slot, stack);
             }
         }

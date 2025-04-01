@@ -33,12 +33,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.academy.internal.common.ability.builtin.electromaster.skills.Railgun.Client.KEY_NAME;
+
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
-    public static final String KEY_NAME = "railgun.shoot";
 
     private Railgun() {
-        super(SkillNames.SELF_TELEPORT, 5);
+        super(SkillNames.RAILGUN, 5);
     }
 
     @Override
@@ -63,6 +64,7 @@ public class Railgun extends Skill {
     }
 
     public static final class Client {
+        public static final String KEY_NAME = SkillNames.RAILGUN + ".shoot";
         public static RailgunClientConfig CLIENT_CONFIG = new RailgunClientConfig();
 
         public static void handleKey() {
