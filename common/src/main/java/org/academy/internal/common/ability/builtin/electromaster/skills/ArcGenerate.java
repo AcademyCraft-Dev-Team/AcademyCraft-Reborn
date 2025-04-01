@@ -7,7 +7,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftServer;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -20,7 +19,6 @@ import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
-import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -78,8 +76,7 @@ public class ArcGenerate extends Skill {
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
             if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
-            AcademyCraftWorldData.Player data = AcademyCraftServer.academyCraftWorldData.getPlayers().get(player.getUUID());
-            float currentComputingPower = data.getComputingPower();
+            float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower > 10) {
                 AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
             } else {
