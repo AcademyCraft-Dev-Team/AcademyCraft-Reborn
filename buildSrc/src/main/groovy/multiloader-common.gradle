@@ -79,10 +79,8 @@ repositories {
     }
 }
 
-sourcesJar {
-    from(rootProject.file('LICENSE')) {
-        rename { "${it}_${mod_name}" }
-    }
+javadoc{
+    options.encoding = 'UTF-8'
 }
 
 jar {
