@@ -83,6 +83,9 @@ public class VectorReflection extends Skill {
             if (player instanceof LocalPlayer) {
                 return false;
             }
+            if (player.isCreative() || player.isSpectator()) {
+                return false;
+            }
             final UUID uuid = player.getUUID();
             if (ACTIVE_REFLECTION_MAP.containsKey(uuid)) {
                 return ACTIVE_REFLECTION_MAP.get(uuid);
@@ -97,7 +100,9 @@ public class VectorReflection extends Skill {
                 final float computingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
                 AcademyCraft.LOGGER.info("{}{}", damageSource.toString(), damageSource.type());
                 AcademyCraft.LOGGER.info("{} {}", needComputingPower, computingPower);
-                player.level().playSound(null, player, AcademyCraftSoundEvents.VECTOR_REFLECTION, SoundSource.BLOCKS, 1, 1);
+                if (computingPower > 0) {
+                    player.level().playSound(null, player, AcademyCraftSoundEvents.VECTOR_REFLECTION, SoundSource.BLOCKS, 1, 1);
+                }
                 if (computingPower > needComputingPower) {
                     AbilitySystemServer.setPlayerComputingPower(player.getUUID(), computingPower - needComputingPower);
                     Entity source = damageSource.getEntity();
