@@ -21,6 +21,7 @@ import org.joml.Matrix4f;
 
 import java.util.List;
 import java.util.Random;
+import java.util.function.Function;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
@@ -33,6 +34,111 @@ public final class RenderUtil {
         switch (cameraType) {
             case THIRD_PERSON_BACK -> applyOffset(poseStack, lookVec.scale(4));
             case THIRD_PERSON_FRONT -> applyOffset(poseStack, lookVec.scale(-4));
+        }
+    }
+
+    public static final class RingRenderer {
+        public static final Function<ResourceLocation, RenderType> RING_RENDER_TYPE = resourceLocation -> RenderType.create(
+                "ring_render_type",
+                DefaultVertexFormat.POSITION_COLOR_TEX,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(new TextureStateShard(
+                                resourceLocation,
+                                false, false
+                        ))
+                        .setShaderState(RenderStateShard.POSITION_COLOR_TEX_SHADER)
+                        .setCullState(RenderStateShard.NO_CULL)
+                        .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false)
+        );
+
+        public static float[][][] getVerticalVertexBuffer(float radius, float height, int segments) {
+            float[][][] vertexBuffer = new float[segments][4][4];
+            final float pi = (float) Math.PI;
+
+            for (int i = 0; i < segments; i++) {
+                float angle1 = (i * 2 * pi) / segments;
+                float angle2 = ((i + 1) * 2 * pi) / segments;
+                float u0 = (float) i / segments;
+                float u1 = (float) (i + 1) / segments;
+
+                float x1 = (float) Math.cos(angle1) * radius;
+                float z1 = (float) Math.sin(angle1) * radius;
+                float x2 = (float) Math.cos(angle2) * radius;
+                float z2 = (float) Math.sin(angle2) * radius;
+
+                vertexBuffer[i][0][0] = x1;
+                vertexBuffer[i][0][1] = 0;
+                vertexBuffer[i][0][2] = z1;
+                vertexBuffer[i][0][3] = u0;
+
+                vertexBuffer[i][1][0] = x2;
+                vertexBuffer[i][1][1] = 0;
+                vertexBuffer[i][1][2] = z2;
+                vertexBuffer[i][1][3] = u1;
+
+                vertexBuffer[i][2][0] = x2;
+                vertexBuffer[i][2][1] = height;
+                vertexBuffer[i][2][2] = z2;
+                vertexBuffer[i][2][3] = u1;
+
+                vertexBuffer[i][3][0] = x1;
+                vertexBuffer[i][3][1] = height;
+                vertexBuffer[i][3][2] = z1;
+                vertexBuffer[i][3][3] = u0;
+            }
+            return vertexBuffer;
+        }
+
+        /**
+         * Renders a vertical ring (standing in the XY plane) with texture.
+         *
+         * @param poseStack PoseStack for transformations.
+         * @param buffer    MultiBufferSource for drawing.
+         * @param radius    Inner radius of the ring.
+         * @param height    Height of the ring band.
+         * @param segments  Number of segments to approximate the circle.
+         * @param texture   ResourceLocation of the texture to apply.
+         */
+        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture, float red, float green, float blue, float alpha) {
+            float[][][] vertexBuffer = getVerticalVertexBuffer(radius, height, segments);
+            renderVerticalRing(poseStack, buffer, segments, vertexBuffer, texture, red, green, blue, alpha);
+        }
+
+        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, int segments, float[][][] vertexBuffer, ResourceLocation texture, float red, float green, float blue, float alpha) {
+            final PoseStack.Pose pose = poseStack.last();
+            final Matrix4f matrix = pose.pose();
+            final VertexConsumer vertexConsumer = buffer.getBuffer(RING_RENDER_TYPE.apply(texture));
+
+            renderVerticalRing(matrix, vertexConsumer, segments, vertexBuffer, red, green, blue, alpha);
+        }
+
+        public static void renderVerticalRing(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
+            for (int i = 0; i < segments; i++) {
+                vertexConsumer.vertex(matrix, vertexBuffer[i][0][0], vertexBuffer[i][0][1], vertexBuffer[i][0][2])
+                        .color(red, green, blue, alpha)
+                        .uv(vertexBuffer[i][0][3], 0)
+                        .endVertex();
+
+                vertexConsumer.vertex(matrix, vertexBuffer[i][1][0], vertexBuffer[i][1][1], vertexBuffer[i][1][2])
+                        .color(red, green, blue, alpha)
+                        .uv(vertexBuffer[i][1][3], 0)
+                        .endVertex();
+
+                vertexConsumer.vertex(matrix, vertexBuffer[i][2][0], vertexBuffer[i][2][1], vertexBuffer[i][2][2])
+                        .color(red, green, blue, alpha)
+                        .uv(vertexBuffer[i][2][3], 1)
+                        .endVertex();
+
+                vertexConsumer.vertex(matrix, vertexBuffer[i][3][0], vertexBuffer[i][3][1], vertexBuffer[i][3][2])
+                        .color(red, green, blue, alpha)
+                        .uv(vertexBuffer[i][3][3], 1)
+                        .endVertex();
+            }
         }
     }
 
