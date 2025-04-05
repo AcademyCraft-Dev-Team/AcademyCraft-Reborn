@@ -8,7 +8,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
@@ -22,10 +22,15 @@ public class Arc extends Entity {
     }
 
     public Arc(Level level, Player player) {
-        super(AcademyCraftEntityTypes.ARC_ENTITY_TYPE, level);
+        super(EntityTypes.ARC_ENTITY_TYPE, level);
         this.setPos(player.position().add(0, 1, 0));
         this.setYRot(player.getYRot());
         this.setXRot(player.getXRot());
+    }
+
+    @Override
+    public boolean ignoreExplosion() {
+        return true;
     }
 
     @Override

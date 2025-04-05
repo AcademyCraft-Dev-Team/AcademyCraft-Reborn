@@ -14,7 +14,7 @@ import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
-import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
@@ -64,7 +64,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
         public static void handle(final @NotNull ServerPlayer player) {
      //       if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final Level level = player.level();
-            final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
+            final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
 
             final Vec3 eyePos = player.getEyePosition().add(0, -0.5, 0);
 

@@ -6,9 +6,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AcademyCraftBlockEntityTypes {
+public class BlockEntityTypes {
     public static final Map<ResourceLocation, BlockEntityType<?>> BLOCK_ENTITY_TYPES = new HashMap<>();
 
-    private AcademyCraftBlockEntityTypes() {
+    private BlockEntityTypes() {
     }
 }

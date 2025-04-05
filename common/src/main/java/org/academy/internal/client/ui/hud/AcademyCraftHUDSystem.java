@@ -7,18 +7,17 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.AcademyCraft;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.MathUtil;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static net.minecraft.client.renderer.RenderStateShard.*;
-
 public class AcademyCraftHUDSystem {
-    public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR = RenderType.create(
+    public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR = new RenderType.CompositeRenderType(
             "computing_power_bar",
             DefaultVertexFormat.POSITION_COLOR_TEX,
             VertexFormat.Mode.QUADS,
@@ -31,12 +30,12 @@ public class AcademyCraftHUDSystem {
                             false,
                             false
                     ))
-                    .setShaderState(POSITION_COLOR_TEX_SHADER)
-                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
+                    .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
 
-    public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR_BACKGROUND = RenderType.create(
+    public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR_BACKGROUND = new RenderType.CompositeRenderType(
             "computing_power_bar_background",
             DefaultVertexFormat.POSITION_TEX,
             VertexFormat.Mode.QUADS,
@@ -51,13 +50,13 @@ public class AcademyCraftHUDSystem {
                             false,
                             false
                     ))
-                    .setShaderState(POSITION_TEX_SHADER)
-                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
+                    .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
 
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
-            RenderType.create(
+            new RenderType.CompositeRenderType(
                     "ability_icon",
                     DefaultVertexFormat.POSITION_COLOR_TEX,
                     VertexFormat.Mode.QUADS,
@@ -72,8 +71,8 @@ public class AcademyCraftHUDSystem {
                                     false,
                                     false
                             ))
-                            .setShaderState(POSITION_COLOR_TEX_SHADER)
-                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                            .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
+                            .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
                             .createCompositeState(false)
             );
 

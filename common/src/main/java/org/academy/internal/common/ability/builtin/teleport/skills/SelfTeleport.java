@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.client.render.AcademyCraftRenderSystem;
+import org.academy.api.client.render.RenderManager;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
@@ -88,16 +88,16 @@ public final class SelfTeleport extends Skill {
 
         private static void start() {
             if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            AcademyCraftRenderSystem.RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.RENDERER);
+            RenderManager.RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.RENDERER);
         }
 
         private static void end() {
-            AcademyCraftRenderSystem.RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
+            RenderManager.RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
             if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
 
-        private static final AcademyCraftRenderSystem.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
+        private static final RenderManager.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
             if (level != null && localPlayer != null) {
                 poseStack.pushPose();
                 final AABB aabb = new AABB(0, 0, 0, 1, 2, 1);

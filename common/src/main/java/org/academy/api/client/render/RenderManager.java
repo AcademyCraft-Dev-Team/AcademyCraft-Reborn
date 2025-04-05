@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.HashMap;
 import java.util.Map;
 
-public final class AcademyCraftRenderSystem {
+public final class RenderManager {
     public static final Minecraft mc = Minecraft.getInstance();
     public static final LocalPlayer player = mc.player;
     public static final Map<String,Renderer> RENDERER_MAP = new HashMap<>();

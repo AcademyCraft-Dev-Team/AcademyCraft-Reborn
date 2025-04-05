@@ -1,7 +1,6 @@
 package org.academy.fabric;
 
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -15,7 +14,7 @@ import org.academy.api.common.ability.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.GameUtil;
-import org.academy.internal.client.renderer.entity.AcademyCraftEntityRenderers;
+import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.fabric.internal.client.renderer.blockentity.fabric.BlockEntityRenderersFabric;
 import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.BlockEntityTypesFabric;
@@ -23,11 +22,11 @@ import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftB
 import org.academy.internal.client.renderer.blockentity.BlockEntityRenderers;
 import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
-import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
 import org.academy.internal.common.world.item.AcademyCraftItems;
-import org.academy.internal.common.world.level.block.AcademyCraftBlocks;
-import org.academy.internal.common.world.level.block.entity.AcademyCraftBlockEntityTypes;
+import org.academy.internal.common.world.level.block.Blocks;
+import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 
 public class AcademyCraftRegisterFabric {
     public static void register() {
@@ -54,15 +53,15 @@ public class AcademyCraftRegisterFabric {
 
     private static void registerBlock() {
         AcademyCraftBlocksFabric.init();
-        for (ResourceLocation resourceLocation : AcademyCraftBlocks.BLOCKS.keySet()) {
-            Registry.register(BuiltInRegistries.BLOCK, resourceLocation, AcademyCraftBlocks.BLOCKS.get(resourceLocation));
+        for (ResourceLocation resourceLocation : Blocks.BLOCKS.keySet()) {
+            Registry.register(BuiltInRegistries.BLOCK, resourceLocation, Blocks.BLOCKS.get(resourceLocation));
         }
     }
 
     private static void registerBlockEntityType() {
         BlockEntityTypesFabric.init();
-        for (ResourceLocation resourceLocation : AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.keySet()) {
-            Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, resourceLocation, AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.get(resourceLocation));
+        for (ResourceLocation resourceLocation : BlockEntityTypes.BLOCK_ENTITY_TYPES.keySet()) {
+            Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, resourceLocation, BlockEntityTypes.BLOCK_ENTITY_TYPES.get(resourceLocation));
         }
     }
 
@@ -86,15 +85,15 @@ public class AcademyCraftRegisterFabric {
     }
 
     private static void registerEntityType() {
-        for (AcademyCraftEntityTypes.Type<?> type : AcademyCraftEntityTypes.TYPE_LIST) {
+        for (EntityTypes.Type<?> type : EntityTypes.TYPE_LIST) {
             Registry.register(BuiltInRegistries.ENTITY_TYPE, new ResourceLocation(AcademyCraft.MOD_ID, type.name()), type.entityType());
         }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void registerEntityRenderer() {
-        for (AcademyCraftEntityRenderers.Renderer renderer : AcademyCraftEntityRenderers.RENDERER_LIST) {
-            EntityRenderers.register(renderer.entityType(), renderer.entityRenderer());
+        for (EntityRenderers.Renderer renderer : EntityRenderers.RENDERER_LIST) {
+            net.minecraft.client.renderer.entity.EntityRenderers.register(renderer.entityType(), renderer.entityRenderer());
         }
     }
 

@@ -1,10 +1,13 @@
 package org.academy.api.client.util;
 
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
@@ -37,8 +40,43 @@ public final class RenderUtil {
         }
     }
 
+    public static final class RenderStates {
+        public static final WriteMaskStateShard COLOR_WRITE = new WriteMaskStateShard(true, false);
+        public static final ShaderStateShard POSITION_COLOR_LIGHTMAP_SHADER = new ShaderStateShard(GameRenderer::getPositionColorLightmapShader);
+        public static final ShaderStateShard POSITION_SHADER = new ShaderStateShard(GameRenderer::getPositionShader);
+        public static final ShaderStateShard POSITION_COLOR_TEX_SHADER = new ShaderStateShard(GameRenderer::getPositionColorTexShader);
+        public static final ShaderStateShard POSITION_TEX_SHADER = new ShaderStateShard(GameRenderer::getPositionTexShader);
+        public static final ShaderStateShard POSITION_COLOR_TEX_LIGHTMAP_SHADER = new ShaderStateShard(GameRenderer::getPositionColorTexLightmapShader);
+        public static final ShaderStateShard POSITION_COLOR_SHADER = new ShaderStateShard(GameRenderer::getPositionColorShader);
+        public static final TransparencyStateShard TRANSLUCENT_TRANSPARENCY = new TransparencyStateShard("translucent_transparency", () -> {
+            RenderSystem.enableBlend();
+            RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        }, () -> {
+            RenderSystem.disableBlend();
+            RenderSystem.defaultBlendFunc();
+        });
+        public static final RenderStateShard.TransparencyStateShard LIGHTNING_TRANSPARENCY = new RenderStateShard.TransparencyStateShard("lightning_transparency", () -> {
+            RenderSystem.enableBlend();
+            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+        }, () -> {
+            RenderSystem.disableBlend();
+            RenderSystem.defaultBlendFunc();
+        });
+        public static final CullStateShard CULL = new CullStateShard(true);
+        public static final CullStateShard NO_CULL = new CullStateShard(false);
+        public static final LightmapStateShard LIGHTMAP = new LightmapStateShard(true);
+        public static final LightmapStateShard NO_LIGHTMAP = new LightmapStateShard(false);
+        public static final OverlayStateShard OVERLAY = new OverlayStateShard(true);
+        public static final OverlayStateShard NO_OVERLAY = new OverlayStateShard(false);
+        public static final ShaderStateShard RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER = new ShaderStateShard(GameRenderer::getRendertypeEntityTranslucentCullShader);
+        public static final DepthTestStateShard NO_DEPTH_TEST = new DepthTestStateShard("always", 519);
+        public static final DepthTestStateShard EQUAL_DEPTH_TEST = new DepthTestStateShard("==", 514);
+        public static final DepthTestStateShard LEQUAL_DEPTH_TEST = new DepthTestStateShard("<=", 515);
+        public static final DepthTestStateShard GREATER_DEPTH_TEST = new DepthTestStateShard(">", 516);
+    }
+
     public static final class RingRenderer {
-        public static final Function<ResourceLocation, RenderType> RING_RENDER_TYPE = resourceLocation -> RenderType.create(
+        public static final Function<ResourceLocation, RenderType> RING_RENDER_TYPE = resourceLocation -> new RenderType.CompositeRenderType(
                 "ring_render_type",
                 DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS,
@@ -50,9 +88,10 @@ public final class RenderUtil {
                                 resourceLocation,
                                 false, false
                         ))
-                        .setShaderState(RenderStateShard.POSITION_COLOR_TEX_SHADER)
-                        .setCullState(RenderStateShard.NO_CULL)
-                        .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(RenderStates.POSITION_COLOR_TEX_SHADER)
+                        .setCullState(RenderStates.NO_CULL)
+                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setWriteMaskState(RenderStates.COLOR_WRITE)
                         .createCompositeState(false)
         );
 
@@ -143,7 +182,7 @@ public final class RenderUtil {
     }
 
     public static final class BallRenderer {
-        public static final RenderType.CompositeRenderType BALL_RENDER_TYPE = RenderType.create(
+        public static final RenderType BALL_RENDER_TYPE = new RenderType.CompositeRenderType(
                 "ball_render_type",
                 DefaultVertexFormat.POSITION_COLOR,
                 VertexFormat.Mode.TRIANGLES,
@@ -151,9 +190,9 @@ public final class RenderUtil {
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(POSITION_COLOR_SHADER)
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                        .setCullState(NO_CULL)
+                        .setShaderState(RenderStates.POSITION_COLOR_SHADER)
+                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(RenderStates.NO_CULL)
                         .createCompositeState(false)
         );
 
@@ -215,7 +254,7 @@ public final class RenderUtil {
     }
 
     public static final class RayRenderer {
-        public static final RenderType.CompositeRenderType RAY_RENDER_TYPE = RenderType.create(
+        public static final RenderType RAY_RENDER_TYPE = new RenderType.CompositeRenderType(
                 "ray_render_type",
                 DefaultVertexFormat.POSITION_COLOR,
                 VertexFormat.Mode.TRIANGLE_STRIP,
@@ -223,9 +262,9 @@ public final class RenderUtil {
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(POSITION_COLOR_SHADER)
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                        .setCullState(NO_CULL)
+                        .setShaderState(RenderStates.POSITION_COLOR_SHADER)
+                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(RenderStates.NO_CULL)
                         .createCompositeState(false)
         );
 
@@ -285,7 +324,7 @@ public final class RenderUtil {
 
     public static final class ArcRenderer {
         public static final ResourceLocation ARC_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/skill/effect/electromaster/line_segment.png");
-        public static final RenderType.CompositeRenderType ARC_RENDER_TYPE = RenderType.create(
+        public static final RenderType ARC_RENDER_TYPE = new RenderType.CompositeRenderType(
                 "arc_render_type",
                 DefaultVertexFormat.POSITION_TEX,
                 VertexFormat.Mode.QUADS,
@@ -298,9 +337,9 @@ public final class RenderUtil {
                                 false,
                                 false
                         ))
-                        .setShaderState(POSITION_TEX_SHADER)
-                        .setCullState(NO_CULL)
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(RenderStates.POSITION_TEX_SHADER)
+                        .setCullState(RenderStates.NO_CULL)
+                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false)
         );
 
@@ -351,7 +390,7 @@ public final class RenderUtil {
 
     @SuppressWarnings("deprecation")
     public static final class BakedModelRenderer {
-        public static final RenderType BAKED_MODEL_NO_TRANSPARENCY_RENDER_TYPE = RenderType.create(
+        public static final RenderType BAKED_MODEL_NO_TRANSPARENCY_RENDER_TYPE = new RenderType.CompositeRenderType(
                 "baked_model_no_transparency_render_type",
                 DefaultVertexFormat.NEW_ENTITY,
                 VertexFormat.Mode.QUADS,
@@ -359,18 +398,17 @@ public final class RenderUtil {
                 false,
                 false,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
+                        .setShaderState(RenderStates.RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
                         .setTextureState(new RenderStateShard.TextureStateShard(
                                 TextureAtlas.LOCATION_BLOCKS,
                                 false,
                                 true
                         ))
-                        .setLightmapState(LIGHTMAP)
-                        .setOverlayState(OVERLAY)
-                        .setTransparencyState(NO_TRANSPARENCY)
+                        .setLightmapState(RenderStates.LIGHTMAP)
+                        .setOverlayState(RenderStates.OVERLAY)
                         .createCompositeState(true)
         );
-        public static final RenderType BAKED_MODEL_TRANSPARENCY_RENDER_TYPE = RenderType.create(
+        public static final RenderType BAKED_MODEL_TRANSPARENCY_RENDER_TYPE = new RenderType.CompositeRenderType(
                 "baked_model_transparency_render_type",
                 DefaultVertexFormat.NEW_ENTITY,
                 VertexFormat.Mode.QUADS,
@@ -378,16 +416,16 @@ public final class RenderUtil {
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
+                        .setShaderState(RenderStates.RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
                         .setTextureState(new RenderStateShard.TextureStateShard(
                                 TextureAtlas.LOCATION_BLOCKS,
                                 false,
                                 true
                         ))
-                        .setLightmapState(LIGHTMAP)
-                        .setOverlayState(OVERLAY)
-                        .setCullState(NO_CULL)
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setLightmapState(RenderStates.LIGHTMAP)
+                        .setOverlayState(RenderStates.OVERLAY)
+                        .setCullState(RenderStates.NO_CULL)
+                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(true)
         );
 
