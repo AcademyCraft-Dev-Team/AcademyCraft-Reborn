@@ -10,6 +10,8 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.render.renderer.EffectRenderer;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.ImprovedNoise;
+import org.academy.internal.common.ability.builtin.accelerator.skills.StormWing;
+import org.academy.internal.common.world.entity.player.PlayerSyncSkillData;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -17,9 +19,9 @@ import org.joml.Quaternionf;
 @SuppressWarnings({"SuspiciousNameCombination", "DuplicatedCode"})
 public class StormWingEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new StormWingEffectRenderer();
-    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/skill/effect/accelerator/tornado_ring.png"); // 纹理路径
-    private static final RandomSource RAND = RandomSource.create(); // 随机数生成器
-    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90)); // 基础变换矩阵 (绕X轴旋转90度，使环垂直)
+    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/skill/effect/accelerator/tornado_ring.png");
+    private static final RandomSource RAND = RandomSource.create();
+    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90));
 
     // --- 参数: 平滑稳定且具有复杂性 ---
     private static final int NUM_RINGS = 32;                  // 环的数量
@@ -100,13 +102,9 @@ public class StormWingEffectRenderer implements EffectRenderer {
         // 私有构造函数，防止外部实例化
     }
 
-    // --- 噪声辅助方法 ---
     private static double getNoise(double x, double y, double seed) {
-        // 使用改进柏林噪声获取二维噪声值
         return ImprovedNoise.noise(x, y, seed);
     }
-
-    // --- 计算辅助方法 ---
 
     /**
      * 应用领域扭曲，修改传入的归一化 Y 坐标（通过 outWarpedY 返回）
@@ -129,12 +127,9 @@ public class StormWingEffectRenderer implements EffectRenderer {
      */
     private static void calculateHorizontalDisplacement(double normalizedY, double tPosBase, double tWarp) {
         applyDomainWarp(normalizedY, tWarp); // 获取扭曲后的Y坐标
-        // 使用扭曲后的坐标进行噪声查找，生成 X 和 Z 方向的噪声
         double noiseX = getNoise(warpedYBuffer[0] * 1.3, tPosBase * 0.75, 10.0);
         double noiseZ = getNoise(warpedYBuffer[0] * 1.3, tPosBase * 0.75, 20.0);
-        // 位移幅度随高度增加而增加 (简单线性插值)
         double heightScaleFactor = 0.4 + normalizedY * 1.6;
-        // 将结果存入缓冲区
         StormWingEffectRenderer.displacementBuffer[0] = noiseX * heightScaleFactor;
         StormWingEffectRenderer.displacementBuffer[1] = noiseZ * heightScaleFactor;
     }
@@ -293,6 +288,9 @@ public class StormWingEffectRenderer implements EffectRenderer {
 
     @Override
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, @NotNull AbstractClientPlayer livingEntity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
+        if (!livingEntity.getEntityData().get(PlayerSyncSkillData.SKILL_DATA).getBoolean(StormWing.TAG_KEY)) {
+            return;
+        }
         poseStack.pushPose(); // 保存当前姿态栈状态
         poseStack.mulPoseMatrix(BASE_MATRIX); // 应用基础变换，使 Z 轴朝上
         VertexConsumer vertexConsumer = buffer.getBuffer(RenderUtil.RingRenderer.RING_RENDER_TYPE.apply(TEXTURE)); // 获取顶点消费者

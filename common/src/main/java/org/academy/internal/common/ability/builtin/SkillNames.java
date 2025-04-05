@@ -6,4 +6,6 @@ public class SkillNames {
     public static final String SINGLE_HIGH_SPEED_ELECTRON_BEAM = "single_high_speed_electron_beam";
     public static final String VECTOR_REFLECTION = "vector_reflection";
     public static final String BLOODFLOW_REVERSE = "bloodflow_reverse";
+    public static final String STORM_WING = "storm_wing";
+    public static final String PLASMA_GENERATION = "plasma_generation";
 }

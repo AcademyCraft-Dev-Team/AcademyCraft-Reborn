@@ -59,9 +59,11 @@ public class BloodflowReverse extends Skill {
 
     public static final class Client {
         public static final String KEY_NAME = "bloodflow_reverse";
-        public static final SkillClientConfig.SkillClientKeyBindingConfig CONFIG = new BloodflowReverseClientConfig();
+        public static final BloodflowReverseClientConfig CONFIG = new BloodflowReverseClientConfig();
 
-        private static final class BloodflowReverseClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
+        public static final class BloodflowReverseClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
+            private BloodflowReverseClientConfig() {
+            }
         }
 
         public static void reverseBloodflow() {
@@ -70,6 +72,7 @@ public class BloodflowReverse extends Skill {
     }
 
     public static final class Server {
+        @SuppressWarnings("resource")
         public static void reverseBloodflow(ServerPlayer player) {
             HitResult hitResult = player.pick(1, 1, false);
             List<LivingEntity> entityList = player.level().getEntitiesOfClass(LivingEntity.class,

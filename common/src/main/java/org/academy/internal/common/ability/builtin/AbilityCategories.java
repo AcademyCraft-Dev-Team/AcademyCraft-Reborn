@@ -10,7 +10,7 @@ import org.academy.internal.common.ability.builtin.teleport.Teleport;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AcademyCraftAbilityCategories {
+public class AbilityCategories {
     public static final List<AbilityCategory> ABILITY_CATEGORY_LIST = new ArrayList<>();
 
     static {
@@ -21,6 +21,6 @@ public class AcademyCraftAbilityCategories {
         ABILITY_CATEGORY_LIST.add(Meltdowner.INSTANCE);
     }
 
-    private AcademyCraftAbilityCategories() {
+    private AbilityCategories() {
     }
 }

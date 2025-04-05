@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
 
-public class AcademyCraftWorldData {
+public class WorldData {
     @SerializedName("players")
     private final Map<UUID, Player<? extends Player.SkillData>> players = new HashMap<>();
 
@@ -119,7 +119,7 @@ public class AcademyCraftWorldData {
                 return false;
             }
 
-            Field[] fields = AcademyCraftWorldData.class.getDeclaredFields();
+            Field[] fields = WorldData.class.getDeclaredFields();
 
             return GsonUtil.isValidField(jsonObject, fields);
         } catch (IOException e) {
@@ -127,10 +127,10 @@ public class AcademyCraftWorldData {
         }
     }
 
-    public static AcademyCraftWorldData getWorldData(File file) {
+    public static WorldData getWorldData(File file) {
         final Gson gson = new GsonBuilder().setPrettyPrinting().create();
         if (!isValidFile(file)) {
-            AcademyCraftWorldData worldData = new AcademyCraftWorldData();
+            WorldData worldData = new WorldData();
             AcademyCraft.LOGGER.info("Creating new world data file.");
             try (FileWriter fileWriter = new FileWriter(file)) {
                 gson.toJson(worldData, fileWriter);
@@ -141,21 +141,21 @@ public class AcademyCraftWorldData {
         }
 
         try (FileReader reader = new FileReader(file)) {
-            return gson.fromJson(reader, AcademyCraftWorldData.class);
+            return gson.fromJson(reader, WorldData.class);
         } catch (IOException e) {
             throw new RuntimeException("Failed to read world data file", e);
         }
     }
 
     public static void saveData() {
-        if (AcademyCraftServer.academyCraftWorldData == null) {
+        if (AcademyCraftServer.worldData == null) {
             return;
         }
         final Gson gson = new GsonBuilder().setPrettyPrinting().create();
         final File configFile = AcademyCraftServer.worldDataFile;
 
         try (FileWriter fileWriter = new FileWriter(configFile)) {
-            gson.toJson(AcademyCraftServer.academyCraftWorldData, fileWriter);
+            gson.toJson(AcademyCraftServer.worldData, fileWriter);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save world data", e);
         }

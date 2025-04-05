@@ -5,7 +5,7 @@ import org.academy.api.common.curriculum.Curriculum;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AcademyCraftCurriculums {
+public class Curriculums {
     public static final List<Curriculum> CURRICULUM_LIST = new ArrayList<>();
 
     static {
@@ -13,6 +13,6 @@ public class AcademyCraftCurriculums {
         CURRICULUM_LIST.add(ComputingPowerRecoverySpeedCurriculum.INSTANCE);
     }
 
-    private AcademyCraftCurriculums() {
+    private Curriculums() {
     }
 }

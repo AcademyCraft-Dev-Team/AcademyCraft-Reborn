@@ -1,7 +1,6 @@
 package org.academy.forge;
 
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -28,10 +27,10 @@ import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraft
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
 import org.academy.forge.internal.common.world.level.block.entity.forge.AcademyCraftBlockEntityTypesForge;
 import org.academy.forge.internal.common.world.level.block.forge.AcademyCraftBlocksForge;
-import org.academy.internal.client.renderer.blockentity.AcademyCraftBlockEntityRenderers;
+import org.academy.internal.client.renderer.blockentity.BlockEntityRenderers;
 import org.academy.internal.client.renderer.entity.AcademyCraftEntityRenderers;
 import org.academy.internal.client.ui.hud.AcademyCraftHUDSystem;
-import org.academy.internal.common.ability.builtin.AcademyCraftAbilityCategories;
+import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
@@ -93,8 +92,8 @@ public class AcademyCraftRegisterForge {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void registerBlockEntityRenderer() {
         AcademyCraftBlockEntityRenderersForge.init();
-        for (BlockEntityType<?> blockEntityType : AcademyCraftBlockEntityRenderers.BLOCK_ENTITY_RENDERERS.keySet()) {
-            BlockEntityRenderers.register(blockEntityType, context -> (BlockEntityRenderer) AcademyCraftBlockEntityRenderers.BLOCK_ENTITY_RENDERERS.get(blockEntityType));
+        for (BlockEntityType<?> blockEntityType : BlockEntityRenderers.BLOCK_ENTITY_RENDERERS.keySet()) {
+            net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(blockEntityType, context -> (BlockEntityRenderer) BlockEntityRenderers.BLOCK_ENTITY_RENDERERS.get(blockEntityType));
         }
     }
 
@@ -118,7 +117,7 @@ public class AcademyCraftRegisterForge {
     }
 
     private static void registerAbilityCategory() {
-        for (AbilityCategory abilityCategory : AcademyCraftAbilityCategories.ABILITY_CATEGORY_LIST) {
+        for (AbilityCategory abilityCategory : AbilityCategories.ABILITY_CATEGORY_LIST) {
             AbilitySystem.registerAbilityCategory(abilityCategory);
         }
     }
