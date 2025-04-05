@@ -17,7 +17,7 @@ public class RadioFrequencyEnergyOutputBridgeBlockEntity extends BlockEntity {
     };
 
     public RadioFrequencyEnergyOutputBridgeBlockEntity(BlockPos pos, BlockState blockState) {
-        super(AcademyCraftBlockEntityTypesFabric.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE, pos, blockState);
+        super(BlockEntityTypesFabric.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE, pos, blockState);
     }
 
     @Override

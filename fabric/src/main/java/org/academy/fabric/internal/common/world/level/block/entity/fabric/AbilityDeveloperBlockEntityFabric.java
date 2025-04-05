@@ -6,7 +6,7 @@ import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBloc
 
 public class AbilityDeveloperBlockEntityFabric extends AbilityDeveloperBlockEntity {
     public AbilityDeveloperBlockEntityFabric(BlockPos pos, BlockState blockState) {
-        super(AcademyCraftBlockEntityTypesFabric.ABILITY_DEVELOPER, pos, blockState);
+        super(BlockEntityTypesFabric.ABILITY_DEVELOPER, pos, blockState);
         if (isMain()) {
             setMainPos(pos);
         }
