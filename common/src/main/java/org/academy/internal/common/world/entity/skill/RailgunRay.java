@@ -20,6 +20,11 @@ public class RailgunRay extends Entity {
         super(entityType, level);
     }
 
+    @Override
+    public boolean ignoreExplosion() {
+        return true;
+    }
+
     @SuppressWarnings("resource")
     @Override
     public void tick() {

@@ -35,11 +35,8 @@ public class HighSpeedElectronBeam extends Entity {
     }
 
     @Override
-    public void push(double x, double y, double z) {
-    }
-
-    @Override
-    public void push(@NotNull Entity entity) {
+    public boolean ignoreExplosion() {
+        return true;
     }
 
     @Override

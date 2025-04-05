@@ -22,7 +22,7 @@ import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
-import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.jetbrains.annotations.NotNull;
@@ -85,7 +85,7 @@ public class Railgun extends Skill {
             if (computingPower < 100) {
                 return;
             }
-            EntityType<?> targetEntity = AcademyCraftEntityTypes.THROWN_COIN_ENTITY_TYPE;
+            EntityType<?> targetEntity = EntityTypes.THROWN_COIN_ENTITY_TYPE;
             Vec3 lookVec = player.getLookAngle().scale(2);
             BlockPos pos = new BlockPos((int) (lookVec.x + player.getX()), (int) (lookVec.y + player.getEyeY()), (int) (lookVec.z + player.getZ()));
 
@@ -100,7 +100,7 @@ public class Railgun extends Skill {
                 coin.setFired(true);
                 coin.damage = computingPower;
                 coin.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 10F, 0);
-                RailgunRay railgunRay = new RailgunRay(AcademyCraftEntityTypes.RAILGUN_RAY_ENTITY_TYPE, player.level());
+                RailgunRay railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY_ENTITY_TYPE, player.level());
                 railgunRay.setPos(player.getEyePosition().add(0, -0.5, 0));
                 railgunRay.setYRot(player.getYRot());
                 railgunRay.setXRot(player.getXRot());

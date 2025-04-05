@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import org.academy.AcademyCraft;
@@ -21,7 +22,8 @@ public class StormWingEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new StormWingEffectRenderer();
     public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/skill/effect/accelerator/tornado_ring.png");
     private static final RandomSource RAND = RandomSource.create();
-    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90));
+    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90)).translate(0,0.25f,0);
+    private static final RenderType RENDER_TYPE = RenderUtil.RingRenderer.RING_RENDER_TYPE.apply(TEXTURE);
 
     // --- 参数: 平滑稳定且具有复杂性 ---
     private static final int NUM_RINGS = 32;                  // 环的数量
@@ -55,7 +57,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final float FUNNEL_EXPONENT = 1.75F;             // 漏斗半径随高度变化的指数 (控制形状陡峭程度)
 
     // --- 外观 ---
-    private static final float BASE_ALPHA = 0.65f;                  // 基础透明度
+    private static final float BASE_ALPHA = 0.75f;                  // 基础透明度
     private static final float BASE_RING_WIDTH = 0.075f;          // 基础环带宽度
     public static final int RING_SEGMENTS = 16;                  // 环渲染的分段数 (用于顶点缓存)
 
@@ -87,8 +89,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final double[] warpedYBuffer = new double[1];          // 用于存储领域扭曲后的Y坐标
 
     // --- 顶点缓冲区缓存 ---
-    // 缓存一个标准环的顶点 (半径=1, 高度=1, 分段数=RING_SEGMENTS)
-    // 稍后我们将使用 PoseStack 来缩放它
     private static final int CACHED_RING_SEGMENTS = RING_SEGMENTS;
     private static final float[][][] CACHED_VERTICAL_VERTEX_BUFFER = RenderUtil.RingRenderer.getVerticalVertexBuffer(1.0f, 1.0f, CACHED_RING_SEGMENTS);
 
@@ -293,7 +293,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
         }
         poseStack.pushPose(); // 保存当前姿态栈状态
         poseStack.mulPoseMatrix(BASE_MATRIX); // 应用基础变换，使 Z 轴朝上
-        VertexConsumer vertexConsumer = buffer.getBuffer(RenderUtil.RingRenderer.RING_RENDER_TYPE.apply(TEXTURE)); // 获取顶点消费者
+        VertexConsumer vertexConsumer = buffer.getBuffer(RENDER_TYPE); // 获取顶点消费者
 
         // --- 渲染四个龙卷风实例 ---
         // 每个实例应用不同的旋转，并传入不同的时间偏移量
