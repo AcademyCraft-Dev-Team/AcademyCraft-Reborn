@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.world.entity.AcademyCraftEntityTypes;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
@@ -99,7 +99,7 @@ public class LevelUtil {
 
             List<Entity> entities = serverLevel.getEntities(null, area);
             for (Entity entity : entities) {
-                if (entity.getType() == AcademyCraftEntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE) continue;
+                if (entity.getType() == EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE) continue;
 
                 if (entity.position().distanceToSqr(currentPos) <= sizeSquared) {
                     if (entity instanceof EnderDragon enderDragon) {
