@@ -16,7 +16,7 @@ import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
+import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
 
 public class AbilitySystemServer {
-    public static Map<UUID, AcademyCraftWorldData.Player<? extends AcademyCraftWorldData.Player.SkillData>> playerMap;
+    public static Map<UUID, WorldData.Player<? extends WorldData.Player.SkillData>> playerMap;
     private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
     public static volatile MinecraftServer minecraftServer;
@@ -34,7 +34,7 @@ public class AbilitySystemServer {
 
     public static void init(final MinecraftServer server) {
         minecraftServer = server;
-        playerMap = AcademyCraftServer.academyCraftWorldData.getPlayers();
+        playerMap = AcademyCraftServer.worldData.getPlayers();
         for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initServer(server);
             for (Skill skill : abilityCategory.skillList) {
@@ -123,12 +123,12 @@ public class AbilitySystemServer {
 
     public static final class MinecraftServerThread {
         public static void initPlayer(ServerPlayer player) {
-            if (AcademyCraftServer.academyCraftWorldData == null) {
+            if (AcademyCraftServer.worldData == null) {
                 return;
             }
             if (!playerMap.containsKey(player.getUUID())) {
-                AcademyCraftWorldData.Player<AcademyCraftWorldData.Player.SkillData> data =
-                        new AcademyCraftWorldData.Player<>();
+                WorldData.Player<WorldData.Player.SkillData> data =
+                        new WorldData.Player<>();
                 data.setLevel(0);
 
                 MathUtil.WeightedRandom weightedRandom = new MathUtil.WeightedRandom();
@@ -222,6 +222,23 @@ public class AbilitySystemServer {
         playerMap.get(uuid).setComputingPowerRecoverySpeed(speed);
     }
 
+    /**
+     *  You must check return.
+     */
+    public static float getPlayerAdditionalComputingPower(UUID uuid) {
+        if (!playerMap.containsKey(uuid)) {
+            return -1;
+        } else {
+            return LIVE_PLAYER_MAP.get(uuid).additionalComputingPower;
+        }
+    }
+
+    public static void setPlayerAdditionalComputingPower(UUID uuid, float power) {
+        if (playerMap.containsKey(uuid)) {
+            LIVE_PLAYER_MAP.get(uuid).additionalComputingPower = power;
+        }
+    }
+
     public static float getDamageMultiplier() {
         return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();
     }
@@ -245,11 +262,12 @@ public class AbilitySystemServer {
 
     public static class Player {
         public final UUID uuid;
-        public final AcademyCraftWorldData.Player<? extends AcademyCraftWorldData.Player.SkillData> data;
+        public float additionalComputingPower;
+        public final WorldData.Player<? extends WorldData.Player.SkillData> data;
         private final Consumer<Packet<?>> packetConsumer;
         public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
 
-        public Player(final UUID uuid, final AcademyCraftWorldData.Player<? extends AcademyCraftWorldData.Player.SkillData> data, final Consumer<Packet<?>> packetConsumer) {
+        public Player(final UUID uuid, final WorldData.Player<? extends WorldData.Player.SkillData> data, final Consumer<Packet<?>> packetConsumer) {
             this.uuid = uuid;
             this.data = data;
             this.packetConsumer = packetConsumer;

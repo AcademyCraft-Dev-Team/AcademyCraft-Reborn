@@ -3,7 +3,7 @@ package org.academy.mixin;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
+import org.academy.internal.server.world.level.storage.WorldData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -22,6 +22,6 @@ public class ServerGamePacketListenerImplMixin {
     private void onInit(CallbackInfo info) {
         academyCraft$instance = (ServerGamePacketListenerImpl) (Object) this;
         AbilitySystemServer.MinecraftServerThread.initPlayer(player);
-        AcademyCraftWorldData.saveData();
+        WorldData.saveData();
     }
 }

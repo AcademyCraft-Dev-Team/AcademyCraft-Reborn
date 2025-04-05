@@ -9,16 +9,16 @@ import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftB
 import org.academy.internal.common.world.level.block.entity.AcademyCraftBlockEntityTypes;
 import team.reborn.energy.api.EnergyStorage;
 
-public class AcademyCraftBlockEntityTypesFabric {
+public class BlockEntityTypesFabric {
     public static final BlockEntityType<AbilityDeveloperBlockEntityFabric> ABILITY_DEVELOPER = BlockEntityType.Builder.of(AbilityDeveloperBlockEntityFabric::new, AcademyCraftBlocksFabric.ABILITY_DEVELOPER_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "ability_developer"));
     public static final BlockEntityType<RadioFrequencyEnergyOutputBridgeBlockEntity> RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE = BlockEntityType.Builder.of(RadioFrequencyEnergyOutputBridgeBlockEntity::new, AcademyCraftBlocksFabric.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "radio_frequency_energy_output_bridge"));
 
     public static void init() {
         AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer"), ABILITY_DEVELOPER);
         AcademyCraftBlockEntityTypes.BLOCK_ENTITY_TYPES.put(new ResourceLocation(AcademyCraft.MOD_ID, "radio_frequency_energy_output_bridge"), RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE);
-        EnergyStorage.SIDED.registerForBlockEntity((radioFrequencyEnergyOutputBridgeBlockEntity, direction) -> radioFrequencyEnergyOutputBridgeBlockEntity.energyStorage, AcademyCraftBlockEntityTypesFabric.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE);
+        EnergyStorage.SIDED.registerForBlockEntity((radioFrequencyEnergyOutputBridgeBlockEntity, direction) -> radioFrequencyEnergyOutputBridgeBlockEntity.energyStorage, BlockEntityTypesFabric.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE);
     }
 
-    private AcademyCraftBlockEntityTypesFabric() {
+    private BlockEntityTypesFabric() {
     }
 }

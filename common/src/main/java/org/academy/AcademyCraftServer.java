@@ -5,13 +5,13 @@ import net.minecraft.world.level.storage.LevelResource;
 import org.academy.api.common.command.CommandManager;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.academy.internal.server.world.level.storage.AcademyCraftWorldData;
+import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.io.File;
 
 public class AcademyCraftServer {
     public static AcademyCraftServerConfig serverConfig;
-    public static AcademyCraftWorldData academyCraftWorldData;
+    public static WorldData worldData;
     public static File serverConfigFile;
     public static File worldDataFile;
 
@@ -21,7 +21,7 @@ public class AcademyCraftServer {
         AcademyCraft.checkFile(serverConfigFile);
         AcademyCraft.checkFile(worldDataFile);
         serverConfig = new AcademyCraftServerConfig().loadConfig(serverConfigFile);
-        academyCraftWorldData = AcademyCraftWorldData.getWorldData(worldDataFile);
+        worldData = WorldData.getWorldData(worldDataFile);
         AbilitySystemServer.init(server);
         CommandManager.Server.registerPacketHandler();
         AbilityDeveloperBlockEntity.intiServer();
