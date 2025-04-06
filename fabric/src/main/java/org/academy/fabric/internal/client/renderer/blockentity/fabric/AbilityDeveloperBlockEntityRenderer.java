@@ -11,8 +11,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
-import org.academy.fabric.internal.common.world.level.block.fabric.AbilityDeveloperBlockFabric;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.AbilityDeveloperBlockEntityFabric;
+import org.academy.fabric.internal.common.world.level.block.fabric.AbilityDeveloperBlockFabric;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 

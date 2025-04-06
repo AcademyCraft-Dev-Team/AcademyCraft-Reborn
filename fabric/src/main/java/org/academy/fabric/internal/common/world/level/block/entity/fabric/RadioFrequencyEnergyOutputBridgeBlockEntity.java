@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import team.reborn.energy.api.base.SimpleEnergyStorage;
 
 public class RadioFrequencyEnergyOutputBridgeBlockEntity extends BlockEntity {
-    public SimpleEnergyStorage energyStorage = new SimpleEnergyStorage(40000,32,32){
+    public SimpleEnergyStorage energyStorage = new SimpleEnergyStorage(40000, 32, 32) {
         @SuppressWarnings("UnstableApiUsage")
         @Override
         protected void onFinalCommit() {

@@ -10,16 +10,16 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import org.academy.api.common.ability.AbilitySystem;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.util.GameUtil;
-import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.fabric.internal.client.renderer.blockentity.fabric.BlockEntityRenderersFabric;
 import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.BlockEntityTypesFabric;
 import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftBlocksFabric;
-import org.academy.internal.client.renderer.blockentity.BlockEntityRenderers;
+import org.academy.internal.client.render.renderer.blockentity.BlockEntityRenderers;
+import org.academy.internal.client.render.renderer.entity.EntityRenderers;
 import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -29,6 +29,9 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 
 public class AcademyCraftRegisterFabric {
+    private AcademyCraftRegisterFabric() {
+    }
+
     public static void register() {
         registerItem();
         registerBlock();
@@ -107,8 +110,5 @@ public class AcademyCraftRegisterFabric {
         for (AbilityCategory abilityCategory : AbilityCategories.ABILITY_CATEGORY_LIST) {
             AbilitySystem.registerAbilityCategory(abilityCategory);
         }
-    }
-
-    private AcademyCraftRegisterFabric() {
     }
 }

@@ -13,11 +13,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public class ClientPacketListenerMixin {
+    @Unique
+    ClientPacketListener academyCraft$instance;
     @Shadow
     @Final
     private Connection connection;
-    @Unique
-    ClientPacketListener academyCraft$instance;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {

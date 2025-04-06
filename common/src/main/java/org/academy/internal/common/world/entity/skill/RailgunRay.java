@@ -8,7 +8,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
-// Only for render ray.
 public class RailgunRay extends Entity {
     public static final int defaultLifeTicks = 8;
     public int currentLifetime = defaultLifeTicks;
@@ -18,6 +17,20 @@ public class RailgunRay extends Entity {
 
     public RailgunRay(EntityType<?> entityType, Level level) {
         super(entityType, level);
+    }
+
+    @Override
+    public boolean isAttackable() {
+        return false;
+    }
+
+    @Override
+    protected void doWaterSplashEffect() {
+    }
+
+    @Override
+    public boolean displayFireAnimation() {
+        return false;
     }
 
     @Override

@@ -21,88 +21,6 @@ public class WorldData {
     @SerializedName("players")
     private final Map<UUID, Player<? extends Player.SkillData>> players = new HashMap<>();
 
-    public Map<UUID, Player<? extends Player.SkillData>> getPlayers() {
-        return players;
-    }
-
-    public static class Player<SD extends Player.SkillData> {
-        @SerializedName("abilityCategory")
-        private String abilityCategory;
-
-        public final String getAbilityCategory() {
-            return abilityCategory;
-        }
-
-        public final void setAbilityCategory(String abilityCategory) {
-            this.abilityCategory = abilityCategory;
-        }
-
-        @SerializedName("skills")
-        private final Set<String> skills = new HashSet<>();
-
-        public final Set<String> getSkills() {
-            return skills;
-        }
-
-        @SerializedName("skillData")
-        private final Map<String, SD> skillData = new HashMap<>();
-
-        public final Map<String, SD> getSkillData() {
-            return skillData;
-        }
-
-        @SerializedName("level")
-        private volatile int level;
-
-        public final int getLevel() {
-            return level;
-        }
-
-        public final void setLevel(int level) {
-            this.level = level;
-        }
-
-        @SerializedName("computingPower")
-        private volatile float computingPower = 0f;
-
-        public final float getComputingPower() {
-            return computingPower;
-        }
-
-        public final void setComputingPower(float computingPower) {
-            if (Float.isNaN(computingPower) || Float.isInfinite(computingPower)) {
-                AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaxComputingPower(), 0));
-                return;
-            }
-            AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaxComputingPower(), computingPower));
-        }
-
-        @SerializedName("maxComputingPower")
-        private volatile float maxComputingPower = 100f;
-
-        public float getMaxComputingPower() {
-            return maxComputingPower;
-        }
-
-        public void setMaxComputingPower(float maxComputingPower) {
-            AbilitySystemServer.addTask(() -> this.maxComputingPower = maxComputingPower);
-        }
-
-        @SerializedName("computingPowerRecoverySpeed")
-        private volatile float computingPowerRecoverySpeed = 1f;
-
-        public float getComputingPowerRecoverySpeed() {
-            return computingPowerRecoverySpeed;
-        }
-
-        public void setComputingPowerRecoverySpeed(float computingPowerRecoverySpeed) {
-            AbilitySystemServer.addTask(() -> this.computingPowerRecoverySpeed = computingPowerRecoverySpeed);
-        }
-
-        public static abstract class SkillData {
-        }
-    }
-
     private static boolean isValidFile(File file) {
         final Gson gson = new GsonBuilder().create();
 
@@ -158,6 +76,82 @@ public class WorldData {
             gson.toJson(AcademyCraftServer.worldData, fileWriter);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save world data", e);
+        }
+    }
+
+    public Map<UUID, Player<? extends Player.SkillData>> getPlayers() {
+        return players;
+    }
+
+    public static class Player<SD extends Player.SkillData> {
+        @SerializedName("skills")
+        private final Set<String> skills = new HashSet<>();
+        @SerializedName("skillData")
+        private final Map<String, SD> skillData = new HashMap<>();
+        @SerializedName("abilityCategory")
+        private String abilityCategory;
+        @SerializedName("level")
+        private volatile int level;
+        @SerializedName("computingPower")
+        private volatile float computingPower = 0f;
+        @SerializedName("maxComputingPower")
+        private volatile float maxComputingPower = 100f;
+        @SerializedName("computingPowerRecoverySpeed")
+        private volatile float computingPowerRecoverySpeed = 1f;
+
+        public final String getAbilityCategory() {
+            return abilityCategory;
+        }
+
+        public final void setAbilityCategory(String abilityCategory) {
+            this.abilityCategory = abilityCategory;
+        }
+
+        public final Set<String> getSkills() {
+            return skills;
+        }
+
+        public final Map<String, SD> getSkillData() {
+            return skillData;
+        }
+
+        public final int getLevel() {
+            return level;
+        }
+
+        public final void setLevel(int level) {
+            this.level = level;
+        }
+
+        public final float getComputingPower() {
+            return computingPower;
+        }
+
+        public final void setComputingPower(float computingPower) {
+            if (Float.isNaN(computingPower) || Float.isInfinite(computingPower)) {
+                AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaxComputingPower(), 0));
+                return;
+            }
+            AbilitySystemServer.addTask(() -> this.computingPower = Math.min(getMaxComputingPower(), computingPower));
+        }
+
+        public float getMaxComputingPower() {
+            return maxComputingPower;
+        }
+
+        public void setMaxComputingPower(float maxComputingPower) {
+            AbilitySystemServer.addTask(() -> this.maxComputingPower = maxComputingPower);
+        }
+
+        public float getComputingPowerRecoverySpeed() {
+            return computingPowerRecoverySpeed;
+        }
+
+        public void setComputingPowerRecoverySpeed(float computingPowerRecoverySpeed) {
+            AbilitySystemServer.addTask(() -> this.computingPowerRecoverySpeed = computingPowerRecoverySpeed);
+        }
+
+        public static abstract class SkillData {
         }
     }
 }

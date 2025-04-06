@@ -1,6 +1,5 @@
-package org.academy.internal.client.ui;
+package org.academy.internal.client.render.ui;
 
-import icyllis.arc3d.core.Color;
 import icyllis.modernui.R;
 import icyllis.modernui.annotation.Nullable;
 import icyllis.modernui.core.Context;
@@ -9,8 +8,6 @@ import icyllis.modernui.core.Looper;
 import icyllis.modernui.fragment.Fragment;
 import icyllis.modernui.fragment.FragmentContainerView;
 import icyllis.modernui.fragment.FragmentTransaction;
-import icyllis.modernui.graphics.*;
-import icyllis.modernui.graphics.drawable.Drawable;
 import icyllis.modernui.mc.ui.ThemeControl;
 import icyllis.modernui.util.ColorStateList;
 import icyllis.modernui.util.DataSet;
@@ -29,16 +26,6 @@ import java.time.format.DateTimeFormatter;
 import static icyllis.modernui.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
 public class PhoneFragment extends Fragment {
-    private int id_container;
-    private int homeId;
-    private LinearLayout root;
-    private RadioGroup mainButtonTab;
-    private FrameLayout infoLayout;
-    private TextView time;
-    private FragmentContainerView containerView;
-    private Handler handler;
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-
     private static final ColorStateList NAV_BUTTON_COLOR = new ColorStateList(
             new int[][]{
                     new int[]{R.attr.state_checked},
@@ -49,7 +36,15 @@ public class PhoneFragment extends Fragment {
                     0xFFE0E0E0, // hovered
                     0xFFB4B4B4} // other
     );
-
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private int id_container;
+    private int homeId;
+    private LinearLayout root;
+    private RadioGroup mainButtonTab;
+    private FrameLayout infoLayout;
+    private TextView time;
+    private FragmentContainerView containerView;
+    private Handler handler;
     private final Runnable updateTimeRunnable = new Runnable() {
         @Override
         public void run() {

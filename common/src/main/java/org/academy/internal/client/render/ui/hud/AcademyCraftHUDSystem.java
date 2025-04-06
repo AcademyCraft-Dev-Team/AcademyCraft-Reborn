@@ -1,4 +1,4 @@
-package org.academy.internal.client.ui.hud;
+package org.academy.internal.client.render.ui.hud;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -93,6 +93,9 @@ public class AcademyCraftHUDSystem {
 
     public static float smoothProgress;
 
+    private AcademyCraftHUDSystem() {
+    }
+
     public static void render(GuiGraphics guiGraphics, float partialTicks) {
         if (AbilitySystemClient.isActiveHUD()) {
             AcademyCraftHUDSystem.renderComputingPowerBarBackground(guiGraphics);
@@ -146,7 +149,7 @@ public class AcademyCraftHUDSystem {
         } else {
             progress = 0;
         }
-        smoothProgress = MathUtil.lerp(smoothProgress, progress, 0.125f);
+        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, 0.125f);
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
         final float width = COMPUTING_POWER_BAR_WIDTH * scale;
@@ -219,8 +222,5 @@ public class AcademyCraftHUDSystem {
         vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
         // Right Top
         vertexConsumer.vertex(rightTopX, rightTopY, z).uv(1, 0).endVertex();
-    }
-
-    private AcademyCraftHUDSystem() {
     }
 }

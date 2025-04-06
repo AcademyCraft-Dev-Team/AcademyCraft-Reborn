@@ -10,12 +10,19 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ConsoleSource {
-    private final List<String> HISTORY = new CopyOnWriteArrayList<>();
-    private final StringBuilder historyContent = new StringBuilder();
     public final BlockPos mainPos;
     public final Handler handler;
     public final ScrollView scrollView;
     public final TextView historyTextView;
+    private final List<String> HISTORY = new CopyOnWriteArrayList<>();
+    private final StringBuilder historyContent = new StringBuilder();
+
+    public ConsoleSource(BlockPos blockPos, Handler handler, ScrollView scrollView, TextView historyTextView) {
+        this.mainPos = blockPos;
+        this.handler = handler;
+        this.scrollView = scrollView;
+        this.historyTextView = historyTextView;
+    }
 
     public void addHistory(String history) {
         HISTORY.add(history);
@@ -31,7 +38,7 @@ public class ConsoleSource {
         update();
     }
 
-    public void update(){
+    public void update() {
         handler.post(() -> {
             historyContent.setLength(0);
             for (String entry : HISTORY) {
@@ -40,12 +47,5 @@ public class ConsoleSource {
             historyTextView.setText(historyContent.toString());
             scrollView.post(() -> scrollView.fullScroll(ScrollView.FOCUS_DOWN));
         });
-    }
-
-    public ConsoleSource(BlockPos blockPos,Handler handler, ScrollView scrollView, TextView historyTextView) {
-        this.mainPos = blockPos;
-        this.handler = handler;
-        this.scrollView = scrollView;
-        this.historyTextView = historyTextView;
     }
 }

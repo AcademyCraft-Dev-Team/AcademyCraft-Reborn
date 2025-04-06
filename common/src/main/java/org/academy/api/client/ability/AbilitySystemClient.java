@@ -20,10 +20,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public final class AbilitySystemClient {
-    private static volatile boolean activeHUD = false;
-    private static volatile float computingPower;
-    private static volatile float maximumComputingPower;
-    public static volatile AbilityCategory category;
     public static final Set<Skill> SKILLS = new HashSet<>();
     public static final String KEY_NAME = "activate_ability";
     public static final InputSystem.InputPair KEY = AcademyCraftClient.CLIENT_CONFIG.getKey(
@@ -37,6 +33,10 @@ public final class AbilitySystemClient {
                     )
             )
     );
+    public static volatile AbilityCategory category;
+    private static volatile boolean activeHUD = false;
+    private static volatile float computingPower;
+    private static volatile float maximumComputingPower;
 
     public static void initClient() {
         registerPacketHandler();

@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
 
 public class AbilitySystemServer {
-    public static Map<UUID, WorldData.Player<? extends WorldData.Player.SkillData>> playerMap;
-    private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
+    private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
+    public static Map<UUID, WorldData.Player<? extends WorldData.Player.SkillData>> playerMap;
     public static volatile MinecraftServer minecraftServer;
     public static volatile ScheduledFuture<?> scheduledFuture;
 
@@ -50,6 +50,107 @@ public class AbilitySystemServer {
                     }
                 }, 0, 50, TimeUnit.MILLISECONDS
         );
+    }
+
+    public static void addAllPlayerSyncTask(final UUID uuid) {
+        for (SyncType syncType : SyncType.values()) {
+            addPlayerSyncTask(uuid, syncType);
+        }
+    }
+
+    public static AbilityCategory getPlayerAbilityCategory(UUID uuid) {
+        return ABILITY_CATEGORY_MAP.get(playerMap.get(uuid).getAbilityCategory());
+    }
+
+    public static void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        playerMap.get(uuid).setAbilityCategory(abilityCategory.name);
+        addPlayerSyncTask(uuid, SyncType.ABILITY_CATEGORY);
+    }
+
+    public static Set<String> getPlayerSkills(UUID uuid) {
+        return playerMap.get(uuid).getSkills();
+    }
+
+    public static void addPlayerSkill(UUID uuid, String skill) {
+        playerMap.get(uuid).getSkills().add(skill);
+        addPlayerSyncTask(uuid, SyncType.SKILLS);
+    }
+
+    public static void removePlayerSkill(UUID uuid, String skill) {
+        playerMap.get(uuid).getSkills().remove(skill);
+        addPlayerSyncTask(uuid, SyncType.SKILLS);
+    }
+
+    public static int getPlayerLevel(UUID uuid) {
+        return playerMap.get(uuid).getLevel();
+    }
+
+    public static void setPlayerLevel(UUID uuid, int level) {
+        playerMap.get(uuid).setLevel(level);
+    }
+
+    public static float getPlayerComputingPower(UUID uuid) {
+        return playerMap.get(uuid).getComputingPower();
+    }
+
+    public static void setPlayerComputingPower(UUID uuid, float power) {
+        playerMap.get(uuid).setComputingPower(power);
+        addPlayerSyncTask(uuid, SyncType.COMPUTING_POWER);
+    }
+
+    public static float getPlayerMaxComputingPower(UUID uuid) {
+        return playerMap.get(uuid).getMaxComputingPower();
+    }
+
+    public static void setPlayerMaxComputingPower(UUID uuid, float power) {
+        playerMap.get(uuid).setMaxComputingPower(power);
+        addPlayerSyncTask(uuid, SyncType.MAX_COMPUTING_POWER);
+    }
+
+    public static float getPlayerComputingPowerRecoverySpeed(UUID uuid) {
+        return playerMap.get(uuid).getComputingPowerRecoverySpeed();
+    }
+
+    public static void setPlayerComputingPowerRecoverySpeed(UUID uuid, float speed) {
+        playerMap.get(uuid).setComputingPowerRecoverySpeed(speed);
+    }
+
+    /**
+     * You must check return.
+     */
+    public static float getPlayerAdditionalComputingPower(UUID uuid) {
+        if (!playerMap.containsKey(uuid)) {
+            return -1;
+        } else {
+            return LIVE_PLAYER_MAP.get(uuid).additionalComputingPower;
+        }
+    }
+
+    public static void setPlayerAdditionalComputingPower(UUID uuid, float power) {
+        if (playerMap.containsKey(uuid)) {
+            LIVE_PLAYER_MAP.get(uuid).additionalComputingPower = power;
+        }
+    }
+
+    public static float getDamageMultiplier() {
+        return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();
+    }
+
+    public static void addPlayerSyncTask(final UUID uuid, final SyncType syncType) {
+        if (LIVE_PLAYER_MAP.containsKey(uuid)) {
+            LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
+        }
+    }
+
+    public static void addTask(Runnable runnable) {
+        RUNNABLE_LIST.add(runnable);
+    }
+
+    public enum SyncType {
+        COMPUTING_POWER,
+        MAX_COMPUTING_POWER,
+        ABILITY_CATEGORY,
+        SKILLS,
     }
 
     public static final class AbilitySystemServerThread {
@@ -159,113 +260,12 @@ public class AbilitySystemServer {
         }
     }
 
-    public static void addAllPlayerSyncTask(final UUID uuid) {
-        for (SyncType syncType : SyncType.values()) {
-            addPlayerSyncTask(uuid, syncType);
-        }
-    }
-
-    public static AbilityCategory getPlayerAbilityCategory(UUID uuid) {
-        return ABILITY_CATEGORY_MAP.get(playerMap.get(uuid).getAbilityCategory());
-    }
-
-    public static void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
-        playerMap.get(uuid).setAbilityCategory(abilityCategory.name);
-        addPlayerSyncTask(uuid, SyncType.ABILITY_CATEGORY);
-    }
-
-    public static Set<String> getPlayerSkills(UUID uuid) {
-        return playerMap.get(uuid).getSkills();
-    }
-
-    public static void addPlayerSkill(UUID uuid, String skill) {
-        playerMap.get(uuid).getSkills().add(skill);
-        addPlayerSyncTask(uuid, SyncType.SKILLS);
-    }
-
-    public static void removePlayerSkill(UUID uuid, String skill) {
-        playerMap.get(uuid).getSkills().remove(skill);
-        addPlayerSyncTask(uuid, SyncType.SKILLS);
-    }
-
-    public static int getPlayerLevel(UUID uuid) {
-        return playerMap.get(uuid).getLevel();
-    }
-
-    public static void setPlayerLevel(UUID uuid, int level) {
-        playerMap.get(uuid).setLevel(level);
-    }
-
-    public static float getPlayerComputingPower(UUID uuid) {
-        return playerMap.get(uuid).getComputingPower();
-    }
-
-    public static void setPlayerComputingPower(UUID uuid, float power) {
-        playerMap.get(uuid).setComputingPower(power);
-        addPlayerSyncTask(uuid, SyncType.COMPUTING_POWER);
-    }
-
-    public static float getPlayerMaxComputingPower(UUID uuid) {
-        return playerMap.get(uuid).getMaxComputingPower();
-    }
-
-    public static void setPlayerMaxComputingPower(UUID uuid, float power) {
-        playerMap.get(uuid).setMaxComputingPower(power);
-        addPlayerSyncTask(uuid, SyncType.MAX_COMPUTING_POWER);
-    }
-
-    public static float getPlayerComputingPowerRecoverySpeed(UUID uuid) {
-        return playerMap.get(uuid).getComputingPowerRecoverySpeed();
-    }
-
-    public static void setPlayerComputingPowerRecoverySpeed(UUID uuid, float speed) {
-        playerMap.get(uuid).setComputingPowerRecoverySpeed(speed);
-    }
-
-    /**
-     *  You must check return.
-     */
-    public static float getPlayerAdditionalComputingPower(UUID uuid) {
-        if (!playerMap.containsKey(uuid)) {
-            return -1;
-        } else {
-            return LIVE_PLAYER_MAP.get(uuid).additionalComputingPower;
-        }
-    }
-
-    public static void setPlayerAdditionalComputingPower(UUID uuid, float power) {
-        if (playerMap.containsKey(uuid)) {
-            LIVE_PLAYER_MAP.get(uuid).additionalComputingPower = power;
-        }
-    }
-
-    public static float getDamageMultiplier() {
-        return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();
-    }
-
-    public static void addPlayerSyncTask(final UUID uuid, final SyncType syncType) {
-        if (LIVE_PLAYER_MAP.containsKey(uuid)) {
-            LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
-        }
-    }
-
-    public static void addTask(Runnable runnable) {
-        RUNNABLE_LIST.add(runnable);
-    }
-
-    public enum SyncType {
-        COMPUTING_POWER,
-        MAX_COMPUTING_POWER,
-        ABILITY_CATEGORY,
-        SKILLS,
-    }
-
     public static class Player {
         public final UUID uuid;
-        public float additionalComputingPower;
         public final WorldData.Player<? extends WorldData.Player.SkillData> data;
-        private final Consumer<Packet<?>> packetConsumer;
         public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
+        private final Consumer<Packet<?>> packetConsumer;
+        public float additionalComputingPower;
 
         public Player(final UUID uuid, final WorldData.Player<? extends WorldData.Player.SkillData> data, final Consumer<Packet<?>> packetConsumer) {
             this.uuid = uuid;

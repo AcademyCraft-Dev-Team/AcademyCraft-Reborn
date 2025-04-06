@@ -31,9 +31,9 @@ public final class SelfTeleport extends Skill {
     public static final Skill INSTANCE = new SelfTeleport();
     public static final String KEY_NAME_START = "self_teleport.start";
     public static final String KEY_NAME_END = "self_teleport.end";
+    public static final float DISTANCE = 10F;
     public static InputSystem.InputPair KEY_START;
     public static InputSystem.InputPair KEY_END;
-    public static final float DISTANCE = 10F;
 
     private SelfTeleport() {
         super(SkillNames.SELF_TELEPORT, 2);
@@ -85,18 +85,6 @@ public final class SelfTeleport extends Skill {
         private static final Minecraft mc = Minecraft.getInstance();
         private static final ClientLevel level = mc.level;
         private static final LocalPlayer localPlayer = mc.player;
-
-        private static void start() {
-            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            RenderManager.RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.RENDERER);
-        }
-
-        private static void end() {
-            RenderManager.RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
-            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
-        }
-
         private static final RenderManager.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
             if (level != null && localPlayer != null) {
                 poseStack.pushPose();
@@ -115,5 +103,16 @@ public final class SelfTeleport extends Skill {
                 poseStack.popPose();
             }
         };
+
+        private static void start() {
+            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            RenderManager.RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.RENDERER);
+        }
+
+        private static void end() {
+            RenderManager.RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
+            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
+        }
     }
 }

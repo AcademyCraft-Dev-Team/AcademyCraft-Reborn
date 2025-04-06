@@ -51,18 +51,18 @@ public class SingleHighSpeedElectronBeam extends Skill {
     }
 
     public static final class Client {
-        public static InputSystem.InputPair KEY;
         public static final String KEY_NAME = "single_high_speed_electron_beam.shoot";
+        public static InputSystem.InputPair KEY;
 
         public static void handleKey() {
-     //       if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            //       if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }
 
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player) {
-     //       if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
+            //       if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final Level level = player.level();
             final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
 

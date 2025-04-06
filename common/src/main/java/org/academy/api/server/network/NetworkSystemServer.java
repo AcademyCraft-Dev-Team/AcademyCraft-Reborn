@@ -16,6 +16,9 @@ import java.util.function.Consumer;
 public class NetworkSystemServer {
     public static final Map<ResourceLocation, C2SPacketHandler> C2S_PACKET_HANDLER_MAP = new HashMap<>();
 
+    private NetworkSystemServer() {
+    }
+
     public static void registerC2SPacketHandler(ResourceLocation resourceLocation, C2SPacketHandler handler) {
         C2S_PACKET_HANDLER_MAP.put(resourceLocation, handler);
     }
@@ -73,8 +76,5 @@ public class NetworkSystemServer {
             }
             consumer.accept(args);
         });
-    }
-
-    private NetworkSystemServer() {
     }
 }

@@ -38,9 +38,9 @@ public class EntityTypes {
         TYPE_LIST.add(new Type<>(PLASMA_ENTITY_TYPE, "plasma"));
     }
 
-    public record Type<T extends Entity>(EntityType<T> entityType, String name) {
+    private EntityTypes() {
     }
 
-    private EntityTypes() {
+    public record Type<T extends Entity>(EntityType<T> entityType, String name) {
     }
 }

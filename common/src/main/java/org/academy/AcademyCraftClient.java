@@ -3,7 +3,7 @@ package org.academy;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.config.AcademyCraftClientConfig;
 import org.academy.api.client.config.SkillClientConfig;
-import org.academy.internal.client.ui.AbilityDeveloperFragment;
+import org.academy.internal.client.render.ui.AbilityDeveloperFragment;
 
 import java.io.File;
 

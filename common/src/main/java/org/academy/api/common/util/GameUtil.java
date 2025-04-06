@@ -3,6 +3,9 @@ package org.academy.api.common.util;
 import net.minecraft.client.Minecraft;
 
 public class GameUtil {
+    private GameUtil() {
+    }
+
     public static EnvType getEnvType() {
         try {
             Minecraft.class.getClasses();
@@ -10,9 +13,6 @@ public class GameUtil {
         } catch (Throwable throwable) {
             return EnvType.SERVER;
         }
-    }
-
-    private GameUtil() {
     }
 
     public enum EnvType {

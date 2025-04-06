@@ -1,4 +1,4 @@
-package org.academy.internal.client.renderer.entity;
+package org.academy.internal.client.render.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -30,7 +30,7 @@ public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
         RandomSource randomSource = RandomSource.create();
         randomSource.setSeed(42L);
         Matrix4f matrix4f = new Matrix4f();
-        entity.renderAngle = MathUtil.lerp(entity.renderAngle, entity.angle, partialTick);
+        entity.renderAngle = MathUtil.lerpStartEndFactor(entity.renderAngle, entity.angle, partialTick);
         matrix4f.rotateX(entity.renderAngle);
         poseStack.mulPoseMatrix(matrix4f);
         RenderUtil.BakedModelRenderer.render(poseStack, bakedModel, buffer, randomSource, false, packedLight, OverlayTexture.NO_OVERLAY);
