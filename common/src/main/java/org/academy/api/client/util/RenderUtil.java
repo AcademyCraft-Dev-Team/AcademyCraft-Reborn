@@ -78,9 +78,9 @@ public final class RenderUtil {
     public static final class RingRenderer {
         public static final Function<ResourceLocation, RenderType> RING_RENDER_TYPE = resourceLocation -> new RenderType.CompositeRenderType(
                 "ring_render_type",
-                DefaultVertexFormat.POSITION_COLOR_TEX,
+                DefaultVertexFormat.POSITION_TEX,
                 VertexFormat.Mode.QUADS,
-                256,
+                512,
                 false,
                 true,
                 RenderType.CompositeState.builder()
@@ -88,10 +88,10 @@ public final class RenderUtil {
                                 resourceLocation,
                                 false, false
                         ))
-                        .setShaderState(RenderStates.POSITION_COLOR_TEX_SHADER)
+                        .setShaderState(RenderStates.POSITION_TEX_SHADER)
                         .setCullState(RenderStates.NO_CULL)
+                        .setOutputState(ITEM_ENTITY_TARGET)
                         .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
-                        .setWriteMaskState(RenderStates.COLOR_WRITE)
                         .createCompositeState(false)
         );
 
@@ -143,38 +143,34 @@ public final class RenderUtil {
          * @param segments  Number of segments to approximate the circle.
          * @param texture   ResourceLocation of the texture to apply.
          */
-        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture, float red, float green, float blue, float alpha) {
+        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture) {
             float[][][] vertexBuffer = getVerticalVertexBuffer(radius, height, segments);
-            renderVerticalRing(poseStack, buffer, segments, vertexBuffer, texture, red, green, blue, alpha);
+            renderVerticalRing(poseStack, buffer, segments, vertexBuffer, texture);
         }
 
-        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, int segments, float[][][] vertexBuffer, ResourceLocation texture, float red, float green, float blue, float alpha) {
+        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, int segments, float[][][] vertexBuffer, ResourceLocation texture) {
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix = pose.pose();
             final VertexConsumer vertexConsumer = buffer.getBuffer(RING_RENDER_TYPE.apply(texture));
 
-            renderVerticalRing(matrix, vertexConsumer, segments, vertexBuffer, red, green, blue, alpha);
+            renderVerticalRing(matrix, vertexConsumer, segments, vertexBuffer);
         }
 
-        public static void renderVerticalRing(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
+        public static void renderVerticalRing(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer) {
             for (int i = 0; i < segments; i++) {
                 vertexConsumer.vertex(matrix, vertexBuffer[i][0][0], vertexBuffer[i][0][1], vertexBuffer[i][0][2])
-                        .color(red, green, blue, alpha)
                         .uv(vertexBuffer[i][0][3], 0)
                         .endVertex();
 
                 vertexConsumer.vertex(matrix, vertexBuffer[i][1][0], vertexBuffer[i][1][1], vertexBuffer[i][1][2])
-                        .color(red, green, blue, alpha)
                         .uv(vertexBuffer[i][1][3], 0)
                         .endVertex();
 
                 vertexConsumer.vertex(matrix, vertexBuffer[i][2][0], vertexBuffer[i][2][1], vertexBuffer[i][2][2])
-                        .color(red, green, blue, alpha)
                         .uv(vertexBuffer[i][2][3], 1)
                         .endVertex();
 
                 vertexConsumer.vertex(matrix, vertexBuffer[i][3][0], vertexBuffer[i][3][1], vertexBuffer[i][3][2])
-                        .color(red, green, blue, alpha)
                         .uv(vertexBuffer[i][3][3], 1)
                         .endVertex();
             }
@@ -192,6 +188,7 @@ public final class RenderUtil {
                 RenderType.CompositeState.builder()
                         .setShaderState(RenderStates.POSITION_COLOR_SHADER)
                         .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setOutputState(ITEM_ENTITY_TARGET)
                         .setCullState(RenderStates.NO_CULL)
                         .createCompositeState(false)
         );
@@ -264,6 +261,7 @@ public final class RenderUtil {
                 RenderType.CompositeState.builder()
                         .setShaderState(RenderStates.POSITION_COLOR_SHADER)
                         .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setOutputState(ITEM_ENTITY_TARGET)
                         .setCullState(RenderStates.NO_CULL)
                         .createCompositeState(false)
         );
@@ -339,6 +337,7 @@ public final class RenderUtil {
                         ))
                         .setShaderState(RenderStates.POSITION_TEX_SHADER)
                         .setCullState(RenderStates.NO_CULL)
+                        .setOutputState(ITEM_ENTITY_TARGET)
                         .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false)
         );
@@ -404,6 +403,7 @@ public final class RenderUtil {
                                 false,
                                 true
                         ))
+                        .setOutputState(ITEM_ENTITY_TARGET)
                         .setLightmapState(RenderStates.LIGHTMAP)
                         .setOverlayState(RenderStates.OVERLAY)
                         .createCompositeState(true)

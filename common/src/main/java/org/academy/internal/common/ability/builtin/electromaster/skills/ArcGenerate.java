@@ -65,7 +65,7 @@ public class ArcGenerate extends Skill {
         public static final ArcGenerateSKillConfig CONFIG = new ArcGenerateSKillConfig();
 
         public static void handler() {
-            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+         //   if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
         }
 
@@ -75,7 +75,7 @@ public class ArcGenerate extends Skill {
 
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
-            if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
+      //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower > 10) {
                 AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
