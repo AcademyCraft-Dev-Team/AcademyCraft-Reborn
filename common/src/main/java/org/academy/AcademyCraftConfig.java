@@ -22,103 +22,15 @@ import java.util.Map;
 public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
     @SerializedName("ability")
     private final Ability ability = new Ability();
+    @SerializedName("generic")
+    private final Generic generic = new Generic();
 
     public Ability getAbility() {
         return ability;
     }
 
-    @SerializedName("generic")
-    private final Generic generic = new Generic();
-
     public Generic getGeneric() {
         return generic;
-    }
-
-    public static class Ability {
-        @SerializedName("damageMultiplier")
-        private volatile float damageMultiplier = 1.0f;
-
-        public float getDamageMultiplier() {
-            return damageMultiplier;
-        }
-
-        public void setDamageMultiplier(float damageMultiplier) {
-            AbilitySystemServer.addTask(() -> this.damageMultiplier = damageMultiplier);
-        }
-
-        @SerializedName("cpRecoverSpeed")
-        private float cpRecoverSpeed;
-
-        @SerializedName("metalEntities")
-        private final Map<String, List<String>> metalEntities = new HashMap<>();
-
-        @SerializedName("metalBlocks")
-        private final Map<String, List<String>> metalBlocks = new HashMap<>();
-
-        @SerializedName("skills")
-        private final Map<String, Skill> skills = new HashMap<>();
-
-        public float getCpRecoverSpeed() {
-            return cpRecoverSpeed;
-        }
-
-        public Map<String, List<String>> getMetalEntities() {
-            return metalEntities;
-        }
-
-        public Map<String, List<String>> getMetalBlocks() {
-            return metalBlocks;
-        }
-
-        public Map<String, Skill> getSkills() {
-            return skills;
-        }
-
-        public void setCpRecoverSpeed(float cpRecoverSpeed) {
-            this.cpRecoverSpeed = cpRecoverSpeed;
-            AcademyCraft.saveConfig();
-        }
-
-        private Ability() {
-        }
-    }
-
-    public static class Generic {
-        @SerializedName("booleanMap")
-        private final Map<String, Boolean> booleanMap = new HashMap<>();
-
-        @SerializedName("stringArrayMap")
-        private final Map<String, String[]> stringArrayMap = new HashMap<>();
-
-        public Map<String, Boolean> getBooleanMap() {
-            return booleanMap;
-        }
-
-        public Map<String, String[]> getStringArrayMap() {
-            return stringArrayMap;
-        }
-
-        private Generic() {
-        }
-    }
-
-    public static class Skill {
-        @SerializedName("booleanMap")
-        private final Map<String, Boolean> booleanMap = new HashMap<>();
-
-        @SerializedName("floatMap")
-        private final Map<String, Float> floatMap = new HashMap<>();
-
-        public Map<String, Boolean> getBooleanMap() {
-            return booleanMap;
-        }
-
-        public Map<String, Float> getFloatMap() {
-            return floatMap;
-        }
-
-        protected Skill() {
-        }
     }
 
     public T loadConfig(File file) {
@@ -183,5 +95,88 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
     }
 
     protected void writeDefaultConfig(T academyCraftConfig) {
+    }
+
+    public static class Ability {
+        @SerializedName("metalEntities")
+        private final Map<String, List<String>> metalEntities = new HashMap<>();
+        @SerializedName("metalBlocks")
+        private final Map<String, List<String>> metalBlocks = new HashMap<>();
+        @SerializedName("skills")
+        private final Map<String, Skill> skills = new HashMap<>();
+        @SerializedName("damageMultiplier")
+        private volatile float damageMultiplier = 1.0f;
+        @SerializedName("cpRecoverSpeed")
+        private float cpRecoverSpeed;
+
+        private Ability() {
+        }
+
+        public float getDamageMultiplier() {
+            return damageMultiplier;
+        }
+
+        public void setDamageMultiplier(float damageMultiplier) {
+            AbilitySystemServer.addTask(() -> this.damageMultiplier = damageMultiplier);
+        }
+
+        public float getCpRecoverSpeed() {
+            return cpRecoverSpeed;
+        }
+
+        public void setCpRecoverSpeed(float cpRecoverSpeed) {
+            this.cpRecoverSpeed = cpRecoverSpeed;
+            AcademyCraft.saveConfig();
+        }
+
+        public Map<String, List<String>> getMetalEntities() {
+            return metalEntities;
+        }
+
+        public Map<String, List<String>> getMetalBlocks() {
+            return metalBlocks;
+        }
+
+        public Map<String, Skill> getSkills() {
+            return skills;
+        }
+    }
+
+    public static class Generic {
+        @SerializedName("booleanMap")
+        private final Map<String, Boolean> booleanMap = new HashMap<>();
+
+        @SerializedName("stringArrayMap")
+        private final Map<String, String[]> stringArrayMap = new HashMap<>();
+
+        private Generic() {
+        }
+
+        public Map<String, Boolean> getBooleanMap() {
+            return booleanMap;
+        }
+
+        public Map<String, String[]> getStringArrayMap() {
+            return stringArrayMap;
+        }
+    }
+
+    public static class Skill {
+        @SerializedName("booleanMap")
+        private final Map<String, Boolean> booleanMap = new HashMap<>();
+
+        @SerializedName("floatMap")
+        private final Map<String, Float> floatMap = new HashMap<>();
+
+        protected Skill() {
+        }
+
+        public Map<String, Boolean> getBooleanMap() {
+            return booleanMap;
+        }
+
+        public Map<String, Float> getFloatMap() {
+            return floatMap;
+        }
     }
 }

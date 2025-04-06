@@ -20,7 +20,7 @@ public class NetworkResourceLocations {
     public static final ResourceLocation C2S_TRY_DEV_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_try_dev_packet");
     public static final ResourceLocation C2S_FETCH_ALL_SKILL_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_fetch_all_skill_packet");
     public static final ResourceLocation S2C_FETCH_ALL_SKILL_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_fetch_all_skill_packet");
-    public static final ResourceLocation S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID,"s2c_open_ability_developer_fragment_packet");
+    public static final ResourceLocation S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "s2c_open_ability_developer_fragment_packet");
     public static final ResourceLocation C2S_TOGGLE_REFLECTION_PACKET = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_toggle_reflection_packet");
     public static final ResourceLocation C2S_REVERSE_BLOODFLOW = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_reverse_bloodflow_packet");
     public static final ResourceLocation C2S_STORM_WING_TOGGLE = new ResourceLocation(AcademyCraft.MOD_ID, "c2s_storming_toggle_packet");

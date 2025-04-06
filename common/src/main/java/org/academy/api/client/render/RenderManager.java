@@ -15,7 +15,7 @@ import java.util.Map;
 public final class RenderManager {
     public static final Minecraft mc = Minecraft.getInstance();
     public static final LocalPlayer player = mc.player;
-    public static final Map<String,Renderer> RENDERER_MAP = new HashMap<>();
+    public static final Map<String, Renderer> RENDERER_MAP = new HashMap<>();
 
     public interface Renderer {
         void render(PoseStack poseStack, float f, long l, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, CallbackInfo ci);

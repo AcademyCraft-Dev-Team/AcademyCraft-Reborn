@@ -1,4 +1,4 @@
-package org.academy.internal.client.ui;
+package org.academy.internal.client.render.ui;
 
 import icyllis.modernui.fragment.Fragment;
 import icyllis.modernui.util.DataSet;

@@ -27,7 +27,9 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     public BlockPos mainPos;
     public long energyStored;
 
-    public abstract long getMaxStored();
+    public AbilityDeveloperBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
+        super(type, pos, blockState);
+    }
 
     @SuppressWarnings("resource")
     public static void intiServer() {
@@ -57,9 +59,7 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
         );
     }
 
-    public AbilityDeveloperBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
-        super(type, pos, blockState);
-    }
+    public abstract long getMaxStored();
 
     public void setMainPos(BlockPos pos) {
         this.mainPos = pos;

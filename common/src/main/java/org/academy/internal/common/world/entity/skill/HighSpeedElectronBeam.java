@@ -18,8 +18,8 @@ import java.util.Optional;
 @SuppressWarnings("resource")
 public class HighSpeedElectronBeam extends Entity {
     public static final int maxChargerTicks = 40;
-    public int currentChargerTicks = 0;
     public static final int maxRayLifeTicks = 15;
+    public int currentChargerTicks = 0;
     public int currentRayLifeTicks = maxRayLifeTicks;
     public float rayProgress = 0;
     public boolean shouldStopRay = true;
@@ -32,6 +32,20 @@ public class HighSpeedElectronBeam extends Entity {
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
         super(entityType, level);
         setNoGravity(false);
+    }
+
+    @Override
+    public boolean isAttackable() {
+        return false;
+    }
+
+    @Override
+    protected void doWaterSplashEffect() {
+    }
+
+    @Override
+    public boolean displayFireAnimation() {
+        return false;
     }
 
     @Override
@@ -86,7 +100,10 @@ public class HighSpeedElectronBeam extends Entity {
                 double d = result.get().getValue();
                 length = (float) d;
             }
-            LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 1, new DamageSource(level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
+            if (!level().isClientSide) {
+                LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 1, new DamageSource(level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
+
+            }
         }
     }
 

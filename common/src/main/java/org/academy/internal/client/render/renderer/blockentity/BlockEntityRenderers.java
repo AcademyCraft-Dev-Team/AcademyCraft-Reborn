@@ -1,4 +1,4 @@
-package org.academy.internal.client.renderer.blockentity;
+package org.academy.internal.client.render.renderer.blockentity;
 
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.world.level.block.entity.BlockEntityType;

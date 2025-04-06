@@ -24,7 +24,7 @@ import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.internal.client.ui.AbilityDeveloperFragment;
+import org.academy.internal.client.render.ui.AbilityDeveloperFragment;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -130,13 +130,6 @@ public class CommandManager {
             );
         }
 
-        public static final class DebugCommand {
-            public static int changeCategory(CommandContext<ConsoleSource> context) {
-                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET, new FriendlyByteBuf(Unpooled.buffer()).writeUtf(StringArgumentType.getString(context, "category"))));
-                return 1;
-            }
-        }
-
         private static int info(CommandContext<ConsoleSource> context) {
             return 1;
         }
@@ -175,6 +168,13 @@ public class CommandManager {
                 dispatcher.execute(input, source);
             } catch (CommandSyntaxException e) {
                 AbilityDeveloperFragment.addHistory(e.getMessage());
+            }
+        }
+
+        public static final class DebugCommand {
+            public static int changeCategory(CommandContext<ConsoleSource> context) {
+                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET, new FriendlyByteBuf(Unpooled.buffer()).writeUtf(StringArgumentType.getString(context, "category"))));
+                return 1;
             }
         }
     }

@@ -20,6 +20,9 @@ public class NetworkSystemClient {
     public static final Map<ResourceLocation, ServerToClientPacketHandler> SERVER_TO_CLIENT_PACKET_HANDLER_MAP = new HashMap<>();
     public static Connection connection;
 
+    private NetworkSystemClient() {
+    }
+
     public static void sendPacket(Packet<?> packet) {
         connection.send(packet);
     }
@@ -94,8 +97,5 @@ public class NetworkSystemClient {
             }
             consumer.accept(args);
         });
-    }
-
-    private NetworkSystemClient() {
     }
 }

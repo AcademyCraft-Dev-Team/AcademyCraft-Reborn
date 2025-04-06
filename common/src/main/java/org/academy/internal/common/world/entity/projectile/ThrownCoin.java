@@ -20,11 +20,11 @@ import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
+    public static final EntityDataAccessor<Boolean> ID_FIRED = SynchedEntityData.defineId(ThrownCoin.class, EntityDataSerializers.BOOLEAN);
     public int angle;
     public float renderAngle;
     public float damage = 0.25f;
     public int canDestroy = 10;
-    public static final EntityDataAccessor<Boolean> ID_FIRED = SynchedEntityData.defineId(ThrownCoin.class, EntityDataSerializers.BOOLEAN);
 
     public ThrownCoin(EntityType<? extends AbstractArrow> entityType, Level level) {
         super(entityType, level);

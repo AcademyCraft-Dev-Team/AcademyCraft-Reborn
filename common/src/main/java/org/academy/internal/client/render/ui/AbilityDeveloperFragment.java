@@ -1,4 +1,4 @@
-package org.academy.internal.client.ui;
+package org.academy.internal.client.render.ui;
 
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.suggestion.Suggestion;
@@ -34,11 +34,16 @@ import java.util.concurrent.CompletableFuture;
 
 @SuppressWarnings({"UnstableApiUsage", "DataFlowIssue"})
 public class AbilityDeveloperFragment extends Fragment {
+    private static final PopupWindow popupWindow = new PopupWindow();
+    public static ConsoleSource consoleSource;
     private static BlockPos blockPos;
     private static Handler handler;
     private static EditText editText;
-    private static final PopupWindow popupWindow = new PopupWindow();
-    public static ConsoleSource consoleSource;
+
+    public AbilityDeveloperFragment(@NotNull BlockPos mainPos) {
+        super();
+        blockPos = mainPos;
+    }
 
     public static void init() {
         NetworkSystemClient.registerServerToClientPacketHandler(
@@ -50,9 +55,16 @@ public class AbilityDeveloperFragment extends Fragment {
         );
     }
 
-    public AbilityDeveloperFragment(@NotNull BlockPos mainPos) {
-        super();
-        blockPos = mainPos;
+    public static void addHistory(String history) {
+        if (consoleSource != null) {
+            consoleSource.addHistory(history);
+        }
+    }
+
+    public static void addHistory(Collection<String> history) {
+        if (consoleSource != null) {
+            consoleSource.addHistory(history);
+        }
     }
 
     @Override
@@ -191,17 +203,5 @@ public class AbilityDeveloperFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         popupWindow.dismiss();
-    }
-
-    public static void addHistory(String history) {
-        if (consoleSource != null) {
-            consoleSource.addHistory(history);
-        }
-    }
-
-    public static void addHistory(Collection<String> history) {
-        if (consoleSource != null) {
-            consoleSource.addHistory(history);
-        }
     }
 }

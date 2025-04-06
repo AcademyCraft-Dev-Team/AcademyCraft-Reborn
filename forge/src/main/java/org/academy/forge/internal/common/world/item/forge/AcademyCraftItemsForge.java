@@ -7,12 +7,15 @@ import net.minecraft.world.item.ItemStack;
 import org.academy.AcademyCraft;
 import org.academy.forge.internal.common.world.level.block.entity.forge.AbilityDeveloperBlockEntityForge;
 import org.academy.forge.internal.common.world.level.block.forge.AcademyCraftBlocksForge;
-import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.academy.internal.common.world.item.AbilityDeveloperComputationalChipItem;
+import org.academy.internal.common.world.item.AcademyCraftItems;
 
 public class AcademyCraftItemsForge {
     public static final AbilityDeveloperBlockItem ABILITY_DEVELOPER_BLOCK_ITEM = new AbilityDeveloperBlockItem();
     public static final BlockItem RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK_ITEM = new BlockItem(AcademyCraftBlocksForge.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK, new Item.Properties());
+
+    private AcademyCraftItemsForge() {
+    }
 
     public static void init() {
         AcademyCraftItems.ITEMS.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer_block_item"), ABILITY_DEVELOPER_BLOCK_ITEM);
@@ -27,8 +30,5 @@ public class AcademyCraftItemsForge {
                 }
             }
         };
-    }
-
-    private AcademyCraftItemsForge() {
     }
 }

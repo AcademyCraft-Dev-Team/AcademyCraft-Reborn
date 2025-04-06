@@ -1,4 +1,4 @@
-package org.academy.internal.client.renderer.entity;
+package org.academy.internal.client.render.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -14,6 +14,9 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
 public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElectronBeam> {
+    public static final float[][][] BALL_BUFFER = RenderUtil.BallRenderer.getBallVertexBuffer(1, 16);
+    public static final float[][] RAY_BUFFER = RenderUtil.RayRenderer.getRayVertexBuffer(0, 1, 1, 8);
+
     public HighSpeedElectronBeamRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
@@ -25,10 +28,16 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()))
         );
-        entity.smoothProgress = MathUtil.lerp(entity.smoothProgress, entity.progress, partialTick);
-        entity.smoothRayProgress = MathUtil.lerp(entity.smoothRayProgress, entity.rayProgress, partialTick);
-        RenderUtil.BallRenderer.renderBall(poseStack, buffer, entity.smoothProgress * 0.25f, 16, 0.906f, 0.827f, 0.694f, 1f);
-        RenderUtil.RayRenderer.renderRay(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, entity.length, entity.smoothRayProgress * 0.125f, 8);
+        entity.smoothProgress = MathUtil.lerpStartEndFactor(entity.smoothProgress, entity.progress, partialTick);
+        entity.smoothRayProgress = MathUtil.lerpStartEndFactor(entity.smoothRayProgress, entity.rayProgress, partialTick);
+        poseStack.pushPose();
+        poseStack.mulPoseMatrix(new Matrix4f().scale(entity.smoothProgress * 0.25f));
+        RenderUtil.BallRenderer.renderBall(poseStack, buffer, BALL_BUFFER, 0.906f, 0.827f, 0.694f, 1f);
+        poseStack.popPose();
+        poseStack.pushPose();
+        poseStack.mulPoseMatrix(new Matrix4f().scale(entity.smoothRayProgress * 0.125f,  entity.length, entity.smoothRayProgress * 0.125f));
+        RenderUtil.RayRenderer.renderRay(poseStack, buffer, RAY_BUFFER, 0.906f, 0.827f, 0.694f, 1f);
+        poseStack.popPose();
         poseStack.popPose();
     }
 
