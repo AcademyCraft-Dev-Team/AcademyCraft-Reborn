@@ -5,14 +5,14 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.common.ability.Skill;
 
 public class ClientUtil {
+    private ClientUtil() {
+    }
+
     public static boolean isScreenNull() {
         return Minecraft.getInstance().screen == null;
     }
 
     public static boolean lacksSkill(Skill skill) {
         return !AbilitySystemClient.SKILLS.contains(skill);
-    }
-
-    private ClientUtil() {
     }
 }

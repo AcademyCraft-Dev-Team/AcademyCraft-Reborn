@@ -75,6 +75,9 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<Class> CLASS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Class.class, (buffer, value) -> buffer.writeUtf(value.getCanonicalName()));
     public static final FriendlyByteBufSerializer<ArrayList<Skill>> SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = getArrayListFriendlyByteBufSerializer(Skill.class);
 
+    private FriendlyByteBufSerializers() {
+    }
+
     public static <T> FriendlyByteBufSerializer<ArrayList<T>> getArrayListFriendlyByteBufSerializer(Class<T> clazz) {
         return (buffer, value) -> {
             buffer.writeVarInt(value.size());
@@ -103,8 +106,5 @@ public class FriendlyByteBufSerializers {
         } else {
             return serializer;
         }
-    }
-
-    private FriendlyByteBufSerializers() {
     }
 }

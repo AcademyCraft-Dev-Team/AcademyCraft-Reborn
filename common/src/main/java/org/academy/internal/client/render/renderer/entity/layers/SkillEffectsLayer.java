@@ -1,4 +1,4 @@
-package org.academy.internal.client.renderer.entity.layers;
+package org.academy.internal.client.render.renderer.entity.layers;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;

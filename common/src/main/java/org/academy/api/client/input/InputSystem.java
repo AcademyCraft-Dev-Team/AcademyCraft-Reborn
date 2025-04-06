@@ -80,6 +80,11 @@ public class InputSystem {
         }
     }
 
+    public enum InputType {
+        MOUSE,
+        KEYBOARD
+    }
+
     /**
      * Describes a key event.
      *
@@ -94,10 +99,5 @@ public class InputSystem {
     }
 
     public record InputPair(InputType inputType, InputEvent inputEvent) {
-    }
-
-    public enum InputType {
-        MOUSE,
-        KEYBOARD
     }
 }

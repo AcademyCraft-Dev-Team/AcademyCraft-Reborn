@@ -1,4 +1,4 @@
-package org.academy.internal.client.renderer.entity;
+package org.academy.internal.client.render.renderer.entity;
 
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.world.entity.Entity;
@@ -29,9 +29,9 @@ public class EntityRenderers {
         RENDERER_LIST.add(new Renderer<>(EntityTypes.PLASMA_ENTITY_TYPE, PLASMA_ENTITY_RENDERER_PROVIDER));
     }
 
-    public record Renderer<T extends Entity>(EntityType<T> entityType, EntityRendererProvider<T> entityRenderer) {
+    private EntityRenderers() {
     }
 
-    private EntityRenderers() {
+    public record Renderer<T extends Entity>(EntityType<T> entityType, EntityRendererProvider<T> entityRenderer) {
     }
 }

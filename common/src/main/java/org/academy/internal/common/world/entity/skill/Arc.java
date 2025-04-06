@@ -29,6 +29,20 @@ public class Arc extends Entity {
     }
 
     @Override
+    public boolean isAttackable() {
+        return false;
+    }
+
+    @Override
+    protected void doWaterSplashEffect() {
+    }
+
+    @Override
+    public boolean displayFireAnimation() {
+        return false;
+    }
+
+    @Override
     public boolean ignoreExplosion() {
         return true;
     }

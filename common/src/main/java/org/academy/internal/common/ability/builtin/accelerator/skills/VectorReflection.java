@@ -60,11 +60,11 @@ public class VectorReflection extends Skill {
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + ".toggle";
         public static final SkillClientConfig.SkillClientKeyBindingConfig CONFIG = new VectorReflectionClientConfig();
 
-        public static final class VectorReflectionClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
-        }
-
         public static void toggleReflection() {
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_TOGGLE_REFLECTION_PACKET));
+        }
+
+        public static final class VectorReflectionClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
         }
     }
 

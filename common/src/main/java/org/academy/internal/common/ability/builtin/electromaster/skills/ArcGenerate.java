@@ -10,13 +10,11 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.jetbrains.annotations.NotNull;
@@ -65,7 +63,7 @@ public class ArcGenerate extends Skill {
         public static final ArcGenerateSKillConfig CONFIG = new ArcGenerateSKillConfig();
 
         public static void handler() {
-         //   if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            //   if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
         }
 
@@ -75,7 +73,7 @@ public class ArcGenerate extends Skill {
 
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
-      //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
+            //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower > 10) {
                 AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);

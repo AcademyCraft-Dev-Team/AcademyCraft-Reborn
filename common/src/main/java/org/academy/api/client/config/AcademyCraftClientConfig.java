@@ -10,6 +10,8 @@ import java.util.Map;
 public class AcademyCraftClientConfig<SC extends SkillClientConfig> {
     @SerializedName("skills")
     private final Map<String, SC> skills = new HashMap<>();
+    @SerializedName("key")
+    private final Map<String, InputSystem.InputPair> key = new HashMap<>();
 
     public SC getSkillClientConfig(String skill, SC defaultConfig) {
         if (!skills.containsKey(skill)) {
@@ -21,9 +23,6 @@ public class AcademyCraftClientConfig<SC extends SkillClientConfig> {
     public void setSkillClientConfig(String skill, SC newConfig) {
         skills.put(skill, newConfig);
     }
-
-    @SerializedName("key")
-    private final Map<String, InputSystem.InputPair> key = new HashMap<>();
 
     public InputSystem.InputPair getKey(String name, InputSystem.InputPair defaultValue) {
         if (!key.containsKey(name)) {

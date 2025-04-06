@@ -52,6 +52,23 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
         super(properties);
     }
 
+    public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction) {
+        final List<BlockPos> subjectBlocks = new ArrayList<>();
+
+        for (Vec3i vec3i : SUBJECT_BLOCKS) {
+            BlockPos offsetPos = switch (direction) {
+                case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), -vec3i.getZ());
+                case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), vec3i.getZ());
+                case EAST -> pos.offset(vec3i.getZ(), vec3i.getY(), vec3i.getX());
+                case WEST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
+                default -> pos;
+            };
+            subjectBlocks.add(offsetPos);
+        }
+
+        return subjectBlocks;
+    }
+
     @Override
     protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
         builder.add(TYPE, FACING);
@@ -122,23 +139,6 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
     public @Nullable BlockState getStateForPlacement(@NotNull BlockPlaceContext context) {
         Direction direction = context.getHorizontalDirection();
         return super.getStateForPlacement(context).setValue(FACING, direction);
-    }
-
-    public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction) {
-        final List<BlockPos> subjectBlocks = new ArrayList<>();
-
-        for (Vec3i vec3i : SUBJECT_BLOCKS) {
-            BlockPos offsetPos = switch (direction) {
-                case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), -vec3i.getZ());
-                case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), vec3i.getZ());
-                case EAST -> pos.offset(vec3i.getZ(), vec3i.getY(), vec3i.getX());
-                case WEST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
-                default -> pos;
-            };
-            subjectBlocks.add(offsetPos);
-        }
-
-        return subjectBlocks;
     }
 
     @Override

@@ -61,13 +61,13 @@ public class BloodflowReverse extends Skill {
         public static final String KEY_NAME = "bloodflow_reverse";
         public static final BloodflowReverseClientConfig CONFIG = new BloodflowReverseClientConfig();
 
+        public static void reverseBloodflow() {
+            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_REVERSE_BLOODFLOW));
+        }
+
         public static final class BloodflowReverseClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
             private BloodflowReverseClientConfig() {
             }
-        }
-
-        public static void reverseBloodflow() {
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_REVERSE_BLOODFLOW));
         }
     }
 

@@ -12,8 +12,8 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
-import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
+import org.academy.internal.client.render.renderer.effect.StormWingEffectRenderer;
+import org.academy.internal.client.render.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.player.PlayerSyncSkillData;
 import org.lwjgl.glfw.GLFW;
@@ -56,13 +56,13 @@ public class StormWing extends Skill {
         public static final String KEY_NAME = INSTANCE.name + "_toggle";
         public static final StormWingClientConfig CONFIG = new StormWingClientConfig();
 
+        public static void toggle() {
+            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_STORM_WING_TOGGLE));
+        }
+
         public static final class StormWingClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
             private StormWingClientConfig() {
             }
-        }
-
-        public static void toggle() {
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_STORM_WING_TOGGLE));
         }
     }
 

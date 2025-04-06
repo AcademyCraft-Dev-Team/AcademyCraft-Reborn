@@ -10,9 +10,9 @@ import java.util.List;
 
 public class AcademyCraftSoundEvents {
     public static final List<SoundEvent> SOUND_EVENT_LIST = new ArrayList<>();
-    public static final SoundEvent COIN = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID,"coin"));
-    public static final SoundEvent RAILGUN = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID,"railgun"));
-    public static final SoundEvent ARC_WEAK = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID,"arc_weak"));
+    public static final SoundEvent COIN = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, "coin"));
+    public static final SoundEvent RAILGUN = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, "railgun"));
+    public static final SoundEvent ARC_WEAK = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, "arc_weak"));
     public static final SoundEvent VECTOR_REFLECTION = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, SkillNames.VECTOR_REFLECTION));
 
     static {
