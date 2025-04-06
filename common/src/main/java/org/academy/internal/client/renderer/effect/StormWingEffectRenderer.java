@@ -48,16 +48,12 @@ public class StormWingEffectRenderer implements EffectRenderer {
     //--- 宽度 ---
     private static final float WIDTH_BASE_NOISE_SCALE = 0.4f;      // 基础宽度噪声强度 (较慢变化)
     private static final float WIDTH_DETAIL_NOISE_SCALE = 0.25f;   // 细节宽度噪声强度 (较快变化)
-    //--- 透明度 ---
-    private static final float ALPHA_BASE_NOISE_SCALE = 0.25f;     // 基础慢速透明度噪声强度
-    private static final float ALPHA_FLICKER_NOISE_SCALE = 0.20f;  // 快速透明度闪烁噪声强度
 
     // --- 龙卷风形状控制 ---
     private static final float FUNNEL_BASE_RADIUS = 0.2F;         // 漏斗形状的底部基础半径比例 (相对于最大半径)
     private static final float FUNNEL_EXPONENT = 1.75F;             // 漏斗半径随高度变化的指数 (控制形状陡峭程度)
 
     // --- 外观 ---
-    private static final float BASE_ALPHA = 0.75f;                  // 基础透明度
     private static final float BASE_RING_WIDTH = 0.075f;          // 基础环带宽度
     public static final int RING_SEGMENTS = 16;                  // 环渲染的分段数 (用于顶点缓存)
 
@@ -70,8 +66,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final float TIME_SCALE_RAD_EXTRA = 0.22f * TIME_SCALE_GLOBAL;// 额外半径噪声变化速率
     private static final float TIME_SCALE_ROT_BASE = 0.55f * TIME_SCALE_GLOBAL;// 基础旋转速率
     private static final float TIME_SCALE_ROT_MOD = 0.16f * TIME_SCALE_GLOBAL; // 旋转噪声强度调制速率
-    private static final float TIME_SCALE_ALPHA_BASE = 0.18f * TIME_SCALE_GLOBAL;// 基础透明度变化速率
-    private static final float TIME_SCALE_ALPHA_FLICKER = 0.75f * TIME_SCALE_GLOBAL;// 透明度闪烁速率
     private static final float TIME_SCALE_WIDTH_BASE = 0.15f * TIME_SCALE_GLOBAL;// 基础宽度变化速率
     private static final float TIME_SCALE_WIDTH_DETAIL = 0.55f * TIME_SCALE_GLOBAL;// 宽度细节变化速率
     private static final float TIME_SCALE_TILT = 0.18f * TIME_SCALE_GLOBAL;     // 倾斜变化速率
@@ -81,7 +75,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final float NESTED_RING_PROBABILITY = 0.40f;    // 出现嵌套环的概率
     private static final float NESTED_RADIUS_FACTOR = 0.50f;       // 嵌套环相对父环的半径比例
     private static final float NESTED_WIDTH_FACTOR = 0.75f;        // 嵌套环相对父环的宽度比例
-    private static final float NESTED_ALPHA_FACTOR = 0.88f;        // 嵌套环相对父环的透明度比例
 
     // --- 避免渲染时重复分配内存的缓冲区 ---
     private static final double[] displacementBuffer = new double[2];     // 用于存储计算出的水平位移 (dx, dz)
@@ -230,30 +223,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
     }
 
     /**
-     * 计算透明度 (结合基础慢速变化、快速闪烁和高度淡出)
-     *
-     * @param normalizedY   归一化的 Y 坐标
-     * @param ringIndex     当前环的索引
-     * @param tAlphaBase    基础透明度时间变量
-     * @param tAlphaFlicker 透明度闪烁时间变量
-     * @return 最终透明度值 (0.0 到 1.0 之间)
-     */
-    private static float calculateAlpha(double normalizedY, int ringIndex, double tAlphaBase, double tAlphaFlicker) {
-        // 基础慢速噪声 (基于 normalizedY 和基础时间)
-        float baseNoise = (float) getNoise(normalizedY * 1.4, tAlphaBase, 70.0);
-        // 快速闪烁噪声 (基于 ringIndex 和闪烁时间，产生快速明暗变化)
-        float flickerNoise = (float) getNoise(ringIndex * 2.0, tAlphaFlicker, 75.0);
-        // 合并噪声影响 (1.0 +/- 噪声值)
-        float noiseFactor = 1.0f + baseNoise * ALPHA_BASE_NOISE_SCALE + flickerNoise * ALPHA_FLICKER_NOISE_SCALE;
-        // 基于高度的淡出因子 (顶部更透明，指数使淡出更明显)
-        float fadeFactor = 1.0f - (float) Math.pow(normalizedY, 2.2) * 0.5f;
-        // 最终透明度 = 基础值 * 噪声影响 * 淡出因子
-        float alpha = BASE_ALPHA * noiseFactor * fadeFactor;
-        // 限制透明度范围，避免完全透明或完全不透明
-        return Math.max(0.05f, Math.min(0.95f, alpha));
-    }
-
-    /**
      * 计算环带宽度 (结合基础慢速变化和细节快速变化)
      *
      * @param normalizedY  归一化的 Y 坐标
@@ -348,8 +317,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
         double tJitter = effectiveTime * TIME_SCALE_JITTER;
         double tRotBase = effectiveTime * TIME_SCALE_ROT_BASE;
         double tRotMod = effectiveTime * TIME_SCALE_ROT_MOD;
-        double tAlphaBase = effectiveTime * TIME_SCALE_ALPHA_BASE;
-        double tAlphaFlicker = effectiveTime * TIME_SCALE_ALPHA_FLICKER;
         double tWidthBase = effectiveTime * TIME_SCALE_WIDTH_BASE;
         double tWidthDetail = effectiveTime * TIME_SCALE_WIDTH_DETAIL;
         double tTilt = effectiveTime * TIME_SCALE_TILT;
@@ -388,7 +355,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
 
             // 5. 计算其他属性：旋转角度、透明度、环带宽度、倾斜四元数
             double rotationAngle = calculateRotation(normalizedY, i, tRotBase, tRotMod);
-            float alpha = calculateAlpha(normalizedY, i, tAlphaBase, tAlphaFlicker);
             float ringWidth = calculateRingWidth(normalizedY, i, tWidthBase, tWidthDetail);
             calculateTilt(i, tTilt); // 结果存储在 tempTiltQuat 中
 
@@ -408,8 +374,8 @@ public class StormWingEffectRenderer implements EffectRenderer {
             // 渲染缓存的环 - 它将使用当前的姿态栈，包含所有变换
             RenderUtil.RingRenderer.renderVerticalRing(poseStack.last().pose(),       // 传递完全变换后的矩阵
                     vertexConsumer, CACHED_RING_SEGMENTS,           // 使用与缓存匹配的分段数
-                    CACHED_VERTICAL_VERTEX_BUFFER, // 使用缓存的顶点数据
-                    1.0f, 1.0f, 1.0f, alpha       // 传递颜色/透明度 (这里使用白色)
+                    CACHED_VERTICAL_VERTEX_BUFFER // 使用缓存的顶点数据
+                    // 传递颜色/透明度 (这里使用白色)
             );
             poseStack.popPose(); // 渲染完主环后恢复缩放
 
@@ -423,11 +389,10 @@ public class StormWingEffectRenderer implements EffectRenderer {
                 float finalRadiusNested = Math.max(0.01f, (nestedBaseRadiusRaw + nestedJitter) * SIZE);
 
                 float nestedWidth = Math.max(0.01f, ringWidth * NESTED_WIDTH_FACTOR); // 嵌套环宽度
-                float nestedAlpha = Math.max(0.0f, Math.min(0.9f, alpha * NESTED_ALPHA_FACTOR)); // 嵌套环透明度
 
                 poseStack.pushPose(); // 隔离嵌套环的缩放
                 poseStack.scale(finalRadiusNested, nestedWidth, finalRadiusNested); // 应用嵌套环的缩放
-                RenderUtil.RingRenderer.renderVerticalRing(poseStack.last().pose(), vertexConsumer, CACHED_RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER, 1.0f, 1.0f, 1.0f, nestedAlpha // 使用嵌套环的透明度
+                RenderUtil.RingRenderer.renderVerticalRing(poseStack.last().pose(), vertexConsumer, CACHED_RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER   // 使用嵌套环的透明度
                 );
                 poseStack.popPose();
             }
