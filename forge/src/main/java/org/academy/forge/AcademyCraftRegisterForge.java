@@ -26,9 +26,9 @@ import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraft
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
 import org.academy.forge.internal.common.world.level.block.entity.forge.AcademyCraftBlockEntityTypesForge;
 import org.academy.forge.internal.common.world.level.block.forge.AcademyCraftBlocksForge;
-import org.academy.internal.client.render.renderer.blockentity.BlockEntityRenderers;
-import org.academy.internal.client.render.renderer.entity.EntityRenderers;
-import org.academy.internal.client.render.ui.hud.AcademyCraftHUDSystem;
+import org.academy.internal.client.renderer.blockentity.BlockEntityRenderers;
+import org.academy.internal.client.renderer.entity.EntityRenderers;
+import org.academy.internal.client.ui.hud.AcademyCraftHUDSystem;
 import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;

@@ -13,7 +13,8 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.client.render.RenderManager;
+import org.academy.api.client.renderer.CameraRenderer;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
@@ -85,7 +86,7 @@ public final class SelfTeleport extends Skill {
         private static final Minecraft mc = Minecraft.getInstance();
         private static final ClientLevel level = mc.level;
         private static final LocalPlayer localPlayer = mc.player;
-        private static final RenderManager.Renderer RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
+        private static final CameraRenderer CAMERA_RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
             if (level != null && localPlayer != null) {
                 poseStack.pushPose();
                 final AABB aabb = new AABB(0, 0, 0, 1, 2, 1);
@@ -106,11 +107,11 @@ public final class SelfTeleport extends Skill {
 
         private static void start() {
             if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            RenderManager.RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.RENDERER);
+            RendererManager.CAMERA_RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.CAMERA_RENDERER);
         }
 
         private static void end() {
-            RenderManager.RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
+            RendererManager.CAMERA_RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
             if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
         }
