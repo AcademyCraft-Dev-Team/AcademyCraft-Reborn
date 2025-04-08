@@ -10,11 +10,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.client.render.renderer.entity.PlasmaRenderer;
+import org.academy.internal.client.renderer.entity.PlasmaRenderer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Random;
 
+@SuppressWarnings("resource")
 public class Plasma extends Entity {
     private static final EntityDataAccessor<Float> DATA_GATHER_PROGRESS = SynchedEntityData.defineId(Plasma.class, EntityDataSerializers.FLOAT); // 同步实体数据：聚集进度
     public static final int IDX_POS_X = 0; // 粒子数据索引：当前X坐标
@@ -41,7 +42,7 @@ public class Plasma extends Entity {
     private static final int IDX_GROUND_VEL_Y = 12; // 地面粒子索引：Y轴速度
     private static final int IDX_GROUND_VEL_Z = 13; // 地面粒子索引：Z轴速度
     private static final int IDX_GROUND_NOISE_SEED = 14; // 地面粒子索引：噪声种子
-    private static final float EFFECT_GATHER_DURATION_TICKS = 80.0f; // 效果聚集持续时间 (tick)
+    private static final float EFFECT_GATHER_DURATION_TICKS = 80.0f; // 效果聚集持续时间 (tick) - Currently unused due to fix below
 
     private static final int NUM_ATMOSPHERE_PARTICLES_TO_MANAGE = 350; // 管理的大气粒子数量
     private static final float ATMOSPHERE_PARTICLE_LIFE_TICKS = 90f; // 大气粒子寿命 (tick)
@@ -78,33 +79,47 @@ public class Plasma extends Entity {
         }
 
         simulationRandom.setSeed(this.getId() + 12345L);
-        prevGatherProgress = 1.0f;
+        // Initialize prevGatherProgress based on the default defined value
+        prevGatherProgress = this.entityData.get(DATA_GATHER_PROGRESS);
     }
 
     @Override
     protected void defineSynchedData() {
+        // Default gather progress is 1.0f (full size)
         this.entityData.define(DATA_GATHER_PROGRESS, 1.0f);
     }
 
     @Override
     public void tick() {
         super.tick();
+        // Always update prevGatherProgress *before* any potential changes
         this.prevGatherProgress = getGatherProgress();
 
-        if (!this.level().isClientSide) {
-            float currentProgress = 1.0f - MathUtil.clamp((float) this.tickCount / EFFECT_GATHER_DURATION_TICKS, 0.0f, 1.0f);
-            this.entityData.set(DATA_GATHER_PROGRESS, currentProgress);
-        } else {
+        // --- FIX: Remove the server-side logic that decreases gatherProgress ---
+        // if (!this.level().isClientSide) {
+        //     float currentProgress = 1.0f - MathUtil.clamp((float) this.tickCount / EFFECT_GATHER_DURATION_TICKS, 0.0f, 1.0f);
+        //     this.entityData.set(DATA_GATHER_PROGRESS, currentProgress);
+        // }
+        // --- End of Fix ---
+        // By removing the update, DATA_GATHER_PROGRESS will remain at its default value (1.0f)
+
+        // Client-side particle simulation still runs
+        if (this.level().isClientSide) {
             simulateParticlesClient();
         }
     }
 
+    // No changes needed below this line for the fix //
+    // ... (rest of the Plasma class methods remain the same) ...
     private void simulateParticlesClient() {
+        // gatherFactor will now consistently be calculated based on gatherProgress = 1.0
         float currentGatherProgress = getGatherProgress();
+        // smoothedGatherProgress will be smoothStep(1.0) = 1.0
+        // gatherFactor will be lerp(1.0, 0.25, 1.0) = 1.0
         float gatherFactor = MathUtil.lerpFactorStartEnd(MathUtil.smoothStep(currentGatherProgress), PlasmaRenderer.MIN_GATHER_FACTOR, 1.0f);
 
-        simulateAtmosphereParticles(gatherFactor);
-        simulateGroundParticles(gatherFactor);
+        simulateAtmosphereParticles(gatherFactor); // Will receive gatherFactor = 1.0
+        simulateGroundParticles(gatherFactor);   // Will receive gatherFactor = 1.0
     }
 
     private void simulateAtmosphereParticles(float gatherFactor) {
@@ -151,9 +166,11 @@ public class Plasma extends Entity {
         }
     }
 
+    @SuppressWarnings("DuplicatedCode")
     private void spawnAtmosphereParticle(int index, float gatherFactor) {
         float[] pData = atmosphereParticles[index];
 
+        // Uses gatherFactor (which will be 1.0 with the fix)
         float currentMaxVisualRadius = PlasmaRenderer.MAX_EFFECT_RADIUS * gatherFactor;
         float initialRadius = currentMaxVisualRadius * (0.8f + simulationRandom.nextFloat() * 0.2f);
         initialRadius = Math.max(1.0f, initialRadius);
@@ -194,6 +211,7 @@ public class Plasma extends Entity {
         float smoothedLifeRatio = MathUtil.smoothStep(lifeRatio);
 
         float initialRadius = pData[IDX_ATM_INITIAL_RADIUS];
+        // Particle still shrinks towards core visually, independently of overall effect size
         float currentRadius = MathUtil.lerpFactorStartEnd(smoothedLifeRatio, initialRadius, ATMOSPHERE_TARGET_RADIUS_NEAR_CORE);
 
         float initialY = pData[IDX_ATM_INITIAL_Y];
@@ -209,6 +227,7 @@ public class Plasma extends Entity {
 
         double driftTime = age * 0.05;
         double noiseFreq = 0.08;
+        // Uses gatherFactor (which will be 1.0 with the fix)
         float driftFactor = ATMOSPHERE_PARTICLE_DRIFT_SCALE * (1.0f - lifeRatio * 0.8f) * gatherFactor;
 
         float noiseSeedX = pData[IDX_ATM_NOISE_SEED_X];
@@ -225,9 +244,11 @@ public class Plasma extends Entity {
     }
 
 
+    @SuppressWarnings("DuplicatedCode")
     private void spawnGroundParticle(int index, float currentMaxSpawnRadius) {
         float[] pData = groundParticles[index];
 
+        // Uses currentMaxSpawnRadius (which depends on gatherFactor = 1.0 with the fix)
         double angle = simulationRandom.nextDouble() * MathUtil.TWO_PI;
         double radius = Math.sqrt(simulationRandom.nextDouble()) * currentMaxSpawnRadius;
 
@@ -307,26 +328,15 @@ public class Plasma extends Entity {
         return groundParticles;
     }
 
-
     @Override
     public @NotNull AABB getBoundingBoxForCulling() {
-        double radius = PlasmaRenderer.MAX_EFFECT_RADIUS + 50.0;
-        float effectMinYAbs = PlasmaRenderer.CORE_Y_OFFSET + PlasmaRenderer.MIN_EFFECT_HEIGHT_REL_CORE - 50.0f;
-        float effectMaxYAbs = PlasmaRenderer.CORE_Y_OFFSET + PlasmaRenderer.MAX_EFFECT_HEIGHT_REL_CORE + 50.0f;
-
-        return new AABB(this.getX() - radius, this.getY() + effectMinYAbs, this.getZ() - radius,
-                this.getX() + radius, this.getY() + effectMaxYAbs, this.getZ() + radius);
-    }
-
-    @Override
-    public boolean shouldRenderAtSqrDistance(double distanceSqr) {
-        double maxRenderDist = PlasmaRenderer.MAX_EFFECT_RADIUS + 200.0;
-        return distanceSqr < maxRenderDist * maxRenderDist;
+        double radius = 512;
+        return new AABB( radius,  radius,  radius, radius, radius,  radius);
     }
 
     @Override
     public boolean shouldRender(double camX, double camY, double camZ) {
-        return shouldRenderAtSqrDistance(this.distanceToSqr(camX, camY, camZ));
+        return true;
     }
 
 

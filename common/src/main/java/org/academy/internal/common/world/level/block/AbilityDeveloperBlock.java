@@ -113,7 +113,7 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
                 if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                     serverPlayer.connection.send(new S2CPacket(
-                            NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_FRAGMENT_PACKET,
+                            NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_SCREEN_PACKET,
                             new BlockPos(abilityDeveloperBlockEntity.mainPos)
                     ));
                 }

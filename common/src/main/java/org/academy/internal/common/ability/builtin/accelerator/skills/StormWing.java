@@ -8,12 +8,12 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.NetworkResourceLocations;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.internal.client.render.renderer.effect.StormWingEffectRenderer;
-import org.academy.internal.client.render.renderer.entity.layers.SkillEffectsLayer;
+import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.player.PlayerSyncSkillData;
 import org.lwjgl.glfw.GLFW;
@@ -33,7 +33,7 @@ public class StormWing extends Skill {
 
     @Override
     public void initClient() {
-        SkillEffectsLayer.EFFECT_RENDERER_MAP.add(StormWingEffectRenderer.INSTANCE);
+        RendererManager.EFFECT_RENDERER_MAP.add(StormWingEffectRenderer.INSTANCE);
         AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
         InputSystem.addKeyBinding(Client.KEY_NAME, VectorReflection.Client.CONFIG.getKeyBinding(KEY_NAME_TOGGLE,
                 new InputSystem.InputPair(

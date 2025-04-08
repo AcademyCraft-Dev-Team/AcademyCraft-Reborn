@@ -24,7 +24,7 @@ import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.internal.client.render.ui.AbilityDeveloperFragment;
+import org.academy.internal.client.ui.AbilityDeveloperFragment;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;

@@ -29,6 +29,7 @@ import java.util.function.Function;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
+@SuppressWarnings("DuplicatedCode")
 public final class RenderUtil {
     private RenderUtil() {
     }
@@ -90,10 +91,7 @@ public final class RenderUtil {
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setTextureState(new TextureStateShard(
-                                resourceLocation,
-                                false, false
-                        ))
+                        .setTextureState(new TextureStateShard(resourceLocation, false, false))
                         .setShaderState(RenderStates.POSITION_TEX_SHADER)
                         .setCullState(RenderStates.NO_CULL)
                         .setOutputState(ITEM_ENTITY_TARGET)
@@ -101,7 +99,7 @@ public final class RenderUtil {
                         .createCompositeState(false)
         );
 
-        public static float[][][] getVerticalVertexBuffer(float radius, float height, int segments) {
+        public static float[][][] getRingVertexBuffer(float radius, int segments, float yBottom, float yTop) {
             if (segments <= 0) return null;
             float[][][] vertexBuffer = new float[segments][4][4];
             final float twoPi = MathUtil.TWO_PI;
@@ -122,62 +120,56 @@ public final class RenderUtil {
                 float x2 = cos2 * radius;
                 float z2 = sin2 * radius;
 
-                vertexBuffer[i][0][0] = x1;
-                vertexBuffer[i][0][1] = 0;
-                vertexBuffer[i][0][2] = z1;
-                vertexBuffer[i][0][3] = u0;
-                vertexBuffer[i][1][0] = x2;
-                vertexBuffer[i][1][1] = 0;
-                vertexBuffer[i][1][2] = z2;
-                vertexBuffer[i][1][3] = u1;
-                vertexBuffer[i][2][0] = x2;
-                vertexBuffer[i][2][1] = height;
-                vertexBuffer[i][2][2] = z2;
-                vertexBuffer[i][2][3] = u1;
-                vertexBuffer[i][3][0] = x1;
-                vertexBuffer[i][3][1] = height;
-                vertexBuffer[i][3][2] = z1;
-                vertexBuffer[i][3][3] = u0;
+                vertexBuffer[i][0] = new float[]{x1, yBottom, z1, u0};
+                vertexBuffer[i][1] = new float[]{x2, yBottom, z2, u1};
+                vertexBuffer[i][2] = new float[]{x2, yTop, z2, u1};
+                vertexBuffer[i][3] = new float[]{x1, yTop, z1, u0};
             }
             return vertexBuffer;
+        }
+
+        public static float[][][] getVerticalVertexBuffer(float radius, float height, int segments) {
+            return getRingVertexBuffer(radius, segments, 0f, height);
+        }
+
+        public static float[][][] getHorizontalVertexBuffer(float radius, float height, int segments) {
+            return getRingVertexBuffer(radius, segments, -height / 2f, height / 2f);
+        }
+
+        public static void renderRing(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer) {
+            for (int i = 0; i < segments; i++) {
+                float[] v0 = vertexBuffer[i][0];
+                float[] v1 = vertexBuffer[i][1];
+                float[] v2 = vertexBuffer[i][2];
+                float[] v3 = vertexBuffer[i][3];
+
+                vertexConsumer.vertex(matrix, v0[0], v0[1], v0[2]).uv(v0[3], 0).endVertex();
+                vertexConsumer.vertex(matrix, v1[0], v1[1], v1[2]).uv(v1[3], 0).endVertex();
+                vertexConsumer.vertex(matrix, v2[0], v2[1], v2[2]).uv(v2[3], 1).endVertex();
+                vertexConsumer.vertex(matrix, v3[0], v3[1], v3[2]).uv(v3[3], 1).endVertex();
+            }
+        }
+
+        public static void renderRing(PoseStack poseStack, MultiBufferSource buffer, int segments, float[][][] vertexBuffer, ResourceLocation texture) {
+            if (vertexBuffer == null || vertexBuffer.length < segments || segments <= 0) return;
+            final PoseStack.Pose pose = poseStack.last();
+            final Matrix4f matrix = pose.pose();
+            final VertexConsumer vertexConsumer = buffer.getBuffer(RING_RENDER_TYPE.apply(texture));
+            renderRing(matrix, vertexConsumer, segments, vertexBuffer);
         }
 
         public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture) {
             float[][][] vertexBuffer = getVerticalVertexBuffer(radius, height, segments);
             if (vertexBuffer == null) return;
-            renderVerticalRing(poseStack, buffer, segments, vertexBuffer, texture);
+            renderRing(poseStack, buffer, segments, vertexBuffer, texture);
         }
 
-        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, int segments, float[][][] vertexBuffer, ResourceLocation texture) {
-            if (vertexBuffer == null || vertexBuffer.length < segments || segments <= 0) return;
-            final PoseStack.Pose pose = poseStack.last();
-            final Matrix4f matrix = pose.pose();
-            final VertexConsumer vertexConsumer = buffer.getBuffer(RING_RENDER_TYPE.apply(texture));
-
-            renderVerticalRingGeometry(matrix, vertexConsumer, segments, vertexBuffer);
-        }
-
-        public static void renderVerticalRing(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer) {
-            renderVerticalRingGeometry(matrix, vertexConsumer, segments, vertexBuffer);
-        }
-
-        private static void renderVerticalRingGeometry(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer) {
-            if (vertexBuffer == null || vertexBuffer.length < segments || segments <= 0) return;
-
-            for (int i = 0; i < segments; i++) {
-                float x_bl = vertexBuffer[i][0][0]; float y_bl = vertexBuffer[i][0][1]; float z_bl = vertexBuffer[i][0][2]; float u_bl = vertexBuffer[i][0][3];
-                float x_br = vertexBuffer[i][1][0]; float y_br = vertexBuffer[i][1][1]; float z_br = vertexBuffer[i][1][2]; float u_br = vertexBuffer[i][1][3];
-                float x_tr = vertexBuffer[i][2][0]; float y_tr = vertexBuffer[i][2][1]; float z_tr = vertexBuffer[i][2][2]; float u_tr = vertexBuffer[i][2][3];
-                float x_tl = vertexBuffer[i][3][0]; float y_tl = vertexBuffer[i][3][1]; float z_tl = vertexBuffer[i][3][2]; float u_tl = vertexBuffer[i][3][3];
-
-                vertexConsumer.vertex(matrix, x_bl, y_bl, z_bl).uv(u_bl, 0).endVertex();
-                vertexConsumer.vertex(matrix, x_br, y_br, z_br).uv(u_br, 0).endVertex();
-                vertexConsumer.vertex(matrix, x_tr, y_tr, z_tr).uv(u_tr, 1).endVertex();
-                vertexConsumer.vertex(matrix, x_tl, y_tl, z_tl).uv(u_tl, 1).endVertex();
-            }
+        public static void renderHorizontalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture) {
+            float[][][] vertexBuffer = getHorizontalVertexBuffer(radius, height, segments);
+            if (vertexBuffer == null) return;
+            renderRing(poseStack, buffer, segments, vertexBuffer, texture);
         }
     }
-
 
     public static final class BallRenderer {
         public static final RenderType BALL_RENDER_TYPE = new RenderType.CompositeRenderType(
@@ -198,18 +190,16 @@ public final class RenderUtil {
         public static float[][][] getBallVertexBuffer(final float radius, final int faces) {
             if (radius <= 0 || faces < 3) return null;
 
-            final int latBands = faces;
-            final int lonBands = faces;
-            final int numTriangles = latBands * lonBands * 2;
+            final int numTriangles = faces * faces * 2;
             final float[][][] vertexBuffer = new float[numTriangles][3][3];
 
             final float pi = MathUtil.PI;
             final float twoPi = MathUtil.TWO_PI;
             int triangleIndex = 0;
 
-            for (int lat = 0; lat < latBands; lat++) {
-                float theta1 = pi * (-0.5f + (float) lat / latBands);
-                float theta2 = pi * (-0.5f + (float) (lat + 1) / latBands);
+            for (int lat = 0; lat < faces; lat++) {
+                float theta1 = pi * (-0.5f + (float) lat / faces);
+                float theta2 = pi * (-0.5f + (float) (lat + 1) / faces);
 
                 float y1 = radius * (float) Math.sin(theta1);
                 float y2 = radius * (float) Math.sin(theta2);
@@ -217,28 +207,44 @@ public final class RenderUtil {
                 float scale1 = radius * (float) Math.cos(theta1);
                 float scale2 = radius * (float) Math.cos(theta2);
 
-                for (int lon = 0; lon < lonBands; lon++) {
-                    float phi1 = twoPi * (float) lon / lonBands;
-                    float phi2 = twoPi * (float) (lon + 1) / lonBands;
+                for (int lon = 0; lon < faces; lon++) {
+                    float phi1 = twoPi * (float) lon / faces;
+                    float phi2 = twoPi * (float) (lon + 1) / faces;
 
                     float cosPhi1 = (float) Math.cos(phi1);
                     float sinPhi1 = (float) Math.sin(phi1);
                     float cosPhi2 = (float) Math.cos(phi2);
                     float sinPhi2 = (float) Math.sin(phi2);
 
-                    float x1 = scale1 * cosPhi1; float z1 = scale1 * sinPhi1;
-                    float x2 = scale1 * cosPhi2; float z2 = scale1 * sinPhi2;
-                    float x3 = scale2 * cosPhi1; float z3 = scale2 * sinPhi1;
-                    float x4 = scale2 * cosPhi2; float z4 = scale2 * sinPhi2;
+                    float x1 = scale1 * cosPhi1;
+                    float z1 = scale1 * sinPhi1;
+                    float x2 = scale1 * cosPhi2;
+                    float z2 = scale1 * sinPhi2;
+                    float x3 = scale2 * cosPhi1;
+                    float z3 = scale2 * sinPhi1;
+                    float x4 = scale2 * cosPhi2;
+                    float z4 = scale2 * sinPhi2;
 
-                    vertexBuffer[triangleIndex][0][0] = x1; vertexBuffer[triangleIndex][0][1] = y1; vertexBuffer[triangleIndex][0][2] = z1;
-                    vertexBuffer[triangleIndex][1][0] = x3; vertexBuffer[triangleIndex][1][1] = y2; vertexBuffer[triangleIndex][1][2] = z3;
-                    vertexBuffer[triangleIndex][2][0] = x2; vertexBuffer[triangleIndex][2][1] = y1; vertexBuffer[triangleIndex][2][2] = z2;
+                    vertexBuffer[triangleIndex][0][0] = x1;
+                    vertexBuffer[triangleIndex][0][1] = y1;
+                    vertexBuffer[triangleIndex][0][2] = z1;
+                    vertexBuffer[triangleIndex][1][0] = x3;
+                    vertexBuffer[triangleIndex][1][1] = y2;
+                    vertexBuffer[triangleIndex][1][2] = z3;
+                    vertexBuffer[triangleIndex][2][0] = x2;
+                    vertexBuffer[triangleIndex][2][1] = y1;
+                    vertexBuffer[triangleIndex][2][2] = z2;
                     triangleIndex++;
 
-                    vertexBuffer[triangleIndex][0][0] = x2; vertexBuffer[triangleIndex][0][1] = y1; vertexBuffer[triangleIndex][0][2] = z2;
-                    vertexBuffer[triangleIndex][1][0] = x3; vertexBuffer[triangleIndex][1][1] = y2; vertexBuffer[triangleIndex][1][2] = z3;
-                    vertexBuffer[triangleIndex][2][0] = x4; vertexBuffer[triangleIndex][2][1] = y2; vertexBuffer[triangleIndex][2][2] = z4;
+                    vertexBuffer[triangleIndex][0][0] = x2;
+                    vertexBuffer[triangleIndex][0][1] = y1;
+                    vertexBuffer[triangleIndex][0][2] = z2;
+                    vertexBuffer[triangleIndex][1][0] = x3;
+                    vertexBuffer[triangleIndex][1][1] = y2;
+                    vertexBuffer[triangleIndex][1][2] = z3;
+                    vertexBuffer[triangleIndex][2][0] = x4;
+                    vertexBuffer[triangleIndex][2][1] = y2;
+                    vertexBuffer[triangleIndex][2][2] = z4;
                     triangleIndex++;
                 }
             }
@@ -269,12 +275,18 @@ public final class RenderUtil {
                 for (int lon = 0; lon < lonBands; lon++) {
                     float phi1 = twoPi * (float) lon / lonBands;
                     float phi2 = twoPi * (float) (lon + 1) / lonBands;
-                    float cosPhi1 = (float) Math.cos(phi1); float sinPhi1 = (float) Math.sin(phi1);
-                    float cosPhi2 = (float) Math.cos(phi2); float sinPhi2 = (float) Math.sin(phi2);
-                    float x1 = scale1 * cosPhi1; float z1 = scale1 * sinPhi1;
-                    float x2 = scale1 * cosPhi2; float z2 = scale1 * sinPhi2;
-                    float x3 = scale2 * cosPhi1; float z3 = scale2 * sinPhi1;
-                    float x4 = scale2 * cosPhi2; float z4 = scale2 * sinPhi2;
+                    float cosPhi1 = (float) Math.cos(phi1);
+                    float sinPhi1 = (float) Math.sin(phi1);
+                    float cosPhi2 = (float) Math.cos(phi2);
+                    float sinPhi2 = (float) Math.sin(phi2);
+                    float x1 = scale1 * cosPhi1;
+                    float z1 = scale1 * sinPhi1;
+                    float x2 = scale1 * cosPhi2;
+                    float z2 = scale1 * sinPhi2;
+                    float x3 = scale2 * cosPhi1;
+                    float z3 = scale2 * sinPhi1;
+                    float x4 = scale2 * cosPhi2;
+                    float z4 = scale2 * sinPhi2;
 
                     vertexConsumer.vertex(matrix, x1, y1, z1).color(red, green, blue, alpha).endVertex();
                     vertexConsumer.vertex(matrix, x3, y2, z3).color(red, green, blue, alpha).endVertex();
@@ -299,14 +311,18 @@ public final class RenderUtil {
         }
 
         private static void renderBallGeometry(Matrix4f matrix, VertexConsumer vertexConsumer, float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
-            if (vertexBuffer == null || vertexBuffer.length == 0) return;
+            if (vertexBuffer == null) return;
 
-            final int numTriangles = vertexBuffer.length;
-
-            for (int tri = 0; tri < numTriangles; tri++) {
-                float x0 = vertexBuffer[tri][0][0]; float y0 = vertexBuffer[tri][0][1]; float z0 = vertexBuffer[tri][0][2];
-                float x1 = vertexBuffer[tri][1][0]; float y1 = vertexBuffer[tri][1][1]; float z1 = vertexBuffer[tri][1][2];
-                float x2 = vertexBuffer[tri][2][0]; float y2 = vertexBuffer[tri][2][1]; float z2 = vertexBuffer[tri][2][2];
+            for (float[][] floats : vertexBuffer) {
+                float x0 = floats[0][0];
+                float y0 = floats[0][1];
+                float z0 = floats[0][2];
+                float x1 = floats[1][0];
+                float y1 = floats[1][1];
+                float z1 = floats[1][2];
+                float x2 = floats[2][0];
+                float y2 = floats[2][1];
+                float z2 = floats[2][2];
 
                 vertexConsumer.vertex(matrix, x0, y0, z0).color(red, green, blue, alpha).endVertex();
                 vertexConsumer.vertex(matrix, x1, y1, z1).color(red, green, blue, alpha).endVertex();
@@ -387,14 +403,12 @@ public final class RenderUtil {
         }
 
         private static void renderRayGeometry(Matrix4f matrix4f, VertexConsumer vertexConsumer, float[][] vertexBuffer, float red, float green, float blue, float alpha) {
-            if (vertexBuffer == null || vertexBuffer.length == 0) return;
+            if (vertexBuffer == null) return;
 
-            final int numVertices = vertexBuffer.length;
-
-            for (int i = 0; i < numVertices; i++) {
-                float x = vertexBuffer[i][0];
-                float y = vertexBuffer[i][1];
-                float z = vertexBuffer[i][2];
+            for (float[] floats : vertexBuffer) {
+                float x = floats[0];
+                float y = floats[1];
+                float z = floats[2];
                 vertexConsumer.vertex(matrix4f, x, y, z).color(red, green, blue, alpha).endVertex();
             }
         }
@@ -442,7 +456,9 @@ public final class RenderUtil {
                 ny /= len;
                 nz /= len;
             } else {
-                nx = 0; ny = 1; nz = 0;
+                nx = 0;
+                ny = 1;
+                nz = 0;
             }
             vc.vertex(mat, x1, y1, z1).color(r, g, b, a).normal(normMat, nx, ny, nz).endVertex();
             vc.vertex(mat, x2, y2, z2).color(r, g, b, a).normal(normMat, nx, ny, nz).endVertex();
@@ -471,9 +487,12 @@ public final class RenderUtil {
                         .createCompositeState(false)
         );
 
-        public static void renderArc(PoseStack ps, MultiBufferSource mbs, long seed, float sx, float sy, float sz, float ex, float ey, float ez, float thickness, int segments) {
-            if (thickness <= 0 || segments <= 0) return;
+        private static final float DISPLACEMENT_FACTOR = 1.6f;
+        private static final float THICKNESS_VARIATION = 0.4f;
+        private static final float MIN_THICKNESS_FACTOR = 0.1f;
+        private static final double EPSILON = 1e-6;
 
+        public static void renderArc(PoseStack ps, MultiBufferSource mbs, long seed, float sx, float sy, float sz, float ex, float ey, float ez, float thickness, int segments) {
             VertexConsumer vc = mbs.getBuffer(ARC_RENDER_TYPE);
             Matrix4f matrix = ps.last().pose();
             Random rnd = new Random(seed);
@@ -482,47 +501,71 @@ public final class RenderUtil {
             Vec3 end = new Vec3(ex, ey, ez);
             Vec3 delta = end.subtract(start);
 
+            if (delta.lengthSqr() < EPSILON * EPSILON) {
+                return;
+            }
+
             Vec3 direction = delta.normalize();
+
             Vec3 up = new Vec3(0, 1, 0);
-            if (Math.abs(direction.y) > 0.999) {
+            if (Math.abs(direction.y()) > 1.0 - EPSILON) {
                 up = new Vec3(1, 0, 0);
             }
-            Vec3 side = direction.cross(up).normalize();
+
+            Vec3 side = direction.cross(up);
+            if (side.lengthSqr() < EPSILON * EPSILON) {
+                up = new Vec3(0, 0, 1);
+                side = direction.cross(up);
+
+                if (side.lengthSqr() < EPSILON * EPSILON) {
+                    if (direction.lengthSqr() > EPSILON * EPSILON) {
+                        Vec3 arbitraryNonParallel = Math.abs(direction.x()) < 0.9 ? new Vec3(1,0,0) : new Vec3(0,1,0);
+                        side = direction.cross(arbitraryNonParallel);
+                        if (side.lengthSqr() < EPSILON * EPSILON) return;
+                    } else {
+                        return;
+                    }
+                }
+            }
+            side = side.normalize();
             Vec3 renderUp = side.cross(direction).normalize();
 
-            Vec3 prevL = start, prevR = start;
-            float halfThickness = thickness * 0.5f;
+            Vec3 prevL = start;
+            Vec3 prevR = start;
+            float baseHalfThickness = thickness * 0.5f;
 
             for (int i = 1; i <= segments; ++i) {
                 float t = (float) i / segments;
                 Vec3 currentMidpoint = start.add(delta.scale(t));
 
-                float displacementMagnitude = thickness * 0.75f * (1.0f - (float) Math.abs(2.0 * t - 1.0));
-                displacementMagnitude *= (float) (2.0 * (rnd.nextFloat() - 0.5));
+                float displacementMagnitude = baseHalfThickness * DISPLACEMENT_FACTOR;
+                float falloff = 1.0f - (float) Math.pow(2.0 * t - 1.0, 2);
+                displacementMagnitude *= falloff;
+                displacementMagnitude *= (rnd.nextFloat() * 2.0f - 1.0f);
 
                 double angle = rnd.nextDouble() * MathUtil.TWO_PI;
                 Vec3 displacementDir = side.scale(Math.cos(angle)).add(renderUp.scale(Math.sin(angle)));
 
                 Vec3 currentPos = currentMidpoint.add(displacementDir.scale(displacementMagnitude));
 
-                Vec3 currentL = currentPos.subtract(side.scale(halfThickness));
-                Vec3 currentR = currentPos.add(side.scale(halfThickness));
+                float currentHalfThickness = baseHalfThickness;
+                currentHalfThickness *= (1.0f + THICKNESS_VARIATION * (rnd.nextFloat() * 2.0f - 1.0f));
+                currentHalfThickness = Math.max(baseHalfThickness * MIN_THICKNESS_FACTOR, currentHalfThickness);
+
+                Vec3 currentL = currentPos.subtract(side.scale(currentHalfThickness));
+                Vec3 currentR = currentPos.add(side.scale(currentHalfThickness));
 
                 float u0 = (float) (i - 1) / segments;
                 float u1 = (float) i / segments;
 
-                vertex(vc, matrix, prevL, u0, 0);
-                vertex(vc, matrix, prevR, u0, 1);
-                vertex(vc, matrix, currentR, u1, 1);
-                vertex(vc, matrix, currentL, u1, 0);
+                vc.vertex(matrix, (float) prevL.x(), (float) prevL.y(), (float) prevL.z()).uv(u0, 0).endVertex();
+                vc.vertex(matrix, (float) prevR.x(), (float) prevR.y(), (float) prevR.z()).uv(u0, 1).endVertex();
+                vc.vertex(matrix, (float) currentR.x(), (float) currentR.y(), (float) currentR.z()).uv(u1, 1).endVertex();
+                vc.vertex(matrix, (float) currentL.x(), (float) currentL.y(), (float) currentL.z()).uv(u1, 0).endVertex();
 
                 prevL = currentL;
                 prevR = currentR;
             }
-        }
-
-        private static void vertex(VertexConsumer vc, Matrix4f m, Vec3 pos, float u, float v) {
-            vc.vertex(m, (float) pos.x, (float) pos.y, (float) pos.z).uv(u, v).endVertex();
         }
     }
 

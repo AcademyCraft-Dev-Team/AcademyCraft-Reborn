@@ -1,7 +1,7 @@
 package org.academy.mixin;
 
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import org.academy.internal.client.render.renderer.entity.layers.SkillEffectsLayer;
+import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
