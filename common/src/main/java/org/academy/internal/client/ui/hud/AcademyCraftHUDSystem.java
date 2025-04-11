@@ -96,10 +96,10 @@ public class AcademyCraftHUDSystem {
     private AcademyCraftHUDSystem() {
     }
 
-    public static void render(GuiGraphics guiGraphics, float partialTicks) {
+    public static void render(GuiGraphics guiGraphics, float partialTick) {
         if (AbilitySystemClient.isActiveHUD()) {
             AcademyCraftHUDSystem.renderComputingPowerBarBackground(guiGraphics);
-            AcademyCraftHUDSystem.renderComputingPowerBar(guiGraphics);
+            AcademyCraftHUDSystem.renderComputingPowerBar(guiGraphics, partialTick);
             AcademyCraftHUDSystem.renderAbilityIcon(guiGraphics);
         }
     }
@@ -139,7 +139,7 @@ public class AcademyCraftHUDSystem {
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
-    public static void renderComputingPowerBar(GuiGraphics guiGraphics) {
+    public static void renderComputingPowerBar(GuiGraphics guiGraphics, float partialTick) {
         final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(COMPUTING_POWER_BAR);
         final float computingPower = AbilitySystemClient.getComputingPower();
         final float maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
@@ -149,7 +149,7 @@ public class AcademyCraftHUDSystem {
         } else {
             progress = 0;
         }
-        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, 0.125f);
+        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, partialTick / (20f / 3f));
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
         final float width = COMPUTING_POWER_BAR_WIDTH * scale;

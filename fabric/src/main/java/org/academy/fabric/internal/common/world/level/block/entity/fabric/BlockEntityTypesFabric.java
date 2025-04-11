@@ -9,6 +9,7 @@ import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftB
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import team.reborn.energy.api.EnergyStorage;
 
+@SuppressWarnings("DataFlowIssue")
 public class BlockEntityTypesFabric {
     private BlockEntityTypesFabric() {
     }    public static final BlockEntityType<AbilityDeveloperBlockEntityFabric> ABILITY_DEVELOPER = BlockEntityType.Builder.of(AbilityDeveloperBlockEntityFabric::new, AcademyCraftBlocksFabric.ABILITY_DEVELOPER_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "ability_developer"));

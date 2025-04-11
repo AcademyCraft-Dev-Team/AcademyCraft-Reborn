@@ -10,7 +10,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -47,7 +47,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(NetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, (serverPacketListener, packet) -> Server.handle(serverPacketListener.player));
+        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(Packets.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM, (serverPacketListener, packet) -> Server.handle(serverPacketListener.player));
     }
 
     public static final class Client {
@@ -56,7 +56,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
         public static void handleKey() {
             //       if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
+            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }
 

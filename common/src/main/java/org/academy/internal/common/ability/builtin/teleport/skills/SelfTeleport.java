@@ -18,7 +18,7 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
@@ -63,7 +63,7 @@ public final class SelfTeleport extends Skill {
     public void initServer(MinecraftServer server) {
         try {
             NetworkSystemServer.registerC2SPacketHandler(
-                    NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET,
+                    Packets.C2S_SELF_TELEPORT,
                     Server.class.getDeclaredMethod("handleTeleport", ServerPlayer.class),
                     objects -> Server.handleTeleport((ServerPlayer) objects[0])
             );
@@ -113,7 +113,7 @@ public final class SelfTeleport extends Skill {
         private static void end() {
             RendererManager.CAMERA_RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
             if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_SELF_TELEPORT_PACKET, new FriendlyByteBuf(Unpooled.buffer())));
+            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SELF_TELEPORT, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }
 }
