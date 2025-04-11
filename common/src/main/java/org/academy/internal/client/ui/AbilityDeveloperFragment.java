@@ -24,7 +24,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.command.ConsoleSource;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.internal.client.gui.AbilityDeveloperScreen;
 import org.jetbrains.annotations.NotNull;
 
@@ -47,8 +47,8 @@ public class AbilityDeveloperFragment extends Fragment {
     }
 
     public static void init() {
-        NetworkSystemClient.registerServerToClientPacketHandler(
-                NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_SCREEN_PACKET,
+        NetworkSystemClient.registerS2CPacketHandler(
+                Packets.S2C_OPEN_ABILITY_DEVELOPER_SCREEN,
                 (listener, packet) -> {
                     BlockPos mainPos = packet.friendlyByteBuf.readBlockPos();
                     Minecraft.getInstance().setScreen(new AbilityDeveloperScreen(mainPos));

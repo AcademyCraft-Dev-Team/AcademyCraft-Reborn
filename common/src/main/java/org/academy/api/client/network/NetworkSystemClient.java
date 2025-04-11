@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class NetworkSystemClient {
-    public static final Map<ResourceLocation, ServerToClientPacketHandler> SERVER_TO_CLIENT_PACKET_HANDLER_MAP = new HashMap<>();
+    public static final Map<ResourceLocation, S2CPacketHandler> SERVER_TO_CLIENT_PACKET_HANDLER_MAP = new HashMap<>();
     public static Connection connection;
 
     private NetworkSystemClient() {
@@ -27,7 +27,7 @@ public class NetworkSystemClient {
         connection.send(packet);
     }
 
-    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull ServerToClientPacketHandler handler) {
+    public static void registerS2CPacketHandler(ResourceLocation resourceLocation, S2CPacketHandler handler) {
         SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(resourceLocation, handler);
     }
 
@@ -38,16 +38,16 @@ public class NetworkSystemClient {
      * @param method           需要调用的 Method
      * @param consumer         负责将生成的参数传入方法,不直接使用 Method.invoke 的原因是性能
      */
-    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Method method, @NotNull Consumer<Object[]> consumer) {
+    public static void registerS2CPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Method method, @NotNull Consumer<Object[]> consumer) {
         final Class<?>[] parameterTypes = method.getParameterTypes();
-        registerServerToClientPacketHandler(resourceLocation, parameterTypes, consumer);
+        registerS2CPacketHandler(resourceLocation, parameterTypes, consumer);
     }
 
-    public static <T> void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<T> clazz, @NotNull Consumer<T> consumer) {
-        registerServerToClientPacketHandler(resourceLocation, new Class<?>[]{clazz}, objects -> consumer.accept((T) objects[0]));
+    public static <T> void registerS2CPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class<T> clazz, @NotNull Consumer<T> consumer) {
+        registerS2CPacketHandler(resourceLocation, new Class<?>[]{clazz}, objects -> consumer.accept((T) objects[0]));
     }
 
-    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class[] parameterTypes, @NotNull Consumer<Object[]> consumer) {
+    public static void registerS2CPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull Class[] parameterTypes, @NotNull Consumer<Object[]> consumer) {
         final byte parameterCount = (byte) parameterTypes.length;
         final List<BiFunction<ClientPacketListener, S2CPacket, Object>> biFunctions =
                 new ArrayList<>(Collections.nCopies(parameterCount, null));
@@ -68,7 +68,7 @@ public class NetworkSystemClient {
                 );
             }
         }
-        registerServerToClientPacketHandler(resourceLocation, (listener, packet) -> {
+        registerS2CPacketHandler(resourceLocation, (listener, packet) -> {
             Object[] args = new Object[parameterCount];
             for (byte i = 0; i < parameterCount; i++) {
                 args[i] = biFunctions.get(i).apply(listener, packet);
@@ -77,8 +77,8 @@ public class NetworkSystemClient {
         });
     }
 
-    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull BiFunction<ClientPacketListener, S2CPacket, Object>[] biFunctions, @NotNull Consumer<Object[]> consumer) {
-        registerServerToClientPacketHandler(resourceLocation, (listener, packet) -> {
+    public static void registerS2CPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull BiFunction<ClientPacketListener, S2CPacket, Object>[] biFunctions, @NotNull Consumer<Object[]> consumer) {
+        registerS2CPacketHandler(resourceLocation, (listener, packet) -> {
             Object[] args = new Object[biFunctions.length];
             for (int i = 0; i < biFunctions.length; i++) {
                 args[i] = biFunctions[i].apply(listener, packet);
@@ -87,8 +87,8 @@ public class NetworkSystemClient {
         });
     }
 
-    public static void registerServerToClientPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull FriendlyByteBufDeserializer[] friendlyByteBufDeserializers, @NotNull Consumer<Object[]> consumer) {
-        registerServerToClientPacketHandler(resourceLocation, (listener, packet) -> {
+    public static void registerS2CPacketHandler(@NotNull ResourceLocation resourceLocation, @NotNull FriendlyByteBufDeserializer[] friendlyByteBufDeserializers, @NotNull Consumer<Object[]> consumer) {
+        registerS2CPacketHandler(resourceLocation, (listener, packet) -> {
             Object[] args = new Object[friendlyByteBufDeserializers.length];
             FriendlyByteBuf friendlyByteBuf = packet.friendlyByteBuf;
             for (int i = 0; i < friendlyByteBufDeserializers.length; i++) {

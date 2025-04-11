@@ -47,6 +47,7 @@ public class AbilityDeveloperBlockFabric extends AbilityDeveloperBlock {
                             if (amountExtracted == source.maxExtract) {
                                 abilityDeveloperBlockEntity.energyStored += amountExtracted;
                                 transaction.commit();
+                                level.sendBlockUpdated(blockPos, blockState, blockState, 3);
                             }
                         }
                     }

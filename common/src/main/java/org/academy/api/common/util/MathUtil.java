@@ -39,21 +39,59 @@ public class MathUtil {
         return x * x * (3.0 - 2.0 * x);
     }
 
-    public static class WeightedRandom {
-        private final NavigableMap<Double, String> map = new TreeMap<>();
+    public static boolean rayIntersectPanelFastAngles(
+            double rayOx, double rayOy, double rayOz,        // 射线起点
+            double rayPitchDeg, double rayYawDeg,            // 射线俯仰和偏航角
+            double panelCx, double panelCy, double panelCz,  // 面板中心
+            double panelPitchDeg, double panelYawDeg,        // 面板旋转（法线方向）
+            double[] outIntersection                         // 输出交点
+    ) {
+        double rayPitchRad = Math.toRadians(rayPitchDeg);
+        double rayYawRad = Math.toRadians(rayYawDeg);
+
+        double rayDx = Math.cos(rayPitchRad) * Math.sin(rayYawRad);
+        double rayDy = -Math.sin(rayPitchRad);
+        double rayDz = Math.cos(rayPitchRad) * Math.cos(rayYawRad);
+
+        double panelPitchRad = Math.toRadians(panelPitchDeg);
+        double panelYawRad = Math.toRadians(panelYawDeg);
+
+        double nx = Math.sin(panelYawRad);
+        double ny = -Math.sin(panelPitchRad) * Math.cos(panelYawRad);
+        double nz = Math.cos(panelPitchRad) * Math.cos(panelYawRad);
+
+        double dx = panelCx - rayOx;
+        double dy = panelCy - rayOy;
+        double dz = panelCz - rayOz;
+
+        double denom = nx * rayDx + ny * rayDy + nz * rayDz;
+        if (Math.abs(denom) < 1e-6) return false; // 平行
+
+        double t = (nx * dx + ny * dy + nz * dz) / denom;
+        if (t < 0) return false; // 背后
+
+        outIntersection[0] = rayOx + t * rayDx;
+        outIntersection[1] = rayOy + t * rayDy;
+        outIntersection[2] = rayOz + t * rayDz;
+
+        return true;
+    }
+
+    public static class WeightedRandom<T> {
+        private final NavigableMap<Double, T> map = new TreeMap<>();
         private final Random random = new Random();
         private double totalWeight = 0.0;
 
-        public void addItem(String item, double probability) {
+        public void addItem(T item, double probability) {
             if (probability <= 0) return;
             totalWeight += probability;
             map.put(totalWeight, item);
         }
 
-        public String getRandomItem() {
+        public T getRandomItem() {
             if (totalWeight <= 0) return null;
             double r = random.nextDouble() * totalWeight;
-            NavigableMap.Entry<Double, String> entry = map.ceilingEntry(r);
+            NavigableMap.Entry<Double, T> entry = map.ceilingEntry(r);
             return entry != null ? entry.getValue() : map.firstEntry().getValue();
         }
     }

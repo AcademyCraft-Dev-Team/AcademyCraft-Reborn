@@ -100,9 +100,9 @@ public class HighSpeedElectronBeam extends Entity {
                 double d = result.get().getValue();
                 length = (float) d;
             }
+
             if (!level().isClientSide) {
                 LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 1, new DamageSource(level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
-
             }
         }
     }

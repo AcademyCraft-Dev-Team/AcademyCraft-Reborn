@@ -17,9 +17,13 @@ public abstract class ConnectionProtocolMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void init(String string, int i, int id, ConnectionProtocol.ProtocolBuilder protocolBuilder, CallbackInfo ci) {
         if (string.equals("PLAY")) {
-            ConnectionProtocol.PacketSet<ClientGamePacketListener> clientGamePacketListenerPacketSet = (ConnectionProtocol.PacketSet<ClientGamePacketListener>) protocolBuilder.flows.get(PacketFlow.CLIENTBOUND);
+            ConnectionProtocol.PacketSet<ClientGamePacketListener> clientGamePacketListenerPacketSet =
+                    (ConnectionProtocol.PacketSet<ClientGamePacketListener>)
+                            protocolBuilder.flows.get(PacketFlow.CLIENTBOUND);
             clientGamePacketListenerPacketSet.addPacket(S2CPacket.class, S2CPacket::new);
-            ConnectionProtocol.PacketSet<ServerGamePacketListener> serverGamePacketListenerPacketSet = (ConnectionProtocol.PacketSet<ServerGamePacketListener>) protocolBuilder.flows.get(PacketFlow.SERVERBOUND);
+            ConnectionProtocol.PacketSet<ServerGamePacketListener> serverGamePacketListenerPacketSet =
+                    (ConnectionProtocol.PacketSet<ServerGamePacketListener>)
+                            protocolBuilder.flows.get(PacketFlow.SERVERBOUND);
             serverGamePacketListenerPacketSet.addPacket(C2SPacket.class, C2SPacket::new);
         }
     }

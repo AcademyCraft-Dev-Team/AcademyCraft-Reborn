@@ -38,6 +38,7 @@ public class AbilityDeveloperBlockForge extends AbilityDeveloperBlock {
                         int extractEnergy = iEnergyStorage.extractEnergy(shouldExtract, false);
                         if (extractEnergy > 0) {
                             abilityDeveloperBlockEntity.energyStored += extractEnergy;
+                            level.sendBlockUpdated(blockPos, blockState, blockState, 3);
                         }
                     });
                 }
