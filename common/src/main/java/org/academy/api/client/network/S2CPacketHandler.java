@@ -5,6 +5,6 @@ import org.academy.api.common.network.packet.S2CPacket;
 import org.jetbrains.annotations.NotNull;
 
 @FunctionalInterface
-public interface ServerToClientPacketHandler {
+public interface S2CPacketHandler {
     void handle(@NotNull ClientPacketListener listener, @NotNull S2CPacket packet);
 }

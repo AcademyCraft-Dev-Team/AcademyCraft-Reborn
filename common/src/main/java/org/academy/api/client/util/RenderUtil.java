@@ -585,7 +585,6 @@ public final class RenderUtil {
                                 false,
                                 true
                         ))
-                        .setOutputState(ITEM_ENTITY_TARGET)
                         .setLightmapState(RenderStates.LIGHTMAP)
                         .setOverlayState(RenderStates.OVERLAY)
                         .createCompositeState(true)
@@ -615,7 +614,6 @@ public final class RenderUtil {
             RenderType renderType = transparency ? BAKED_MODEL_TRANSPARENCY_RENDER_TYPE : BAKED_MODEL_NO_TRANSPARENCY_RENDER_TYPE;
             VertexConsumer vertexConsumer = multiBufferSource.getBuffer(renderType);
             List<BakedQuad> bakedQuadList = bakedModel.getQuads(null, null, randomSource);
-            if (bakedQuadList.isEmpty()) return;
 
             PoseStack.Pose pose = poseStack.last();
             for (BakedQuad bakedQuad : bakedQuadList) {

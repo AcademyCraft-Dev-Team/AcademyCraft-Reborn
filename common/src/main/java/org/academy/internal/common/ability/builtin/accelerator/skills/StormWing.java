@@ -10,7 +10,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
@@ -49,7 +49,7 @@ public class StormWing extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerC2SPacketHandler(NetworkResourceLocations.C2S_STORM_WING_TOGGLE, (listener, packet) -> Server.handleToggle(listener.player));
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_STORM_WING_TOGGLE, (listener, packet) -> Server.handleToggle(listener.player));
     }
 
     public static final class Client {
@@ -57,7 +57,7 @@ public class StormWing extends Skill {
         public static final StormWingClientConfig CONFIG = new StormWingClientConfig();
 
         public static void toggle() {
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_STORM_WING_TOGGLE));
+            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_TOGGLE));
         }
 
         public static final class StormWingClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {

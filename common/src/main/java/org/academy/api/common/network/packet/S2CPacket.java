@@ -10,25 +10,28 @@ import net.minecraft.resources.ResourceLocation;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.network.FriendlyByteBufSerializer;
 import org.academy.api.common.network.FriendlyByteBufSerializers;
+import org.academy.api.common.network.NetworkSystem;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 public class S2CPacket implements Packet<ClientGamePacketListener> {
-    public final ResourceLocation resourceLocation;
+    public int id;
     public final FriendlyByteBuf friendlyByteBuf;
 
+    @ApiStatus.Internal
     public S2CPacket(FriendlyByteBuf friendlyByteBuf) {
-        resourceLocation = friendlyByteBuf.readResourceLocation();
+        id = friendlyByteBuf.readVarInt();
         this.friendlyByteBuf = new FriendlyByteBuf(friendlyByteBuf.readBytes(friendlyByteBuf.readableBytes()));
     }
 
     public S2CPacket(ResourceLocation resourceLocation, FriendlyByteBuf friendlyByteBuf) {
-        this.resourceLocation = resourceLocation;
+        this.id = NetworkSystem.getPacketId(resourceLocation);
         this.friendlyByteBuf = friendlyByteBuf;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public S2CPacket(@NotNull ResourceLocation resourceLocation, Object... values) {
-        this.resourceLocation = resourceLocation;
+        this.id = NetworkSystem.getPacketId(resourceLocation);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         for (Object value : values) {
             FriendlyByteBufSerializer friendlyByteBufSerializer = FriendlyByteBufSerializers.getRequiredSerializer(value.getClass());
@@ -38,14 +41,14 @@ public class S2CPacket implements Packet<ClientGamePacketListener> {
 
     @Override
     public void write(@NotNull FriendlyByteBuf buffer) {
-        friendlyByteBuf.writeResourceLocation(resourceLocation);
+        friendlyByteBuf.writeVarInt(id);
         friendlyByteBuf.writeBytes(friendlyByteBuf.copy());
     }
 
     @Override
     public void handle(@NotNull ClientGamePacketListener handler) {
         Minecraft.getInstance().execute(() -> {
-            NetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.get(resourceLocation).handle((ClientPacketListener) handler, this);
+            NetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle((ClientPacketListener) handler, this);
             friendlyByteBuf.release();
         });
     }

@@ -13,7 +13,7 @@ import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
@@ -51,7 +51,7 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerC2SPacketHandler(NetworkResourceLocations.C2S_TOGGLE_REFLECTION_PACKET,
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_TOGGLE_REFLECTION,
                 (listener, packet) -> Server.toggleReflection(listener.player.getUUID())
         );
     }
@@ -61,7 +61,7 @@ public class VectorReflection extends Skill {
         public static final SkillClientConfig.SkillClientKeyBindingConfig CONFIG = new VectorReflectionClientConfig();
 
         public static void toggleReflection() {
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_TOGGLE_REFLECTION_PACKET));
+            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_TOGGLE_REFLECTION));
         }
 
         public static final class VectorReflectionClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {

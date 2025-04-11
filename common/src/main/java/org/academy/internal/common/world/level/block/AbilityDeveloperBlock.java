@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -113,7 +113,7 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
                 if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                     serverPlayer.connection.send(new S2CPacket(
-                            NetworkResourceLocations.S2C_OPEN_ABILITY_DEVELOPER_SCREEN_PACKET,
+                            Packets.S2C_OPEN_ABILITY_DEVELOPER_SCREEN,
                             new BlockPos(abilityDeveloperBlockEntity.mainPos)
                     ));
                 }

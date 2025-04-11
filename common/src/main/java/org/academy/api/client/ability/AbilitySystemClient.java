@@ -11,7 +11,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ public final class AbilitySystemClient {
     private static volatile float computingPower;
     private static volatile float maximumComputingPower;
 
-    public static void initClient() {
+    public static void init() {
         registerPacketHandler();
         InputSystem.addKeyBinding(KEY_NAME, KEY, () -> {
             if (!ClientUtil.isScreenNull()) return;
@@ -55,24 +55,24 @@ public final class AbilitySystemClient {
     }
 
     public static void registerPacketHandler() {
-        NetworkSystemClient.registerServerToClientPacketHandler(
-                NetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
+        NetworkSystemClient.registerS2CPacketHandler(
+                Packets.S2C_ABILITY_CATEGORY_SYNC,
                 (handler, packet) ->
                         category = FriendlyByteBufDeserializers
                                 .ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER.deserialize(packet.friendlyByteBuf)
         );
-        NetworkSystemClient.registerServerToClientPacketHandler(
-                NetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
+        NetworkSystemClient.registerS2CPacketHandler(
+                Packets.S2C_COMPUTING_POWER_SYNC,
                 (handler, packet) ->
                         setComputingPower(packet.friendlyByteBuf.readFloat())
         );
-        NetworkSystemClient.registerServerToClientPacketHandler(
-                NetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
+        NetworkSystemClient.registerS2CPacketHandler(
+                Packets.S2C_MAX_COMPUTING_POWER_SYNC,
                 (handler, packet) ->
                         setMaximumComputingPower(packet.friendlyByteBuf.readFloat())
         );
-        NetworkSystemClient.registerServerToClientPacketHandler(
-                NetworkResourceLocations.S2C_SKILLS_SYC_PACKET,
+        NetworkSystemClient.registerS2CPacketHandler(
+                Packets.S2C_SKILLS_SYC,
                 (listener, packet) -> {
                     FriendlyByteBufDeserializer<ArrayList<Skill>> friendlyByteBufDeserializer =
                             FriendlyByteBufDeserializers.getArrayListFriendlyByteBufDeserializer(Skill.class);

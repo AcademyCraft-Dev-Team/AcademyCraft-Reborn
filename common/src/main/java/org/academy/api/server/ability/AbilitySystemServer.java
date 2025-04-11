@@ -2,6 +2,7 @@ package org.academy.api.server.ability;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.MinecraftServer;
@@ -13,9 +14,12 @@ import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.FriendlyByteBufSerializers;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.internal.common.ability.builtin.level0.Level0;
+import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.util.*;
@@ -33,6 +37,7 @@ public class AbilitySystemServer {
     public static volatile ScheduledFuture<?> scheduledFuture;
 
     public static void init(final MinecraftServer server) {
+        registerPacketHandler();
         minecraftServer = server;
         playerMap = AcademyCraftServer.worldData.getPlayers();
         for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
@@ -50,6 +55,27 @@ public class AbilitySystemServer {
                     }
                 }, 0, 50, TimeUnit.MILLISECONDS
         );
+    }
+
+    @SuppressWarnings("resource")
+    public static void registerPacketHandler() {
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_ACQUIRE_CATEGORY, (listener, packet) -> {
+            BlockPos pos = packet.friendlyByteBuf.readBlockPos();
+            if (listener.player.level().getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
+                if (abilityDeveloperBlockEntity.energyStored < 15000) {
+                    listener.send(new S2CPacket(Packets.S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE, "Energy is not enough."));
+                } else {
+                    abilityDeveloperBlockEntity.energyStored -= 15000;
+                    MathUtil.WeightedRandom<AbilityCategory> weightedRandom = new MathUtil.WeightedRandom<>();
+                    for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
+                        if (abilityCategory != Level0.INSTANCE)
+                            weightedRandom.addItem(abilityCategory, abilityCategory.probability);
+                    }
+                    setPlayerAbilityCategory(listener.player.getUUID(), weightedRandom.getRandomItem());
+                    listener.send(new S2CPacket(Packets.S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE, "Learning complete. Please type 'exit' to shut down the system, then reopen the screen manually."));
+                }
+            }
+        });
     }
 
     public static void addAllPlayerSyncTask(final UUID uuid) {
@@ -172,7 +198,7 @@ public class AbilitySystemServer {
                     switch (syncType) {
                         case COMPUTING_POWER -> packetConsumer.accept(
                                 new S2CPacket(
-                                        NetworkResourceLocations.S2C_COMPUTING_POWER_SYNC_PACKET,
+                                        Packets.S2C_COMPUTING_POWER_SYNC,
                                         new FriendlyByteBuf(Unpooled.buffer()
                                                 .writeFloat(getPlayerComputingPower(uuid))
                                         )
@@ -180,14 +206,14 @@ public class AbilitySystemServer {
                         );
                         case ABILITY_CATEGORY -> packetConsumer.accept(
                                 new S2CPacket(
-                                        NetworkResourceLocations.S2C_ABILITY_CATEGORY_SYNC_PACKET,
+                                        Packets.S2C_ABILITY_CATEGORY_SYNC,
                                         new FriendlyByteBuf(Unpooled.buffer())
                                                 .writeUtf(getPlayerAbilityCategory(uuid).name)
                                 )
                         );
                         case MAX_COMPUTING_POWER -> packetConsumer.accept(
                                 new S2CPacket(
-                                        NetworkResourceLocations.S2C_MAX_COMPUTING_POWER_SYNC_PACKET,
+                                        Packets.S2C_MAX_COMPUTING_POWER_SYNC,
                                         new FriendlyByteBuf(Unpooled.buffer()
                                                 .writeFloat(getPlayerMaxComputingPower(uuid))
                                         )
@@ -202,7 +228,7 @@ public class AbilitySystemServer {
                             FriendlyByteBufSerializers.SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER
                                     .serialize(friendlyByteBuf, skillList);
                             packetConsumer.accept(
-                                    new S2CPacket(NetworkResourceLocations.S2C_SKILLS_SYC_PACKET, friendlyByteBuf)
+                                    new S2CPacket(Packets.S2C_SKILLS_SYC, friendlyByteBuf)
                             );
                         }
                     }
@@ -230,15 +256,9 @@ public class AbilitySystemServer {
             if (!playerMap.containsKey(player.getUUID())) {
                 WorldData.Player<WorldData.Player.SkillData> data =
                         new WorldData.Player<>();
-                data.setLevel(0);
-
-                MathUtil.WeightedRandom weightedRandom = new MathUtil.WeightedRandom();
-                for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
-                    weightedRandom.addItem(abilityCategory.name, abilityCategory.probability);
-                }
-
-                data.setAbilityCategory(weightedRandom.getRandomItem());
                 playerMap.put(player.getUUID(), data);
+                setPlayerLevel(player.getUUID(), 0);
+                setPlayerAbilityCategory(player.getUUID(), Level0.INSTANCE);
             }
         }
 

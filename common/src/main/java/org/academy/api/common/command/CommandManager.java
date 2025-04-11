@@ -15,11 +15,11 @@ import net.minecraft.network.FriendlyByteBuf;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.client.network.ServerToClientPacketHandler;
+import org.academy.api.client.network.S2CPacketHandler;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -105,23 +105,23 @@ public class CommandManager {
 
         @SuppressWarnings("unchecked")
         public static void registerPacketHandler() {
-            NetworkSystemClient.registerServerToClientPacketHandler(
-                    NetworkResourceLocations.S2C_LEARN_SKILL_PACKET, new ServerToClientPacketHandler() {
+            NetworkSystemClient.registerS2CPacketHandler(
+                    Packets.S2C_LEARN_SKILL, new S2CPacketHandler() {
                         @Override
                         public void handle(@NotNull ClientPacketListener listener, @NotNull S2CPacket packet) {
                         }
                     }
             );
-            NetworkSystemClient.registerServerToClientPacketHandler(
-                    NetworkResourceLocations.S2C_FETCH_ALL_SKILL_PACKET, ArrayList.class, list -> {
+            NetworkSystemClient.registerS2CPacketHandler(
+                    Packets.S2C_FETCH_ALL_SKILL, ArrayList.class, list -> {
                         ArrayList<Skill> skills = (ArrayList<Skill>) list;
                         for (Skill skill : skills) {
                             AbilityDeveloperFragment.addHistory(skill.name);
                         }
                     }
             );
-            NetworkSystemClient.registerServerToClientPacketHandler(
-                    NetworkResourceLocations.S2C_INFO_PACKET, new ServerToClientPacketHandler() {
+            NetworkSystemClient.registerS2CPacketHandler(
+                    Packets.S2C_INFO, new S2CPacketHandler() {
                         @Override
                         public void handle(@NotNull ClientPacketListener listener, @NotNull S2CPacket packet) {
 
@@ -146,14 +146,14 @@ public class CommandManager {
 
         private static int fetchAllSkill(CommandContext<ConsoleSource> context) {
             NetworkSystemClient.sendPacket(new C2SPacket(
-                    NetworkResourceLocations.C2S_FETCH_ALL_SKILL_PACKET)
+                    Packets.C2S_FETCH_ALL_SKILL)
             );
             return 1;
         }
 
         private static int learnSkill(CommandContext<ConsoleSource> context, String skillName) {
             Minecraft.getInstance().execute(() -> NetworkSystemClient.sendPacket(new C2SPacket(
-                    NetworkResourceLocations.C2S_LEARN_SKILL_PACKET, skillName, new BlockPos(context.getSource().mainPos))
+                    Packets.C2S_LEARN_SKILL, skillName, new BlockPos(context.getSource().mainPos))
             ));
             return 1;
         }
@@ -173,7 +173,7 @@ public class CommandManager {
 
         public static final class DebugCommand {
             public static int changeCategory(CommandContext<ConsoleSource> context) {
-                NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET, new FriendlyByteBuf(Unpooled.buffer()).writeUtf(StringArgumentType.getString(context, "category"))));
+                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_DEBUG_CHANGE_CATEGORY, new FriendlyByteBuf(Unpooled.buffer()).writeUtf(StringArgumentType.getString(context, "category"))));
                 return 1;
             }
         }
@@ -182,18 +182,18 @@ public class CommandManager {
     public static final class Server {
         public static void registerPacketHandler() {
             NetworkSystemServer.registerC2SPacketHandler(
-                    NetworkResourceLocations.C2S_DEBUG_CHANGE_CATEGORY_PACKET,
+                    Packets.C2S_DEBUG_CHANGE_CATEGORY,
                     (serverPacketListener, packet) ->
                             AbilitySystemServer.setPlayerAbilityCategory(serverPacketListener.player.getUUID(),
                                     FriendlyByteBufDeserializers.ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER
                                             .deserialize(packet.friendlyByteBuf))
             );
             NetworkSystemServer.registerC2SPacketHandler(
-                    NetworkResourceLocations.C2S_FETCH_ALL_SKILL_PACKET,
+                    Packets.C2S_FETCH_ALL_SKILL,
                     (listener, packet) -> {
                         List<Skill> skills = new ArrayList<>(AbilitySystem.SKILL_MAP.values());
                         listener.send(new S2CPacket(
-                                NetworkResourceLocations.S2C_FETCH_ALL_SKILL_PACKET, skills)
+                                Packets.S2C_FETCH_ALL_SKILL, skills)
                         );
                     }
             );

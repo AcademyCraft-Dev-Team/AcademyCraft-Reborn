@@ -11,7 +11,7 @@ import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
@@ -50,7 +50,7 @@ public class ArcGenerate extends Skill {
     public void initServer(MinecraftServer server) {
         try {
             NetworkSystemServer.registerC2SPacketHandler(
-                    NetworkResourceLocations.C2S_ARC_GENERATE_PACKET,
+                    Packets.C2S_ARC_GENERATE,
                     Server.class.getMethod("handle", ServerPlayer.class, ServerLevel.class),
                     objects -> Server.handle((ServerPlayer) objects[0], (ServerLevel) objects[1])
             );
@@ -64,7 +64,7 @@ public class ArcGenerate extends Skill {
 
         public static void handler() {
             //   if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_ARC_GENERATE_PACKET));
+            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_ARC_GENERATE));
         }
 
         public static final class ArcGenerateSKillConfig extends SkillClientConfig.SkillClientKeyBindingConfig {

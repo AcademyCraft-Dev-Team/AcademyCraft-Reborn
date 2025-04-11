@@ -112,7 +112,6 @@ public class FriendlyByteBufDeserializers {
     }
 
     public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(Class<T> clazz) {
-        AcademyCraft.LOGGER.info("Get required deserializer for {}", clazz);
         FriendlyByteBufDeserializer<T> deserializer = getDeserializer(clazz);
         if (deserializer == null) {
             throw new NullPointerException("Deserializer for " + clazz.getCanonicalName() + " was null");

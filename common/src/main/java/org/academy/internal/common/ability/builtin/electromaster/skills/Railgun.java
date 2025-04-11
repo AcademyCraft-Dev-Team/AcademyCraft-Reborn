@@ -15,7 +15,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
@@ -44,7 +44,7 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET,
+        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(Packets.C2S_RAILGUN_SHOOT,
                 (serverPacketListener, packet) ->
                         Server.handleShoot(serverPacketListener.player)
         );
@@ -69,7 +69,7 @@ public class Railgun extends Skill {
 
         public static void handleKey() {
             if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_RAILGUN_SHOOT_PACKET));
+            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_RAILGUN_SHOOT));
         }
 
         public static final class RailgunClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {

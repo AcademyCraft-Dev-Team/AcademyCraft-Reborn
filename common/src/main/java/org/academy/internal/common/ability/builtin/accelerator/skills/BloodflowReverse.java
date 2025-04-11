@@ -13,7 +13,7 @@ import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkResourceLocations;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -52,7 +52,7 @@ public class BloodflowReverse extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerC2SPacketHandler(NetworkResourceLocations.C2S_REVERSE_BLOODFLOW,
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_REVERSE_BLOODFLOW,
                 (listener, packet) -> Server.reverseBloodflow(listener.player)
         );
     }
@@ -62,7 +62,7 @@ public class BloodflowReverse extends Skill {
         public static final BloodflowReverseClientConfig CONFIG = new BloodflowReverseClientConfig();
 
         public static void reverseBloodflow() {
-            NetworkSystemClient.sendPacket(new C2SPacket(NetworkResourceLocations.C2S_REVERSE_BLOODFLOW));
+            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_REVERSE_BLOODFLOW));
         }
 
         public static final class BloodflowReverseClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
