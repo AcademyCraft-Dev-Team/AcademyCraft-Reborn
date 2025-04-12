@@ -9,14 +9,14 @@ import java.util.List;
 import java.util.Map;
 
 public class WirelessManager {
-    public static final Map<BlockPos, WirelessMaster> WIRELESS_MASTERS = new HashMap<>();
+    public static final Map<BlockPos, WirelessNode> WIRELESS_NODES = new HashMap<>();
 
-    public static List<WirelessMaster> getAvailableWirelessMasters(@NotNull BlockPos nodePos) {
-        List<WirelessMaster> result = new ArrayList<>();
+    public static List<WirelessNode> getAvailableWirelessMasters(@NotNull BlockPos nodePos) {
+        List<WirelessNode> result = new ArrayList<>();
 
-        for (Map.Entry<BlockPos, WirelessMaster> entry : WIRELESS_MASTERS.entrySet()) {
+        for (Map.Entry<BlockPos, WirelessNode> entry : WIRELESS_NODES.entrySet()) {
             BlockPos masterPos = entry.getKey();
-            WirelessMaster master = entry.getValue();
+            WirelessNode master = entry.getValue();
 
             int radius = master.getRadius();
 

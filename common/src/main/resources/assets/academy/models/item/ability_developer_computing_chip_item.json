@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/handheld",
-  "textures": {
-    "layer0": "academy:item/ability_developer_computing_chip"
-  }
-}
