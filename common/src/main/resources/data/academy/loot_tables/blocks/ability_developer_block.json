@@ -2,26 +2,20 @@
   "type": "minecraft:block",
   "pools": [
     {
-      "rolls": 1,
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "academy:ability_developer_block_item"
-        }
-      ],
+      "bonus_rolls": 0.0,
       "conditions": [
         {
           "condition": "minecraft:survives_explosion"
-        },
-        {
-          "condition": "minecraft:match_tool",
-          "predicate": {
-            "predicate": {
-              "items": ["minecraft:iron_pickaxe", "minecraft:diamond_pickaxe"]
-            }
-          }
         }
-      ]
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "academy:ability_developer_block"
+        }
+      ],
+      "rolls": 1.0
     }
-  ]
+  ],
+  "random_sequence": "academy:blocks/ability_developer_block"
 }

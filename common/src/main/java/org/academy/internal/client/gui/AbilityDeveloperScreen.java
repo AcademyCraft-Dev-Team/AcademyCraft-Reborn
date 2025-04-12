@@ -14,7 +14,6 @@ import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.Tickable;
@@ -33,6 +32,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
@@ -52,10 +52,15 @@ public class AbilityDeveloperScreen extends Screen {
     public static final float SKILL_PANEL_HEIGHT = 139;
     public static final float SKILL_PANEL_LEFT_ZONE = (PANEL_RIGHT_WIDTH - SKILL_PANEL_WIDTH) / 2;
     public static final float SKILL_PANEL_TOP_ZONE = 17;
+    public static final int TEXT_COLOR = -3092272;
     public final RightPanelBackground rightPanelBackground = new RightPanelBackground();
     public final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
+    public final WirelessViewPanel wirelessViewPanel = new WirelessViewPanel();
     public final List<Skill> skillList = new ArrayList<>();
     public final BlockPos mainPos;
+    @Nullable
+    public Renderable currentPanel;
+    public AbilityDeveloperBlockEntity abilityDeveloperBlockEntity;
 
     static {
         NetworkSystemClient.registerS2CPacketHandler(Packets.S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE, (listener, packet) -> {
@@ -69,6 +74,12 @@ public class AbilityDeveloperScreen extends Screen {
     public AbilityDeveloperScreen(BlockPos mainPos) {
         super(Component.empty());
         this.mainPos = mainPos;
+        if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(mainPos)
+                instanceof AbilityDeveloperBlockEntity entity) {
+            this.abilityDeveloperBlockEntity = entity;
+        }else {
+            Minecraft.getInstance().setScreen(null);
+        }
     }
 
     @Override
@@ -82,7 +93,6 @@ public class AbilityDeveloperScreen extends Screen {
     @Override
     public void onClose() {
         super.onClose();
-        skillInfoPanel.isShowing = false;
     }
 
     @Override
@@ -95,6 +105,8 @@ public class AbilityDeveloperScreen extends Screen {
         skillB.fathers.add(skillA);
         addSkill(skillA);
         addSkill(skillB);
+        addRenderableWidget(new LeftPanelInfo());
+        addRenderableWidget(wirelessViewPanel);
         addRenderableWidget(skillInfoPanel);
     }
 
@@ -107,6 +119,13 @@ public class AbilityDeveloperScreen extends Screen {
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        for (GuiEventListener listener : children()) {
+            listener.mouseMoved(mouseX, mouseY);
+        }
     }
 
     public class RightPanelBackground implements Renderable, Tickable, GuiEventListener {
@@ -210,7 +229,6 @@ public class AbilityDeveloperScreen extends Screen {
             final float skillPanelBackTop = top + SKILL_PANEL_TOP_ZONE;
             final float skillPanelBackBottom = skillPanelBackTop + SKILL_PANEL_HEIGHT;
             final float textPadding = 2;
-            final int textColor = -3092272;
             final int lineHeight = font.lineHeight;
 
             if (bootFailed) {
@@ -230,7 +248,7 @@ public class AbilityDeveloperScreen extends Screen {
 
                 for (int i = startLineIndex; i < OUTPUT_LINES.size(); i++) {
                     if (currentY + lineHeight > renderAreaBottomLimit) break;
-                    guiGraphics.drawString(font, OUTPUT_LINES.get(i), renderAreaX, currentY, textColor);
+                    guiGraphics.drawString(font, OUTPUT_LINES.get(i), renderAreaX, currentY, TEXT_COLOR);
                     currentY += lineHeight;
                     linesDrawn++;
                     if (printFinished && linesDrawn >= linesToRenderCount) break;
@@ -243,7 +261,7 @@ public class AbilityDeveloperScreen extends Screen {
 
                 if (printFinished) {
                     if (promptLineY < renderAreaBottomLimit) {
-                        guiGraphics.drawString(font, osText, renderAreaX, promptLineY, textColor);
+                        guiGraphics.drawString(font, osText, renderAreaX, promptLineY, TEXT_COLOR);
                         if (editBox != null) {
                             editBox.setX(renderAreaX + font.width(osText));
                             editBox.setY(promptLineY);
@@ -376,7 +394,7 @@ public class AbilityDeveloperScreen extends Screen {
 
         @Override
         public boolean isFocused() {
-            return true;
+            return false;
         }
 
         @Override
@@ -389,15 +407,10 @@ public class AbilityDeveloperScreen extends Screen {
 
                         switch (command.trim()) {
                             case "learn": {
-                                ClientLevel level = Minecraft.getInstance().level;
-                                if (level != null && level.getBlockEntity(mainPos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                                    if (abilityDeveloperBlockEntity.energyStored < 15000) {
-                                        addOutputLine("Energy is not enough.");
-                                    } else {
-                                        NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_ACQUIRE_CATEGORY, mainPos));
-                                    }
+                                if (abilityDeveloperBlockEntity.energyStored < 15000) {
+                                    addOutputLine("Energy is not enough.");
                                 } else {
-                                    addOutputLine("Unknown error");
+                                    NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_ACQUIRE_CATEGORY, mainPos));
                                 }
                                 AcademyCraft.LOGGER.info("Learn command entered");
                                 break;
@@ -424,7 +437,7 @@ public class AbilityDeveloperScreen extends Screen {
         return rightPanelBackground.keyReleased(keyCode, scanCode, modifiers) || super.keyReleased(keyCode, scanCode, modifiers);
     }
 
-    public static class LeftPanelBackground implements Renderable {
+    public class LeftPanelBackground implements Renderable {
         public static final ResourceLocation TEXTURE_TOP = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerleft.png");
         public static final RenderType RENDER_TYPE_TOP = new RenderType.CompositeRenderType(
                 "developer_left_panel_top",
@@ -482,13 +495,10 @@ public class AbilityDeveloperScreen extends Screen {
 
         @Override
         public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-            final int screenWidth = guiGraphics.guiWidth();
-            final int screenHeight = guiGraphics.guiHeight();
-
-            final float left = getMainPanelLeft(screenWidth);
+            final float left = getMainPanelLeft(width);
             final float right = left + PANEL_LEFT_WIDTH;
-            final float top = getMainPaneTop(screenHeight);
-            final float bottom = getMainPanelBottom(screenHeight);
+            final float top = getMainPaneTop(height);
+            final float bottom = getMainPanelBottom(height);
 
             VertexConsumer vertexConsumerBottom = guiGraphics.bufferSource().getBuffer(RENDER_TYPE_BOTTOM);
             vertexConsumerBottom.vertex(left, top, 0).uv(0, 0).endVertex();
@@ -507,6 +517,244 @@ public class AbilityDeveloperScreen extends Screen {
             vertexConsumerTop.vertex(left, bottom, 0).uv(0, 1).endVertex();
             vertexConsumerTop.vertex(right, bottom, 0).uv(1, 1).endVertex();
             vertexConsumerTop.vertex(right, top, 0).uv(1, 0).endVertex();
+        }
+    }
+
+    public class LeftPanelInfo implements Renderable, GuiEventListener, NarratableEntry {
+        public static final ResourceLocation TEXTURE_WIRELESS_BUTTON_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_node.png");
+        public static final RenderType RENDER_TYPE_WIRELESS_BUTTON_ICON = new RenderType.CompositeRenderType(
+                "developer_left_panel_bottom",
+                DefaultVertexFormat.POSITION_TEX,
+                VertexFormat.Mode.QUADS,
+                16,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(new RenderStateShard.TextureStateShard(
+                                TEXTURE_WIRELESS_BUTTON_ICON,
+                                true,
+                                false
+                        ))
+                        .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
+                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false)
+        );
+        public static final ResourceLocation TEXTURE_WIRELESS_BUTTON_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/element_background_light.png");
+        public static final RenderType RENDER_TYPE_WIRELESS_BUTTON_BACK = new RenderType.CompositeRenderType(
+                "developer_wireless_button_back",
+                DefaultVertexFormat.POSITION_COLOR_TEX,
+                VertexFormat.Mode.QUADS,
+                16,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(new RenderStateShard.TextureStateShard(
+                                TEXTURE_WIRELESS_BUTTON_BACK,
+                                true,
+                                false
+                        ))
+                        .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
+                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false)
+        );
+
+        public static final int WIRELESS_BUTTON_TITLE_X = 5;
+        public static final int WIRELESS_BUTTON_TITLE_Y = 108;
+        public static final int WIRELESS_BUTTON_BACK_X = 6;
+        public static final int WIRELESS_BUTTON_BACK_Y = 116;
+        public static final int WIRELESS_BUTTON_BACK_WIDTH = 96;
+        public static final int WIRELESS_BUTTON_BACK_HEIGHT = 16;
+        public static final int WIRELESS_BUTTON_ICON_SIZE = 10;
+        public static final int WIRELESS_BUTTON_ICON_X = 8;
+        public static final int WIRELESS_BUTTON_ICON_Y = 3;
+        public boolean wirelessButtonCovered = false;
+
+        @Override
+        public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            renderWirelessButton(guiGraphics, mouseX, mouseY, partialTick);
+        }
+
+        public void renderWirelessButton(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            VertexConsumer wirelessButtonBack = guiGraphics.bufferSource().getBuffer(RENDER_TYPE_WIRELESS_BUTTON_BACK);
+
+            final float left = getMainPanelLeft(width) + WIRELESS_BUTTON_BACK_X;
+            final float right = left + WIRELESS_BUTTON_BACK_WIDTH;
+            final float top = getMainPaneTop(height) + WIRELESS_BUTTON_BACK_Y;
+            final float bottom = top + WIRELESS_BUTTON_BACK_HEIGHT;
+
+            float color = wirelessButtonCovered ? 1.0f : 0.75f;
+
+            // Left Top
+            wirelessButtonBack.vertex(left, top, 3).color(color, color, color, 1f).uv(0, 0).endVertex();
+            // Left Bottom
+            wirelessButtonBack.vertex(left, bottom, 3).color(color, color, color, 1f).uv(0, 1).endVertex();
+            // Right Bottom
+            wirelessButtonBack.vertex(right, bottom, 3).color(color, color, color, 1f).uv(1, 1).endVertex();
+            // Right Top
+            wirelessButtonBack.vertex(right, top, 3).color(color, color, color, 1f).uv(1, 0).endVertex();
+
+            guiGraphics.drawString(font, "Current Node:", (int) (getMainPanelLeft(width) + WIRELESS_BUTTON_TITLE_X), (int) (getMainPaneTop(height) + WIRELESS_BUTTON_TITLE_Y), TEXT_COLOR);
+
+            VertexConsumer wirelessButtonIcon = guiGraphics.bufferSource().getBuffer(RENDER_TYPE_WIRELESS_BUTTON_ICON);
+            final float iconLeft = left + WIRELESS_BUTTON_ICON_X;
+            final float iconTop = top + WIRELESS_BUTTON_ICON_Y;
+            final float iconRight = iconLeft + WIRELESS_BUTTON_ICON_SIZE;
+            final float iconBottom = iconTop + WIRELESS_BUTTON_ICON_SIZE;
+
+            wirelessButtonIcon.vertex(iconLeft, iconTop, 4).uv(0, 0).endVertex();
+            wirelessButtonIcon.vertex(iconLeft, iconBottom, 4).uv(0, 1).endVertex();
+            wirelessButtonIcon.vertex(iconRight, iconBottom, 4).uv(1, 1).endVertex();
+            wirelessButtonIcon.vertex(iconRight, iconTop, 4).uv(1, 0).endVertex();
+        }
+
+        @Override
+        public void setFocused(boolean focused) {
+        }
+
+        @Override
+        public boolean isFocused() {
+            return false;
+        }
+
+        @Override
+        public @NotNull NarrationPriority narrationPriority() {
+            return NarrationPriority.FOCUSED;
+        }
+
+        @Override
+        public void updateNarration(@NotNull NarrationElementOutput narrationElementOutput) {
+        }
+
+        @Override
+        public void mouseMoved(double mouseX, double mouseY) {
+            final float left = getMainPanelLeft(width) + WIRELESS_BUTTON_BACK_X;
+            final float top = getMainPaneTop(height) + WIRELESS_BUTTON_BACK_Y;
+            wirelessButtonCovered = isMouseInside(mouseX, mouseY, left, top, WIRELESS_BUTTON_BACK_WIDTH, WIRELESS_BUTTON_BACK_HEIGHT);
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (currentPanel != null) return false;
+            final float left = getMainPanelLeft(width) + WIRELESS_BUTTON_BACK_X;
+            final float top = getMainPaneTop(height) + WIRELESS_BUTTON_BACK_Y;
+            if (isMouseInside(mouseX, mouseY, left, top, WIRELESS_BUTTON_BACK_WIDTH, WIRELESS_BUTTON_BACK_HEIGHT)) {
+                currentPanel = wirelessViewPanel;
+                AcademyCraft.LOGGER.info("Clicked on wireless button");
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    public class WirelessViewPanel implements Renderable, GuiEventListener, NarratableEntry {
+        public static final ResourceLocation TEXTURE_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_tonode.png");
+        public static final RenderType RENDER_TYPE_ICON = new RenderType.CompositeRenderType(
+                "developer_wireless_view_icon",
+                DefaultVertexFormat.POSITION_TEX,
+                VertexFormat.Mode.QUADS,
+                16,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(new RenderStateShard.TextureStateShard(
+                                TEXTURE_ICON,
+                                true,
+                                false
+                        ))
+                        .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
+                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false)
+        );
+
+        public static final ResourceLocation TEXTURE_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/element_background_dark.png");
+        public static final RenderType RENDER_TYPE_BACK = new RenderType.CompositeRenderType(
+                "developer_wireless_view_back",
+                DefaultVertexFormat.POSITION_COLOR_TEX,
+                VertexFormat.Mode.QUADS,
+                16,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(new RenderStateShard.TextureStateShard(
+                                TEXTURE_BACK,
+                                false,
+                                false
+                        ))
+                        .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
+                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false)
+        );
+        public static final int WIRELESS_VIEW_BACK_WIDTH = 176;
+        public static final int WIRELESS_VIEW_BACK_HEIGHT = 187;
+        public static final int WIRELESS_VIEW_ICON_OFFSET = 10;
+        public static final int WIRELESS_VIEW_ICON_SIZE = 16;
+
+        @Override
+        public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            if (currentPanel != this) return;
+            renderBackground(guiGraphics);
+            VertexConsumer wirelessViewBack = guiGraphics.bufferSource().getBuffer(RENDER_TYPE_BACK);
+
+            final float left = (width - WIRELESS_VIEW_BACK_WIDTH) / 2.0f;
+            final float right = left + WIRELESS_VIEW_BACK_WIDTH;
+            final float top = (height - WIRELESS_VIEW_BACK_HEIGHT) / 2.0f;
+            final float bottom = top + WIRELESS_VIEW_BACK_HEIGHT;
+
+            float color = 1.0f;
+
+            // Left Top
+            wirelessViewBack.vertex(left, top, 3).color(color, color, color, 1f).uv(0, 0).endVertex();
+            // Left Bottom
+            wirelessViewBack.vertex(left, bottom, 3).color(color, color, color, 1f).uv(0, 1).endVertex();
+            // Right Bottom
+            wirelessViewBack.vertex(right, bottom, 3).color(color, color, color, 1f).uv(1, 1).endVertex();
+            // Right Top
+            wirelessViewBack.vertex(right, top, 3).color(color, color, color, 1f).uv(1, 0).endVertex();
+            VertexConsumer wirelessViewIcon = guiGraphics.bufferSource().getBuffer(RENDER_TYPE_ICON);
+            final float iconLeft = left + WIRELESS_VIEW_ICON_OFFSET;
+            final float iconTop = top + WIRELESS_VIEW_ICON_OFFSET;
+            final float iconRight = iconLeft + WIRELESS_VIEW_ICON_SIZE;
+            final float iconBottom = iconTop + WIRELESS_VIEW_ICON_SIZE;
+
+            wirelessViewIcon.vertex(iconLeft, iconTop, 4).uv(0, 0).endVertex();
+            wirelessViewIcon.vertex(iconLeft, iconBottom, 4).uv(0, 1).endVertex();
+            wirelessViewIcon.vertex(iconRight, iconBottom, 4).uv(1, 1).endVertex();
+            wirelessViewIcon.vertex(iconRight, iconTop, 4).uv(1, 0).endVertex();
+
+
+        }
+
+        @Override
+        public void setFocused(boolean focused) {
+        }
+
+        @Override
+        public boolean isFocused() {
+            return false;
+        }
+
+        @Override
+        public @NotNull NarrationPriority narrationPriority() {
+            return NarrationPriority.FOCUSED;
+        }
+
+        @Override
+        public void updateNarration(@NotNull NarrationElementOutput narrationElementOutput) {
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (currentPanel != this) return false;
+            final float left = (width - WIRELESS_VIEW_BACK_WIDTH) / 2.0f;
+            final float top = (height - WIRELESS_VIEW_BACK_HEIGHT) / 2.0f;
+
+            if (!isMouseInside(mouseX, mouseY, left, top, WIRELESS_VIEW_BACK_WIDTH, WIRELESS_VIEW_BACK_HEIGHT)) {
+                currentPanel = null;
+                return true;
+            } else {
+                return false;
+            }
         }
     }
 
@@ -571,7 +819,6 @@ public class AbilityDeveloperScreen extends Screen {
         public ResourceLocation texture;
         public boolean hasFathers = false;
         public final List<Skill> fathers = new ArrayList<>();
-        public boolean focused;
         public float scale = 1.0f;
         public float targetScale = 1.0f;
 
@@ -702,12 +949,11 @@ public class AbilityDeveloperScreen extends Screen {
 
         @Override
         public void setFocused(boolean focused) {
-            this.focused = focused;
         }
 
         @Override
         public boolean isFocused() {
-            return focused && !skillInfoPanel.isShowing;
+            return false;
         }
 
         @Override
@@ -774,9 +1020,8 @@ public class AbilityDeveloperScreen extends Screen {
 
         @Override
         public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-            if (isShowing && shownSkill != null) {
+            if (currentPanel == this && shownSkill != null) {
                 renderBackground(guiGraphics);
-
                 renderLearnButton(guiGraphics, isMouseInsideButton(mouseX, mouseY));
             }
         }
@@ -829,7 +1074,7 @@ public class AbilityDeveloperScreen extends Screen {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (isShowing) {
+            if (currentPanel == this) {
                 if (isMouseInside(mouseX, mouseY, ((double) width / 2) - (WIDTH / 2), ((double) height / 2) - (HEIGHT / 2), WIDTH, HEIGHT)) {
                     if (isMouseInsideButton(mouseX, mouseY)) {
                         AcademyCraft.LOGGER.info("Learn button clicked");
@@ -838,7 +1083,7 @@ public class AbilityDeveloperScreen extends Screen {
                         return false;
                     }
                 } else {
-                    this.isShowing = false;
+                    currentPanel = null;
                     return true;
                 }
             } else {

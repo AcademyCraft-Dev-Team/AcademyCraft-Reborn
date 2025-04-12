@@ -1,12 +1,16 @@
 package org.academy.api.common.wireless;
 
-import org.jetbrains.annotations.Nullable;
+import java.util.List;
 
 public interface WirelessNode {
-    @Nullable
-    WirelessMaster getWirelessMaster();
-    String getName();
-    int getEnergyStorage();
+    String getNodeName();
+    void setNodeName(String nodeName);
+    String getNodePassword();
+    void setNodePassword(String nodePassword);
+    int getRadius();
+    int getEnergyStored();
+    void setEnergyStored(int energyStored);
     int getMaxEnergyStorage();
-    void setEnergyStorage(int energyStorage);
+    int getTranslateSpeed();
+    List<WirelessUser> getWirelessNodes();
 }
