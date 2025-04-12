@@ -11,8 +11,8 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
-import org.academy.api.common.wireless.WirelessMaster;
 import org.academy.api.common.wireless.WirelessNode;
+import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
@@ -21,9 +21,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
-public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements WirelessNode {
+public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements WirelessUser {
     @Nullable
-    public WirelessMaster wirelessMaster;
+    public WirelessNode wirelessNode;
     public String name;
     public BlockPos mainPos;
     public int energyStored;
@@ -85,8 +85,13 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public @Nullable WirelessMaster getWirelessMaster() {
-        return wirelessMaster;
+    public @Nullable WirelessNode getWirelessNode() {
+        return wirelessNode;
+    }
+
+    @Override
+    public void setWirelessNode(@Nullable WirelessNode wirelessNode) {
+        this.wirelessNode = wirelessNode;
     }
 
     @Override

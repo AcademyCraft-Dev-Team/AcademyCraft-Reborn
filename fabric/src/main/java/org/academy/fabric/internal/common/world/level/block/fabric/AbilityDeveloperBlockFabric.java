@@ -36,14 +36,14 @@ public class AbilityDeveloperBlockFabric extends AbilityDeveloperBlock {
                 if (radio instanceof RadioFrequencyEnergyOutputBridgeBlockEntity radioFrequencyEnergyOutputBridgeBlockEntity) {
                     SimpleEnergyStorage source = radioFrequencyEnergyOutputBridgeBlockEntity.energyStorage;
                     try (Transaction transaction = Transaction.openOuter()) {
-                        if (abilityDeveloperBlockEntity.energyStored < abilityDeveloperBlockEntity.getMaxStored()) {
-                            long amountExtracted;
-                            long shouldExtract;
-                            shouldExtract = abilityDeveloperBlockEntity.getMaxStored() - abilityDeveloperBlockEntity.energyStored;
-                            if (abilityDeveloperBlockEntity.getMaxStored() - abilityDeveloperBlockEntity.energyStored >= abilityDeveloperBlockEntity.getMaxStored()) {
-                                shouldExtract = source.maxExtract;
+                        if (abilityDeveloperBlockEntity.energyStored < abilityDeveloperBlockEntity.getMaxEnergyStorage()) {
+                            int amountExtracted;
+                            int shouldExtract;
+                            shouldExtract = abilityDeveloperBlockEntity.getMaxEnergyStorage() - abilityDeveloperBlockEntity.energyStored;
+                            if (abilityDeveloperBlockEntity.getMaxEnergyStorage() - abilityDeveloperBlockEntity.energyStored >= abilityDeveloperBlockEntity.getMaxEnergyStorage()) {
+                                shouldExtract = (int) source.maxExtract;
                             }
-                            amountExtracted = source.extract(shouldExtract, transaction);
+                            amountExtracted = (int) source.extract(shouldExtract, transaction);
                             if (amountExtracted == source.maxExtract) {
                                 abilityDeveloperBlockEntity.energyStored += amountExtracted;
                                 transaction.commit();
