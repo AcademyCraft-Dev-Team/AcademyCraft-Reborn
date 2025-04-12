@@ -1,0 +1,9 @@
+{
+  "loader": "forge:obj",
+  "model": "academy:models/block/ability_developer_block.obj",
+  "flip_v": true,
+  "textures": {
+    "texture0": "academy:block/ability_developer_block",
+    "particle": "academy:item/ability_developer_block_item"
+  }
+}

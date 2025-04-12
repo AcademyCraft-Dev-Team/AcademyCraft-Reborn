@@ -24,7 +24,6 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
-import org.academy.internal.common.world.item.AcademyCraftItems;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,7 +48,7 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
     );
 
     protected AbilityDeveloperBlock(Properties properties) {
-        super(properties);
+        super(properties.noOcclusion().strength(6.0F, 7.0F).requiresCorrectToolForDrops());
     }
 
     public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction) {
@@ -100,16 +99,7 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
 
     @Override
     public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
-        if (player.isShiftKeyDown()) {
-            if (!level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                    if (!abilityDeveloperBlockEntity.isEmpty()) {
-                        abilityDeveloperBlockEntity.setItem(0, ItemStack.EMPTY);
-                        player.addItem(new ItemStack(AcademyCraftItems.ABILITY_DEVELOPER_COMPUTATIONAL_CHIP_ITEM.asItem()));
-                    }
-                }
-            }
-        } else {
+        if (!player.isShiftKeyDown()) {
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
                 if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                     serverPlayer.connection.send(new S2CPacket(

@@ -5,7 +5,7 @@ plugins {
 
 legacyForge {
     mcpVersion = minecraft_version
-    accessTransformers = ["src/main/others/accesstransformer.cfg"]
+    accessTransformers = [project(":forge").file("src/main/resources/META-INF/accesstransformer.cfg").path]
     parchment {
         minecraftVersion = parchment_minecraft
         mappingsVersion = parchment_version

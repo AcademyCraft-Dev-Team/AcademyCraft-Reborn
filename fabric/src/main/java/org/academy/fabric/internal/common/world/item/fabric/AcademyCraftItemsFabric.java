@@ -11,7 +11,7 @@ import org.academy.internal.common.world.item.AbilityDeveloperComputationalChipI
 import org.academy.internal.common.world.item.AcademyCraftItems;
 
 public class AcademyCraftItemsFabric {
-    public static final BlockItem ABILITY_DEVELOPER_BLOCK_ITEM = new AbilityDeveloperBlockItem();
+    public static final BlockItem ABILITY_DEVELOPER_BLOCK_ITEM = new AbilityDeveloperBlockItemFabric();
     public static final BlockItem RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK_ITEM = new BlockItem(AcademyCraftBlocksFabric.RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK, new Item.Properties());
 
     private AcademyCraftItemsFabric() {

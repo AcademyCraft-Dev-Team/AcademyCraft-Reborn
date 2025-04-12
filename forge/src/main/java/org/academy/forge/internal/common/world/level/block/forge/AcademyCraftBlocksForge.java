@@ -6,7 +6,7 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.world.level.block.Blocks;
 
 public class AcademyCraftBlocksForge {
-    public static final AbilityDeveloperBlockForge ABILITY_DEVELOPER_BLOCK = new AbilityDeveloperBlockForge(BlockBehaviour.Properties.of().noOcclusion());
+    public static final AbilityDeveloperBlockForge ABILITY_DEVELOPER_BLOCK = new AbilityDeveloperBlockForge(BlockBehaviour.Properties.of());
     public static final RadioFrequencyEnergyOutputBridgeBlock RADIO_FREQUENCY_ENERGY_OUTPUT_BRIDGE_BLOCK = new RadioFrequencyEnergyOutputBridgeBlock(BlockBehaviour.Properties.of());
 
     private AcademyCraftBlocksForge() {

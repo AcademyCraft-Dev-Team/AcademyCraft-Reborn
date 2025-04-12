@@ -1,6 +1,6 @@
 # Blender 4.3.2
 # www.blender.org
-mtllib ability_developer_block_item.mtl
+mtllib ability_developer_block.mtl
 o ability_developer_block
 v 0.738950 0.346949 0.286679
 v 0.864100 0.421499 0.173128

@@ -30,11 +30,12 @@ public class AbilityDeveloperBlockForge extends AbilityDeveloperBlock {
         if (level.isClientSide() || state.getValue(TYPE) == MultiBlockType.SUBJECT) return null;
         return (serverLevel, blockPos, blockState, blockEntity) -> {
             if (blockEntity instanceof AbilityDeveloperBlockEntityForge abilityDeveloperBlockEntity) {
-                if (abilityDeveloperBlockEntity.getMaxStored() >= abilityDeveloperBlockEntity.energyStored) return;
+                if (abilityDeveloperBlockEntity.getMaxEnergyStorage() >= abilityDeveloperBlockEntity.energyStored)
+                    return;
                 BlockEntity radio = serverLevel.getBlockEntity(blockPos.below());
                 if (radio instanceof RadioFrequencyEnergyOutputBridgeBlockEntity radioFrequencyEnergyOutputBridgeBlockEntity) {
                     radioFrequencyEnergyOutputBridgeBlockEntity.getCapability(ForgeCapabilities.ENERGY).ifPresent(iEnergyStorage -> {
-                        int shouldExtract = (int) Math.min(iEnergyStorage.getEnergyStored(), abilityDeveloperBlockEntity.getMaxStored() - abilityDeveloperBlockEntity.energyStored);
+                        int shouldExtract = Math.min(iEnergyStorage.getEnergyStored(), abilityDeveloperBlockEntity.getMaxEnergyStorage() - abilityDeveloperBlockEntity.energyStored);
                         int extractEnergy = iEnergyStorage.extractEnergy(shouldExtract, false);
                         if (extractEnergy > 0) {
                             abilityDeveloperBlockEntity.energyStored += extractEnergy;
