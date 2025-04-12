@@ -12,8 +12,7 @@ import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.GameUtil;
 import org.academy.api.server.network.C2SPacketHandler;
 import org.academy.api.server.network.NetworkSystemServer;
-
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public class NetworkSystem {
     public static final BiMap<ResourceLocation, Integer> PACKET_IDS = HashBiMap.create();
@@ -29,12 +28,12 @@ public class NetworkSystem {
     }
 
     public static ResourceLocation registerPacket(ResourceLocation resourceLocation, @Nullable C2SPacketHandler c2sPacketHandler, @Nullable S2CPacketHandler s2cPacketHandler) {
-        registerPacketHandler(resourceLocation,c2sPacketHandler, s2cPacketHandler);
+        registerPacketHandler(resourceLocation, c2sPacketHandler, s2cPacketHandler);
         return registerPacket(resourceLocation);
     }
 
-    public static void registerPacketHandler(ResourceLocation resourceLocation,@Nullable C2SPacketHandler c2sPacketHandler, @Nullable S2CPacketHandler s2cPacketHandler) {
-        switch (GameUtil.getEnvType()){
+    public static void registerPacketHandler(ResourceLocation resourceLocation, @Nullable C2SPacketHandler c2sPacketHandler, @Nullable S2CPacketHandler s2cPacketHandler) {
+        switch (GameUtil.getEnvType()) {
             case CLIENT -> {
                 if (s2cPacketHandler == null) {
                     AcademyCraft.LOGGER.warn("NetworkSystem: Client side packet handler is null!");
