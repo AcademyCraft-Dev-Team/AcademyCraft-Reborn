@@ -22,5 +22,11 @@
     "sounds": [
       "academy:skill/accelerator/vector_reflection"
     ]
+  },
+  "select": {
+    "subtitle": "academy.select",
+    "sounds": [
+      "academy:gui/select"
+    ]
   }
 }
