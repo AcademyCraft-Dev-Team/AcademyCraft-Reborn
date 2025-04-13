@@ -14,12 +14,14 @@ public class AcademyCraftSoundEvents {
     public static final SoundEvent RAILGUN = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, "railgun"));
     public static final SoundEvent ARC_WEAK = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, "arc_weak"));
     public static final SoundEvent VECTOR_REFLECTION = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, SkillNames.VECTOR_REFLECTION));
+    public static final SoundEvent SELECT = SoundEvent.createVariableRangeEvent(new ResourceLocation(AcademyCraft.MOD_ID, "select"));
 
     static {
         SOUND_EVENT_LIST.add(COIN);
         SOUND_EVENT_LIST.add(RAILGUN);
         SOUND_EVENT_LIST.add(ARC_WEAK);
         SOUND_EVENT_LIST.add(VECTOR_REFLECTION);
+        SOUND_EVENT_LIST.add(SELECT);
     }
 
     private AcademyCraftSoundEvents() {

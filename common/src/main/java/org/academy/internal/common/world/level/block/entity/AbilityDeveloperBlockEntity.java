@@ -1,9 +1,13 @@
 package org.academy.internal.common.world.level.block.entity;
 
+import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -15,6 +19,7 @@ import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.internal.client.models.AbilityDeveloperBlockEntityModel;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +32,10 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     public String name;
     public BlockPos mainPos;
     public int energyStored;
+    public int ticks;
+    public final AnimationState animationState = new AnimationState();
+    public final AnimationState closingAnimationState = new AnimationState();
+    public boolean isOpen = false;
 
     public AbilityDeveloperBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
         super(type, pos, blockState);
@@ -39,8 +48,9 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
         return tag;
     }
 
+    @Nullable
     @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
@@ -64,6 +74,7 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
                             for (String skillName : skillList) {
                                 AcademyCraft.LOGGER.info(skillName);
                             }
+                            abilityDeveloperBlockEntity.setChanged();
                         }
                     } else {
                         AcademyCraft.LOGGER.info("Invalid server learn skill packet for {}", name);
@@ -74,7 +85,45 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
 
     public void setMainPos(BlockPos pos) {
         this.mainPos = pos;
-        if (level != null) {
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public void setOpen(boolean open) {
+        this.animationState.animateWhen(this.isOpen, this.ticks);
+        this.closingAnimationState.animateWhen(!this.isOpen, this.ticks);
+
+        boolean previousIsOpen = this.isOpen;
+        this.isOpen = open;
+
+        if (level != null && level.isClientSide) {
+            AnimationState currentAnimationState = previousIsOpen ? animationState : closingAnimationState;
+            AnimationState targetAnimationState = open ? animationState : closingAnimationState;
+            AnimationDefinition targetAnimationDefinition = open ? AbilityDeveloperBlockEntityModel.open : AbilityDeveloperBlockEntityModel.close;
+
+            long elapsedMillis = currentAnimationState.getAccumulatedTime();
+
+            currentAnimationState.stop();
+
+            if (elapsedMillis > 0) {
+                float elapsedSeconds = elapsedMillis / 1000.0f;
+                float totalDuration = targetAnimationDefinition.lengthInSeconds();
+
+                float targetStartSeconds = Math.max(0.0f, Math.min(totalDuration, totalDuration - elapsedSeconds));
+
+                long targetElapsedTicks = (long)(targetStartSeconds * 20.0f);
+
+                long adjustedStartTick = this.ticks - targetElapsedTicks;
+                targetAnimationState.start(Math.toIntExact(adjustedStartTick));
+            } else {
+                targetAnimationState.start(this.ticks);
+            }
+        }
+
+        setChanged();
+        if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
         }
     }
@@ -101,12 +150,26 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
 
     @Override
     public int getEnergyStorage() {
+        if (!isMain() && level != null && mainPos != null) {
+            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
+                return mainDevBE.getEnergyStorage();
+            }
+        }
         return energyStored;
     }
 
     @Override
     public void setEnergyStorage(int energyStorage) {
+        if (!isMain() && level != null && mainPos != null) {
+            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
+                mainDevBE.setEnergyStorage(energyStorage);
+                return;
+            }
+        }
         this.energyStored = energyStorage;
+        setChanged();
     }
 
     @Override
@@ -119,19 +182,46 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
         }
         if (isMain()) {
             tag.putInt("energyStored", energyStored);
+            tag.putBoolean("isOpen", isOpen);
         }
     }
 
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
+        if (tag.contains("mainPosX")) {
+            mainPos = new BlockPos(
+                    tag.getInt("mainPosX"),
+                    tag.getInt("mainPosY"),
+                    tag.getInt("mainPosZ")
+            );
+        }
+
         if (isMain()) {
             energyStored = tag.getInt("energyStored");
+            boolean loadedIsOpen = tag.getBoolean("isOpen");
+            if (level == null || !level.isClientSide) {
+                this.isOpen = loadedIsOpen;
+            } else {
+                if (this.isOpen != loadedIsOpen) {
+                    this.isOpen = loadedIsOpen;
+                }
+            }
+
+        } else if (level != null && mainPos != null && level.isClientSide) {
+            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
+                this.isOpen = mainDevBE.isOpen;
+                this.energyStored = mainDevBE.energyStored;
+            }
         }
-        mainPos = new BlockPos(
-                tag.getInt("mainPosX"),
-                tag.getInt("mainPosY"),
-                tag.getInt("mainPosZ")
-        );
+    }
+
+    public void clientTick() {
+        this.ticks++;
+    }
+
+    public void serverTick() {
+        this.ticks++;
     }
 }
