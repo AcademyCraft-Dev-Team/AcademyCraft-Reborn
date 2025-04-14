@@ -33,8 +33,10 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     public BlockPos mainPos;
     public int energyStored;
     public int ticks;
-    public final AnimationState animationState = new AnimationState();
-    public final AnimationState closingAnimationState = new AnimationState();
+    public final AnimationState openState = new AnimationState();
+    public final AnimationState closingState = new AnimationState();
+    public final AnimationState standState = new AnimationState();
+    public final AnimationState liedownState = new AnimationState();
     public boolean isOpen = false;
 
     public AbilityDeveloperBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
@@ -92,15 +94,16 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     }
 
     public void setOpen(boolean open) {
-        this.animationState.animateWhen(this.isOpen, this.ticks);
-        this.closingAnimationState.animateWhen(!this.isOpen, this.ticks);
-
         boolean previousIsOpen = this.isOpen;
         this.isOpen = open;
 
+        this.openState.animateWhen(this.isOpen, this.ticks);
+        this.closingState.animateWhen(!this.isOpen, this.ticks);
+
+
         if (level != null && level.isClientSide) {
-            AnimationState currentAnimationState = previousIsOpen ? animationState : closingAnimationState;
-            AnimationState targetAnimationState = open ? animationState : closingAnimationState;
+            AnimationState currentAnimationState = previousIsOpen ? openState : closingState;
+            AnimationState targetAnimationState = open ? openState : closingState;
             AnimationDefinition targetAnimationDefinition = open ? AbilityDeveloperBlockEntityModel.open : AbilityDeveloperBlockEntityModel.close;
 
             long elapsedMillis = currentAnimationState.getAccumulatedTime();
@@ -219,6 +222,13 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
 
     public void clientTick() {
         this.ticks++;
+        if (energyStored <= 0){
+            standState.stop();
+            liedownState.startIfStopped(ticks);
+        } else {
+            liedownState.stop();
+            standState.startIfStopped(ticks);
+        }
     }
 
     public void serverTick() {

@@ -12,12 +12,10 @@ import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntity> {
     public static final AbilityDeveloperBlockEntityModel ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL = new AbilityDeveloperBlockEntityModel(AbilityDeveloperBlockEntityModel.createBodyLayer().bakeRoot());
     private static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/ability_developer.png");
-    private static final Vector3f ANIMATION_VECTOR_CACHE = new Vector3f();
 
     @Override
     public void render(@NotNull AbilityDeveloperBlockEntity blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
@@ -32,11 +30,17 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
                 default -> yRot = 0;
             }
 
-            matrix4f.translate(0.5f,1.5f,0.5f);
-            matrix4f.rotateX((float) Math.toRadians(180));
-            matrix4f.rotateY((float) Math.toRadians(yRot));
-            poseStack.mulPoseMatrix(matrix4f);
             poseStack.last().normal().rotateX((float) Math.toRadians(180));
+            poseStack.last().normal().rotateY((float) Math.toRadians(yRot));
+            matrix4f.rotateX((float) Math.toRadians(180));
+            matrix4f.translate(0.5f,-1.5f,-1.5f);
+
+            matrix4f.translate(0,0,1);
+            matrix4f.rotateY((float) Math.toRadians(yRot));
+            matrix4f.translate(0,0,-1);
+
+            poseStack.mulPoseMatrix(matrix4f);
+
             VertexConsumer vertexConsumer = buffer.getBuffer(ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.renderType(TEXTURE));
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.setupAnim(blockEntity, partialTick);
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay, 1f, 1f, 1f, 1f);
