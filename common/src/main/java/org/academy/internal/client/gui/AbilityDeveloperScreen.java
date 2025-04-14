@@ -889,7 +889,6 @@ public class AbilityDeveloperScreen extends Screen {
         public static final int PADDING = 10;
         public static final int EDIT_BOX_WIDTH = 60;
         public static final int EDIT_BOX_HEIGHT = 14;
-        public static final int ACTION_BUTTON_BASE_WIDTH = 20;
         public static final int ACTION_BUTTON_HEIGHT = 14;
 
         private final Map<WirelessNode, Pair<EditBox, ConnectButton>> availableNodeWidgets = new LinkedHashMap<>();
