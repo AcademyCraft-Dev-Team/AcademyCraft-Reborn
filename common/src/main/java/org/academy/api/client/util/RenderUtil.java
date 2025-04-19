@@ -7,10 +7,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.CameraType;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.resources.model.BakedModel;
@@ -20,12 +17,15 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
+import org.academy.internal.client.renderer.Shaders;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
@@ -47,6 +47,49 @@ public final class RenderUtil {
         }
     }
 
+    @NotNull
+    public static RenderType getPositionTexRenderType(@NotNull String name, @NotNull ResourceLocation resourceLocation, boolean blur) {
+        return new RenderType.CompositeRenderType(
+                name,
+                DefaultVertexFormat.POSITION_TEX,
+                VertexFormat.Mode.QUADS,
+                16,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(
+                                new RenderStateShard.TextureStateShard(
+                                        resourceLocation,
+                                        blur,
+                                        false
+                                )
+                        )
+                        .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
+                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false));
+    }
+
+    public static RenderType getPositionColorTexRenderType(@NotNull String name, @NotNull ResourceLocation resourceLocation, boolean blur) {
+        return new RenderType.CompositeRenderType(
+                name,
+                DefaultVertexFormat.POSITION_COLOR_TEX,
+                VertexFormat.Mode.QUADS,
+                16,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(
+                                new RenderStateShard.TextureStateShard(
+                                        resourceLocation,
+                                        blur,
+                                        false
+                                )
+                        )
+                        .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
+                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false));
+    }
+
     public static final class RenderStates {
         public static final WriteMaskStateShard COLOR_WRITE = new WriteMaskStateShard(true, false);
         public static final ShaderStateShard POSITION_COLOR_LIGHTMAP_SHADER = new ShaderStateShard(GameRenderer::getPositionColorLightmapShader);
@@ -55,6 +98,12 @@ public final class RenderUtil {
         public static final ShaderStateShard POSITION_TEX_SHADER = new ShaderStateShard(GameRenderer::getPositionTexShader);
         public static final ShaderStateShard POSITION_COLOR_TEX_LIGHTMAP_SHADER = new ShaderStateShard(GameRenderer::getPositionColorTexLightmapShader);
         public static final ShaderStateShard POSITION_COLOR_SHADER = new ShaderStateShard(GameRenderer::getPositionColorShader);
+        public static final ShaderStateShard DEBUG = new ShaderStateShard(new Supplier<ShaderInstance>() {
+            @Override
+            public ShaderInstance get() {
+                return Shaders.test;
+            }
+        });
         public static final TransparencyStateShard TRANSLUCENT_TRANSPARENCY = new TransparencyStateShard("translucent_transparency", () -> {
             RenderSystem.enableBlend();
             RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
@@ -99,43 +148,6 @@ public final class RenderUtil {
                         .createCompositeState(false)
         );
 
-        public static float[][][] getRingVertexBuffer(float radius, int segments, float yBottom, float yTop) {
-            if (segments <= 0) return null;
-            float[][][] vertexBuffer = new float[segments][4][4];
-            final float twoPi = MathUtil.TWO_PI;
-
-            for (int i = 0; i < segments; i++) {
-                float angle1 = (i * twoPi) / segments;
-                float angle2 = ((i + 1) * twoPi) / segments;
-                float u0 = (float) i / segments;
-                float u1 = (float) (i + 1) / segments;
-
-                float cos1 = (float) Math.cos(angle1);
-                float sin1 = (float) Math.sin(angle1);
-                float cos2 = (float) Math.cos(angle2);
-                float sin2 = (float) Math.sin(angle2);
-
-                float x1 = cos1 * radius;
-                float z1 = sin1 * radius;
-                float x2 = cos2 * radius;
-                float z2 = sin2 * radius;
-
-                vertexBuffer[i][0] = new float[]{x1, yBottom, z1, u0};
-                vertexBuffer[i][1] = new float[]{x2, yBottom, z2, u1};
-                vertexBuffer[i][2] = new float[]{x2, yTop, z2, u1};
-                vertexBuffer[i][3] = new float[]{x1, yTop, z1, u0};
-            }
-            return vertexBuffer;
-        }
-
-        public static float[][][] getVerticalVertexBuffer(float radius, float height, int segments) {
-            return getRingVertexBuffer(radius, segments, 0f, height);
-        }
-
-        public static float[][][] getHorizontalVertexBuffer(float radius, float height, int segments) {
-            return getRingVertexBuffer(radius, segments, -height / 2f, height / 2f);
-        }
-
         public static void renderRing(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer) {
             for (int i = 0; i < segments; i++) {
                 float[] v0 = vertexBuffer[i][0];
@@ -159,13 +171,13 @@ public final class RenderUtil {
         }
 
         public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture) {
-            float[][][] vertexBuffer = getVerticalVertexBuffer(radius, height, segments);
+            float[][][] vertexBuffer = VertexUtil.Ring.getVerticalVertexBuffer(radius, height, segments);
             if (vertexBuffer == null) return;
             renderRing(poseStack, buffer, segments, vertexBuffer, texture);
         }
 
         public static void renderHorizontalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture) {
-            float[][][] vertexBuffer = getHorizontalVertexBuffer(radius, height, segments);
+            float[][][] vertexBuffer = VertexUtil.Ring.getHorizontalVertexBuffer(radius, height, segments);
             if (vertexBuffer == null) return;
             renderRing(poseStack, buffer, segments, vertexBuffer, texture);
         }
@@ -311,8 +323,6 @@ public final class RenderUtil {
         }
 
         private static void renderBallGeometry(Matrix4f matrix, VertexConsumer vertexConsumer, float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
-            if (vertexBuffer == null) return;
-
             for (float[][] floats : vertexBuffer) {
                 float x0 = floats[0][0];
                 float y0 = floats[0][1];
@@ -487,7 +497,6 @@ public final class RenderUtil {
                         .createCompositeState(false)
         );
 
-        private static final float DISPLACEMENT_FACTOR = 1.6f;
         private static final float THICKNESS_VARIATION = 0.4f;
         private static final float MIN_THICKNESS_FACTOR = 0.1f;
         private static final double EPSILON = 1e-6;
@@ -519,7 +528,7 @@ public final class RenderUtil {
 
                 if (side.lengthSqr() < EPSILON * EPSILON) {
                     if (direction.lengthSqr() > EPSILON * EPSILON) {
-                        Vec3 arbitraryNonParallel = Math.abs(direction.x()) < 0.9 ? new Vec3(1,0,0) : new Vec3(0,1,0);
+                        Vec3 arbitraryNonParallel = Math.abs(direction.x()) < 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
                         side = direction.cross(arbitraryNonParallel);
                         if (side.lengthSqr() < EPSILON * EPSILON) return;
                     } else {
@@ -538,7 +547,7 @@ public final class RenderUtil {
                 float t = (float) i / segments;
                 Vec3 currentMidpoint = start.add(delta.scale(t));
 
-                float displacementMagnitude = baseHalfThickness * DISPLACEMENT_FACTOR;
+                float displacementMagnitude = baseHalfThickness * MathUtil.TWO_PI;
                 float falloff = 1.0f - (float) Math.pow(2.0 * t - 1.0, 2);
                 displacementMagnitude *= falloff;
                 displacementMagnitude *= (rnd.nextFloat() * 2.0f - 1.0f);

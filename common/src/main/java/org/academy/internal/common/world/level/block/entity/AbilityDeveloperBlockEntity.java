@@ -100,7 +100,6 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
         this.openState.animateWhen(this.isOpen, this.ticks);
         this.closingState.animateWhen(!this.isOpen, this.ticks);
 
-
         if (level != null && level.isClientSide) {
             AnimationState currentAnimationState = previousIsOpen ? openState : closingState;
             AnimationState targetAnimationState = open ? openState : closingState;

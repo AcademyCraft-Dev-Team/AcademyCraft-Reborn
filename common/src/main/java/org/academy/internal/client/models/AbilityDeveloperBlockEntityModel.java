@@ -385,7 +385,6 @@ public class AbilityDeveloperBlockEntityModel extends HierarchicalModel<Entity> 
         animate(abilityDeveloperBlockEntity.liedownState, liedown, abilityDeveloperBlockEntity.ticks + partialTick);
     }
 
-
     @Override
     public void setupAnim(@NotNull Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
     }

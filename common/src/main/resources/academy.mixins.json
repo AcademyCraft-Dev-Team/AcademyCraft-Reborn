@@ -12,11 +12,14 @@
   ],
   "client": [
     "ClientPacketListenerMixin",
+    "GameRendererMixin",
+    "ItemRendererMixin",
     "KeyboardHandlerMixin",
     "LevelRendererMixin",
     "MinecraftMixin",
     "MouseHandlerMixin",
-    "PlayerRendererMixin"
+    "PlayerRendererMixin",
+    "ShaderInstanceMixin"
   ],
   "injectors": {
     "defaultRequire": 1

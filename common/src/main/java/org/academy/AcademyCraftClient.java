@@ -3,6 +3,7 @@ package org.academy;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.config.AcademyCraftClientConfig;
 import org.academy.api.client.config.SkillClientConfig;
+import org.academy.api.common.wireless.WirelessManager;
 import org.academy.internal.client.ui.AbilityDeveloperFragment;
 
 import java.io.File;
@@ -16,5 +17,6 @@ public final class AcademyCraftClient {
         AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
         CLIENT_CONFIG = new AcademyCraftClientConfig<>();
         AbilityDeveloperFragment.init();
+        WirelessManager.initClient();
     }
 }

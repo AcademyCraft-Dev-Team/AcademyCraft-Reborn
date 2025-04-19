@@ -68,7 +68,7 @@ public class Railgun extends Skill {
         public static RailgunClientConfig CLIENT_CONFIG = new RailgunClientConfig();
 
         public static void handleKey() {
-            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_RAILGUN_SHOOT));
         }
 

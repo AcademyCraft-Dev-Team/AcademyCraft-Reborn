@@ -29,7 +29,7 @@ public final class AcademyCraft {
 
         try {
             if (file.exists()) {
-                AcademyCraft.LOGGER.info("File already exists: {}", file.getAbsolutePath());
+                AcademyCraft.LOGGER.debug("File already exists: {}", file.getAbsolutePath());
                 return;
             }
 
@@ -39,7 +39,7 @@ public final class AcademyCraft {
             } else if (!file.createNewFile()) {
                 errorMessage = "Failed to create new file: " + file.getAbsolutePath();
             } else {
-                AcademyCraft.LOGGER.info("Successfully created new file: {}", file.getAbsolutePath());
+                AcademyCraft.LOGGER.debug("Successfully created new file: {}", file.getAbsolutePath());
             }
         } catch (IOException e) {
             errorMessage = "An error occurred while creating the file: " + file.getAbsolutePath() + " - " + e.getMessage();
@@ -47,12 +47,6 @@ public final class AcademyCraft {
 
         if (errorMessage != null) {
             throw new RuntimeException(errorMessage);
-        }
-    }
-
-    public static void debugLog(Object message) {
-        if (DEBUG_MODE) {
-            AcademyCraft.LOGGER.debug(message);
         }
     }
 
