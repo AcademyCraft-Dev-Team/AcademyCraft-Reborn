@@ -33,17 +33,18 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
             poseStack.last().normal().rotateX((float) Math.toRadians(180));
             poseStack.last().normal().rotateY((float) Math.toRadians(yRot));
             matrix4f.rotateX((float) Math.toRadians(180));
-            matrix4f.translate(0.5f,-1.5f,-1.5f);
+            matrix4f.translate(0.5f, -1.5f, -1.5f);
 
-            matrix4f.translate(0,0,1);
+            matrix4f.translate(0, 0, 1);
             matrix4f.rotateY((float) Math.toRadians(yRot));
-            matrix4f.translate(0,0,-1);
+            matrix4f.translate(0, 0, -1);
 
             poseStack.mulPoseMatrix(matrix4f);
 
             VertexConsumer vertexConsumer = buffer.getBuffer(ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.renderType(TEXTURE));
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.setupAnim(blockEntity, partialTick);
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay, 1f, 1f, 1f, 1f);
+
             poseStack.popPose();
         }
     }

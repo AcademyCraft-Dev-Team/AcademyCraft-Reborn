@@ -106,13 +106,13 @@ public final class SelfTeleport extends Skill {
         };
 
         private static void start() {
-            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
             RendererManager.CAMERA_RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.CAMERA_RENDERER);
         }
 
         private static void end() {
             RendererManager.CAMERA_RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
-            if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
+            if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SELF_TELEPORT, new FriendlyByteBuf(Unpooled.buffer())));
         }
     }

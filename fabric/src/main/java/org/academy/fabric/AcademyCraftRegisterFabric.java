@@ -24,7 +24,7 @@ import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
-import org.academy.internal.common.world.item.AcademyCraftItems;
+import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 
@@ -49,8 +49,8 @@ public class AcademyCraftRegisterFabric {
 
     private static void registerItem() {
         AcademyCraftItemsFabric.init();
-        for (ResourceLocation resourceLocation : AcademyCraftItems.ITEMS.keySet()) {
-            Registry.register(BuiltInRegistries.ITEM, resourceLocation, AcademyCraftItems.ITEMS.get(resourceLocation));
+        for (ResourceLocation resourceLocation : Items.ITEMS.keySet()) {
+            Registry.register(BuiltInRegistries.ITEM, resourceLocation, Items.ITEMS.get(resourceLocation));
         }
     }
 
@@ -77,9 +77,9 @@ public class AcademyCraftRegisterFabric {
     }
 
     private static void registerCreativeModeTab() {
-        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(AcademyCraft.MOD_ID, "item_group"), CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0).icon(() -> new ItemStack(AcademyCraftItems.ACADEMY_CRAFT_ICON_ITEM)).displayItems((itemDisplayParameters, output) -> {
-            for (ResourceLocation resourceLocation : AcademyCraftItems.ITEMS.keySet()) {
-                Item item = AcademyCraftItems.ITEMS.get(resourceLocation);
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(AcademyCraft.MOD_ID, "item_group"), CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0).icon(() -> new ItemStack(Items.ACADEMY_CRAFT_ICON_ITEM)).displayItems((itemDisplayParameters, output) -> {
+            for (ResourceLocation resourceLocation : Items.ITEMS.keySet()) {
+                Item item = Items.ITEMS.get(resourceLocation);
                 if (!(item instanceof AcademyCraftIconItem)) {
                     output.accept(item);
                 }

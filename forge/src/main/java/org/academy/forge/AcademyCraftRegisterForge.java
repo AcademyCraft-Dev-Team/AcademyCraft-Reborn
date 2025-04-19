@@ -33,16 +33,16 @@ import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
-import org.academy.internal.common.world.item.AcademyCraftItems;
+import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class AcademyCraftRegisterForge {
     private static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TAB_DEFERRED_REGISTER = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, AcademyCraft.MOD_ID);
-    public static final RegistryObject<CreativeModeTab> BASE_CREATIVE_TAB = CREATIVE_MODE_TAB_DEFERRED_REGISTER.register("all", () -> CreativeModeTab.builder().icon(() -> new ItemStack(AcademyCraftItems.ACADEMY_CRAFT_ICON_ITEM)).displayItems((itemDisplayParameters, output) -> {
-        for (ResourceLocation resourceLocation : AcademyCraftItems.ITEMS.keySet()) {
-            Item item = AcademyCraftItems.ITEMS.get(resourceLocation);
+    public static final RegistryObject<CreativeModeTab> BASE_CREATIVE_TAB = CREATIVE_MODE_TAB_DEFERRED_REGISTER.register("all", () -> CreativeModeTab.builder().icon(() -> new ItemStack(Items.ACADEMY_CRAFT_ICON_ITEM)).displayItems((itemDisplayParameters, output) -> {
+        for (ResourceLocation resourceLocation : Items.ITEMS.keySet()) {
+            Item item = Items.ITEMS.get(resourceLocation);
             if (!(item instanceof AcademyCraftIconItem)) {
                 output.accept(item);
             }
@@ -69,8 +69,8 @@ public class AcademyCraftRegisterForge {
 
     private static void registerItem(RegisterEvent event) {
         AcademyCraftItemsForge.init();
-        for (ResourceLocation resourceLocation : AcademyCraftItems.ITEMS.keySet()) {
-            event.register(ForgeRegistries.Keys.ITEMS, resourceLocation, () -> AcademyCraftItems.ITEMS.get(resourceLocation));
+        for (ResourceLocation resourceLocation : Items.ITEMS.keySet()) {
+            event.register(ForgeRegistries.Keys.ITEMS, resourceLocation, () -> Items.ITEMS.get(resourceLocation));
         }
     }
 

@@ -20,7 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public final class AbilitySystemClient {
-    public static final Set<Skill> SKILLS = new HashSet<>();
+    public static final Set<Skill> LEARNED_SKILLS = new HashSet<>();
     public static final String KEY_NAME = "activate_ability";
     public static final InputSystem.InputPair KEY = AcademyCraftClient.CLIENT_CONFIG.getKey(
             KEY_NAME,
@@ -41,7 +41,7 @@ public final class AbilitySystemClient {
     public static void init() {
         registerPacketHandler();
         InputSystem.addKeyBinding(KEY_NAME, KEY, () -> {
-            if (!ClientUtil.isScreenNull()) return;
+            if (ClientUtil.hasScreen()) return;
             setActiveHUD(!activeHUD);
         });
         for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
@@ -77,8 +77,8 @@ public final class AbilitySystemClient {
                     FriendlyByteBufDeserializer<ArrayList<Skill>> friendlyByteBufDeserializer =
                             FriendlyByteBufDeserializers.getArrayListFriendlyByteBufDeserializer(Skill.class);
                     ArrayList<Skill> skillList = friendlyByteBufDeserializer.deserialize(packet.friendlyByteBuf);
-                    SKILLS.clear();
-                    SKILLS.addAll(skillList);
+                    LEARNED_SKILLS.clear();
+                    LEARNED_SKILLS.addAll(skillList);
                 }
         );
     }

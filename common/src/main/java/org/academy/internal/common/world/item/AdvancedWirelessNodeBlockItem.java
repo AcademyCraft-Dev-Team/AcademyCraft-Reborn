@@ -5,6 +5,6 @@ import org.academy.internal.common.world.level.block.Blocks;
 
 public class AdvancedWirelessNodeBlockItem extends BlockItem {
     public AdvancedWirelessNodeBlockItem() {
-        super(Blocks.ADVANCED_WIRELESS_NODE_BLOCK_BLOCK, new Properties());
+        super(Blocks.ADVANCED_WIRELESS_NODE_BLOCK, new Properties());
     }
 }

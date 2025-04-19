@@ -1,0 +1,36 @@
+package org.academy.internal.client.renderer;
+
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceProvider;
+import org.academy.AcademyCraft;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+
+public class Shaders {
+    public static final List<Function<ResourceProvider, ShaderInstance>> SHADERS = new ArrayList<>();
+    public static ShaderInstance test;
+
+    static {
+        SHADERS.add(new Function<>() {
+            @Override
+            public ShaderInstance apply(ResourceProvider resourceProvider) {
+                try {
+                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "ring_effect");
+                    ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
+                    test = shaderInstance;
+                    return shaderInstance;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
+
+    private Shaders() {
+    }
+}
