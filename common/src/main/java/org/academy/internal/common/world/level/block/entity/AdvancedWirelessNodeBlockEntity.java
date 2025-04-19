@@ -16,7 +16,7 @@ import java.util.List;
 
 public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements WirelessNode {
     public final List<WirelessUser> wirelessUsers = new ArrayList<>();
-    public String nodeName = "Unnamed";
+    public String nodeName = "Unnamed - " + getBlockPos().toShortString();
     public String nodePassword = "";
     public int energyStored;
 
@@ -105,5 +105,11 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
     @Override
     public List<WirelessUser> getWirelessNodes() {
         return wirelessUsers;
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        WirelessManager.WIRELESS_NODES.remove(getBlockPos());
     }
 }

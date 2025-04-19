@@ -15,7 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import org.academy.internal.common.world.damagesource.AcademyCraftDamageTypes;
-import org.academy.internal.common.world.item.AcademyCraftItems;
+import org.academy.internal.common.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
@@ -44,7 +44,7 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
 
     @Override
     public @NotNull ItemStack getItem() {
-        return new ItemStack(AcademyCraftItems.COIN_ITEM);
+        return new ItemStack(Items.COIN_ITEM);
     }
 
     @Override

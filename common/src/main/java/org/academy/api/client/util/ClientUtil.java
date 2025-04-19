@@ -8,11 +8,11 @@ public class ClientUtil {
     private ClientUtil() {
     }
 
-    public static boolean isScreenNull() {
-        return Minecraft.getInstance().screen == null;
+    public static boolean hasScreen() {
+        return Minecraft.getInstance().screen != null;
     }
 
     public static boolean lacksSkill(Skill skill) {
-        return !AbilitySystemClient.SKILLS.contains(skill);
+        return !AbilitySystemClient.LEARNED_SKILLS.contains(skill);
     }
 }

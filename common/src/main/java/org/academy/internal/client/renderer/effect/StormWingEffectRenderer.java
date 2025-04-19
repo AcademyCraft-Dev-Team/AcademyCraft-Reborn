@@ -10,6 +10,7 @@ import net.minecraft.util.RandomSource;
 import org.academy.AcademyCraft;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.builtin.accelerator.skills.StormWing;
@@ -18,13 +19,13 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
-@SuppressWarnings({"SuspiciousNameCombination", "DuplicatedCode"})
+@SuppressWarnings("SuspiciousNameCombination")
 public class StormWingEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new StormWingEffectRenderer();
     public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/skill/effect/accelerator/tornado_ring.png");
     public static final int RING_SEGMENTS = 12; // 每个环的顶点数
     private static final RandomSource RAND = RandomSource.create(); // 随机数生成器
-    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90)).translate(0, 0.25f, 0); // 基础变换矩阵
+    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0); // 基础变换矩阵
     private static final RenderType RENDER_TYPE = RenderUtil.RingRenderer.RING_RENDER_TYPE.apply(TEXTURE); // 渲染类型
     private static final int NUM_RINGS = 24; // 每个龙卷风的环数量
     private static final float HEIGHT = 3.5f; // 目标视觉高度
@@ -33,7 +34,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final float FUNNEL_BASE_RADIUS_FACTOR = 0.2F; // 漏斗底部半径因子
     private static final float FUNNEL_EXPONENT = 1.75F; // 漏斗曲率指数
     private static final float HORIZONTAL_DISPLACEMENT_SCALE = 1.6f; // 水平位移缩放
-    private static final double POS_DOMAIN_WARP_SCALE = 0.15f; // 位置域扭曲强度
+    private static final double POS_DOMAIN_WARP_SCALE = 0.15; // 位置域扭曲强度
     private static final float GAP_VARIANCE_SCALE = 0.6f; // 间隙变化缩放
     private static final float VERTICAL_POSITION_JITTER = 0.03f; // 垂直位置抖动
     private static final float BASE_RING_WIDTH = 0.075f * SIZE; // 基础环宽度
@@ -68,7 +69,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final Quaternionf tempTiltQuat = new Quaternionf(); // 临时倾斜四元数
     private static final Quaternionf tempRotQuat = new Quaternionf(); // 临时旋转四元数
     private static final double[] warpedYBuffer = new double[1]; // 扭曲Y坐标缓冲区
-    private static final float[][][] CACHED_VERTICAL_VERTEX_BUFFER = RenderUtil.RingRenderer.getVerticalVertexBuffer(1.0f, 1.0f, RING_SEGMENTS); // 缓存的垂直顶点缓冲区
+    private static final float[][][] CACHED_VERTICAL_VERTEX_BUFFER = VertexUtil.Ring.getVerticalVertexBuffer(1.0f, 1.0f, RING_SEGMENTS); // 缓存的垂直顶点缓冲区
 
     private StormWingEffectRenderer() {
     }
@@ -77,8 +78,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
         warpedYBuffer[0] = normalizedY + ImprovedNoise.noise(normalizedY * 2.0, timeWarp, 5.0) * POS_DOMAIN_WARP_SCALE;
     }
 
-    private static void calculateHorizontalDisplacement(double normalizedY, double timePosBase, double timeWarp) {
-        applyDomainWarp(normalizedY, timeWarp);
+    private static void calculateHorizontalDisplacement(double normalizedY, double timePosBase) {
         double noiseX = ImprovedNoise.noise(warpedYBuffer[0] * 1.3, timePosBase * 0.75, 10.0);
         double noiseZ = ImprovedNoise.noise(warpedYBuffer[0] * 1.3, timePosBase * 0.75, 20.0);
         double heightScaleFactor = 0.4 + normalizedY * 1.6;
@@ -86,8 +86,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
         displacementBuffer[1] = noiseZ * heightScaleFactor;
     }
 
-    private static double calculateVerticalJitter(double normalizedY, double timeWarp, double timePosBase, double timeJitter) {
-        applyDomainWarp(normalizedY, timeWarp);
+    private static double calculateVerticalJitter(double timePosBase, double timeJitter) {
         double noise = ImprovedNoise.noise(warpedYBuffer[0] * 2.2, timePosBase * 1.1 + timeJitter * 0.5, 30.0);
         return noise * VERTICAL_POSITION_JITTER;
     }
@@ -126,7 +125,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
         float baseNoise = (float) ImprovedNoise.noise(normalizedY * 1.2, timeWidthBase, 80.0);
         float detailNoise = (float) ImprovedNoise.noise(ringIndex * 2.5, timeWidthDetail, 85.0);
         float width = BASE_RING_WIDTH * (1.0f + baseNoise * WIDTH_BASE_NOISE_SCALE + detailNoise * WIDTH_DETAIL_NOISE_SCALE);
-        return Math.max(0.015f, width);
+        return Math.max(0.015f * SIZE, width);
     }
 
     private static void calculateTilt(int ringIndex, double timeTilt) {
@@ -156,10 +155,13 @@ public class StormWingEffectRenderer implements EffectRenderer {
             if (i > 0) {
                 currentY += calculateGap(i, tGap);
             }
-            double yJitter = calculateVerticalJitter(normalizedY, tWarp, tPosBase, tJitter);
+
+            applyDomainWarp(normalizedY, tWarp);
+
+            double yJitter = calculateVerticalJitter(tPosBase, tJitter);
             double actualY = currentY + yJitter;
 
-            calculateHorizontalDisplacement(normalizedY, tPosBase, tWarp);
+            calculateHorizontalDisplacement(normalizedY, tPosBase);
             double actualDx = displacementBuffer[0] * SIZE * HORIZONTAL_DISPLACEMENT_SCALE;
             double actualDz = displacementBuffer[1] * SIZE * HORIZONTAL_DISPLACEMENT_SCALE;
             actualDx *= normalizedY;
@@ -223,22 +225,22 @@ public class StormWingEffectRenderer implements EffectRenderer {
         float time = livingEntity.tickCount + partialTick;
 
         poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30)).rotateX((float) Math.toRadians(30)));
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
         renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_1);
         poseStack.popPose();
 
         poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30)).rotateX((float) Math.toRadians(30)));
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
         renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_2);
         poseStack.popPose();
 
         poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30)).rotateX((float) Math.toRadians(-30)));
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
         renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_3);
         poseStack.popPose();
 
         poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30)).rotateX((float) Math.toRadians(-30)));
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
         renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_4);
         poseStack.popPose();
 

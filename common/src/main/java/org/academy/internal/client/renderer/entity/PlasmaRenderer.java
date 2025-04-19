@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import org.academy.AcademyCraft;
 import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.skill.Plasma;
@@ -109,7 +110,7 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
     );
 
     private final Random RAND = new Random();
-    private static final float[][][] cachedLayerVertexBuffer = RenderUtil.RingRenderer.getVerticalVertexBuffer(1.0f, 1.0f, LAYER_SEGMENTS);
+    private static final float[][][] cachedLayerVertexBuffer = VertexUtil.Ring.getVerticalVertexBuffer(1.0f, 1.0f, LAYER_SEGMENTS);
     private final float[] tempVec1 = new float[3];
     private final float[] tempVec2 = new float[3];
     private final float[] tempVec3 = new float[3];

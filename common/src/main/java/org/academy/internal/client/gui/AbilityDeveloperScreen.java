@@ -84,7 +84,7 @@ public class AbilityDeveloperScreen extends Screen {
     );
 
     public static final float MAIN_PANEL_WIDTH = 400;
-    public static final float MAIN_PANEL__HEIGHT = 187;
+    public static final float MAIN_PANEL_HEIGHT = 187;
     public static final float PANEL_RIGHT_WIDTH = 278;
     public static final float PANEL_RIGHT_ZONE_LEFT = MAIN_PANEL_WIDTH - PANEL_RIGHT_WIDTH;
     public static final float PANEL_LEFT_WIDTH = 108.5f;
@@ -1669,7 +1669,7 @@ public class AbilityDeveloperScreen extends Screen {
     }
 
     public static float getMainPaneTop(float screenHeight) {
-        return (screenHeight - MAIN_PANEL__HEIGHT) / 2f;
+        return (screenHeight - MAIN_PANEL_HEIGHT) / 2f;
     }
 
     public static float getMainPanelRight(float screenWidth) {
@@ -1677,7 +1677,7 @@ public class AbilityDeveloperScreen extends Screen {
     }
 
     public static float getMainPanelBottom(float screenHeight) {
-        return getMainPaneTop(screenHeight) + MAIN_PANEL__HEIGHT;
+        return getMainPaneTop(screenHeight) + MAIN_PANEL_HEIGHT;
     }
 
     public static boolean isMouseInside(double mouseX, double mouseY,

@@ -1,6 +1,9 @@
 package org.academy.internal.common.world.level.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -10,6 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.wireless.WirelessManager;
 import org.academy.internal.common.world.level.block.entity.AdvancedWirelessNodeBlockEntity;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
@@ -41,6 +45,11 @@ public class AdvancedWirelessNodeBlock extends BaseEntityBlock {
     public void onRemove(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState newState, boolean movedByPiston) {
         super.onRemove(state, level, pos, newState, movedByPiston);
         WirelessManager.WIRELESS_NODES.remove(pos);
+    }
+
+    @Override
+    public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
+        return super.use(state, level, pos, player, hand, hit);
     }
 
     @Override

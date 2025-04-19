@@ -24,6 +24,9 @@ public class Packets {
     public static final ResourceLocation C2S_STORM_WING_TOGGLE = NetworkSystem.registerPacket(new ResourceLocation(AcademyCraft.MOD_ID, "c2s_storming_toggle"));
     public static final ResourceLocation C2S_ACQUIRE_CATEGORY = NetworkSystem.registerPacket(new ResourceLocation(AcademyCraft.MOD_ID, "c2s_acquire_category"));
     public static final ResourceLocation S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE = NetworkSystem.registerPacket(new ResourceLocation(AcademyCraft.MOD_ID, "s2c_ability_developer_screen_response"));
+    public static final ResourceLocation C2S_CONNECT_NODE= NetworkSystem.registerPacket(new ResourceLocation(AcademyCraft.MOD_ID, "c2s_connect_node"));
+    public static final ResourceLocation C2S_DISCONNECT_NODE = NetworkSystem.registerPacket(new ResourceLocation(AcademyCraft.MOD_ID, "c2s_disconnect_node"));
+    public static final ResourceLocation S2C_SET_NODE = NetworkSystem.registerPacket(new ResourceLocation(AcademyCraft.MOD_ID, "s2c_set_node"));
 
     private Packets() {
     }

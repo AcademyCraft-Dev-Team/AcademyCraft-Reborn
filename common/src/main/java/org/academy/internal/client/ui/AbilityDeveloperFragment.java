@@ -26,6 +26,7 @@ import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.command.ConsoleSource;
 import org.academy.api.common.network.Packets;
 import org.academy.internal.client.gui.AbilityDeveloperScreen;
+import org.academy.internal.client.gui.NewAbilityDeveloperScreen;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -51,7 +52,7 @@ public class AbilityDeveloperFragment extends Fragment {
                 Packets.S2C_OPEN_ABILITY_DEVELOPER_SCREEN,
                 (listener, packet) -> {
                     BlockPos mainPos = packet.friendlyByteBuf.readBlockPos();
-                    Minecraft.getInstance().setScreen(new AbilityDeveloperScreen(mainPos));
+                    Minecraft.getInstance().setScreen(new NewAbilityDeveloperScreen(mainPos));
                 }
         );
     }
