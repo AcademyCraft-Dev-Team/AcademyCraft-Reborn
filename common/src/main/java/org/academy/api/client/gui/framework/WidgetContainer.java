@@ -10,13 +10,4 @@ public interface WidgetContainer extends Widget, Iterable<Widget> {
     void clearChildren();
 
     Map<String, Widget> getChildren();
-
-    /**
-     * Finds the widget currently under the mouse cursor within this container.
-     * Searches children in reverse order (topmost first).
-     * @param mouseX Screen X coordinate.
-     * @param mouseY Screen Y coordinate.
-     * @return The widget under the mouse, or null if none.
-     */
-    Widget getWidgetAt(double mouseX, double mouseY);
 }

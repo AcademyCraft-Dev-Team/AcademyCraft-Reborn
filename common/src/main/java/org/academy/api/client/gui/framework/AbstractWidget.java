@@ -29,7 +29,7 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public float getZ() {
-        return x;
+        return z;
     }
 
     @Override
@@ -125,6 +125,19 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
+    public boolean isAbsoluteEnabled() {
+        if (isEnabled()){
+            if (parent != null) {
+                return parent.isAbsoluteEnabled();
+            } else {
+                return true;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
     }
 }

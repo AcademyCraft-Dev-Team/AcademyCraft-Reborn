@@ -15,6 +15,7 @@ import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.jetbrains.annotations.NotNull;
@@ -27,11 +28,11 @@ import java.util.Set;
 
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
-    public static final String KEY_NAME = "arc_generate.generate";
+    public static final String KEY_NAME = SkillNames.ARC_GENERATE + ".generate";
     public static final float BASE_DAMAGE = 2.0F;
 
     private ArcGenerate() {
-        super("arc_generate", 1);
+        super(SkillNames.ARC_GENERATE, 1);
     }
 
     @Override
@@ -73,36 +74,37 @@ public class ArcGenerate extends Skill {
 
     public static final class Server {
         public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
-            //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
-            if (currentComputingPower > 10) {
-                AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
-            } else {
-                return;
-            }
+            if (currentComputingPower <= 10) return;
+            AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
 
-            Arc arc = new Arc(level, player);
+            Vec3 lookVec = player.getLookAngle();
+            Vec3 playerPos = player.position();
+            Vec3 eyePos = player.getEyePosition();
+            Vec3 rightVec = lookVec.cross(new Vec3(0, 1, 0)).normalize();
+
+            Vec3 handPos = playerPos.add(rightVec.scale(0.4)).add(0, 1.2, 0);
+
+            Vec3 targetPos = eyePos.add(lookVec.scale(10));
+
+            Arc arc = new Arc(level, handPos, targetPos);
             level.addFreshEntity(arc);
             arc.playSound(AcademyCraftSoundEvents.ARC_WEAK);
-            Vec3 lookVec = arc.getLookAngle();
-            Vec3 start = arc.position();
-            int steps = 10;
 
+            Vec3 direction = targetPos.subtract(handPos).normalize();
+            int steps = 10;
             Set<LivingEntity> detectedEntities = new HashSet<>();
 
             for (int i = 0; i < steps; i++) {
-                Vec3 segmentStart = start.add(lookVec.scale(i));
-                Vec3 segmentEnd = start.add(lookVec.scale(i + 1));
-
+                Vec3 segmentStart = handPos.add(direction.scale(i));
+                Vec3 segmentEnd = handPos.add(direction.scale(i + 1));
                 AABB box = new AABB(segmentStart, segmentEnd);
                 List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, box);
-
                 detectedEntities.addAll(entities);
             }
 
             detectedEntities.forEach(entity -> {
                 if (entity == player) return;
-
                 float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
                 entity.hurt(player.damageSources().playerAttack(player), damage);
             });
