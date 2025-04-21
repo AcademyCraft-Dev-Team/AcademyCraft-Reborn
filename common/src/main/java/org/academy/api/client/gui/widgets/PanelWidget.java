@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.widgets; // Example package
+package org.academy.api.client.gui.widgets;
 
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 

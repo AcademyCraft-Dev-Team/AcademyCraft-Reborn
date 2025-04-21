@@ -55,7 +55,7 @@ public final class RenderUtil {
                 VertexFormat.Mode.QUADS,
                 16,
                 false,
-                true,
+                false,
                 RenderType.CompositeState.builder()
                         .setTextureState(
                                 new RenderStateShard.TextureStateShard(
@@ -65,6 +65,7 @@ public final class RenderUtil {
                                 )
                         )
                         .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
+                        .setCullState(RenderStates.NO_CULL)
                         .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false));
     }
@@ -132,7 +133,8 @@ public final class RenderUtil {
     }
 
     public static final class RingRenderer {
-        public static final Function<ResourceLocation, RenderType> RING_RENDER_TYPE = resourceLocation -> new RenderType.CompositeRenderType(
+        public static final Function<ResourceLocation, RenderType> RING_RENDER_TYPE = resourceLocation
+                -> new RenderType.CompositeRenderType(
                 "ring_render_type",
                 DefaultVertexFormat.POSITION_TEX,
                 VertexFormat.Mode.QUADS,
@@ -148,7 +150,8 @@ public final class RenderUtil {
                         .createCompositeState(false)
         );
 
-        public static void renderRing(Matrix4f matrix, VertexConsumer vertexConsumer, int segments, float[][][] vertexBuffer) {
+        public static void renderRing(Matrix4f matrix, VertexConsumer vertexConsumer,
+                                      int segments, float[][][] vertexBuffer) {
             for (int i = 0; i < segments; i++) {
                 float[] v0 = vertexBuffer[i][0];
                 float[] v1 = vertexBuffer[i][1];
@@ -162,7 +165,8 @@ public final class RenderUtil {
             }
         }
 
-        public static void renderRing(PoseStack poseStack, MultiBufferSource buffer, int segments, float[][][] vertexBuffer, ResourceLocation texture) {
+        public static void renderRing(PoseStack poseStack, MultiBufferSource buffer, int segments,
+                                      float[][][] vertexBuffer, ResourceLocation texture) {
             if (vertexBuffer == null || vertexBuffer.length < segments || segments <= 0) return;
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix = pose.pose();
@@ -170,13 +174,15 @@ public final class RenderUtil {
             renderRing(matrix, vertexConsumer, segments, vertexBuffer);
         }
 
-        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture) {
+        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer,
+                                              float radius, float height, int segments, ResourceLocation texture) {
             float[][][] vertexBuffer = VertexUtil.Ring.getVerticalVertexBuffer(radius, height, segments);
             if (vertexBuffer == null) return;
             renderRing(poseStack, buffer, segments, vertexBuffer, texture);
         }
 
-        public static void renderHorizontalRing(PoseStack poseStack, MultiBufferSource buffer, float radius, float height, int segments, ResourceLocation texture) {
+        public static void renderHorizontalRing(PoseStack poseStack, MultiBufferSource buffer,
+                                                float radius, float height, int segments, ResourceLocation texture) {
             float[][][] vertexBuffer = VertexUtil.Ring.getHorizontalVertexBuffer(radius, height, segments);
             if (vertexBuffer == null) return;
             renderRing(poseStack, buffer, segments, vertexBuffer, texture);
@@ -264,7 +270,9 @@ public final class RenderUtil {
         }
 
         @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
-        public static void renderBall(final PoseStack poseStack, final MultiBufferSource buffer, final float radius, final int faces, float red, float green, float blue, float alpha) {
+        public static void renderBall(final PoseStack poseStack, final MultiBufferSource buffer,
+                                      final float radius, final int faces,
+                                      float red, float green, float blue, float alpha) {
             if (radius <= 0 || faces < 3) return;
 
             final PoseStack.Pose pose = poseStack.last();
@@ -310,7 +318,8 @@ public final class RenderUtil {
             }
         }
 
-        public static void renderBall(PoseStack poseStack, MultiBufferSource buffer, float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
+        public static void renderBall(PoseStack poseStack, MultiBufferSource buffer, float[][][] vertexBuffer,
+                                      float red, float green, float blue, float alpha) {
             if (vertexBuffer == null || vertexBuffer.length == 0) return;
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix = pose.pose();
@@ -318,11 +327,13 @@ public final class RenderUtil {
             renderBallGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
         }
 
-        public static void renderBall(Matrix4f matrix, VertexConsumer vertexConsumer, float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
+        public static void renderBall(Matrix4f matrix, VertexConsumer vertexConsumer, float[][][] vertexBuffer,
+                                      float red, float green, float blue, float alpha) {
             renderBallGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
         }
 
-        private static void renderBallGeometry(Matrix4f matrix, VertexConsumer vertexConsumer, float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
+        private static void renderBallGeometry(Matrix4f matrix, VertexConsumer vertexConsumer,
+                                               float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
             for (float[][] floats : vertexBuffer) {
                 float x0 = floats[0][0];
                 float y0 = floats[0][1];
@@ -357,7 +368,8 @@ public final class RenderUtil {
                         .createCompositeState(false)
         );
 
-        public static float[][] getRayVertexBuffer(final float yBottom, final float yTop, final float radius, final int faces) {
+        public static float[][] getRayVertexBuffer(final float yBottom, final float yTop,
+                                                   final float radius, final int faces) {
             if (radius <= 0 || faces < 3) return null;
 
             final int numVertices = (faces + 1) * 2;
@@ -383,7 +395,8 @@ public final class RenderUtil {
             return vertexBuffer;
         }
 
-        public static void renderRay(final PoseStack poseStack, final MultiBufferSource multiBufferSource, final float red, final float green, float blue, float alpha, final float yBottom, final float yTop, final float radius, final int faces) {
+        public static void renderRay(final PoseStack poseStack, final MultiBufferSource multiBufferSource,
+                                     final float red, final float green, float blue, float alpha, final float yBottom, final float yTop, final float radius, final int faces) {
             if (radius <= 0 || faces < 3) return;
 
             final PoseStack.Pose pose = poseStack.last();
@@ -400,7 +413,8 @@ public final class RenderUtil {
             }
         }
 
-        public static void renderRay(PoseStack poseStack, MultiBufferSource buffer, float[][] vertexBuffer, float red, float green, float blue, float alpha) {
+        public static void renderRay(PoseStack poseStack, MultiBufferSource buffer, float[][] vertexBuffer,
+                                     float red, float green, float blue, float alpha) {
             if (vertexBuffer == null || vertexBuffer.length == 0) return;
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix = pose.pose();
@@ -408,11 +422,13 @@ public final class RenderUtil {
             renderRayGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
         }
 
-        public static void renderRay(Matrix4f matrix, VertexConsumer vertexConsumer, float[][] vertexBuffer, float red, float green, float blue, float alpha) {
+        public static void renderRay(Matrix4f matrix, VertexConsumer vertexConsumer, float[][] vertexBuffer,
+                                     float red, float green, float blue, float alpha) {
             renderRayGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
         }
 
-        private static void renderRayGeometry(Matrix4f matrix4f, VertexConsumer vertexConsumer, float[][] vertexBuffer, float red, float green, float blue, float alpha) {
+        private static void renderRayGeometry(Matrix4f matrix4f, VertexConsumer vertexConsumer, float[][] vertexBuffer,
+                                              float red, float green, float blue, float alpha) {
             if (vertexBuffer == null) return;
 
             for (float[] floats : vertexBuffer) {
@@ -425,7 +441,8 @@ public final class RenderUtil {
     }
 
     public static final class BoxRenderer {
-        public static void renderWireframeBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box, float r, float g, float b, float a) {
+        public static void renderWireframeBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
+                                              float r, float g, float b, float a) {
             if (box == null) return;
 
             final VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lines());
@@ -456,7 +473,9 @@ public final class RenderUtil {
             drawLine(vertexConsumer, matrix4f, matrix3f, minX, minY, maxZ, minX, maxY, maxZ, r, g, b, a);
         }
 
-        private static void drawLine(VertexConsumer vc, Matrix4f mat, Matrix3f normMat, float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float b, float a) {
+        private static void drawLine(VertexConsumer vc, Matrix4f mat, Matrix3f normMat,
+                                     float x1, float y1, float z1, float x2, float y2, float z2,
+                                     float r, float g, float b, float a) {
             float nx = x2 - x1;
             float ny = y2 - y1;
             float nz = z2 - z1;
@@ -476,7 +495,8 @@ public final class RenderUtil {
     }
 
     public static final class ArcRenderer {
-        public static final ResourceLocation ARC_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/skill/effect/electromaster/line_segment.png");
+        public static final ResourceLocation ARC_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID,
+                "textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
         public static final RenderType ARC_RENDER_TYPE = new RenderType.CompositeRenderType(
                 "arc_render_type",
                 DefaultVertexFormat.POSITION_TEX,
@@ -501,7 +521,9 @@ public final class RenderUtil {
         private static final float MIN_THICKNESS_FACTOR = 0.1f;
         private static final double EPSILON = 1e-6;
 
-        public static void renderArc(PoseStack ps, MultiBufferSource mbs, long seed, float sx, float sy, float sz, float ex, float ey, float ez, float thickness, int segments) {
+        public static void renderArc(PoseStack ps, MultiBufferSource mbs, long seed,
+                                     float sx, float sy, float sz, float ex, float ey, float ez,
+                                     float thickness, int segments) {
             VertexConsumer vc = mbs.getBuffer(ARC_RENDER_TYPE);
             Matrix4f matrix = ps.last().pose();
             Random rnd = new Random(seed);

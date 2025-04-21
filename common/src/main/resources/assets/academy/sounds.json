@@ -20,7 +20,7 @@
   "vector_reflection": {
     "subtitle": "academy.vector_reflection",
     "sounds": [
-      "academy:skill/accelerator/vector_reflection"
+      "academy:ability/accelerator/skill/vector_reflection"
     ]
   },
   "select": {

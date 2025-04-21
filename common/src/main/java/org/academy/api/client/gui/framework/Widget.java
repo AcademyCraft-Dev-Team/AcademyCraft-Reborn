@@ -29,6 +29,8 @@ public interface Widget {
 
     boolean isEnabled(); // Can the widget be interacted with?
 
+    boolean isAbsoluteEnabled();
+
     void setEnabled(boolean enabled);
 
     boolean isHovered();
@@ -120,6 +122,10 @@ public interface Widget {
      */
     default float getAbsoluteY() {
         return getY() + (getParent() != null ? getParent().getAbsoluteY() : 0);
+    }
+
+    default float getAbsoluteZ() {
+        return getZ() + (getParent() != null ? getParent().getAbsoluteZ() + 1 : 0);
     }
 
     default boolean shouldFocus() {
