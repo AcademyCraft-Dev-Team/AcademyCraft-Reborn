@@ -6,6 +6,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class InputSystem {
@@ -14,6 +15,16 @@ public class InputSystem {
     public static final Map<String, Consumer<Integer>> scrollListeners = new HashMap<>();
     public static final Map<Integer, Integer> KEYBOARD_STATE = new HashMap<>();
     public static final Map<Integer, Integer> MOUSE_STATE = new HashMap<>();
+    public static final Map<String, BiConsumer<Double, Double>> MOUSE_MOVE_HANDLERS = new HashMap<>();
+    public static int currentMouseButton = -1;
+    public static int currentMouseAction = -1;
+    public static int currentMouseModifier = -1;
+
+    public static void handleMouseMove(double xpos, double ypos) {
+        for (BiConsumer<Double, Double> consumer : MOUSE_MOVE_HANDLERS.values()) {
+            consumer.accept(xpos, ypos);
+        }
+    }
 
     public static void handleKeyCallback(int key, int action, int modifiers) {
         KEYBOARD_STATE.put(key, action);
@@ -21,6 +32,9 @@ public class InputSystem {
     }
 
     public static void handleMouseButton(int button, int action, int modifiers) {
+        currentMouseButton = button;
+        currentMouseAction = action;
+        currentMouseModifier = modifiers;
         MOUSE_STATE.put(button, action);
         processBindings(MOUSE_KEY_BINDINGS, MOUSE_STATE, button, modifiers);
     }

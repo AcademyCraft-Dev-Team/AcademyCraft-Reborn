@@ -3,7 +3,6 @@ package org.academy.internal.common.world.entity.skill;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -21,11 +20,16 @@ public class Arc extends Entity {
         super(entityType, level);
     }
 
-    public Arc(Level level, Player player) {
+    public Arc(Level level, Vec3 handPos, Vec3 targetPos) {
         super(EntityTypes.ARC_ENTITY_TYPE, level);
-        this.setPos(player.position().add(0, 1, 0));
-        this.setYRot(player.getYRot());
-        this.setXRot(player.getXRot());
+
+        this.setPos(handPos);
+
+        Vec3 dir = targetPos.subtract(handPos).normalize();
+        float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
+        float pitch = (float) Math.toDegrees(-Math.asin(dir.y));
+        this.setYRot(yaw);
+        this.setXRot(pitch);
     }
 
     @Override

@@ -22,7 +22,7 @@ import org.joml.Quaternionf;
 @SuppressWarnings("SuspiciousNameCombination")
 public class StormWingEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new StormWingEffectRenderer();
-    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/skill/effect/accelerator/tornado_ring.png");
+    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
     public static final int RING_SEGMENTS = 12; // 每个环的顶点数
     private static final RandomSource RAND = RandomSource.create(); // 随机数生成器
     private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0); // 基础变换矩阵

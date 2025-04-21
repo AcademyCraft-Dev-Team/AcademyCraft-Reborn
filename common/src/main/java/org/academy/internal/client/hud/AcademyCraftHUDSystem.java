@@ -1,4 +1,4 @@
-package org.academy.internal.client.ui.hud;
+package org.academy.internal.client.hud;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -149,7 +149,7 @@ public class AcademyCraftHUDSystem {
         } else {
             progress = 0;
         }
-        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, partialTick / (20f / 3f));
+        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, MathUtil.animationFactor(0.125f, partialTick));
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
         final float width = COMPUTING_POWER_BAR_WIDTH * scale;

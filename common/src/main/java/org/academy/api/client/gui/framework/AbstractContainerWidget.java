@@ -3,9 +3,7 @@ package org.academy.api.client.gui.framework;
 import net.minecraft.client.gui.GuiGraphics;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 public abstract class AbstractContainerWidget extends AbstractWidget implements WidgetContainer {
     protected final Map<String, Widget> children = new LinkedHashMap<>();
@@ -41,7 +39,6 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         children.clear();
     }
 
-
     @Override
     public Map<String, Widget> getChildren() {
         return children;
@@ -54,29 +51,43 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     }
 
     protected void setFocusedChild(Widget child) {
-        if (focusedChild != null) {
-            focusedChild.setFocused(false);
-        }
+        if (child == this) return;
+
         focusedChild = child;
         if (focusedChild != null) {
             focusedChild.setFocused(true);
         }
     }
 
-    @Override
     public Widget getWidgetAt(double mouseX, double mouseY) {
-        for (Widget child : children.values()) {
-            if (child.isVisible() && child.isMouseOver(mouseX, mouseY)) {
-                if (child instanceof WidgetContainer containerChild) {
-                    Widget inner = containerChild.getWidgetAt(mouseX, mouseY);
-                    if (inner != null) {
-                        return inner;
-                    }
-                }
-                return child;
+        List<Widget> widgetList = getAllWidgets();
+
+        widgetList.sort(Comparator.comparing(Widget::getAbsoluteZ).reversed());
+
+        for (Widget widget : widgetList) {
+            if (widget.isAbsoluteEnabled() && widget.isMouseOver(mouseX, mouseY)) {
+                return widget;
             }
         }
         return null;
+    }
+
+    public List<Widget> getAllWidgets() {
+        List<Widget> result = new ArrayList<>();
+        Stack<Widget> stack = new Stack<>();
+        stack.addAll(getChildren().values());
+
+        while (!stack.isEmpty()) {
+            Widget widget = stack.pop();
+
+            if (widget instanceof AbstractContainerWidget container) {
+                stack.addAll(container.getChildren().values());
+            } else {
+                result.add(widget);
+            }
+        }
+
+        return result;
     }
 
     @Override
@@ -85,7 +96,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         if (!isVisible()) return;
 
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(this.x, this.y, 0);
+        guiGraphics.pose().translate(getX(), getY(), getZ());
 
         for (Widget child : children.values()) {
             child.render(guiGraphics, mouseX, mouseY, partialTicks);
@@ -97,50 +108,44 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         if (!isVisible() || !isEnabled()) return;
-        for (Widget child : children.values()) {
-            child.setHovered(child.isMouseOver(mouseX, mouseY));
-            if (child.shouldFocus()) {
-                if (child.isFocused() && child.isEnabled()) {
-                    child.mouseMoved(mouseX, mouseY);
-                }
-            } else {
-                child.mouseMoved(mouseX, mouseY);
-            }
+
+        for (Widget child : getAllWidgets()) {
+            child.setHovered(false);
+        }
+
+        setHovered(isMouseOver(mouseX, mouseY));
+
+        Widget widget = getWidgetAt(mouseX, mouseY);
+        if (widget != null) {
+            widget.setHovered(true);
         }
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!isVisible() || !isEnabled()) return false;
+        List<Widget> widgetList = getAllWidgets();
 
-        Widget target = getWidgetAt(mouseX, mouseY);
-        if (target != null) {
-            if (target.canFocus()) {
-                setFocusedChild(target);
-            }
+        for (Widget child : widgetList) {
+            child.setHovered(false);
+            child.setFocused(false);
         }
 
-        for (Widget child : children.values()) {
-            child.setHovered(child.isMouseOver(mouseX, mouseY));
-            if (!child.shouldFocus()) {
-                child.mouseClicked(mouseX, mouseY, button);
-            } else {
-                if (child.isFocused() && child.isEnabled()) {
-                    child.mouseClicked(mouseX, mouseY, button);
+        if (button == 0) {
+            Widget target = getWidgetAt(mouseX, mouseY);
+            if (target != null) {
+                target.setHovered(true);
+                if (target.canFocus()) {
+                    setFocusedChild(target);
                 }
-            }
-        }
-
-        if (isMouseOver(mouseX, mouseY)) {
-            if (this.canFocus()) {
+            } else {
                 setFocusedChild(null);
             }
         }
 
-        if (target == null && focusedChild != null) {
-            setFocusedChild(null);
+        for (Widget child : widgetList) {
+            child.mouseClicked(mouseX, mouseY, button);
         }
-
         return false;
     }
 
@@ -158,42 +163,35 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     public boolean charTyped(char codePoint, int modifiers) {
         if (!isVisible() || !isEnabled()) return false;
 
-        if (focusedChild != null && focusedChild.isEnabled()) {
-            return focusedChild.charTyped(codePoint, modifiers);
+        for (Widget widget : children.values()) {
+            widget.charTyped(codePoint, modifiers);
         }
         return false;
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (!isVisible() || !isEnabled()) return false;
-        Widget target = getWidgetAt(mouseX, mouseY);
-        if (target != null && target != this && target.isEnabled()) {
-            return target.mouseReleased(mouseX, mouseY, button);
+        for (Widget widget : children.values()) {
+            widget.mouseReleased(mouseX, mouseY, button);
         }
         return false;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (!isVisible() || !isEnabled()) return false;
-        Widget target = getWidgetAt(mouseX, mouseY);
-        if (target != null && target != this && target.isEnabled()) {
-            return target.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        for (Widget widget : children.values()) {
+            widget.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         }
         return false;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (!isVisible() || !isEnabled()) return false;
-        Widget target = getWidgetAt(mouseX, mouseY);
-        if (target != null && target != this && target.isEnabled()) {
-            return target.mouseScrolled(mouseX, mouseY, delta);
+        for (Widget widget : children.values()) {
+            widget.mouseScrolled(mouseX, mouseY, delta);
         }
         return false;
     }
-
 
     @Override
     public void setFocused(boolean focused) {

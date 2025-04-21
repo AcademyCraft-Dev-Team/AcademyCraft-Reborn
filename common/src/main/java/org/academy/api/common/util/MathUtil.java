@@ -40,41 +40,40 @@ public class MathUtil {
     }
 
     public static boolean rayIntersectPanelFastAngles(
-            double rayOx, double rayOy, double rayOz,        // 射线起点
-            double rayPitchDeg, double rayYawDeg,            // 射线俯仰和偏航角
-            double panelCx, double panelCy, double panelCz,  // 面板中心
-            double panelPitchDeg, double panelYawDeg,        // 面板旋转（法线方向）
-            double[] outIntersection                         // 输出交点
+            double rayOx, double rayOy, double rayOz,
+            double rayPitchDeg, double rayYawDeg,
+            double panelCx, double panelCy, double panelCz,
+            double panelPitchDeg, double panelYawDeg,
+            double[] outIntersection
     ) {
-        double rayPitchRad = Math.toRadians(rayPitchDeg);
-        double rayYawRad = Math.toRadians(rayYawDeg);
+        double ry = Math.toRadians(rayYawDeg),  rp = Math.toRadians(rayPitchDeg);
+        double rayDx = -Math.cos(rp) * Math.sin(ry);
+        double rayDy = -Math.sin(rp);
+        double rayDz =  Math.cos(rp) * Math.cos(ry);
 
-        double rayDx = Math.cos(rayPitchRad) * Math.sin(rayYawRad);
-        double rayDy = -Math.sin(rayPitchRad);
-        double rayDz = Math.cos(rayPitchRad) * Math.cos(rayYawRad);
-
-        double panelPitchRad = Math.toRadians(panelPitchDeg);
-        double panelYawRad = Math.toRadians(panelYawDeg);
-
-        double nx = Math.sin(panelYawRad);
-        double ny = -Math.sin(panelPitchRad) * Math.cos(panelYawRad);
-        double nz = Math.cos(panelPitchRad) * Math.cos(panelYawRad);
+        double py = Math.toRadians(panelYawDeg), pp = Math.toRadians(panelPitchDeg);
+        double nx = -Math.cos(pp) * Math.sin(py);
+        double ny = -Math.sin(pp);
+        double nz =  Math.cos(pp) * Math.cos(py);
 
         double dx = panelCx - rayOx;
         double dy = panelCy - rayOy;
         double dz = panelCz - rayOz;
 
-        double denom = nx * rayDx + ny * rayDy + nz * rayDz;
-        if (Math.abs(denom) < 1e-6) return false; // 平行
+        double denom = nx*rayDx + ny*rayDy + nz*rayDz;
+        if (Math.abs(denom) < 1e-6) return false;  // 平行，无交点
 
-        double t = (nx * dx + ny * dy + nz * dz) / denom;
-        if (t < 0) return false; // 背后
+        double t = (nx*dx + ny*dy + nz*dz) / denom;
+        if (t < 0) return false;  // 交点在射线负向
 
         outIntersection[0] = rayOx + t * rayDx;
         outIntersection[1] = rayOy + t * rayDy;
         outIntersection[2] = rayOz + t * rayDz;
-
         return true;
+    }
+
+    public static float animationFactor(float animationDuration, float partialTick) {
+        return 1 - (float) Math.exp(-Math.log(20) * partialTick / 20 / animationDuration);
     }
 
     public static class WeightedRandom<T> {

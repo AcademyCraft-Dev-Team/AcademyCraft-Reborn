@@ -19,8 +19,7 @@ public class ImageButtonWidget extends ImageWidget {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        super.mouseClicked(mouseX, mouseY, button);
-        if (this.enabled && this.visible && hovered && button == 0) {
+        if (focused && button == 0) {
             playDownSound(Minecraft.getInstance().getSoundManager());
             if (onPress != null) {
                 onPress.accept(this);
@@ -36,7 +35,7 @@ public class ImageButtonWidget extends ImageWidget {
 
     @Override
     public boolean canFocus() {
-        return this.enabled && this.visible;
+        return this.enabled;
     }
 
     @Override

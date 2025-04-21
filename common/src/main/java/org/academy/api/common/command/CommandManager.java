@@ -5,8 +5,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.tree.CommandNode;
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -24,12 +22,10 @@ import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.internal.client.ui.AbilityDeveloperFragment;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class CommandManager {
@@ -116,7 +112,6 @@ public class CommandManager {
                     Packets.S2C_FETCH_ALL_SKILL, ArrayList.class, list -> {
                         ArrayList<Skill> skills = (ArrayList<Skill>) list;
                         for (Skill skill : skills) {
-                            AbilityDeveloperFragment.addHistory(skill.name);
                         }
                     }
             );
@@ -135,8 +130,6 @@ public class CommandManager {
         }
 
         private static int help(CommandContext<ConsoleSource> context) {
-            Map<CommandNode<ConsoleSource>, String> map = dispatcher.getSmartUsage(dispatcher.getRoot(), context.getSource());
-            AbilityDeveloperFragment.addHistory(map.values());
             return 1;
         }
 
@@ -161,14 +154,6 @@ public class CommandManager {
         private static int learnCurriculum(CommandContext<ConsoleSource> context, String identifier) {
             AcademyCraft.LOGGER.info("Learned curriculum: " + identifier);
             return 1;
-        }
-
-        public static void executeCommand(String input, ConsoleSource source) {
-            try {
-                dispatcher.execute(input, source);
-            } catch (CommandSyntaxException e) {
-                AbilityDeveloperFragment.addHistory(e.getMessage());
-            }
         }
 
         public static final class DebugCommand {

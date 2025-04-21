@@ -4,12 +4,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.texture.Tickable;
 import net.minecraft.network.chat.Component;
+import org.academy.AcademyCraft;
 import org.academy.api.client.gui.widgets.PanelWidget;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class CGuiScreen extends Screen {
-    public final WidgetContainer rootContainer = new PanelWidget(0, 0, 0, 0);
+    public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
 
     protected CGuiScreen() {
         super(Component.empty());
@@ -17,6 +19,7 @@ public abstract class CGuiScreen extends Screen {
 
     @Override
     protected void init() {
+        rootContainer.clearChildren();
         rootContainer.setWidth(width);
         rootContainer.setHeight(height);
         onInit();
@@ -31,6 +34,15 @@ public abstract class CGuiScreen extends Screen {
         guiGraphics.pose().pushPose();
         rootContainer.render(guiGraphics, mouseHandler.xpos(), mouseHandler.ypos(), partialTick);
         guiGraphics.pose().popPose();
+    }
+
+    @Override
+    public void tick() {
+        for (Widget widget : rootContainer.getAllWidgets()){
+            if (widget instanceof Tickable tickable){
+                tickable.tick();
+            }
+        }
     }
 
     @Override
@@ -50,6 +62,7 @@ public abstract class CGuiScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        AcademyCraft.LOGGER.info(dragX + ", " + dragY);
         return rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
