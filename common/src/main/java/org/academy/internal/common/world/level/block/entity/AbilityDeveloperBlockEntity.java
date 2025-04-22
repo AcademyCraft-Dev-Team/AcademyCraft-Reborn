@@ -3,11 +3,14 @@ package org.academy.internal.common.world.level.block.entity;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.entity.AnimationState;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -15,7 +18,6 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
-import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
@@ -24,11 +26,10 @@ import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.Set;
 
 public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements WirelessUser {
-    @Nullable
-    public WirelessNode wirelessNode;
     public String name;
     public BlockPos mainPos;
     public int energyStored;
@@ -38,6 +39,8 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     public final AnimationState standState = new AnimationState();
     public final AnimationState liedownState = new AnimationState();
     public boolean isOpen = false;
+    private BlockPos connectedNodePos = null;
+
 
     public AbilityDeveloperBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
         super(type, pos, blockState);
@@ -66,17 +69,17 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
                     BlockPos blockPos = friendlyByteBuf.readBlockPos();
                     Skill skill = AbilitySystem.SKILL_MAP.get(name);
                     if (skill == null) return;
+                    listener.player.level();
                     BlockEntity blockEntity = listener.player.level().getBlockEntity(blockPos);
                     if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                         long needEnergy = skill.level * 10000L;
-                        if (abilityDeveloperBlockEntity.energyStored >= needEnergy) {
-                            abilityDeveloperBlockEntity.energyStored -= skill.level * 10000;
+                        if (abilityDeveloperBlockEntity.getEnergyStorage() >= needEnergy) {
+                            abilityDeveloperBlockEntity.setEnergyStorage(abilityDeveloperBlockEntity.getEnergyStorage() - (int) needEnergy);
                             AbilitySystemServer.addPlayerSkill(listener.player.getUUID(), name);
                             Set<String> skillList = AbilitySystemServer.getPlayerSkills(listener.player.getUUID());
                             for (String skillName : skillList) {
                                 AcademyCraft.LOGGER.info(skillName);
                             }
-                            abilityDeveloperBlockEntity.setChanged();
                         }
                     } else {
                         AcademyCraft.LOGGER.info("Invalid server learn skill packet for {}", name);
@@ -96,34 +99,28 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     public void setOpen(boolean open) {
         boolean previousIsOpen = this.isOpen;
         this.isOpen = open;
-
-        this.openState.animateWhen(this.isOpen, this.ticks);
-        this.closingState.animateWhen(!this.isOpen, this.ticks);
-
         if (level != null && level.isClientSide) {
+            this.openState.animateWhen(this.isOpen, this.ticks);
+            this.closingState.animateWhen(!this.isOpen, this.ticks);
             AnimationState currentAnimationState = previousIsOpen ? openState : closingState;
             AnimationState targetAnimationState = open ? openState : closingState;
             AnimationDefinition targetAnimationDefinition = open ? AbilityDeveloperBlockEntityModel.open : AbilityDeveloperBlockEntityModel.close;
-
             long elapsedMillis = currentAnimationState.getAccumulatedTime();
-
             currentAnimationState.stop();
-
             if (elapsedMillis > 0) {
                 float elapsedSeconds = elapsedMillis / 1000.0f;
                 float totalDuration = targetAnimationDefinition.lengthInSeconds();
-
                 float targetStartSeconds = Math.max(0.0f, Math.min(totalDuration, totalDuration - elapsedSeconds));
-
                 long targetElapsedTicks = (long)(targetStartSeconds * 20.0f);
-
                 long adjustedStartTick = this.ticks - targetElapsedTicks;
-                targetAnimationState.start(Math.toIntExact(adjustedStartTick));
+                targetAnimationState.start((int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, adjustedStartTick)));
             } else {
                 targetAnimationState.start(this.ticks);
             }
+        } else if (level != null) {
+            this.openState.stop();
+            this.closingState.stop();
         }
-
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
@@ -131,106 +128,194 @@ public abstract class AbilityDeveloperBlockEntity extends BlockEntity implements
     }
 
     public boolean isMain() {
-        return this.getBlockState().getValue(AbilityDeveloperBlock.TYPE)
-                .equals(AbilityDeveloperBlock.MultiBlockType.MAIN);
+        BlockState state = this.getBlockState();
+        return state.getValue(AbilityDeveloperBlock.TYPE).equals(AbilityDeveloperBlock.MultiBlockType.MAIN);
     }
 
     @Override
-    public @Nullable WirelessNode getWirelessNode() {
-        return wirelessNode;
+    public Level getOwningLevel() {
+        return this.level;
     }
 
     @Override
-    public void setWirelessNode(@Nullable WirelessNode wirelessNode) {
-        this.wirelessNode = wirelessNode;
+    public BlockPos getPosition() {
+        return this.worldPosition;
     }
 
+    @Nullable
     @Override
-    public String getName() {
-        return "AbilityDeveloperBlockEntity: " + mainPos;
-    }
-
-    @Override
-    public int getEnergyStorage() {
+    public BlockPos getConnectedNodePosition() {
         if (!isMain() && level != null && mainPos != null) {
             BlockEntity mainBE = level.getBlockEntity(mainPos);
             if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
-                return mainDevBE.getEnergyStorage();
+                return mainDevBE.getConnectedNodePosition();
             }
+            return null;
         }
-        return energyStored;
+        return this.connectedNodePos;
     }
 
     @Override
+    public void setConnectedNodePosition(@Nullable BlockPos nodePos) {
+        if (!isMain() && level != null && mainPos != null) {
+            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
+                mainDevBE.setConnectedNodePosition(nodePos);
+            }
+            return;
+        }
+        if (!Objects.equals(this.connectedNodePos, nodePos)) {
+            this.connectedNodePos = nodePos;
+            setChanged();
+            if (level != null && !level.isClientSide) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            }
+        }
+    }
+
+    @Override
+    public double extractEnergy(double maxExtract, boolean simulate) {
+        return 0.0;
+    }
+
+    @Override
+    public double receiveEnergy(double maxReceive, boolean simulate) {
+        if (!isMain() && level != null && mainPos != null) {
+            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            if (mainBE instanceof WirelessUser mainUser) {
+                return mainUser.receiveEnergy(maxReceive, simulate);
+            } else {
+                return 0.0;
+            }
+        }
+        double maxEnergyCanStore = getMaxEnergyStorage_internal();
+        double energyStoredDouble = getEnergyStorage_internal();
+        double maxCanReceive = Math.max(0.0, maxEnergyCanStore - energyStoredDouble);
+        double energyToReceive = Math.min(maxReceive, maxCanReceive);
+        if (energyToReceive <= 0.0) {
+            return 0.0;
+        }
+        if (!simulate) {
+            setEnergyStorage(getEnergyStorage_internal() + (int) Math.floor(energyToReceive));
+        }
+        return energyToReceive;
+    }
+
+    @Override
+    public double getEnergyStored() {
+        return getEnergyStorage_internal();
+    }
+
+    @Override
+    public double getMaxEnergyStorage() {
+        return getMaxEnergyStorage_internal();
+    }
+
+    private int getEnergyStorage_internal() {
+        if (!isMain() && level != null && mainPos != null) {
+            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
+                return mainDevBE.getEnergyStorage_internal();
+            }
+            return 0;
+        }
+        return this.energyStored;
+    }
+
+    private double getMaxEnergyStorage_internal() {
+        return 1_000_000.0;
+    }
+
+    public int getEnergyStorage() {
+        return getEnergyStorage_internal();
+    }
+
     public void setEnergyStorage(int energyStorage) {
         if (!isMain() && level != null && mainPos != null) {
             BlockEntity mainBE = level.getBlockEntity(mainPos);
             if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
                 mainDevBE.setEnergyStorage(energyStorage);
-                return;
             }
+            return;
         }
-        this.energyStored = energyStorage;
-        setChanged();
+        int oldEnergy = this.energyStored;
+        int maxInt = (int) Math.min(Integer.MAX_VALUE, getMaxEnergyStorage_internal());
+        this.energyStored = Math.max(0, Math.min(energyStorage, maxInt));
+        if (oldEnergy != this.energyStored) {
+            setChanged();
+        }
     }
+
 
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
         if (mainPos != null) {
-            tag.putInt("mainPosX", mainPos.getX());
-            tag.putInt("mainPosY", mainPos.getY());
-            tag.putInt("mainPosZ", mainPos.getZ());
+            tag.putInt("main_pos_x", mainPos.getX());
+            tag.putInt("main_pos_y", mainPos.getY());
+            tag.putInt("main_pos_z", mainPos.getZ());
         }
         if (isMain()) {
-            tag.putInt("energyStored", energyStored);
-            tag.putBoolean("isOpen", isOpen);
+            tag.putInt("energy_stored", energyStored);
+            tag.putBoolean("is_open", isOpen);
+            if (this.connectedNodePos != null) {
+                tag.put("connected_node_pos", NbtUtils.writeBlockPos(this.connectedNodePos));
+            }
         }
     }
 
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
-        if (tag.contains("mainPosX")) {
-            mainPos = new BlockPos(
-                    tag.getInt("mainPosX"),
-                    tag.getInt("mainPosY"),
-                    tag.getInt("mainPosZ")
-            );
+        if (tag.contains("main_pos_x")) {
+            mainPos = new BlockPos(tag.getInt("main_pos_x"), tag.getInt("main_pos_y"), tag.getInt("main_pos_z"));
+        } else {
+            this.mainPos = null;
         }
 
         if (isMain()) {
-            energyStored = tag.getInt("energyStored");
-            boolean loadedIsOpen = tag.getBoolean("isOpen");
-            if (level == null || !level.isClientSide) {
-                this.isOpen = loadedIsOpen;
+            energyStored = tag.getInt("energy_stored");
+            if (tag.contains("connected_node_pos", Tag.TAG_COMPOUND)) {
+                this.connectedNodePos = NbtUtils.readBlockPos(tag.getCompound("connected_node_pos"));
             } else {
-                if (this.isOpen != loadedIsOpen) {
-                    this.isOpen = loadedIsOpen;
-                }
+                this.connectedNodePos = null;
             }
-
-        } else if (level != null && mainPos != null && level.isClientSide) {
-            BlockEntity mainBE = level.getBlockEntity(mainPos);
-            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
-                this.isOpen = mainDevBE.isOpen;
-                this.energyStored = mainDevBE.energyStored;
+            this.isOpen = tag.getBoolean("is_open");
+        } else {
+            this.connectedNodePos = null;
+            if (level != null && mainPos != null && level.isClientSide) {
+                BlockEntity mainBE = level.getBlockEntity(mainPos);
+                if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
+                    this.isOpen = mainDevBE.isOpen;
+                    this.energyStored = mainDevBE.getEnergyStorage_internal();
+                    this.connectedNodePos = mainDevBE.connectedNodePos;
+                }
             }
         }
     }
 
     public void clientTick() {
         this.ticks++;
-        if (energyStored <= 0){
+        if (getEnergyStorage() <= 0) {
             standState.stop();
             liedownState.startIfStopped(ticks);
         } else {
             liedownState.stop();
             standState.startIfStopped(ticks);
         }
+        if (level != null && level.isClientSide) {
+            this.openState.animateWhen(this.isOpen, this.ticks);
+            this.closingState.animateWhen(!this.isOpen, this.ticks);
+        }
     }
 
     public void serverTick() {
         this.ticks++;
+        if (isMain() && connectedNodePos != null && level != null && level.getGameTime() % 100 == 0) {
+            BlockEntity nodeBE = level.getBlockEntity(connectedNodePos);
+            if (!(nodeBE instanceof org.academy.api.common.wireless.WirelessNode)) {
+                setConnectedNodePosition(null);
+            }
+        }
     }
 }

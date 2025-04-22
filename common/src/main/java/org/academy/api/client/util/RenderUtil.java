@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FastColor;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -130,6 +131,45 @@ public final class RenderUtil {
         public static final DepthTestStateShard EQUAL_DEPTH_TEST = new DepthTestStateShard("==", 514);
         public static final DepthTestStateShard LEQUAL_DEPTH_TEST = new DepthTestStateShard("<=", 515);
         public static final DepthTestStateShard GREATER_DEPTH_TEST = new DepthTestStateShard(">", 516);
+    }
+
+    public static final class GeneralRenderer {
+        public static final RenderType RENDER_TYPE_POSITION_COLOR = new RenderType.CompositeRenderType(
+                "render_type_position_color",
+                DefaultVertexFormat.POSITION_COLOR,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(RenderStates.POSITION_COLOR_SHADER)
+                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false)
+        );
+
+        public static void fill(Matrix4f matrix4f, float minX, float minY, float maxX, float maxY, int color, MultiBufferSource buffer) {
+            if (minX < maxX) {
+                float i = minX;
+                minX = maxX;
+                maxX = i;
+            }
+
+            if (minY < maxY) {
+                float j = minY;
+                minY = maxY;
+                maxY = j;
+            }
+
+            float f3 = (float) FastColor.ARGB32.alpha(color) / 255.0F;
+            float f = (float) FastColor.ARGB32.red(color) / 255.0F;
+            float f1 = (float) FastColor.ARGB32.green(color) / 255.0F;
+            float f2 = (float) FastColor.ARGB32.blue(color) / 255.0F;
+            VertexConsumer vertexconsumer = buffer.getBuffer(RenderType.gui());
+            vertexconsumer.vertex(matrix4f, minX, minY, 0).color(f, f1, f2, f3).endVertex();
+            vertexconsumer.vertex(matrix4f, minX, maxY, 0).color(f, f1, f2, f3).endVertex();
+            vertexconsumer.vertex(matrix4f, maxX, maxY, 0).color(f, f1, f2, f3).endVertex();
+            vertexconsumer.vertex(matrix4f, maxX, minY, 0).color(f, f1, f2, f3).endVertex();
+        }
     }
 
     public static final class RingRenderer {

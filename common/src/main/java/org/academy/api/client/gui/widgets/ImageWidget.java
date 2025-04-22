@@ -28,7 +28,6 @@ public class ImageWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
         if (!isVisible()) return;
 
         VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(renderType);

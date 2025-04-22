@@ -1,5 +1,7 @@
 package org.academy.api.common.network;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -8,10 +10,13 @@ import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class FriendlyByteBufSerializers {
+    public static final BiMap<FriendlyByteBufSerializer, Integer> SERIALIZER_IDS = HashBiMap.create();
     private static final Map<Class<?>, FriendlyByteBufSerializer<?>> FRIENDLY_BYTE_BUF_SERIALIZER_MAP = new ConcurrentHashMap<>();
     public static final FriendlyByteBufSerializer<String> STRING_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(String.class, FriendlyByteBuf::writeUtf);
     public static final FriendlyByteBufSerializer<Integer> INTEGER_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Integer.class, FriendlyByteBuf::writeVarInt);
@@ -54,7 +60,7 @@ public class FriendlyByteBufSerializers {
             buffer.writeBoolean(false);
         }
     });
-    public static final FriendlyByteBufSerializer<Map> MAP_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Map.class, (buffer, value) -> {
+    public static final FriendlyByteBufSerializer<HashMap> MAP_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(HashMap.class, (buffer, value) -> {
         buffer.writeVarInt(value.size());
         buffer.writeBoolean(value.isEmpty());
         if (!value.isEmpty()) {
@@ -74,6 +80,19 @@ public class FriendlyByteBufSerializers {
     });
     public static final FriendlyByteBufSerializer<Class> CLASS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Class.class, (buffer, value) -> buffer.writeUtf(value.getCanonicalName()));
     public static final FriendlyByteBufSerializer<ArrayList<Skill>> SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = getArrayListFriendlyByteBufSerializer(Skill.class);
+    public static final FriendlyByteBufSerializer<ImmutablePair> PAIR_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ImmutablePair.class, (buffer, pair) -> {
+        Object left = pair.getLeft();
+        Object right = pair.getRight();
+
+        buffer.writeUtf(left.getClass().getCanonicalName());
+        buffer.writeUtf(right.getClass().getCanonicalName());
+
+        FriendlyByteBufSerializer leftSerializer = getRequiredSerializer(left.getClass());
+        FriendlyByteBufSerializer rightSerializer = getRequiredSerializer(right.getClass());
+
+        leftSerializer.serialize(buffer, left);
+        rightSerializer.serialize(buffer, right);
+    });
 
     private FriendlyByteBufSerializers() {
     }
@@ -88,9 +107,21 @@ public class FriendlyByteBufSerializers {
         };
     }
 
-    public static <T> FriendlyByteBufSerializer<T> registerSerializer(Class<T> clazz, FriendlyByteBufSerializer<T> serializer) {
+    public static <T> FriendlyByteBufSerializer<T> registerSerializer(
+            Class<T> clazz, FriendlyByteBufSerializer<T> serializer
+    ) {
+        SERIALIZER_IDS.put(serializer, SERIALIZER_IDS.size());
         FRIENDLY_BYTE_BUF_SERIALIZER_MAP.put(clazz, serializer);
         return serializer;
+    }
+
+    public static int getSerializerId(FriendlyByteBufSerializer<?> serializer) {
+        return SERIALIZER_IDS.get(serializer);
+    }
+
+    @Nullable
+    public static <T> FriendlyByteBufSerializer<T> getSerializer(int id) {
+        return (FriendlyByteBufSerializer<T>) SERIALIZER_IDS.inverse().get(id);
     }
 
     @Nullable

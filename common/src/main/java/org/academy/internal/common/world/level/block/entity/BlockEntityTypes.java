@@ -20,7 +20,7 @@ public class BlockEntityTypes {
             BlockEntityType.Builder.<AdvancedWirelessNodeBlockEntity>of(new BlockEntityType.BlockEntitySupplier<>() {
                 @Override
                 public @NotNull AdvancedWirelessNodeBlockEntity create(@NotNull BlockPos pos, @NotNull BlockState state) {
-                    return new AdvancedWirelessNodeBlockEntity(ADVANCED_WIRELESS_NODE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE, pos, state);
+                    return new AdvancedWirelessNodeBlockEntity( pos, state);
                 }
             }, Blocks.ADVANCED_WIRELESS_NODE_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "advanced_wireless_node"));
     public static final BlockEntityType<WindGenBaseBlockEntity> WIND_GEN_BASE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE =

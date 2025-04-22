@@ -53,6 +53,7 @@ public class NetworkSystem {
         return PACKET_IDS.get(resourceLocation);
     }
 
+    @Nullable
     public static ResourceLocation getPacketResourceLocation(int packetId) {
         return PACKET_IDS.inverse().get(packetId);
     }

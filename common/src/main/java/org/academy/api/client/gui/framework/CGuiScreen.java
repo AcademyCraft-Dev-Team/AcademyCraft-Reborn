@@ -62,7 +62,6 @@ public abstract class CGuiScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        AcademyCraft.LOGGER.info(dragX + ", " + dragY);
         return rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 

@@ -8,7 +8,6 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.academy.api.common.network.Packets;
@@ -50,8 +49,6 @@ public final class AbilitySystemClient {
                 skill.initClient();
             }
         }
-        CommandManager.Client.registerCommands();
-        CommandManager.Client.registerPacketHandler();
     }
 
     public static void registerPacketHandler() {

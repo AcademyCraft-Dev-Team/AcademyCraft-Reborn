@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.framework;
 
-import net.minecraft.client.gui.GuiGraphics;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -18,8 +17,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         if (child.getParent() != null) {
             child.getParent().removeChild(name);
         }
-        this.children.put(name, child);
         child.setParent(this);
+        this.children.put(name, child);
     }
 
     @Override
@@ -44,6 +43,15 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         return children;
     }
 
+    @SuppressWarnings("unchecked")
+    @NotNull
+    public <T extends Widget> T getChildUnSafe(String name) {
+        if (!children.containsKey(name)) {
+            throw new NoSuchElementException("No such child: " + name);
+        }
+        return (T) children.get(name);
+    }
+
     @NotNull
     @Override
     public Iterator<Widget> iterator() {
@@ -65,7 +73,12 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         widgetList.sort(Comparator.comparing(Widget::getAbsoluteZ).reversed());
 
         for (Widget widget : widgetList) {
+        //    AcademyCraft.LOGGER.info(widget + " Z : " + widget.getAbsoluteZ() + " Enable : " + widget.isAbsoluteEnabled() + " Overed : " + widget.isMouseOver(mouseX, mouseY));
+        }
+
+        for (Widget widget : widgetList) {
             if (widget.isAbsoluteEnabled() && widget.isMouseOver(mouseX, mouseY)) {
+         //       AcademyCraft.LOGGER.info("Widget " + widget + " is focused");
                 return widget;
             }
         }
@@ -79,7 +92,6 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
         while (!stack.isEmpty()) {
             Widget widget = stack.pop();
-
             if (widget instanceof AbstractContainerWidget container) {
                 stack.addAll(container.getChildren().values());
             } else {
@@ -88,21 +100,6 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
 
         return result;
-    }
-
-    @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
-        if (!isVisible()) return;
-
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(getX(), getY(), getZ());
-
-        for (Widget child : children.values()) {
-            child.render(guiGraphics, mouseX, mouseY, partialTicks);
-        }
-
-        guiGraphics.pose().popPose();
     }
 
     @Override
@@ -118,6 +115,10 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         Widget widget = getWidgetAt(mouseX, mouseY);
         if (widget != null) {
             widget.setHovered(true);
+        }
+
+        for (Widget child : getChildren().values()) {
+            child.mouseMoved(mouseX, mouseY);
         }
     }
 

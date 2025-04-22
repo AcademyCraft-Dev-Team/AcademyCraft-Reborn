@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import org.academy.api.client.config.AcademyCraftClientConfig;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.common.wireless.WirelessManager;
-import org.academy.internal.client.gui.NewAbilityDeveloperScreen;
+import org.academy.internal.client.gui.AbilityDeveloperScreen;
 
 import java.io.File;
 
@@ -16,7 +16,7 @@ public final class AcademyCraftClient {
         CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
         AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
         CLIENT_CONFIG = new AcademyCraftClientConfig<>();
-        NewAbilityDeveloperScreen.initPacket();
         WirelessManager.initClient();
+        AbilityDeveloperScreen.initS2CPacket();
     }
 }

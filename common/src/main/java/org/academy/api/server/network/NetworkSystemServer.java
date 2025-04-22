@@ -16,6 +16,10 @@ import java.util.function.Consumer;
 public class NetworkSystemServer {
     public static final Map<ResourceLocation, C2SPacketHandler> C2S_PACKET_HANDLER_MAP = new HashMap<>();
 
+    static {
+        FutureManagerServer.register();
+    }
+
     private NetworkSystemServer() {
     }
 
