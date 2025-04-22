@@ -1,13 +1,16 @@
 package org.academy.api.common.network;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -22,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class FriendlyByteBufDeserializers {
+    public static final BiMap<FriendlyByteBufDeserializer, Integer> DESERIALIZER_IDS = HashBiMap.create();
     private static final Map<Class<?>, FriendlyByteBufDeserializer<?>> FRIENDLY_BYTE_BUF_DESERIALIZER_MAP = new ConcurrentHashMap<>();
     public static final FriendlyByteBufDeserializer<String> STRING_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(String.class, FriendlyByteBuf::readUtf);
     public static final FriendlyByteBufDeserializer<Integer> INTEGER_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Integer.class, FriendlyByteBuf::readVarInt);
@@ -56,10 +60,10 @@ public class FriendlyByteBufDeserializers {
         }
         return list;
     });
-    public static final FriendlyByteBufDeserializer<Map> MAP_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Map.class, buffer -> {
+    public static final FriendlyByteBufDeserializer<HashMap> MAP_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(HashMap.class, buffer -> {
         int size = buffer.readVarInt();
         boolean isEmpty = buffer.readBoolean();
-        Map<Object, Object> map = new HashMap<>(size);
+        HashMap<Object, Object> map = new HashMap<>(size);
         if (!isEmpty) {
             Class<?> keyClass;
             Class<?> valueClass;
@@ -86,6 +90,22 @@ public class FriendlyByteBufDeserializers {
             throw new RuntimeException(e);
         }
     });
+    public static final FriendlyByteBufDeserializer<ImmutablePair> PAIR_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(ImmutablePair.class, buffer -> {
+        try {
+            Class<?> leftClass = Class.forName(buffer.readUtf());
+            Class<?> rightClass = Class.forName(buffer.readUtf());
+
+            FriendlyByteBufDeserializer<?> leftDeserializer = getRequiredDeserializer(leftClass);
+            FriendlyByteBufDeserializer<?> rightDeserializer = getRequiredDeserializer(rightClass);
+
+            Object left = leftDeserializer.deserialize(buffer);
+            Object right = rightDeserializer.deserialize(buffer);
+
+            return new ImmutablePair<>(left, right);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Failed to deserialize Pair due to missing class", e);
+        }
+    });
 
     public static <T> FriendlyByteBufDeserializer<ArrayList<T>> getArrayListFriendlyByteBufDeserializer(Class<T> clazz) {
         return buffer -> {
@@ -102,8 +122,18 @@ public class FriendlyByteBufDeserializers {
     public static <T> FriendlyByteBufDeserializer<T> registerDeserializer(
             Class<T> clazz, FriendlyByteBufDeserializer<T> deserializer
     ) {
+        DESERIALIZER_IDS.put(deserializer, DESERIALIZER_IDS.size());
         FRIENDLY_BYTE_BUF_DESERIALIZER_MAP.put(clazz, deserializer);
         return deserializer;
+    }
+
+    public static int getDeserializerId(FriendlyByteBufDeserializer<?> serializer) {
+        return DESERIALIZER_IDS.get(serializer);
+    }
+
+    @Nullable
+    public static <T> FriendlyByteBufDeserializer<T> getDeserializer(int id) {
+        return (FriendlyByteBufDeserializer<T>) DESERIALIZER_IDS.inverse().get(id);
     }
 
     @Nullable

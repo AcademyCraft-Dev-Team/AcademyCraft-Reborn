@@ -49,7 +49,7 @@ public interface Widget {
      */
     void setParent(WidgetContainer parent);
 
-    void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks);
+    void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick);
 
     default void mouseMoved(double mouseX, double mouseY) {
     }

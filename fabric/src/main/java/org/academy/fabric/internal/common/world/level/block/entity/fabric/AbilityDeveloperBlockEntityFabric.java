@@ -13,7 +13,7 @@ public class AbilityDeveloperBlockEntityFabric extends AbilityDeveloperBlockEnti
     }
 
     @Override
-    public int getMaxEnergyStorage() {
+    public double getMaxEnergyStorage() {
         return 640000;
     }
 }

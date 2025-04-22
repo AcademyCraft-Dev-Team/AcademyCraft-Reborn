@@ -8,11 +8,11 @@ import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import java.util.function.Consumer;
 
 public class ImageButtonWidget extends ImageWidget {
-    protected Consumer<ImageButtonWidget> onPress;
+    public Runnable onPress;
     public boolean hoverEffect = true;
 
     public ImageButtonWidget(float x, float y, float width, float height,
-                             RenderType renderType, Consumer<ImageButtonWidget> onPress) {
+                             RenderType renderType, Runnable onPress) {
         super(x, y, width, height, renderType);
         this.onPress = onPress;
     }
@@ -22,7 +22,7 @@ public class ImageButtonWidget extends ImageWidget {
         if (focused && button == 0) {
             playDownSound(Minecraft.getInstance().getSoundManager());
             if (onPress != null) {
-                onPress.accept(this);
+                onPress.run();
             }
             return true;
         }
