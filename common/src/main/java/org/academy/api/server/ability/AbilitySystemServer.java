@@ -32,7 +32,7 @@ import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
 public class AbilitySystemServer {
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
     private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
-    public static Map<UUID, WorldData.Player<? extends WorldData.Player.SkillData>> playerMap;
+    public static Map<UUID, WorldData.Player> playerMap;
     public static volatile MinecraftServer minecraftServer;
     public static volatile ScheduledFuture<?> scheduledFuture;
 
@@ -254,8 +254,8 @@ public class AbilitySystemServer {
                 return;
             }
             if (!playerMap.containsKey(player.getUUID())) {
-                WorldData.Player<WorldData.Player.SkillData> data =
-                        new WorldData.Player<>();
+                WorldData.Player data =
+                        new WorldData.Player();
                 playerMap.put(player.getUUID(), data);
                 setPlayerLevel(player.getUUID(), 0);
                 setPlayerAbilityCategory(player.getUUID(), Level0.INSTANCE);
@@ -282,12 +282,12 @@ public class AbilitySystemServer {
 
     public static class Player {
         public final UUID uuid;
-        public final WorldData.Player<? extends WorldData.Player.SkillData> data;
+        public final WorldData.Player data;
         public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
         private final Consumer<Packet<?>> packetConsumer;
         public float additionalComputingPower;
 
-        public Player(final UUID uuid, final WorldData.Player<? extends WorldData.Player.SkillData> data, final Consumer<Packet<?>> packetConsumer) {
+        public Player(final UUID uuid, final WorldData.Player data, final Consumer<Packet<?>> packetConsumer) {
             this.uuid = uuid;
             this.data = data;
             this.packetConsumer = packetConsumer;

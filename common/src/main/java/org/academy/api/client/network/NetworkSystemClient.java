@@ -20,6 +20,10 @@ public class NetworkSystemClient {
     public static final Map<ResourceLocation, S2CPacketHandler> SERVER_TO_CLIENT_PACKET_HANDLER_MAP = new HashMap<>();
     public static Connection connection;
 
+    static {
+        FutureManagerClient.register();
+    }
+
     private NetworkSystemClient() {
     }
 

@@ -2,9 +2,9 @@ package org.academy;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
-import org.academy.api.common.command.CommandManager;
 import org.academy.api.common.wireless.WirelessManager;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.client.gui.AbilityDeveloperScreen;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.world.level.storage.WorldData;
 
@@ -24,8 +24,8 @@ public class AcademyCraftServer {
         serverConfig = new AcademyCraftServerConfig().loadConfig(serverConfigFile);
         worldData = WorldData.getWorldData(worldDataFile);
         AbilitySystemServer.init(server);
-        CommandManager.Server.registerPacketHandler();
         AbilityDeveloperBlockEntity.intiServer();
         WirelessManager.initServer();
+        AbilityDeveloperScreen.initC2SPacket();
     }
 }

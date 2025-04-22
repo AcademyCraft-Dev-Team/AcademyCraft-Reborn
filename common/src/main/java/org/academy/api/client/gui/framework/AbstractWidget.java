@@ -1,7 +1,5 @@
 package org.academy.api.client.gui.framework;
 
-import net.minecraft.client.gui.GuiGraphics;
-
 public abstract class AbstractWidget implements Widget {
     protected float x, y, z, width, height;
     protected boolean visible = true;
@@ -135,9 +133,5 @@ public abstract class AbstractWidget implements Widget {
         } else {
             return false;
         }
-    }
-
-    @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
     }
 }

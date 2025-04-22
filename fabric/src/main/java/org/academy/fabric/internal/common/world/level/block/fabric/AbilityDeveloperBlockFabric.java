@@ -36,7 +36,7 @@ public class AbilityDeveloperBlockFabric extends AbilityDeveloperBlock {
                     if (abilityDeveloperBlockEntity.energyStored < abilityDeveloperBlockEntity.getMaxEnergyStorage()) {
                         int amountExtracted;
                         int shouldExtract;
-                        shouldExtract = abilityDeveloperBlockEntity.getMaxEnergyStorage() - abilityDeveloperBlockEntity.energyStored;
+                        shouldExtract = (int) (abilityDeveloperBlockEntity.getMaxEnergyStorage() - abilityDeveloperBlockEntity.energyStored);
                         if (abilityDeveloperBlockEntity.getMaxEnergyStorage() - abilityDeveloperBlockEntity.energyStored >= abilityDeveloperBlockEntity.getMaxEnergyStorage()) {
                             shouldExtract = (int) source.maxExtract;
                         }

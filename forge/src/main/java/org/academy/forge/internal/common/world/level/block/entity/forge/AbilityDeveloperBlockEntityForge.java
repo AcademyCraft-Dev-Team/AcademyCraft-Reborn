@@ -22,7 +22,7 @@ public class AbilityDeveloperBlockEntityForge extends AbilityDeveloperBlockEntit
     }
 
     @Override
-    public int getMaxEnergyStorage() {
+    public double getMaxEnergyStorage() {
         return 3840000;
     }
 }
