@@ -57,4 +57,11 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
     public float getAbsoluteY() {
         return super.getAbsoluteY() - scrollOffset;
     }
+
+    @Override
+    public boolean isMouseOver(double checkX, double checkY) {
+        float absX = super.getAbsoluteX();
+        float absY = super.getAbsoluteY();
+        return checkX >= absX && checkY >= absY && checkX < absX + getWidth() && checkY < absY + getHeight();
+    }
 }

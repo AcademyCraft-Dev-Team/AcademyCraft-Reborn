@@ -77,7 +77,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
 
         for (Widget widget : widgetList) {
-            if (widget.isAbsoluteEnabled() && widget.isMouseOver(mouseX, mouseY)) {
+            if (widget.isAbsoluteEnabled() && widget.isAbsoluteMouseOver(mouseX, mouseY)) {
          //       AcademyCraft.LOGGER.info("Widget " + widget + " is focused");
                 return widget;
             }
@@ -110,7 +110,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             child.setHovered(false);
         }
 
-        setHovered(isMouseOver(mouseX, mouseY));
+        setHovered(isAbsoluteMouseOver(mouseX, mouseY));
 
         Widget widget = getWidgetAt(mouseX, mouseY);
         if (widget != null) {

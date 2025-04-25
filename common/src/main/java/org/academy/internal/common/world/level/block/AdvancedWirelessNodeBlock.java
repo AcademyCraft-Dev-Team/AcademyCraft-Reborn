@@ -8,7 +8,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -64,11 +63,11 @@ public class AdvancedWirelessNodeBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void destroy(@NotNull LevelAccessor levelAccessor, @NotNull BlockPos pos, @NotNull BlockState state) {
-        if (levelAccessor instanceof ServerLevel serverLevel) {
+    public void onRemove(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState newState, boolean movedByPiston) {
+        if (level instanceof ServerLevel serverLevel) {
             WorldData.WirelessNetworkData.get(serverLevel).unregisterNode(pos);
         }
-        super.destroy(levelAccessor, pos, state);
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
     @Override
@@ -84,6 +83,6 @@ public class AdvancedWirelessNodeBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
-        return level.isClientSide ? null : createTickerHelper(blockEntityType, BlockEntityTypes.ADVANCED_WIRELESS_NODE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE, AdvancedWirelessNodeBlockEntity::tick);
+        return level.isClientSide ? null : createTickerHelper(blockEntityType, BlockEntityTypes.ADVANCED_WIRELESS_NODE, (level1, pos, state1, blockEntity) -> AdvancedWirelessNodeBlockEntity.tick(level1, pos, blockEntity));
     }
 }

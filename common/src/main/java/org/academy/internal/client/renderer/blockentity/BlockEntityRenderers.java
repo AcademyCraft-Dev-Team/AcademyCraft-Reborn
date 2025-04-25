@@ -11,7 +11,8 @@ public class BlockEntityRenderers {
     public static final Map<BlockEntityType<?>, BlockEntityRenderer<?>> BLOCK_ENTITY_RENDERERS = new HashMap<>();
 
     static {
-        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_BASE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE, new WindGenBaseBlockEntityRenderer());
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_BASE, new WindGenBaseBlockEntityRenderer());
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_TOP, new WindGenTopBlockEntityRenderer());
     }
 
     private BlockEntityRenderers() {

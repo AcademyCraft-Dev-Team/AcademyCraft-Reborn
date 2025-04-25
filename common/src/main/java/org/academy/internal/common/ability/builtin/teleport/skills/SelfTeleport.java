@@ -100,7 +100,7 @@ public final class SelfTeleport extends Skill {
                 final RenderBuffers renderBuffers = mc.renderBuffers();
 
                 poseStack.translate(-0.5f, -1f, -0.5f);
-                RenderUtil.BoxRenderer.renderWireframeBox(poseStack, renderBuffers.bufferSource(), aabb, 1f, 1f, 1f, 1f);
+                RenderUtil.LineBoxRenderer.renderWireframeBox(poseStack, renderBuffers.bufferSource(), aabb, 1f, 1f, 1f, 1f);
                 poseStack.popPose();
             }
         };

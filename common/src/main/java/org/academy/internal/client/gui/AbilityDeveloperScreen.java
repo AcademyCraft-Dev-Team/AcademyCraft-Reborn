@@ -18,6 +18,7 @@ import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.widgets.*;
 import org.academy.api.client.network.FutureManagerClient;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.util.RenderStateUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
@@ -86,50 +87,42 @@ public class AbilityDeveloperScreen extends CGuiScreen {
                 (listener, packet) -> {
                     ServerPlayer player = listener.player;
                     ServerLevel level = player.serverLevel();
-                    try {
-                        int id = packet.friendlyByteBuf.readVarInt();
-                        BlockPos requesterPos = packet.friendlyByteBuf.readBlockPos();
-                        WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
-                        List<String> nodeNamesInRange = new ArrayList<>();
-                        for (Map.Entry<BlockPos, WorldData.WirelessNetworkData.NodeConfig> entry : data.getNodeEntries().entrySet()) {
-                            BlockPos nodePos = entry.getKey();
-                            WorldData.WirelessNetworkData.NodeConfig config = entry.getValue();
-                            if (nodePos.distSqr(requesterPos) <= (double) config.radius * config.radius) {
-                                nodeNamesInRange.add(config.name);
-                            }
+                    int id = packet.friendlyByteBuf.readVarInt();
+                    BlockPos requesterPos = packet.friendlyByteBuf.readBlockPos();
+                    WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
+                    List<String> nodeNamesInRange = new ArrayList<>();
+                    for (Map.Entry<BlockPos, WorldData.WirelessNetworkData.NodeConfig> entry : data.getNodeEntries().entrySet()) {
+                        BlockPos nodePos = entry.getKey();
+                        WorldData.WirelessNetworkData.NodeConfig config = entry.getValue();
+                        if (nodePos.distSqr(requesterPos) <= (double) config.radius * config.radius) {
+                            nodeNamesInRange.add(config.name);
                         }
-                        FutureManagerServer.sendResult(listener, id, nodeNamesInRange);
-                    } catch (Exception e) {
-                        AcademyCraft.LOGGER.error("Error processing C2S_GET_AVAILABLE_NODE_LIST: {}", e.getMessage(), e);
                     }
+                    FutureManagerServer.sendResult(listener, id, nodeNamesInRange);
                 }
         );
         NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_GET_CURRENT_NODE, (listener, packet) -> {
             ServerPlayer player = listener.player;
             ServerLevel level = player.serverLevel();
-            try {
-                int id = packet.friendlyByteBuf.readVarInt();
-                BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
-                String currentNodeName = null;
-                net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(userPos);
-                if (be instanceof WirelessUser user) {
-                    BlockPos connectedNodePos = user.getConnectedNodePosition();
-                    if (connectedNodePos != null) {
-                        WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
-                        WorldData.WirelessNetworkData.NodeConfig nodeConfig = data.getNodeConfig(connectedNodePos);
-                        if (nodeConfig != null) {
-                            currentNodeName = nodeConfig.name;
-                        }
+            int id = packet.friendlyByteBuf.readVarInt();
+            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
+            String currentNodeName = null;
+            net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(userPos);
+            if (be instanceof WirelessUser user) {
+                BlockPos connectedNodePos = user.getConnectedNodePosition();
+                if (connectedNodePos != null) {
+                    WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
+                    WorldData.WirelessNetworkData.NodeConfig nodeConfig = data.getNodeConfig(connectedNodePos);
+                    if (nodeConfig != null) {
+                        currentNodeName = nodeConfig.name;
                     }
                 }
-                boolean isNull = currentNodeName == null;
-                if (currentNodeName == null) {
-                    currentNodeName = "None";
-                }
-                FutureManagerServer.sendResult(listener, id, Pair.of(isNull, currentNodeName));
-            } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Error processing C2S_GET_CURRENT_NODE: {}", e.getMessage(), e);
             }
+            boolean isNull = currentNodeName == null;
+            if (currentNodeName == null) {
+                currentNodeName = "None";
+            }
+            FutureManagerServer.sendResult(listener, id, Pair.of(isNull, currentNodeName));
         });
     }
 
@@ -389,10 +382,10 @@ public class AbilityDeveloperScreen extends CGuiScreen {
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RenderUtil.RenderStates.DEBUG)
-                        .setCullState(RenderUtil.RenderStates.NO_CULL)
-                        .setWriteMaskState(RenderUtil.RenderStates.COLOR_WRITE)
-                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(RenderStateUtil.DEBUG)
+                        .setCullState(RenderStateUtil.NO_CULL)
+                        .setWriteMaskState(RenderStateUtil.COLOR_WRITE)
+                        .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false)
         );
         static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_TOP = RenderUtil.getPositionTexRenderType(

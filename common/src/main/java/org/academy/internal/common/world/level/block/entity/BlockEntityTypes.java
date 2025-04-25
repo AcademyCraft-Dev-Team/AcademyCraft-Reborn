@@ -1,14 +1,12 @@
 package org.academy.internal.common.world.level.block.entity;
 
 import net.minecraft.Util;
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.datafix.fixes.References;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.level.block.Blocks;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,24 +14,37 @@ import java.util.Map;
 @SuppressWarnings("DataFlowIssue")
 public class BlockEntityTypes {
     public static final Map<ResourceLocation, BlockEntityType<?>> BLOCK_ENTITY_TYPES = new HashMap<>();
-    public static final BlockEntityType<AdvancedWirelessNodeBlockEntity> ADVANCED_WIRELESS_NODE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE =
-            BlockEntityType.Builder.<AdvancedWirelessNodeBlockEntity>of(new BlockEntityType.BlockEntitySupplier<>() {
-                @Override
-                public @NotNull AdvancedWirelessNodeBlockEntity create(@NotNull BlockPos pos, @NotNull BlockState state) {
-                    return new AdvancedWirelessNodeBlockEntity( pos, state);
-                }
-            }, Blocks.ADVANCED_WIRELESS_NODE_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "advanced_wireless_node"));
-    public static final BlockEntityType<WindGenBaseBlockEntity> WIND_GEN_BASE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE =
-            BlockEntityType.Builder.<WindGenBaseBlockEntity>of(new BlockEntityType.BlockEntitySupplier<>() {
-                @Override
-                public @NotNull WindGenBaseBlockEntity create(@NotNull BlockPos pos, @NotNull BlockState state) {
-                    return new WindGenBaseBlockEntity(WIND_GEN_BASE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE, pos, state);
-                }
-            },Blocks.WIND_GEN_BASE_BLOCK).build(Util.fetchChoiceType(References.BLOCK_ENTITY, "wind_gen_base"));
 
-    static {
-        BLOCK_ENTITY_TYPES.put(new ResourceLocation(AcademyCraft.MOD_ID, "advanced_wireless_node"), ADVANCED_WIRELESS_NODE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE);
-        BLOCK_ENTITY_TYPES.put(new ResourceLocation(AcademyCraft.MOD_ID, "wind_gen_base"), WIND_GEN_BASE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE);
+    public static final BlockEntityType<AdvancedWirelessNodeBlockEntity> ADVANCED_WIRELESS_NODE = register(
+            BlockEntityType.Builder.of(
+                    AdvancedWirelessNodeBlockEntity::new, Blocks.ADVANCED_WIRELESS_NODE_BLOCK),
+            "advanced_wireless_node");
+
+    public static final BlockEntityType<WindGenBaseBlockEntity> WIND_GEN_BASE = register(
+            BlockEntityType.Builder.of(
+                    WindGenBaseBlockEntity::new, Blocks.WIND_GEN_BASE_BLOCK),
+            "wind_gen_base");
+
+    public static final BlockEntityType<WindGenTopBlockEntity> WIND_GEN_TOP = register(
+            BlockEntityType.Builder.of(
+                    WindGenTopBlockEntity::new, Blocks.WIND_GEN_TOP_BLOCK),
+            "wind_gen_top");
+
+    public static final BlockEntityType<WindGenPillarBlockEntity> WIND_GEN_PILLAR = register(
+            BlockEntityType.Builder.of(
+                    WindGenPillarBlockEntity::new, Blocks.WIND_GEN_PILLAR_BLOCK),
+            "wind_gen_pillar");
+
+    public static final BlockEntityType<AbilityDeveloperBlockEntity> ABILITY_DEVELOPER = register(
+            BlockEntityType.Builder.of(
+                    AbilityDeveloperBlockEntity::new, Blocks.ABILITY_DEVELOPER_BLOCK),
+            "ability_developer"
+    );
+
+    public static <T extends BlockEntity> BlockEntityType<T> register(BlockEntityType.Builder<T> builder, String choiceName) {
+        BlockEntityType<T> result = builder.build(Util.fetchChoiceType(References.BLOCK_ENTITY, choiceName));
+        BLOCK_ENTITY_TYPES.put(new ResourceLocation(AcademyCraft.MOD_ID, choiceName), result);
+        return result;
     }
 
     private BlockEntityTypes() {
