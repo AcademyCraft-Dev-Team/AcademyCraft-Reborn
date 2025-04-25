@@ -2,7 +2,6 @@ package org.academy.internal.common.world.level.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -23,54 +22,51 @@ import java.util.List;
 
 
 public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements WirelessNode {
-    private double energyStored = 0;
-    private static final double MAX_ENERGY = 2_400_000.0;
-    private static final double TRANSFER_RATE = 5000.0;
+    private int energyStored = 5000;
+    private static final int MAX_ENERGY = 2_400_000;
+    private static final int TRANSFER_RATE = 5;
 
     private WorldData.WirelessNetworkData.NodeConfig cachedConfig = null;
 
     public AdvancedWirelessNodeBlockEntity(BlockPos pos, BlockState blockState) {
-        super(BlockEntityTypes.ADVANCED_WIRELESS_NODE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE, pos, blockState);
+        super(BlockEntityTypes.ADVANCED_WIRELESS_NODE, pos, blockState);
     }
 
-    public static <T extends BlockEntity> void tick(Level level, BlockPos pos, BlockState state, T blockEntity) {
+    public static <T extends BlockEntity> void tick(Level level, BlockPos pos, T blockEntity) {
         if (level instanceof ServerLevel serverLevel && blockEntity instanceof AdvancedWirelessNodeBlockEntity nodeBE) {
-            nodeBE.serverTick(serverLevel, pos, state);
+            nodeBE.serverTick(serverLevel, pos);
         }
     }
 
-    private void serverTick(ServerLevel serverLevel, BlockPos pos, BlockState state) {
+    private void serverTick(ServerLevel serverLevel, BlockPos pos) {
         if (level == null) return;
 
-        if (level.getGameTime() % 60 == 0 || cachedConfig == null) {
+        if (cachedConfig == null) {
             WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(serverLevel);
             cachedConfig = networkData.getNodeConfig(pos);
-            // --- Check level null again before logging ---
             if (cachedConfig == null && level != null && level.getGameTime() > 1) {
                 AcademyCraft.LOGGER.warn("Wireless Node BE at {} ticking but not (yet?) registered in SavedData!", pos);
             }
+            return;
         }
 
-        if (cachedConfig == null) return;
-
-        double transferRate = getEnergyTransferRate();
-        double energyReceivedThisTick = 0;
-        double energySentThisTick = 0;
+        int transferRate = getEnergyTransferRate();
+        int remainingTransferBudget = transferRate;
         boolean changed = false;
 
         List<BlockPos> connectedUserPositions = List.copyOf(cachedConfig.connectedUsers);
 
         for (BlockPos userPos : connectedUserPositions) {
-            if (energyStored >= getMaxEnergyStorage()) break;
+            if (energyStored >= getMaxEnergyStorage() || remainingTransferBudget <= 0) break;
             BlockEntity userBE = serverLevel.getBlockEntity(userPos);
             if (userBE instanceof WirelessUser user) {
-                double space = getMaxEnergyStorage() - energyStored;
-                double maxPull = Math.min(transferRate, space);
+                int space = getMaxEnergyStorage() - energyStored;
+                int maxPull = Math.min(Math.min(space, remainingTransferBudget), transferRate);
                 if (maxPull <= 0) continue;
-                double extracted = this.extractFromUser(userPos, maxPull, false);
+                int extracted = this.extractFromUser(user, maxPull, false);
                 if (extracted > 0) {
                     this.energyStored += extracted;
-                    energyReceivedThisTick += extracted;
+                    remainingTransferBudget -= extracted;
                     changed = true;
                 }
             } else {
@@ -78,19 +74,19 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
             }
         }
 
-        if (energyStored > 0 && !connectedUserPositions.isEmpty()) {
+        if (energyStored > 0 && !connectedUserPositions.isEmpty() && remainingTransferBudget > 0) {
             List<BlockPos> usersToProvide = new ArrayList<>(connectedUserPositions);
             Collections.shuffle(usersToProvide);
             for (BlockPos userPos : usersToProvide) {
-                if (energyStored <= 0) break;
+                if (energyStored <= 0 || remainingTransferBudget <= 0) break;
                 BlockEntity userBE = serverLevel.getBlockEntity(userPos);
                 if (userBE instanceof WirelessUser user) {
-                    double maxPush = Math.min(transferRate, energyStored);
+                    int maxPush = Math.min(Math.min(energyStored, remainingTransferBudget), transferRate);
                     if (maxPush <= 0) continue;
-                    double accepted = this.insertIntoUser(userPos, maxPush, false);
+                    int accepted = this.insertIntoUser(user, maxPush, false);
                     if (accepted > 0) {
                         this.energyStored -= accepted;
-                        energySentThisTick += accepted;
+                        remainingTransferBudget -= accepted;
                         changed = true;
                     }
                 }
@@ -158,76 +154,59 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
     }
 
     @Override
-    public double getEnergyStored() {
+    public int getEnergyStored() {
         return this.energyStored;
     }
 
     @Override
-    public void setEnergyStored(double energy) {
+    public void setEnergyStored(int energy) {
         double oldEnergy = this.energyStored;
-        this.energyStored = Math.max(0.0, Math.min(energy, getMaxEnergyStorage()));
+        this.energyStored = Math.max(0, Math.min(energy, getMaxEnergyStorage()));
         if (oldEnergy != this.energyStored) {
             setChanged();
         }
     }
 
     @Override
-    public double getMaxEnergyStorage() {
+    public int getMaxEnergyStorage() {
         return MAX_ENERGY;
     }
 
     @Override
-    public double getEnergyTransferRate() {
+    public int getEnergyTransferRate() {
         return TRANSFER_RATE;
     }
 
     @Override
-    public double extractFromUser(BlockPos userPos, double maxAmount, boolean simulate) {
-        if (level == null || level.isClientSide || maxAmount <= 0) return 0;
-        BlockEntity be = level.getBlockEntity(userPos);
-        if (be instanceof WirelessUser user) {
-            try {
-                return user.extractEnergy(maxAmount, simulate);
-            } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Error extracting energy from user at {}: {}", userPos, e.getMessage());
-                return 0;
-            }
+    public int extractFromUser(WirelessUser user, int maxAmount, boolean simulate) {
+        try {
+            return user.extractEnergy(maxAmount, simulate);
+        } catch (Exception e) {
+            AcademyCraft.LOGGER.error("Error extracting energy from user at {}: {}", user, e.getMessage());
+            return 0;
         }
-        return 0;
     }
 
     @Override
-    public double insertIntoUser(BlockPos userPos, double maxAmount, boolean simulate) {
-        if (level == null || level.isClientSide || maxAmount <= 0) return 0;
-        BlockEntity be = level.getBlockEntity(userPos);
-        if (be instanceof WirelessUser user) {
-            try {
-                return user.receiveEnergy(maxAmount, simulate);
-            } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Error inserting energy into user at {}: {}", userPos, e.getMessage());
-                return 0;
-            }
+    public int insertIntoUser(WirelessUser user, int maxAmount, boolean simulate) {
+        try {
+            return user.receiveEnergy(maxAmount, simulate);
+        } catch (Exception e) {
+            AcademyCraft.LOGGER.error("Error inserting energy into user at {}: {}", user, e.getMessage());
+            return 0;
         }
-        return 0;
     }
 
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.putDouble("EnergyStored", this.energyStored);
+        tag.putInt("energy_stored", energyStored);
     }
 
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
-        if (tag.contains("EnergyStored", Tag.TAG_DOUBLE)) {
-            this.energyStored = tag.getDouble("EnergyStored");
-        } else if (tag.contains("EnergyStored", Tag.TAG_INT)) {
-            this.energyStored = tag.getInt("EnergyStored");
-            AcademyCraft.LOGGER.debug("Loaded legacy int energy for node at {}, converting to double.", worldPosition);
-        } else {
-            this.energyStored = 0;
-        }
+        energyStored = tag.getInt("energy_stored");
         this.cachedConfig = null;
     }
 
@@ -241,5 +220,4 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
-
 }

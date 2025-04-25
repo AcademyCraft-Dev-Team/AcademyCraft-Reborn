@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import org.academy.AcademyCraft;
+import org.academy.api.client.util.RenderStateUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
@@ -102,10 +103,10 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
             false,
             true,
             RenderType.CompositeState.builder()
-                    .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
+                    .setShaderState(RenderStateUtil.POSITION_TEX_SHADER)
                     .setTextureState(new RenderType.TextureStateShard(PLASMA_PARTICLE_TEXTURE, true, false))
-                    .setTransparencyState(RenderUtil.RenderStates.LIGHTNING_TRANSPARENCY)
-                    .setCullState(RenderUtil.RenderStates.NO_CULL)
+                    .setTransparencyState(RenderStateUtil.LIGHTNING_TRANSPARENCY)
+                    .setCullState(RenderStateUtil.NO_CULL)
                     .createCompositeState(false)
     );
 

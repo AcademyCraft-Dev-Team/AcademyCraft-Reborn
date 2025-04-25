@@ -8,7 +8,7 @@ import org.academy.api.client.gui.framework.AbstractWidget;
 
 public class LabelWidget extends AbstractWidget {
     public String value;
-    public int color = -524296;
+    public int color = 0xFFFFFFFF;
     public boolean dropShadow = true;
     public float scale = 1.0f;
 

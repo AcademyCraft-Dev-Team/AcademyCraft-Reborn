@@ -1,13 +1,17 @@
 package org.academy.internal.common.world.level.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -17,17 +21,26 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 @SuppressWarnings("deprecation")
-public class WindGenBaseBlock extends BaseEntityBlock {
+public class WindGenBaseBlock extends MultiBlock {
+    public static final List<Vec3i> SUB_BLOCKS = List.of(
+            new Vec3i(0, 1, 0)
+    );
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
     public WindGenBaseBlock(Properties properties) {
         super(properties.noOcclusion());
+    }
+
+    @Override
+    public List<Vec3i> getSubBlocks() {
+        return SUB_BLOCKS;
     }
 
     @Override
@@ -96,7 +109,7 @@ public class WindGenBaseBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(TYPE, FACING);
     }
 
     @Override
@@ -106,7 +119,7 @@ public class WindGenBaseBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
-        return new WindGenBaseBlockEntity(BlockEntityTypes.WIND_GEN_BASE_BLOCK_ENTITY_BLOCK_ENTITY_TYPE, pos, state);
+        return new WindGenBaseBlockEntity(pos, state);
     }
 
     @Override
@@ -114,9 +127,9 @@ public class WindGenBaseBlock extends BaseEntityBlock {
         return pState.setValue(FACING, pRotation.rotate(pState.getValue(FACING)));
     }
 
-    @Nullable
-    public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection());
+    @Override
+    public boolean canBeReplaced(@NotNull BlockState state, @NotNull BlockPlaceContext useContext) {
+        return false;
     }
 
     @Override
@@ -125,13 +138,6 @@ public class WindGenBaseBlock extends BaseEntityBlock {
             if (blockEntity instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
                 windGenBaseBlockEntity.ticks++;
                 if (level1.isClientSide()) {
-                    if (windGenBaseBlockEntity.active) {
-                        windGenBaseBlockEntity.shuttingState.stop();
-                        windGenBaseBlockEntity.activeState.startIfStopped(windGenBaseBlockEntity.ticks);
-                    } else {
-                        windGenBaseBlockEntity.activeState.stop();
-                        windGenBaseBlockEntity.shuttingState.startIfStopped(windGenBaseBlockEntity.ticks);
-                    }
                 }
             }
         };

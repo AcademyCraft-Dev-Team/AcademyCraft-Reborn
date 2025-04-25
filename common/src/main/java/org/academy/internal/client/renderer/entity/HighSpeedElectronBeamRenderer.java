@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
@@ -15,7 +16,7 @@ import org.joml.Matrix4f;
 
 public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElectronBeam> {
     public static final float[][][] BALL_BUFFER = RenderUtil.BallRenderer.getBallVertexBuffer(1, 16);
-    public static final float[][] RAY_BUFFER = RenderUtil.RayRenderer.getRayVertexBuffer(0, 1, 1, 8);
+    public static final float[][] RAY_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 1, 8, true);
 
     public HighSpeedElectronBeamRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -36,7 +37,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.popPose();
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(entity.smoothRayProgress * 0.125f,  entity.length, entity.smoothRayProgress * 0.125f));
-        RenderUtil.RayRenderer.renderRay(poseStack, buffer, RAY_BUFFER, 0.906f, 0.827f, 0.694f, 1f);
+        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, RAY_BUFFER, 0.906f, 0.827f, 0.694f, 1f);
         poseStack.popPose();
         poseStack.popPose();
     }

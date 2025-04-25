@@ -10,7 +10,6 @@ import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -134,6 +133,15 @@ public class FriendlyByteBufDeserializers {
     @Nullable
     public static <T> FriendlyByteBufDeserializer<T> getDeserializer(int id) {
         return (FriendlyByteBufDeserializer<T>) DESERIALIZER_IDS.inverse().get(id);
+    }
+
+    public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(int id) {
+        FriendlyByteBufDeserializer<T> deserializer = getDeserializer(id);
+        if (deserializer == null) {
+            throw new RuntimeException("No deserializer found for id " + id);
+        } else {
+            return deserializer;
+        }
     }
 
     @Nullable

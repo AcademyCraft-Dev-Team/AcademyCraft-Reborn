@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.util.RenderStateUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.MathUtil;
@@ -30,8 +31,8 @@ public class AcademyCraftHUDSystem {
                             false,
                             false
                     ))
-                    .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
-                    .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                    .setShaderState(RenderStateUtil.POSITION_COLOR_TEX_SHADER)
+                    .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
 
@@ -50,8 +51,8 @@ public class AcademyCraftHUDSystem {
                             false,
                             false
                     ))
-                    .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
-                    .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                    .setShaderState(RenderStateUtil.POSITION_TEX_SHADER)
+                    .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
 
@@ -71,8 +72,8 @@ public class AcademyCraftHUDSystem {
                                     false,
                                     false
                             ))
-                            .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
-                            .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                            .setShaderState(RenderStateUtil.POSITION_COLOR_TEX_SHADER)
+                            .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                             .createCompositeState(false)
             );
 

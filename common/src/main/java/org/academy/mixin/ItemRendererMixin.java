@@ -18,8 +18,8 @@ public class ItemRendererMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     public void render(ItemStack itemStack, ItemDisplayContext displayContext, boolean leftHand, PoseStack poseStack, MultiBufferSource buffer, int combinedLight, int combinedOverlay, BakedModel model, CallbackInfo ci) {
         final Item item = itemStack.getItem();
-        if (RendererManager.ITEM_STACK_RENDERER_MAP.containsKey(item)) {
-            RendererManager.ITEM_STACK_RENDERER_MAP.get(item).render(itemStack, displayContext, leftHand, poseStack, buffer, combinedLight, combinedOverlay, model);
+        if (RendererManager.ITEM_RENDERER_MAP.containsKey(item)) {
+            RendererManager.ITEM_RENDERER_MAP.get(item).render(itemStack, displayContext, leftHand, poseStack, buffer, combinedLight, combinedOverlay, model);
             ci.cancel();
         }
     }

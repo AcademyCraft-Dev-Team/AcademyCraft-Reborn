@@ -7,11 +7,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -130,7 +128,6 @@ public class FriendlyByteBufSerializers {
     }
 
     public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<T> clazz) {
-        AcademyCraft.LOGGER.info("Get required serializer for {}", clazz);
         FriendlyByteBufSerializer<T> serializer = getSerializer(clazz);
         if (serializer == null) {
             throw new NullPointerException("Serializer for " + clazz.getCanonicalName() + " was null");

@@ -5,24 +5,16 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
@@ -30,14 +22,11 @@ import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBloc
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 @SuppressWarnings("deprecation")
-public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
-    public static final EnumProperty<MultiBlockType> TYPE = EnumProperty.create("type", MultiBlockType.class);
+public class AbilityDeveloperBlock extends MultiBlock {
     public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
             // 以 South
             new Vec3i(0, 1, 0),   // 上
@@ -49,34 +38,8 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
             new Vec3i(0, 2, 2)    // 前前上上
     );
 
-    protected AbilityDeveloperBlock(Properties properties) {
-        super(properties.noOcclusion().strength(6.0F, 7.0F).requiresCorrectToolForDrops());
-    }
-
-    public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction) {
-        final List<BlockPos> subjectBlocks = new ArrayList<>();
-
-        for (Vec3i vec3i : SUBJECT_BLOCKS) {
-            BlockPos offsetPos = switch (direction) {
-                case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), -vec3i.getZ());
-                case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), vec3i.getZ());
-                case EAST -> pos.offset(vec3i.getZ(), vec3i.getY(), vec3i.getX());
-                case WEST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
-                default -> pos;
-            };
-            subjectBlocks.add(offsetPos);
-        }
-
-        return subjectBlocks;
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
-        builder.add(TYPE, FACING);
-    }
-
-    @Override
-    protected void spawnDestroyParticles(@NotNull Level level, @NotNull Player player, @NotNull BlockPos pos, @NotNull BlockState state) {
+    public AbilityDeveloperBlock() {
+        super(BlockBehaviour.Properties.of().noOcclusion().strength(6.0F, 7.0F).requiresCorrectToolForDrops());
     }
 
     @Override
@@ -85,18 +48,8 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void neighborChanged(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Block neighborBlock, @NotNull BlockPos neighborPos, boolean movedByPiston) {
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-            List<BlockPos> blockPosList = getRotatedSubjectBlocks(abilityDeveloperBlockEntity.mainPos, state.getValue(FACING));
-            blockPosList.add(abilityDeveloperBlockEntity.mainPos);
-            boolean broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof AbilityDeveloperBlockEntity));
-            if (broken) {
-                for (BlockPos subjectBlock : blockPosList) {
-                    level.destroyBlock(subjectBlock, false);
-                }
-            }
-        }
+    public List<Vec3i> getSubBlocks() {
+        return SUBJECT_BLOCKS;
     }
 
     @Override
@@ -115,59 +68,29 @@ public abstract class AbilityDeveloperBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void setPlacedBy(@NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState state, @Nullable LivingEntity placer, @NotNull ItemStack stack) {
-        List<BlockPos> subjectBlocks = getRotatedSubjectBlocks(pos, state.getValue(FACING));
-        for (BlockPos subjectBlock : subjectBlocks) {
-            level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
-            BlockEntity blockEntity = level.getBlockEntity(subjectBlock);
-            if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                abilityDeveloperBlockEntity.setMainPos(pos);
-            }
-        }
+    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+        return new AbilityDeveloperBlockEntity(pos, state);
     }
 
     @Override
     public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
-            tick(level1, pos, state1, blockEntity);
             if (blockEntity instanceof AbilityDeveloperBlockEntity abe) {
-                if (level1.isClientSide) {
-                    abe.clientTick();
-                } else {
-                    abe.serverTick();
+                if (abe.isMain()) {
+                    if (level1.isClientSide) {
+                        abe.clientTick();
+                    } else {
+                        if (level1 instanceof ServerLevel serverLevel) {
+                            abe.serverTick(serverLevel);
+                        }
+                    }
                 }
             }
         };
     }
 
-
-    protected abstract <T extends BlockEntity> void tick(@NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull T blockEntity);
-
-    @SuppressWarnings("DataFlowIssue")
-    @Override
-    public @Nullable BlockState getStateForPlacement(@NotNull BlockPlaceContext context) {
-        Direction direction = context.getHorizontalDirection();
-        return super.getStateForPlacement(context).setValue(FACING, direction);
-    }
-
     @Override
     public boolean skipRendering(@NotNull BlockState state, @NotNull BlockState adjacentState, @NotNull Direction direction) {
         return false;
-    }
-
-    public enum MultiBlockType implements StringRepresentable {
-        MAIN("main"),
-        SUBJECT("subject");
-
-        public final String name;
-
-        MultiBlockType(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public @NotNull String getSerializedName() {
-            return name;
-        }
     }
 }
