@@ -2,6 +2,7 @@ package org.academy.internal.client.models;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.animation.AnimationChannel;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
@@ -10,18 +11,27 @@ import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import org.academy.AcademyCraft;
+import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.util.VertexUtil;
+import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 import org.jetbrains.annotations.NotNull;
+import org.joml.Matrix4f;
 
 /**
  * @author 这里没有Badd
  */
+@SuppressWarnings({"unused", "FieldCanBeLocal", "SpellCheckingInspection"})
 public class WindGenBaseModel extends HierarchicalModel<Entity> {
-    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/block/wind_gen_base.png");
+    public static final float[][] PILLAR_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 8, true);
+    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wind_gen_base.png");
     private final ModelPart all;
     private final ModelPart pole;
     private final ModelPart parts;
@@ -270,7 +280,22 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
 
     @Override
     public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        all.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+    }
+
+    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        all.render(poseStack, bufferSource.getBuffer(renderType(TEXTURE)), packedLight, packedOverlay);
+        poseStack.pushPose();
+        Minecraft minecraft = Minecraft.getInstance();
+        BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR_BLOCK.defaultBlockState());
+        RandomSource randomSource = RandomSource.create();
+        randomSource.setSeed(42L);
+        Matrix4f matrix4f = new Matrix4f();
+        matrix4f.rotateY((float) Math.toRadians(-90));
+        matrix4f.translate(-0.5f, 0.505f, -0.5f);
+        matrix4f.scale(1,0.9f,1);
+        poseStack.mulPoseMatrix(matrix4f);
+        RenderUtil.BakedModelRenderer.render(poseStack, bakedModel, bufferSource, randomSource, false, packedLight, packedOverlay);
+        poseStack.popPose();
     }
 
     @Override

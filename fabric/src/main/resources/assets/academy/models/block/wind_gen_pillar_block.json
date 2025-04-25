@@ -1,0 +1,6 @@
+{
+  "parent": "special-model-loader:builtin/obj",
+  "flip_v": true,
+  "particle": "academy:block/break_w",
+  "model": "academy:models/block/wind_gen_pillar.obj"
+}

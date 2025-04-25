@@ -3,6 +3,8 @@ package org.academy.api.client.util;
 import org.academy.api.common.util.MathUtil;
 
 public class VertexUtil {
+
+
     public static final class Ring {
         public static float[][][] getRingVertexBuffer(float radius, int segments, float yBottom, float yTop) {
             if (segments <= 0) return null;
@@ -39,6 +41,66 @@ public class VertexUtil {
 
         public static float[][][] getHorizontalVertexBuffer(float radius, float height, int segments) {
             return getRingVertexBuffer(radius, segments, -height / 2f, height / 2f);
+        }
+    }
+
+    public static final class Cylinder {
+        public static float[][] getCylinderVertexBuffer(
+                final float yBottom,
+                final float yTop,
+                final float radius,
+                final int faces,
+                final boolean capped) {
+            if (radius <= 0 || faces < 3) {
+                return new float[0][];
+            }
+            int sideVertexCount = (faces + 1) * 2;
+            int capVertexCount = capped ? (faces + 2) : 0;
+            int totalVertices = sideVertexCount + capVertexCount * 2;
+            float[][] vertexBuffer = new float[totalVertices][3];
+            double angleStep = MathUtil.TWO_PI / faces;
+            for (int i = 0; i <= faces; i++) {
+                double angle = i * angleStep;
+                float x = (float) (radius * Math.cos(angle));
+                float z = (float) (radius * Math.sin(angle));
+                int topIdx = i * 2;
+                int botIdx = topIdx + 1;
+                vertexBuffer[topIdx][0] = x;
+                vertexBuffer[topIdx][1] = yTop;
+                vertexBuffer[topIdx][2] = z;
+                vertexBuffer[botIdx][0] = x;
+                vertexBuffer[botIdx][1] = yBottom;
+                vertexBuffer[botIdx][2] = z;
+            }
+
+            if (capped) {
+                int offset = sideVertexCount;
+                vertexBuffer[offset][0] = 0f;
+                vertexBuffer[offset][1] = yTop;
+                vertexBuffer[offset][2] = 0f;
+                for (int i = 0; i <= faces; i++) {
+                    double angle = i * angleStep;
+                    float x = (float) (radius * Math.cos(angle));
+                    float z = (float) (radius * Math.sin(angle));
+                    vertexBuffer[offset + 1 + i][0] = x;
+                    vertexBuffer[offset + 1 + i][1] = yTop;
+                    vertexBuffer[offset + 1 + i][2] = z;
+                }
+                offset += capVertexCount;
+                vertexBuffer[offset][0] = 0f;
+                vertexBuffer[offset][1] = yBottom;
+                vertexBuffer[offset][2] = 0f;
+                for (int i = 0; i <= faces; i++) {
+                    double angle = i * angleStep;
+                    float x = (float) (radius * Math.cos(angle));
+                    float z = (float) (radius * Math.sin(angle));
+                    vertexBuffer[offset + 1 + i][0] = x;
+                    vertexBuffer[offset + 1 + i][1] = yBottom;
+                    vertexBuffer[offset + 1 + i][2] = z;
+                }
+            }
+
+            return vertexBuffer;
         }
     }
 

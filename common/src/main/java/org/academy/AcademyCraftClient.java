@@ -5,6 +5,7 @@ import org.academy.api.client.config.AcademyCraftClientConfig;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.common.wireless.WirelessManager;
 import org.academy.internal.client.gui.AbilityDeveloperScreen;
+import org.academy.internal.client.renderer.item.ItemRenderers;
 
 import java.io.File;
 
@@ -18,5 +19,6 @@ public final class AcademyCraftClient {
         CLIENT_CONFIG = new AcademyCraftClientConfig<>();
         WirelessManager.initClient();
         AbilityDeveloperScreen.initS2CPacket();
+        ItemRenderers.init();
     }
 }

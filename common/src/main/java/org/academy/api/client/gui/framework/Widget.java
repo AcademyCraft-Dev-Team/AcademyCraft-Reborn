@@ -108,6 +108,14 @@ public interface Widget {
         return checkX >= absX && checkY >= absY && checkX < absX + getWidth() && checkY < absY + getHeight();
     }
 
+    default boolean isAbsoluteMouseOver(double mouseX, double mouseY) {
+        if (getParent() != null) {
+            return isMouseOver(mouseX, mouseY) && getParent().isAbsoluteMouseOver(mouseX, mouseY);
+        } else {
+            return isMouseOver(mouseX, mouseY);
+        }
+    }
+
     /**
      * Calculates the absolute X coordinate on the screen.
      * @return Absolute X coordinate.

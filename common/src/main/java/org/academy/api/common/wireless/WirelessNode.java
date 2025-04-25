@@ -6,40 +6,28 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 public interface WirelessNode {
-
-    // --- Configuration (Managed by SavedData/Synced) ---
     String getNodeName();
 
     boolean checkPassword(String passwordAttempt);
 
-    int getRadius(); // Range of the node
-
-    // --- Connections (Managed by SavedData) ---
-
-    /** Returns an immutable list of connected user positions */
+    int getRadius();
     List<BlockPos> getConnectedUserPositions();
 
-    /** Max number of users this node can handle */
     int getMaxConnections();
 
-    // --- Runtime State (Managed by BlockEntity) ---
-    Level getOwningLevel(); // Get the level this node is in
+    Level getOwningLevel();
 
-    BlockPos getPosition(); // Get the position of this node block
+    BlockPos getPosition();
 
-    double getEnergyStored();
+    int getEnergyStored();
 
-    void setEnergyStored(double energy); // Careful direct use
+    void setEnergyStored(int energy);
 
-    double getMaxEnergyStorage();
+    int getMaxEnergyStorage();
 
-    double getEnergyTransferRate(); // Max energy moved per tick per connection
+    int getEnergyTransferRate();
 
-    // --- Runtime Operations (Likely internal to ticker) ---
+    int extractFromUser(WirelessUser user, int maxAmount, boolean simulate);
 
-    /** Attempts to extract energy FROM a user at userPos */
-    double extractFromUser(BlockPos userPos, double maxAmount, boolean simulate);
-
-    /** Attempts to insert energy INTO a user at userPos */
-    double insertIntoUser(BlockPos userPos, double maxAmount, boolean simulate);
+    int insertIntoUser(WirelessUser user, int maxAmount, boolean simulate);
 }

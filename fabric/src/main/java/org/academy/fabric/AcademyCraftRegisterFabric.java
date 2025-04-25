@@ -14,7 +14,6 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.util.GameUtil;
-import org.academy.fabric.internal.client.renderer.blockentity.fabric.BlockEntityRenderersFabric;
 import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.BlockEntityTypesFabric;
 import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftBlocksFabric;
@@ -70,7 +69,6 @@ public class AcademyCraftRegisterFabric {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void registerBlockEntityRenderer() {
-        BlockEntityRenderersFabric.init();
         for (BlockEntityType<?> blockEntityType : BlockEntityRenderers.BLOCK_ENTITY_RENDERERS.keySet()) {
             net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(blockEntityType, context -> (BlockEntityRenderer) BlockEntityRenderers.BLOCK_ENTITY_RENDERERS.get(blockEntityType));
         }

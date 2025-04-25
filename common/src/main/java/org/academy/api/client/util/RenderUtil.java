@@ -1,13 +1,13 @@
 package org.academy.api.client.util;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.CameraType;
-import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.resources.model.BakedModel;
@@ -18,7 +18,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.client.renderer.Shaders;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -26,9 +25,10 @@ import org.joml.Matrix4f;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-import static net.minecraft.client.renderer.RenderStateShard.*;
+import static net.minecraft.client.renderer.RenderStateShard.ITEM_ENTITY_TARGET;
+import static net.minecraft.client.renderer.RenderStateShard.TextureStateShard;
+import static org.academy.api.client.util.RenderStateUtil.*;
 
 @SuppressWarnings("DuplicatedCode")
 public final class RenderUtil {
@@ -65,9 +65,9 @@ public final class RenderUtil {
                                         false
                                 )
                         )
-                        .setShaderState(RenderUtil.RenderStates.POSITION_TEX_SHADER)
-                        .setCullState(RenderStates.NO_CULL)
-                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(POSITION_TEX_SHADER)
+                        .setCullState(NO_CULL)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false));
     }
 
@@ -87,66 +87,12 @@ public final class RenderUtil {
                                         false
                                 )
                         )
-                        .setShaderState(RenderUtil.RenderStates.POSITION_COLOR_TEX_SHADER)
-                        .setTransparencyState(RenderUtil.RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(POSITION_COLOR_TEX_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false));
     }
 
-    public static final class RenderStates {
-        public static final WriteMaskStateShard COLOR_WRITE = new WriteMaskStateShard(true, false);
-        public static final ShaderStateShard POSITION_COLOR_LIGHTMAP_SHADER = new ShaderStateShard(GameRenderer::getPositionColorLightmapShader);
-        public static final ShaderStateShard POSITION_SHADER = new ShaderStateShard(GameRenderer::getPositionShader);
-        public static final ShaderStateShard POSITION_COLOR_TEX_SHADER = new ShaderStateShard(GameRenderer::getPositionColorTexShader);
-        public static final ShaderStateShard POSITION_TEX_SHADER = new ShaderStateShard(GameRenderer::getPositionTexShader);
-        public static final ShaderStateShard POSITION_COLOR_TEX_LIGHTMAP_SHADER = new ShaderStateShard(GameRenderer::getPositionColorTexLightmapShader);
-        public static final ShaderStateShard POSITION_COLOR_SHADER = new ShaderStateShard(GameRenderer::getPositionColorShader);
-        public static final ShaderStateShard DEBUG = new ShaderStateShard(new Supplier<ShaderInstance>() {
-            @Override
-            public ShaderInstance get() {
-                return Shaders.test;
-            }
-        });
-        public static final TransparencyStateShard TRANSLUCENT_TRANSPARENCY = new TransparencyStateShard("translucent_transparency", () -> {
-            RenderSystem.enableBlend();
-            RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        }, () -> {
-            RenderSystem.disableBlend();
-            RenderSystem.defaultBlendFunc();
-        });
-        public static final RenderStateShard.TransparencyStateShard LIGHTNING_TRANSPARENCY = new RenderStateShard.TransparencyStateShard("lightning_transparency", () -> {
-            RenderSystem.enableBlend();
-            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-        }, () -> {
-            RenderSystem.disableBlend();
-            RenderSystem.defaultBlendFunc();
-        });
-        public static final CullStateShard CULL = new CullStateShard(true);
-        public static final CullStateShard NO_CULL = new CullStateShard(false);
-        public static final LightmapStateShard LIGHTMAP = new LightmapStateShard(true);
-        public static final LightmapStateShard NO_LIGHTMAP = new LightmapStateShard(false);
-        public static final OverlayStateShard OVERLAY = new OverlayStateShard(true);
-        public static final OverlayStateShard NO_OVERLAY = new OverlayStateShard(false);
-        public static final ShaderStateShard RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER = new ShaderStateShard(GameRenderer::getRendertypeEntityTranslucentCullShader);
-        public static final DepthTestStateShard NO_DEPTH_TEST = new DepthTestStateShard("always", 519);
-        public static final DepthTestStateShard EQUAL_DEPTH_TEST = new DepthTestStateShard("==", 514);
-        public static final DepthTestStateShard LEQUAL_DEPTH_TEST = new DepthTestStateShard("<=", 515);
-        public static final DepthTestStateShard GREATER_DEPTH_TEST = new DepthTestStateShard(">", 516);
-    }
-
     public static final class GeneralRenderer {
-        public static final RenderType RENDER_TYPE_POSITION_COLOR = new RenderType.CompositeRenderType(
-                "render_type_position_color",
-                DefaultVertexFormat.POSITION_COLOR,
-                VertexFormat.Mode.QUADS,
-                256,
-                false,
-                true,
-                RenderType.CompositeState.builder()
-                        .setShaderState(RenderStates.POSITION_COLOR_SHADER)
-                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
-                        .createCompositeState(false)
-        );
-
         public static void fill(Matrix4f matrix4f, float minX, float minY, float maxX, float maxY, int color, MultiBufferSource buffer) {
             if (minX < maxX) {
                 float i = minX;
@@ -183,10 +129,10 @@ public final class RenderUtil {
                 true,
                 RenderType.CompositeState.builder()
                         .setTextureState(new TextureStateShard(resourceLocation, false, false))
-                        .setShaderState(RenderStates.POSITION_TEX_SHADER)
-                        .setCullState(RenderStates.NO_CULL)
+                        .setShaderState(POSITION_TEX_SHADER)
+                        .setCullState(NO_CULL)
                         .setOutputState(ITEM_ENTITY_TARGET)
-                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false)
         );
 
@@ -238,10 +184,10 @@ public final class RenderUtil {
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RenderStates.POSITION_COLOR_SHADER)
-                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setOutputState(ITEM_ENTITY_TARGET)
-                        .setCullState(RenderStates.NO_CULL)
+                        .setCullState(NO_CULL)
                         .createCompositeState(false)
         );
 
@@ -392,56 +338,27 @@ public final class RenderUtil {
         }
     }
 
-    public static final class RayRenderer {
-        public static final RenderType RAY_RENDER_TYPE = new RenderType.CompositeRenderType(
-                "ray_render_type",
+    public static final class CylinderRenderer {
+        public static final RenderType CYLINDER_RENDER_TYPE = new RenderType.CompositeRenderType(
+                "cylinder_render_type",
                 DefaultVertexFormat.POSITION_COLOR,
                 VertexFormat.Mode.TRIANGLE_STRIP,
                 128,
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RenderStates.POSITION_COLOR_SHADER)
-                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setOutputState(ITEM_ENTITY_TARGET)
-                        .setCullState(RenderStates.NO_CULL)
+                        .setCullState(NO_CULL)
                         .createCompositeState(false)
         );
 
-        public static float[][] getRayVertexBuffer(final float yBottom, final float yTop,
-                                                   final float radius, final int faces) {
-            if (radius <= 0 || faces < 3) return null;
-
-            final int numVertices = (faces + 1) * 2;
-            final float[][] vertexBuffer = new float[numVertices][3];
-            final double angleStep = MathUtil.TWO_PI / faces;
-
-            for (int i = 0; i <= faces; i++) {
-                final double angle = i * angleStep;
-                final float x = (float) (radius * Math.cos(angle));
-                final float z = (float) (radius * Math.sin(angle));
-
-                int topVertexIndex = i * 2;
-                int bottomVertexIndex = i * 2 + 1;
-
-                vertexBuffer[topVertexIndex][0] = x;
-                vertexBuffer[topVertexIndex][1] = yTop;
-                vertexBuffer[topVertexIndex][2] = z;
-
-                vertexBuffer[bottomVertexIndex][0] = x;
-                vertexBuffer[bottomVertexIndex][1] = yBottom;
-                vertexBuffer[bottomVertexIndex][2] = z;
-            }
-            return vertexBuffer;
-        }
-
-        public static void renderRay(final PoseStack poseStack, final MultiBufferSource multiBufferSource,
-                                     final float red, final float green, float blue, float alpha, final float yBottom, final float yTop, final float radius, final int faces) {
-            if (radius <= 0 || faces < 3) return;
-
+        public static void renderCylinder(final PoseStack poseStack, final MultiBufferSource multiBufferSource,
+                                          final float red, final float green, float blue, float alpha, final float yBottom, final float yTop, final float radius, final int faces) {
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix4f = pose.pose();
-            final VertexConsumer vertexConsumer = multiBufferSource.getBuffer(RAY_RENDER_TYPE);
+            final VertexConsumer vertexConsumer = multiBufferSource.getBuffer(CYLINDER_RENDER_TYPE);
             final double angleStep = MathUtil.TWO_PI / faces;
 
             for (int i = 0; i <= faces; i++) {
@@ -453,24 +370,16 @@ public final class RenderUtil {
             }
         }
 
-        public static void renderRay(PoseStack poseStack, MultiBufferSource buffer, float[][] vertexBuffer,
-                                     float red, float green, float blue, float alpha) {
-            if (vertexBuffer == null || vertexBuffer.length == 0) return;
+        public static void renderCylinder(PoseStack poseStack, MultiBufferSource buffer, float[][] vertexBuffer,
+                                          float red, float green, float blue, float alpha) {
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix = pose.pose();
-            final VertexConsumer vertexConsumer = buffer.getBuffer(RAY_RENDER_TYPE);
-            renderRayGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
+            final VertexConsumer vertexConsumer = buffer.getBuffer(CYLINDER_RENDER_TYPE);
+            renderCylinder(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
         }
 
-        public static void renderRay(Matrix4f matrix, VertexConsumer vertexConsumer, float[][] vertexBuffer,
-                                     float red, float green, float blue, float alpha) {
-            renderRayGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
-        }
-
-        private static void renderRayGeometry(Matrix4f matrix4f, VertexConsumer vertexConsumer, float[][] vertexBuffer,
-                                              float red, float green, float blue, float alpha) {
-            if (vertexBuffer == null) return;
-
+        public static void renderCylinder(Matrix4f matrix4f, VertexConsumer vertexConsumer, float[][] vertexBuffer,
+                                                  float red, float green, float blue, float alpha) {
             for (float[] floats : vertexBuffer) {
                 float x = floats[0];
                 float y = floats[1];
@@ -480,7 +389,7 @@ public final class RenderUtil {
         }
     }
 
-    public static final class BoxRenderer {
+    public static final class LineBoxRenderer {
         public static void renderWireframeBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
                                               float r, float g, float b, float a) {
             if (box == null) return;
@@ -550,10 +459,10 @@ public final class RenderUtil {
                                 false,
                                 false
                         ))
-                        .setShaderState(RenderStates.POSITION_TEX_SHADER)
-                        .setCullState(RenderStates.NO_CULL)
+                        .setShaderState(POSITION_TEX_SHADER)
+                        .setCullState(NO_CULL)
                         .setOutputState(ITEM_ENTITY_TARGET)
-                        .setTransparencyState(RenderStates.LIGHTNING_TRANSPARENCY)
+                        .setTransparencyState(LIGHTNING_TRANSPARENCY)
                         .createCompositeState(false)
         );
 
@@ -650,14 +559,14 @@ public final class RenderUtil {
                 false,
                 false,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RenderStates.RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
+                        .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
                         .setTextureState(new RenderStateShard.TextureStateShard(
                                 TextureAtlas.LOCATION_BLOCKS,
                                 false,
                                 true
                         ))
-                        .setLightmapState(RenderStates.LIGHTMAP)
-                        .setOverlayState(RenderStates.OVERLAY)
+                        .setLightmapState(LIGHTMAP)
+                        .setOverlayState(OVERLAY)
                         .createCompositeState(true)
         );
         public static final RenderType BAKED_MODEL_TRANSPARENCY_RENDER_TYPE = new RenderType.CompositeRenderType(
@@ -668,16 +577,16 @@ public final class RenderUtil {
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RenderStates.RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
+                        .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
                         .setTextureState(new RenderStateShard.TextureStateShard(
                                 TextureAtlas.LOCATION_BLOCKS,
                                 false,
                                 true
                         ))
-                        .setLightmapState(RenderStates.LIGHTMAP)
-                        .setOverlayState(RenderStates.OVERLAY)
-                        .setCullState(RenderStates.NO_CULL)
-                        .setTransparencyState(RenderStates.TRANSLUCENT_TRANSPARENCY)
+                        .setLightmapState(LIGHTMAP)
+                        .setOverlayState(OVERLAY)
+                        .setCullState(NO_CULL)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(true)
         );
 
