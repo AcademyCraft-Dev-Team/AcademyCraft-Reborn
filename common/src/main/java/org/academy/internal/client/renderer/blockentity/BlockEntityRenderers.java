@@ -13,6 +13,7 @@ public class BlockEntityRenderers {
     static {
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_BASE, new WindGenBaseBlockEntityRenderer());
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_TOP, new WindGenTopBlockEntityRenderer());
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ABILITY_DEVELOPER, new AbilityDeveloperBlockEntityRenderer());
     }
 
     private BlockEntityRenderers() {
