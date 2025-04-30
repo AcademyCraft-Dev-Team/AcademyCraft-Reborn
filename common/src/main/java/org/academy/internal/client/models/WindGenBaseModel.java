@@ -47,7 +47,6 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
     private final ModelPart rods;
 
     public WindGenBaseModel(ModelPart root) {
-        super(RenderType::entityTranslucent);
         this.all = root.getChild("all");
         this.pole = this.all.getChild("pole");
         this.parts = this.all.getChild("parts");
@@ -275,7 +274,6 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
         bsr.resetPose();
 
         animate(windGenBaseBlockEntity.activeState, setup, windGenBaseBlockEntity.ticks + partialTick);
-        animate(windGenBaseBlockEntity.shuttingState, shut, windGenBaseBlockEntity.ticks + partialTick);
     }
 
     @Override

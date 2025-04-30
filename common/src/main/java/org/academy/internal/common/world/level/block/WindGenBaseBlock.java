@@ -1,11 +1,14 @@
 package org.academy.internal.common.world.level.block;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -19,8 +22,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.util.MathUtil;
+import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +33,7 @@ import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class WindGenBaseBlock extends MultiBlock {
+    public static final String WIND_GEN_SCREEN = "wind_gen_screen";
     public static final List<Vec3i> SUB_BLOCKS = List.of(
             new Vec3i(0, 1, 0)
     );
@@ -39,72 +44,49 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    public List<Vec3i> getSubBlocks() {
-        return SUB_BLOCKS;
+    public @NotNull InteractionResult use(@NotNull BlockState pState, Level pLevel, @NotNull BlockPos pPos, @NotNull Player pPlayer, @NotNull InteractionHand pHand, @NotNull BlockHitResult pHit) {
+        if (pLevel.isClientSide) {
+            return InteractionResult.SUCCESS;
+        } else {
+            if (pPlayer instanceof ServerPlayer serverPlayer) {
+                if (pLevel.getBlockEntity(pPos) instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
+                    if (windGenBaseBlockEntity.getMain() instanceof WindGenBaseBlockEntity windGenBaseBlock) {
+                        if (serverPlayer.containerMenu != serverPlayer.inventoryMenu) {
+                            serverPlayer.closeContainer();
+                        }
+                        serverPlayer.nextContainerCounter();
+                        MenuProvider menuProvider = getMenuProvider(pState, pLevel, pPos);
+                        assert menuProvider != null;
+                        AbstractContainerMenu abstractcontainermenu = menuProvider.createMenu(serverPlayer.containerCounter, pPlayer.getInventory(), pPlayer);
+                        if (abstractcontainermenu == null) {
+                            if (serverPlayer.isSpectator()) {
+                                serverPlayer.displayClientMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED), true);
+                            }
+                        } else {
+                            serverPlayer.connection.send(new S2CPacket(Packets.S2C_OPEN_SCREEN, WIND_GEN_SCREEN, abstractcontainermenu.containerId, menuProvider.getDisplayName(), windGenBaseBlock.getBlockPos()));
+                            serverPlayer.initMenu(abstractcontainermenu);
+                            serverPlayer.containerMenu = abstractcontainermenu;
+                        }
+                    }
+                }
+            }
+            return InteractionResult.CONSUME;
+        }
     }
 
     @Override
-    public @NotNull InteractionResult use(
-            @NotNull BlockState state,
-            @NotNull Level level,
-            @NotNull BlockPos pos,
-            @NotNull Player player,
-            @NotNull InteractionHand hand,
-            @NotNull BlockHitResult hit
-    ) {
-        Vec3 rayOPos = player.getEyePosition();
-        float yaw = player.getYRot();
-        float pitch = player.getXRot();
-
-        double rayYawRad = Math.toRadians(yaw);
-        double rayPitchRad = Math.toRadians(pitch);
-        double rayDx = -Math.cos(rayPitchRad) * Math.sin(rayYawRad);
-        double rayDy = -Math.sin(rayPitchRad);
-        double rayDz = Math.cos(rayPitchRad) * Math.cos(rayYawRad);
-
-        double panelPitch = -90.0, panelYaw = 180.0;
-        double panelYawRad = Math.toRadians(panelYaw);
-        double panelPitchRad = Math.toRadians(panelPitch);
-        double nx = -Math.cos(panelPitchRad) * Math.sin(panelYawRad);
-        double ny = -Math.sin(panelPitchRad);
-        double nz = Math.cos(panelPitchRad) * Math.cos(panelYawRad);
-
-        player.displayClientMessage(
-                Component.literal(String.format(
-                        "Ray Dir = [%.3f, %.3f, %.3f], Panel Normal = [%.3f, %.3f, %.3f]",
-                        rayDx, rayDy, rayDz, nx, ny, nz
-                )), false
-        );
-
-        double[] outIntersection = new double[3];
-        boolean hitPanel = MathUtil.rayIntersectPanelFastAngles(
-                rayOPos.x, rayOPos.y, rayOPos.z,
-                pitch, yaw,
-                pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5,
-                panelPitch, panelYaw,
-                outIntersection
-        );
-
-        if (hitPanel) {
-            double dx = outIntersection[0] - (pos.getX() + 0.5);
-            double dy = outIntersection[1] - (pos.getY() + 1);
-            double dz = outIntersection[2] - (pos.getZ() + 0.5);
-
-            player.displayClientMessage(
-                    Component.literal("Hit at: " +
-                            String.format("[%.2f, %.2f, %.2f]", outIntersection[0], outIntersection[1], outIntersection[2])
-                    ), false
-            );
-            player.displayClientMessage(
-                    Component.literal("Offset from center: " +
-                            String.format("dx=%.5f, dy=%.5f, dz=%.5f", dx, dy, dz)
-                    ), false
-            );
-        } else {
-            player.displayClientMessage(Component.literal("Missed panel"), true);
+    public void onRemove(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState newState, boolean movedByPiston) {
+        BlockEntity blockentity = level.getBlockEntity(pos);
+        if (blockentity instanceof Container container) {
+            Containers.dropContents(level, pos, container);
+            level.updateNeighbourForOutputSignal(pos, this);
         }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
 
-        return super.use(state, level, pos, player, hand, hit);
+    @Override
+    public List<Vec3i> getSubBlocks() {
+        return SUB_BLOCKS;
     }
 
     @Override
@@ -133,11 +115,21 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
+    public @Nullable MenuProvider getMenuProvider(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
+            if (windGenBaseBlockEntity.getMain() instanceof WindGenBaseBlockEntity windGenBaseBlock) {
+                return new SimpleMenuProvider((containerId, playerInventory, player) -> new WindGenMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), windGenBaseBlock), Component.empty());
+            }
+        }
+        return null;
+    }
+
+    @Override
     public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
-                windGenBaseBlockEntity.ticks++;
-                if (level1.isClientSide()) {
+                if (windGenBaseBlockEntity.isMain()) {
+                    windGenBaseBlockEntity.tick();
                 }
             }
         };

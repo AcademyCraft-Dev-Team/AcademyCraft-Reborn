@@ -5,6 +5,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -26,12 +27,13 @@ import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraft
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
 import org.academy.forge.internal.common.world.level.block.entity.forge.AcademyCraftBlockEntityTypesForge;
 import org.academy.forge.internal.common.world.level.block.forge.AcademyCraftBlocksForge;
+import org.academy.internal.client.hud.HUDManager;
 import org.academy.internal.client.renderer.blockentity.BlockEntityRenderers;
 import org.academy.internal.client.renderer.entity.EntityRenderers;
-import org.academy.internal.client.hud.AcademyCraftHUDSystem;
 import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -65,6 +67,7 @@ public class AcademyCraftRegisterForge {
         registerEntityType(event);
         registerSoundEvent(event);
         registerAbilityCategory();
+        registerMenuType(event);
     }
 
     private static void registerItem(RegisterEvent event) {
@@ -121,8 +124,15 @@ public class AcademyCraftRegisterForge {
         }
     }
 
+    private static void registerMenuType(RegisterEvent event) {
+        for (String name : MenuTypes.MENU_TYPES.keySet()) {
+            MenuType<?> menuType = MenuTypes.MENU_TYPES.get(name);
+            event.register(ForgeRegistries.Keys.MENU_TYPES, new ResourceLocation(AcademyCraft.MOD_ID, name), () -> menuType);
+        }
+    }
+
     @SubscribeEvent
     public static void registerOverlays(RegisterGuiOverlaysEvent event) {
-        event.registerBelow(VanillaGuiOverlay.CROSSHAIR.id(), "ability_hud", (forgeGui, arg, f, i, j) -> AcademyCraftHUDSystem.render(arg, f));
+        event.registerBelow(VanillaGuiOverlay.CROSSHAIR.id(), "ability_hud", (forgeGui, arg, f, i, j) -> HUDManager.render(arg, f));
     }
 }

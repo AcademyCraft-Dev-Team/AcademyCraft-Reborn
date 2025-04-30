@@ -6,7 +6,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.*;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
@@ -214,14 +216,22 @@ public class WorldData {
 
         public boolean connectUserToNode(BlockPos nodePos, BlockPos userPos) {
             NodeConfig config = nodeConfigurations.get(nodePos);
-            if (config != null && config.connectedUsers.size() < config.maxConnections) {
-                if (config.connectedUsers.add(userPos)) {
-                    AcademyCraft.LOGGER.debug("Connected user {} to node '{}'", userPos, config.name);
-                    setDirty();
-                    return true;
+            if (config != null) {
+                if (config.connectedUsers.size() < config.maxConnections) {
+                    if (!config.connectedUsers.containsKey(userPos)) {
+                        config.connectedUsers.put(userPos, new UserConfig());
+                        AcademyCraft.LOGGER.debug("Connected user {} to node '{}'", userPos, config.name);
+                        setDirty();
+                        return true;
+                    } else {
+                        AcademyCraft.LOGGER.warn("User {} is already connected to node '{}'", userPos, config.name);
+                    }
+                } else {
+                    AcademyCraft.LOGGER.warn("Node '{}' at {} is at full capacity.", config.name, nodePos);
                 }
+            } else {
+                AcademyCraft.LOGGER.warn("Connect failed: Node '{}' at {} not found.", "null", nodePos);
             }
-            AcademyCraft.LOGGER.warn("Connect failed: Node '{}' at {} not found or at capacity.", config != null ? config.name : "null", nodePos);
             return false;
         }
 
@@ -288,13 +298,12 @@ public class WorldData {
             tag.put("nodes", nodesTag);
             return tag;
         }
-
         public static class NodeConfig {
             public final String name;
             private String password;
             public final int radius;
             public final int maxConnections;
-            public final Set<BlockPos> connectedUsers = new HashSet<>();
+            public final Map<BlockPos, UserConfig> connectedUsers = new HashMap<>();
 
             public NodeConfig(String name, String password, int radius, int maxConnections) {
                 this.name = name;
@@ -319,17 +328,24 @@ public class WorldData {
                 tag.putString("password", password);
                 tag.putInt("radius", radius);
                 tag.putInt("max_connections", maxConnections);
+
                 ListTag usersTag = new ListTag();
-                for (BlockPos userPos : this.connectedUsers) {
-                    usersTag.add(LongTag.valueOf(userPos.asLong()));
+                for (Map.Entry<BlockPos, UserConfig> entry : this.connectedUsers.entrySet()) {
+                    CompoundTag userTag = new CompoundTag();
+                    userTag.putLong("pos", entry.getKey().asLong());
+                    userTag.putDouble("weight", entry.getValue().getWeight());
+                    usersTag.add(userTag);
                 }
                 tag.put("users", usersTag);
+
                 return tag;
             }
 
             public static NodeConfig load(CompoundTag tag) {
-                if (!tag.contains("name", Tag.TAG_STRING) || !tag.contains("password", Tag.TAG_STRING) ||
-                        !tag.contains("radius", Tag.TAG_INT) || !tag.contains("max_connections", Tag.TAG_INT)) {
+                if (!tag.contains("name", Tag.TAG_STRING) ||
+                        !tag.contains("password", Tag.TAG_STRING) ||
+                        !tag.contains("radius", Tag.TAG_INT) ||
+                        !tag.contains("max_connections", Tag.TAG_INT)) {
                     AcademyCraft.LOGGER.error("NodeConfig missing required fields: {}", tag);
                     return null;
                 }
@@ -343,18 +359,38 @@ public class WorldData {
                 loaded.password = password;
 
                 if (tag.contains("users", Tag.TAG_LIST)) {
-                    ListTag usersTag = tag.getList("users", Tag.TAG_LONG);
-                    for (Tag userTag : usersTag) {
-                        if (userTag instanceof NumericTag numericTag) {
-                            loaded.connectedUsers.add(BlockPos.of(numericTag.getAsLong()));
-                        } else {
-                            AcademyCraft.LOGGER.warn("Unexpected tag type in 'users': {}", userTag.getId());
+                    ListTag usersTag = tag.getList("users", Tag.TAG_COMPOUND);
+                    for (Tag baseTag : usersTag) {
+                        if (baseTag instanceof CompoundTag userTag) {
+                            if (userTag.contains("pos", Tag.TAG_LONG) && userTag.contains("weight", Tag.TAG_DOUBLE)) {
+                                BlockPos pos = BlockPos.of(userTag.getLong("pos"));
+                                double weight = userTag.getDouble("weight");
+
+                                loaded.connectedUsers.put(pos, new UserConfig(weight));
+                                AcademyCraft.LOGGER.warn("User tag missing required fields: {}", userTag);
+                            }
                         }
                     }
                 }
 
                 AcademyCraft.LOGGER.debug("Loaded NodeConfig '{}'", name);
                 return loaded;
+            }
+        }
+
+        public static class UserConfig {
+            private final double weight;
+
+            public UserConfig(double weight) {
+                this.weight = weight;
+            }
+
+            public UserConfig(){
+                this(1);
+            }
+
+            public double getWeight() {
+                return weight;
             }
         }
     }

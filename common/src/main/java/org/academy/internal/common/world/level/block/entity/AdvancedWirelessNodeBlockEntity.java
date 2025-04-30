@@ -50,50 +50,14 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
             return;
         }
 
-        int transferRate = getEnergyTransferRate();
-        int remainingTransferBudget = transferRate;
-        boolean changed = false;
-
-        List<BlockPos> connectedUserPositions = List.copyOf(cachedConfig.connectedUsers);
-
-        for (BlockPos userPos : connectedUserPositions) {
-            if (energyStored >= getMaxEnergyStorage() || remainingTransferBudget <= 0) break;
+        for (BlockPos userPos : getConnectedUserPositions()) {
             BlockEntity userBE = serverLevel.getBlockEntity(userPos);
-            if (userBE instanceof WirelessUser user) {
-                int space = getMaxEnergyStorage() - energyStored;
-                int maxPull = Math.min(Math.min(space, remainingTransferBudget), transferRate);
-                if (maxPull <= 0) continue;
-                int extracted = this.extractFromUser(user, maxPull, false);
-                if (extracted > 0) {
-                    this.energyStored += extracted;
-                    remainingTransferBudget -= extracted;
-                    changed = true;
-                }
-            } else {
+            if (!(userBE instanceof WirelessUser)) {
                 handleUserDisconnect(serverLevel, userPos);
             }
         }
 
-        if (energyStored > 0 && !connectedUserPositions.isEmpty() && remainingTransferBudget > 0) {
-            List<BlockPos> usersToProvide = new ArrayList<>(connectedUserPositions);
-            Collections.shuffle(usersToProvide);
-            for (BlockPos userPos : usersToProvide) {
-                if (energyStored <= 0 || remainingTransferBudget <= 0) break;
-                BlockEntity userBE = serverLevel.getBlockEntity(userPos);
-                if (userBE instanceof WirelessUser user) {
-                    int maxPush = Math.min(Math.min(energyStored, remainingTransferBudget), transferRate);
-                    if (maxPush <= 0) continue;
-                    int accepted = this.insertIntoUser(user, maxPush, false);
-                    if (accepted > 0) {
-                        this.energyStored -= accepted;
-                        remainingTransferBudget -= accepted;
-                        changed = true;
-                    }
-                }
-            }
-        }
-
-        if (changed) {
+        if (balanceEnergy(cachedConfig)) {
             setChanged();
         }
     }
@@ -119,28 +83,13 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
     }
 
     @Override
-    public String getNodeName() {
-        return cachedConfig != null ? cachedConfig.name : "Unregistered";
-    }
-
-    @Override
-    public boolean checkPassword(String passwordAttempt) {
-        return cachedConfig != null && cachedConfig.checkPassword(passwordAttempt);
-    }
-
-    @Override
     public int getRadius() {
         return cachedConfig != null ? cachedConfig.radius : 0;
     }
 
     @Override
     public List<BlockPos> getConnectedUserPositions() {
-        return cachedConfig != null ? List.copyOf(cachedConfig.connectedUsers) : Collections.emptyList();
-    }
-
-    @Override
-    public int getMaxConnections() {
-        return cachedConfig != null ? cachedConfig.maxConnections : 0;
+        return cachedConfig != null ? new ArrayList<>(cachedConfig.connectedUsers.keySet()) : Collections.emptyList();
     }
 
     @Override

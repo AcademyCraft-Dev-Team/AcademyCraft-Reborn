@@ -64,7 +64,6 @@ public class MathUtil {
         if (Math.abs(denom) < 1e-6) return false;  // 平行，无交点
 
         double t = (nx*dx + ny*dy + nz*dz) / denom;
-        if (t < 0) return false;  // 交点在射线负向
 
         outIntersection[0] = rayOx + t * rayDx;
         outIntersection[1] = rayOy + t * rayDy;
