@@ -11,7 +11,6 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -112,16 +111,6 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
         }
-    }
-
-    @Override
-    public Level getOwningLevel() {
-        return level;
-    }
-
-    @Override
-    public BlockPos getPosition() {
-        return this.worldPosition;
     }
 
     @Nullable

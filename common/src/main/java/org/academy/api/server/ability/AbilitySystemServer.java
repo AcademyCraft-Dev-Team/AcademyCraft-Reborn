@@ -6,8 +6,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.AbilityCategory;
@@ -17,6 +19,8 @@ import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.common.wireless.WirelessUser;
+import org.academy.api.server.network.FutureManagerServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -74,6 +78,24 @@ public class AbilitySystemServer {
                     setPlayerAbilityCategory(listener.player.getUUID(), weightedRandom.getRandomItem());
                     listener.send(new S2CPacket(Packets.S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE, "Learning complete. Please type 'exit' to shut down the system, then reopen the screen manually."));
                 }
+            }
+        });
+
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_LEARN, (listener, packet) -> {
+            ServerPlayer player = listener.player;
+            ServerLevel level = player.serverLevel();
+            int id = packet.friendlyByteBuf.readVarInt();
+            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
+            BlockEntity be = level.getBlockEntity(userPos);
+            if (be instanceof WirelessUser user) {
+                List<String> outputList = new ArrayList<>();
+                int energyStored = user.getEnergyStored();
+                if (energyStored > 360_000) {
+                    outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
+                } else {
+                    outputList.add("Insufficient energy available.");
+                }
+                FutureManagerServer.sendResult(listener, id, outputList);
             }
         });
     }

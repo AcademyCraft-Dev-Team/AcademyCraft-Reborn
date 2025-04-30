@@ -16,17 +16,24 @@ public class HorizontalScrollBarWidget extends DragBarWidget {
 
     @Override
     protected float getThumbSize() {
-        float contentWidth = panel.getMaxScroll() + panel.getWidth();
-        if (contentWidth <= 0) return getWidth();
+        float max = panel.getMaxScroll();
+        if (max <= 0f) {
+            return getWidth();
+        }
+        float contentWidth = max + panel.getWidth();
         float ratio = panel.getWidth() / contentWidth;
         return MathUtil.clamp(ratio * getWidth(), 16f, getWidth());
     }
 
     @Override
     protected float getThumbPosition() {
+        float max = panel.getMaxScroll();
+        if (max <= 0f) {
+            return getX();
+        }
         float track = getWidth() - getThumbSize();
-        float ratio = panel.scrollOffset / panel.getMaxScroll();
-        return getAbsoluteX() + ratio * track;
+        float ratio = panel.scrollOffset / max;
+        return getX() + ratio * track;
     }
 
     @Override
@@ -41,9 +48,11 @@ public class HorizontalScrollBarWidget extends DragBarWidget {
 
     @Override
     protected void updateTargetFromMouse(float mouse) {
+        float max = panel.getMaxScroll();
+        if (max <= 0f) return;
         float track = getTrackSize() - getThumbSize();
         float ratio = MathUtil.clamp((mouse - dragOffset) / track, 0f, 1f);
-        panel.scrollTarget = ratio * panel.getMaxScroll();
+        panel.scrollTarget = ratio * max;
     }
 
     @Override

@@ -12,19 +12,19 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements WirelessNode {
     private int energyStored = 5000;
     private static final int MAX_ENERGY = 2_400_000;
-    private static final int TRANSFER_RATE = 5;
+    private static final int TRANSFER_RATE = 50;
 
     private WorldData.WirelessNetworkData.NodeConfig cachedConfig = null;
 
@@ -50,14 +50,18 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
             return;
         }
 
-        for (BlockPos userPos : getConnectedUserPositions()) {
+
+        Map<WirelessUser, WorldData.WirelessNetworkData.UserConfig> userMap = new HashMap<>();
+        for (BlockPos userPos : cachedConfig.connectedUsers.keySet()) {
             BlockEntity userBE = serverLevel.getBlockEntity(userPos);
-            if (!(userBE instanceof WirelessUser)) {
+            if (!(userBE instanceof WirelessUser user)) {
                 handleUserDisconnect(serverLevel, userPos);
+            } else {
+                userMap.put(user, cachedConfig.connectedUsers.get(userPos));
             }
         }
 
-        if (balanceEnergy(cachedConfig)) {
+        if (WirelessManager.balanceEnergy(this, userMap)) {
             setChanged();
         }
     }
@@ -80,26 +84,6 @@ public class AdvancedWirelessNodeBlockEntity extends BlockEntity implements Wire
                 AcademyCraft.LOGGER.error("Error notifying potentially invalid user BE at {} about disconnect: {}", userPos, e.getMessage());
             }
         }
-    }
-
-    @Override
-    public int getRadius() {
-        return cachedConfig != null ? cachedConfig.radius : 0;
-    }
-
-    @Override
-    public List<BlockPos> getConnectedUserPositions() {
-        return cachedConfig != null ? new ArrayList<>(cachedConfig.connectedUsers.keySet()) : Collections.emptyList();
-    }
-
-    @Override
-    public Level getOwningLevel() {
-        return this.level;
-    }
-
-    @Override
-    public BlockPos getPosition() {
-        return this.worldPosition;
     }
 
     @Override
