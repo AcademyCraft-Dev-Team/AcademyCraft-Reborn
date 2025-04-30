@@ -1,24 +1,15 @@
 package org.academy.api.client.gui;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.api.client.gui.widgets.*;
 import org.academy.api.client.network.FutureManagerClient;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.wireless.WirelessUser;
-import org.academy.api.server.network.FutureManagerServer;
-import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.internal.server.world.level.storage.WorldData;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.academy.api.client.gui.ImageResources.RenderTypes.*;
@@ -52,69 +43,6 @@ public class WirelessPanelHelper {
         return wirelessPanel;
     }
 
-    @SuppressWarnings("resource")
-    public static void initC2SPacket() {
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_GET_AVAILABLE_NODE_LIST,
-                (listener, packet) -> {
-                    ServerPlayer player = listener.player;
-                    ServerLevel level = player.serverLevel();
-                    int id = packet.friendlyByteBuf.readVarInt();
-                    BlockPos requesterPos = packet.friendlyByteBuf.readBlockPos();
-                    WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
-                    List<String> nodeNamesInRange = new ArrayList<>();
-                    for (Map.Entry<BlockPos, WorldData.WirelessNetworkData.NodeConfig> entry : data.getNodeEntries().entrySet()) {
-                        BlockPos nodePos = entry.getKey();
-                        WorldData.WirelessNetworkData.NodeConfig config = entry.getValue();
-                        if (nodePos.distSqr(requesterPos) <= (double) config.radius * config.radius) {
-                            nodeNamesInRange.add(config.name);
-                        }
-                    }
-                    FutureManagerServer.sendResult(listener, id, nodeNamesInRange);
-                }
-        );
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_GET_CURRENT_NODE, (listener, packet) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            int id = packet.friendlyByteBuf.readVarInt();
-            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
-            String currentNodeName = null;
-            BlockEntity be = level.getBlockEntity(userPos);
-            if (be instanceof WirelessUser user) {
-                BlockPos connectedNodePos = user.getConnectedNodePosition();
-                if (connectedNodePos != null) {
-                    WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
-                    WorldData.WirelessNetworkData.NodeConfig nodeConfig = data.getNodeConfig(connectedNodePos);
-                    if (nodeConfig != null) {
-                        currentNodeName = nodeConfig.name;
-                    }
-                }
-            }
-            boolean isNull = currentNodeName == null;
-            if (currentNodeName == null) {
-                currentNodeName = "None";
-            }
-            FutureManagerServer.sendResult(listener, id, Pair.of(isNull, currentNodeName));
-        });
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_LEARN, (listener, packet) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            int id = packet.friendlyByteBuf.readVarInt();
-            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
-            BlockEntity be = level.getBlockEntity(userPos);
-            if (be instanceof WirelessUser user) {
-                List<String> outputList = new ArrayList<>();
-                int energyStored = user.getEnergyStored();
-                if (energyStored > 360_000) {
-                    outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
-                } else {
-                    outputList.add("Insufficient energy available.");
-                }
-                FutureManagerServer.sendResult(listener, id, outputList);
-            }
-        });
-    }
-
-
     public interface WirelessPanel {
         SmoothScrollPanelWidget getNodeList();
 
@@ -127,7 +55,7 @@ public class WirelessPanelHelper {
         BlockPos getPosition();
 
         default void requestAvailableNodes(SmoothScrollPanelWidget listPanel) {
-            FutureManagerClient.<List<String>>sendFuturePacket(Packets.C2S_GET_AVAILABLE_NODE_LIST, availableNodeNames -> {
+            FutureManagerClient.<List<String>>sendFuturePacket(Packets.C2S_GET_AVAILABLE_NODES, availableNodeNames -> {
                 listPanel.clearChildren();
                 availableNodeNames.removeIf(s -> s.equals(getConnectedNodeName()));
                 for (int i = 0; i < availableNodeNames.size(); i++) {

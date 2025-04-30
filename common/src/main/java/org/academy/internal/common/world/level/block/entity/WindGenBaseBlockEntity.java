@@ -11,7 +11,6 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -181,16 +180,6 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
     @Override
     public void clearContent() {
         items.clear();
-    }
-
-    @Override
-    public Level getOwningLevel() {
-        return level;
-    }
-
-    @Override
-    public BlockPos getPosition() {
-        return getBlockPos();
     }
 
     @Override

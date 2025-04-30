@@ -23,7 +23,7 @@ public final class Packets {
     public static final String C2S_CONNECT_NODE = "c2s_connect_node";
     public static final String C2S_DISCONNECT_NODE = "c2s_disconnect_node";
     public static final String S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE = "s2c_ability_developer_screen_response";
-    public static final String C2S_GET_AVAILABLE_NODE_LIST = "c2s_get_available_node_list";
+    public static final String C2S_GET_AVAILABLE_NODES = "c2s_get_available_nodes";
     public static final String C2S_GET_CURRENT_NODE = "c2s_get_current_node";
     /**
      * Ability Developer

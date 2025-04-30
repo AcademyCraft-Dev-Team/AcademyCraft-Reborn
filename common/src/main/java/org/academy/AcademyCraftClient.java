@@ -5,7 +5,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.AcademyCraftClientConfig;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.common.wireless.WirelessManager;
 import org.academy.internal.client.gui.screens.Screens;
 import org.academy.internal.client.renderer.item.ItemRenderers;
 
@@ -23,7 +22,6 @@ public final class AcademyCraftClient {
 
     public static void init() {
         AbilitySystemClient.init();
-        WirelessManager.initClient();
         ItemRenderers.init();
         NetworkSystemClient.init();
         Screens.register();

@@ -10,6 +10,7 @@ import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.widgets.ImageWidget;
 import org.academy.api.client.gui.widgets.PanelWidget;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
 public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
     private ImageWidget back;
@@ -82,35 +83,41 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (isContainerActive()) {
-            return super.mouseReleased(mouseX, mouseY, button) || rootContainer.mouseReleased(mouseX, mouseY, button);
-        } else return rootContainer.mouseReleased(mouseX, mouseY, button);
+        boolean rootResult = rootContainer.mouseReleased(mouseX, mouseY, button);
+        boolean superResult = isContainerActive() && super.mouseReleased(mouseX, mouseY, button);
+        return superResult || rootResult;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (isContainerActive()) {
-            return super.mouseDragged(mouseX, mouseY, button, dragX, dragY) || rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-        } else return rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        boolean rootResult = rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        boolean superResult = isContainerActive() && super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return superResult || rootResult;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (isContainerActive()) {
-            return super.mouseScrolled(mouseX, mouseY, delta) || rootContainer.mouseScrolled(mouseX, mouseY, delta);
-        } else return rootContainer.mouseScrolled(mouseX, mouseY, delta);
+        boolean rootResult = rootContainer.mouseScrolled(mouseX, mouseY, delta);
+        boolean superResult = isContainerActive() && super.mouseScrolled(mouseX, mouseY, delta);
+        return superResult || rootResult;
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return super.keyPressed(keyCode, scanCode, modifiers) || rootContainer.keyPressed(keyCode, scanCode, modifiers);
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE && this.shouldCloseOnEsc()) {
+            this.onClose();
+            return true;
+        }
+        boolean rootResult = rootContainer.keyPressed(keyCode, scanCode, modifiers);
+        boolean superResult = isContainerActive() && super.keyPressed(keyCode, scanCode, modifiers);
+        return superResult || rootResult;
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (isContainerActive()) {
-            return super.charTyped(codePoint, modifiers) || rootContainer.charTyped(codePoint, modifiers);
-        } else return rootContainer.charTyped(codePoint, modifiers);
+        boolean rootResult = rootContainer.charTyped(codePoint, modifiers);
+        boolean superResult = isContainerActive() && super.charTyped(codePoint, modifiers);
+        return superResult || rootResult;
     }
 
     public boolean isContainerActive() {
