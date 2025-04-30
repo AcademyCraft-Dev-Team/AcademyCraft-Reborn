@@ -109,11 +109,9 @@ public interface Widget {
     }
 
     default boolean isAbsoluteMouseOver(double mouseX, double mouseY) {
-        if (getParent() != null) {
-            return isMouseOver(mouseX, mouseY) && getParent().isAbsoluteMouseOver(mouseX, mouseY);
-        } else {
-            return isMouseOver(mouseX, mouseY);
-        }
+        boolean parentMouseOver = getParent() == null || getParent().isMouseOver(mouseX, mouseY);
+        boolean mouseOver = isMouseOver(mouseX, mouseY);
+        return parentMouseOver && mouseOver;
     }
 
     /**

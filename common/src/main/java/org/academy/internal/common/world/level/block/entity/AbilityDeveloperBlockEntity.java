@@ -12,6 +12,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -115,7 +116,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
 
     @Override
     public Level getOwningLevel() {
-        return this.level;
+        return level;
     }
 
     @Override
@@ -127,7 +128,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     @Override
     public BlockPos getConnectedNodePosition() {
         if (!isMain() && level != null && mainPos != null) {
-            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            BlockEntity mainBE = getMain();
             if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
                 return mainDevBE.getConnectedNodePosition();
             }
@@ -139,7 +140,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     @Override
     public void setConnectedNodePosition(@Nullable BlockPos nodePos) {
         if (!isMain() && level != null && mainPos != null) {
-            BlockEntity mainBE = level.getBlockEntity(mainPos);
+            BlockEntity mainBE = getMain();
             if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
                 mainDevBE.setConnectedNodePosition(nodePos);
             }
@@ -149,7 +150,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
             this.connectedNodePos = nodePos;
             setChanged();
             if (level != null && !level.isClientSide) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
     }
@@ -192,7 +193,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
 
     @Override
     public int getMaxEnergyStorage() {
-        return 100_000;
+        return 1440_000;
     }
 
     @Override
@@ -241,7 +242,6 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
 
     public void serverTick(@NotNull ServerLevel level) {
         this.ticks++;
-        AcademyCraft.LOGGER.info("Server Tick" + energyStored);
         if (connectedNodePos == null) {
             setConnectedNodePosition(null);
         } else {
@@ -253,6 +253,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     }
 
     // For Forge
+    @SuppressWarnings("unused")
     public AABB getRenderBoundingBox() {
         Vec3 pos = this.getBlockPos().getCenter();
         double radius = 5.0;

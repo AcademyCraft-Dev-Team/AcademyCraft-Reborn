@@ -6,15 +6,14 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.Tickable;
 import net.minecraft.network.chat.Component;
-import org.academy.AcademyCraft;
 import org.academy.api.client.gui.widgets.PanelWidget;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class CGuiScreen extends Screen {
     public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
 
-    protected CGuiScreen() {
-        super(Component.empty());
+    protected CGuiScreen(Component title) {
+        super(title);
     }
 
     @Override
@@ -70,14 +69,10 @@ public abstract class CGuiScreen extends Screen {
         return rootContainer.mouseScrolled(mouseX, mouseY, delta);
     }
 
+
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && this.shouldCloseOnEsc()) {
-            this.onClose();
-            return true;
-        } else {
-            return rootContainer.keyPressed(keyCode, scanCode, modifiers);
-        }
+        return super.keyPressed(keyCode, scanCode, modifiers) || rootContainer.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

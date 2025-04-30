@@ -2,9 +2,10 @@ package org.academy;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
+import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.common.wireless.WirelessManager;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.client.gui.AbilityDeveloperScreen;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.world.level.storage.WorldData;
 
@@ -26,6 +27,7 @@ public class AcademyCraftServer {
         AbilitySystemServer.init(server);
         AbilityDeveloperBlockEntity.intiServer();
         WirelessManager.initServer();
-        AbilityDeveloperScreen.initC2SPacket();
+        WirelessPanelHelper.initC2SPacket();
+        NetworkSystemServer.init();
     }
 }

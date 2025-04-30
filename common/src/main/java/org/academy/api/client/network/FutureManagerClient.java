@@ -1,7 +1,6 @@
 package org.academy.api.client.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.Packets;
@@ -16,8 +15,8 @@ public class FutureManagerClient {
     private static final Map<Integer, Consumer<?>> FUTURES = new HashMap<>();
     private static final BitSet USED_IDS = new BitSet();
 
-    public static <T> void sendFuturePacket(ResourceLocation resourceLocation, Consumer<T> handler, Object... values) {
-        sendFuturePacket(NetworkSystem.getPacketId(resourceLocation), handler, values);
+    public static <T> void sendFuturePacket(String packet, Consumer<T> handler, Object... values) {
+        sendFuturePacket(NetworkSystem.getPacketId(packet), handler, values);
     }
 
     public static <T> void sendFuturePacket(int packetID, Consumer<T> handler, Object... values) {

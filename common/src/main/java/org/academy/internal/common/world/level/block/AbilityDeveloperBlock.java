@@ -37,6 +37,7 @@ public class AbilityDeveloperBlock extends MultiBlock {
             new Vec3i(0, 1, 2),   // 前前上
             new Vec3i(0, 2, 2)    // 前前上上
     );
+    public static final String ABILITY_DEVELOPER_SCREEN = "ability_developer_screen";
 
     public AbilityDeveloperBlock() {
         super(BlockBehaviour.Properties.of().noOcclusion().strength(6.0F, 7.0F).requiresCorrectToolForDrops());
@@ -57,10 +58,13 @@ public class AbilityDeveloperBlock extends MultiBlock {
         if (!player.isShiftKeyDown()) {
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
                 if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                    serverPlayer.connection.send(new S2CPacket(
-                            Packets.S2C_OPEN_ABILITY_DEVELOPER_SCREEN,
-                            new BlockPos(abilityDeveloperBlockEntity.mainPos)
-                    ));
+                    if (abilityDeveloperBlockEntity.mainPos != null) {
+                        serverPlayer.connection.send(new S2CPacket(
+                                Packets.S2C_OPEN_SCREEN,
+                                ABILITY_DEVELOPER_SCREEN,
+                                abilityDeveloperBlockEntity.mainPos
+                        ));
+                    }
                 }
             }
         }

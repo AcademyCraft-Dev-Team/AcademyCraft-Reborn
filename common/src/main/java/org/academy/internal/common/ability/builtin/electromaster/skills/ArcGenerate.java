@@ -11,6 +11,7 @@ import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -45,19 +46,8 @@ public class ArcGenerate extends Skill {
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))
                 )
         ), Client::handler);
-    }
-
-    @Override
-    public void initServer(MinecraftServer server) {
-        try {
-            NetworkSystemServer.registerC2SPacketHandler(
-                    Packets.C2S_ARC_GENERATE,
-                    Server.class.getMethod("handle", ServerPlayer.class, ServerLevel.class),
-                    objects -> Server.handle((ServerPlayer) objects[0], (ServerLevel) objects[1])
-            );
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+        NetworkSystemClient.CLIENT_PACKET_HANDLER_CLASSES.add(Client.class);
+        NetworkSystemServer.SERVER_PACKET_HANDLER_CLASSES.add(Server.class);
     }
 
     public static final class Client {
@@ -73,6 +63,8 @@ public class ArcGenerate extends Skill {
     }
 
     public static final class Server {
+        @SuppressWarnings("unused")
+        @PacketHandler(packet = Packets.C2S_ARC_GENERATE)
         public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
             float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower <= 10) return;

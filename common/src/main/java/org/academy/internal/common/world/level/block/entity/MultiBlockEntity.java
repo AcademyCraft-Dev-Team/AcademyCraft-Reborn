@@ -7,8 +7,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.academy.internal.common.world.level.block.MultiBlock;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class MultiBlockEntity extends BlockEntity {
+public abstract class MultiBlockEntity extends BlockEntity {
     public BlockPos mainPos;
 
     public MultiBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
@@ -29,6 +30,21 @@ public class MultiBlockEntity extends BlockEntity {
     public boolean isMain() {
         BlockState state = this.getBlockState();
         return state.getValue(MultiBlock.TYPE).equals(MultiBlock.MultiBlockType.MAIN);
+    }
+
+    @Nullable
+    public MultiBlockEntity getMain() {
+        if (isMain()) {
+            return this;
+        } else {
+            if (level != null) {
+                BlockEntity blockEntity = level.getBlockEntity(mainPos);
+                if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
+                    return multiBlockEntity;
+                }
+            }
+            return null;
+        }
     }
 
     @Override

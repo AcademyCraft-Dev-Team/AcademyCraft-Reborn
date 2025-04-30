@@ -3,6 +3,7 @@ package org.academy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.Packets;
 import org.academy.api.common.util.GameUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,6 +22,7 @@ public final class AcademyCraft {
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
 
     public static void init() {
+        Packets.init();
         NetworkSystem.init();
     }
 

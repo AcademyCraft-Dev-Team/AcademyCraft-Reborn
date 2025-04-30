@@ -18,6 +18,7 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
@@ -59,21 +60,9 @@ public final class SelfTeleport extends Skill {
         InputSystem.addKeyBinding(KEY_NAME_END, KEY_END, Client::end);
     }
 
-    @Override
-    public void initServer(MinecraftServer server) {
-        try {
-            NetworkSystemServer.registerC2SPacketHandler(
-                    Packets.C2S_SELF_TELEPORT,
-                    Server.class.getDeclaredMethod("handleTeleport", ServerPlayer.class),
-                    objects -> Server.handleTeleport((ServerPlayer) objects[0])
-            );
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private static final class Server {
-        private static void handleTeleport(ServerPlayer serverPlayer) {
+        @PacketHandler(packet = Packets.C2S_SELF_TELEPORT)
+        public static void handleTeleport(ServerPlayer serverPlayer) {
             if (ServerUtil.lacksSkill(serverPlayer.getUUID(), INSTANCE)) return;
             Vec3 lookDirection = serverPlayer.getLookAngle();
             Vec3 targetPosition = serverPlayer.position().add(lookDirection.scale(DISTANCE));

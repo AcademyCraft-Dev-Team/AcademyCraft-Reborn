@@ -64,4 +64,8 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
         float absY = super.getAbsoluteY();
         return checkX >= absX && checkY >= absY && checkX < absX + getWidth() && checkY < absY + getHeight();
     }
+
+    public void scrollToBottom() {
+        scrollTarget = getMaxScroll();
+    }
 }

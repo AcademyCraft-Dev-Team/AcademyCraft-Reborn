@@ -97,8 +97,8 @@ public class Plasma extends Entity {
 
         // --- FIX: Remove the server-side logic that decreases gatherProgress ---
         // if (!this.level().isClientSide) {
-        //     float currentProgress = 1.0f - MathUtil.clamp((float) this.tickCount / EFFECT_GATHER_DURATION_TICKS, 0.0f, 1.0f);
-        //     this.entityData.set(DATA_GATHER_PROGRESS, currentProgress);
+        //     float currentStep = 1.0f - MathUtil.clamp((float) this.tickCount / EFFECT_GATHER_DURATION_TICKS, 0.0f, 1.0f);
+        //     this.entityData.set(DATA_GATHER_PROGRESS, currentStep);
         // }
         // --- End of Fix ---
         // By removing the update, DATA_GATHER_PROGRESS will remain at its default value (1.0f)

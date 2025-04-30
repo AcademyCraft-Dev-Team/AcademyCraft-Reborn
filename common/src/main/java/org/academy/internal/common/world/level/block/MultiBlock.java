@@ -16,7 +16,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import org.academy.AcademyCraft;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -31,6 +30,14 @@ public abstract class MultiBlock extends BaseEntityBlock {
 
     protected MultiBlock(Properties properties) {
         super(properties);
+    }
+
+    @Nullable
+    public MultiBlockEntity getMainBlockEntity(@NotNull Level level, @NotNull BlockPos anyPos) {
+        BlockEntity blockEntity = level.getBlockEntity(anyPos);
+        if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
+            return multiBlockEntity.getMain();
+        } else return null;
     }
 
     public abstract List<Vec3i> getSubBlocks();

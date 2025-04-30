@@ -6,7 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -39,7 +39,7 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<Skill> SKILL_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Skill.class, (buffer, value) -> buffer.writeUtf(value.name));
     public static final FriendlyByteBufSerializer<BlockPos> BLOCK_POS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(BlockPos.class, FriendlyByteBuf::writeBlockPos);
     public static final FriendlyByteBufSerializer<UUID> UUID_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(UUID.class, FriendlyByteBuf::writeUUID);
-    public static final FriendlyByteBufSerializer<Component> COMPONENT_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Component.class, FriendlyByteBuf::writeComponent);
+    public static final FriendlyByteBufSerializer<MutableComponent> COMPONENT_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(MutableComponent.class, FriendlyByteBuf::writeComponent);
     public static final FriendlyByteBufSerializer<Vector3f> VECTOR_3_F_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Vector3f.class, FriendlyByteBuf::writeVector3f);
     public static final FriendlyByteBufSerializer<Tag> COMPOUND_TAG_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Tag.class, (buffer, value) -> buffer.writeNbt((CompoundTag) value));
     public static final FriendlyByteBufSerializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ArrayList.class, (buffer, value) -> {
@@ -91,6 +91,7 @@ public class FriendlyByteBufSerializers {
         leftSerializer.serialize(buffer, left);
         rightSerializer.serialize(buffer, right);
     });
+    public static final FriendlyByteBufSerializer<BlockPos.MutableBlockPos> MUTABLE_BLOCK_POS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(BlockPos.MutableBlockPos.class, FriendlyByteBuf::writeBlockPos);
 
     private FriendlyByteBufSerializers() {
     }
