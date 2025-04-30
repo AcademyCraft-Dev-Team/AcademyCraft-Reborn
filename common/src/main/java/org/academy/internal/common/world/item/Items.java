@@ -18,6 +18,7 @@ public class Items {
     public static final Item WIND_GEN_TOP_BLOCK_ITEM = new WindGenTopBlockItem();
     public static final Item WIND_GEN_PILLAR_BLOCK_ITEM = new WindGenPillarBlockItem();
     public static final Item ABILITY_DEVELOPER_BLOCK_ITEM = new AbilityDeveloperBlockItem();
+    public static final Item WIND_GEN_FAN_ITEM = new WindGenFanItem();
 
     static {
         ITEMS.put(new ResourceLocation(AcademyCraft.MOD_ID, "icon"), ACADEMY_CRAFT_ICON_ITEM);
@@ -29,6 +30,7 @@ public class Items {
         ITEMS.put(new ResourceLocation(AcademyCraft.MOD_ID, "wind_gen_top_block"), WIND_GEN_TOP_BLOCK_ITEM);
         ITEMS.put(new ResourceLocation(AcademyCraft.MOD_ID, "wind_gen_pillar_block"), WIND_GEN_PILLAR_BLOCK_ITEM);
         ITEMS.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer_block"), ABILITY_DEVELOPER_BLOCK_ITEM);
+        ITEMS.put(new ResourceLocation(AcademyCraft.MOD_ID, "wind_gen_fan"), WIND_GEN_FAN_ITEM);
     }
 
     private Items() {

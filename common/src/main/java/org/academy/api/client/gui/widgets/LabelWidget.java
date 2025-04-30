@@ -10,6 +10,7 @@ public class LabelWidget extends AbstractWidget {
     public String value;
     public int color = 0xFFFFFFFF;
     public boolean dropShadow = true;
+    public static float globalScale = 1.0f;
     public float scale = 1.0f;
 
     public LabelWidget(String value, float x, float y) {
@@ -21,11 +22,12 @@ public class LabelWidget extends AbstractWidget {
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
         guiGraphics.pose().pushPose();
         Font font = Minecraft.getInstance().font;
+        float finalScale = scale * globalScale;
         float textHeight = font.lineHeight;
-        float scaledHeight = textHeight * scale;
+        float scaledHeight = textHeight * finalScale;
         float offsetY = (scaledHeight - textHeight) / 2;
         guiGraphics.pose().translate(x, y - offsetY, 0);
-        guiGraphics.pose().scale(scale, scale, 1.0f);
+        guiGraphics.pose().scale(finalScale, finalScale, 1.0f);
         Minecraft.getInstance().font.drawInBatch(value, 0, 0, color, dropShadow,
                 guiGraphics.pose().last().pose(),
                 guiGraphics.bufferSource(),

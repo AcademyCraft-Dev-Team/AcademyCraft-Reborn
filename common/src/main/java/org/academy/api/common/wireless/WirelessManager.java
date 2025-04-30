@@ -10,8 +10,6 @@ import org.academy.api.common.network.Packets;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.server.world.level.storage.WorldData;
 
-import java.util.Objects;
-
 public class WirelessManager {
     public static void initClient() {
     }
@@ -37,6 +35,11 @@ public class WirelessManager {
             WorldData.WirelessNetworkData.NodeConfig nodeConfig = networkData.getNodeConfig(nodePos);
             if (nodeConfig == null) {
                 AcademyCraft.LOGGER.error("Node position {} found for '{}' but NodeConfig is missing!", nodePos, targetNodeName);
+                return;
+            }
+
+            if (nodeConfig.connectedUsers.size() >= nodeConfig.maxConnections) {
+                AcademyCraft.LOGGER.warn("Node '{}' has reached its maximum connection limit. User at {} cannot connect.", targetNodeName, userPos);
                 return;
             }
 

@@ -10,14 +10,13 @@ import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.util.RenderStateUtil;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.MathUtil;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class AcademyCraftHUDSystem {
+public class HUDManager {
     public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR = new RenderType.CompositeRenderType(
             "computing_power_bar",
             DefaultVertexFormat.POSITION_COLOR_TEX,
@@ -94,14 +93,14 @@ public class AcademyCraftHUDSystem {
 
     public static float smoothProgress;
 
-    private AcademyCraftHUDSystem() {
+    private HUDManager() {
     }
 
     public static void render(GuiGraphics guiGraphics, float partialTick) {
         if (AbilitySystemClient.isActiveHUD()) {
-            AcademyCraftHUDSystem.renderComputingPowerBarBackground(guiGraphics);
-            AcademyCraftHUDSystem.renderComputingPowerBar(guiGraphics, partialTick);
-            AcademyCraftHUDSystem.renderAbilityIcon(guiGraphics);
+            HUDManager.renderComputingPowerBarBackground(guiGraphics);
+            HUDManager.renderComputingPowerBar(guiGraphics, partialTick);
+            HUDManager.renderAbilityIcon(guiGraphics);
         }
     }
 

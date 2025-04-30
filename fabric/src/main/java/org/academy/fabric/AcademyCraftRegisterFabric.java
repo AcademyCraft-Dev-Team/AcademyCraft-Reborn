@@ -6,6 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -22,6 +23,7 @@ import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.internal.common.ability.builtin.AbilityCategories;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.item.AcademyCraftIconItem;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -44,6 +46,7 @@ public class AcademyCraftRegisterFabric {
         }
         registerSoundEvent();
         registerAbilityCategory();
+        registerMenuType();
     }
 
     private static void registerItem() {
@@ -107,6 +110,13 @@ public class AcademyCraftRegisterFabric {
     private static void registerAbilityCategory() {
         for (AbilityCategory abilityCategory : AbilityCategories.ABILITY_CATEGORY_LIST) {
             AbilitySystem.registerAbilityCategory(abilityCategory);
+        }
+    }
+
+    private static void registerMenuType() {
+        for (String name : MenuTypes.MENU_TYPES.keySet()) {
+            MenuType<?> menuType = MenuTypes.MENU_TYPES.get(name);
+            Registry.register(BuiltInRegistries.MENU, new ResourceLocation(AcademyCraft.MOD_ID, name), menuType);
         }
     }
 }

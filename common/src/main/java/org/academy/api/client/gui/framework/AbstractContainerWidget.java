@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.framework;
 
+import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -58,9 +59,12 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         return children.values().iterator();
     }
 
-    protected void setFocusedChild(Widget child) {
+    public void setFocusedChild(Widget child) {
         if (child == this) return;
 
+        if (focusedChild != null){
+            focusedChild.setFocused(false);
+        }
         focusedChild = child;
         if (focusedChild != null) {
             focusedChild.setFocused(true);
@@ -73,12 +77,14 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         widgetList.sort(Comparator.comparing(Widget::getAbsoluteZ).reversed());
 
         for (Widget widget : widgetList) {
-        //    AcademyCraft.LOGGER.info(widget + " Z : " + widget.getAbsoluteZ() + " Enable : " + widget.isAbsoluteEnabled() + " Overed : " + widget.isMouseOver(mouseX, mouseY));
+       //     AcademyCraft.LOGGER.info(widget + " Z : " + widget.getAbsoluteZ() + " Enable : " + widget.isAbsoluteEnabled() + " Overed : " + widget.isMouseOver(mouseX, mouseY));
         }
 
         for (Widget widget : widgetList) {
-            if (widget.isAbsoluteEnabled() && widget.isAbsoluteMouseOver(mouseX, mouseY)) {
-         //       AcademyCraft.LOGGER.info("Widget " + widget + " is focused");
+            boolean enabled = widget.isAbsoluteEnabled();
+            boolean mouseOvered = widget.isAbsoluteMouseOver(mouseX, mouseY);
+            if (enabled && mouseOvered) {
+            //    AcademyCraft.LOGGER.info("Widget " + widget + " is focused");
                 return widget;
             }
         }

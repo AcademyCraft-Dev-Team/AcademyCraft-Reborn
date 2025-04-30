@@ -6,7 +6,6 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.resources.ResourceLocation;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.network.FriendlyByteBufSerializer;
 import org.academy.api.common.network.FriendlyByteBufSerializers;
@@ -24,14 +23,14 @@ public class S2CPacket implements Packet<ClientGamePacketListener> {
         this.friendlyByteBuf = new FriendlyByteBuf(friendlyByteBuf.readBytes(friendlyByteBuf.readableBytes()));
     }
 
-    public S2CPacket(ResourceLocation resourceLocation, FriendlyByteBuf friendlyByteBuf) {
-        this.id = NetworkSystem.getPacketId(resourceLocation);
+    public S2CPacket(String packet, FriendlyByteBuf friendlyByteBuf) {
+        this.id = NetworkSystem.getPacketId(packet);
         this.friendlyByteBuf = friendlyByteBuf;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public S2CPacket(@NotNull ResourceLocation resourceLocation, Object... values) {
-        this.id = NetworkSystem.getPacketId(resourceLocation);
+    public S2CPacket(@NotNull String packet, Object... values) {
+        this.id = NetworkSystem.getPacketId(packet);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         for (Object value : values) {
             FriendlyByteBufSerializer friendlyByteBufSerializer = FriendlyByteBufSerializers.getRequiredSerializer(value.getClass());

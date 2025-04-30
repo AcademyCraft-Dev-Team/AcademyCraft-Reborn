@@ -3,7 +3,12 @@ package org.academy.api.client.gui.widgets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.util.RenderUtil;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.function.Consumer;
 
 public class TextBoxWidget extends AbstractWidget {
     private final StringBuilder text = new StringBuilder();
@@ -12,10 +17,12 @@ public class TextBoxWidget extends AbstractWidget {
     public boolean showBackground = false;
     public boolean showCaret = true;
     public long lastBlinkTime = System.currentTimeMillis();
-    public final int bgColor = 0xFF1F1F1F;
-    public final int borderColor = 0xFF5A5A5A;
-    public final int textColor = 0xFFFFFFFF;
-    public final int padding = 4;
+    public int bgColor = 0xFF1F1F1F;
+    public int borderColor = 0xFF5A5A5A;
+    public int textColor = 0xFFFFFFFF;
+    public Consumer<String> whenEnter;
+    public boolean clearWhenEnter = true;
+    public float scale = 1.0f;
 
     public TextBoxWidget(int maxLength, float x, float y, float width, float height) {
         super(x, y, width, height);
@@ -73,7 +80,13 @@ public class TextBoxWidget extends AbstractWidget {
                 if (caretPos > 0) caretPos--;
                 yield true;
             }
-            case 335 -> {
+            case GLFW.GLFW_KEY_KP_ENTER ,GLFW.GLFW_KEY_ENTER-> {
+                if (whenEnter != null){
+                    whenEnter.accept(getText());
+                }
+                if (clearWhenEnter){
+                    text.setLength(0);
+                }
                 caretPos = 0;
                 yield true;
             }
@@ -98,14 +111,24 @@ public class TextBoxWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
-        if (showBackground){
-            guiGraphics.fill((int) x, (int) y, (int) (x + width), (int) (y + height), borderColor);
-            guiGraphics.fill((int) (x + 1), (int) (y + 1), (int) (x + width - 1), (int) (y + height - 1), bgColor);
+        if (showBackground) {
+            RenderUtil.GeneralRenderer.fill(guiGraphics.pose().last().pose(), x, y, x + width, y + height, borderColor, guiGraphics.bufferSource());
+            RenderUtil.GeneralRenderer.fill(guiGraphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, bgColor, guiGraphics.bufferSource());
         }
 
         Font font = Minecraft.getInstance().font;
-        float textY = y + (height - font.lineHeight) / 2f;
-        guiGraphics.drawString(font, text.toString(), (int) (x + padding), (int) textY, textColor, false);
+        float finalScale = scale * LabelWidget.globalScale;
+
+        guiGraphics.pose().pushPose();
+
+        float textHeight = font.lineHeight;
+        float scaledHeight = textHeight * finalScale;
+        float offsetY = (scaledHeight - textHeight) / 2;
+
+        guiGraphics.pose().translate(x, y + (height - scaledHeight) / 2 - offsetY, 0);
+        guiGraphics.pose().scale(finalScale, finalScale, 1.0f);
+
+        guiGraphics.drawString(font, text.toString(), 0, 0, textColor, false);
 
         if (isFocused()) {
             long now = System.currentTimeMillis();
@@ -114,10 +137,20 @@ public class TextBoxWidget extends AbstractWidget {
                 lastBlinkTime = now;
             }
             if (showCaret) {
-                String beforeCaret = text.substring(0, caretPos);
-                int caretX = (int) (x + padding + font.width(beforeCaret));
-                guiGraphics.fill(caretX, (int) (y + 2), caretX + 1, (int) (y + height - 2), textColor);
+                float caretX = 0;
+                if (!text.isEmpty() && caretPos > 0) {
+                    String beforeCaret = text.substring(0, caretPos);
+                    caretX += font.width(beforeCaret);
+                }
+                RenderUtil.GeneralRenderer.fill(
+                        guiGraphics.pose().last().pose(),
+                        caretX, textHeight - 0.5f, caretX + 4, textHeight,
+                        textColor,
+                        guiGraphics.bufferSource()
+                );
             }
         }
+
+        guiGraphics.pose().popPose();
     }
 }

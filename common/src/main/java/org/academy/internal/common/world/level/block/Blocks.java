@@ -12,7 +12,7 @@ public class Blocks {
     public static final Map<ResourceLocation, Block> BLOCKS = new HashMap<>();
     public static final Block ADVANCED_WIRELESS_NODE_BLOCK = new AdvancedWirelessNodeBlock(BlockBehaviour.Properties.of());
     public static final Block WIND_GEN_BASE_BLOCK = new WindGenBaseBlock(BlockBehaviour.Properties.of());
-    public static final Block WIND_GEN_TOP_BLOCK = new WindGenTopBlock();
+    public static final MultiBlock WIND_GEN_TOP_BLOCK = new WindGenTopBlock();
     public static final Block WIND_GEN_PILLAR_BLOCK = new WindGenPillarBlock();
     public static final MultiBlock ABILITY_DEVELOPER_BLOCK = new AbilityDeveloperBlock();
 

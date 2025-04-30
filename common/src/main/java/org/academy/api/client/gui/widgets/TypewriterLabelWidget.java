@@ -1,12 +1,13 @@
 package org.academy.api.client.gui.widgets;
 
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.Tickable;
 
 public class TypewriterLabelWidget extends LabelWidget implements Tickable {
     public final String fullText;
     public String displayedText = "";
-    public float displayProgress = 0.0f;
-    public float displaySpeed = 0.05f;
+    public float currentStep = 0.0f;
+    public float displaySpeed = 100;
     public boolean isAnimating = false;
     public Runnable afterFinished;
 
@@ -17,6 +18,7 @@ public class TypewriterLabelWidget extends LabelWidget implements Tickable {
 
     public void start() {
         isAnimating = true;
+        currentStep = 0.0f;
     }
 
     public void stop() {
@@ -24,19 +26,14 @@ public class TypewriterLabelWidget extends LabelWidget implements Tickable {
     }
 
     @Override
-    public void tick() {
+    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
         if (isAnimating) {
-            displayProgress += displaySpeed;
+            currentStep += displaySpeed * (partialTicks / 20.0f);
 
-            if (displayProgress > 1.0f) {
-                displayProgress = 1.0f;
-            }
-
-            int currentLength = (int) Math.floor(displayProgress * fullText.length());
-
+            int currentLength = Math.min((int) Math.floor(currentStep), fullText.length());
             displayedText = fullText.substring(0, currentLength);
 
-            if (displayProgress == 1.0f) {
+            if (currentLength >= fullText.length()) {
                 isAnimating = false;
                 if (afterFinished != null) {
                     afterFinished.run();
@@ -44,5 +41,11 @@ public class TypewriterLabelWidget extends LabelWidget implements Tickable {
             }
         }
         value = displayedText;
+
+        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+    }
+
+    @Override
+    public void tick() {
     }
 }
