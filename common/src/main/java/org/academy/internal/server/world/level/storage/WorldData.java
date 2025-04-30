@@ -298,6 +298,7 @@ public class WorldData {
             tag.put("nodes", nodesTag);
             return tag;
         }
+
         public static class NodeConfig {
             public final String name;
             private String password;
@@ -333,7 +334,8 @@ public class WorldData {
                 for (Map.Entry<BlockPos, UserConfig> entry : this.connectedUsers.entrySet()) {
                     CompoundTag userTag = new CompoundTag();
                     userTag.putLong("pos", entry.getKey().asLong());
-                    userTag.putDouble("weight", entry.getValue().getWeight());
+                    userTag.putDouble("weight_receive", entry.getValue().getReceiveWeight());
+                    userTag.putDouble("weight_send", entry.getValue().getSendWeight());
                     usersTag.add(userTag);
                 }
                 tag.put("users", usersTag);
@@ -364,9 +366,10 @@ public class WorldData {
                         if (baseTag instanceof CompoundTag userTag) {
                             if (userTag.contains("pos", Tag.TAG_LONG) && userTag.contains("weight", Tag.TAG_DOUBLE)) {
                                 BlockPos pos = BlockPos.of(userTag.getLong("pos"));
-                                double weight = userTag.getDouble("weight");
+                                double weightReceive = userTag.getDouble("weight_receive");
+                                double weightSend = userTag.getDouble("weight_send");
 
-                                loaded.connectedUsers.put(pos, new UserConfig(weight));
+                                loaded.connectedUsers.put(pos, new UserConfig(weightReceive, weightSend));
                                 AcademyCraft.LOGGER.warn("User tag missing required fields: {}", userTag);
                             }
                         }
@@ -379,18 +382,24 @@ public class WorldData {
         }
 
         public static class UserConfig {
-            private final double weight;
+            private final double receiveWeight;
+            private final double sendWeight;
 
-            public UserConfig(double weight) {
-                this.weight = weight;
+            public UserConfig(double receiveWeight, double sendWeight) {
+                this.receiveWeight = receiveWeight;
+                this.sendWeight = sendWeight;
             }
 
-            public UserConfig(){
-                this(1);
+            public UserConfig() {
+                this(1, 1);
             }
 
-            public double getWeight() {
-                return weight;
+            public double getReceiveWeight() {
+                return receiveWeight;
+            }
+
+            public double getSendWeight() {
+                return sendWeight;
             }
         }
     }

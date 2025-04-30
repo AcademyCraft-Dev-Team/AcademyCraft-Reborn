@@ -17,16 +17,23 @@ public class VerticalScrollBarWidget extends DragBarWidget {
 
     @Override
     protected float getThumbSize() {
-        float contentHeight = panel.getMaxScroll() + panel.getHeight();
-        if (contentHeight <= 0) return getHeight();
+        float max = panel.getMaxScroll();
+        if (max <= 0f) {
+            return getHeight();
+        }
+        float contentHeight = max + panel.getHeight();
         float ratio = panel.getHeight() / contentHeight;
         return MathUtil.clamp(ratio * getHeight(), 16f, getHeight());
     }
 
     @Override
     protected float getThumbPosition() {
+        float max = panel.getMaxScroll();
+        if (max <= 0f) {
+            return getY();
+        }
         float track = getHeight() - getThumbSize();
-        float ratio = panel.scrollOffset / panel.getMaxScroll();
+        float ratio = panel.scrollOffset / max;
         return getY() + ratio * track;
     }
 
@@ -42,9 +49,11 @@ public class VerticalScrollBarWidget extends DragBarWidget {
 
     @Override
     protected void updateTargetFromMouse(float mouse) {
+        float max = panel.getMaxScroll();
+        if (max <= 0f) return;
         float track = getTrackSize() - getThumbSize();
         float ratio = MathUtil.clamp((mouse - dragOffset) / track, 0f, 1f);
-        panel.scrollTarget = ratio * panel.getMaxScroll();
+        panel.scrollTarget = ratio * max;
     }
 
     @Override
