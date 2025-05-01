@@ -1,6 +1,9 @@
 package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
@@ -12,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
 public class Arc extends Entity {
+    public static final EntityDataAccessor<Float> ID_LENGTH = SynchedEntityData.defineId(Arc.class, EntityDataSerializers.FLOAT);
     public static final int defaultLifetime = 8;
     public int currentLifetime = defaultLifetime;
     public long random;
@@ -77,6 +81,7 @@ public class Arc extends Entity {
 
     @Override
     protected void defineSynchedData() {
+        entityData.define(ID_LENGTH, 0.0f);
     }
 
     @Override
@@ -85,5 +90,13 @@ public class Arc extends Entity {
 
     @Override
     protected void addAdditionalSaveData(@NotNull CompoundTag compoundTag) {
+    }
+
+    public float getLength() {
+        return entityData.get(ID_LENGTH);
+    }
+
+    public void setLength(float length) {
+        entityData.set(ID_LENGTH, length);
     }
 }

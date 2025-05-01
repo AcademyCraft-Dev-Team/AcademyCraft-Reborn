@@ -46,9 +46,6 @@ public class C2SPacket implements Packet<ServerGamePacketListener> {
     @Override
     public void handle(@NotNull ServerGamePacketListener handler) {
         final ServerGamePacketListenerImpl serverPacketListener = (ServerGamePacketListenerImpl) handler;
-        serverPacketListener.player.server.execute(() -> {
-            NetworkSystemServer.C2S_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle(serverPacketListener, this);
-            friendlyByteBuf.release();
-        });
+        serverPacketListener.player.server.execute(() -> NetworkSystemServer.C2S_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle(serverPacketListener, this));
     }
 }

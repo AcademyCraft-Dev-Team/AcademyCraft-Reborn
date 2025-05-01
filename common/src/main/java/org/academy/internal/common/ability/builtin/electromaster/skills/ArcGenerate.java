@@ -1,10 +1,8 @@
 package org.academy.internal.common.ability.builtin.electromaster.skills;
 
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
@@ -14,6 +12,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -22,9 +21,7 @@ import org.academy.internal.common.world.entity.skill.Arc;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 public class ArcGenerate extends Skill {
@@ -74,32 +71,21 @@ public class ArcGenerate extends Skill {
             Vec3 playerPos = player.position();
             Vec3 eyePos = player.getEyePosition();
             Vec3 rightVec = lookVec.cross(new Vec3(0, 1, 0)).normalize();
-
             Vec3 handPos = playerPos.add(rightVec.scale(0.4)).add(0, 1.2, 0);
-
             Vec3 targetPos = eyePos.add(lookVec.scale(10));
-
             Arc arc = new Arc(level, handPos, targetPos);
+
+            double length = LevelUtil.getValidViewDistance(arc, 10);
+            arc.setLength((float) length);
+            targetPos = eyePos.add(lookVec.scale(length));
+
             level.addFreshEntity(arc);
             arc.playSound(AcademyCraftSoundEvents.ARC_WEAK);
 
-            Vec3 direction = targetPos.subtract(handPos).normalize();
-            int steps = 10;
-            Set<LivingEntity> detectedEntities = new HashSet<>();
-
-            for (int i = 0; i < steps; i++) {
-                Vec3 segmentStart = handPos.add(direction.scale(i));
-                Vec3 segmentEnd = handPos.add(direction.scale(i + 1));
-                AABB box = new AABB(segmentStart, segmentEnd);
-                List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, box);
-                detectedEntities.addAll(entities);
-            }
-
-            detectedEntities.forEach(entity -> {
-                if (entity == player) return;
-                float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
-                entity.hurt(player.damageSources().playerAttack(player), damage);
-            });
+            float radius = 0.125f;
+            float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
+            DamageSource src = player.damageSources().playerAttack(player);
+            LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, damage);
         }
     }
 }
