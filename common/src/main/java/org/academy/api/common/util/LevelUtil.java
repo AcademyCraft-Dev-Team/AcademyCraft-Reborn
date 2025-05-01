@@ -38,41 +38,54 @@ public class LevelUtil {
 
     @SuppressWarnings("DataFlowIssue")
     public static boolean canBreakBlock(BlockState blockState, int miningLevel) {
-        if (blockState.isAir() || blockState.getDestroySpeed(null, null) < 0) return false;
+        if (miningLevel == -1 || blockState.isAir() || blockState.getDestroySpeed(null, null) < 0) {
+            return false;
+        }
+
         return switch (miningLevel) {
-            case 3 ->
-                    blockState.is(BlockTags.NEEDS_DIAMOND_TOOL) || blockState.is(BlockTags.NEEDS_IRON_TOOL) || blockState.is(BlockTags.NEEDS_STONE_TOOL) || !blockState.is(BlockTags.MINEABLE_WITH_PICKAXE) && !blockState.is(BlockTags.MINEABLE_WITH_AXE) && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL) && !blockState.is(BlockTags.MINEABLE_WITH_HOE);
-            case 2 ->
-                    blockState.is(BlockTags.NEEDS_IRON_TOOL) || blockState.is(BlockTags.NEEDS_STONE_TOOL) || !blockState.is(BlockTags.MINEABLE_WITH_PICKAXE) && !blockState.is(BlockTags.MINEABLE_WITH_AXE) && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL) && !blockState.is(BlockTags.MINEABLE_WITH_HOE);
-            case 1 ->
-                    blockState.is(BlockTags.NEEDS_STONE_TOOL) || !blockState.is(BlockTags.MINEABLE_WITH_PICKAXE) && !blockState.is(BlockTags.MINEABLE_WITH_AXE) && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL) && !blockState.is(BlockTags.MINEABLE_WITH_HOE);
-            case 0 ->
-                    !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL) && !blockState.is(BlockTags.NEEDS_IRON_TOOL) && !blockState.is(BlockTags.NEEDS_STONE_TOOL);
-            default ->
-                    !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL) && !blockState.is(BlockTags.NEEDS_IRON_TOOL) && !blockState.is(BlockTags.NEEDS_STONE_TOOL);
+            case 3 -> blockState.is(BlockTags.NEEDS_DIAMOND_TOOL)
+                    || blockState.is(BlockTags.NEEDS_IRON_TOOL)
+                    || blockState.is(BlockTags.NEEDS_STONE_TOOL)
+                    || (!blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_AXE)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_HOE));
+            case 2 -> blockState.is(BlockTags.NEEDS_IRON_TOOL)
+                    || blockState.is(BlockTags.NEEDS_STONE_TOOL)
+                    || (!blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_AXE)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_HOE));
+            case 1 -> blockState.is(BlockTags.NEEDS_STONE_TOOL)
+                    || (!blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_AXE)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)
+                    && !blockState.is(BlockTags.MINEABLE_WITH_HOE));
+            case 0 -> !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL)
+                    && !blockState.is(BlockTags.NEEDS_IRON_TOOL)
+                    && !blockState.is(BlockTags.NEEDS_STONE_TOOL);
+            default -> !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL)
+                    && !blockState.is(BlockTags.NEEDS_IRON_TOOL)
+                    && !blockState.is(BlockTags.NEEDS_STONE_TOOL);
         };
     }
 
-
-    public static Pair<Boolean, Double> destroyBlocksAlongPath(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean dropBlock, boolean spawnParticles, boolean canBlock) {
+    public static Pair<Boolean, Double> destroyBlocksAlongPath(Level level, Vec3 start, Vec3 end, float radius,
+                                                               int miningLevel, boolean dropBlock,
+                                                               boolean spawnParticles, boolean canBlock,
+                                                               boolean simulate) {
         final BlockState air = Blocks.AIR.defaultBlockState();
         Set<BlockPos> processedBlocks = new HashSet<>();
         double pathLength = start.distanceTo(end);
 
-
-        if (pathLength < 1.0E-6) {
-            return Pair.of(false, 0.0);
-        }
-
         Vec3 direction = end.subtract(start).normalize();
         int maxSteps = Mth.ceil(pathLength / 0.5);
         BlockPos.MutableBlockPos currentBlockPos = new BlockPos.MutableBlockPos();
-        int searchBounds = Mth.ceil(radius); // Renamed for clarity, effectively the same calculation
+        int searchBounds = Mth.ceil(radius);
 
         for (int step = 0; step <= maxSteps; ++step) {
-
             double distAlongPath = (step / (double) maxSteps) * pathLength;
-            distAlongPath = Math.min(distAlongPath, pathLength); // Clamp distance
+            distAlongPath = Math.min(distAlongPath, pathLength);
             Vec3 currentPoint = start.add(direction.scale(distAlongPath));
             BlockPos centerBlock = BlockPos.containing(currentPoint);
 
@@ -90,18 +103,19 @@ public class LevelUtil {
 
                             if (!blockState.isAir()) {
                                 boolean breakable = canBreakBlock(blockState, miningLevel);
-
                                 if (breakable) {
-                                    if (level instanceof ServerLevel serverLevel) {
+                                    if (!simulate) {
                                         processedBlocks.add(currentBlockPos.immutable());
-                                        BlockEntity blockEntity = blockState.hasBlockEntity() ? serverLevel.getBlockEntity(currentBlockPos) : null;
+                                        BlockEntity blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(currentBlockPos) : null;
                                         if (dropBlock) {
-                                            Block.dropResources(blockState, serverLevel, currentBlockPos, blockEntity, null, ItemStack.EMPTY);
+                                            Block.dropResources(blockState, level, currentBlockPos, blockEntity, null, ItemStack.EMPTY);
                                         }
-                                        serverLevel.setBlock(currentBlockPos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                                        level.setBlock(currentBlockPos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
                                         if (spawnParticles) {
-                                            serverLevel.levelEvent(2001, currentBlockPos, Block.getId(blockState));
+                                            level.levelEvent(2001, currentBlockPos, Block.getId(blockState));
                                         }
+                                    } else {
+                                        processedBlocks.add(currentBlockPos.immutable());
                                     }
                                 } else if (canBlock) {
                                     double blockedDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, currentBlockPos);
@@ -113,9 +127,9 @@ public class LevelUtil {
                 }
             }
 
-            if(canBlock && !processedBlocks.contains(centerBlock)) {
+            if (canBlock && !processedBlocks.contains(centerBlock)) {
                 BlockState centerBlockState = level.getBlockState(centerBlock);
-                if(!centerBlockState.isAir() && !canBreakBlock(centerBlockState, miningLevel) && isBlockIntersectingCylinder(centerBlock, start, end, radius)) {
+                if (!centerBlockState.isAir() && !canBreakBlock(centerBlockState, miningLevel) && isBlockIntersectingCylinder(centerBlock, start, end, radius)) {
                     double blockDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, centerBlock);
                     return Pair.of(true, Math.min(blockDistance, pathLength));
                 }
@@ -125,16 +139,14 @@ public class LevelUtil {
         return Pair.of(false, pathLength);
     }
 
-
-    private static boolean isBlockIntersectingCylinder(BlockPos blockPos, Vec3 start, Vec3 end, float radius) {
+    public static boolean isBlockIntersectingCylinder(BlockPos blockPos, Vec3 start, Vec3 end, float radius) {
         Vec3 blockCenter = Vec3.atCenterOf(blockPos);
         double distSq = distanceSqToLineSegment(blockCenter, start, end);
         double checkRadius = radius + 0.8660254;
         return distSq <= checkRadius * checkRadius;
     }
 
-
-    private static double distanceSqToLineSegment(Vec3 point, Vec3 segStart, Vec3 segEnd) {
+    public static double distanceSqToLineSegment(Vec3 point, Vec3 segStart, Vec3 segEnd) {
         Vec3 segment = segEnd.subtract(segStart);
         double segLengthSq = segment.lengthSqr();
         if (segLengthSq < 1.0E-12) {
@@ -147,8 +159,8 @@ public class LevelUtil {
         return point.distanceToSqr(closestPoint);
     }
 
-
-    private static double calculateDistanceToBlockIntersection(Vec3 start, Vec3 direction, double totalPathLength, BlockPos blockPos) {
+    public static double calculateDistanceToBlockIntersection(Vec3 start, Vec3 direction,
+                                                              double totalPathLength, BlockPos blockPos) {
         Vec3 blockCenter = Vec3.atCenterOf(blockPos);
         Vec3 startToBlock = blockCenter.subtract(start);
         double distanceAlongPath = startToBlock.dot(direction);
@@ -156,59 +168,48 @@ public class LevelUtil {
         return Mth.clamp(distanceAlongPath, 0.0, totalPathLength);
     }
 
-
-    public static void attackEntitiesAlongPath(Level level, Vec3 start, Vec3 end, float size, DamageSource damageSource, float damage) {
+    public static void attackEntitiesAlongPath(Level level,
+                                               Vec3 start,
+                                               Vec3 end,
+                                               float radius,
+                                               DamageSource damageSource,
+                                               float damage) {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
         Vec3 direction = end.subtract(start).normalize();
         double totalDistance = start.distanceTo(end);
-        double stepSize = 0.5;
 
-        Set<Entity> damagedEntities = new HashSet<>();
+        int steps = (int) Math.ceil(totalDistance / (double) radius);
 
-        AABB pathBoundingBox = new AABB(start, end).inflate(size + 1.0);
-        List<Entity> nearbyEntities = serverLevel.getEntities((Entity)null, pathBoundingBox, entity ->
-                entity != null && entity.isAlive() && !(entity instanceof EnderDragon)
-                        && entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE
+        AABB pathBB = new AABB(start, end).inflate(radius, radius, radius);
+        List<Entity> candidates = serverLevel.getEntities(
+                (Entity) null,
+                pathBB,
+                e -> e.isAlive()
+                        && e.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE
         );
-        List<EnderDragon> nearbyDragons = serverLevel.getEntitiesOfClass(EnderDragon.class, pathBoundingBox, Entity::isAlive);
 
-        double sizeSq = size * size;
+        Set<Entity> hitSet = new HashSet<>();
 
-        for (double traveled = 0; traveled <= totalDistance; traveled += stepSize) {
-            Vec3 currentPos = start.add(direction.scale(traveled));
+        for (int i = 0; i <= steps; i++) {
+            double distAlong = Math.min(i * (double) radius, totalDistance);
+            Vec3 samplePos = start.add(direction.scale(distAlong));
 
-            for (Entity entity : nearbyEntities) {
-                if (damagedEntities.contains(entity)) continue;
+            AABB sliceBB = new AABB(
+                    samplePos.subtract(radius, radius, radius),
+                    samplePos.add(radius, radius, radius)
+            );
 
-                if (distanceSqToLineSegment(entity.position(), start, end) <= sizeSq) {
-                    if (entity.getBoundingBox().intersects(currentPos, currentPos)) {
-                        entity.hurt(damageSource, damage);
-                        damagedEntities.add(entity);
+            for (Entity e : candidates) {
+                if (hitSet.contains(e)) continue;
+
+                if (e.getBoundingBox().intersects(sliceBB)) {
+                    if (e instanceof EnderDragon) {
+                        ((EnderDragon) e).reallyHurt(damageSource, damage);
                     } else {
-                        Vec3 closestPointInBB = entity.getBoundingBox().clip(currentPos, currentPos.add(direction.scale(1e-6))).orElse(entity.position());
-                        if (closestPointInBB.distanceToSqr(currentPos) <= sizeSq) {
-                            entity.hurt(damageSource, damage);
-                            damagedEntities.add(entity);
-                        }
+                        e.hurt(damageSource, damage);
                     }
-                }
-            }
-
-            for (EnderDragon dragon : nearbyDragons) {
-                if (damagedEntities.contains(dragon)) continue;
-
-                if (distanceSqToLineSegment(dragon.position(), start, end) <= sizeSq) {
-                    if (dragon.getBoundingBox().intersects(currentPos, currentPos)) {
-                        dragon.reallyHurt(damageSource, damage);
-                        damagedEntities.add(dragon);
-                    } else {
-                        Vec3 closestPointInBB = dragon.getBoundingBox().clip(currentPos, currentPos.add(direction.scale(1e-6))).orElse(dragon.position());
-                        if (closestPointInBB.distanceToSqr(currentPos) <= sizeSq) {
-                            dragon.reallyHurt(damageSource, damage);
-                            damagedEntities.add(dragon);
-                        }
-                    }
+                    hitSet.add(e);
                 }
             }
         }

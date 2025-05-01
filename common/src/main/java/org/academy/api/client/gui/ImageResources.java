@@ -15,7 +15,7 @@ import static org.academy.api.client.gui.ImageResources.Textures.*;
 public final class ImageResources {
     public static final class Textures {
         /**
-         * AbilityDeveloper
+         * Ability Developer
          */
         public static final ResourceLocation PANEL_LEFT_BACK_TOP_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerleft.png");
         public static final ResourceLocation TEXTURE_PANEL_LEFT_BACK_MIDDLE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/parent_background_developermachine.png");
@@ -24,7 +24,7 @@ public final class ImageResources {
         public static final ResourceLocation TEXTURE_PANEL_RIGHT_SKILL_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_panel_back.png");
         public static final ResourceLocation TEXTURE_PANEL_RIGHT_SKILL_ICON_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_back.png");
         /**
-         * WindGen
+         * Wind Gen
          */
         public static final ResourceLocation TEXTURE_WIND_GEN_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/windgen/ui_windgen.png");
         public static final ResourceLocation TEXTURE_ICON_WIND_GEN_BASE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_base.png");
@@ -47,11 +47,11 @@ public final class ImageResources {
 
     public static final class RenderTypes {
         /**
-         * AbilityDeveloper
+         * Ability Developer
          */
         public static final BiFunction<String, ResourceLocation, RenderType> RENDER_TYPE_SKILL_ICON =
                 (string, resourceLocation) ->
-                        RenderUtil.getPositionTexRenderType(string, resourceLocation, false);
+                        RenderUtil.getPositionColorTexRenderType(string, resourceLocation, false);
         public static final RenderType DEBUG = new RenderType.CompositeRenderType(
                 "debug_aaa",
                 DefaultVertexFormat.POSITION_TEX,
@@ -66,22 +66,22 @@ public final class ImageResources {
                         .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false)
         );
-        public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_TOP = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_TOP = RenderUtil.getPositionColorTexRenderType(
                 "panel_left_back_top", PANEL_LEFT_BACK_TOP_TEXTURE, false);
-        public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE = RenderUtil.getPositionColorTexRenderType(
                 "panel_left_back_middle", TEXTURE_PANEL_LEFT_BACK_MIDDLE, false);
         public static final RenderType RENDER_TYPE_SKILL_PANEL_BACK = RenderUtil.getPositionTexRenderType(
                 "skill_panel_back", TEXTURE_PANEL_RIGHT_SKILL_BACK, true);
-        public static final RenderType RENDER_TYPE_SKILL_PANEL_INFO = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_SKILL_PANEL_INFO = RenderUtil.getPositionColorTexRenderType(
                 "skill_panel_info", TEXTURE_PANEL_RIGHT_INFO, false);
-        public static final RenderType RENDER_TYPE_PANEL_RIGHT_BACK = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_PANEL_RIGHT_BACK = RenderUtil.getPositionColorTexRenderType(
                 "panel_right_back", TEXTURE_PANEL_RIGHT_BACK, false);
-        public static final RenderType RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK = RenderUtil.getPositionColorTexRenderType(
                 "panel_right_skill_icon_back", TEXTURE_PANEL_RIGHT_SKILL_ICON_BACK, false);
         /**
          * WindGen
          */
-        public static final RenderType RENDER_TYPE_WIND_GEN_UI = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_WIND_GEN_UI = RenderUtil.getPositionColorTexRenderType(
                 "windgen_ui", TEXTURE_WIND_GEN_UI, false
         );
         public static final RenderType RENDER_TYPE_ICON_WIND_GEN_BASE = RenderUtil.getPositionColorTexRenderType(
@@ -96,16 +96,16 @@ public final class ImageResources {
         /**
          * Common
          */
-        public static final RenderType RENDER_TYPE_INVENTORY = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_INVENTORY = RenderUtil.getPositionColorTexRenderType(
                 "inventory", TEXTURE_INVENTORY, false
         );
-        public static final RenderType RENDER_TYPE_ELEMENT_LINE = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_ELEMENT_LINE = RenderUtil.getPositionColorTexRenderType(
                 "element_line", TEXTURE_ELEMENT_LINE, true);
-        public static final RenderType RENDER_TYPE_ELEMENT_BACK_DARK = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_ELEMENT_BACK_DARK = RenderUtil.getPositionColorTexRenderType(
                 "element_back_dark", TEXTURE_ELEMENT_BACK_DARK, false);
-        public static final RenderType RENDER_TYPE_ELEMENT_BACK_LIGHT = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_ELEMENT_BACK_LIGHT = RenderUtil.getPositionColorTexRenderType(
                 "element_back_light", TEXTURE_ELEMENT_BACK_LIGHT, false);
-        public static final RenderType RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON = RenderUtil.getPositionColorTexRenderType(
                 "wireless_panel_view_icon", TEXTURE_WIRELESS_PANEL_VIEW_ICON, false);
         public static final RenderType RENDER_TYPE_ICON_NODE = RenderUtil.getPositionColorTexRenderType(
                 "icon_node", TEXTURE_ICON_NODE, false);

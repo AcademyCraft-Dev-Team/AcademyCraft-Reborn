@@ -46,9 +46,6 @@ public class S2CPacket implements Packet<ClientGamePacketListener> {
 
     @Override
     public void handle(@NotNull ClientGamePacketListener handler) {
-        Minecraft.getInstance().execute(() -> {
-            NetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle((ClientPacketListener) handler, this);
-            friendlyByteBuf.release();
-        });
+        Minecraft.getInstance().execute(() -> NetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle((ClientPacketListener) handler, this));
     }
 }

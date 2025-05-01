@@ -1,18 +1,36 @@
 package org.academy.api.client.gui.framework;
 
-public abstract class AbstractWidget implements Widget {
+import net.minecraft.client.gui.GuiGraphics;
+import org.academy.api.client.gui.animation.Animation;
+
+public abstract class AbstractWidget implements Widget,Animation {
     protected float x, y, z, width, height;
     protected boolean visible = true;
     protected boolean enabled = true;
     protected WidgetContainer parent = null;
     protected boolean hovered = false;
     protected boolean focused = false;
+    public Animation animation;
 
     public AbstractWidget(float x, float y, float width, float height) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+    }
+
+    @Override
+    public void afterRender(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+        if (animation != null) {
+            animation.afterRender(guiGraphics, mouseX, mouseY, partialTick);
+        }
+    }
+
+    @Override
+    public void beforeRender(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+        if (animation != null) {
+            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
+        }
     }
 
     @Override

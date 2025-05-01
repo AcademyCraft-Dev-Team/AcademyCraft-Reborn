@@ -6,9 +6,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.level.block.Block;
@@ -47,12 +44,6 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         standState.start(ticks);
     }
 
-    @Nullable
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
     @SuppressWarnings("resource")
     public static void intiServer() {
         NetworkSystemServer.registerC2SPacketHandler(
@@ -68,7 +59,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
                     if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
                         long needEnergy = skill.level * 10000L;
                         if (abilityDeveloperBlockEntity.getEnergyStored() >= needEnergy) {
-                            abilityDeveloperBlockEntity.setEnergyStorage(abilityDeveloperBlockEntity.getEnergyStored() - (int) needEnergy);
+                            abilityDeveloperBlockEntity.setEnergyStored(abilityDeveloperBlockEntity.getEnergyStored() - (int) needEnergy);
                             AbilitySystemServer.addPlayerSkill(listener.player.getUUID(), name);
                             Set<String> skillList = AbilitySystemServer.getPlayerSkills(listener.player.getUUID());
                             for (String skillName : skillList) {
@@ -159,12 +150,12 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
             return 0;
         }
         if (!simulate) {
-            setEnergyStorage(getEnergyStored() + energyToReceive);
+            setEnergyStored(getEnergyStored() + energyToReceive);
         }
         return energyToReceive;
     }
 
-    public void setEnergyStorage(int newEnergy) {
+    public void setEnergyStored(int newEnergy) {
         int clamped = Math.max(0, Math.min(newEnergy, getMaxEnergyStorage()));
         if (clamped != this.energyStored) {
             this.energyStored = clamped;

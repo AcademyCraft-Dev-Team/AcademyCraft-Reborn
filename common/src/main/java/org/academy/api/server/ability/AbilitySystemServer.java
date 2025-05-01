@@ -36,7 +36,7 @@ import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
 public class AbilitySystemServer {
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
     private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
-    public static Map<UUID, WorldData.Player> playerMap;
+    private static Map<UUID, WorldData.Player> playerMap;
     public static volatile MinecraftServer minecraftServer;
     public static volatile ScheduledFuture<?> scheduledFuture;
 

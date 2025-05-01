@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.framework;
 
-import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;

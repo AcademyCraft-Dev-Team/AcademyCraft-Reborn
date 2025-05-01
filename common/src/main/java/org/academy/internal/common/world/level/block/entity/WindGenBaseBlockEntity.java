@@ -3,9 +3,6 @@ package org.academy.internal.common.world.level.block.entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.AnimationState;
@@ -253,10 +250,5 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
 
     public enum Completeness {
         BASE_ONLY, NO_TOP, COMPLETE, COMPLETE_NOT_WORKING
-    }
-
-    @Override
-    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
     }
 }

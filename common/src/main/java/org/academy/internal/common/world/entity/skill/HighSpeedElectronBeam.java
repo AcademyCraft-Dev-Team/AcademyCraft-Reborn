@@ -9,7 +9,6 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.api.common.util.LevelUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -95,14 +94,14 @@ public class HighSpeedElectronBeam extends Entity {
         progress = (float) currentChargerTicks / (float) maxChargerTicks - (float) endShootTicks / 15;
         move(MoverType.SELF, this.getDeltaMovement());
         if (rayProgress > 0.125f && !fired) {
-            Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.025f, 10, false, true, true);
+            Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.025f, 10, false, true, true, level().isClientSide);
             if (result.getKey()) {
                 double d = result.getValue();
                 length = (float) d;
             }
 
             if (!level().isClientSide) {
-                LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 1, new DamageSource(level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
+                LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.125f, new DamageSource(level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
             }
             fired = true;
         }

@@ -150,6 +150,9 @@ public class HUDManager {
             progress = 0;
         }
         smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, MathUtil.animationFactor(0.125f, partialTick));
+        if (Float.isNaN(smoothProgress)){
+            smoothProgress = 0f;
+        }
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
         final float width = COMPUTING_POWER_BAR_WIDTH * scale;
