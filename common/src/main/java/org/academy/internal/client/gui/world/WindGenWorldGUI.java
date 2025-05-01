@@ -3,9 +3,9 @@ package org.academy.internal.client.gui.world;
 import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
-import org.academy.api.client.gui.widgets.ImageButtonWidget;
-import org.academy.api.client.gui.widgets.ImageWidget;
-import org.academy.api.client.gui.widgets.PanelWidget;
+import org.academy.api.client.gui.widget.ImageButtonWidget;
+import org.academy.api.client.gui.widget.ImageWidget;
+import org.academy.api.client.gui.widget.PanelWidget;
 import org.jetbrains.annotations.NotNull;
 
 public class WindGenWorldGUI {

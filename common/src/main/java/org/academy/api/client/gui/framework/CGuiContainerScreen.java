@@ -7,16 +7,18 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import org.academy.api.client.gui.ImageResources;
-import org.academy.api.client.gui.widgets.ImageWidget;
-import org.academy.api.client.gui.widgets.PanelWidget;
+import org.academy.api.client.gui.animation.AnimationTopToBottom;
+import org.academy.api.client.gui.widget.ImageWidget;
+import org.academy.api.client.gui.widget.PanelWidget;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
-    private ImageWidget back;
-    private ImageWidget inventory;
+    public ImageWidget back;
+    public ImageWidget inventory;
     public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
-    public boolean containerActive = true;
+    public boolean handleContainer = true;
+    public boolean renderInventory = true;
 
     protected CGuiContainerScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -29,6 +31,8 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
                 ImageResources.RenderTypes.RENDER_TYPE_ELEMENT_BACK_DARK);
         inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, 187,
                 ImageResources.RenderTypes.RENDER_TYPE_INVENTORY);
+        inventory.animation = new AnimationTopToBottom(inventory);
+        back.animation = new AnimationTopToBottom(back);
         onInit();
     }
 
@@ -36,12 +40,22 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if (isContainerActive()) {
-            super.render(guiGraphics, mouseX, mouseY, partialTick);
-        } else {
-            renderBg(guiGraphics, partialTick, mouseX, mouseY);
+        renderBackground(guiGraphics);
+        if (renderInventory) {
+            back.render(guiGraphics, mouseX, mouseY, partialTick);
+            inventory.render(guiGraphics, mouseX, mouseY, partialTick);
         }
         rootContainer.render(guiGraphics, mouseX, mouseY, partialTick);
+        if (shouldRenderInventory()) {
+            if (inventory.animation instanceof AnimationTopToBottom animationTopToBottom) {
+                guiGraphics.pose().pushPose();
+                guiGraphics.pose().scale(1, animationTopToBottom.currentHeight / animationTopToBottom.originHeight, 1);
+                super.render(guiGraphics, mouseX, mouseY, partialTick);
+                guiGraphics.pose().popPose();
+            } else {
+                super.render(guiGraphics, mouseX, mouseY, partialTick);
+            }
+        }
         renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
@@ -51,13 +65,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     protected void renderBg(@NotNull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        renderBackground(guiGraphics);
-        if (back != null && inventory != null) {
-            if (isContainerActive()) {
-                back.render(guiGraphics, mouseX, mouseY, partialTick);
-                inventory.render(guiGraphics, mouseX, mouseY, partialTick);
-            }
-        }
+
     }
 
     @Override
@@ -77,28 +85,28 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         boolean rootResult = rootContainer.mouseClicked(mouseX, mouseY, button);
-        boolean superResult = isContainerActive() && super.mouseClicked(mouseX, mouseY, button);
+        boolean superResult = shouldHandleContainer() && super.mouseClicked(mouseX, mouseY, button);
         return rootResult || superResult;
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         boolean rootResult = rootContainer.mouseReleased(mouseX, mouseY, button);
-        boolean superResult = isContainerActive() && super.mouseReleased(mouseX, mouseY, button);
+        boolean superResult = shouldHandleContainer() && super.mouseReleased(mouseX, mouseY, button);
         return superResult || rootResult;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         boolean rootResult = rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-        boolean superResult = isContainerActive() && super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        boolean superResult = shouldHandleContainer() && super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         return superResult || rootResult;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         boolean rootResult = rootContainer.mouseScrolled(mouseX, mouseY, delta);
-        boolean superResult = isContainerActive() && super.mouseScrolled(mouseX, mouseY, delta);
+        boolean superResult = shouldHandleContainer() && super.mouseScrolled(mouseX, mouseY, delta);
         return superResult || rootResult;
     }
 
@@ -109,18 +117,22 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
             return true;
         }
         boolean rootResult = rootContainer.keyPressed(keyCode, scanCode, modifiers);
-        boolean superResult = isContainerActive() && super.keyPressed(keyCode, scanCode, modifiers);
+        boolean superResult = shouldHandleContainer() && super.keyPressed(keyCode, scanCode, modifiers);
         return superResult || rootResult;
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
         boolean rootResult = rootContainer.charTyped(codePoint, modifiers);
-        boolean superResult = isContainerActive() && super.charTyped(codePoint, modifiers);
+        boolean superResult = shouldHandleContainer() && super.charTyped(codePoint, modifiers);
         return superResult || rootResult;
     }
 
-    public boolean isContainerActive() {
-        return containerActive;
+    public boolean shouldHandleContainer() {
+        return handleContainer;
+    }
+
+    public boolean shouldRenderInventory() {
+        return renderInventory;
     }
 }

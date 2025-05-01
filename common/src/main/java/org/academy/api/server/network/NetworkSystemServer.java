@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraft;
 import org.academy.api.common.annotation.PacketHandler;
+import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.academy.api.common.network.packet.C2SPacket;
 
@@ -60,9 +61,9 @@ public final class NetworkSystemServer {
                                             listener, c2SPacket) ->
                                             listener.player.level());
                                 } else {
+                                    FriendlyByteBufDeserializer<?> deserializer = FriendlyByteBufDeserializers.getRequiredDeserializer(parameterType);
                                     biFunctions.set(i, (listener, c2SPacket) ->
-                                            FriendlyByteBufDeserializers.getRequiredDeserializer(parameterType)
-                                                    .deserialize(c2SPacket.friendlyByteBuf)
+                                            deserializer.deserialize(c2SPacket.friendlyByteBuf)
                                     );
                                 }
                             }
@@ -70,7 +71,9 @@ public final class NetworkSystemServer {
                                 try {
                                     Object[] args = new Object[parameterCount];
                                     for (int i = 0; i < parameterCount; i++) {
-                                        args[i] = biFunctions.get(i).apply(listener, packet);
+                                        BiFunction<ServerGamePacketListenerImpl, C2SPacket, Object> biFunction = biFunctions.get(i);
+                                        Object result = biFunction.apply(listener, packet);
+                                        args[i] = result;
                                     }
                                     mh.invokeWithArguments(args);
                                 } catch (Throwable throwable) {

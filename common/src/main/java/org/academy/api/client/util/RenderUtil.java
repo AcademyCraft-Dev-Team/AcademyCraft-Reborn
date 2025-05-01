@@ -71,6 +71,7 @@ public final class RenderUtil {
                         .createCompositeState(false));
     }
 
+    @NotNull
     public static RenderType getPositionColorTexRenderType(@NotNull String name, @NotNull ResourceLocation resourceLocation, boolean blur) {
         return new RenderType.CompositeRenderType(
                 name,

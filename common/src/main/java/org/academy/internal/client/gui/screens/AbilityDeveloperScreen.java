@@ -13,7 +13,7 @@ import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.framework.Widget;
-import org.academy.api.client.gui.widgets.*;
+import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.FutureManagerClient;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
@@ -340,10 +340,10 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 m.rotateZ(angle);
                 m.translate(PANEL_RIGHT_SKILL_SIZE / 2f - thickness / 2, -thickness / 2f, 0f);
                 m.scale(length, thickness, 1f);
-                buf.vertex(m, 0f, 0f, 0f).uv(0f, 0f).endVertex();
-                buf.vertex(m, 0f, 1f, 0f).uv(0f, 1f).endVertex();
-                buf.vertex(m, 1f, 1f, 0f).uv(1f, 1f).endVertex();
-                buf.vertex(m, 1f, 0f, 0f).uv(1f, 0f).endVertex();
+                buf.vertex(m, 0f, 0f, 0f).color(1, 1, 1, 1f).uv(0f, 0f).endVertex();
+                buf.vertex(m, 0f, 1f, 0f).color(1, 1, 1, 1f).uv(0f, 1f).endVertex();
+                buf.vertex(m, 1f, 1f, 0f).color(1, 1, 1, 1f).uv(1f, 1f).endVertex();
+                buf.vertex(m, 1f, 0f, 0f).color(1, 1, 1, 1f).uv(1f, 0f).endVertex();
                 guiGraphics.pose().popPose();
             }
             renderType = RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK;

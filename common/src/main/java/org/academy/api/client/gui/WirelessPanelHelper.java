@@ -1,7 +1,7 @@
 package org.academy.api.client.gui;
 
 import net.minecraft.core.BlockPos;
-import org.academy.api.client.gui.widgets.*;
+import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.FutureManagerClient;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.network.Packets;

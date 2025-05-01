@@ -4,22 +4,22 @@
   "package": "org.academy.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "ConnectionProtocolMixin",
-    "DimensionDataStorageMixin",
-    "MinecraftServerMixin",
-    "PlayerMixin",
-    "ServerGamePacketListenerImplMixin"
+    "MixinConnectionProtocol",
+    "MixinDimensionDataStorage",
+    "MixinMinecraftServer",
+    "MixinPlayer",
+    "MixinServerGamePacketListenerImpl"
   ],
   "client": [
-    "ClientPacketListenerMixin",
-    "GameRendererMixin",
-    "ItemRendererMixin",
-    "KeyboardHandlerMixin",
-    "LevelRendererMixin",
-    "MinecraftMixin",
-    "MouseHandlerMixin",
-    "PlayerRendererMixin",
-    "ShaderInstanceMixin"
+    "MixinClientPacketListener",
+    "MixinGameRenderer",
+    "MixinItemRenderer",
+    "MixinKeyboardHandler",
+    "MixinLevelRenderer",
+    "MixinMinecraft",
+    "MixinMouseHandler",
+    "MixinPlayerRenderer",
+    "MixinShaderInstance"
   ],
   "injectors": {
     "defaultRequire": 1

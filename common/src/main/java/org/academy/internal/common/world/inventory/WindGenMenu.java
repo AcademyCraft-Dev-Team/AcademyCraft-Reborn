@@ -12,8 +12,6 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
 public class WindGenMenu extends AbstractContainerMenu {
-    public Level level;
-    public BlockPos pos;
     public final ContainerLevelAccess access;
 
     public WindGenMenu(int containerId, Inventory playerInventory, ContainerLevelAccess pAccess, Container windgenContainer) {
