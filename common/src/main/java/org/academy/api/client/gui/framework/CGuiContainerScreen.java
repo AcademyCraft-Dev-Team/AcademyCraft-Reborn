@@ -31,7 +31,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
                 ImageResources.RenderTypes.RENDER_TYPE_ELEMENT_BACK_DARK);
         inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, 187,
                 ImageResources.RenderTypes.RENDER_TYPE_INVENTORY);
-        inventory.animation = new AnimationTopToBottom(inventory);
+        AnimationTopToBottom invAnim = new AnimationTopToBottom(inventory);
+        invAnim.currentHeight = inventory.height / 1.25f;
+        inventory.animation = invAnim;
         back.animation = new AnimationTopToBottom(back);
         onInit();
     }

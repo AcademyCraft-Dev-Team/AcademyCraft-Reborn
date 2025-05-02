@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import org.academy.AcademyCraft;
 import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
@@ -15,22 +14,29 @@ import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEnti
 
 public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
-    public WindGenBaseBlockEntity windGenBaseBlockEntity;
+    public final WindGenBaseBlockEntity windGenBaseBlockEntity;
     public ImageWidget topIcon;
     public ImageWidget pillarIcon;
     public ImageWidget baseIcon;
+    public static final String AF = "%d AF";
     private String connectedNodeName = "None";
     private PanelWidget wirelessPanel;
     private SmoothScrollPanelWidget nodeListPanel;
+    private LabelWidget bufferValueLabel;
+    private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
+            37f / 255f, 247f / 255f, 1, 1);
 
-    public WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, BlockPos mainPos) {
+    private WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, WindGenBaseBlockEntity windGenBaseBlockEntity) {
         super(menu, playerInventory, title);
-        this.mainPos = mainPos;
-        assert Minecraft.getInstance().level != null;
-        if (Minecraft.getInstance().level.getBlockEntity(mainPos) instanceof WindGenBaseBlockEntity blockEntity) {
-            windGenBaseBlockEntity = blockEntity;
+        this.windGenBaseBlockEntity = windGenBaseBlockEntity;
+        this.mainPos = windGenBaseBlockEntity.getBlockPos();
+    }
+
+    public static WindGenScreen create(WindGenMenu menu, Inventory playerInventory, Component title, BlockPos mainPos) {
+        if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(mainPos) instanceof WindGenBaseBlockEntity blockEntity) {
+            return new WindGenScreen(menu, playerInventory, title, blockEntity);
         } else {
-            onClose();
+            return null;
         }
     }
 
@@ -40,10 +46,10 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         invPage.animation = new AnimationTopToBottom(invPage);
         rootContainer.addChild("page_inv", invPage);
         {
-            ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, imageHeight, ImageResources.RenderTypes.RENDER_TYPE_WIND_GEN_UI);
+            ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, 187, ImageResources.RenderTypes.RENDER_TYPE_WIND_GEN_UI);
             invPage.addChild("ui", ui);
             ui.animation = new AnimationTopToBottom(ui);
-            PanelWidget statePanel = new PanelWidget(leftPos, topPos - 22, imageWidth, imageHeight);
+            PanelWidget statePanel = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
             statePanel.setHorizontalGravity(PanelWidget.HorizontalGravity.CENTER);
             statePanel.animation = new AnimationTopToBottom(statePanel);
             invPage.addChild("panel_state", statePanel);
@@ -90,22 +96,100 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
-            ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, ImageResources.RenderTypes.RENDER_TYPE_ICON_INV, () -> AcademyCraft.LOGGER.info("W"));
+            ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
+                    ImageResources.RenderTypes.RENDER_TYPE_ICON_INV, () -> {
+            });
             inv.animation = new AnimationTopToBottom(inv);
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, ImageResources.RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> AcademyCraft.LOGGER.info("WindGenScreen: wireless"));
+            ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
+                    ImageResources.RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
+            });
             wireless.animation = new AnimationTopToBottom(wireless);
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);
+        }
+
+        PanelWidget infoArea = new PanelWidget(leftPos + imageWidth, topPos - 19.5f, 110, 105);
+        rootContainer.addChild("area_info", infoArea);
+        {
+            BlendQuadWidget back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());
+            back.red = 0;
+            back.green = 0;
+            back.blue = 0;
+            back.alpha = 0.5f;
+            back.animation = new AnimationTopToBottom(back);
+            infoArea.addChild("back", back);
+
+            HistogramWidget histogramWidget = new HistogramWidget(0, 0, 84, 84);
+            histogramWidget.addValue(histogramValue);
+            AnimationTopToBottom animationHistogramWidget = new AnimationTopToBottom(histogramWidget);
+            animationHistogramWidget.animationTime = 0.75f;
+            histogramWidget.animation = animationHistogramWidget;
+            AnimationTopToBottom animationHistogramWidgetBack = new AnimationTopToBottom(histogramWidget.back);
+            animationHistogramWidgetBack.animationTime = 0.75f;
+            histogramWidget.back.animation = animationHistogramWidgetBack;
+            infoArea.addChild("histogram", histogramWidget);
+
+            FillWidget bufferIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25F7FF);
+            AnimationTopToBottom animationBufferIcon = new AnimationTopToBottom(bufferIcon);
+            animationBufferIcon.animationTime = 0.75f;
+            bufferIcon.animation = animationBufferIcon;
+            infoArea.addChild("icon_buffer", bufferIcon);
+
+            LabelWidget bufferLabel = new LabelWidget("BUFFER", 15, 72);
+            AnimationTopToBottom animationBufferLabel = new AnimationTopToBottom(bufferLabel);
+            animationBufferLabel.animationTime = 0.75f;
+            bufferLabel.scale = 0.75f;
+            bufferLabel.animation = animationBufferLabel;
+            infoArea.addChild("label_buffer", bufferLabel);
+
+            bufferValueLabel = new LabelWidget(AF, 50, 72);
+            AnimationTopToBottom animationBufferValueLabel = new AnimationTopToBottom(bufferValueLabel);
+            animationBufferValueLabel.animationTime = 0.75f;
+            bufferValueLabel.scale = 0.75f;
+            bufferValueLabel.animation = animationBufferValueLabel;
+            infoArea.addChild("label_buffer_value", bufferValueLabel);
+
+            LabelWidget infoLabel = new LabelWidget("Information", 8, 82);
+            AnimationTopToBottom animationInfoLabel = new AnimationTopToBottom(infoLabel);
+            animationInfoLabel.animationTime = 0.75f;
+            infoLabel.scale = 0.75f;
+            infoLabel.animation = animationInfoLabel;
+            infoArea.addChild("label_info", infoLabel);
+
+            LabelWidget altitudeLabel = new LabelWidget("Altitude", 10, 90);
+            AnimationTopToBottom animationAltitudeLabel = new AnimationTopToBottom(altitudeLabel);
+            animationAltitudeLabel.animationTime = 0.75f;
+            altitudeLabel.scale = 0.75f;
+            altitudeLabel.animation = animationAltitudeLabel;
+            infoArea.addChild("label_altitude", altitudeLabel);
+
+            String altitudeValue = "N/A";
+            if (windGenBaseBlockEntity != null) {
+                altitudeValue = windGenBaseBlockEntity.altitude + "";
+            }
+            LabelWidget altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
+            AnimationTopToBottom animationAltitudeValueLabel = new AnimationTopToBottom(altitudeValueLabel);
+            animationAltitudeValueLabel.animationTime = 0.75f;
+            altitudeValueLabel.scale = 0.75f;
+            altitudeValueLabel.animation = animationAltitudeValueLabel;
+            infoArea.addChild("label_altitude_value", altitudeValueLabel);
         }
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (windGenBaseBlockEntity != null && baseIcon != null && pillarIcon != null && topIcon != null) {
+        if (baseIcon != null && pillarIcon != null && topIcon != null && bufferValueLabel != null) {
+            bufferValueLabel.value = String.format(AF, windGenBaseBlockEntity.energyStored);
+            float progress = (float) windGenBaseBlockEntity.energyStored / (float) windGenBaseBlockEntity.getMaxEnergyStorage();
+            if (Float.isNaN(progress)) {
+                progress = 0;
+            }
+            histogramValue.height = progress * 60;
+
             switch (windGenBaseBlockEntity.completeness) {
                 case NO_TOP -> {
                     baseIcon.alpha = 1f;

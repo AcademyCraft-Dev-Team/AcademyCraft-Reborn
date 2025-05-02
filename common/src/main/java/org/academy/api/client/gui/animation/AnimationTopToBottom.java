@@ -10,7 +10,7 @@ public class AnimationTopToBottom implements Animation {
     public final Widget widget;
     public final float originHeight;
     public float animationTime = 0.25f;
-    public float currentHeight;
+    public float currentHeight = 0;
     public boolean startAlpha = false;
     public boolean alpha = true;
     public boolean finished = false;
