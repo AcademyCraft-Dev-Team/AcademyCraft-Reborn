@@ -25,6 +25,8 @@ public final class Packets {
     public static final String S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE = "s2c_ability_developer_screen_response";
     public static final String C2S_GET_AVAILABLE_NODES = "c2s_get_available_nodes";
     public static final String C2S_GET_CURRENT_NODE = "c2s_get_current_node";
+    public static final String C2S_SET_NODE_NAME = "c2s_set_node_name";
+    public static final String C2S_SET_NODE_PASS = "c2s_set_node_pass";
     /**
      * Ability Developer
      */

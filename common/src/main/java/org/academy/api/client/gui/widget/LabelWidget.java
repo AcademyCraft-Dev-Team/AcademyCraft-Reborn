@@ -20,6 +20,10 @@ public class LabelWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
+        if (!isVisible()) return;
+        if (animation != null) {
+            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTicks);
+        }
         guiGraphics.pose().pushPose();
         Font font = Minecraft.getInstance().font;
         float finalScale = scale * globalScale;
@@ -36,5 +40,8 @@ public class LabelWidget extends AbstractWidget {
                 15728880
         );
         guiGraphics.pose().popPose();
+        if (animation != null) {
+            animation.afterRender(guiGraphics, mouseX, mouseY, partialTicks);
+        }
     }
 }

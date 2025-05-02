@@ -52,6 +52,67 @@ public class WirelessManager {
             boolean isNull = currentNode.getLeft();
             FutureManagerServer.sendResult(listener, id, Pair.of(isNull, currentNode.getRight()));
         });
+
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_SET_NODE_NAME, (listener, packet) -> {
+            ServerPlayer player = listener.player;
+            ServerLevel level = player.serverLevel();
+            BlockPos nodePos = packet.friendlyByteBuf.readBlockPos();
+            String newName = packet.friendlyByteBuf.readUtf();
+            WirelessManager.setNodeName(player, level, nodePos, newName);
+        });
+
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_SET_NODE_PASS, (listener, packet) -> {
+            ServerPlayer player = listener.player;
+            ServerLevel level = player.serverLevel();
+            BlockPos nodePos = packet.friendlyByteBuf.readBlockPos();
+            String newPass = packet.friendlyByteBuf.readUtf();
+            WirelessManager.setNodePass(player, level, nodePos, newPass);
+        });
+    }
+
+    public static void setNodeName(ServerPlayer player,
+                                   ServerLevel level,
+                                   BlockPos nodePos,
+                                   String newName) {
+        WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
+
+        WorldData.WirelessNetworkData.NodeConfig oldCfg = data.getNodeConfig(nodePos);
+        if (oldCfg == null) {
+            AcademyCraft.LOGGER.warn("Player {} tried to rename nonexistent node at {}",
+                    player.getGameProfile().getName(), nodePos);
+            return;
+        }
+
+        if (data.findNodePositionByName(newName) != null) {
+            AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken",
+                    player.getGameProfile().getName(), nodePos, newName);
+            return;
+        }
+
+        oldCfg.name = newName;
+
+        data.setDirty();
+        AcademyCraft.LOGGER.debug("Player {} renamed node at {} from '{}' to '{}'",
+                player.getGameProfile().getName(), nodePos, oldCfg.name, newName);
+    }
+
+    public static void setNodePass(ServerPlayer player,
+                                   ServerLevel level,
+                                   BlockPos nodePos,
+                                   String newPass) {
+        WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
+
+        WorldData.WirelessNetworkData.NodeConfig cfg = data.getNodeConfig(nodePos);
+        if (cfg == null) {
+            AcademyCraft.LOGGER.warn("Player {} tried to change password of nonexistent node at {}",
+                    player.getGameProfile().getName(), nodePos);
+            return;
+        }
+
+        cfg.password = newPass;
+        data.setDirty();
+        AcademyCraft.LOGGER.debug("Player {} changed password of node '{}' at {}",
+                player.getGameProfile().getName(), cfg.name, nodePos);
     }
 
     public static void handleConnect(ServerPlayer player, ServerLevel level, BlockPos userPos, String targetNodeName, String passwordAttempt) {
@@ -64,6 +125,7 @@ public class WirelessManager {
         }
 
         WorldData.WirelessNetworkData.NodeConfig nodeConfig = networkData.getNodeConfig(nodePos);
+
         if (nodeConfig == null) {
             AcademyCraft.LOGGER.error("Node position {} found for '{}' but NodeConfig is missing!", nodePos, targetNodeName);
             return;
@@ -155,16 +217,15 @@ public class WirelessManager {
         }
     }
 
-    public static boolean balanceEnergy(
+    public static void balanceEnergy(
             WirelessNode node,
             Map<WirelessUser, WorldData.WirelessNetworkData.UserConfig> userConfigMap
     ) {
-        if (userConfigMap.isEmpty()) return false;
+        if (userConfigMap.isEmpty()) return;
 
         int transferRate = node.getEnergyTransferRate();
         int energyStored = node.getEnergyStored();
         int maxEnergy = node.getMaxEnergyStorage();
-        boolean changed = false;
 
         Map<WirelessUser, Integer> extractSources = new HashMap<>();
         Map<WirelessUser, Integer> insertTargets = new HashMap<>();
@@ -189,7 +250,7 @@ public class WirelessManager {
             }
         }
 
-        if (extractSources.isEmpty() && insertTargets.isEmpty()) return false;
+        if (extractSources.isEmpty() && insertTargets.isEmpty()) return;
 
         int remaining = transferRate;
 
@@ -207,7 +268,6 @@ public class WirelessManager {
                 if (moved > 0) {
                     energyStored += moved;
                     remaining -= moved;
-                    changed = true;
                     if (remaining <= 0) break;
                 }
             }
@@ -227,14 +287,12 @@ public class WirelessManager {
                 if (moved > 0) {
                     energyStored -= moved;
                     remaining -= moved;
-                    changed = true;
                     if (remaining <= 0) break;
                 }
             }
         }
 
         node.setEnergyStored(energyStored);
-        return changed;
     }
 
     private WirelessManager() {

@@ -54,18 +54,14 @@ public abstract class MultiBlockEntity extends BlockEntity {
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
         if (mainPos != null) {
-            tag.putInt("main_pos_x", mainPos.getX());
-            tag.putInt("main_pos_y", mainPos.getY());
-            tag.putInt("main_pos_z", mainPos.getZ());
+            tag.putLong("main_pos", mainPos.asLong());
         }
     }
 
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
-        if (tag.contains("main_pos_x")) {
-            mainPos = new BlockPos(tag.getInt("main_pos_x"), tag.getInt("main_pos_y"), tag.getInt("main_pos_z"));
-        }
+        mainPos = BlockPos.of(tag.getLong("main_pos"));
     }
 
     @Override

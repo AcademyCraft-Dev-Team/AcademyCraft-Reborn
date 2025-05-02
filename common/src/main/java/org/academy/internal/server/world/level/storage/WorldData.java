@@ -300,8 +300,8 @@ public class WorldData {
         }
 
         public static class NodeConfig {
-            public final String name;
-            private String password;
+            public String name;
+            public String password;
             public final int radius;
             public final int maxConnections;
             public final Map<BlockPos, UserConfig> connectedUsers = new HashMap<>();
@@ -364,14 +364,11 @@ public class WorldData {
                     ListTag usersTag = tag.getList("users", Tag.TAG_COMPOUND);
                     for (Tag baseTag : usersTag) {
                         if (baseTag instanceof CompoundTag userTag) {
-                            if (userTag.contains("pos", Tag.TAG_LONG) && userTag.contains("weight", Tag.TAG_DOUBLE)) {
-                                BlockPos pos = BlockPos.of(userTag.getLong("pos"));
-                                double weightReceive = userTag.getDouble("weight_receive");
-                                double weightSend = userTag.getDouble("weight_send");
-
-                                loaded.connectedUsers.put(pos, new UserConfig(weightReceive, weightSend));
-                                AcademyCraft.LOGGER.warn("User tag missing required fields: {}", userTag);
-                            }
+                            BlockPos pos = BlockPos.of(userTag.getLong("pos"));
+                            double weightReceive = userTag.getDouble("weight_receive");
+                            double weightSend = userTag.getDouble("weight_send");
+                            loaded.connectedUsers.put(pos, new UserConfig(weightReceive, weightSend));
+                            AcademyCraft.LOGGER.warn("User tag missing required fields: {}", userTag);
                         }
                     }
                 }

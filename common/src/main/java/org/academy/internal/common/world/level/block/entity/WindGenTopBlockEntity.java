@@ -8,6 +8,8 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
@@ -90,5 +92,13 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
             ticks++;
             hasFan = getItem(0).getItem() == Items.WIND_GEN_FAN_ITEM;
         }
+    }
+
+    // For Forge
+    @SuppressWarnings("unused")
+    public AABB getRenderBoundingBox() {
+        Vec3 pos = this.getBlockPos().getCenter();
+        double radius = 20.0;
+        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }

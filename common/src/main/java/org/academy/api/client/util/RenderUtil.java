@@ -93,6 +93,28 @@ public final class RenderUtil {
                         .createCompositeState(false));
     }
 
+    @NotNull
+    public static RenderType getPositionColorTexRenderTypeFull(@NotNull String name, @NotNull ResourceLocation resourceLocation, boolean blur) {
+        return new RenderType.CompositeRenderType(
+                name,
+                DefaultVertexFormat.POSITION_COLOR_TEX,
+                VertexFormat.Mode.QUADS,
+                16,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setTextureState(
+                                new RenderStateShard.TextureStateShard(
+                                        resourceLocation,
+                                        blur,
+                                        false
+                                )
+                        )
+                        .setShaderState(POSITION_COLOR_TEX_SHADER_FULL)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .createCompositeState(false));
+    }
+
     public static final class GeneralRenderer {
         public static void fill(Matrix4f matrix4f, float minX, float minY, float maxX, float maxY, int color, MultiBufferSource buffer) {
             if (minX < maxX) {

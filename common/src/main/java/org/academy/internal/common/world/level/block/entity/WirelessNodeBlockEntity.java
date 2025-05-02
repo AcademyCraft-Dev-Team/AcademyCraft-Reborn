@@ -34,6 +34,7 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
     private BlockPos connectedNodePos = null;
     public int connectedUsersCount;
     public int maxConnectedUsers;
+    public int radius;
 
     public WirelessNodeBlockEntity(BlockEntityType<? extends WirelessNodeBlockEntity> blockEntityType, BlockPos pos, BlockState blockState) {
         super(blockEntityType, pos, blockState);
@@ -53,6 +54,7 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
 
         connectedUsersCount = cachedConfig.connectedUsers.size();
         maxConnectedUsers = cachedConfig.maxConnections;
+        radius = cachedConfig.radius;
 
         Map<WirelessUser, WorldData.WirelessNetworkData.UserConfig> userMap = new HashMap<>();
         for (BlockPos userPos : cachedConfig.connectedUsers.keySet()) {
@@ -180,6 +182,7 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
         tag.putInt("energy_stored", energyStored);
         tag.putInt("connected_users_count", connectedUsersCount);
         tag.putInt("max_connected_users", maxConnectedUsers);
+        tag.putInt("radius", radius);
     }
 
     @Override
@@ -190,6 +193,7 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
         energyStored = tag.getInt("energy_stored");
         connectedUsersCount = tag.getInt("connected_users_count");
         maxConnectedUsers = tag.getInt("max_connected_users");
+        radius = tag.getInt("radius");
         this.cachedConfig = null;
     }
 
