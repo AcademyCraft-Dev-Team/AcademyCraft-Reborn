@@ -1,11 +1,16 @@
 package org.academy.internal.common.world.level.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -20,6 +25,8 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.AcademyCraft;
+import org.academy.api.server.util.ServerPlayerUtil;
+import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.NotNull;
@@ -27,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("deprecation")
 public abstract class WirelessNodeBlock extends BaseEntityBlock {
+    public static final String WIRELESS_NODE_SCREEN = "wireless_node_screen";
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
     private static final IntegerProperty ENERGY = IntegerProperty.create("energy", 0, 4);
 
@@ -70,8 +78,18 @@ public abstract class WirelessNodeBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
-        return super.use(state, level, pos, player, hand, hit);
+    public @NotNull InteractionResult use(@NotNull BlockState pState, Level pLevel, @NotNull BlockPos pPos, @NotNull Player pPlayer, @NotNull InteractionHand pHand, @NotNull BlockHitResult pHit) {
+        if (pLevel.isClientSide) {
+            return InteractionResult.SUCCESS;
+        } else {
+            if (pPlayer instanceof ServerPlayer serverPlayer) {
+                if (pLevel.getBlockEntity(pPos) instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
+                    MenuProvider menuProvider = getMenuProvider(pState, pLevel, pPos);
+                    ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIRELESS_NODE_SCREEN, wirelessNodeBlockEntity.getBlockPos());
+                }
+            }
+            return InteractionResult.CONSUME;
+        }
     }
 
     @Override
@@ -81,5 +99,13 @@ public abstract class WirelessNodeBlock extends BaseEntityBlock {
                 wirelessNodeBlockEntity.serverTick(serverLevel, pos);
             }
         };
+    }
+
+    @Override
+    public @Nullable MenuProvider getMenuProvider(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
+            return new SimpleMenuProvider((containerId, playerInventory, player) -> new WirelessNodeMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), wirelessNodeBlockEntity), Component.empty());
+        }
+        return null;
     }
 }

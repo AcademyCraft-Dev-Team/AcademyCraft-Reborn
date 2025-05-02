@@ -31,6 +31,11 @@ public final class ImageResources {
         public static final ResourceLocation TEXTURE_ICON_WIND_GEN_PILLAR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_pillar.png");
         public static final ResourceLocation TEXTURE_ICON_WIND_GEN_TOP = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_top.png");
         /**
+         * Wireless Node
+         */
+        public static final ResourceLocation TEXTURE_WIRELESS_NODE_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/node/ui_node.png");
+        public static final ResourceLocation TEXTURE_WIRELESS_NODE_STATE = new ResourceLocation(AcademyCraft.MOD_ID,"textures/gui/node/state_node.png");
+        /**
          * Common
          */
         public static final ResourceLocation TEXTURE_INVENTORY = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/ui_inventory.png");
@@ -92,6 +97,15 @@ public final class ImageResources {
         );
         public static final RenderType RENDER_TYPE_ICON_WIND_GEN_TOP = RenderUtil.getPositionColorTexRenderType(
                 "icon_wind_gen_top", TEXTURE_ICON_WIND_GEN_TOP, false
+        );
+        /**
+         * Wireless Node
+         */
+        public static final RenderType RENDER_TYPE_WIRELESS_NODE_UI = RenderUtil.getPositionColorTexRenderType(
+                "wireless_node_ui", TEXTURE_WIRELESS_NODE_UI, false
+        );
+        public static final RenderType RENDER_TYPE_WIRELESS_NODE_STATE = RenderUtil.getPositionTexRenderType(
+                "wireless_node_state", TEXTURE_WIRELESS_NODE_STATE, false
         );
         /**
          * Common
