@@ -21,7 +21,7 @@ import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.internal.client.models.AbilityDeveloperBlockEntityModel;
+import org.academy.internal.client.model.AbilityDeveloperBlockEntityModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
