@@ -29,6 +29,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
     public WindGenTopBlockEntity topBlockEntity;
     private static final String NBT_COMPLETENESS = "Completeness";
     private BlockPos connectedNodePos = null;
+    public int altitude;
 
     public WindGenBaseBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.WIND_GEN_BASE, pos, blockState);
@@ -95,6 +96,9 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
             }
 
             this.completeness = calculatedCompleteness;
+            if (topBlockEntity != null) {
+                altitude = topBlockEntity.getBlockPos().getY();
+            }
         }
     }
 
@@ -105,6 +109,10 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
         ContainerHelper.saveAllItems(tag, this.items);
         if (isMain()) {
             tag.putInt("energy_stored", energyStored);
+            if (connectedNodePos != null) {
+                tag.putLong("connected_node_pos", connectedNodePos.asLong());
+            }
+            tag.putInt("altitude", altitude);
         }
     }
 
@@ -123,6 +131,10 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
         }
         if (isMain()) {
             energyStored = tag.getInt("energy_stored");
+            if (tag.contains("connected_node_pos", CompoundTag.TAG_LONG)) {
+                this.connectedNodePos = BlockPos.of(tag.getLong("connected_node_pos"));
+            }
+            altitude = tag.getInt("altitude");
         }
     }
 

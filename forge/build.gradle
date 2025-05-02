@@ -44,9 +44,6 @@ sourceSets.main.resources.srcDir 'src/generated/resources'
 dependencies {
     compileOnly project(":common")
     annotationProcessor("org.spongepowered:mixin:0.8.7:processor")
-    implementation(additionalRuntimeClasspath("icyllis.modernui:ModernUI-Core:3.11.1"))
-    implementation(additionalRuntimeClasspath("icyllis.modernui:ModernUI-Markdown:3.11.1"))
-    modImplementation "icyllis.modernui:ModernUI-Forge:${minecraft_version}-3.11.1.6"
     modImplementation "maven.modrinth:jade:11.12.3+forge"
 }
 

@@ -14,6 +14,7 @@ import java.util.function.Function;
 public class Shaders {
     public static final List<Function<ResourceProvider, ShaderInstance>> SHADERS = new ArrayList<>();
     public static ShaderInstance test;
+    public static ShaderInstance positionColorShader;
 
     static {
         SHADERS.add(new Function<>() {
@@ -23,6 +24,19 @@ public class Shaders {
                     ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "ring_effect");
                     ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
                     test = shaderInstance;
+                    return shaderInstance;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        SHADERS.add(new Function<>() {
+            @Override
+            public ShaderInstance apply(ResourceProvider resourceProvider) {
+                try {
+                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "position_color_tex");
+                    ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_COLOR_TEX);
+                    positionColorShader = shaderInstance;
                     return shaderInstance;
                 } catch (IOException e) {
                     throw new RuntimeException(e);

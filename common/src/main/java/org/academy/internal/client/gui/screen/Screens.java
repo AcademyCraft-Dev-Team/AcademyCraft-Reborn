@@ -12,8 +12,8 @@ import org.academy.api.client.network.S2CPacketHandler;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.internal.common.world.inventory.MenuTypes;
-import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.inventory.WindGenMenu;
+import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.WindGenBaseBlock;
 import org.academy.internal.common.world.level.block.WirelessNodeBlock;
@@ -35,8 +35,10 @@ public class Screens {
                 Inventory inventory = Minecraft.getInstance().player.getInventory();
                 MenuType<WindGenMenu> menuType = MenuTypes.WIND_GEN_MENU;
                 WindGenMenu windGenMenu = menuType.create(containerId, inventory);
-                WindGenScreen windGenScreen = new WindGenScreen(windGenMenu, inventory, title, pos);
-                Minecraft.getInstance().player.containerMenu = windGenMenu;
+                WindGenScreen windGenScreen = WindGenScreen.create(windGenMenu, inventory, title, pos);
+                if (windGenScreen != null) {
+                    Minecraft.getInstance().player.containerMenu = windGenMenu;
+                }
                 Minecraft.getInstance().setScreen(windGenScreen);
             });
     public static final S2CPacketHandler ABILITY_DEVELOPER_SCREEN = registerScreen(AbilityDeveloperBlock.ABILITY_DEVELOPER_SCREEN, (listener, packet) -> {

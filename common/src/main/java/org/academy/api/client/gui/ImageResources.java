@@ -48,6 +48,8 @@ public final class ImageResources {
         public static final ResourceLocation TEXTURE_ICON_UNCONNECTED = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_unconnected.png");
         public static final ResourceLocation TEXTURE_ICON_INV = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_inv.png");
         public static final ResourceLocation TEXTURE_ICON_WIRELESS = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wireless.png");
+        public static final ResourceLocation TEXTURE_HISTOGRAM = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/histogram.png");
+        public static final ResourceLocation TEXTURE_BLEND_QUAD = new ResourceLocation(AcademyCraft.MOD_ID,"textures/gui/element/blend_quad.png");
     }
 
     public static final class RenderTypes {
@@ -86,16 +88,16 @@ public final class ImageResources {
         /**
          * WindGen
          */
-        public static final RenderType RENDER_TYPE_WIND_GEN_UI = RenderUtil.getPositionColorTexRenderType(
+        public static final RenderType RENDER_TYPE_WIND_GEN_UI = RenderUtil.getPositionColorTexRenderTypeFull(
                 "windgen_ui", TEXTURE_WIND_GEN_UI, false
         );
-        public static final RenderType RENDER_TYPE_ICON_WIND_GEN_BASE = RenderUtil.getPositionColorTexRenderType(
+        public static final RenderType RENDER_TYPE_ICON_WIND_GEN_BASE = RenderUtil.getPositionColorTexRenderTypeFull(
                 "icon_wind_gen_base", TEXTURE_ICON_WIND_GEN_BASE, false
         );
-        public static final RenderType RENDER_TYPE_ICON_WIND_GEN_PILLAR = RenderUtil.getPositionColorTexRenderType(
+        public static final RenderType RENDER_TYPE_ICON_WIND_GEN_PILLAR = RenderUtil.getPositionColorTexRenderTypeFull(
                 "icon_wind_gen_pillar", TEXTURE_ICON_WIND_GEN_PILLAR, false
         );
-        public static final RenderType RENDER_TYPE_ICON_WIND_GEN_TOP = RenderUtil.getPositionColorTexRenderType(
+        public static final RenderType RENDER_TYPE_ICON_WIND_GEN_TOP = RenderUtil.getPositionColorTexRenderTypeFull(
                 "icon_wind_gen_top", TEXTURE_ICON_WIND_GEN_TOP, false
         );
         /**
@@ -131,6 +133,12 @@ public final class ImageResources {
                 "icon_inv", TEXTURE_ICON_INV, false);
         public static final RenderType RENDER_TYPE_ICON_WIRELESS = RenderUtil.getPositionColorTexRenderType(
                 "icon_wireless", TEXTURE_ICON_WIRELESS, false);
+        public static final RenderType RENDER_TYPE_HISTOGRAM = RenderUtil.getPositionColorTexRenderType(
+                "histogram", TEXTURE_HISTOGRAM, false
+        );
+        public static final RenderType RENDER_TYPE_BLEND_QUAD = RenderUtil.getPositionColorTexRenderTypeFull(
+                "blend_quad", TEXTURE_BLEND_QUAD, true
+        );
     }
 
     private ImageResources() {

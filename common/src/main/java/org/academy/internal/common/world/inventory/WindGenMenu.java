@@ -1,13 +1,13 @@
 package org.academy.internal.common.world.inventory;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.*;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,6 +17,7 @@ public class WindGenMenu extends AbstractContainerMenu {
     public WindGenMenu(int containerId, Inventory playerInventory, ContainerLevelAccess pAccess, Container windgenContainer) {
         super(MenuTypes.WIND_GEN_MENU, containerId);
         this.access = pAccess;
+        this.addSlot(new Slot(windgenContainer, 0, 44, 59));
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
                 this.addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
@@ -26,7 +27,6 @@ public class WindGenMenu extends AbstractContainerMenu {
         for (int k = 0; k < 9; ++k) {
             this.addSlot(new Slot(playerInventory, k, 8 + k * 18, 142));
         }
-        this.addSlot(new Slot(windgenContainer, 0, 44, 48));
     }
 
     public WindGenMenu(int id, Inventory playerInventory) {
@@ -40,14 +40,12 @@ public class WindGenMenu extends AbstractContainerMenu {
         if (slot.hasItem()) {
             ItemStack stackInSlot = slot.getItem();
             movedStack = stackInSlot.copy();
-            if (index < this.slots.size() - 36) {
-                if (!this.moveItemStackTo(stackInSlot, 0, 36, false)) {
+            if (index < 1) {
+                if (!this.moveItemStackTo(stackInSlot, 1, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else {
-                if (!this.moveItemStackTo(stackInSlot, 0, 1, false)) {
-                    return ItemStack.EMPTY;
-                }
+            } else if (!this.moveItemStackTo(stackInSlot, 0, 1, false)) {
+                return ItemStack.EMPTY;
             }
             if (stackInSlot.isEmpty()) {
                 slot.set(ItemStack.EMPTY);
