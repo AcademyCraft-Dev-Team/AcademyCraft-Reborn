@@ -111,6 +111,8 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
+        items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
+        ContainerHelper.loadAllItems(tag, this.items);
         if (tag.contains(NBT_COMPLETENESS, CompoundTag.TAG_STRING)) {
             try {
                 this.completeness = Completeness.valueOf(tag.getString(NBT_COMPLETENESS));
@@ -119,8 +121,6 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
         } else {
             this.completeness = Completeness.BASE_ONLY;
         }
-        items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(tag, this.items);
         if (isMain()) {
             energyStored = tag.getInt("energy_stored");
         }
@@ -155,7 +155,6 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
     public @NotNull ItemStack removeItemNoUpdate(int slot) {
         return ContainerHelper.takeItem(this.items, slot);
     }
-
 
     @Override
     public void setItem(int slot, @NotNull ItemStack stack) {

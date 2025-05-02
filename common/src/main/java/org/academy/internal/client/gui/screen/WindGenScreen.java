@@ -1,4 +1,4 @@
-package org.academy.internal.client.gui.screens;
+package org.academy.internal.client.gui.screen;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -36,17 +36,17 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
 
     @Override
     protected void onInit() {
-        PanelWidget windgenPage = new PanelWidget(0, 0, width, height);
-        windgenPage.animation = new AnimationTopToBottom(windgenPage);
-        rootContainer.addChild("page_windgen", windgenPage);
+        PanelWidget invPage = new PanelWidget(0, 0, width, height);
+        invPage.animation = new AnimationTopToBottom(invPage);
+        rootContainer.addChild("page_inv", invPage);
         {
             ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, imageHeight, ImageResources.RenderTypes.RENDER_TYPE_WIND_GEN_UI);
-            windgenPage.addChild("ui", ui);
+            invPage.addChild("ui", ui);
             ui.animation = new AnimationTopToBottom(ui);
             PanelWidget statePanel = new PanelWidget(leftPos, topPos - 22, imageWidth, imageHeight);
             statePanel.setHorizontalGravity(PanelWidget.HorizontalGravity.CENTER);
             statePanel.animation = new AnimationTopToBottom(statePanel);
-            windgenPage.addChild("panel_state", statePanel);
+            invPage.addChild("panel_state", statePanel);
             {
                 topIcon = new ImageWidget(0, 13, 24, 24, ImageResources.RenderTypes.RENDER_TYPE_ICON_WIND_GEN_TOP);
                 topIcon.animation = new AnimationTopToBottom(topIcon);
@@ -75,14 +75,14 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
                 case 0:
                     handleContainer = true;
                     renderInventory = true;
-                    windgenPage.setVisible(true);
+                    invPage.setVisible(true);
                     wirelessPanel.setVisible(false);
                     wirelessPanel.setEnabled(false);
                     break;
                 case 1:
                     handleContainer = false;
                     renderInventory = false;
-                    windgenPage.setVisible(false);
+                    invPage.setVisible(false);
                     wirelessPanel.setVisible(true);
                     wirelessPanel.setEnabled(true);
                     break;
@@ -91,11 +91,12 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
             ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, ImageResources.RenderTypes.RENDER_TYPE_ICON_INV, () -> AcademyCraft.LOGGER.info("W"));
+            inv.animation = new AnimationTopToBottom(inv);
             radioGroupWidget.addChild("inv", inv);
-            inv.setSelected(true);
             radioGroupWidget.selectButton(inv);
 
             ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, ImageResources.RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> AcademyCraft.LOGGER.info("WindGenScreen: wireless"));
+            wireless.animation = new AnimationTopToBottom(wireless);
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);
         }

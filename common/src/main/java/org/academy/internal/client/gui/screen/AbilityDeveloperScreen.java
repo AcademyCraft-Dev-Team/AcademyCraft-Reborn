@@ -1,4 +1,4 @@
-package org.academy.internal.client.gui.screens;
+package org.academy.internal.client.gui.screen;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;

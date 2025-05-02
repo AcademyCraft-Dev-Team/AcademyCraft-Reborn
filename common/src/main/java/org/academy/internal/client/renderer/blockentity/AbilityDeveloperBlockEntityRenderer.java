@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
-import org.academy.internal.client.models.AbilityDeveloperBlockEntityModel;
+import org.academy.internal.client.model.AbilityDeveloperBlockEntityModel;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;

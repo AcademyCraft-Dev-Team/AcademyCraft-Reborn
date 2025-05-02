@@ -9,7 +9,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
-import org.academy.internal.client.models.WindGenBaseModel;
+import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;

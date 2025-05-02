@@ -135,4 +135,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     public boolean shouldRenderInventory() {
         return renderInventory;
     }
+
+    @Override
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int mouseButton) {
+        return mouseX < (double) guiLeft || mouseY < (double) guiTop - 22 || mouseX >= (double) (guiLeft + this.imageWidth) || mouseY >= (double) (guiTop + this.imageHeight);
+    }
 }
