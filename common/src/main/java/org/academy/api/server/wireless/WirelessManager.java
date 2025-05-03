@@ -89,7 +89,9 @@ public class WirelessManager {
             return;
         }
 
+        data.nodeNameMap.remove(oldCfg.name);
         oldCfg.name = newName;
+        data.nodeNameMap.put(newName, nodePos);
 
         data.setDirty();
         AcademyCraft.LOGGER.debug("Player {} renamed node at {} from '{}' to '{}'",
@@ -250,50 +252,51 @@ public class WirelessManager {
             }
         }
 
-        if (extractSources.isEmpty() && insertTargets.isEmpty()) return;
+        if (insertTargets.isEmpty() && extractSources.isEmpty()) return;
 
-        int remaining = transferRate;
+        int remainingBandwidth = transferRate;
 
-        if (!extractSources.isEmpty() && energyStored < maxEnergy) {
-            for (Map.Entry<WirelessUser, Integer> entry : extractSources.entrySet()) {
-                WirelessUser user = entry.getKey();
-                int capacity = entry.getValue();
-                double weight = userConfigMap.get(user).getReceiveWeight();
-
-                int share = (int) Math.floor((weight / extractWeight) * transferRate);
-                int amount = Math.min(Math.min(share, capacity), Math.min(maxEnergy - energyStored, remaining));
-                if (amount <= 0) continue;
-
-                int moved = node.extractFromUser(user, amount, false);
-                if (moved > 0) {
-                    energyStored += moved;
-                    remaining -= moved;
-                    if (remaining <= 0) break;
-                }
-            }
-        }
-
-        if (!insertTargets.isEmpty() && energyStored > 0 && remaining > 0) {
+        if (!insertTargets.isEmpty() && energyStored > 0) {
             for (Map.Entry<WirelessUser, Integer> entry : insertTargets.entrySet()) {
+                if (remainingBandwidth <= 0 || energyStored <= 0) break;
                 WirelessUser user = entry.getKey();
                 int capacity = entry.getValue();
                 double weight = userConfigMap.get(user).getSendWeight();
 
                 int share = (int) Math.floor((weight / insertWeight) * transferRate);
-                int amount = Math.min(Math.min(share, capacity), Math.min(energyStored, remaining));
+                int amount = Math.min(Math.min(share, capacity), Math.min(energyStored, remainingBandwidth));
                 if (amount <= 0) continue;
 
                 int moved = node.insertIntoUser(user, amount, false);
                 if (moved > 0) {
                     energyStored -= moved;
-                    remaining -= moved;
-                    if (remaining <= 0) break;
+                    remainingBandwidth -= moved;
+                }
+            }
+        }
+
+        if (!extractSources.isEmpty() && remainingBandwidth > 0 && energyStored < maxEnergy) {
+            for (Map.Entry<WirelessUser, Integer> entry : extractSources.entrySet()) {
+                if (remainingBandwidth <= 0 || energyStored >= maxEnergy) break;
+                WirelessUser user = entry.getKey();
+                int capacity = entry.getValue();
+                double weight = userConfigMap.get(user).getReceiveWeight();
+
+                int share = (int) Math.floor((weight / extractWeight) * remainingBandwidth);
+                int amount = Math.min(Math.min(share, capacity), Math.min(maxEnergy - energyStored, remainingBandwidth));
+                if (amount <= 0) continue;
+
+                int moved = node.extractFromUser(user, amount, false);
+                if (moved > 0) {
+                    energyStored += moved;
+                    remainingBandwidth -= moved;
                 }
             }
         }
 
         node.setEnergyStored(energyStored);
     }
+
 
     private WirelessManager() {
     }

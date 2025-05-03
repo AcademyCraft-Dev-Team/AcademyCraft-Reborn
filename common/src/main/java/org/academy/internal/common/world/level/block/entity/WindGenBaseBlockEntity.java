@@ -11,6 +11,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -261,5 +263,13 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
 
     public enum Completeness {
         BASE_ONLY, NO_TOP, COMPLETE, COMPLETE_NOT_WORKING
+    }
+
+    // For Forge
+    @SuppressWarnings("unused")
+    public AABB getRenderBoundingBox() {
+        Vec3 pos = this.getBlockPos().getCenter();
+        double radius = 2.0;
+        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }

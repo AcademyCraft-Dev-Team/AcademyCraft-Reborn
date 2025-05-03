@@ -50,7 +50,7 @@ public final class Packets {
     public static final String C2S_TOGGLE_REFLECTION = "c2s_toggle_reflection";
     public static final String C2S_REVERSE_BLOODFLOW = "c2s_reverse_bloodflow";
     public static final String C2S_STORM_WING_TOGGLE = "c2s_storming_toggle";
-
+    public static final String C2S_KINETIC_ENERGY_APPLIED_TOGGLE = "c2s_kinetic_energy_applied_toggle";
     /**
      * Other
      */

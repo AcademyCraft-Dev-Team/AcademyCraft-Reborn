@@ -23,9 +23,7 @@ import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public abstract class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
     private int energyStored = 5000;
@@ -41,8 +39,6 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
     }
 
     public void serverTick(ServerLevel serverLevel, BlockPos pos) {
-        if (level == null) return;
-
         if (cachedConfig == null) {
             WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(serverLevel);
             cachedConfig = networkData.getNodeConfig(pos);
@@ -56,21 +52,28 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
         maxConnectedUsers = cachedConfig.maxConnections;
         radius = cachedConfig.radius;
 
-        Map<WirelessUser, WorldData.WirelessNetworkData.UserConfig> userMap = new HashMap<>();
-        for (BlockPos userPos : cachedConfig.connectedUsers.keySet()) {
+        Map<WirelessUser, WorldData.WirelessNetworkData.UserConfig> userMap = new HashMap<>(connectedUsersCount);
+        List<BlockPos> toRemove = new ArrayList<>();
+
+        for (Map.Entry<BlockPos, WorldData.WirelessNetworkData.UserConfig> entry : cachedConfig.connectedUsers.entrySet()) {
+            BlockPos userPos = entry.getKey();
             BlockEntity userBE = serverLevel.getBlockEntity(userPos);
             if (!(userBE instanceof WirelessUser user)) {
-                handleUserDisconnect(serverLevel, userPos);
+                toRemove.add(userPos);
             } else {
-                userMap.put(user, cachedConfig.connectedUsers.get(userPos));
+                userMap.put(user, entry.getValue());
             }
         }
 
-        WirelessManager.balanceEnergy(this, new HashMap<>(userMap));
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        for (BlockPos blockPos : toRemove) {
+            handleUserDisconnect(serverLevel, blockPos);
+            cachedConfig.connectedUsers.remove(blockPos);
         }
+
+        WirelessManager.balanceEnergy(this, new HashMap<>(userMap));
+
+        setChanged();
+        serverLevel.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
     }
 
     private void handleUserDisconnect(ServerLevel level, BlockPos userPos) {
