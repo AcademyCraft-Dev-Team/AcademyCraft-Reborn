@@ -180,33 +180,40 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             LabelWidget rangeLabel = new LabelWidget("Trans. Range", 10, 102);
             AnimationTopToBottom animationRangeLabel = new AnimationTopToBottom(infoLabel);
             animationRangeLabel.animationTime = 0.75f;
-            rangeLabel.scale = 0.75f;
+            rangeLabel.scale = 0.65f;
             rangeLabel.animation = animationRangeLabel;
             infoArea.addChild("label_range", rangeLabel);
 
-            rangeValueLabel = new LabelWidget("0", 50, 102);
+            rangeValueLabel = new LabelWidget("0", 60, 102);
             AnimationTopToBottom animationRangeValueLabel = new AnimationTopToBottom(rangeValueLabel);
             animationRangeValueLabel.animationTime = 0.75f;
-            rangeValueLabel.scale = 0.75f;
+            rangeValueLabel.scale = 0.65f;
             rangeValueLabel.animation = animationRangeValueLabel;
             infoArea.addChild("label_range_value", rangeValueLabel);
 
             LabelWidget nameLabel = new LabelWidget("Node Name", 10, 112);
             AnimationTopToBottom animationNameLabel = new AnimationTopToBottom(nameLabel);
             animationNameLabel.animationTime = 0.75f;
-            nameLabel.scale = 0.75f;
+            nameLabel.scale = 0.65f;
             nameLabel.animation = animationNameLabel;
             infoArea.addChild("label_name", nameLabel);
 
-            LabelWidget inputNameLabel = new LabelWidget("[                         ]", 50, 112);
-            AnimationTopToBottom animationInputNameLabel = new AnimationTopToBottom(inputNameLabel);
-            animationInputNameLabel.animationTime = 0.75f;
-            inputNameLabel.scale = 0.75f;
-            inputNameLabel.animation = animationInputNameLabel;
-            infoArea.addChild("label_input_name", inputNameLabel);
+            LabelWidget inputNameLabelLeft = new LabelWidget("[", 50, 112);
+            AnimationTopToBottom animationInputNameLabelLeft = new AnimationTopToBottom(inputNameLabelLeft);
+            animationInputNameLabelLeft.animationTime = 0.75f;
+            inputNameLabelLeft.scale = 0.65f;
+            inputNameLabelLeft.animation = animationInputNameLabelLeft;
+            infoArea.addChild("label_input_name_left", inputNameLabelLeft);
 
-            TextBoxWidget nameTextBox = new TextBoxWidget(12, 54, 112, inputNameLabel.getWidth() - 15, inputNameLabel.getHeight());
-            nameTextBox.scale = 0.75f;
+            LabelWidget inputNameLabelRight = new LabelWidget("]", 100, 112);
+            AnimationTopToBottom animationInputNameLabelRight = new AnimationTopToBottom(inputNameLabelRight);
+            animationInputNameLabelRight.animationTime = 0.75f;
+            inputNameLabelRight.scale = 0.65f;
+            inputNameLabelRight.animation = animationInputNameLabelRight;
+            infoArea.addChild("label_input_name_right", inputNameLabelRight);
+
+            TextBoxWidget nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
+            nameTextBox.scale = 0.5f;
             nameTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
                     NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SET_NODE_NAME, wirelessNodeBlockEntity.getBlockPos(), s));
@@ -217,19 +224,26 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             LabelWidget passLabel = new LabelWidget("Password", 10, 122);
             AnimationTopToBottom animationPassLabel = new AnimationTopToBottom(passLabel);
             animationPassLabel.animationTime = 0.75f;
-            passLabel.scale = 0.75f;
+            passLabel.scale = 0.6f;
             passLabel.animation = animationPassLabel;
             infoArea.addChild("label_pass", passLabel);
 
-            LabelWidget inputPassLabel = new LabelWidget("[                         ]", 50, 122);
-            AnimationTopToBottom animationInputPassLabel = new AnimationTopToBottom(inputPassLabel);
-            animationInputPassLabel.animationTime = 0.75f;
-            inputPassLabel.scale = 0.75f;
-            inputPassLabel.animation = animationInputPassLabel;
-            infoArea.addChild("label_input_pass", inputPassLabel);
+            LabelWidget inputPassLabelLeft = new LabelWidget("[", 50, 122);
+            AnimationTopToBottom animationInputPassLabelLeft = new AnimationTopToBottom(inputPassLabelLeft);
+            animationInputPassLabelLeft.animationTime = 0.75f;
+            inputPassLabelLeft.scale = 0.65f;
+            inputPassLabelLeft.animation = animationInputPassLabelLeft;
+            infoArea.addChild("label_input_pass_left", inputPassLabelLeft);
 
-            TextBoxWidget passTextBox = new TextBoxWidget(12, 54, 122, inputPassLabel.getWidth() - 15, inputPassLabel.getHeight());
-            passTextBox.scale = 0.75f;
+            LabelWidget inputPassLabelRight = new LabelWidget("]", 100, 122);
+            AnimationTopToBottom animationInputPassLabelRight = new AnimationTopToBottom(inputPassLabelRight);
+            animationInputPassLabelRight.animationTime = 0.75f;
+            inputPassLabelRight.scale = 0.65f;
+            inputPassLabelRight.animation = animationInputPassLabelRight;
+            infoArea.addChild("label_input_pass_right", inputPassLabelRight);
+
+            TextBoxWidget passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
+            passTextBox.scale = 0.5f;
             passTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
                     NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SET_NODE_PASS, wirelessNodeBlockEntity.getBlockPos(), s));
