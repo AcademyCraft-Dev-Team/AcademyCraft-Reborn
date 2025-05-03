@@ -2,6 +2,8 @@ package org.academy;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import net.neoforged.bus.BusBuilderImpl;
+import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.util.GameUtil;
@@ -20,6 +22,7 @@ public final class AcademyCraft {
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
+    public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
 
     public static void init() {
         Packets.init();

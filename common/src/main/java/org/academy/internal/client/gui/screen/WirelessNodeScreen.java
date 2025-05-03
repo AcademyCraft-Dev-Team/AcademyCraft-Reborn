@@ -4,6 +4,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.neoforged.bus.api.SubscribeEvent;
+import org.academy.AcademyCraft;
+import org.academy.api.client.event.ContainerSetFocusedChildEvent;
 import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
@@ -37,6 +40,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
         assert Minecraft.getInstance().level != null;
         if (Minecraft.getInstance().level.getBlockEntity(mainPos) instanceof WirelessNodeBlockEntity blockEntity) {
             wirelessNodeBlockEntity = blockEntity;
+            AcademyCraft.EVENT_BUS.register(this);
         } else {
             onClose();
         }
@@ -306,5 +310,16 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
     @Override
     public BlockPos getPosition() {
         return mainPos;
+    }
+
+    @SubscribeEvent
+    public void onContainerSetFocusedChild(ContainerSetFocusedChildEvent event) {
+        handleContainer = !(event.child instanceof TextBoxWidget);
+    }
+
+    @Override
+    public void onClose() {
+        super.onClose();
+        AcademyCraft.EVENT_BUS.unregister(this);
     }
 }
