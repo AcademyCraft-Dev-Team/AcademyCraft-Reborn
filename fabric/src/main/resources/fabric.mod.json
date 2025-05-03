@@ -3,7 +3,7 @@
   "id": "academy",
   "version": "${version}",
   "name": "academy",
-  "description": "A Minecraft mod about Academy City.",
+  "description": "${description}",
   "authors": [],
   "contact": {},
   "license": "GPL-3.0",

@@ -15,12 +15,9 @@ legacyForge {
 dependencies {
     compileOnly group: 'org.spongepowered', name: 'mixin', version: '0.8.5'
     implementation 'org.ow2.asm:asm:9.7.1'
+    compileOnly 'net.neoforged:bus:8.0.2'
     api 'org.jetbrains:annotations:26.0.2'
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.1'
-    compileOnly "icyllis.modernui:ModernUI-Core:3.11.1"
-    compileOnly "icyllis.modernui:ModernUI-Markdown:3.11.1"
-    // Only for icyllis.modernui.mc.MuiModApi
-    compileOnly "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
 }
 
 configurations {

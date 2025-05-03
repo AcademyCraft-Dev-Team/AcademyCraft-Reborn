@@ -53,6 +53,13 @@ repositories {
         name = "Modrinth"
         url = "https://api.modrinth.com/maven"
     }
+    maven {
+        name = "NeoForged"
+        url = "https://maven.neoforged.net/releases"
+        content {
+            includeGroup "net.neoforged"
+        }
+    }
     exclusiveContent {
         forRepository {
             maven {
@@ -61,6 +68,12 @@ repositories {
         }
         filter {
             includeGroup "curse.maven"
+        }
+    }
+    maven {
+        url 'https://raw.githubusercontent.com/LovelyCane/maven-repo/main/'
+        content {
+            includeGroup 'net.forbricbus'
         }
     }
 }
