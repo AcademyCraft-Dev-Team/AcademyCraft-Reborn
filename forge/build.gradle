@@ -45,6 +45,7 @@ dependencies {
     compileOnly project(":common")
     annotationProcessor("org.spongepowered:mixin:0.8.7:processor")
     modImplementation "maven.modrinth:jade:11.12.3+forge"
+    jarJar "net.forbricbus:forbricbus-lexforge:8.0.2"
 }
 
 jar {
