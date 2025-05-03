@@ -2,10 +2,7 @@ package org.academy.internal.common.ability.builtin.accelerator;
 
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityCategoryIdentities;
-import org.academy.internal.common.ability.builtin.accelerator.skills.BloodflowReverse;
-import org.academy.internal.common.ability.builtin.accelerator.skills.PlasmaGeneration;
-import org.academy.internal.common.ability.builtin.accelerator.skills.StormWing;
-import org.academy.internal.common.ability.builtin.accelerator.skills.VectorReflection;
+import org.academy.internal.common.ability.builtin.accelerator.skills.*;
 
 public class Accelerator extends AbilityCategory {
     public static final AbilityCategory INSTANCE = new Accelerator();
@@ -16,5 +13,6 @@ public class Accelerator extends AbilityCategory {
         skillList.add(BloodflowReverse.INSTANCE);
         skillList.add(StormWing.INSTANCE);
         skillList.add(PlasmaGeneration.INSTANCE);
+        skillList.add(KineticEnergyApplied.INSTANCE);
     }
 }

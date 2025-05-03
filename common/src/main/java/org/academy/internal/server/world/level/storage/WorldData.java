@@ -167,8 +167,8 @@ public class WorldData {
     }
 
     public static class WirelessNetworkData extends SavedData {
-        private final Map<BlockPos, NodeConfig> nodeConfigurations = new HashMap<>();
-        private final Map<String, BlockPos> nodeNameMap = new HashMap<>();
+        public final Map<BlockPos, NodeConfig> nodeConfigurations = new HashMap<>();
+        public final Map<String, BlockPos> nodeNameMap = new HashMap<>();
         public static final String DATA_NAME = "wireless_network_data";
 
         public static WirelessNetworkData get(ServerLevel level) {
