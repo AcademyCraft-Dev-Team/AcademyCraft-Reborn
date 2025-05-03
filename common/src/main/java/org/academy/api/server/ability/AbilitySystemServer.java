@@ -92,6 +92,14 @@ public class AbilitySystemServer {
                 int energyStored = user.getEnergyStored();
                 if (energyStored > 10_000) {
                     user.extractEnergy(10_000, false);
+                    MathUtil.WeightedRandom<AbilityCategory> weightedRandom = new MathUtil.WeightedRandom<>();
+                    for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
+                        if (abilityCategory != Level0.INSTANCE) {
+                            weightedRandom.addItem(abilityCategory, abilityCategory.probability);
+                        }
+                    }
+                    AbilityCategory abilityCategory = weightedRandom.getRandomItem();
+                    setPlayerAbilityCategory(player.getUUID(), abilityCategory);
                     outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
                 } else {
                     outputList.add("Insufficient energy available.");
