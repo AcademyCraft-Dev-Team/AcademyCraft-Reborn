@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static org.academy.api.client.gui.ImageResources.RenderTypes.*;
-import static org.academy.api.client.gui.WirelessPanelHelper.PANEL_WIRELESS_NAME;
 
 public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
@@ -267,9 +266,6 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     }
 
     void openSkillViewPanel(Skill skill) {
-        Widget widget = rootContainer.getChildUnSafe(PANEL_WIRELESS_NAME);
-        widget.setVisible(true);
-        widget.setEnabled(true);
     }
 
     @Override
