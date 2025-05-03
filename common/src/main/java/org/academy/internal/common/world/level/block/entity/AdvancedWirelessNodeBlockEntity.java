@@ -18,6 +18,6 @@ public class AdvancedWirelessNodeBlockEntity extends WirelessNodeBlockEntity {
 
     @Override
     public int getEnergyTransferRate() {
-        return 20;
+        return TRANSFER_RATE;
     }
 }
