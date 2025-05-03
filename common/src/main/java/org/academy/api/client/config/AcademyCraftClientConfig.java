@@ -7,20 +7,21 @@ import org.academy.api.client.input.InputSystem;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AcademyCraftClientConfig<SC extends SkillClientConfig> {
+@SuppressWarnings("unchecked")
+public class AcademyCraftClientConfig {
     @SerializedName("skills")
-    private final Map<String, SC> skills = new HashMap<>();
+    private final Map<String, SkillClientConfig> skills = new HashMap<>();
     @SerializedName("key")
     private final Map<String, InputSystem.InputPair> key = new HashMap<>();
 
-    public SC getSkillClientConfig(String skill, SC defaultConfig) {
+    public <T extends SkillClientConfig> T getSkillClientConfig(String skill, T defaultConfig) {
         if (!skills.containsKey(skill)) {
             setSkillClientConfig(skill, defaultConfig);
         }
-        return skills.get(skill);
+        return (T) skills.get(skill);
     }
 
-    public void setSkillClientConfig(String skill, SC newConfig) {
+    public <T extends SkillClientConfig> void setSkillClientConfig(String skill, T newConfig) {
         skills.put(skill, newConfig);
     }
 

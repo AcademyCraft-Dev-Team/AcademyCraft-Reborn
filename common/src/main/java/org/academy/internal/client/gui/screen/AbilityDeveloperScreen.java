@@ -137,7 +137,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
 
                             if ("learn".equals(s)) {
                                 if (!learned) {
-                                    if (abilityDeveloperBlockEntity.getEnergyStored() == 0) {
+                                    if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
                                         FutureManagerClient.sendFuturePacket(Packets.C2S_LEARN, (Consumer<ArrayList<String>>) strings -> {
                                             Widget lastWidget = outputCommand;
                                             for (String string : strings) {

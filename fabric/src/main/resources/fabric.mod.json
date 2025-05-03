@@ -15,6 +15,9 @@
     ],
     "client": [
       "org.academy.fabric.AcademyCraftFabricClient"
+    ],
+    "jei_mod_plugin": [
+      "org.academy.internal.common.compatibility.JEIPlugin"
     ]
   },
   "mixins": [

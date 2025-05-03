@@ -90,7 +90,8 @@ public class AbilitySystemServer {
             if (be instanceof WirelessUser user) {
                 List<String> outputList = new ArrayList<>();
                 int energyStored = user.getEnergyStored();
-                if (energyStored > 360_000) {
+                if (energyStored > 10_000) {
+                    user.extractEnergy(10_000, false);
                     outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
                 } else {
                     outputList.add("Insufficient energy available.");

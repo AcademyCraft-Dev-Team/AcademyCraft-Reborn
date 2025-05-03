@@ -9,4 +9,5 @@ public class SkillNames {
     public static final String BLOODFLOW_REVERSE = "bloodflow_reverse";
     public static final String STORM_WING = "storm_wing";
     public static final String PLASMA_GENERATION = "plasma_generation";
+    public static final String KINETIC_ENERGY_APPLIED= "kinetic_energy_applied";
 }

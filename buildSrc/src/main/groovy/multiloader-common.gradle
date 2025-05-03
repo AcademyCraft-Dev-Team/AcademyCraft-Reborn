@@ -71,10 +71,8 @@ repositories {
         }
     }
     maven {
-        url 'https://raw.githubusercontent.com/LovelyCane/maven-repo/main/'
-        content {
-            includeGroup 'net.forbricbus'
-        }
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
     }
 }
 
