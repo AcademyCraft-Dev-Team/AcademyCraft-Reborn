@@ -2,6 +2,10 @@ package org.academy.internal.common.ability.builtin.accelerator.skills;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
@@ -12,6 +16,8 @@ import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -66,6 +72,16 @@ public class KineticEnergyApplied extends Skill {
             } else {
                 SKILL_STATS.put(player.getUUID(), true);
             }
+        }
+
+        public static float onShoot(Projectile projectile, Entity shooter, float x, float y, float z, float velocity, float inaccuracy) {
+            GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, shooter.level());
+            Vec3 vec3 = shooter.getLookAngle().scale(1);
+            glowCircle.setPos(projectile.getX() + vec3.x, projectile.getY() + vec3.y, projectile.getZ() + vec3.z);
+            glowCircle.setYRot(shooter.getYRot());
+            glowCircle.setXRot(shooter.getXRot());
+            shooter.level().addFreshEntity(glowCircle);
+            return velocity * 2;
         }
     }
 }

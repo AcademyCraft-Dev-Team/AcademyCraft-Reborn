@@ -5,10 +5,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
-import org.academy.internal.common.world.entity.skill.Arc;
-import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.world.entity.skill.Plasma;
-import org.academy.internal.common.world.entity.skill.RailgunRay;
+import org.academy.internal.common.world.entity.skill.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +17,7 @@ public class EntityRenderers {
     public static final EntityRendererProvider<Arc> ARC_ENTITY_RENDERER_PROVIDER = ArcRenderer::new;
     public static final EntityRendererProvider<HighSpeedElectronBeam> HIGH_SPEED_ELECTRON_BEAM_ENTITY_RENDERER_PROVIDER = HighSpeedElectronBeamRenderer::new;
     public static final EntityRendererProvider<Plasma> PLASMA_ENTITY_RENDERER_PROVIDER = PlasmaRenderer::new;
+    public static final EntityRendererProvider<GlowCircle> GLOW_CIRCLE_ENTITY_RENDERER_PROVIDER = GlowCircleRenderer::new;
 
     static {
         RENDERER_LIST.add(new Renderer<>(EntityTypes.RAILGUN_RAY_ENTITY_TYPE, RAILGUN_RAY_ENTITY_RENDERER_PROVIDER));
@@ -27,6 +25,7 @@ public class EntityRenderers {
         RENDERER_LIST.add(new Renderer<>(EntityTypes.ARC_ENTITY_TYPE, ARC_ENTITY_RENDERER_PROVIDER));
         RENDERER_LIST.add(new Renderer<>(EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, HIGH_SPEED_ELECTRON_BEAM_ENTITY_RENDERER_PROVIDER));
         RENDERER_LIST.add(new Renderer<>(EntityTypes.PLASMA_ENTITY_TYPE, PLASMA_ENTITY_RENDERER_PROVIDER));
+        RENDERER_LIST.add(new Renderer<>(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, GLOW_CIRCLE_ENTITY_RENDERER_PROVIDER));
     }
 
     private EntityRenderers() {
