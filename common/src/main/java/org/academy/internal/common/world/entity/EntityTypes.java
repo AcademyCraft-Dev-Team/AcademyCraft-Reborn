@@ -4,10 +4,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
-import org.academy.internal.common.world.entity.skill.Arc;
-import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.world.entity.skill.Plasma;
-import org.academy.internal.common.world.entity.skill.RailgunRay;
+import org.academy.internal.common.world.entity.skill.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +26,9 @@ public class EntityTypes {
     public static final EntityType<Plasma> PLASMA_ENTITY_TYPE = EntityType.Builder.of(
             Plasma::new, MobCategory.MISC
     ).sized(0, 0).build("plasma");
+    public static final EntityType<GlowCircle> GLOW_CIRCLE_ENTITY_TYPE = EntityType.Builder.of(
+            GlowCircle::new,MobCategory.MISC
+    ).sized(0, 0).build("glow_circle");
 
     static {
         TYPE_LIST.add(new Type<>(THROWN_COIN_ENTITY_TYPE, "thrown_coin"));
@@ -36,6 +36,7 @@ public class EntityTypes {
         TYPE_LIST.add(new Type<>(ARC_ENTITY_TYPE, "arc"));
         TYPE_LIST.add(new Type<>(HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, "high_speed_electron_beam"));
         TYPE_LIST.add(new Type<>(PLASMA_ENTITY_TYPE, "plasma"));
+        TYPE_LIST.add(new Type<>(GLOW_CIRCLE_ENTITY_TYPE, "glow_circle"));
     }
 
     private EntityTypes() {
