@@ -1,7 +1,9 @@
 package org.academy.mixin;
 
 import net.minecraft.client.Minecraft;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
+import org.academy.api.client.tick.ClientTickEvent;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,5 +15,10 @@ public class MixinMinecraft {
     @Inject(method = "run", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;gameThread:Ljava/lang/Thread;", opcode = Opcodes.PUTFIELD, ordinal = 0, shift = At.Shift.AFTER))
     private void run(CallbackInfo ci) {
         AcademyCraftClient.init();
+    }
+
+    @Inject(method = "tick", at = @At(value = "HEAD"))
+    private void tick(CallbackInfo ci) {
+        AcademyCraft.EVENT_BUS.post(new ClientTickEvent());
     }
 }

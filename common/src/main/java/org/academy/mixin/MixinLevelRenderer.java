@@ -5,6 +5,8 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
+import org.academy.AcademyCraft;
+import org.academy.api.client.renderer.CameraRenderEvent;
 import org.academy.api.client.renderer.CameraRenderer;
 import org.academy.api.client.renderer.RendererManager;
 import org.joml.Matrix4f;
@@ -17,6 +19,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MixinLevelRenderer {
     @Inject(method = {"renderLevel"}, at = {@At(value = "CONSTANT", args = {"stringValue=entities"}, ordinal = 0)})
     private void afterEntities(PoseStack poseStack, float partialTick, long finishNanoTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f projectionMatrix, CallbackInfo ci) {
+        CameraRenderEvent event = new CameraRenderEvent(poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix);
+        AcademyCraft.EVENT_BUS.post(event);
+        if (event.isCanceled()) return;
+        poseStack = event.poseStack;
+        partialTick = event.partialTick;
+        finishNanoTime = event.finishNanoTime;
+        renderBlockOutline = event.renderBlockOutline;
+        camera = event.camera;
+        gameRenderer = event.gameRenderer;
+        lightTexture = event.lightTexture;
+        projectionMatrix = event.projectionMatrix;
         for (CameraRenderer cameraRenderer : RendererManager.CAMERA_RENDERER_MAP.values()) {
             cameraRenderer.render(poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix, ci);
         }

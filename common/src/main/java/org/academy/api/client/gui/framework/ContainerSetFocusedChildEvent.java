@@ -1,8 +1,7 @@
-package org.academy.api.client.event;
+package org.academy.api.client.gui.framework;
 
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
-import org.academy.api.client.gui.framework.Widget;
 import org.jetbrains.annotations.Nullable;
 
 public class ContainerSetFocusedChildEvent extends Event implements ICancellableEvent {

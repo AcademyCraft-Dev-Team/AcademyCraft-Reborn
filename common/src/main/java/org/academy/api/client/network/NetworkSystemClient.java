@@ -85,7 +85,9 @@ public class NetworkSystemClient {
     }
 
     public static void sendPacket(Packet<?> packet) {
-        connection.send(packet);
+        if (connection != null) {
+            connection.send(packet);
+        }
     }
 
     public static void registerS2CPacketHandler(String packet, S2CPacketHandler handler) {

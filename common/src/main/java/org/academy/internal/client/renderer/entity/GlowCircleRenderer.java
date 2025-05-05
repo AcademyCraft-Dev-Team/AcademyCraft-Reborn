@@ -1,12 +1,13 @@
 package org.academy.internal.client.renderer.entity;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.api.client.util.RenderUtil;
@@ -27,7 +28,12 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle> {
         entity.renderAlpha = MathUtil.lerpStartEndFactor(entity.renderAlpha, entity.alpha, partialTick);
         entity.renderRadius = MathUtil.lerpStartEndFactor(entity.renderRadius, entity.radius, partialTick);
 
-        VertexConsumer vertexConsumer = buffer.getBuffer(RenderUtil.getPositionColorTexRenderType("glow_circle", TEXTURE, true));
+        boolean shaderPackInUse = RenderUtil.IS_SHADER_PACK_IN_USE.get();
+        VertexConsumer vertexConsumer = buffer.getBuffer(
+                shaderPackInUse
+                        ? RenderType.eyes(TEXTURE)
+                        : RenderUtil.getPositionColorTexRenderTypeFull("glow_circle", TEXTURE, true)
+        );
 
         float yaw = entity.getYRot();
         float pitch = entity.getXRot();
@@ -37,10 +43,10 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle> {
         poseStack.mulPose(Axis.ZP.rotationDegrees(90 + pitch));
 
         Matrix4f matrix = poseStack.last().pose();
-        vertexConsumer.vertex(matrix, -entity.renderRadius, 0, -entity.renderRadius).uv(0, 0).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
-        vertexConsumer.vertex(matrix,  entity.renderRadius, 0, -entity.renderRadius).uv(1, 0).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
-        vertexConsumer.vertex(matrix,  entity.renderRadius, 0,  entity.renderRadius).uv(1, 1).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
-        vertexConsumer.vertex(matrix, -entity.renderRadius, 0,  entity.renderRadius).uv(0, 1).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
+        vertexConsumer.vertex(matrix, -entity.renderRadius, 0, -entity.renderRadius).uv(0, 0).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
+        vertexConsumer.vertex(matrix,  entity.renderRadius, 0, -entity.renderRadius).uv(1, 0).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
+        vertexConsumer.vertex(matrix,  entity.renderRadius, 0,  entity.renderRadius).uv(1, 1).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
+        vertexConsumer.vertex(matrix, -entity.renderRadius, 0,  entity.renderRadius).uv(0, 1).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
         poseStack.popPose();
 
         poseStack.pushPose();
@@ -49,10 +55,10 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle> {
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
 
         matrix = poseStack.last().pose();
-        vertexConsumer.vertex(matrix, -entity.renderRadius, 0, -entity.renderRadius).uv(0, 0).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
-        vertexConsumer.vertex(matrix,  entity.renderRadius, 0, -entity.renderRadius).uv(1, 0).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
-        vertexConsumer.vertex(matrix,  entity.renderRadius, 0,  entity.renderRadius).uv(1, 1).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
-        vertexConsumer.vertex(matrix, -entity.renderRadius, 0,  entity.renderRadius).uv(0, 1).color(1f, 1f, 1f, entity.renderAlpha).endVertex();
+        vertexConsumer.vertex(matrix, -entity.renderRadius, 0, -entity.renderRadius).uv(0, 0).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
+        vertexConsumer.vertex(matrix,  entity.renderRadius, 0, -entity.renderRadius).uv(1, 0).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
+        vertexConsumer.vertex(matrix,  entity.renderRadius, 0,  entity.renderRadius).uv(1, 1).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
+        vertexConsumer.vertex(matrix, -entity.renderRadius, 0,  entity.renderRadius).uv(0, 1).color(1f, 1f, 1f, entity.renderAlpha).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
         poseStack.popPose();
     }
 

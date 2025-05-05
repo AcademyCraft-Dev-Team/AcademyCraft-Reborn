@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.framework;
 
 import org.academy.AcademyCraft;
-import org.academy.api.client.event.ContainerSetFocusedChildEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -65,6 +64,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         AcademyCraft.EVENT_BUS.post(containerSetFocusedChildEvent);
         if (containerSetFocusedChildEvent.isCanceled()) return;
         if (child == this) return;
+        child = containerSetFocusedChildEvent.child;
 
         if (focusedChild != null){
             focusedChild.setFocused(false);

@@ -7,30 +7,33 @@ import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
+@SuppressWarnings("unused")
 public class EntityRenderers {
-    public static final List<Renderer<?>> RENDERER_LIST = new ArrayList<>();
-    public static final EntityRendererProvider<ThrownCoin> THROWN_COIN_ENTITY_RENDERER_PROVIDER = ThrownCoinRenderer::new;
-    public static final EntityRendererProvider<RailgunRay> RAILGUN_RAY_ENTITY_RENDERER_PROVIDER = RailgunRayRenderer::new;
-    public static final EntityRendererProvider<Arc> ARC_ENTITY_RENDERER_PROVIDER = ArcRenderer::new;
-    public static final EntityRendererProvider<HighSpeedElectronBeam> HIGH_SPEED_ELECTRON_BEAM_ENTITY_RENDERER_PROVIDER = HighSpeedElectronBeamRenderer::new;
-    public static final EntityRendererProvider<Plasma> PLASMA_ENTITY_RENDERER_PROVIDER = PlasmaRenderer::new;
-    public static final EntityRendererProvider<GlowCircle> GLOW_CIRCLE_ENTITY_RENDERER_PROVIDER = GlowCircleRenderer::new;
+    public static final Map<EntityType<?>, EntityRendererProvider<?>> RENDERER_MAP = new HashMap<>();
 
-    static {
-        RENDERER_LIST.add(new Renderer<>(EntityTypes.RAILGUN_RAY_ENTITY_TYPE, RAILGUN_RAY_ENTITY_RENDERER_PROVIDER));
-        RENDERER_LIST.add(new Renderer<>(EntityTypes.THROWN_COIN_ENTITY_TYPE, THROWN_COIN_ENTITY_RENDERER_PROVIDER));
-        RENDERER_LIST.add(new Renderer<>(EntityTypes.ARC_ENTITY_TYPE, ARC_ENTITY_RENDERER_PROVIDER));
-        RENDERER_LIST.add(new Renderer<>(EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, HIGH_SPEED_ELECTRON_BEAM_ENTITY_RENDERER_PROVIDER));
-        RENDERER_LIST.add(new Renderer<>(EntityTypes.PLASMA_ENTITY_TYPE, PLASMA_ENTITY_RENDERER_PROVIDER));
-        RENDERER_LIST.add(new Renderer<>(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, GLOW_CIRCLE_ENTITY_RENDERER_PROVIDER));
+    public static final EntityRendererProvider<ThrownCoin> THROWN_COIN_ENTITY_RENDERER_PROVIDER =
+            register(EntityTypes.THROWN_COIN_ENTITY_TYPE, ThrownCoinRenderer::new);
+    public static final EntityRendererProvider<RailgunRay> RAILGUN_RAY_ENTITY_RENDERER_PROVIDER =
+            register(EntityTypes.RAILGUN_RAY_ENTITY_TYPE, RailgunRayRenderer::new);
+    public static final EntityRendererProvider<Arc> ARC_ENTITY_RENDERER_PROVIDER =
+            register(EntityTypes.ARC_ENTITY_TYPE, ArcRenderer::new);
+    public static final EntityRendererProvider<HighSpeedElectronBeam> HIGH_SPEED_ELECTRON_BEAM_ENTITY_RENDERER_PROVIDER =
+            register(EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, HighSpeedElectronBeamRenderer::new);
+    public static final EntityRendererProvider<Plasma> PLASMA_ENTITY_RENDERER_PROVIDER =
+            register(EntityTypes.PLASMA_ENTITY_TYPE, PlasmaRenderer::new);
+    public static final EntityRendererProvider<GlowCircle> GLOW_CIRCLE_ENTITY_RENDERER_PROVIDER =
+            register(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, GlowCircleRenderer::new);
+    public static final EntityRendererProvider<Smoke> SMOKE_ENTITY_RENDERER_PROVIDER =
+            register(EntityTypes.SMOKE_ENTITY_TYPE, SmokeRenderer::new);
+
+    public static <T extends Entity> EntityRendererProvider<T> register(EntityType<T> type, EntityRendererProvider<T> provider) {
+        RENDERER_MAP.put(type, provider);
+        return provider;
     }
 
     private EntityRenderers() {
-    }
-
-    public record Renderer<T extends Entity>(EntityType<T> entityType, EntityRendererProvider<T> entityRenderer) {
     }
 }

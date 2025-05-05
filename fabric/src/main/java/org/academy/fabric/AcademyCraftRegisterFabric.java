@@ -6,6 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -96,8 +97,8 @@ public class AcademyCraftRegisterFabric {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void registerEntityRenderer() {
-        for (EntityRenderers.Renderer renderer : EntityRenderers.RENDERER_LIST) {
-            net.minecraft.client.renderer.entity.EntityRenderers.register(renderer.entityType(), renderer.entityRenderer());
+        for (EntityType entityType : EntityRenderers.RENDERER_MAP.keySet()) {
+            net.minecraft.client.renderer.entity.EntityRenderers.register(entityType, EntityRenderers.RENDERER_MAP.get(entityType));
         }
     }
 

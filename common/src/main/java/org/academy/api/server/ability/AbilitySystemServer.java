@@ -12,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.ability.ClientContext;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
@@ -323,5 +324,13 @@ public class AbilitySystemServer {
             this.data = data;
             this.packetConsumer = packetConsumer;
         }
+    }
+
+    public static void registerContext(ServerContext serverContext) {
+        AcademyCraft.EVENT_BUS.register(serverContext);
+    }
+
+    public static void unregisterContext(ServerContext serverContext) {
+        AcademyCraft.EVENT_BUS.unregister(serverContext);
     }
 }
