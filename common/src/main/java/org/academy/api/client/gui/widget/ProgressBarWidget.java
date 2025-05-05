@@ -29,7 +29,7 @@ public class ProgressBarWidget extends AbstractWidget {
             if (progress > 1.0f) progress = 1.0f;
 
             if (backgroundVisible) {
-                RenderUtil.GeneralRenderer.fill(
+                RenderUtil.fill(
                         guiGraphics.pose().last().pose(),
                         this.getX(), this.getY(),
                         this.getX() + this.getWidth(), this.getY() + this.getHeight(),
@@ -38,7 +38,7 @@ public class ProgressBarWidget extends AbstractWidget {
             }
 
             float progressWidth = this.getWidth() * progress;
-            RenderUtil.GeneralRenderer.fill(
+            RenderUtil.fill(
                     guiGraphics.pose().last().pose(),
                     this.getX(), this.getY(),
                     this.getX() + progressWidth, this.getY() + this.getHeight(),

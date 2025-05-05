@@ -14,6 +14,6 @@ public class ColorFillWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
-        RenderUtil.GeneralRenderer.fill(guiGraphics.pose().last().pose(), getX(), getY(), getX() + getWidth(), getY() + getHeight(), color, guiGraphics.bufferSource());
+        RenderUtil.fill(guiGraphics.pose().last().pose(), getX(), getY(), getX() + getWidth(), getY() + getHeight(), color, guiGraphics.bufferSource());
     }
 }

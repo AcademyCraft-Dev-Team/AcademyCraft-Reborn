@@ -37,7 +37,7 @@ public class ArcGenerate extends Skill {
     public void initClient() {
         AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
         InputSystem.addKeyBinding(KEY_NAME, Client.CONFIG.getKeyBinding(KEY_NAME,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_G)),
                         GLFW.GLFW_RELEASE,
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))
@@ -55,7 +55,7 @@ public class ArcGenerate extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_ARC_GENERATE));
         }
 
-        public static final class ArcGenerateSKillConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
+        public static final class ArcGenerateSKillConfig extends SkillClientConfig.KeyBindingConfig {
         }
     }
 

@@ -1,6 +1,7 @@
 package org.academy.api.client.ability;
 
 import net.minecraft.client.Minecraft;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -25,7 +26,7 @@ public final class AbilitySystemClient {
             KEY_NAME,
             new InputSystem.InputPair(
                     InputSystem.InputType.KEYBOARD,
-                    new InputSystem.InputEvent(
+                    new InputSystem.KeyInfo(
                             new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)),
                             GLFW.GLFW_PRESS,
                             new LinkedHashSet<>()
@@ -106,5 +107,13 @@ public final class AbilitySystemClient {
 
     public static AbilityCategory getCategory() {
         return category;
+    }
+
+    public static void registerContext(ClientContext clientContext) {
+        AcademyCraft.EVENT_BUS.register(clientContext);
+    }
+
+    public static void unregisterContext(ClientContext clientContext) {
+        AcademyCraft.EVENT_BUS.unregister(clientContext);
     }
 }

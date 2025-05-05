@@ -55,7 +55,7 @@ public class Railgun extends Skill {
         AcademyCraftClient.CLIENT_CONFIG.setSkillClientConfig(INSTANCE.name, Client.CLIENT_CONFIG);
         InputSystem.addKeyBinding(KEY_NAME, Client.CLIENT_CONFIG.getKeyBinding(KEY_NAME,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD,
-                        new InputSystem.InputEvent(
+                        new InputSystem.KeyInfo(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
                                 GLFW.GLFW_RELEASE,
                                 new LinkedHashSet<>())
@@ -72,7 +72,7 @@ public class Railgun extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_RAILGUN_SHOOT));
         }
 
-        public static final class RailgunClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
+        public static final class RailgunClientConfig extends SkillClientConfig.KeyBindingConfig {
         }
     }
 

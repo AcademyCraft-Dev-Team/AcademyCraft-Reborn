@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
@@ -35,7 +34,7 @@ public class KineticEnergyApplied extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
-                        new InputSystem.InputEvent(
+                        new InputSystem.KeyInfo(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_K)),
                                 GLFW.GLFW_RELEASE,
                                 new LinkedHashSet<>()
@@ -57,7 +56,7 @@ public class KineticEnergyApplied extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_KINETIC_ENERGY_APPLIED_TOGGLE));
         }
 
-        public static final class KineticEnergyAppliedClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
+        public static final class KineticEnergyAppliedClientConfig extends SkillClientConfig.KeyBindingConfig {
         }
     }
 

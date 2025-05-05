@@ -111,8 +111,8 @@ public class TextBoxWidget extends AbstractWidget {
     @Override
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
         if (showBackground) {
-            RenderUtil.GeneralRenderer.fill(guiGraphics.pose().last().pose(), x, y, x + width, y + height, borderColor, guiGraphics.bufferSource());
-            RenderUtil.GeneralRenderer.fill(guiGraphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, bgColor, guiGraphics.bufferSource());
+            RenderUtil.fill(guiGraphics.pose().last().pose(), x, y, x + width, y + height, borderColor, guiGraphics.bufferSource());
+            RenderUtil.fill(guiGraphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, bgColor, guiGraphics.bufferSource());
         }
 
         Font font = Minecraft.getInstance().font;
@@ -141,7 +141,7 @@ public class TextBoxWidget extends AbstractWidget {
                     String beforeCaret = text.substring(0, caretPos);
                     caretX += font.width(beforeCaret);
                 }
-                RenderUtil.GeneralRenderer.fill(
+                RenderUtil.fill(
                         guiGraphics.pose().last().pose(),
                         caretX, textHeight - 0.5f, caretX + 4, textHeight,
                         textColor,

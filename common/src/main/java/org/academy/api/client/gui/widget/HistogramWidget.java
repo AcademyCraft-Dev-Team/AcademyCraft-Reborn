@@ -54,7 +54,7 @@ public class HistogramWidget extends AbstractWidget {
             int a = Math.min(255, Math.max(0, (int) (value.alpha * 255.0f)));
             int packedColor = (a << 24) | (r << 16) | (g << 8) | b;
 
-            RenderUtil.GeneralRenderer.fill(
+            RenderUtil.fill(
                     guiGraphics.pose().last().pose(),
                     left, top,
                     right, bottom,
