@@ -2,6 +2,7 @@ package org.academy.api.client.gui.framework;
 
 import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
@@ -81,7 +82,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         widgetList.sort(Comparator.comparing(Widget::getAbsoluteZ).reversed());
 
         for (Widget widget : widgetList) {
-       //     AcademyCraft.LOGGER.info(widget + " Z : " + widget.getAbsoluteZ() + " Enable : " + widget.isAbsoluteEnabled() + " Overed : " + widget.isMouseOver(mouseX, mouseY));
+         //   AcademyCraft.LOGGER.info(widget + " Z : " + widget.getAbsoluteZ() + " Enable : " + widget.isAbsoluteEnabled() + " Overed : " + widget.isMouseOver(mouseX, mouseY) + "Abs Overed " + widget.isAbsoluteMouseOver(mouseX, mouseY));
         }
 
         for (Widget widget : widgetList) {
@@ -115,8 +116,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         if (!isVisible() || !isEnabled()) return;
-
-        for (Widget child : getAllWidgets()) {
+        List<Widget> widgetList = getAllWidgets();
+        for (Widget child : widgetList) {
             child.setHovered(false);
         }
 
@@ -127,7 +128,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             widget.setHovered(true);
         }
 
-        for (Widget child : getChildren().values()) {
+        for (Widget child : widgetList) {
             child.mouseMoved(mouseX, mouseY);
         }
     }
@@ -137,9 +138,11 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         if (!isVisible() || !isEnabled()) return false;
         List<Widget> widgetList = getAllWidgets();
 
-        for (Widget child : widgetList) {
-            child.setHovered(false);
-            child.setFocused(false);
+        if (button != GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+            for (Widget child : widgetList) {
+                child.setHovered(false);
+                child.setFocused(false);
+            }
         }
 
         if (button == 0) {

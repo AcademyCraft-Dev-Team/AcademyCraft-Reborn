@@ -12,7 +12,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
-import org.academy.api.client.ability.ClientContext;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
@@ -24,7 +23,6 @@ import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.network.FutureManagerServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.level0.Level0;
-import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.util.*;
@@ -33,6 +31,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
+import static org.academy.api.common.ability.AbilitySystem.SKILL_MAP;
 
 public class AbilitySystemServer {
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
@@ -65,24 +64,6 @@ public class AbilitySystemServer {
     @SuppressWarnings("resource")
     public static void registerPacketHandler() {
         NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_ACQUIRE_CATEGORY, (listener, packet) -> {
-            BlockPos pos = packet.friendlyByteBuf.readBlockPos();
-            if (listener.player.level().getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                if (abilityDeveloperBlockEntity.energyStored < 15000) {
-                    listener.send(new S2CPacket(Packets.S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE, "Energy is not enough."));
-                } else {
-                    abilityDeveloperBlockEntity.energyStored -= 15000;
-                    MathUtil.WeightedRandom<AbilityCategory> weightedRandom = new MathUtil.WeightedRandom<>();
-                    for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
-                        if (abilityCategory != Level0.INSTANCE)
-                            weightedRandom.addItem(abilityCategory, abilityCategory.probability);
-                    }
-                    setPlayerAbilityCategory(listener.player.getUUID(), weightedRandom.getRandomItem());
-                    listener.send(new S2CPacket(Packets.S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE, "Learning complete. Please type 'exit' to shut down the system, then reopen the screen manually."));
-                }
-            }
-        });
-
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_LEARN, (listener, packet) -> {
             ServerPlayer player = listener.player;
             ServerLevel level = player.serverLevel();
             int id = packet.friendlyByteBuf.readVarInt();
@@ -106,6 +87,35 @@ public class AbilitySystemServer {
                     outputList.add("Insufficient energy available.");
                 }
                 FutureManagerServer.sendResult(listener, id, outputList);
+            }
+        });
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_LEARN_SKILL, (listener, packet) -> {
+            ServerPlayer player = listener.player;
+            ServerLevel level = player.serverLevel();
+            int id = packet.friendlyByteBuf.readVarInt();
+            String skillName = packet.friendlyByteBuf.readUtf();
+            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
+            BlockEntity be = level.getBlockEntity(userPos);
+            if (be instanceof WirelessUser user) {
+                if (SKILL_MAP.containsKey(skillName)) {
+                    Skill skill = SKILL_MAP.get(skillName);
+                    int energy = skill.energy;
+                    boolean depLearned = true;
+                    for (Skill dep : skill.dependencies) {
+                        if (!playerMap.get(player.getUUID()).getSkills().contains(dep.name)) {
+                            depLearned = false;
+                        }
+                    }
+                    boolean can = user.getEnergyStored() > energy && depLearned;
+                    boolean learned = playerMap.get(player.getUUID()).getSkills().contains(skillName);
+                    if (can) {
+                        if (!learned) {
+                            user.extractEnergy(energy, false);
+                            addPlayerSkill(player.getUUID(), skillName);
+                        }
+                    }
+                    FutureManagerServer.sendResult(listener, id, can);
+                }
             }
         });
     }

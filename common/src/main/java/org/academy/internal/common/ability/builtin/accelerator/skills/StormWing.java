@@ -68,7 +68,7 @@ public class StormWing extends Skill {
 
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
-            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
+            if (Minecraft.getInstance().level != null) {
                 boolean handled = false;
                 for (Integer key : InputSystem.KEYBOARD_STATE.keySet()) {
                     Integer state = InputSystem.KEYBOARD_STATE.get(key);
@@ -110,19 +110,27 @@ public class StormWing extends Skill {
         }
 
         public static void front() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_FRONT));
+            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
+                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_FRONT));
+            }
         }
 
         public static void back() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_BACK));
+            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
+                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_BACK));
+            }
         }
 
         public static void left() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_LEFT));
+            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
+                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_LEFT));
+            }
         }
 
         public static void right() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_RIGHT));
+            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
+                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_RIGHT));
+            }
         }
 
         public static void keep() {

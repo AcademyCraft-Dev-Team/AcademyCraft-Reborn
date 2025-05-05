@@ -151,31 +151,22 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
 
     @Override
     public int extractEnergy(int maxExtract, boolean simulate) {
-        int energyStored = getEnergyStored();
-        int energyToExtract = Math.min(maxExtract, energyStored);
-        if (energyToExtract <= 0) {
-            return 0;
-        }
-        if (!simulate) {
-            setEnergyStorage(energyStored - energyToExtract);
-        }
-        return energyToExtract;
-    }
-
-    public void setEnergyStorage(int newEnergy) {
-        int clamped = Math.max(0, Math.min(newEnergy, getMaxEnergyStorage()));
-        if (clamped != this.energyStored) {
-            this.energyStored = clamped;
-            setChanged();
-            if (level != null && !level.isClientSide) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-            }
-        }
+        return 0;
     }
 
     @Override
     public int receiveEnergy(int maxReceive, boolean simulate) {
-        return 0;
+        int maxEnergyCanStore = getMaxEnergyStorage();
+        int energyStoredDouble = getEnergyStored();
+        int maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
+        int energyToReceive = Math.min(maxReceive, maxCanReceive);
+        if (energyToReceive <= 0) {
+            return 0;
+        }
+        if (!simulate) {
+            setEnergyStored(getEnergyStored() + energyToReceive);
+        }
+        return energyToReceive;
     }
 
     @Override
