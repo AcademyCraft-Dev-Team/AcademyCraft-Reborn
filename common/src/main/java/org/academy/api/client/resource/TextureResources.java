@@ -40,4 +40,5 @@ public final class TextureResources {
     public static final ResourceLocation TEXTURE_ICON_WIRELESS = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wireless.png");
     public static final ResourceLocation TEXTURE_HISTOGRAM = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/histogram.png");
     public static final ResourceLocation TEXTURE_BLEND_QUAD = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/blend_quad.png");
+    public static final ResourceLocation TEXTURE_BUTTON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/button.png");
 }

@@ -24,7 +24,6 @@ public class AcademyCraftServer {
         serverConfig = new AcademyCraftServerConfig().loadConfig(serverConfigFile);
         worldData = WorldData.getWorldData(worldDataFile);
         AbilitySystemServer.init(server);
-        AbilityDeveloperBlockEntity.intiServer();
         WirelessManager.initServer();
         NetworkSystemServer.init();
     }

@@ -17,7 +17,7 @@ public class ImageButtonWidget extends ImageWidget {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (focused && button == 0) {
+        if (focused && button == 0 && isAbsoluteEnabled()) {
             playDownSound(Minecraft.getInstance().getSoundManager());
             if (onPress != null) {
                 onPress.run();
