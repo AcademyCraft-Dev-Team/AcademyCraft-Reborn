@@ -3,6 +3,7 @@ package org.academy.internal.client.renderer.blockentity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -41,7 +42,7 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
 
             poseStack.mulPoseMatrix(matrix4f);
 
-            VertexConsumer vertexConsumer = buffer.getBuffer(ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.renderType(TEXTURE));
+            VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(TEXTURE));
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.setupAnim(blockEntity, partialTick);
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay, 1f, 1f, 1f, 1f);
 

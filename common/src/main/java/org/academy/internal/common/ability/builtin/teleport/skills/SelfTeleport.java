@@ -6,7 +6,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -21,7 +20,6 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.lwjgl.glfw.GLFW;
@@ -44,13 +42,13 @@ public final class SelfTeleport extends Skill {
     @Override
     public void initClient() {
         KEY_START = AcademyCraftClient.CLIENT_CONFIG.getKey(KEY_NAME_START,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Z)),
                         GLFW.GLFW_PRESS,
                         new LinkedHashSet<>()
                 )));
         KEY_END = AcademyCraftClient.CLIENT_CONFIG.getKey(KEY_NAME_END,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.InputEvent(
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Z)),
                         GLFW.GLFW_RELEASE,
                         new LinkedHashSet<>()

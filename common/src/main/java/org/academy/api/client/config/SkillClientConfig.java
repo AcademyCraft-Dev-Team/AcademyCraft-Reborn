@@ -10,7 +10,7 @@ public abstract class SkillClientConfig {
     protected SkillClientConfig() {
     }
 
-    public static class SkillClientKeyBindingConfig extends SkillClientConfig {
+    public static class KeyBindingConfig extends SkillClientConfig {
         @SerializedName("keyBindings")
         private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 

@@ -33,8 +33,8 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
     public static final float MIN_EFFECT_HEIGHT_REL_CORE = -CORE_Y_OFFSET; // 相对于核心的最小效果高度 (与核心Y偏移一致)
     private static final float TOTAL_VERTICAL_RANGE_REL_CORE = MAX_EFFECT_HEIGHT_REL_CORE - MIN_EFFECT_HEIGHT_REL_CORE; // 相对于核心的总垂直范围
     private static final float RADIUS_MIDPOINT_NORMALIZED_Y = Math.abs(MIN_EFFECT_HEIGHT_REL_CORE) / TOTAL_VERTICAL_RANGE_REL_CORE; // 半径中点的归一化Y坐标
-    private static final ResourceLocation PLASMA_PARTICLE_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/generic/effect/generic/sparkle_blurred.png"); // 等离子体粒子纹理
-    private static final ResourceLocation ATMOSPHERE_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/generic/effect/generic/white_smoke_hq.png"); // 大气效果纹理
+    private static final ResourceLocation PLASMA_PARTICLE_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/generic/effect/sparkle_blurred.png"); // 等离子体粒子纹理
+    private static final ResourceLocation ATMOSPHERE_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/generic/effect/white_smoke_hq.png"); // 大气效果纹理
     private static final float CORE_BASE_RADIUS = 16.0f; // 核心基础半径
     private static final float CORE_PULSATION_AMP = 1.0f; // 核心脉动幅度
     private static final float CORE_PULSATION_FREQ = 0.5f; // 核心脉动频率

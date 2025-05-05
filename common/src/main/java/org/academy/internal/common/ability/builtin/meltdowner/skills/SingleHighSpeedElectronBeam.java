@@ -35,7 +35,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
                 Client.KEY_NAME,
                 new InputSystem.InputPair(
                         InputSystem.InputType.MOUSE,
-                        new InputSystem.InputEvent(
+                        new InputSystem.KeyInfo(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_MOUSE_BUTTON_LEFT)),
                                 GLFW.GLFW_RELEASE,
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT))

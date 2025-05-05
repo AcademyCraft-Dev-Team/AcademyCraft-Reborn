@@ -22,9 +22,11 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static net.minecraft.client.renderer.RenderStateShard.ITEM_ENTITY_TARGET;
 import static net.minecraft.client.renderer.RenderStateShard.TextureStateShard;
@@ -32,7 +34,32 @@ import static org.academy.api.client.util.RenderStateUtil.*;
 
 @SuppressWarnings("DuplicatedCode")
 public final class RenderUtil {
+    public static final Supplier<Boolean> IS_SHADER_PACK_IN_USE = createShaderPackInUseSupplier();
+
     private RenderUtil() {
+    }
+
+    public static Supplier<Boolean> createShaderPackInUseSupplier() {
+        try {
+            Class<?> irisApiClass = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+
+            Method getInstanceMethod = irisApiClass.getDeclaredMethod("getInstance");
+            getInstanceMethod.setAccessible(true);
+
+            Method isShaderPackInUseMethod = irisApiClass.getMethod("isShaderPackInUse");
+            isShaderPackInUseMethod.setAccessible(true);
+
+            return () -> {
+                try {
+                    Object instance = getInstanceMethod.invoke(null);
+                    return (Boolean) isShaderPackInUseMethod.invoke(instance);
+                } catch (Exception e) {
+                    return false;
+                }
+            };
+        } catch (Exception e) {
+            return () -> false;
+        }
     }
 
     public static void applyOffset(final PoseStack poseStack, final Vec3 vec3) {
@@ -110,35 +137,34 @@ public final class RenderUtil {
                                         false
                                 )
                         )
+                        .setDepthTestState(NO_DEPTH_TEST)
                         .setShaderState(POSITION_COLOR_TEX_SHADER_FULL)
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false));
     }
 
-    public static final class GeneralRenderer {
-        public static void fill(Matrix4f matrix4f, float minX, float minY, float maxX, float maxY, int color, MultiBufferSource buffer) {
-            if (minX < maxX) {
-                float i = minX;
-                minX = maxX;
-                maxX = i;
-            }
-
-            if (minY < maxY) {
-                float j = minY;
-                minY = maxY;
-                maxY = j;
-            }
-
-            float f3 = (float) FastColor.ARGB32.alpha(color) / 255.0F;
-            float f = (float) FastColor.ARGB32.red(color) / 255.0F;
-            float f1 = (float) FastColor.ARGB32.green(color) / 255.0F;
-            float f2 = (float) FastColor.ARGB32.blue(color) / 255.0F;
-            VertexConsumer vertexconsumer = buffer.getBuffer(RenderType.gui());
-            vertexconsumer.vertex(matrix4f, minX, minY, 0).color(f, f1, f2, f3).endVertex();
-            vertexconsumer.vertex(matrix4f, minX, maxY, 0).color(f, f1, f2, f3).endVertex();
-            vertexconsumer.vertex(matrix4f, maxX, maxY, 0).color(f, f1, f2, f3).endVertex();
-            vertexconsumer.vertex(matrix4f, maxX, minY, 0).color(f, f1, f2, f3).endVertex();
+    public static void fill(Matrix4f matrix4f, float minX, float minY, float maxX, float maxY, int color, MultiBufferSource buffer) {
+        if (minX < maxX) {
+            float i = minX;
+            minX = maxX;
+            maxX = i;
         }
+
+        if (minY < maxY) {
+            float j = minY;
+            minY = maxY;
+            maxY = j;
+        }
+
+        float f3 = (float) FastColor.ARGB32.alpha(color) / 255.0F;
+        float f = (float) FastColor.ARGB32.red(color) / 255.0F;
+        float f1 = (float) FastColor.ARGB32.green(color) / 255.0F;
+        float f2 = (float) FastColor.ARGB32.blue(color) / 255.0F;
+        VertexConsumer vertexconsumer = buffer.getBuffer(RenderType.gui());
+        vertexconsumer.vertex(matrix4f, minX, minY, 0).color(f, f1, f2, f3).endVertex();
+        vertexconsumer.vertex(matrix4f, minX, maxY, 0).color(f, f1, f2, f3).endVertex();
+        vertexconsumer.vertex(matrix4f, maxX, maxY, 0).color(f, f1, f2, f3).endVertex();
+        vertexconsumer.vertex(matrix4f, maxX, minY, 0).color(f, f1, f2, f3).endVertex();
     }
 
     public static final class RingRenderer {
@@ -173,29 +199,6 @@ public final class RenderUtil {
                 vertexConsumer.vertex(matrix, v3[0], v3[1], v3[2]).uv(v3[3], 1).endVertex();
             }
         }
-
-        public static void renderRing(PoseStack poseStack, MultiBufferSource buffer, int segments,
-                                      float[][][] vertexBuffer, ResourceLocation texture) {
-            if (vertexBuffer == null || vertexBuffer.length < segments || segments <= 0) return;
-            final PoseStack.Pose pose = poseStack.last();
-            final Matrix4f matrix = pose.pose();
-            final VertexConsumer vertexConsumer = buffer.getBuffer(RING_RENDER_TYPE.apply(texture));
-            renderRing(matrix, vertexConsumer, segments, vertexBuffer);
-        }
-
-        public static void renderVerticalRing(PoseStack poseStack, MultiBufferSource buffer,
-                                              float radius, float height, int segments, ResourceLocation texture) {
-            float[][][] vertexBuffer = VertexUtil.Ring.getVerticalVertexBuffer(radius, height, segments);
-            if (vertexBuffer == null) return;
-            renderRing(poseStack, buffer, segments, vertexBuffer, texture);
-        }
-
-        public static void renderHorizontalRing(PoseStack poseStack, MultiBufferSource buffer,
-                                                float radius, float height, int segments, ResourceLocation texture) {
-            float[][][] vertexBuffer = VertexUtil.Ring.getHorizontalVertexBuffer(radius, height, segments);
-            if (vertexBuffer == null) return;
-            renderRing(poseStack, buffer, segments, vertexBuffer, texture);
-        }
     }
 
     public static final class BallRenderer {
@@ -213,70 +216,6 @@ public final class RenderUtil {
                         .setCullState(NO_CULL)
                         .createCompositeState(false)
         );
-
-        public static float[][][] getBallVertexBuffer(final float radius, final int faces) {
-            if (radius <= 0 || faces < 3) return null;
-
-            final int numTriangles = faces * faces * 2;
-            final float[][][] vertexBuffer = new float[numTriangles][3][3];
-
-            final float pi = MathUtil.PI;
-            final float twoPi = MathUtil.TWO_PI;
-            int triangleIndex = 0;
-
-            for (int lat = 0; lat < faces; lat++) {
-                float theta1 = pi * (-0.5f + (float) lat / faces);
-                float theta2 = pi * (-0.5f + (float) (lat + 1) / faces);
-
-                float y1 = radius * (float) Math.sin(theta1);
-                float y2 = radius * (float) Math.sin(theta2);
-
-                float scale1 = radius * (float) Math.cos(theta1);
-                float scale2 = radius * (float) Math.cos(theta2);
-
-                for (int lon = 0; lon < faces; lon++) {
-                    float phi1 = twoPi * (float) lon / faces;
-                    float phi2 = twoPi * (float) (lon + 1) / faces;
-
-                    float cosPhi1 = (float) Math.cos(phi1);
-                    float sinPhi1 = (float) Math.sin(phi1);
-                    float cosPhi2 = (float) Math.cos(phi2);
-                    float sinPhi2 = (float) Math.sin(phi2);
-
-                    float x1 = scale1 * cosPhi1;
-                    float z1 = scale1 * sinPhi1;
-                    float x2 = scale1 * cosPhi2;
-                    float z2 = scale1 * sinPhi2;
-                    float x3 = scale2 * cosPhi1;
-                    float z3 = scale2 * sinPhi1;
-                    float x4 = scale2 * cosPhi2;
-                    float z4 = scale2 * sinPhi2;
-
-                    vertexBuffer[triangleIndex][0][0] = x1;
-                    vertexBuffer[triangleIndex][0][1] = y1;
-                    vertexBuffer[triangleIndex][0][2] = z1;
-                    vertexBuffer[triangleIndex][1][0] = x3;
-                    vertexBuffer[triangleIndex][1][1] = y2;
-                    vertexBuffer[triangleIndex][1][2] = z3;
-                    vertexBuffer[triangleIndex][2][0] = x2;
-                    vertexBuffer[triangleIndex][2][1] = y1;
-                    vertexBuffer[triangleIndex][2][2] = z2;
-                    triangleIndex++;
-
-                    vertexBuffer[triangleIndex][0][0] = x2;
-                    vertexBuffer[triangleIndex][0][1] = y1;
-                    vertexBuffer[triangleIndex][0][2] = z2;
-                    vertexBuffer[triangleIndex][1][0] = x3;
-                    vertexBuffer[triangleIndex][1][1] = y2;
-                    vertexBuffer[triangleIndex][1][2] = z3;
-                    vertexBuffer[triangleIndex][2][0] = x4;
-                    vertexBuffer[triangleIndex][2][1] = y2;
-                    vertexBuffer[triangleIndex][2][2] = z4;
-                    triangleIndex++;
-                }
-            }
-            return vertexBuffer;
-        }
 
         @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
         public static void renderBall(final PoseStack poseStack, final MultiBufferSource buffer,
@@ -333,11 +272,6 @@ public final class RenderUtil {
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix = pose.pose();
             final VertexConsumer vertexConsumer = buffer.getBuffer(BALL_RENDER_TYPE);
-            renderBallGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
-        }
-
-        public static void renderBall(Matrix4f matrix, VertexConsumer vertexConsumer, float[][][] vertexBuffer,
-                                      float red, float green, float blue, float alpha) {
             renderBallGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
         }
 

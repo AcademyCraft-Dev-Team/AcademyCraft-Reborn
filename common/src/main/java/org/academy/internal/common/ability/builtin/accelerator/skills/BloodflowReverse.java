@@ -38,7 +38,7 @@ public class BloodflowReverse extends Skill {
         InputSystem.addKeyBinding(KEY_NAME, Client.CONFIG.getKeyBinding(KEY_NAME,
                         new InputSystem.InputPair(
                                 InputSystem.InputType.KEYBOARD,
-                                new InputSystem.InputEvent(
+                                new InputSystem.KeyInfo(
                                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
                                         GLFW.GLFW_RELEASE,
                                         new LinkedHashSet<>(
@@ -65,7 +65,7 @@ public class BloodflowReverse extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_REVERSE_BLOODFLOW));
         }
 
-        public static final class BloodflowReverseClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
+        public static final class BloodflowReverseClientConfig extends SkillClientConfig.KeyBindingConfig {
             private BloodflowReverseClientConfig() {
             }
         }

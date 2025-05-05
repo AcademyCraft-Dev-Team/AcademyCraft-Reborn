@@ -50,7 +50,14 @@ public final class Packets {
     public static final String C2S_TOGGLE_REFLECTION = "c2s_toggle_reflection";
     public static final String C2S_REVERSE_BLOODFLOW = "c2s_reverse_bloodflow";
     public static final String C2S_STORM_WING_TOGGLE = "c2s_storming_toggle";
+    public static final String C2S_STORM_WING_FRONT = "c2s_storming_front";
+    public static final String C2S_STORM_WING_BACK = "c2s_storming_back";
+    public static final String C2S_STORM_WING_LEFT = "c2s_storming_left";
+    public static final String C2S_STORM_WING_RIGHT = "c2s_storming_right";
+    public static final String C2S_STORM_WING_KEEP = "c2s_storming_keep";
     public static final String C2S_KINETIC_ENERGY_APPLIED_TOGGLE = "c2s_kinetic_energy_applied_toggle";
+    public static final String C2S_DIR_STRIKE_START = "c2s_dir_strike_start";
+    public static final String C2S_DIR_STRIKE_END = "c2s_dir_strike_end";
     /**
      * Other
      */

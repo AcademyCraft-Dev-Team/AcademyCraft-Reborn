@@ -6,7 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.client.event.ContainerSetFocusedChildEvent;
+import org.academy.api.client.gui.framework.ContainerSetFocusedChildEvent;
 import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;

@@ -3,8 +3,6 @@ package org.academy.api.client.util;
 import org.academy.api.common.util.MathUtil;
 
 public class VertexUtil {
-
-
     public static final class Ring {
         public static float[][][] getRingVertexBuffer(float radius, int segments, float yBottom, float yTop) {
             if (segments <= 0) return null;
@@ -38,9 +36,71 @@ public class VertexUtil {
         public static float[][][] getVerticalVertexBuffer(float radius, float height, int segments) {
             return getRingVertexBuffer(radius, segments, 0f, height);
         }
+    }
 
-        public static float[][][] getHorizontalVertexBuffer(float radius, float height, int segments) {
-            return getRingVertexBuffer(radius, segments, -height / 2f, height / 2f);
+    public static final class Ball {
+        public static float[][][] getBallVertexBuffer(final float radius, final int faces) {
+            if (radius <= 0 || faces < 3) return null;
+
+            final int numTriangles = faces * faces * 2;
+            final float[][][] vertexBuffer = new float[numTriangles][3][3];
+
+            final float pi = MathUtil.PI;
+            final float twoPi = MathUtil.TWO_PI;
+            int triangleIndex = 0;
+
+            for (int lat = 0; lat < faces; lat++) {
+                float theta1 = pi * (-0.5f + (float) lat / faces);
+                float theta2 = pi * (-0.5f + (float) (lat + 1) / faces);
+
+                float y1 = radius * (float) Math.sin(theta1);
+                float y2 = radius * (float) Math.sin(theta2);
+
+                float scale1 = radius * (float) Math.cos(theta1);
+                float scale2 = radius * (float) Math.cos(theta2);
+
+                for (int lon = 0; lon < faces; lon++) {
+                    float phi1 = twoPi * (float) lon / faces;
+                    float phi2 = twoPi * (float) (lon + 1) / faces;
+
+                    float cosPhi1 = (float) Math.cos(phi1);
+                    float sinPhi1 = (float) Math.sin(phi1);
+                    float cosPhi2 = (float) Math.cos(phi2);
+                    float sinPhi2 = (float) Math.sin(phi2);
+
+                    float x1 = scale1 * cosPhi1;
+                    float z1 = scale1 * sinPhi1;
+                    float x2 = scale1 * cosPhi2;
+                    float z2 = scale1 * sinPhi2;
+                    float x3 = scale2 * cosPhi1;
+                    float z3 = scale2 * sinPhi1;
+                    float x4 = scale2 * cosPhi2;
+                    float z4 = scale2 * sinPhi2;
+
+                    vertexBuffer[triangleIndex][0][0] = x1;
+                    vertexBuffer[triangleIndex][0][1] = y1;
+                    vertexBuffer[triangleIndex][0][2] = z1;
+                    vertexBuffer[triangleIndex][1][0] = x3;
+                    vertexBuffer[triangleIndex][1][1] = y2;
+                    vertexBuffer[triangleIndex][1][2] = z3;
+                    vertexBuffer[triangleIndex][2][0] = x2;
+                    vertexBuffer[triangleIndex][2][1] = y1;
+                    vertexBuffer[triangleIndex][2][2] = z2;
+                    triangleIndex++;
+
+                    vertexBuffer[triangleIndex][0][0] = x2;
+                    vertexBuffer[triangleIndex][0][1] = y1;
+                    vertexBuffer[triangleIndex][0][2] = z2;
+                    vertexBuffer[triangleIndex][1][0] = x3;
+                    vertexBuffer[triangleIndex][1][1] = y2;
+                    vertexBuffer[triangleIndex][1][2] = z3;
+                    vertexBuffer[triangleIndex][2][0] = x4;
+                    vertexBuffer[triangleIndex][2][1] = y2;
+                    vertexBuffer[triangleIndex][2][2] = z4;
+                    triangleIndex++;
+                }
+            }
+            return vertexBuffer;
         }
     }
 

@@ -14,5 +14,6 @@ public class Accelerator extends AbilityCategory {
         skillList.add(StormWing.INSTANCE);
         skillList.add(PlasmaGeneration.INSTANCE);
         skillList.add(KineticEnergyApplied.INSTANCE);
+        skillList.add(DirStrike.INSTANCE);
     }
 }

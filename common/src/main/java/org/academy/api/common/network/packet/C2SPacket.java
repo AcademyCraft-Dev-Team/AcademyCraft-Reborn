@@ -5,6 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.AcademyCraft;
 import org.academy.api.common.network.FriendlyByteBufSerializer;
 import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.NetworkSystem;
@@ -45,6 +46,9 @@ public class C2SPacket implements Packet<ServerGamePacketListener> {
 
     @Override
     public void handle(@NotNull ServerGamePacketListener handler) {
+        C2SPacketEvent event = new C2SPacketEvent(this);
+        AcademyCraft.EVENT_BUS.post(event);
+        if (event.isCanceled()) return;
         final ServerGamePacketListenerImpl serverPacketListener = (ServerGamePacketListenerImpl) handler;
         serverPacketListener.player.server.execute(() -> NetworkSystemServer.C2S_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle(serverPacketListener, this));
     }

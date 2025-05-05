@@ -10,4 +10,5 @@ public class SkillNames {
     public static final String STORM_WING = "storm_wing";
     public static final String PLASMA_GENERATION = "plasma_generation";
     public static final String KINETIC_ENERGY_APPLIED= "kinetic_energy_applied";
+    public static final String DIR_STRIKE = "dir_strike";
 }

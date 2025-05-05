@@ -41,7 +41,7 @@ public class VectorReflection extends Skill {
         InputSystem.addKeyBinding(KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(KEY_NAME_TOGGLE,
                         new InputSystem.InputPair(
                                 InputSystem.InputType.KEYBOARD,
-                                new InputSystem.InputEvent(
+                                new InputSystem.KeyInfo(
                                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
                                         GLFW.GLFW_RELEASE,
                                         new LinkedHashSet<>()
@@ -66,7 +66,7 @@ public class VectorReflection extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_TOGGLE_REFLECTION));
         }
 
-        public static final class VectorReflectionClientConfig extends SkillClientConfig.SkillClientKeyBindingConfig {
+        public static final class VectorReflectionClientConfig extends SkillClientConfig.KeyBindingConfig {
         }
     }
 
@@ -130,6 +130,7 @@ public class VectorReflection extends Skill {
             return Pair.of(true, remainingDamage);
         }
 
+        @SuppressWarnings("resource")
         private static void applyReflection(Player player, DamageSource source, float reflectedDamage) {
             Entity sourceEntity = source.getEntity();
             Entity directEntity = source.getDirectEntity();
@@ -141,7 +142,7 @@ public class VectorReflection extends Skill {
             boolean isProjectile = directEntity != null
                     && (source.is(DamageTypes.ARROW) || source.is(DamageTypes.THROWN));
 
-            Vec3 vec3 = player.getLookAngle().scale(1);
+            Vec3 vec3 = player.getLookAngle().normalize().scale(1);
 
             Vec3 spawnPos = isProjectile
                     ? directEntity.position()
@@ -150,7 +151,7 @@ public class VectorReflection extends Skill {
             GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, player.level());
             glowCircle.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
 
-            Vec3 dir = sourceEntity.position().subtract(spawnPos).normalize();
+            Vec3 dir = sourceEntity.position().subtract(player.getPosition(1)).normalize();
 
             float yaw = (float) (Math.toDegrees(Math.atan2(dir.z, dir.x))) - 90.0F;
             float pitch = (float) (-Math.toDegrees(Math.asin(dir.y)));

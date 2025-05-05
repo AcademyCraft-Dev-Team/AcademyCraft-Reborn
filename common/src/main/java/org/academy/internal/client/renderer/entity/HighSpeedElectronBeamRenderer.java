@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
 public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElectronBeam> {
-    public static final float[][][] BALL_BUFFER = RenderUtil.BallRenderer.getBallVertexBuffer(1, 16);
+    public static final float[][][] BALL_BUFFER = VertexUtil.Ball.getBallVertexBuffer(1, 16);
     public static final float[][] RAY_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 1, 8, true);
 
     public HighSpeedElectronBeamRenderer(EntityRendererProvider.Context context) {
