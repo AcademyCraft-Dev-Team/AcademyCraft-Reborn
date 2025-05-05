@@ -213,7 +213,6 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             infoArea.addChild("label_input_name_right", inputNameLabelRight);
 
             TextBoxWidget nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
-            nameTextBox.scale = 0.5f;
             nameTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
                     NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SET_NODE_NAME, wirelessNodeBlockEntity.getBlockPos(), s));
@@ -243,7 +242,6 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             infoArea.addChild("label_input_pass_right", inputPassLabelRight);
 
             TextBoxWidget passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
-            passTextBox.scale = 0.5f;
             passTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
                     NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SET_NODE_PASS, wirelessNodeBlockEntity.getBlockPos(), s));
@@ -294,7 +292,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
                 index = (ticks / 20) % 2 == 0 ? 8 : 9;
             } else {
-                index = Math.max(0, Math.min((int) (progressCapacity * 8), 7));
+                index = Math.max(0, Math.min((int) (progressCapacity * 8 - 1), 7));
             }
 
             state.setFrameIndex(index);

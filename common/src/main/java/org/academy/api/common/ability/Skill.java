@@ -10,6 +10,7 @@ public abstract class Skill {
     public final String name;
     public final int level;
     public final List<Skill> dependencies = new ArrayList<>();
+    public final int energy;
 
     /**
      * @param name  技能名称
@@ -18,6 +19,13 @@ public abstract class Skill {
     protected Skill(String name, int level) {
         this.name = name;
         this.level = level;
+        this.energy = 5000;
+    }
+
+    protected Skill(String name, int level, int energy) {
+        this.name = name;
+        this.level = level;
+        this.energy = energy;
     }
 
     protected Skill(String name, int level, @NotNull List<Skill> dependencies) {

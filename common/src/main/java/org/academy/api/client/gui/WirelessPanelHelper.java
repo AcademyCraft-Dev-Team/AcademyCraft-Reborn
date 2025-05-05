@@ -76,14 +76,13 @@ public class WirelessPanelHelper {
                 HoverLabelWidget nodeNameLabel = new HoverLabelWidget(nodeName, 24, 3.5f, 40);
                 nodeViewPanel.addChild("node_name", nodeNameLabel);
                 if (!isConnected) {
-                    ColorFillWidget passwordBack = new ColorFillWidget(64, 3, 46, 10, 0X802E2E2E);
-                    nodeViewPanel.addChild("password_back", passwordBack);
                     Consumer<String> connect = password -> {
                         NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_CONNECT_NODE, getPosition(), nodeName, password));
                         requestCurrentNodeStatus();
                     };
-                    TextBoxWidget inputBox = new TextBoxWidget(8, 64, 3, 46, 10);
+                    TextBoxWidget inputBox = new TextBoxWidget(12, 70, 3, 46, 10);
                     inputBox.whenEnter = connect;
+                    inputBox.showBackground = true;
                     nodeViewPanel.addChild("input", inputBox);
                     ImageButtonWidget buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_UNCONNECTED, () -> {
                         String password = inputBox.getText();

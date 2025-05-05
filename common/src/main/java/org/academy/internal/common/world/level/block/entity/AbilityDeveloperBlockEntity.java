@@ -5,7 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.level.block.Block;
@@ -13,20 +12,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
-import org.academy.api.common.ability.AbilitySystem;
-import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.Packets;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
-import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.model.AbilityDeveloperBlockEntityModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
-import java.util.Set;
 
 public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser {
     public String name;
@@ -42,35 +34,6 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     public AbilityDeveloperBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.ABILITY_DEVELOPER, pos, blockState);
         standState.start(ticks);
-    }
-
-    @SuppressWarnings("resource")
-    public static void intiServer() {
-        NetworkSystemServer.registerC2SPacketHandler(
-                Packets.C2S_LEARN_SKILL,
-                (listener, packet) -> {
-                    FriendlyByteBuf friendlyByteBuf = packet.friendlyByteBuf;
-                    String name = friendlyByteBuf.readUtf();
-                    BlockPos blockPos = friendlyByteBuf.readBlockPos();
-                    Skill skill = AbilitySystem.SKILL_MAP.get(name);
-                    if (skill == null) return;
-                    listener.player.level();
-                    BlockEntity blockEntity = listener.player.level().getBlockEntity(blockPos);
-                    if (blockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                        long needEnergy = skill.level * 10000L;
-                        if (abilityDeveloperBlockEntity.getEnergyStored() >= needEnergy) {
-                            abilityDeveloperBlockEntity.setEnergyStored(abilityDeveloperBlockEntity.getEnergyStored() - (int) needEnergy);
-                            AbilitySystemServer.addPlayerSkill(listener.player.getUUID(), name);
-                            Set<String> skillList = AbilitySystemServer.getPlayerSkills(listener.player.getUUID());
-                            for (String skillName : skillList) {
-                                AcademyCraft.LOGGER.info(skillName);
-                            }
-                        }
-                    } else {
-                        AcademyCraft.LOGGER.info("Invalid server learn skill packet for {}", name);
-                    }
-                }
-        );
     }
 
     public void setOpen(boolean open) {

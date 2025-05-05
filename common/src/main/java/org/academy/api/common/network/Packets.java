@@ -12,25 +12,20 @@ public final class Packets {
      * Ability System
      */
     public static final String C2S_LEARN_SKILL = "c2s_learn_skill";
+    public static final String C2S_ACQUIRE_CATEGORY = "c2s_acquire_category";
     public static final String S2C_COMPUTING_POWER_SYNC = "s2c_computing_power_sync";
     public static final String S2C_MAX_COMPUTING_POWER_SYNC = "s2c_max_computing_power_sync";
     public static final String S2C_SKILLS_SYC = "s2c_skills_sync";
     public static final String S2C_ABILITY_CATEGORY_SYNC = "s2c_ability_category_sync";
-    public static final String C2S_ACQUIRE_CATEGORY = "c2s_acquire_category";
     /**
      * Wireless Network
      */
     public static final String C2S_CONNECT_NODE = "c2s_connect_node";
     public static final String C2S_DISCONNECT_NODE = "c2s_disconnect_node";
-    public static final String S2C_ABILITY_DEVELOPER_SCREEN_RESPONSE = "s2c_ability_developer_screen_response";
     public static final String C2S_GET_AVAILABLE_NODES = "c2s_get_available_nodes";
     public static final String C2S_GET_CURRENT_NODE = "c2s_get_current_node";
     public static final String C2S_SET_NODE_NAME = "c2s_set_node_name";
     public static final String C2S_SET_NODE_PASS = "c2s_set_node_pass";
-    /**
-     * Ability Developer
-     */
-    public static final String C2S_LEARN = "c2s_learn";
     /**
      * Electromaster
      */

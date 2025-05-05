@@ -16,11 +16,12 @@ public class TextBoxWidget extends AbstractWidget {
     public boolean showBackground = false;
     public boolean showCaret = true;
     public long lastBlinkTime = System.currentTimeMillis();
-    public int bgColor = 0xFF1F1F1F;
-    public int borderColor = 0xFF5A5A5A;
+    public int bgColor = 0x5F1F1F1F;
+    public int borderColor = 0x5F5A5A5A;
     public int textColor = 0xFFFFFFFF;
     public Consumer<String> whenEnter;
     public boolean clearWhenEnter = true;
+    public boolean forceScale = false;
     public float scale = 1.0f;
 
     public TextBoxWidget(int maxLength, float x, float y, float width, float height) {
@@ -120,11 +121,17 @@ public class TextBoxWidget extends AbstractWidget {
 
         guiGraphics.pose().pushPose();
 
+        float textWidth = font.width(text.toString()) + 6;
+        if (textWidth > width) {
+            if (!forceScale) {
+                scale = width / textWidth;
+            }
+        }
         float textHeight = font.lineHeight;
         float scaledHeight = textHeight * finalScale;
         float offsetY = (scaledHeight - textHeight) / 2;
 
-        guiGraphics.pose().translate(x, y + (height - scaledHeight) / 2 - offsetY, 0);
+        guiGraphics.pose().translate(x + 1, y + (height - scaledHeight) / 4 - offsetY, 0);
         guiGraphics.pose().scale(finalScale, finalScale, 1.0f);
 
         guiGraphics.drawString(font, text.toString(), 0, 0, textColor, false);

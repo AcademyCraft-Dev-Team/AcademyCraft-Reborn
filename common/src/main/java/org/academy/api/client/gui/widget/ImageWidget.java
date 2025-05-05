@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.gui.framework.AbstractWidget;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
 public class ImageWidget extends AbstractWidget {
@@ -21,7 +21,7 @@ public class ImageWidget extends AbstractWidget {
     public float heightScale = 1.0f;
     public boolean centerScale = true;
 
-    public ImageWidget(float x, float y, float width, float height, @NotNull RenderType renderType) {
+    public ImageWidget(float x, float y, float width, float height, @Nullable RenderType renderType) {
         super(x, y, width, height);
         this.renderType = renderType;
     }
@@ -32,6 +32,7 @@ public class ImageWidget extends AbstractWidget {
             animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
         }
         if (!isVisible()) return;
+        if (renderType == null) return;
         VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(renderType);
 
         guiGraphics.pose().pushPose();

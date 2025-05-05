@@ -235,6 +235,9 @@ public class WirelessManager {
 
         for (Map.Entry<WirelessUser, WorldData.WirelessNetworkData.UserConfig> entry : userConfigMap.entrySet()) {
             WirelessUser user = entry.getKey();
+            if (user == node) {
+                continue;
+            }
             WorldData.WirelessNetworkData.UserConfig cfg = entry.getValue();
             double receiveWeight = cfg.getReceiveWeight();
             double sendWeight = cfg.getSendWeight();
@@ -296,7 +299,6 @@ public class WirelessManager {
 
         node.setEnergyStored(energyStored);
     }
-
 
     private WirelessManager() {
     }

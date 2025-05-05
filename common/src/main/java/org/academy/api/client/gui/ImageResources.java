@@ -44,7 +44,7 @@ public final class ImageResources {
         public static final RenderType RENDER_TYPE_PANEL_RIGHT_BACK = RenderUtil.getPositionColorTexRenderType(
                 "panel_right_back", TEXTURE_PANEL_RIGHT_BACK, false);
         public static final RenderType RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK = RenderUtil.getPositionColorTexRenderType(
-                "panel_right_skill_icon_back", TEXTURE_PANEL_RIGHT_SKILL_ICON_BACK, false);
+                "panel_right_skill_icon_back", TEXTURE_PANEL_RIGHT_SKILL_ICON_BACK, true);
         /**
          * WindGen
          */
@@ -98,6 +98,9 @@ public final class ImageResources {
         );
         public static final RenderType RENDER_TYPE_BLEND_QUAD = RenderUtil.getPositionColorTexRenderTypeFull(
                 "blend_quad", TEXTURE_BLEND_QUAD, true
+        );
+        public static final RenderType RENDER_TYPE_BUTTON = RenderUtil.getPositionColorTexRenderType(
+                "button", TEXTURE_BUTTON, false
         );
     }
 

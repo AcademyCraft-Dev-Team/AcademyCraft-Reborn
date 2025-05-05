@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -15,6 +16,8 @@ import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.FutureManagerClient;
+import org.academy.api.client.util.ClientUtil;
+import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.util.MathUtil;
@@ -49,6 +52,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     private PanelWidget wirelessPanel;
     private SmoothScrollPanelWidget nodeListPanel;
     private PanelWidget leftPanel;
+    private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
 
     public AbilityDeveloperScreen(@NotNull BlockPos mainPos) {
         super(Component.empty());
@@ -137,7 +141,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                             if ("learn".equals(s)) {
                                 if (!learned) {
                                     if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
-                                        FutureManagerClient.sendFuturePacket(Packets.C2S_LEARN, (Consumer<ArrayList<String>>) strings -> {
+                                        FutureManagerClient.sendFuturePacket(Packets.C2S_ACQUIRE_CATEGORY, (Consumer<ArrayList<String>>) strings -> {
                                             Widget lastWidget = outputCommand;
                                             for (String string : strings) {
                                                 LabelWidget newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
@@ -181,9 +185,9 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 {
                     ParallaxImageWidget parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, RENDER_TYPE_SKILL_PANEL_BACK, width, height);
                     skillPanel.addChild("skill_area_back", parallaxImageWidget);
-                    SkillInfo skillInfo = new SkillInfo(ArcGenerate.INSTANCE, new ArrayList<>(), new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/electromaster/skill/arc_generate/icon.png"), 50, 55);
+                    SkillInfo skillInfo = new SkillInfo(ArcGenerate.INSTANCE, new ArrayList<>(), new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/electromaster/skill/arc_generate/icon.png"), 50, 55, 5000);
                     SKILL_INFOS.add(skillInfo);
-                    SKILL_INFOS.add(new SkillInfo(Railgun.INSTANCE, List.of(skillInfo), new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/electromaster/skill/railgun/icon.png"), 100, 45));
+                    SKILL_INFOS.add(new SkillInfo(Railgun.INSTANCE, List.of(skillInfo), new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/electromaster/skill/railgun/icon.png"), 100, 45, 15000));
                     for (SkillInfo skill : SKILL_INFOS) {
                         SkillWidget skillWidget = new SkillWidget(skill);
                         skillPanel.addChild(skill.skill.name, skillWidget);
@@ -212,6 +216,10 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 nodeListPanel = wirelessPanel.getChildUnSafe("node_list");
             }
         }
+        rootContainer.addChild("panel_skill_info", skillInfoPanel);
+        skillInfoPanel.setZ(150);
+        skillInfoPanel.setEnabled(false);
+        skillInfoPanel.setVisible(false);
         requestCurrentNodeStatus();
         requestAvailableNodes(getNodeList());
     }
@@ -265,7 +273,67 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         }
     }
 
-    void openSkillViewPanel(Skill skill) {
+    void openSkillViewPanel(SkillInfo skill) {
+        skillInfoPanel.skillInfo = skill;
+
+        skillInfoPanel.background.setWidth(AbilityDeveloperScreen.this.width);
+        skillInfoPanel.background.setHeight(AbilityDeveloperScreen.this.height);
+
+        skillInfoPanel.setWidth(AbilityDeveloperScreen.this.width);
+        skillInfoPanel.setHeight(AbilityDeveloperScreen.this.height);
+        skillInfoPanel.setEnabled(true);
+        skillInfoPanel.setVisible(true);
+
+        skillInfoPanel.icon.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.icon.getWidth() / 2);
+        skillInfoPanel.icon.setY(((float) AbilityDeveloperScreen.this.height / 2 - skillInfoPanel.icon.getHeight() / 2) - 25);
+        skillInfoPanel.iconBack.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.iconBack.getWidth() / 2);
+        skillInfoPanel.iconBack.setY(((float) AbilityDeveloperScreen.this.height / 2 - skillInfoPanel.iconBack.getHeight() / 2) - 25);
+        skillInfoPanel.icon.renderType = RenderUtil.getPositionColorTexRenderTypeFull("skill_icon", skill.texture, false);
+
+        skillInfoPanel.nameLabel.value = "Skill: %s".formatted(skill.skill.name);
+        skillInfoPanel.nameLabel.setWidth(Minecraft.getInstance().font.width(FormattedText.of(skillInfoPanel.nameLabel.value)));
+        skillInfoPanel.nameLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.nameLabel.getWidth() / 2);
+        skillInfoPanel.nameLabel.setY(skillInfoPanel.icon.getY() + 50);
+
+        boolean lacked = ClientUtil.lacksSkill(skill.skill);
+        skillInfoPanel.stateLabel.value = lacked ? "Skill not learned" : "Skill learned";
+        skillInfoPanel.stateLabel.color = lacked ? 0XFFFF0000 : 0xFFFFFFFF;
+        skillInfoPanel.stateLabel.setWidth(Minecraft.getInstance().font.width(skillInfoPanel.stateLabel.value));
+        skillInfoPanel.stateLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.stateLabel.getWidth() / 2);
+        skillInfoPanel.stateLabel.setY(skillInfoPanel.nameLabel.getY() + 12);
+
+        skillInfoPanel.learnButton.setEnabled(lacked);
+        skillInfoPanel.learnButton.setVisible(lacked);
+
+        skillInfoPanel.depPanel.clearChildren();
+        skillInfoPanel.depPanel.setY(skillInfoPanel.stateLabel.getY() + 10);
+        if (lacked) {
+            float x = 0;
+            LabelWidget labelWidget = new LabelWidget("Dep.", x, 3.5f);
+            x += labelWidget.getWidth();
+            skillInfoPanel.depPanel.addChild("label_name", labelWidget);
+            if (skill.dependencies.isEmpty()) {
+                LabelWidget empty = new LabelWidget("Empty", x, 3.5f);
+                skillInfoPanel.depPanel.addChild("label_empty", empty);
+                x += empty.getWidth();
+            }
+            for (SkillInfo dependency : skill.dependencies) {
+                String name = "dep_skill_icon_" + skill.skill.name;
+                ImageWidget icon = new ImageWidget(x, 4, 8, 8, RenderUtil.getPositionTexRenderType(name, dependency.texture, false));
+                skillInfoPanel.depPanel.addChild(name, icon);
+                x += 12;
+            }
+            skillInfoPanel.depPanel.setWidth(x);
+        }
+        skillInfoPanel.depPanel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.depPanel.getWidth() / 2);
+
+        skillInfoPanel.learnButton.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.learnButton.getWidth() / 2);
+        skillInfoPanel.learnButton.setY(skillInfoPanel.depPanel.getY() + 18);
+
+        skillInfoPanel.energyLabel.value = !lacked ? "" : "%d AF".formatted(skill.energy);
+        skillInfoPanel.energyLabel.setWidth(Minecraft.getInstance().font.width(skillInfoPanel.energyLabel.value));
+        skillInfoPanel.energyLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.energyLabel.getWidth() * skillInfoPanel.energyLabel.scale / 2);
+        skillInfoPanel.energyLabel.setY(skillInfoPanel.learnButton.getY() + 18);
     }
 
     @Override
@@ -293,6 +361,45 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         return mainPos;
     }
 
+    final class SkillInfoPanel extends PanelWidget {
+        SkillInfo skillInfo;
+        final BackgroundWidget background = new BackgroundWidget(AbilityDeveloperScreen.this);
+        final ImageWidget iconBack = new ImageWidget(0, 0, 65, 65, RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK);
+        final ImageWidget icon = new ImageWidget(0, 0, 32.5f, 32.5f, null);
+        final LabelWidget nameLabel = new LabelWidget("", 0, 0);
+        final LabelWidget stateLabel = new LabelWidget("", 0, 0);
+        final PanelWidget depPanel = new PanelWidget(0, 0, 0, 16);
+        final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, RENDER_TYPE_BUTTON, new Runnable() {
+            @Override
+            public void run() {
+                if (skillInfo == null) return;
+                FutureManagerClient.<Boolean>sendFuturePacket(Packets.C2S_LEARN_SKILL, aBoolean -> {
+                    if (aBoolean) {
+                        init();
+                    }
+                }, skillInfo.skill.name, mainPos);
+            }
+        });
+        final LabelWidget energyLabel = new LabelWidget("", 0, 0);
+
+        public SkillInfoPanel() {
+            super(0, 0, 0, 0);
+            addChild("back", background);
+            addChild("icon_back", iconBack);
+            addChild("icon", icon);
+            addChild("name_label", nameLabel);
+            addChild("state_label", stateLabel);
+            addChild("panel_dep", depPanel);
+            addChild("learn_button", learnButton);
+            addChild("energy_label", energyLabel);
+            energyLabel.scale = 0.75f;
+            background.runnable = () -> {
+                setEnabled(false);
+                setVisible(false);
+            };
+        }
+    }
+
     final class SkillWidget extends ImageButtonWidget {
         public float targetScale = 1.0f;
         public float currentScale = 1.0f;
@@ -302,7 +409,9 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
 
         @SuppressWarnings("SuspiciousNameCombination")
         SkillWidget(SkillInfo skillInfo) {
-            super(skillInfo.x, skillInfo.y, PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE, RENDER_TYPE_SKILL_ICON.apply(skillInfo.skill.name, skillInfo.texture), () -> AbilityDeveloperScreen.this.openSkillViewPanel(skillInfo.skill));
+            super(skillInfo.x, skillInfo.y, PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE,
+                    RENDER_TYPE_SKILL_ICON.apply(skillInfo.skill.name, skillInfo.texture),
+                    () -> AbilityDeveloperScreen.this.openSkillViewPanel(skillInfo));
             this.dependencies.addAll(skillInfo.dependencies);
         }
 
@@ -344,10 +453,19 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             }
             renderType = RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK;
             super.render(guiGraphics, mouseX, mouseY, partialTick);
+            float oRed = red;
+            float oGreen = green;
+            float oBlue = blue;
+            red = 1f;
+            green = 1f;
+            blue = 1f;
             renderType = oldType;
             widthScale *= 0.5f;
             heightScale *= 0.5f;
             super.render(guiGraphics, mouseX, mouseY, partialTick);
+            red = oRed;
+            green = oGreen;
+            blue = oBlue;
             widthScale /= 0.5f;
             heightScale /= 0.5f;
             renderType = DEBUG;
@@ -367,6 +485,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         }
     }
 
-    public record SkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation texture, float x, float y) {
+    public record SkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation texture, float x, float y,
+                            int energy) {
     }
 }
