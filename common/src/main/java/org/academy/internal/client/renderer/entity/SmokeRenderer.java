@@ -52,10 +52,10 @@ public class SmokeRenderer extends EntityRenderer<Smoke> {
         float u1 = u0 + size;
         float v1 = v0 + size;
 
-        vertexConsumer.vertex(matrix, -halfSize, -halfSize, 0).color(r, g, b, a).uv(u0, v0).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
-        vertexConsumer.vertex(matrix, -halfSize, halfSize, 0).color(r, g, b, a).uv(u0, v1).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
-        vertexConsumer.vertex(matrix, halfSize, halfSize, 0).color(r, g, b, a).uv(u1, v1).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
-        vertexConsumer.vertex(matrix, halfSize, -halfSize, 0).color(r, g, b, a).uv(u1, v0).normal(0,0,0).uv2(packedLight).overlayCoords(OverlayTexture.NO_OVERLAY).endVertex();
+        vertexConsumer.vertex(matrix, -halfSize, -halfSize, 0).color(r, g, b, a).uv(u0, v0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 0).endVertex();
+        vertexConsumer.vertex(matrix, -halfSize, halfSize, 0).color(r, g, b, a).uv(u0, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 0).endVertex();
+        vertexConsumer.vertex(matrix, halfSize, halfSize, 0).color(r, g, b, a).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 0).endVertex();
+        vertexConsumer.vertex(matrix, halfSize, -halfSize, 0).color(r, g, b, a).uv(u1, v0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 0).endVertex();
 
         poseStack.popPose();
     }
