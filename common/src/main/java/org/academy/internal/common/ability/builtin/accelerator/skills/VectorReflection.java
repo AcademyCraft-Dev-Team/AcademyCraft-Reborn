@@ -7,6 +7,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
@@ -137,10 +138,7 @@ public class VectorReflection extends Skill {
 
             if (sourceEntity == null || sourceEntity == player) return;
 
-            sourceEntity.hurt(source, reflectedDamage);
-
-            boolean isProjectile = directEntity != null
-                    && (source.is(DamageTypes.ARROW) || source.is(DamageTypes.THROWN));
+            boolean isProjectile = directEntity instanceof Projectile;
 
             Vec3 vec3 = player.getLookAngle().normalize().scale(1);
 
@@ -163,6 +161,8 @@ public class VectorReflection extends Skill {
 
             if (isProjectile) {
                 directEntity.setDeltaMovement(directEntity.getDeltaMovement().scale(10));
+            } else {
+                sourceEntity.hurt(source, reflectedDamage);
             }
         }
     }
