@@ -9,6 +9,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
@@ -16,13 +17,16 @@ import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
+import org.academy.internal.common.ability.builtin.electromaster.Electromaster;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 public class ArcGenerate extends Skill {
@@ -53,6 +57,9 @@ public class ArcGenerate extends Skill {
     }
 
     public static final class Client {
+        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+                AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(Railgun.Client.SKILL_INFO),
+                        TextureResources.TEXTURE_ARC_GENERATE_ICON, 20, 70.25f);
         public static final ArcGenerateSKillConfig CONFIG = new ArcGenerateSKillConfig();
 
         public static void handler() {

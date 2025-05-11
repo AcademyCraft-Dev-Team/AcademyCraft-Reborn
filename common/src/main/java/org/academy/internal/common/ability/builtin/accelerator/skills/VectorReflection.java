@@ -12,12 +12,15 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
+import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -59,6 +62,9 @@ public class VectorReflection extends Skill {
     }
 
     public static final class Client {
+        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+                AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
+                        TextureResources.TEXTURE_VECTOR_REFLECTION_ICON, 20, 70.25f);
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + ".toggle";
         public static final VectorReflectionClientConfig CONFIG = new VectorReflectionClientConfig();
 

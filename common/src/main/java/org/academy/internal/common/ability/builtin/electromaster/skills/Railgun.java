@@ -24,6 +24,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
+import org.academy.internal.common.ability.builtin.electromaster.Electromaster;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -43,7 +44,7 @@ public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
 
     private Railgun() {
-        super(SkillNames.RAILGUN, 5, 15000);
+        super(SkillNames.RAILGUN, 5, 15000, List.of(ArcGenerate.INSTANCE));
     }
 
     @Override
@@ -65,10 +66,12 @@ public class Railgun extends Skill {
                                 new LinkedHashSet<>())
                 )
         ), Client::handleKey);
-        AbilityDeveloperScreen.registerSkillInfo(INSTANCE, List.of(), TextureResources.TEXTURE_RAILGUN_ICON, 50, 50);
     }
 
     public static final class Client {
+        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+                AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(),
+                        TextureResources.TEXTURE_RAILGUN_ICON, 200, 70.25f);
         public static final String KEY_NAME = SkillNames.RAILGUN + ".shoot";
         public static RailgunClientConfig CLIENT_CONFIG = new RailgunClientConfig();
 

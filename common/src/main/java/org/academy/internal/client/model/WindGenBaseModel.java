@@ -17,6 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import org.academy.AcademyCraft;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -30,7 +31,6 @@ import org.joml.Matrix4f;
 @SuppressWarnings({"unused", "FieldCanBeLocal", "SpellCheckingInspection"})
 public class WindGenBaseModel extends HierarchicalModel<Entity> {
     public static final float[][] PILLAR_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 8, true);
-    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wind_gen_base.png");
     private final ModelPart all;
     private final ModelPart pole;
     private final ModelPart parts;
@@ -280,7 +280,7 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
     }
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        all.render(poseStack, bufferSource.getBuffer(renderType(TEXTURE)), packedLight, packedOverlay);
+        all.render(poseStack, bufferSource.getBuffer(renderType(TextureResources.TEXTURE_WIND_GEN_MODEL)), packedLight, packedOverlay);
         poseStack.pushPose();
         Minecraft minecraft = Minecraft.getInstance();
         BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR_BLOCK.defaultBlockState());

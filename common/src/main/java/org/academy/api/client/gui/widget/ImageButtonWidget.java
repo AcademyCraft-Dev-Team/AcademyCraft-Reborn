@@ -7,7 +7,7 @@ import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 
 public class ImageButtonWidget extends ImageWidget {
     public Runnable onPress;
-    public boolean hoverEffect = true;
+    public boolean hoverEffect = false;
 
     public ImageButtonWidget(float x, float y, float width, float height,
                              RenderType renderType, Runnable onPress) {

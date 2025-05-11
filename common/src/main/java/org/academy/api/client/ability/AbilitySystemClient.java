@@ -12,6 +12,8 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.academy.api.common.network.Packets;
+import org.academy.internal.common.ability.builtin.level0.Level0;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -33,7 +35,8 @@ public final class AbilitySystemClient {
                     )
             )
     );
-    public static volatile AbilityCategory category;
+    @NotNull
+    public static volatile AbilityCategory category = Level0.INSTANCE   ;
     private static volatile boolean activeHUD = false;
     private static volatile float computingPower;
     private static volatile float maximumComputingPower;
@@ -105,6 +108,7 @@ public final class AbilitySystemClient {
         Minecraft.getInstance().execute(() -> AbilitySystemClient.activeHUD = activeHUD);
     }
 
+    @NotNull
     public static AbilityCategory getCategory() {
         return category;
     }

@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Projectile.class)
 public abstract class MixinProjectile {
+    @SuppressWarnings("resource")
     @Inject(
             method = "shootFromRotation",
             at = @At("HEAD"),
@@ -27,6 +28,7 @@ public abstract class MixinProjectile {
             CallbackInfo ci
     ) {
         Projectile projectile = (Projectile) (Object) this;
+        if (projectile.level().isClientSide()) return;
         if (KineticEnergyApplied.Server.SKILL_STATS.containsKey(shooter.getUUID()) && KineticEnergyApplied.Server.SKILL_STATS.get(shooter.getUUID())) {
             velocity = KineticEnergyApplied.Server.onShoot(projectile,shooter, x, y, z, velocity, inaccuracy);
 
