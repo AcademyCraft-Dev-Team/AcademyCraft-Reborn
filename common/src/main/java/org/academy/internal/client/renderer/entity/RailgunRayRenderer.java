@@ -21,7 +21,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay> {
     public void render(RailgunRay entity, float entityYaw, float partialTick, PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
 
-        entity.renderProgress = MathUtil.lerpFactorStartEnd(entity.renderProgress, entity.progress, partialTick);
+        entity.renderProgress = MathUtil.lerpStartEndFactor(entity.renderProgress, entity.progress, partialTick);
         poseStack.mulPoseMatrix(new Matrix4f()
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()))

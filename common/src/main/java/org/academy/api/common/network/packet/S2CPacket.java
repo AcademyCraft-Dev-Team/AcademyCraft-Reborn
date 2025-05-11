@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.AcademyCraft;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.S2CPacketHandler;
 import org.academy.api.common.network.FriendlyByteBufSerializer;
 import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.NetworkSystem;
@@ -41,8 +42,8 @@ public class S2CPacket implements Packet<ClientGamePacketListener> {
 
     @Override
     public void write(@NotNull FriendlyByteBuf buffer) {
-        friendlyByteBuf.writeVarInt(id);
-        friendlyByteBuf.writeBytes(friendlyByteBuf.copy());
+        buffer.writeVarInt(id);
+        buffer.writeBytes(friendlyByteBuf.copy());
     }
 
     @Override
@@ -50,6 +51,18 @@ public class S2CPacket implements Packet<ClientGamePacketListener> {
         S2CPacketEvent event = new S2CPacketEvent(this);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
-        Minecraft.getInstance().execute(() -> NetworkSystemClient.SERVER_TO_CLIENT_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle((ClientPacketListener) handler, this));
+        if (handler instanceof ClientPacketListener listener) {
+            String packet = NetworkSystem.getPacketResourceLocation(id);
+            if (packet != null) {
+                S2CPacketHandler packetHandler = NetworkSystemClient.S2C_PACKET_HANDLER_MAP.get(packet);
+                if (packetHandler != null) {
+                    Minecraft.getInstance().execute(() -> packetHandler.handle(listener, this));
+                } else {
+                    AcademyCraft.LOGGER.warn("PacketHandler " + packet + " not found");
+                }
+            } else {
+                AcademyCraft.LOGGER.info("Unknown packetID " + id);
+            }
+        }
     }
 }

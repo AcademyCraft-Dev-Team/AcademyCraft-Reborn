@@ -28,6 +28,8 @@ public class MixinMinecraftServer {
     @Inject(method = "halt", at = @At("HEAD"))
     private void halt(boolean waitForServer, CallbackInfo ci) {
         AcademyCraft.LOGGER.info("Halting MinecraftServer");
-        AbilitySystemServer.scheduledFuture.cancel(true);
+        if (AbilitySystemServer.scheduledFuture != null) {
+            AbilitySystemServer.scheduledFuture.cancel(true);
+        }
     }
 }

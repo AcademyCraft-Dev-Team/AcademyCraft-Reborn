@@ -8,13 +8,13 @@
   "railgun": {
     "subtitle": "academy.railgun",
     "sounds": [
-      "academy:skill/electromaster/railgun"
+      "academy:ability/electromaster/skill/railgun"
     ]
   },
   "arc_weak": {
     "subtitle": "academy.arc_weak",
     "sounds": [
-      "academy:skill/electromaster/arc_weak"
+      "academy:ability/electromaster/skill/arc_weak"
     ]
   },
   "vector_reflection": {

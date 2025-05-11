@@ -8,7 +8,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
@@ -21,8 +20,6 @@ import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.common.ability.builtin.electromaster.skills.ArcGenerate;
-import org.academy.internal.common.ability.builtin.electromaster.skills.Railgun;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
@@ -185,9 +182,6 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 {
                     ParallaxImageWidget parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, RENDER_TYPE_SKILL_PANEL_BACK, width, height);
                     skillPanel.addChild("skill_area_back", parallaxImageWidget);
-                    SkillInfo skillInfo = new SkillInfo(ArcGenerate.INSTANCE, new ArrayList<>(), new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/electromaster/skill/arc_generate/icon.png"), 50, 55, 5000);
-                    SKILL_INFOS.add(skillInfo);
-                    SKILL_INFOS.add(new SkillInfo(Railgun.INSTANCE, List.of(skillInfo), new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/electromaster/skill/railgun/icon.png"), 100, 45, 15000));
                     for (SkillInfo skill : SKILL_INFOS) {
                         SkillWidget skillWidget = new SkillWidget(skill);
                         skillPanel.addChild(skill.skill.name, skillWidget);
@@ -222,6 +216,12 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         skillInfoPanel.setVisible(false);
         requestCurrentNodeStatus();
         requestAvailableNodes(getNodeList());
+    }
+
+    public static SkillInfo registerSkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation icon, float x, float y) {
+        SkillInfo info = new SkillInfo(skill, dependencies, icon, x, y, 0);
+        SKILL_INFOS.add(info);
+        return info;
     }
 
     private static void addOutput(String name, LabelWidget labelWidget, AbstractContainerWidget abstractContainerWidget) {

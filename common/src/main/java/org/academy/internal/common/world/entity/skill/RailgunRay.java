@@ -9,9 +9,9 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 public class RailgunRay extends Entity {
-    public static final int defaultLifeTicks = 8;
+    public static final int defaultLifeTicks = 15;
     public int currentLifetime = defaultLifeTicks;
-    public int effectTicks = 10;
+    public int effectTicks = 20;
     public float progress = 1f;
     public float renderProgress = 1f;
 
