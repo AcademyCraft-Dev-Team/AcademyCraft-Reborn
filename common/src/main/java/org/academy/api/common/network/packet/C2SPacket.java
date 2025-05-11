@@ -9,6 +9,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.network.FriendlyByteBufSerializer;
 import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.server.network.C2SPacketHandler;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -40,8 +41,8 @@ public class C2SPacket implements Packet<ServerGamePacketListener> {
 
     @Override
     public void write(@NotNull FriendlyByteBuf buffer) {
-        friendlyByteBuf.writeVarInt(id);
-        friendlyByteBuf.writeBytes(friendlyByteBuf.copy());
+        buffer.writeVarInt(id);
+        buffer.writeBytes(friendlyByteBuf.copy());
     }
 
     @Override
@@ -49,7 +50,18 @@ public class C2SPacket implements Packet<ServerGamePacketListener> {
         C2SPacketEvent event = new C2SPacketEvent(this);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
-        final ServerGamePacketListenerImpl serverPacketListener = (ServerGamePacketListenerImpl) handler;
-        serverPacketListener.player.server.execute(() -> NetworkSystemServer.C2S_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(id)).handle(serverPacketListener, this));
+        if (handler instanceof ServerGamePacketListenerImpl listenerImpl) {
+            String packet = NetworkSystem.getPacketResourceLocation(id);
+            if (packet != null) {
+                C2SPacketHandler packetHandler = NetworkSystemServer.C2S_PACKET_HANDLER_MAP.get(packet);
+                if (packetHandler != null) {
+                    listenerImpl.player.server.execute(() -> packetHandler.handle(listenerImpl, this));
+                } else {
+                    AcademyCraft.LOGGER.warn("PacketHandler " + packet + " not found");
+                }
+            } else {
+                AcademyCraft.LOGGER.info("Unknown packetID " + id);
+            }
+        }
     }
 }

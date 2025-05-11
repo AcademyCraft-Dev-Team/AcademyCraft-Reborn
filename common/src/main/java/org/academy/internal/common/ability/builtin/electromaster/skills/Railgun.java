@@ -3,6 +3,8 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
@@ -13,18 +15,20 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.client.util.ClientUtil;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.api.server.util.ServerUtil;
+import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -39,7 +43,7 @@ public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
 
     private Railgun() {
-        super(SkillNames.RAILGUN, 5);
+        super(SkillNames.RAILGUN, 5, 15000);
     }
 
     @Override
@@ -61,6 +65,7 @@ public class Railgun extends Skill {
                                 new LinkedHashSet<>())
                 )
         ), Client::handleKey);
+        AbilityDeveloperScreen.registerSkillInfo(INSTANCE, List.of(), TextureResources.TEXTURE_RAILGUN_ICON, 50, 50);
     }
 
     public static final class Client {
@@ -68,7 +73,7 @@ public class Railgun extends Skill {
         public static RailgunClientConfig CLIENT_CONFIG = new RailgunClientConfig();
 
         public static void handleKey() {
-            if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
+            //       if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_RAILGUN_SHOOT));
         }
 
@@ -79,17 +84,22 @@ public class Railgun extends Skill {
     @SuppressWarnings("resource")
     public static final class Server {
         public static void handleShoot(final @NotNull Player player) {
-            if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
+            //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final UUID uuid = player.getUUID();
             final float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
             if (computingPower < 100) {
                 return;
             }
             EntityType<?> targetEntity = EntityTypes.THROWN_COIN_ENTITY_TYPE;
-            Vec3 lookVec = player.getLookAngle().scale(2);
-            BlockPos pos = new BlockPos((int) (lookVec.x + player.getX()), (int) (lookVec.y + player.getEyeY()), (int) (lookVec.z + player.getZ()));
 
-            AABB box = new AABB(pos).inflate(2);
+            Vec3 lookVec = player.getLookAngle().scale(0.25);
+            BlockPos checkPos = new BlockPos((int) (lookVec.x + player.getX()),
+                    (int) (lookVec.y + player.getEyeY()),
+                    (int) (lookVec.z + player.getZ()));
+
+            Vec3 boxSize = new Vec3(2, 2, 2);
+            AABB box = new AABB(checkPos)
+                    .inflate(boxSize.x / 2, boxSize.y / 2, boxSize.z / 2);
             List<Entity> entities = player.level().getEntities(player, box, entity -> entity.getType() == targetEntity);
             if (!entities.isEmpty()) {
                 if (!AcademyCraft.DEBUG_MODE) {
@@ -97,15 +107,24 @@ public class Railgun extends Skill {
                 }
                 player.sendSystemMessage(Component.literal("Yes"));
                 ThrownCoin coin = (ThrownCoin) entities.get(0);
-                coin.setFired(true);
-                coin.damage = computingPower;
-                coin.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 10F, 0);
                 RailgunRay railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY_ENTITY_TYPE, player.level());
-                railgunRay.setPos(player.getEyePosition().add(0, -0.5, 0));
+                coin.kill();
+
+                float length = 50;
+                Vec3 startPos = new Vec3(coin.getX(), coin.getY(), coin.getZ());
+                Vec3 endPos = startPos.add(player.getLookAngle().scale(length));
+                railgunRay.setPos(startPos);
                 railgunRay.setYRot(player.getYRot());
                 railgunRay.setXRot(player.getXRot());
-
                 player.level().addFreshEntity(railgunRay);
+
+                Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(railgunRay.level(), startPos, endPos, 0.025f, 10, false, true, true, false);
+                if (result.getKey()) {
+                    double d = result.getValue();
+                    length = (float) d;
+                    endPos = startPos.add(player.getLookAngle().scale(length));
+                }
+                LevelUtil.attackEntitiesAlongPath(railgunRay.level(), startPos, endPos, 0.125f, new DamageSource(railgunRay.level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), railgunRay), 150);
                 railgunRay.playSound(AcademyCraftSoundEvents.RAILGUN);
             } else {
                 player.sendSystemMessage(Component.literal("No"));

@@ -41,4 +41,8 @@ public final class TextureResources {
     public static final ResourceLocation TEXTURE_HISTOGRAM = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/histogram.png");
     public static final ResourceLocation TEXTURE_BLEND_QUAD = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/blend_quad.png");
     public static final ResourceLocation TEXTURE_BUTTON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/button.png");
+    /**
+     * Railgun
+     */
+    public static final ResourceLocation TEXTURE_RAILGUN_ICON = new ResourceLocation(AcademyCraft.MOD_ID,"textures/ability/electromaster/skill/railgun/icon.png");
 }

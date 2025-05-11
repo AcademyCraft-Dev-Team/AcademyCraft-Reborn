@@ -5,7 +5,6 @@ import net.minecraft.world.level.storage.LevelResource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.io.File;

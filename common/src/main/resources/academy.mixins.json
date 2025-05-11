@@ -8,8 +8,8 @@
     "MixinDimensionDataStorage",
     "MixinMinecraftServer",
     "MixinPlayer",
-    "MixinProjectile",
-    "MixinServerGamePacketListenerImpl"
+    "MixinPlayerList",
+    "MixinProjectile"
   ],
   "client": [
     "MixinClientPacketListener",

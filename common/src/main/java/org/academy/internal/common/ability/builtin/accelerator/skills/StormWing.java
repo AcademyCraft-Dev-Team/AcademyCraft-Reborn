@@ -68,7 +68,7 @@ public class StormWing extends Skill {
 
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
-            if (Minecraft.getInstance().level != null) {
+            if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null && Minecraft.getInstance().player.getEntityData().get(PlayerSyncSkillData.SKILL_DATA).getBoolean(TAG_KEY)) {
                 boolean handled = false;
                 for (Integer key : InputSystem.KEYBOARD_STATE.keySet()) {
                     Integer state = InputSystem.KEYBOARD_STATE.get(key);
@@ -152,6 +152,7 @@ public class StormWing extends Skill {
             CompoundTag newTag = new CompoundTag();
             newTag.putBoolean(TAG_KEY, !compoundTag.getBoolean(TAG_KEY));
             synchedEntityData.set(PlayerSyncSkillData.SKILL_DATA, newTag);
+            player.getAbilities().mayfly = synchedEntityData.get(PlayerSyncSkillData.SKILL_DATA).getBoolean(TAG_KEY);
         }
 
         @PacketHandler(packet = Packets.C2S_STORM_WING_FRONT)

@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.builtin.electromaster.skills;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -44,6 +45,10 @@ public class ArcGenerate extends Skill {
                 )
         ), Client::handler);
         NetworkSystemClient.CLIENT_PACKET_HANDLER_CLASSES.add(Client.class);
+    }
+
+    @Override
+    public void initServer(MinecraftServer server) {
         NetworkSystemServer.SERVER_PACKET_HANDLER_CLASSES.add(Server.class);
     }
 

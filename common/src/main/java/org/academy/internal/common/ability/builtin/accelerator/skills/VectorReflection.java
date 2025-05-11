@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -83,9 +82,6 @@ public class VectorReflection extends Skill {
         }
 
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
-            if (player instanceof LocalPlayer) {
-                return false;
-            }
             if (player.isCreative() || player.isSpectator()) {
                 return false;
             }

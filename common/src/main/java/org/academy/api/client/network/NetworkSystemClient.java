@@ -18,7 +18,7 @@ import java.util.function.BiFunction;
 
 public class NetworkSystemClient {
     public static final List<Class<?>> CLIENT_PACKET_HANDLER_CLASSES = new ArrayList<>();
-    public static final Map<String, S2CPacketHandler> SERVER_TO_CLIENT_PACKET_HANDLER_MAP = new HashMap<>();
+    public static final Map<String, S2CPacketHandler> S2C_PACKET_HANDLER_MAP = new HashMap<>();
     public static Connection connection;
 
     public static void init() {
@@ -91,6 +91,6 @@ public class NetworkSystemClient {
     }
 
     public static void registerS2CPacketHandler(String packet, S2CPacketHandler handler) {
-        SERVER_TO_CLIENT_PACKET_HANDLER_MAP.put(packet, handler);
+        S2C_PACKET_HANDLER_MAP.put(packet, handler);
     }
 }
