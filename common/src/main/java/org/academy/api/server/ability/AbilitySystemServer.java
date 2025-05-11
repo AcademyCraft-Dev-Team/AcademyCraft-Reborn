@@ -102,17 +102,15 @@ public class AbilitySystemServer {
                     int energy = skill.energy;
                     boolean depLearned = true;
                     for (Skill dep : skill.dependencies) {
-                        if (!playerMap.get(player.getUUID()).getSkills().contains(dep.name)) {
+                        if (!getPlayerSkills(player.getUUID()).contains(dep.name)) {
                             depLearned = false;
                         }
                     }
-                    boolean can = user.getEnergyStored() > energy && depLearned;
                     boolean learned = playerMap.get(player.getUUID()).getSkills().contains(skillName);
+                    boolean can = user.getEnergyStored() > energy && depLearned && !learned;
                     if (can) {
-                        if (!learned) {
-                            user.extractEnergy(energy, false);
-                            addPlayerSkill(player.getUUID(), skillName);
-                        }
+                        user.extractEnergy(energy, false);
+                        addPlayerSkill(player.getUUID(), skillName);
                     }
                     FutureManagerServer.sendResult(listener, id, can);
                 }

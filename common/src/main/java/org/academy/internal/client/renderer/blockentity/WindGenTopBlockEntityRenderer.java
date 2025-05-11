@@ -5,6 +5,7 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.model.WindGenTopModel;
 import org.academy.internal.client.model.WindGenTurbineModel;
@@ -51,8 +52,8 @@ public class WindGenTopBlockEntityRenderer implements BlockEntityRenderer<WindGe
                 matrix4f.rotateZ((float) Math.toRadians((blockEntity.ticks + partialTick) * 5));
                 matrix4f.translate(0.134f / 16.0f, -1.5f / 16.0f, 0);
                 poseStack.mulPoseMatrix(matrix4f);
-                windGenTurbineModel.main.render(poseStack, buffer.getBuffer(windGenTurbineModel.renderType(WindGenBaseModel.TEXTURE)), packedLight, packedOverlay);
-                windGenTurbineModel.tip_li.render(poseStack, buffer.getBuffer(windGenTurbineModel.renderType(WindGenBaseModel.TEXTURE)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                windGenTurbineModel.main.render(poseStack, buffer.getBuffer(windGenTurbineModel.renderType(TextureResources.TEXTURE_WIND_GEN_MODEL)), packedLight, packedOverlay);
+                windGenTurbineModel.tip_li.render(poseStack, buffer.getBuffer(windGenTurbineModel.renderType(TextureResources.TEXTURE_WIND_GEN_MODEL)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
                 poseStack.popPose();
             }
         }

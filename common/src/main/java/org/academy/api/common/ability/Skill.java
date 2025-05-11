@@ -33,6 +33,13 @@ public abstract class Skill {
         this.dependencies.addAll(dependencies);
     }
 
+    protected Skill(String name, int level, int energy, @NotNull List<Skill> dependencies) {
+        this.name = name;
+        this.level = level;
+        this.energy = energy;
+        this.dependencies.addAll(dependencies);
+    }
+
     public void initClient() {
     }
 

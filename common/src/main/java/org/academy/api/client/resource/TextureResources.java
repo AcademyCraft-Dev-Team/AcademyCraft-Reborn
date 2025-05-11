@@ -16,6 +16,7 @@ public final class TextureResources {
     /**
      * Wind Gen
      */
+    public static final ResourceLocation TEXTURE_WIND_GEN_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wind_gen.png");
     public static final ResourceLocation TEXTURE_WIND_GEN_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/windgen/ui_windgen.png");
     public static final ResourceLocation TEXTURE_ICON_WIND_GEN_BASE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_base.png");
     public static final ResourceLocation TEXTURE_ICON_WIND_GEN_PILLAR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_pillar.png");
@@ -42,7 +43,16 @@ public final class TextureResources {
     public static final ResourceLocation TEXTURE_BLEND_QUAD = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/blend_quad.png");
     public static final ResourceLocation TEXTURE_BUTTON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/button.png");
     /**
-     * Railgun
+     * Electromaster
      */
     public static final ResourceLocation TEXTURE_RAILGUN_ICON = new ResourceLocation(AcademyCraft.MOD_ID,"textures/ability/electromaster/skill/railgun/icon.png");
+    public static final ResourceLocation TEXTURE_ARC_GENERATE_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/electromaster/skill/railgun/icon.png");
+    /**
+     * Accelerator
+     */
+    public static final ResourceLocation TEXTURE_VECTOR_REFLECTION_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/vector_reflection/icon.png");
+    public static final ResourceLocation TEXTURE_BLOODFLOW_REVERSE_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/bloodflow_reverse/icon.png");
+    public static final ResourceLocation TEXTURE_STORM_WING_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/storm_wing/icon.png");
+    public static final ResourceLocation TEXTURE_PLASMA_GENERATION_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/plasma_generation/icon.png");
+    public static final ResourceLocation TEXTURE_DIR_STRIKE_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/dir_strike/icon.png");
 }

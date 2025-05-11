@@ -14,18 +14,22 @@ import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.RendererManager;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.tick.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.builtin.SkillNames;
+import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.academy.internal.common.world.entity.player.PlayerSyncSkillData;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 public class StormWing extends Skill {
@@ -33,7 +37,7 @@ public class StormWing extends Skill {
     public static final String TAG_KEY = "activated_storm_wing";
 
     private StormWing() {
-        super(SkillNames.STORM_WING, 4);
+        super(SkillNames.STORM_WING, 4, List.of(VectorReflection.INSTANCE));
     }
 
     @Override
@@ -63,6 +67,9 @@ public class StormWing extends Skill {
     }
 
     public static final class Client {
+        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+                AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
+                        TextureResources.TEXTURE_STORM_WING_ICON, 150, 70.25f);
         public static final String KEY_NAME_TOGGLE = SkillNames.STORM_WING + "_toggle";
         public static final StormWingClientConfig CONFIG = new StormWingClientConfig();
 
@@ -196,7 +203,11 @@ public class StormWing extends Skill {
         @PacketHandler(packet = Packets.C2S_STORM_WING_KEEP)
         public static void handleKeep(ServerPlayer player) {
             if (isActive(player)) {
-                player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.125, 0.995));
+                if (Math.abs(player.getDeltaMovement().y) > 0.25) {
+                    player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
+                } else {
+                    player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
+                }
                 player.resetFallDistance();
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
             }

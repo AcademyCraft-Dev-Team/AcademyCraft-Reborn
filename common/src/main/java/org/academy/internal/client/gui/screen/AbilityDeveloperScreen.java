@@ -17,6 +17,7 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.FutureManagerClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
+import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.util.MathUtil;
@@ -26,7 +27,9 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.academy.api.client.gui.ImageResources.RenderTypes.*;
@@ -34,7 +37,7 @@ import static org.academy.api.client.gui.ImageResources.RenderTypes.*;
 public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
     public AbilityDeveloperBlockEntity abilityDeveloperBlockEntity;
-    public static final ArrayList<SkillInfo> SKILL_INFOS = new ArrayList<>();
+    public static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
     public static final float PANEL_MAIN_WIDTH = 400;
     public static final float PANEL_MAIN_HEIGHT = 187;
     public static final float PANEL_LEFT_WIDTH = 108.5f;
@@ -182,9 +185,13 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 {
                     ParallaxImageWidget parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, RENDER_TYPE_SKILL_PANEL_BACK, width, height);
                     skillPanel.addChild("skill_area_back", parallaxImageWidget);
-                    for (SkillInfo skill : SKILL_INFOS) {
-                        SkillWidget skillWidget = new SkillWidget(skill);
-                        skillPanel.addChild(skill.skill.name, skillWidget);
+                    AbilityCategory abilityCategory = AbilitySystemClient.getCategory();
+                    List<SkillInfo> skillInfos = SKILL_INFOS.get(abilityCategory);
+                    if (skillInfos != null) {
+                        for (SkillInfo skillInfo : skillInfos) {
+                            SkillWidget skillWidget = new SkillWidget(skillInfo);
+                            skillPanel.addChild(skillInfo.skill.name, skillWidget);
+                        }
                     }
                 }
             }
@@ -218,9 +225,12 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         requestAvailableNodes(getNodeList());
     }
 
-    public static SkillInfo registerSkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation icon, float x, float y) {
-        SkillInfo info = new SkillInfo(skill, dependencies, icon, x, y, 0);
-        SKILL_INFOS.add(info);
+    public static SkillInfo registerSkillInfo(AbilityCategory abilityCategory, Skill skill, List<SkillInfo> dependencies, ResourceLocation icon, float x, float y) {
+        SkillInfo info = new SkillInfo(skill, dependencies, icon, x, y);
+        if (!SKILL_INFOS.containsKey(abilityCategory)) {
+            SKILL_INFOS.put(abilityCategory, new ArrayList<>());
+        }
+        SKILL_INFOS.get(abilityCategory).add(info);
         return info;
     }
 
@@ -330,7 +340,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         skillInfoPanel.learnButton.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.learnButton.getWidth() / 2);
         skillInfoPanel.learnButton.setY(skillInfoPanel.depPanel.getY() + 18);
 
-        skillInfoPanel.energyLabel.value = !lacked ? "" : "%d AF".formatted(skill.energy);
+        skillInfoPanel.energyLabel.value = !lacked ? "" : "%d AF".formatted(skill.skill.energy);
         skillInfoPanel.energyLabel.setWidth(Minecraft.getInstance().font.width(skillInfoPanel.energyLabel.value));
         skillInfoPanel.energyLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.energyLabel.getWidth() * skillInfoPanel.energyLabel.scale / 2);
         skillInfoPanel.energyLabel.setY(skillInfoPanel.learnButton.getY() + 18);
@@ -485,7 +495,6 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         }
     }
 
-    public record SkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation texture, float x, float y,
-                            int energy) {
+    public record SkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation texture, float x, float y) {
     }
 }

@@ -15,6 +15,7 @@ import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.tick.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
@@ -24,7 +25,9 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.tick.ServerTickEvent;
+import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
+import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.Smoke;
 import org.lwjgl.glfw.GLFW;
@@ -35,7 +38,7 @@ public class DirStrike extends Skill {
     public static final Skill INSTANCE = new DirStrike();
 
     private DirStrike() {
-        super(SkillNames.DIR_STRIKE, 3);
+        super(SkillNames.DIR_STRIKE, 3, List.of(VectorReflection.INSTANCE));
     }
 
     @Override
@@ -72,6 +75,9 @@ public class DirStrike extends Skill {
     }
 
     public static final class Client {
+        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+                AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
+                        TextureResources.TEXTURE_DIR_STRIKE_ICON, 100, 110);
         public static Context context;
         public static final String KEY_NAME_START = SkillNames.DIR_STRIKE + "_start";
         public static final String KEY_NAME_END = SkillNames.DIR_STRIKE + "_end";
