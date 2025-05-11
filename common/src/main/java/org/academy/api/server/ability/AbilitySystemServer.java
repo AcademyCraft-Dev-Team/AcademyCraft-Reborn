@@ -294,11 +294,13 @@ public class AbilitySystemServer {
                 return;
             }
             if (!playerMap.containsKey(player.getUUID())) {
-                WorldData.Player data =
-                        new WorldData.Player();
+                WorldData.Player data = new WorldData.Player();
                 playerMap.put(player.getUUID(), data);
                 setPlayerLevel(player.getUUID(), 0);
                 setPlayerAbilityCategory(player.getUUID(), Level0.INSTANCE);
+                AcademyCraft.LOGGER.debug("Finish init player.");
+            } else {
+                AcademyCraft.LOGGER.debug("Player already exists.");
             }
         }
 
