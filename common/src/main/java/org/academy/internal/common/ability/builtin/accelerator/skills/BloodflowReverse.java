@@ -12,11 +12,14 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
+import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -29,7 +32,7 @@ public class BloodflowReverse extends Skill {
     public static final Skill INSTANCE = new BloodflowReverse();
 
     private BloodflowReverse() {
-        super(SkillNames.BLOODFLOW_REVERSE, 2);
+        super(SkillNames.BLOODFLOW_REVERSE, 2, List.of(VectorReflection.INSTANCE));
     }
 
     @Override
@@ -58,6 +61,9 @@ public class BloodflowReverse extends Skill {
     }
 
     public static final class Client {
+        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+                AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
+                        TextureResources.TEXTURE_BLOODFLOW_REVERSE_ICON, 90, 50);
         public static final String KEY_NAME = "bloodflow_reverse";
         public static final BloodflowReverseClientConfig CONFIG = new BloodflowReverseClientConfig();
 

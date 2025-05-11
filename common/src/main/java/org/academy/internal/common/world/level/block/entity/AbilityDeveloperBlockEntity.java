@@ -39,31 +39,22 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     public void setOpen(boolean open) {
         boolean previousIsOpen = this.isOpen;
         this.isOpen = open;
-        if (level != null && level.isClientSide) {
-            this.openState.animateWhen(this.isOpen, this.ticks);
-            this.closingState.animateWhen(!this.isOpen, this.ticks);
-            AnimationState currentAnimationState = previousIsOpen ? openState : closingState;
-            AnimationState targetAnimationState = open ? openState : closingState;
-            AnimationDefinition targetAnimationDefinition = open ? AbilityDeveloperBlockEntityModel.open : AbilityDeveloperBlockEntityModel.close;
-            long elapsedMillis = currentAnimationState.getAccumulatedTime();
-            currentAnimationState.stop();
-            if (elapsedMillis > 0) {
-                float elapsedSeconds = elapsedMillis / 1000.0f;
-                float totalDuration = targetAnimationDefinition.lengthInSeconds();
-                float targetStartSeconds = Math.max(0.0f, Math.min(totalDuration, totalDuration - elapsedSeconds));
-                long targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
-                long adjustedStartTick = this.ticks - targetElapsedTicks;
-                targetAnimationState.start((int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, adjustedStartTick)));
-            } else {
-                targetAnimationState.start(this.ticks);
-            }
-        } else if (level != null) {
-            this.openState.stop();
-            this.closingState.stop();
-        }
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        this.openState.animateWhen(this.isOpen, this.ticks);
+        this.closingState.animateWhen(!this.isOpen, this.ticks);
+        AnimationState currentAnimationState = previousIsOpen ? openState : closingState;
+        AnimationState targetAnimationState = open ? openState : closingState;
+        AnimationDefinition targetAnimationDefinition = open ? AbilityDeveloperBlockEntityModel.open : AbilityDeveloperBlockEntityModel.close;
+        long elapsedMillis = currentAnimationState.getAccumulatedTime();
+        currentAnimationState.stop();
+        if (elapsedMillis > 0) {
+            float elapsedSeconds = elapsedMillis / 1000.0f;
+            float totalDuration = targetAnimationDefinition.lengthInSeconds();
+            float targetStartSeconds = Math.max(0.0f, Math.min(totalDuration, totalDuration - elapsedSeconds));
+            long targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
+            long adjustedStartTick = this.ticks - targetElapsedTicks;
+            targetAnimationState.start((int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, adjustedStartTick)));
+        } else {
+            targetAnimationState.start(this.ticks);
         }
     }
 
@@ -177,10 +168,6 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
 
     public void clientTick() {
         this.ticks++;
-        if (level != null && level.isClientSide) {
-            this.openState.animateWhen(this.isOpen, this.ticks);
-            this.closingState.animateWhen(!this.isOpen, this.ticks);
-        }
     }
 
     public void serverTick(@NotNull ServerLevel level) {
