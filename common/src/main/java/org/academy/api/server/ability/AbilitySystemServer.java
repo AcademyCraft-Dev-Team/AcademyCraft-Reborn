@@ -1,7 +1,6 @@
 package org.academy.api.server.ability;
 
 import io.netty.buffer.Unpooled;
-import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
@@ -39,6 +38,7 @@ public class AbilitySystemServer {
     private static Map<UUID, WorldData.Player> playerMap;
     public static volatile MinecraftServer minecraftServer;
     public static volatile ScheduledFuture<?> scheduledFuture;
+    public static boolean paused;
 
     public static void init(final MinecraftServer server) {
         registerPacketHandler();
@@ -223,9 +223,7 @@ public class AbilitySystemServer {
 
     public static final class AbilitySystemServerThread {
         public static void tick() {
-            if (minecraftServer instanceof IntegratedServer integratedServer) {
-                if (integratedServer.paused) return;
-            }
+            if (paused) return;
             for (Runnable runnable : RUNNABLE_LIST) {
                 runnable.run();
                 RUNNABLE_LIST.remove(runnable);
