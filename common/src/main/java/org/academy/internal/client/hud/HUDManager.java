@@ -1,15 +1,14 @@
 package org.academy.internal.client.hud;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.util.RenderStateUtil;
+import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.MathUtil;
 
@@ -17,65 +16,20 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class HUDManager {
-    public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR = new RenderType.CompositeRenderType(
-            "computing_power_bar",
-            DefaultVertexFormat.POSITION_COLOR_TEX,
-            VertexFormat.Mode.QUADS,
-            16,
-            false,
-            true,
-            RenderType.CompositeState.builder()
-                    .setTextureState(new RenderStateShard.TextureStateShard(
-                            new ResourceLocation(AcademyCraft.MOD_ID, "textures/hud/computing_power_bar.png"),
-                            false,
-                            false
-                    ))
-                    .setShaderState(RenderStateUtil.POSITION_COLOR_TEX_SHADER)
-                    .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
-                    .createCompositeState(false)
-    );
-
-    public static final RenderType.CompositeRenderType COMPUTING_POWER_BAR_BACKGROUND = new RenderType.CompositeRenderType(
-            "computing_power_bar_background",
-            DefaultVertexFormat.POSITION_TEX,
-            VertexFormat.Mode.QUADS,
-            16,
-            false,
-            true,
-            RenderType.CompositeState.builder()
-                    .setTextureState(new RenderStateShard.TextureStateShard(
-                            new ResourceLocation(AcademyCraft.MOD_ID,
-                                    "textures/hud/computing_power_bar_background.png"
-                            ),
-                            false,
-                            false
-                    ))
-                    .setShaderState(RenderStateUtil.POSITION_TEX_SHADER)
-                    .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
-                    .createCompositeState(false)
-    );
-
+    public static final RenderType COMPUTING_POWER_BAR =
+            RenderUtil.getPositionTexRenderType(
+                    "computing_power_bar",
+                    TextureResources.TEXTURE_COMPUTING_POWER_BAR,
+                    false);
+    public static final RenderType COMPUTING_POWER_BAR_BACKGROUND =
+            RenderUtil.getPositionTexRenderType(
+                    "computing_power_bar_background",
+                    TextureResources.TEXTURE_COMPUTING_POWER_BAR_BACKGROUND,
+                    false);
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
-            new RenderType.CompositeRenderType(
-                    "ability_icon",
-                    DefaultVertexFormat.POSITION_COLOR_TEX,
-                    VertexFormat.Mode.QUADS,
-                    16,
-                    false,
-                    true,
-                    RenderType.CompositeState.builder()
-                            .setTextureState(new RenderStateShard.TextureStateShard(
-                                    new ResourceLocation(AcademyCraft.MOD_ID,
-                                            "textures/hud/ability/" + abilityCategory.name + "/icon_overlay.png"
-                                    ),
-                                    false,
-                                    false
-                            ))
-                            .setShaderState(RenderStateUtil.POSITION_COLOR_TEX_SHADER)
-                            .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
-                            .createCompositeState(false)
-            );
-
+            RenderUtil.getPositionTexRenderType("ability_icon", new ResourceLocation(AcademyCraft.MOD_ID,
+                    "textures/ability/" + abilityCategory.name + "/icon_overlay.png"
+            ), false);
     public static final Supplier<Float> SCALE_FACTOR = () -> 1.0f;
     public static final float DEFAULT_SCALA = 0.2F;
     public static final int COMPUTING_POWER_BAR_WIDTH = 964;
@@ -86,10 +40,11 @@ public class HUDManager {
     public static final int COMPUTING_POWER_BAR_TOP_SAFE_ZONE = 30;
     public static final float COMPUTING_POWER_BAR_ANGLE = 50F;
     public static final float COMPUTING_POWER_BAR_TANGENT = (float) Math.tan(Math.toRadians(COMPUTING_POWER_BAR_ANGLE));
-    public static final int ABILITY_ICON_WIDTH = 64;
-    public static final int ABILITY_ICON_HEIGHT = 64;
+    public static final float ABILITY_ICON_SIZE = 76.8f;
     public static final int ABILITY_ICON_RIGHT_SAFE_ZONE = 10;
     public static final int ABILITY_ICON_TOP_SAFE_ZONE = 10;
+    public static float targetAlpha;
+    public static float currentAlpha;
 
     public static float smoothProgress;
 
@@ -97,23 +52,44 @@ public class HUDManager {
     }
 
     public static void render(GuiGraphics guiGraphics, float partialTick) {
-        if (AbilitySystemClient.isActiveHUD()) {
-            HUDManager.renderComputingPowerBarBackground(guiGraphics);
-            HUDManager.renderComputingPowerBar(guiGraphics, partialTick);
-            HUDManager.renderAbilityIcon(guiGraphics);
-        }
+        guiGraphics.flush();
+
+        targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
+
+        currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, MathUtil.animationFactor(MathUtil.PI, partialTick));
+
+        float[] originColor = RenderSystem.getShaderColor().clone();
+
+        RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
+        HUDManager.renderComputingPowerBarBackground(guiGraphics);
+        HUDManager.renderAbilityIcon(guiGraphics);
+
+        float targetR = 1.0f;
+        float targetG = 174 / 255.0f;
+        float targetB = 68 / 255.0f;
+
+        float finalR = targetR + currentAlpha * (originColor[0] - targetR);
+        float finalG = targetG + currentAlpha * (originColor[1] - targetG);
+        float finalB = targetB + currentAlpha * (originColor[2] - targetB);
+        float finalA = currentAlpha * originColor[3];
+
+        RenderSystem.setShaderColor(finalR, finalG, finalB, finalA);
+        HUDManager.renderComputingPowerBar(guiGraphics, partialTick);
+
+        guiGraphics.flush();
+        RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], originColor[3]);
     }
 
+    @SuppressWarnings("UnnecessaryLocalVariable")
     public static void renderAbilityIcon(GuiGraphics guiGraphics) {
         final AbilityCategory abilityCategory = AbilitySystemClient.getCategory();
-        if (abilityCategory == null) return;
         final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(ABILITY_ICON.apply(abilityCategory));
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
-        final float width = ABILITY_ICON_WIDTH * scale;
-        final float height = ABILITY_ICON_HEIGHT * scale;
-        final float rightSafeZone = (COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
-        final float topSafeZone = (COMPUTING_POWER_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
+        final float width = ABILITY_ICON_SIZE * scale;
+        final float height = ABILITY_ICON_SIZE * scale;
+        final float rightSafeZone = (COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE) * scale;
+        final float topSafeZone = (COMPUTING_POWER_BAR_TOP_SAFE_ZONE) * scale;
 
         final float z = 8;
 
@@ -129,13 +105,13 @@ public class HUDManager {
         final float leftBottomX = rightBottomX - width;
         final float leftBottomY = rightBottomY;
         // Left Top
-        vertexConsumer.vertex(leftTopX, leftTopY, z).color(255, 255, 255, 255).uv(0, 0).endVertex();
+        vertexConsumer.vertex(leftTopX, leftTopY, z).uv(0, 0).endVertex();
         // Left Bottom
-        vertexConsumer.vertex(leftBottomX, leftBottomY, z).color(255, 255, 255, 255).uv(0, 1).endVertex();
+        vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(0, 1).endVertex();
         // Right Bottom
-        vertexConsumer.vertex(rightBottomX, rightBottomY, z).color(255, 255, 255, 255).uv(1, 1).endVertex();
+        vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
         // Right Top
-        vertexConsumer.vertex(rightTopX, rightTopY, z).color(255, 255, 255, 255).uv(1, 0).endVertex();
+        vertexConsumer.vertex(rightTopX, rightTopY, z).uv(1, 0).endVertex();
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
@@ -150,7 +126,7 @@ public class HUDManager {
             progress = 0;
         }
         smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, MathUtil.animationFactor(0.125f, partialTick));
-        if (Float.isNaN(smoothProgress)){
+        if (Float.isNaN(smoothProgress)) {
             smoothProgress = 0f;
         }
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
@@ -183,13 +159,13 @@ public class HUDManager {
         final float leftBottomUv = 1 - ((width - leftBottomOffset) / width);
 
         // Left Top
-        vertexConsumer.vertex(leftTopX, leftTopY, z).color(255, 255, 255, 255).uv(leftTopUv, 0).endVertex();
+        vertexConsumer.vertex(leftTopX, leftTopY, z).uv(leftTopUv, 0).endVertex();
         // Left Bottom
-        vertexConsumer.vertex(leftBottomX, leftBottomY, z).color(255, 255, 255, 255).uv(leftBottomUv, 1).endVertex();
+        vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(leftBottomUv, 1).endVertex();
         // Right Bottom
-        vertexConsumer.vertex(rightBottomX, rightBottomY, z).color(255, 255, 255, 255).uv(1, 1).endVertex();
+        vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
         // Right Top
-        vertexConsumer.vertex(rightTopX, rightTopY, z).color(255, 255, 255, 255).uv(1, 0).endVertex();
+        vertexConsumer.vertex(rightTopX, rightTopY, z).uv(1, 0).endVertex();
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")

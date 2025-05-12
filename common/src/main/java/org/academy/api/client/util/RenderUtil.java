@@ -272,11 +272,11 @@ public final class RenderUtil {
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix = pose.pose();
             final VertexConsumer vertexConsumer = buffer.getBuffer(BALL_RENDER_TYPE);
-            renderBallGeometry(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
+            renderBall(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
         }
 
-        private static void renderBallGeometry(Matrix4f matrix, VertexConsumer vertexConsumer,
-                                               float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
+        public static void renderBall(Matrix4f matrix, VertexConsumer vertexConsumer,
+                                      float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
             for (float[][] floats : vertexBuffer) {
                 float x0 = floats[0][0];
                 float y0 = floats[0][1];

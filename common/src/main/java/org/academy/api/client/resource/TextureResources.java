@@ -7,12 +7,19 @@ public final class TextureResources {
     /**
      * Ability Developer
      */
-    public static final ResourceLocation PANEL_LEFT_BACK_TOP_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerleft.png");
+    public static final ResourceLocation TEXTURE_PANEL_LEFT_BACK_TOP = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerleft.png");
     public static final ResourceLocation TEXTURE_PANEL_LEFT_BACK_MIDDLE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/parent_background_developermachine.png");
     public static final ResourceLocation TEXTURE_PANEL_RIGHT_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/parent_background_developerright.png");
     public static final ResourceLocation TEXTURE_PANEL_RIGHT_INFO = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerright.png");
     public static final ResourceLocation TEXTURE_PANEL_RIGHT_SKILL_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_panel_back.png");
     public static final ResourceLocation TEXTURE_PANEL_RIGHT_SKILL_ICON_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_back.png");
+    /**
+     * HUD
+     */
+
+    public static final ResourceLocation TEXTURE_COMPUTING_POWER_BAR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/hud/computing_power_bar.png");
+    public static final ResourceLocation TEXTURE_COMPUTING_POWER_BAR_BACKGROUND = new ResourceLocation(AcademyCraft.MOD_ID, "textures/hud/computing_power_bar_background.png");
+
     /**
      * Wind Gen
      */
