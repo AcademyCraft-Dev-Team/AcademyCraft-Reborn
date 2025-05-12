@@ -40,7 +40,8 @@ public class HUDManager {
     public static final int COMPUTING_POWER_BAR_TOP_SAFE_ZONE = 30;
     public static final float COMPUTING_POWER_BAR_ANGLE = 50F;
     public static final float COMPUTING_POWER_BAR_TANGENT = (float) Math.tan(Math.toRadians(COMPUTING_POWER_BAR_ANGLE));
-    public static final float ABILITY_ICON_SIZE = 76.8f;
+    public static final int ABILITY_ICON_WIDTH = 64;
+    public static final int ABILITY_ICON_HEIGHT = 64;
     public static final int ABILITY_ICON_RIGHT_SAFE_ZONE = 10;
     public static final int ABILITY_ICON_TOP_SAFE_ZONE = 10;
     public static float targetAlpha;
@@ -86,10 +87,10 @@ public class HUDManager {
         final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(ABILITY_ICON.apply(abilityCategory));
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
-        final float width = ABILITY_ICON_SIZE * scale;
-        final float height = ABILITY_ICON_SIZE * scale;
-        final float rightSafeZone = (COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE) * scale;
-        final float topSafeZone = (COMPUTING_POWER_BAR_TOP_SAFE_ZONE) * scale;
+        final float width = ABILITY_ICON_WIDTH * scale;
+        final float height = ABILITY_ICON_HEIGHT * scale;
+        final float rightSafeZone = (COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
+        final float topSafeZone = (COMPUTING_POWER_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
 
         final float z = 8;
 
