@@ -66,15 +66,15 @@ public class AbilityDeveloperBlockEntityModel extends HierarchicalModel<Entity> 
 
         PartDefinition glass = up.addOrReplaceChild("glass", CubeListBuilder.create(), PartPose.offset(0.0F, 9.174F, 0.5346F));
 
-        PartDefinition rside = glass.addOrReplaceChild("rside", CubeListBuilder.create().texOffs(0, 125).addBox(2.3013F, 0.1297F, -18.0F, 1.0F, 6.0F, 36.0F, new CubeDeformation(0.0F))
-                .texOffs(5, 101).addBox(5.1297F, -2.6987F, -18.0F, 6.0F, 1.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offset(-11.1297F, -13.3013F, -1.0F));
+        PartDefinition rside = glass.addOrReplaceChild("rside", CubeListBuilder.create().texOffs(0, 125).addBox(2.3013F, 0.1297F, -18.0F, 0.0F, 6.0F, 36.0F, new CubeDeformation(0.0F))
+                .texOffs(5, 101).addBox(5.1297F, -2.6987F, -18.0F, 6.0F, 0.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offset(-11.1297F, -13.3013F, -1.0F));
 
-        PartDefinition cube_r1 = rside.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(0, 119).addBox(-0.5F, -2.0F, -2.0F, 1.0F, 4.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(4.069F, -0.931F, -16.0F, 0.0F, 0.0F, 0.7854F));
+        PartDefinition cube_r1 = rside.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(0, 119).addBox(-0.5F, -2.0F, -2.0F, 0.0F, 4.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(4.069F, -0.931F, -16.0F, 0.0F, 0.0F, 0.7854F));
 
-        PartDefinition lside = glass.addOrReplaceChild("lside", CubeListBuilder.create().texOffs(23, 103).addBox(-3.3013F, 0.1297F, -18.0F, 1.0F, 6.0F, 36.0F, new CubeDeformation(0.0F))
-                .texOffs(48, 79).addBox(-11.1297F, -2.6987F, -18.0F, 6.0F, 1.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offset(11.1297F, -13.3013F, -1.0F));
+        PartDefinition lside = glass.addOrReplaceChild("lside", CubeListBuilder.create().texOffs(24, 103).addBox(-2.3013F, 0.1297F, -18.0F, 0.0F, 6.0F, 36.0F, new CubeDeformation(0.0F))
+                .texOffs(48, 79).addBox(-11.1297F, -2.6987F, -18.0F, 6.0F, 0.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offset(11.1297F, -13.3013F, -1.0F));
 
-        PartDefinition cube_r2 = lside.addOrReplaceChild("cube_r2", CubeListBuilder.create().texOffs(23, 111).addBox(-0.5F, -2.0F, -2.0F, 1.0F, 4.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-4.069F, -0.931F, -16.0F, 0.0F, 0.0F, -0.7854F));
+        PartDefinition cube_r2 = lside.addOrReplaceChild("cube_r2", CubeListBuilder.create().texOffs(24, 111).addBox(0.5F, -2.0F, -2.0F, 0.0F, 4.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-4.069F, -0.931F, -16.0F, 0.0F, 0.0F, -0.7854F));
 
         PartDefinition lsidebars = glass.addOrReplaceChild("lsidebars", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
 

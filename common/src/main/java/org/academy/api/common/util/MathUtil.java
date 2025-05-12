@@ -77,7 +77,6 @@ public class MathUtil {
 
     public static class WeightedRandom<T> {
         private final NavigableMap<Double, T> map = new TreeMap<>();
-        private final Random random = new Random();
         private double totalWeight = 0.0;
 
         public void addItem(T item, double probability) {
@@ -88,7 +87,7 @@ public class MathUtil {
 
         public T getRandomItem() {
             if (totalWeight <= 0) return null;
-            double r = random.nextDouble() * totalWeight;
+            double r = RANDOM.nextDouble() * totalWeight;
             NavigableMap.Entry<Double, T> entry = map.ceilingEntry(r);
             return entry != null ? entry.getValue() : map.firstEntry().getValue();
         }
