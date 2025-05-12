@@ -34,7 +34,7 @@ public final class ImageResources {
                         .createCompositeState(false)
         );
         public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_TOP = RenderUtil.getPositionColorTexRenderType(
-                "panel_left_back_top", PANEL_LEFT_BACK_TOP_TEXTURE, false);
+                "panel_left_back_top", TEXTURE_PANEL_LEFT_BACK_TOP, false);
         public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE = RenderUtil.getPositionColorTexRenderType(
                 "panel_left_back_middle", TEXTURE_PANEL_LEFT_BACK_MIDDLE, false);
         public static final RenderType RENDER_TYPE_SKILL_PANEL_BACK = RenderUtil.getPositionTexRenderType(
