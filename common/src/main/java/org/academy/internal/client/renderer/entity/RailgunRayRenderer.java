@@ -1,6 +1,7 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -21,7 +22,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay> {
     public void render(RailgunRay entity, float entityYaw, float partialTick, PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
 
-        entity.renderProgress = MathUtil.lerpStartEndFactor(entity.renderProgress, entity.progress, partialTick);
+        entity.renderProgress = MathUtil.lerpStartEndFactor(entity.renderProgress, entity.progress, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.instance.getDeltaFrameTime()));
         poseStack.mulPoseMatrix(new Matrix4f()
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()))

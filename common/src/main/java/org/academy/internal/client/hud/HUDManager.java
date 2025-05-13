@@ -2,6 +2,7 @@ package org.academy.internal.client.hud;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
@@ -54,16 +55,16 @@ public class HUDManager {
 
     public static void render(GuiGraphics guiGraphics, float partialTick) {
         guiGraphics.flush();
-
         targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
 
-        currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, MathUtil.animationFactor(MathUtil.PI, partialTick));
+        float factor = MathUtil.animationFactor(MathUtil.PI, Minecraft.getInstance().getDeltaFrameTime());
+        currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, factor);
 
         float[] originColor = RenderSystem.getShaderColor().clone();
 
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
         HUDManager.renderComputingPowerBarBackground(guiGraphics);
-        HUDManager.renderAbilityIcon(guiGraphics);
+        guiGraphics.flush();
 
         float targetR = 1.0f;
         float targetG = 174 / 255.0f;
@@ -76,6 +77,10 @@ public class HUDManager {
 
         RenderSystem.setShaderColor(finalR, finalG, finalB, finalA);
         HUDManager.renderComputingPowerBar(guiGraphics, partialTick);
+        guiGraphics.flush();
+
+        RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
+        HUDManager.renderAbilityIcon(guiGraphics);
 
         guiGraphics.flush();
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], originColor[3]);
@@ -92,7 +97,7 @@ public class HUDManager {
         final float rightSafeZone = (COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
         final float topSafeZone = (COMPUTING_POWER_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
 
-        final float z = 8;
+        final float z = 0;
 
         final float rightTopX = guiGraphics.guiWidth() - rightSafeZone;
         final float rightTopY = topSafeZone;
@@ -126,7 +131,7 @@ public class HUDManager {
         } else {
             progress = 0;
         }
-        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, MathUtil.animationFactor(0.125f, partialTick));
+        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.getInstance().getDeltaFrameTime()));
         if (Float.isNaN(smoothProgress)) {
             smoothProgress = 0f;
         }
@@ -141,7 +146,7 @@ public class HUDManager {
         final float leftTopOffset = barWidthOffset + leftSafeZoneWidth;
         final float leftBottomOffset = leftTopOffset + (height / COMPUTING_POWER_BAR_TANGENT);
 
-        final float z = 4;
+        final float z = 0;
 
         final float rightTopX = guiGraphics.guiWidth();
         final float rightTopY = 0;

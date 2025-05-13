@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
+import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
@@ -26,13 +27,15 @@ import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBloc
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
-import static org.academy.api.client.gui.ImageResources.RenderTypes.*;
+import static org.academy.api.client.resource.TextureResources.RenderTypes.*;
 
 public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
@@ -47,6 +50,10 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     public static final float PANEL_RIGHT_SKILL_BACK_WIDTH = 256;
     public static final float PANEL_RIGHT_SKILL_BACK_HEIGHT = 139.5f;
     public static final float PANEL_RIGHT_SKILL_SIZE = 32f;
+    public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
+            RenderUtil.getPositionTexRenderType("ability_icon_glow", new ResourceLocation(AcademyCraft.MOD_ID,
+                    "textures/ability/" + abilityCategory.name + "/icon_glow.png"
+            ), false);
     private String currentlyConnectedNodeName = "None";
     private PanelWidget screenWirelessPanel;
     private PanelWidget wirelessPanel;
@@ -243,12 +250,44 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     private @NotNull PanelWidget getLeftPanel() {
         PanelWidget leftPanel = new PanelWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT);
         {
-            ImageWidget leftPanelBackMiddle = new ImageWidget(0, 70, PANEL_LEFT_WIDTH, 115, RENDER_TYPE_ELEMENT_BACK_DARK);
-            leftPanel.addChild("left_panel_back_middle", leftPanelBackMiddle);
+            ImageWidget leftPanelBack = new ImageWidget(0, 70, PANEL_LEFT_WIDTH, 115, RENDER_TYPE_ELEMENT_BACK_DARK);
+            leftPanel.addChild("left_panel_back", leftPanelBack);
             ImageWidget leftPanelBackBottom = new ImageWidget(4.25f, 0, 100, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE);
             leftPanel.addChild("left_panel_back_bottom", leftPanelBackBottom);
             ImageWidget leftPanelBackTop = new ImageWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_TOP);
             leftPanel.addChild("left_panel_back_top", leftPanelBackTop);
+            PanelWidget leftPanelInfoPanel = new PanelWidget(0, 70, PANEL_LEFT_WIDTH, 32);
+            leftPanel.addChild("left_panel_info", leftPanelInfoPanel);
+            {
+                ImageWidget iconBack = new ImageWidget(0, 0, leftPanelInfoPanel.getHeight(), leftPanelInfoPanel.getHeight(), RENDER_TYPE_ICON_BOX);
+                leftPanelInfoPanel.addChild("icon_back", iconBack);
+                AbilityCategory abilityCategory = AbilitySystemClient.getCategory();
+                ImageWidget icon = new ImageWidget(0, 0, iconBack.getHeight(), iconBack.getHeight(),
+                        ABILITY_ICON.apply(abilityCategory));
+                icon.widthScale = 0.65f;
+                icon.heightScale = 0.65f;
+                leftPanelInfoPanel.addChild("icon", icon);
+                LabelWidget name = new LabelWidget(abilityCategory.name, leftPanelInfoPanel.getHeight(), 5);
+                name.scale = 1.25f;
+                leftPanelInfoPanel.addChild("name", name);
+                ProgressBarWidget learnProgress = new ProgressBarWidget(leftPanelInfoPanel.getHeight(), 16,
+                        leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4, 2,
+                        () -> {
+                            int learned = AbilitySystemClient.LEARNED_SKILLS.size();
+                            int all = abilityCategory.skillList.size();
+                            if (all == 0) return 100.0f;
+                            else return (float) (learned / all);
+                        });
+                learnProgress.progressBarColor = Color.WHITE.hashCode();
+                leftPanelInfoPanel.addChild("learn_progress", learnProgress);
+                LabelWidget progress = new LabelWidget("LEARNED " + 100 + "%", leftPanelInfoPanel.getHeight(), 18);
+                progress.scale = 0.75f;
+                leftPanelInfoPanel.addChild("progress", progress);
+                AutoScaleLabelWidget levelLabel = new AutoScaleLabelWidget(abilityCategory.name, 0, 18, 24);
+                levelLabel.setX(leftPanelInfoPanel.getWidth() - levelLabel.getWidth() - 4);
+                levelLabel.color = 0xFF1177D6;
+                leftPanelInfoPanel.addChild("label_level", levelLabel);
+            }
             LabelWidget wirelessLabel = new LabelWidget("Current Node:", 8, 110);
             leftPanel.addChild("label_wireless", wirelessLabel);
             PanelButtonWidget wirelessButtonPanel = new PanelButtonWidget(8, 120, 90, 16, () -> {
@@ -433,7 +472,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             Matrix4f root = guiGraphics.pose().last().pose();
             root.translate(xOffset, yOffset, 0f);
             targetScale = isHovered() ? 1.25f : 1.0f;
-            currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, MathUtil.animationFactor(0.25f, partialTick));
+            currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.getInstance().getDeltaFrameTime()));
             widthScale = currentScale;
             heightScale = currentScale;
             RenderType oldType = renderType;

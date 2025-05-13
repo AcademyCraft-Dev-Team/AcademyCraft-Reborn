@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 public class ProgressBarWidget extends AbstractWidget {
     private Supplier<Float> progressSupplier;
     public boolean backgroundVisible = true;
-    public int backgroundColor = 0x10000000;
+    public int backgroundColor = 0x20000000;
     public int progressBarColor = 0xFFfcd932;
 
     public ProgressBarWidget(float x, float y, float width, float height, Supplier<Float> progressSupplier) {

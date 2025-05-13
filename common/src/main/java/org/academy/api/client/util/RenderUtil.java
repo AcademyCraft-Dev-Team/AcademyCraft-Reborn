@@ -83,7 +83,7 @@ public final class RenderUtil {
                 VertexFormat.Mode.QUADS,
                 16,
                 false,
-                false,
+                true,
                 RenderType.CompositeState.builder()
                         .setTextureState(
                                 new RenderStateShard.TextureStateShard(
@@ -181,6 +181,7 @@ public final class RenderUtil {
                         .setShaderState(POSITION_TEX_SHADER)
                         .setCullState(NO_CULL)
                         .setOutputState(ITEM_ENTITY_TARGET)
+                        .setWriteMaskState(COLOR_WRITE)
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false)
         );

@@ -1,5 +1,6 @@
 package org.academy.api.common.network.packet;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
@@ -29,8 +30,17 @@ public class C2SPacket implements Packet<ServerGamePacketListener> {
         this.friendlyByteBuf = friendlyByteBuf;
     }
 
+    public C2SPacket(@NotNull String packet, @NotNull ByteBuf byteBuf) {
+        this.id = NetworkSystem.getPacketId(packet);
+        if (byteBuf instanceof FriendlyByteBuf buf) {
+            this.friendlyByteBuf = buf;
+        } else {
+            this.friendlyByteBuf = new FriendlyByteBuf(byteBuf);
+        }
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public C2SPacket(@NotNull String packet, Object... values) {
+    public C2SPacket(@NotNull String packet, @NotNull Object... values) {
         this.id = NetworkSystem.getPacketId(packet);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         for (Object value : values) {

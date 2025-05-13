@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.texture.Tickable;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
+import org.academy.api.client.resource.TextureResources;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -28,9 +28,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     protected void init() {
         super.init();
         back = new ImageWidget(leftPos, topPos - 22, imageWidth, 187,
-                ImageResources.RenderTypes.RENDER_TYPE_ELEMENT_BACK_DARK);
+                TextureResources.RenderTypes.RENDER_TYPE_ELEMENT_BACK_DARK);
         inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, 187,
-                ImageResources.RenderTypes.RENDER_TYPE_INVENTORY);
+                TextureResources.RenderTypes.RENDER_TYPE_INVENTORY);
         AnimationTopToBottom invAnim = new AnimationTopToBottom(inventory);
         invAnim.currentHeight = inventory.height / 1.25f;
         inventory.animation = invAnim;
