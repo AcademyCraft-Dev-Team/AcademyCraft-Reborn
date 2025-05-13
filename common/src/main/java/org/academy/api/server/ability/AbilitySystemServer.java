@@ -11,6 +11,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
@@ -23,7 +24,10 @@ import org.academy.api.server.network.FutureManagerServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.server.world.level.storage.WorldData;
+import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -31,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
 import static org.academy.api.common.ability.AbilitySystem.SKILL_MAP;
+import static org.academy.api.server.ability.AbilitySystemServer.SyncType.*;
 
 public class AbilitySystemServer {
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
@@ -119,8 +124,22 @@ public class AbilitySystemServer {
     }
 
     public static void addAllPlayerSyncTask(final UUID uuid) {
-        for (SyncType syncType : SyncType.values()) {
-            addPlayerSyncTask(uuid, syncType);
+        Field[] fields = SyncType.class.getDeclaredFields();
+
+        for (Field field : fields) {
+            int modifiers = field.getModifiers();
+
+            if (Modifier.isPublic(modifiers) &&
+                    Modifier.isStatic(modifiers) &&
+                    Modifier.isFinal(modifiers) &&
+                    field.getType().equals(String.class)) {
+
+                try {
+                    String value = (String) field.get(null);
+                    addPlayerSyncTask(uuid, value);
+                } catch (IllegalAccessException ignored) {
+                }
+            }
         }
     }
 
@@ -139,7 +158,15 @@ public class AbilitySystemServer {
 
     public static void addPlayerSkill(UUID uuid, String skill) {
         playerMap.get(uuid).getSkills().add(skill);
+        Skill skillI = SKILL_MAP.get(skill);
+        if (skillI != null) {
+            addPlayerSkillData(uuid, skill, skillI.getDefaultSkillData());
+        }
         addPlayerSyncTask(uuid, SyncType.SKILLS);
+    }
+
+    public static void addPlayerSkillData(UUID uuid, String skill, WorldData.Player.SkillData skillData) {
+        playerMap.get(uuid).getSkillData().put(skill, skillData);
     }
 
     public static void removePlayerSkill(UUID uuid, String skill) {
@@ -149,6 +176,38 @@ public class AbilitySystemServer {
 
     public static int getPlayerLevel(UUID uuid) {
         return playerMap.get(uuid).getLevel();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable
+    public static <T extends WorldData.Player.SkillData> T getPlayerSkillData(UUID uuid, String skill) {
+        playerMap.get(uuid).getSkillData().get(skill);
+        return (T) playerMap.get(uuid).getSkillData().get(skill);
+    }
+
+    public static float getPlayerSkillExp(UUID uuid, String skill) {
+        WorldData.Player.SkillData skillData = playerMap.get(uuid).getSkillData().get(skill);
+        if (skillData == null) {
+            return 0;
+        } else {
+            return skillData.exp;
+        }
+    }
+
+    public static void setPlayerSkillExp(UUID uuid, String skill, float exp) {
+        WorldData.Player.SkillData skillData = playerMap.get(uuid).getSkillData().get(skill);
+        if (skillData != null) {
+            skillData.exp = exp;
+            Player player = LIVE_PLAYER_MAP.get(uuid);
+            if (player != null) {
+                FriendlyByteBuf friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
+                friendlyByteBuf.writeUtf(skill);
+                friendlyByteBuf.writeFloat(skillData.exp);
+                player.packetConsumer.accept(new S2CPacket(
+                        Packets.S2C_EXP_SYNC, friendlyByteBuf
+                ));
+            }
+        }
     }
 
     public static void setPlayerLevel(UUID uuid, int level) {
@@ -161,7 +220,7 @@ public class AbilitySystemServer {
 
     public static void setPlayerComputingPower(UUID uuid, float power) {
         playerMap.get(uuid).setComputingPower(power);
-        addPlayerSyncTask(uuid, SyncType.COMPUTING_POWER);
+        addPlayerSyncTask(uuid, COMPUTING_POWER);
     }
 
     public static float getPlayerMaxComputingPower(UUID uuid) {
@@ -202,7 +261,7 @@ public class AbilitySystemServer {
         return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();
     }
 
-    public static void addPlayerSyncTask(final UUID uuid, final SyncType syncType) {
+    public static void addPlayerSyncTask(final UUID uuid, final String syncType) {
         if (LIVE_PLAYER_MAP.containsKey(uuid)) {
             LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
         }
@@ -212,11 +271,12 @@ public class AbilitySystemServer {
         RUNNABLE_LIST.add(runnable);
     }
 
-    public enum SyncType {
-        COMPUTING_POWER,
-        MAX_COMPUTING_POWER,
-        ABILITY_CATEGORY,
-        SKILLS,
+    public static final class SyncType {
+        public static final String COMPUTING_POWER = "computingPower";
+        public static final String MAX_COMPUTING_POWER = "maxComputingPower";
+        public static final String ABILITY_CATEGORY = "abilityCategory";
+        public static final String SKILLS = "skills";
+        public static final String LEVEL = "level";
     }
 
     public static final class AbilitySystemServerThread {
@@ -229,60 +289,68 @@ public class AbilitySystemServer {
             for (Player player : LIVE_PLAYER_MAP.values()) {
                 tickPlayer(player);
             }
-            LIVE_PLAYER_MAP.values().forEach(player -> {
-                final Consumer<Packet<?>> packetConsumer = player.packetConsumer;
-                final UUID uuid = player.uuid;
-                player.syncQueue.forEach(syncType -> {
-                    switch (syncType) {
-                        case COMPUTING_POWER -> packetConsumer.accept(
-                                new S2CPacket(
-                                        Packets.S2C_COMPUTING_POWER_SYNC,
-                                        new FriendlyByteBuf(Unpooled.buffer()
-                                                .writeFloat(getPlayerComputingPower(uuid))
-                                        )
-                                )
-                        );
-                        case ABILITY_CATEGORY -> packetConsumer.accept(
-                                new S2CPacket(
-                                        Packets.S2C_ABILITY_CATEGORY_SYNC,
-                                        new FriendlyByteBuf(Unpooled.buffer())
-                                                .writeUtf(getPlayerAbilityCategory(uuid).name)
-                                )
-                        );
-                        case MAX_COMPUTING_POWER -> packetConsumer.accept(
-                                new S2CPacket(
-                                        Packets.S2C_MAX_COMPUTING_POWER_SYNC,
-                                        new FriendlyByteBuf(Unpooled.buffer()
-                                                .writeFloat(getPlayerMaxComputingPower(uuid))
-                                        )
-                                )
-                        );
-                        case SKILLS -> {
-                            ArrayList<Skill> skillList = new ArrayList<>();
-                            for (String string : getPlayerSkills(uuid)) {
-                                skillList.add(AbilitySystem.SKILL_MAP.get(string));
-                            }
-                            FriendlyByteBuf friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
-                            FriendlyByteBufSerializers.SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER
-                                    .serialize(friendlyByteBuf, skillList);
-                            packetConsumer.accept(
-                                    new S2CPacket(Packets.S2C_SKILLS_SYC, friendlyByteBuf)
-                            );
-                        }
-                    }
-                });
-                player.syncQueue.clear();
-            });
         }
 
-        public static void tickPlayer(Player player) {
+        public static void tickPlayer(Player player) {final Consumer<Packet<?>> packetConsumer = player.packetConsumer;
             final UUID uuid = player.uuid;
+            player.syncQueue.forEach(syncType -> {
+                switch (syncType) {
+                    case COMPUTING_POWER -> packetConsumer.accept(
+                            new S2CPacket(
+                                    Packets.S2C_COMPUTING_POWER_SYNC,
+                                    new FriendlyByteBuf(Unpooled.buffer()
+                                            .writeFloat(getPlayerComputingPower(uuid))
+                                    )
+                            )
+                    );
+                    case ABILITY_CATEGORY -> packetConsumer.accept(
+                            new S2CPacket(
+                                    Packets.S2C_ABILITY_CATEGORY_SYNC,
+                                    new FriendlyByteBuf(Unpooled.buffer())
+                                            .writeUtf(getPlayerAbilityCategory(uuid).name)
+                            )
+                    );
+                    case MAX_COMPUTING_POWER -> packetConsumer.accept(
+                            new S2CPacket(
+                                    Packets.S2C_MAX_COMPUTING_POWER_SYNC,
+                                    new FriendlyByteBuf(Unpooled.buffer()
+                                            .writeFloat(getPlayerMaxComputingPower(uuid))
+                                    )
+                            )
+                    );
+                    case SKILLS -> {
+                        ArrayList<Skill> skillList = new ArrayList<>();
+                        for (String string : getPlayerSkills(uuid)) {
+                            skillList.add(AbilitySystem.SKILL_MAP.get(string));
+                        }
+                        FriendlyByteBuf friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
+                        FriendlyByteBufSerializers.SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER
+                                .serialize(friendlyByteBuf, skillList);
+                        packetConsumer.accept(
+                                new S2CPacket(Packets.S2C_SKILLS_SYC, friendlyByteBuf)
+                        );
+                    }
+                    case LEVEL -> packetConsumer.accept(
+                            new S2CPacket(Packets.S2C_LEVEL_SYNC, new FriendlyByteBuf(Unpooled.buffer())
+                                    .writeVarInt(getPlayerLevel(uuid)))
+                    );
+                }
+            });
+            player.syncQueue.clear();
+
             final float currentComputingPower = getPlayerComputingPower(uuid);
             final float maxComputingPower = getPlayerMaxComputingPower(uuid);
             final float computingPowerRecoverySpeed = getPlayerComputingPowerRecoverySpeed(uuid);
             if (currentComputingPower < maxComputingPower) {
                 setPlayerComputingPower(uuid, currentComputingPower + computingPowerRecoverySpeed);
             }
+
+            AbilityCategory abilityCategory = getPlayerAbilityCategory(uuid);
+            int learned = getPlayerSkills(uuid).size();
+            int all = abilityCategory.skillList.size();
+            float progress;
+            if (all == 0) progress = 100.0f;
+            else progress = (float) learned / all;
         }
     }
 
@@ -323,7 +391,7 @@ public class AbilitySystemServer {
     public static class Player {
         public final UUID uuid;
         public final WorldData.Player data;
-        public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
+        public final ConcurrentLinkedQueue<String> syncQueue = new ConcurrentLinkedQueue<>();
         private final Consumer<Packet<?>> packetConsumer;
         public float additionalComputingPower;
 

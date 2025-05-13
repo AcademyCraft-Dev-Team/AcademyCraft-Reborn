@@ -163,6 +163,8 @@ public class WorldData {
         }
 
         public static abstract class SkillData {
+            @SerializedName("exp")
+            public float exp;
         }
     }
 

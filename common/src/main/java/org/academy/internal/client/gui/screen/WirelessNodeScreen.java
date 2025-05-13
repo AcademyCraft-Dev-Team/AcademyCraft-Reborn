@@ -7,12 +7,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.framework.ContainerSetFocusedChildEvent;
-import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
@@ -52,13 +52,13 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
         invPage.animation = new AnimationTopToBottom(invPage);
         rootContainer.addChild("page_inv", invPage);
         {
-            ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, 187, ImageResources.RenderTypes.RENDER_TYPE_WIRELESS_NODE_UI);
+            ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, 187, TextureResources.RenderTypes.RENDER_TYPE_WIRELESS_NODE_UI);
             ui.animation = new AnimationTopToBottom(ui);
             invPage.addChild("ui", ui);
 
             state = new VerticalSpriteWidget(
                     leftPos + 42, topPos - 22 + 33.5f, 186 / 2f, 75 / 2f,
-                    ImageResources.RenderTypes.RENDER_TYPE_WIRELESS_NODE_STATE,
+                    TextureResources.RenderTypes.RENDER_TYPE_WIRELESS_NODE_STATE,
                     186, 750, 186, 75, 10);
             state.animation = new AnimationTopToBottom(state);
             invPage.addChild("state", state);
@@ -95,13 +95,13 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
-            ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, ImageResources.RenderTypes.RENDER_TYPE_ICON_INV, () -> {
+            ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, TextureResources.RenderTypes.RENDER_TYPE_ICON_INV, () -> {
             });
             inv.animation = new AnimationTopToBottom(inv);
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, ImageResources.RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
+            ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, TextureResources.RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
             });
             wireless.animation = new AnimationTopToBottom(wireless);
             radioGroupWidget.addChild("wireless", wireless);

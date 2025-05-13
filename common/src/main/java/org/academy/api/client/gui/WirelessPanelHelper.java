@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static org.academy.api.client.gui.ImageResources.RenderTypes.*;
+import static org.academy.api.client.resource.TextureResources.RenderTypes.*;
 
 public class WirelessPanelHelper {
     public static final float PANEL_WIDTH = 176f;

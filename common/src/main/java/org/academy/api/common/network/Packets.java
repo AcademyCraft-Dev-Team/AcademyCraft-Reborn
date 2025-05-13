@@ -17,6 +17,8 @@ public final class Packets {
     public static final String S2C_MAX_COMPUTING_POWER_SYNC = "s2c_max_computing_power_sync";
     public static final String S2C_SKILLS_SYC = "s2c_skills_sync";
     public static final String S2C_ABILITY_CATEGORY_SYNC = "s2c_ability_category_sync";
+    public static final String S2C_LEVEL_SYNC = "s2c_level_sync";
+    public static final String S2C_EXP_SYNC = "s2c_exp_sync";
     /**
      * Wireless Network
      */

@@ -33,7 +33,7 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, MathUtil.animationFactor(0.25f, partialTick));
+        scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, MathUtil.magicAnimationFactor(0.25f, partialTick));
 
         guiGraphics.pose().pushPose();
         guiGraphics.flush();

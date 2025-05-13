@@ -1,6 +1,7 @@
 package org.academy.api.client.ability;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.FriendlyByteBuf;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
@@ -17,12 +18,17 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import static org.academy.api.common.ability.AbilitySystem.SKILL_MAP;
 
 public final class AbilitySystemClient {
-    public static final Set<Skill> LEARNED_SKILLS = new HashSet<>();
+    public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
+    public static final Map<Skill,Float> SKILL_EXP = new ConcurrentHashMap<>();
     public static final String KEY_NAME = "activate_ability";
     public static final InputSystem.InputPair KEY = AcademyCraftClient.CLIENT_CONFIG.getKey(
             KEY_NAME,
@@ -40,6 +46,7 @@ public final class AbilitySystemClient {
     private static volatile boolean activeHUD = false;
     private static volatile float computingPower;
     private static volatile float maximumComputingPower;
+    private static volatile int level;
 
     public static void init() {
         registerPacketHandler();
@@ -82,6 +89,30 @@ public final class AbilitySystemClient {
                     LEARNED_SKILLS.addAll(skillList);
                 }
         );
+        NetworkSystemClient.registerS2CPacketHandler(
+                Packets.S2C_LEVEL_SYNC,
+                (listener, packet) -> setLevel(packet.friendlyByteBuf.readVarInt())
+        );
+        NetworkSystemClient.registerS2CPacketHandler(
+                Packets.S2C_EXP_SYNC,
+                (listener, packet) -> {
+                    FriendlyByteBuf friendlyByteBuf = packet.friendlyByteBuf;
+                    String name =  friendlyByteBuf.readUtf();
+                    float exp =  friendlyByteBuf.readFloat();
+                    Skill skill = SKILL_MAP.get(name);
+                    if (skill != null) {
+                        setSkillExp(skill, exp);
+                    }
+                }
+        );
+    }
+
+    public static float getSkillExp(Skill skill) {
+        return SKILL_EXP.getOrDefault(skill, 0f);
+    }
+
+    public static void setSkillExp(Skill skill, float exp) {
+        SKILL_EXP.put(skill, exp);
     }
 
     public static float getComputingPower() {
@@ -98,6 +129,14 @@ public final class AbilitySystemClient {
 
     public static void setMaximumComputingPower(float maximumComputingPower) {
         Minecraft.getInstance().execute(() -> AbilitySystemClient.maximumComputingPower = maximumComputingPower);
+    }
+
+    public static int getLevel() {
+        return level;
+    }
+
+    public static void setLevel(int level) {
+        Minecraft.getInstance().execute(() -> AbilitySystemClient.level = level);
     }
 
     public static boolean isActiveHUD() {

@@ -2,6 +2,7 @@ package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -27,7 +28,7 @@ public class SmokeRenderer extends EntityRenderer<Smoke> {
     public void render(@NotNull Smoke entity, float entityYaw, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
         entity.renderCount++;
-        entity.renderAlpha = MathUtil.lerpStartEndFactor(entity.renderAlpha, entity.alpha, partialTick);
+        entity.renderAlpha = MathUtil.lerpStartEndFactor(entity.renderAlpha, entity.alpha, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.instance.getDeltaFrameTime()));
 
         float size = 0.5f;
         float halfSize = 1f;

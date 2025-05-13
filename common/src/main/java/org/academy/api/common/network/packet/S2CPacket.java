@@ -1,5 +1,6 @@
 package org.academy.api.common.network.packet;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -20,18 +21,27 @@ public class S2CPacket implements Packet<ClientGamePacketListener> {
     public final FriendlyByteBuf friendlyByteBuf;
 
     @ApiStatus.Internal
-    public S2CPacket(FriendlyByteBuf friendlyByteBuf) {
+    public S2CPacket(@NotNull FriendlyByteBuf friendlyByteBuf) {
         id = friendlyByteBuf.readVarInt();
         this.friendlyByteBuf = new FriendlyByteBuf(friendlyByteBuf.readBytes(friendlyByteBuf.readableBytes()));
     }
 
-    public S2CPacket(String packet, FriendlyByteBuf friendlyByteBuf) {
+    public S2CPacket(@NotNull String packet, @NotNull FriendlyByteBuf friendlyByteBuf) {
         this.id = NetworkSystem.getPacketId(packet);
         this.friendlyByteBuf = friendlyByteBuf;
     }
 
+    public S2CPacket(@NotNull String packet, @NotNull ByteBuf byteBuf) {
+        this.id = NetworkSystem.getPacketId(packet);
+        if (byteBuf instanceof FriendlyByteBuf buf) {
+            this.friendlyByteBuf = buf;
+        } else {
+            this.friendlyByteBuf = new FriendlyByteBuf(byteBuf);
+        }
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public S2CPacket(@NotNull String packet, Object... values) {
+    public S2CPacket(@NotNull String packet, @NotNull Object... values) {
         this.id = NetworkSystem.getPacketId(packet);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         for (Object value : values) {
