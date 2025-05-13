@@ -2,14 +2,14 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
-import org.academy.api.client.gui.ImageResources;
 import org.academy.api.client.gui.animation.Animation;
+import org.academy.api.client.resource.TextureResources;
 
 public class BlendQuadWidget extends ImageWidget {
     public float margin = 8;
 
     public BlendQuadWidget(float x, float y, float width, float height) {
-        super(x, y, width, height, ImageResources.RenderTypes.RENDER_TYPE_BLEND_QUAD);
+        super(x, y, width, height, TextureResources.RenderTypes.RENDER_TYPE_BLEND_QUAD);
         this.centerScale = false;
         this.widthScale = 1f;
         this.heightScale = 1f;
@@ -51,7 +51,7 @@ public class BlendQuadWidget extends ImageWidget {
             }
         }
 
-        this.renderType = ImageResources.RenderTypes.RENDER_TYPE_ELEMENT_LINE;
+        this.renderType = TextureResources.RenderTypes.RENDER_TYPE_ELEMENT_LINE;
         this.u0 = 0f;
         this.v0 = 0f;
         this.u1 = 1f;

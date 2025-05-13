@@ -14,10 +14,14 @@ public abstract class SkillClientConfig {
         @SerializedName("keyBindings")
         private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
-        public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair... defaultConfig) {
-            if (!keyBindings.containsKey(name) && defaultConfig.length > 0) {
-                setKeyBinding(name, defaultConfig[0]);
+        public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+            if (!keyBindings.containsKey(name)) {
+                setKeyBinding(name, defaultConfig);
             }
+            return keyBindings.get(name);
+        }
+
+        public InputSystem.InputPair getKeyBinding(String name) {
             return keyBindings.get(name);
         }
 
