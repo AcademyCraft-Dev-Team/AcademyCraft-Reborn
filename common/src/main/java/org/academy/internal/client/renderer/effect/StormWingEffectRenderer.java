@@ -36,7 +36,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final float HORIZONTAL_DISPLACEMENT_SCALE = 1.6f; // 水平位移缩放
     private static final double POS_DOMAIN_WARP_SCALE = 0.15; // 位置域扭曲强度
     private static final float GAP_VARIANCE_SCALE = 0.6f; // 间隙变化缩放
-    private static final float VERTICAL_POSITION_JITTER = 0.03f; // 垂直位置抖动
     private static final float BASE_RING_WIDTH = 0.075f * SIZE; // 基础环宽度
     private static final float RADIUS_BASE_NOISE_SCALE = 0.15f; // 半径基础噪声缩放
     private static final float RADIUS_EXTRA_NOISE_SCALE = 0.20f; // 半径额外噪声缩放
@@ -84,11 +83,6 @@ public class StormWingEffectRenderer implements EffectRenderer {
         double heightScaleFactor = 0.4 + normalizedY * 1.6;
         displacementBuffer[0] = noiseX * heightScaleFactor;
         displacementBuffer[1] = noiseZ * heightScaleFactor;
-    }
-
-    private static double calculateVerticalJitter(double timePosBase, double timeJitter) {
-        double noise = ImprovedNoise.noise(warpedYBuffer[0] * 2.2, timePosBase * 1.1 + timeJitter * 0.5, 30.0);
-        return noise * VERTICAL_POSITION_JITTER;
     }
 
     private static float calculateGap(int ringIndex, double timeGap) {
@@ -158,8 +152,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
 
             applyDomainWarp(normalizedY, tWarp);
 
-            double yJitter = calculateVerticalJitter(tPosBase, tJitter);
-            double actualY = currentY + yJitter;
+            double actualY = currentY;
 
             calculateHorizontalDisplacement(normalizedY, tPosBase);
             double actualDx = displacementBuffer[0] * SIZE * HORIZONTAL_DISPLACEMENT_SCALE;

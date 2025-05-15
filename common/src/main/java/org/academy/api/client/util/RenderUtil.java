@@ -181,7 +181,6 @@ public final class RenderUtil {
                         .setShaderState(POSITION_TEX_SHADER)
                         .setCullState(NO_CULL)
                         .setOutputState(ITEM_ENTITY_TARGET)
-                        .setWriteMaskState(COLOR_WRITE)
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .createCompositeState(false)
         );
