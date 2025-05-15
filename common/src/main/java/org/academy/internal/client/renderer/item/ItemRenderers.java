@@ -21,7 +21,7 @@ public class ItemRenderers {
             (itemStack, displayContext, leftHand, poseStack,
              buffer, combinedLight, combinedOverlay, model) -> {
                 poseStack.pushPose();
-                poseStack.last().normal().rotateX((float) Math.toRadians(180));
+                poseStack.last().normal().rotateY((float) Math.toRadians(90));
                 Matrix4f matrix4f = new Matrix4f();
                 matrix4f.scale(0.5f);
                 matrix4f.rotateX((float) Math.toRadians(180));
