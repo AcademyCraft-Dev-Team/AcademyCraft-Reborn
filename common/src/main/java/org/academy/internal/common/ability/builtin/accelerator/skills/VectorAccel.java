@@ -14,12 +14,12 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
-import org.academy.api.client.config.SkillClientConfig;
+import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.CameraRenderer;
 import org.academy.api.client.renderer.RendererManager;
-import org.academy.api.client.tick.ClientTickEvent;
+import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
@@ -38,11 +38,11 @@ import org.lwjgl.glfw.GLFW;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class VecAccel extends Skill {
-    public static final Skill INSTANCE = new VecAccel();
+public class VectorAccel extends Skill {
+    public static final Skill INSTANCE = new VectorAccel();
 
-    private VecAccel() {
-        super(SkillNames.VEC_ACCEL, 1);
+    private VectorAccel() {
+        super(SkillNames.VECTOR_ACCEL, 1);
     }
 
     @Override
@@ -68,12 +68,12 @@ public class VecAccel extends Skill {
                         )
                 )
         ), Client::onChargeRelease);
-        RendererManager.CAMERA_RENDERER_MAP.put(SkillNames.VEC_ACCEL, Client.CAMERA_RENDERER);
+        RendererManager.registerCameraRenderer(Client.CAMERA_RENDERER);
     }
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.SERVER_PACKET_HANDLER_CLASSES.add(Server.class);
+        NetworkSystemServer.registerPacketHandlerClass(Server.class);
     }
 
     public static final class Client {
@@ -83,10 +83,10 @@ public class VecAccel extends Skill {
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/vec_accel/icon.png"), 20, 40);
 
-        public static final String KEY_NAME_CHARGE = SkillNames.VEC_ACCEL + "_charge";
-        public static final String KEY_NAME_RELEASE = SkillNames.VEC_ACCEL + "_release";
+        public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
+        public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";
 
-        private static final CameraRenderer CAMERA_RENDERER = (poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix, ci) -> {
+        private static final CameraRenderer CAMERA_RENDERER = (poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix) -> {
             if (Client.currentContext == null || Client.currentContext.player == null || Minecraft.getInstance().screen != null) {
                 return;
             }
@@ -168,7 +168,7 @@ public class VecAccel extends Skill {
             }
         }
 
-        public static final class VecAccelClientConfig extends SkillClientConfig.KeyBindingConfig {
+        public static final class VecAccelClientConfig extends ClientConfig.KeyBindingConfig {
         }
 
         public static final class Context implements ClientContext {

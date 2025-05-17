@@ -64,7 +64,7 @@ public class S2CPacket implements Packet<ClientGamePacketListener> {
         if (handler instanceof ClientPacketListener listener) {
             String packet = NetworkSystem.getPacketResourceLocation(id);
             if (packet != null) {
-                S2CPacketHandler packetHandler = NetworkSystemClient.S2C_PACKET_HANDLER_MAP.get(packet);
+                S2CPacketHandler packetHandler = NetworkSystemClient.getS2CPacketHandler(packet);
                 if (packetHandler != null) {
                     Minecraft.getInstance().execute(() -> packetHandler.handle(listener, this));
                 } else {

@@ -55,6 +55,7 @@ public final class TextureResources {
     public static final ResourceLocation TEXTURE_BLEND_QUAD = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/blend_quad.png");
     public static final ResourceLocation TEXTURE_BUTTON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/button.png");
     public static final ResourceLocation TEXTURE_ICON_BOX = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_box.png");
+    public static final ResourceLocation TEXTURE_CURSOR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/cursor.png");
     /**
      * Meltdowner
      */
@@ -167,6 +168,9 @@ public final class TextureResources {
         );
         public static final RenderType RENDER_TYPE_ICON_BOX = RenderUtil.getPositionTexRenderType(
                 "icon_box", TEXTURE_ICON_BOX, false
+        );
+        public static final RenderType RENDER_TYPE_CURSOR = RenderUtil.getPositionTexRenderType(
+                "cursor", TEXTURE_CURSOR, true
         );
     }
 }

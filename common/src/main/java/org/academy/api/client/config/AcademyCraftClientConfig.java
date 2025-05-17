@@ -10,18 +10,18 @@ import java.util.Map;
 @SuppressWarnings("unchecked")
 public class AcademyCraftClientConfig {
     @SerializedName("skills")
-    private final Map<String, SkillClientConfig> skills = new HashMap<>();
+    private final Map<String, ClientConfig> skills = new HashMap<>();
     @SerializedName("key")
     private final Map<String, InputSystem.InputPair> key = new HashMap<>();
 
-    public <T extends SkillClientConfig> T getSkillClientConfig(String skill, T defaultConfig) {
+    public <T extends ClientConfig> T getSkillClientConfig(String skill, T defaultConfig) {
         if (!skills.containsKey(skill)) {
             setSkillClientConfig(skill, defaultConfig);
         }
         return (T) skills.get(skill);
     }
 
-    public <T extends SkillClientConfig> void setSkillClientConfig(String skill, T newConfig) {
+    public <T extends ClientConfig> void setSkillClientConfig(String skill, T newConfig) {
         skills.put(skill, newConfig);
     }
 

@@ -8,6 +8,7 @@ import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.FriendlyByteBufDeserializer;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -18,12 +19,18 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 public final class NetworkSystemServer {
-    public static final List<Class<?>> SERVER_PACKET_HANDLER_CLASSES = new ArrayList<>();
-    public static final Map<String, C2SPacketHandler> C2S_PACKET_HANDLER_MAP = new HashMap<>();
+    private static boolean initialized = false;
+    private static final List<Class<?>> SERVER_PACKET_HANDLER_CLASSES = new ArrayList<>();
+    private static final Map<String, C2SPacketHandler> C2S_PACKET_HANDLER_MAP = new HashMap<>();
 
     public static void init() {
         FutureManagerServer.register();
         initAnnotation();
+        initialized = true;
+    }
+
+    public static void registerPacketHandlerClass(Class<?> clazz) {
+        if (!initialized) SERVER_PACKET_HANDLER_CLASSES.add(clazz);
     }
 
     public static void initAnnotation() {
@@ -95,6 +102,11 @@ public final class NetworkSystemServer {
     }
 
     public static void registerC2SPacketHandler(String packet, C2SPacketHandler handler) {
-        C2S_PACKET_HANDLER_MAP.put(packet, handler);
+        if (!initialized) C2S_PACKET_HANDLER_MAP.put(packet, handler);
+    }
+
+    @Nullable
+    public static C2SPacketHandler getC2SPacketHandler(String packet) {
+        return C2S_PACKET_HANDLER_MAP.get(packet);
     }
 }

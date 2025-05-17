@@ -69,7 +69,6 @@ public abstract class CGuiScreen extends Screen {
         return rootContainer.mouseScrolled(mouseX, mouseY, delta);
     }
 
-
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         return super.keyPressed(keyCode, scanCode, modifiers) || rootContainer.keyPressed(keyCode, scanCode, modifiers);

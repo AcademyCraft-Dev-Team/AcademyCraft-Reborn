@@ -2,10 +2,10 @@ package org.academy.internal.common.ability.builtin.teleport.skills;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -20,6 +20,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.util.ServerUtil;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.lwjgl.glfw.GLFW;
@@ -56,6 +57,12 @@ public final class SelfTeleport extends Skill {
 
         InputSystem.addKeyBinding(KEY_NAME_START, KEY_START, Client::start);
         InputSystem.addKeyBinding(KEY_NAME_END, KEY_END, Client::end);
+        RendererManager.registerCameraRenderer(Client.CAMERA_RENDERER);
+    }
+
+    @Override
+    public void initServer(MinecraftServer server) {
+        NetworkSystemServer.registerPacketHandlerClass(Server.class);
     }
 
     private static final class Server {
@@ -70,11 +77,11 @@ public final class SelfTeleport extends Skill {
     }
 
     private static final class Client {
-        private static final Minecraft mc = Minecraft.getInstance();
-        private static final ClientLevel level = mc.level;
-        private static final LocalPlayer localPlayer = mc.player;
-        private static final CameraRenderer CAMERA_RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f, ci) -> {
-            if (level != null && localPlayer != null) {
+        public static boolean started;
+        private static final CameraRenderer CAMERA_RENDERER = (poseStack, f, l, bl, camera, gameRenderer, lightTexture, matrix4f) -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            LocalPlayer localPlayer = minecraft.player;
+            if (localPlayer != null && started) {
                 poseStack.pushPose();
                 final AABB aabb = new AABB(0, 0, 0, 1, 2, 1);
 
@@ -84,7 +91,7 @@ public final class SelfTeleport extends Skill {
                 RenderUtil.applyCameraOffset(poseStack, Minecraft.getInstance().options.getCameraType(), lookVec);
                 RenderUtil.applyOffset(poseStack, offsetVec);
 
-                final RenderBuffers renderBuffers = mc.renderBuffers();
+                final RenderBuffers renderBuffers = minecraft.renderBuffers();
 
                 poseStack.translate(-0.5f, -1f, -0.5f);
                 RenderUtil.LineBoxRenderer.renderWireframeBox(poseStack, renderBuffers.bufferSource(), aabb, 1f, 1f, 1f, 1f);
@@ -94,11 +101,11 @@ public final class SelfTeleport extends Skill {
 
         private static void start() {
             if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
-            RendererManager.CAMERA_RENDERER_MAP.put(SkillNames.SELF_TELEPORT, Client.CAMERA_RENDERER);
+            started = true;
         }
 
         private static void end() {
-            RendererManager.CAMERA_RENDERER_MAP.remove(SkillNames.SELF_TELEPORT);
+            started = false;
             if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SELF_TELEPORT, new FriendlyByteBuf(Unpooled.buffer())));
         }

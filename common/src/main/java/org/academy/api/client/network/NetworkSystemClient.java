@@ -7,6 +7,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.FriendlyByteBufDeserializers;
 import org.academy.api.common.network.packet.S2CPacket;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -17,13 +18,15 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 public class NetworkSystemClient {
-    public static final List<Class<?>> CLIENT_PACKET_HANDLER_CLASSES = new ArrayList<>();
-    public static final Map<String, S2CPacketHandler> S2C_PACKET_HANDLER_MAP = new HashMap<>();
+    private static boolean initialized = false;
+    private static final List<Class<?>> CLIENT_PACKET_HANDLER_CLASSES = new ArrayList<>();
+    private static final Map<String, S2CPacketHandler> S2C_PACKET_HANDLER_MAP = new HashMap<>();
     public static Connection connection;
 
     public static void init() {
         FutureManagerClient.register();
         initAnnotation();
+        initialized = true;
     }
 
     public static void initAnnotation() {
@@ -90,7 +93,14 @@ public class NetworkSystemClient {
         }
     }
 
+    @Nullable
+    public static S2CPacketHandler getS2CPacketHandler(String packet) {
+        return S2C_PACKET_HANDLER_MAP.get(packet);
+    }
+
     public static void registerS2CPacketHandler(String packet, S2CPacketHandler handler) {
-        S2C_PACKET_HANDLER_MAP.put(packet, handler);
+        if (!initialized) {
+            S2C_PACKET_HANDLER_MAP.put(packet, handler);
+        }
     }
 }

@@ -47,7 +47,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(Packets.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM, (serverPacketListener, packet) -> Server.handle(serverPacketListener.player));
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM, (serverPacketListener, packet) -> Server.handle(serverPacketListener.player));
     }
 
     public static final class Client {
