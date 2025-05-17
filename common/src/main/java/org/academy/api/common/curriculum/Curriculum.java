@@ -1,11 +1,9 @@
 package org.academy.api.common.curriculum;
 
 public abstract class Curriculum {
-    public final String title;
-    public final String identifier;
+    public final String name;
 
-    protected Curriculum(String title, String identifier) {
-        this.title = title;
-        this.identifier = identifier;
+    protected Curriculum(String name) {
+        this.name = name;
     }
 }

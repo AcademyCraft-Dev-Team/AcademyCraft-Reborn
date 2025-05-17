@@ -15,6 +15,6 @@ public class Accelerator extends AbilityCategory {
         skillList.add(PlasmaGeneration.INSTANCE);
         skillList.add(KineticEnergyApplied.INSTANCE);
         skillList.add(DirStrike.INSTANCE);
-        skillList.add(VecAccel.INSTANCE);
+        skillList.add(VectorAccel.INSTANCE);
     }
 }

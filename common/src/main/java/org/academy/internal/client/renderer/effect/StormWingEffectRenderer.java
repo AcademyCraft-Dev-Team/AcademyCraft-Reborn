@@ -14,7 +14,7 @@ import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.builtin.accelerator.skills.StormWing;
-import org.academy.internal.common.world.entity.player.PlayerSyncSkillData;
+import org.academy.internal.common.world.entity.player.PlayerSyncData;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -206,7 +206,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
 
     @Override
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, @NotNull AbstractClientPlayer livingEntity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        if (!livingEntity.getEntityData().get(PlayerSyncSkillData.SKILL_DATA).getBoolean(StormWing.TAG_KEY)) {
+        if (!livingEntity.getEntityData().get(PlayerSyncData.DATA).getBoolean(StormWing.TAG_KEY)) {
             return;
         }
 

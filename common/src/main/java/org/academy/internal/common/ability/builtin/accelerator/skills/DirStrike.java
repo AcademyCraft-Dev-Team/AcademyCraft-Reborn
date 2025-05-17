@@ -12,11 +12,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
-import org.academy.api.client.config.SkillClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
-import org.academy.api.client.tick.ClientTickEvent;
+import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
@@ -71,7 +70,7 @@ public class DirStrike extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.SERVER_PACKET_HANDLER_CLASSES.add(Server.class);
+        NetworkSystemServer.registerPacketHandlerClass(Server.class);
     }
 
     public static final class Client {
@@ -98,7 +97,7 @@ public class DirStrike extends Skill {
             }
         }
 
-        public static final class ClientConfig extends SkillClientConfig.KeyBindingConfig {
+        public static final class ClientConfig extends org.academy.api.client.config.ClientConfig.KeyBindingConfig {
             private ClientConfig() {
             }
         }

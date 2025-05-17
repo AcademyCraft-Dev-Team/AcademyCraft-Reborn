@@ -63,7 +63,7 @@ public class C2SPacket implements Packet<ServerGamePacketListener> {
         if (handler instanceof ServerGamePacketListenerImpl listenerImpl) {
             String packet = NetworkSystem.getPacketResourceLocation(id);
             if (packet != null) {
-                C2SPacketHandler packetHandler = NetworkSystemServer.C2S_PACKET_HANDLER_MAP.get(packet);
+                C2SPacketHandler packetHandler = NetworkSystemServer.getC2SPacketHandler(packet);
                 if (packetHandler != null) {
                     listenerImpl.player.server.execute(() -> packetHandler.handle(listenerImpl, this));
                 } else {

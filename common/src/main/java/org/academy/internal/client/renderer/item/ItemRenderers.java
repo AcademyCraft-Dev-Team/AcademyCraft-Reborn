@@ -94,7 +94,7 @@ public class ItemRenderers {
 
     public static void init() {
         for (Item item : ITEM_RENDERER_MAP.keySet()) {
-            RendererManager.ITEM_RENDERER_MAP.put(item, ITEM_RENDERER_MAP.get(item));
+            RendererManager.registerItemRenderer(item, ITEM_RENDERER_MAP.get(item));
         }
     }
 

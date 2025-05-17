@@ -12,7 +12,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.SkillClientConfig;
+import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
@@ -49,7 +49,7 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.C2S_PACKET_HANDLER_MAP.put(Packets.C2S_RAILGUN_SHOOT,
+        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_RAILGUN_SHOOT,
                 (serverPacketListener, packet) ->
                         Server.handleShoot(serverPacketListener.player)
         );
@@ -80,7 +80,7 @@ public class Railgun extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_RAILGUN_SHOOT));
         }
 
-        public static final class RailgunClientConfig extends SkillClientConfig.KeyBindingConfig {
+        public static final class RailgunClientConfig extends ClientConfig.KeyBindingConfig {
         }
     }
 

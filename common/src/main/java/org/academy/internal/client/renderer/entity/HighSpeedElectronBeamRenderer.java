@@ -56,7 +56,6 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
 
         poseStack.popPose();
 
-
         poseStack.pushPose();
         poseStack.mulPoseMatrix(commonInitialOrientation);
 
@@ -92,7 +91,6 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         tailVertexConsumer.vertex(singleAxisBillboardMatrix,  mainBeamHalfVisualWidth, mainBeamActualLength, 0).uv(u0, v1).endVertex();
 
         poseStack.popPose();
-
 
         poseStack.pushPose();
         poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());

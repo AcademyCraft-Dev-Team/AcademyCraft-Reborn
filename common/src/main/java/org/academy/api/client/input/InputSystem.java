@@ -3,6 +3,7 @@ package org.academy.api.client.input;
 import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -23,10 +24,13 @@ public class InputSystem {
     public static int currentKeyCode = -1;
     public static int currentKeyAction = -1;
 
-    public static void handleMouseMove(double xpos, double ypos) {
+    public static void handleMouseMove(double xpos, double ypos, CallbackInfo ci) {
         MouseMoveEvent event = new MouseMoveEvent(xpos, ypos);
         AcademyCraft.EVENT_BUS.post(event);
-        if (event.isCanceled()) return;
+        if (event.isCanceled()) {
+            ci.cancel();
+            return;
+        }
         xpos = event.xpos;
         ypos = event.ypos;
         for (BiConsumer<Double, Double> consumer : MOUSE_MOVE_HANDLERS.values()) {
@@ -34,12 +38,15 @@ public class InputSystem {
         }
     }
 
-    public static void handleKey(int key, int action, int modifiers) {
+    public static void handleKey(int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
         currentKeyCode = key;
         currentKeyAction = action;
-        KeyEvent event = new KeyEvent(key, action, modifiers);
+        KeyEvent event = new KeyEvent(key, scanCode, action, modifiers);
         AcademyCraft.EVENT_BUS.post(event);
-        if (event.isCanceled()) return;
+        if (event.isCanceled()) {
+            ci.cancel();
+            return;
+        }
         key = event.key;
         action = event.action;
         modifiers = event.modifiers;
@@ -47,10 +54,13 @@ public class InputSystem {
         processBindings(KEYBOARD_KEY_BINDING_MAP, KEYBOARD_STATE, key, modifiers);
     }
 
-    public static void handleMouseButton(int button, int action, int modifiers) {
+    public static void handleMouseButton(int button, int action, int modifiers, CallbackInfo ci) {
         MouseButtonEvent event = new MouseButtonEvent(button, action, modifiers);
         AcademyCraft.EVENT_BUS.post(event);
-        if (event.isCanceled()) return;
+        if (event.isCanceled()) {
+            ci.cancel();
+            return;
+        }
         button = event.button;
         action = event.action;
         modifiers = event.modifiers;
@@ -87,9 +97,19 @@ public class InputSystem {
         });
     }
 
-    public static void handleMouseScroll(long windowPointer, double xOffset, double yOffset) {
+    public static void handleMouseScroll(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
+        MouseScrollEvent event = new MouseScrollEvent(windowPointer, xOffset, yOffset);
+        AcademyCraft.EVENT_BUS.post(event);
+        if (event.isCanceled()) {
+            ci.cancel();
+            return;
+        }
+        windowPointer = event.windowPointer;
+        xOffset = event.xOffset;
+        yOffset = event.yOffset;
         if (yOffset != 0 && !scrollListeners.isEmpty()) {
-            scrollListeners.values().forEach(listener -> listener.accept((int) yOffset));
+            double finalYOffset = yOffset;
+            scrollListeners.values().forEach(listener -> listener.accept((int) finalYOffset));
         }
     }
 

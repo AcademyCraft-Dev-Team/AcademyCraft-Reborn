@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.SkillClientConfig;
+import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
@@ -48,12 +48,11 @@ public class ArcGenerate extends Skill {
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))
                 )
         ), Client::handler);
-        NetworkSystemClient.CLIENT_PACKET_HANDLER_CLASSES.add(Client.class);
     }
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.SERVER_PACKET_HANDLER_CLASSES.add(Server.class);
+        NetworkSystemServer.registerPacketHandlerClass(Server.class);
     }
 
     public static final class Client {
@@ -67,7 +66,7 @@ public class ArcGenerate extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_ARC_GENERATE));
         }
 
-        public static final class ArcGenerateSKillConfig extends SkillClientConfig.KeyBindingConfig {
+        public static final class ArcGenerateSKillConfig extends ClientConfig.KeyBindingConfig {
         }
     }
 

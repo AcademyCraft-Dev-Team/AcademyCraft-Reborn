@@ -12,7 +12,10 @@ public class FutureManagerServer {
         NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_FUTURE, (listener, packet) -> {
             FriendlyByteBuf buf = packet.friendlyByteBuf;
             int packetID = buf.readVarInt();
-            NetworkSystemServer.C2S_PACKET_HANDLER_MAP.get(NetworkSystem.getPacketResourceLocation(packetID)).handle(listener, packet);
+            C2SPacketHandler c2SPacketHandler = NetworkSystemServer.getC2SPacketHandler(NetworkSystem.getPacketResourceLocation(packetID));
+            if (c2SPacketHandler != null) {
+                c2SPacketHandler.handle(listener, packet);
+            }
         });
     }
 
