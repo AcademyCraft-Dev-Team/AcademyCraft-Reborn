@@ -10,12 +10,12 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.SkillClientConfig;
+import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resource.TextureResources;
-import org.academy.api.client.tick.ClientTickEvent;
+import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.annotation.PacketHandler;
 import org.academy.api.common.network.Packets;
@@ -25,7 +25,7 @@ import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
-import org.academy.internal.common.world.entity.player.PlayerSyncSkillData;
+import org.academy.internal.common.world.entity.player.PlayerSyncData;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -42,7 +42,7 @@ public class StormWing extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.EFFECT_RENDERER_MAP.add(StormWingEffectRenderer.INSTANCE);
+        RendererManager.registerEffectRenderer(StormWingEffectRenderer.INSTANCE);
         AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 new InputSystem.InputPair(
@@ -63,7 +63,7 @@ public class StormWing extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.SERVER_PACKET_HANDLER_CLASSES.add(Server.class);
+        NetworkSystemServer.registerPacketHandlerClass(Server.class);
     }
 
     public static final class Client {
@@ -75,7 +75,7 @@ public class StormWing extends Skill {
 
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
-            if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null && Minecraft.getInstance().player.getEntityData().get(PlayerSyncSkillData.SKILL_DATA).getBoolean(TAG_KEY)) {
+            if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null && Minecraft.getInstance().player.getEntityData().get(PlayerSyncData.DATA).getBoolean(TAG_KEY)) {
                 boolean handled = false;
                 for (Integer key : InputSystem.KEYBOARD_STATE.keySet()) {
                     Integer state = InputSystem.KEYBOARD_STATE.get(key);
@@ -144,7 +144,7 @@ public class StormWing extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_KEEP));
         }
 
-        public static final class StormWingClientConfig extends SkillClientConfig.KeyBindingConfig {
+        public static final class StormWingClientConfig extends ClientConfig.KeyBindingConfig {
             private StormWingClientConfig() {
             }
         }
@@ -155,11 +155,11 @@ public class StormWing extends Skill {
         @PacketHandler(packet = Packets.C2S_STORM_WING_TOGGLE)
         public static void handleToggle(ServerPlayer player) {
             SynchedEntityData synchedEntityData = player.getEntityData();
-            CompoundTag compoundTag = synchedEntityData.get(PlayerSyncSkillData.SKILL_DATA);
+            CompoundTag compoundTag = synchedEntityData.get(PlayerSyncData.DATA);
             CompoundTag newTag = new CompoundTag();
             newTag.putBoolean(TAG_KEY, !compoundTag.getBoolean(TAG_KEY));
-            synchedEntityData.set(PlayerSyncSkillData.SKILL_DATA, newTag);
-            player.getAbilities().mayfly = synchedEntityData.get(PlayerSyncSkillData.SKILL_DATA).getBoolean(TAG_KEY);
+            synchedEntityData.set(PlayerSyncData.DATA, newTag);
+            player.getAbilities().mayfly = synchedEntityData.get(PlayerSyncData.DATA).getBoolean(TAG_KEY);
         }
 
         @PacketHandler(packet = Packets.C2S_STORM_WING_FRONT)
@@ -214,7 +214,7 @@ public class StormWing extends Skill {
         }
 
         public static boolean isActive(ServerPlayer player) {
-            return player.getEntityData().get(PlayerSyncSkillData.SKILL_DATA).getBoolean(StormWing.TAG_KEY);
+            return player.getEntityData().get(PlayerSyncData.DATA).getBoolean(StormWing.TAG_KEY);
         }
     }
 }

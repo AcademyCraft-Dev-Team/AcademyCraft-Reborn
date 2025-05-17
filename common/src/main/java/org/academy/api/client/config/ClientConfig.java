@@ -6,11 +6,11 @@ import org.academy.api.client.input.InputSystem;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class SkillClientConfig {
-    protected SkillClientConfig() {
+public abstract class ClientConfig {
+    protected ClientConfig() {
     }
 
-    public static class KeyBindingConfig extends SkillClientConfig {
+    public static class KeyBindingConfig extends ClientConfig {
         @SerializedName("keyBindings")
         private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 

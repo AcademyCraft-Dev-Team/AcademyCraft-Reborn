@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Mixin(GameRenderer.class)
-public class MixinGameRenderer {
+public abstract class MixinGameRenderer {
     @Shadow
     private final Map<String, ShaderInstance> shaders = Maps.newHashMap();
 

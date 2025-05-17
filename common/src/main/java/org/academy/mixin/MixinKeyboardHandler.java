@@ -8,9 +8,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(KeyboardHandler.class)
-public class MixinKeyboardHandler {
-    @Inject(method = "keyPress", at = @At("HEAD"))
+public abstract class MixinKeyboardHandler {
+    @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
     private void keyPress(long windowPointer, int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
-        InputSystem.handleKey(key, action, modifiers);
+        InputSystem.handleKey(key, scanCode, action, modifiers, ci);
     }
 }

@@ -54,3 +54,10 @@ accessible method net/minecraft/server/level/ServerPlayer nextContainerCounter (
 accessible method net/minecraft/server/level/ServerPlayer initMenu (Lnet/minecraft/world/inventory/AbstractContainerMenu;)V
 accessible field net/minecraft/server/level/ServerPlayer containerCounter I
 accessible method net/minecraft/world/entity/player/Player closeContainer ()V
+
+accessible field net/minecraft/client/MouseHandler xpos D
+accessible field net/minecraft/client/MouseHandler ypos D
+accessible field net/minecraft/client/MouseHandler accumulatedDY D
+accessible field net/minecraft/client/MouseHandler accumulatedDX D
+accessible field net/minecraft/client/MouseHandler smoothTurnX Lnet/minecraft/util/SmoothDouble;
+accessible field net/minecraft/client/MouseHandler smoothTurnY Lnet/minecraft/util/SmoothDouble;

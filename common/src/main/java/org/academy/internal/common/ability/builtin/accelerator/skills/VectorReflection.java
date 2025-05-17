@@ -9,7 +9,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.SkillClientConfig;
+import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
@@ -40,7 +40,7 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, new Client.VectorReflectionClientConfig());
         InputSystem.addKeyBinding(KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(KEY_NAME_TOGGLE,
                         new InputSystem.InputPair(
                                 InputSystem.InputType.KEYBOARD,
@@ -66,13 +66,13 @@ public class VectorReflection extends Skill {
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         TextureResources.TEXTURE_VECTOR_REFLECTION_ICON, 20, 70.25f);
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + ".toggle";
-        public static final VectorReflectionClientConfig CONFIG = new VectorReflectionClientConfig();
+        public static VectorReflectionClientConfig CONFIG = new VectorReflectionClientConfig();
 
         public static void toggleReflection() {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_TOGGLE_REFLECTION));
         }
 
-        public static final class VectorReflectionClientConfig extends SkillClientConfig.KeyBindingConfig {
+        public static final class VectorReflectionClientConfig extends ClientConfig.KeyBindingConfig {
         }
     }
 

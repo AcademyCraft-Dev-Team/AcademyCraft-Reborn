@@ -1,4 +1,4 @@
-package org.academy.internal.client.hud;
+package org.academy.api.client.renderer.hud;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -13,10 +13,14 @@ import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.MathUtil;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class HUDManager {
+    private static boolean initialized = false;
+    private static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
     public static final RenderType COMPUTING_POWER_BAR =
             RenderUtil.getPositionTexRenderType(
                     "computing_power_bar",
@@ -47,10 +51,17 @@ public class HUDManager {
     public static final int ABILITY_ICON_TOP_SAFE_ZONE = 10;
     public static float targetAlpha;
     public static float currentAlpha;
-
     public static float smoothProgress;
 
     private HUDManager() {
+    }
+
+    public static void init() {
+        initialized = true;
+    }
+
+    public static void registerHUDRenderer(HUDRenderer renderer) {
+        if (!initialized) HUD_RENDERERS.add(renderer);
     }
 
     public static void render(GuiGraphics guiGraphics, float partialTick) {
@@ -84,6 +95,10 @@ public class HUDManager {
 
         guiGraphics.flush();
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], originColor[3]);
+
+        for (HUDRenderer renderer : HUD_RENDERERS) {
+            renderer.render(guiGraphics, partialTick);
+        }
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")

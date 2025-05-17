@@ -7,6 +7,7 @@ import org.academy.api.client.resource.TextureResources;
 
 public class BlendQuadWidget extends ImageWidget {
     public float margin = 8;
+    public boolean drawLine = true;
 
     public BlendQuadWidget(float x, float y, float width, float height) {
         super(x, y, width, height, TextureResources.RenderTypes.RENDER_TYPE_BLEND_QUAD);
@@ -65,11 +66,15 @@ public class BlendQuadWidget extends ImageWidget {
         setY(origY - 2.5f);
         setWidth(origW - margin / 5);
         setHeight(5);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        if (drawLine) {
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
+        }
 
         setY(origY + origH - 2.5f);
         setHeight(5);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        if (drawLine) {
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
+        }
 
         this.u0 = savedU0;
         this.v0 = savedV0;

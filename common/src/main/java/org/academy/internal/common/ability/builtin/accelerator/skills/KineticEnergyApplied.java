@@ -6,7 +6,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.SkillClientConfig;
+import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
@@ -45,7 +45,7 @@ public class KineticEnergyApplied extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.SERVER_PACKET_HANDLER_CLASSES.add(Server.class);
+        NetworkSystemServer.registerPacketHandlerClass(Server.class);
     }
 
     public static final class Client {
@@ -56,7 +56,7 @@ public class KineticEnergyApplied extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_KINETIC_ENERGY_APPLIED_TOGGLE));
         }
 
-        public static final class KineticEnergyAppliedClientConfig extends SkillClientConfig.KeyBindingConfig {
+        public static final class KineticEnergyAppliedClientConfig extends ClientConfig.KeyBindingConfig {
         }
     }
 

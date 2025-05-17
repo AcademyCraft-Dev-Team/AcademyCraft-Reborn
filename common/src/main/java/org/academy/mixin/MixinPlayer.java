@@ -4,7 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import org.academy.internal.common.ability.builtin.accelerator.skills.VectorReflection;
-import org.academy.internal.common.world.entity.player.PlayerSyncSkillData;
+import org.academy.internal.common.world.entity.player.PlayerSyncData;
 import org.apache.commons.lang3.tuple.Pair;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Player.class)
-public abstract class MixinPlayer implements PlayerSyncSkillData {
+public abstract class MixinPlayer implements PlayerSyncData {
     @SuppressWarnings("UnusedAssignment")
     @Inject(method = "hurt", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"), cancellable = true)
     public void hurt(DamageSource damageSource, float amount, CallbackInfoReturnable<Boolean> cir) {
@@ -27,11 +27,6 @@ public abstract class MixinPlayer implements PlayerSyncSkillData {
 
     @Inject(method = "defineSynchedData", at = @At("TAIL"))
     public void defineSynchedData(CallbackInfo ci) {
-        ((Player) (Object) this).getEntityData().define(SKILL_DATA, new CompoundTag());
-    }
-
-    @Override
-    public CompoundTag academyCraft$getSkillData() {
-        return ((Player) (Object) this).getEntityData().get(SKILL_DATA);
+        ((Player) (Object) this).getEntityData().define(DATA, new CompoundTag());
     }
 }

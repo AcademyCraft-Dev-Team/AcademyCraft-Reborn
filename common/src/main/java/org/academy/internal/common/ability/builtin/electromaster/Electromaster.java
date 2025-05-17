@@ -20,6 +20,6 @@ public final class Electromaster extends AbilityCategory {
 
     @Override
     public void initClient() {
-        RendererManager.EFFECT_RENDERER_MAP.add(ArcEffectRenderer.INSTANCE);
+        RendererManager.registerEffectRenderer(ArcEffectRenderer.INSTANCE);
     }
 }

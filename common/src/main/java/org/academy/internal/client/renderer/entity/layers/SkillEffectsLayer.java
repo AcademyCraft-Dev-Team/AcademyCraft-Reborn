@@ -8,7 +8,6 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import org.academy.AcademyCraft;
 import org.academy.api.client.renderer.EffectRenderEvent;
-import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.renderer.RendererManager;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,8 +33,6 @@ public class SkillEffectsLayer extends RenderLayer<AbstractClientPlayer, PlayerM
         ageInTicks = event.ageInTicks;
         netHeadYaw = event.netHeadYaw;
         headPitch = event.headPitch;
-        for (EffectRenderer effectRenderer : RendererManager.EFFECT_RENDERER_MAP) {
-            effectRenderer.render(poseStack, buffer, packedLight, livingEntity, limbSwing, limbSwingAmount, partialTick, ageInTicks, netHeadYaw, headPitch);
-        }
+        RendererManager.renderEffect(poseStack, buffer, packedLight, livingEntity, limbSwing, limbSwingAmount, partialTick, ageInTicks, netHeadYaw, headPitch);
     }
 }

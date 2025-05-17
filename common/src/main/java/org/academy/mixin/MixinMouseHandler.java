@@ -9,21 +9,21 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MouseHandler.class)
-public class MixinMouseHandler {
-    @Inject(method = "onScroll", at = @At("HEAD"))
+public abstract class MixinMouseHandler {
+    @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void onScroll(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
-        InputSystem.handleMouseScroll(windowPointer, xOffset, yOffset);
+        InputSystem.handleMouseScroll(windowPointer, xOffset, yOffset, ci);
     }
 
-    @Inject(method = "onPress", at = @At("HEAD"))
+    @Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
     private void onPress(long windowPointer, int button, int action, int modifiers, CallbackInfo ci) {
-        InputSystem.handleMouseButton(button, action, modifiers);
+        InputSystem.handleMouseButton(button, action, modifiers, ci);
     }
 
-    @Inject(method = "onMove", at = @At("HEAD"))
+    @Inject(method = "onMove", at = @At("HEAD"), cancellable = true)
     private void onMove(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
         if (windowPointer == Minecraft.getInstance().getWindow().getWindow()) {
-            InputSystem.handleMouseMove(xOffset, yOffset);
+            InputSystem.handleMouseMove(xOffset, yOffset, ci);
         }
     }
 }
