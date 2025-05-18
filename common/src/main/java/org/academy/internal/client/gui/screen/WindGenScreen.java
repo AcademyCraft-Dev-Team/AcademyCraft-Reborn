@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
@@ -42,6 +43,8 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
 
     @Override
     protected void onInit() {
+        rootContainer.setWidth(width);
+        rootContainer.setHeight(height);
         PanelWidget invPage = new PanelWidget(0, 0, width, height);
         invPage.animation = new AnimationTopToBottom(invPage);
         rootContainer.addChild("page_inv", invPage);
@@ -79,14 +82,12 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
             switch (imageRadioButtonWidget.getId()) {
                 case 0:
-                    handleContainer = true;
                     renderInventory = true;
                     invPage.setVisible(true);
                     wirelessPanel.setVisible(false);
                     wirelessPanel.setEnabled(false);
                     break;
                 case 1:
-                    handleContainer = false;
                     renderInventory = false;
                     invPage.setVisible(false);
                     wirelessPanel.setVisible(true);
@@ -215,6 +216,15 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         }
     }
 
+    @SubscribeEvent
+    public void onFocusGainedEvent(TextBoxWidget.FocusGainedEvent event) {
+        handleContainer = false;
+    }
+
+    @SubscribeEvent
+    public void onFocusLostEvent(TextBoxWidget.FocusLostEvent event) {
+        handleContainer = true;
+    }
 
     @Override
     public SmoothScrollPanelWidget getNodeList() {

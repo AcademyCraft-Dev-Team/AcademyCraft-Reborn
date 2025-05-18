@@ -16,7 +16,7 @@ public class FutureManagerClient {
     private static final BitSet USED_IDS = new BitSet();
 
     public static <T> void sendFuturePacket(String packet, Consumer<T> handler, Object... values) {
-        sendFuturePacket(NetworkSystem.getPacketId(packet), handler, values);
+        sendFuturePacket(NetworkSystem.getPacketIdByName(packet), handler, values);
     }
 
     public static <T> void sendFuturePacket(int packetID, Consumer<T> handler, Object... values) {

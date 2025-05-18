@@ -109,7 +109,10 @@ public interface Widget {
     }
 
     default boolean isAbsoluteMouseOver(double mouseX, double mouseY) {
-        boolean parentMouseOver = getParent() == null || getParent().isMouseOver(mouseX, mouseY);
+        boolean parentMouseOver = true;
+        if (getParent() != null) {
+            parentMouseOver = getParent().isAbsoluteMouseOver(mouseX, mouseY);
+        }
         boolean mouseOver = isMouseOver(mouseX, mouseY);
         return parentMouseOver && mouseOver;
     }
@@ -132,9 +135,5 @@ public interface Widget {
 
     default float getAbsoluteZ() {
         return getZ() + (getParent() != null ? getParent().getAbsoluteZ() + 1 : 0);
-    }
-
-    default boolean shouldFocus() {
-        return false;
     }
 }

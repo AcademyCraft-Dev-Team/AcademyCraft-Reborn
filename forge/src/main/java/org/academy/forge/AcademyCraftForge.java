@@ -1,8 +1,6 @@
 package org.academy.forge;
 
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.academy.AcademyCraft;
 
@@ -11,10 +9,5 @@ import org.academy.AcademyCraft;
 public class AcademyCraftForge {
     public AcademyCraftForge() {
         AcademyCraftRegisterForge.init(FMLJavaModLoadingContext.get().getModEventBus());
-    }
-
-    @SubscribeEvent
-    public static void onInitialize(FMLCommonSetupEvent event) {
-        AcademyCraft.init();
     }
 }

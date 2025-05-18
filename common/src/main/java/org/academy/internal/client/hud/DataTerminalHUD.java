@@ -9,7 +9,10 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.Options;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.player.LocalPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -18,7 +21,8 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
 import org.academy.api.client.renderer.hud.HUDManager;
 import org.academy.api.client.renderer.hud.HUDRenderer;
-import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.vanilla.ChangeScreenEvent;
+import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
@@ -38,10 +42,12 @@ public class DataTerminalHUD implements HUDRenderer {
     public static InputSystem.InputPair keyBinding;
     public static final float WIDTH = 150;
     public static final float HEIGHT = 187.5f;
+    public static LabelWidget playerNameLabel;
 
     @Override
     public void render(GuiGraphics guiGraphics, float partialTick) {
         if (!active) return;
+        guiGraphics.pose().pushPose();
 
         RenderSystem.backupProjectionMatrix();
 
@@ -53,16 +59,17 @@ public class DataTerminalHUD implements HUDRenderer {
         float fov = (float) mc.options.fov().get();
         float fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspect);
 
-        RenderSystem.setProjectionMatrix(new Matrix4f().perspective(fovY, aspect, 0.1f, 1000f), VertexSorting.DISTANCE_TO_ORIGIN);
+        RenderSystem.setProjectionMatrix(new Matrix4f().perspective(fovY, aspect, 1, 100), VertexSorting.DISTANCE_TO_ORIGIN);
 
         PoseStack pose = RenderSystem.getModelViewStack();
         pose.pushPose();
         pose.setIdentity();
 
-        float z = -2.8f;
+        float z = -2;
         float scale = (2f * Math.abs(z) * (float) Math.tan(fovY / 2f)) / guiH;
-        pose.translate(0, 0, z * 1.125f);
+        pose.translate(0, 0, z);
         pose.scale(scale, -scale, scale);
+        pose.translate(0, 0, -z - 2);
 
         float panelX = guiW / 2 - WIDTH * 1.25f;
         float panelY = -HEIGHT * 0.5f;
@@ -73,10 +80,11 @@ public class DataTerminalHUD implements HUDRenderer {
 
         pose.translate(panelX, panelY, 0);
         pose.translate(WIDTH / 2f, HEIGHT / 2f, 0);
-        pose.mulPose(Axis.YP.rotationDegrees(dx * 0.075f - 8));
-        pose.mulPose(Axis.XP.rotationDegrees(-dy * 0.075f));
+        pose.mulPose(Axis.YP.rotationDegrees(dx * 0.075f - 24));
+        pose.mulPose(Axis.XP.rotationDegrees(-dy * 0.075f + 5));
         pose.translate(-WIDTH / 2f, -HEIGHT / 2f, 0);
 
+        guiGraphics.pose().scale(1, 1, 0.01f);
         RenderSystem.applyModelViewMatrix();
 
         guiGraphics.pose().pushPose();
@@ -87,6 +95,8 @@ public class DataTerminalHUD implements HUDRenderer {
         pose.popPose();
         RenderSystem.applyModelViewMatrix();
         RenderSystem.restoreProjectionMatrix();
+
+        guiGraphics.pose().popPose();
     }
 
     public static void initGui(int width, int height) {
@@ -94,27 +104,65 @@ public class DataTerminalHUD implements HUDRenderer {
         rootContainer.setHeight(height);
         rootContainer.clearChildren();
         BlendQuadWidget back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
-        back.drawLine  = false;
+        back.drawLine = false;
         back.alpha = 0.25f;
         rootContainer.addChild("back", back);
+        PanelWidget root = new PanelWidget(0, 0, WIDTH, HEIGHT);
+        rootContainer.addChild("root", root);
+        {
+            PanelWidget infoBar = new PanelWidget(0, 0, WIDTH, 32);
+            infoBar.setZ(infoBar.getZ() + 1);
+            root.addChild("info_bar", infoBar);
+            {
+                LocalPlayer player = Minecraft.getInstance().player;
+                String playerName = "N/A";
+                if (player != null) {
+                    playerName = player.getGameProfile().getName();
+                }
+                Font font = Minecraft.getInstance().font;
+                playerNameLabel = new LabelWidget(playerName, WIDTH - font.width(playerName) - 4, 5);
+                playerNameLabel.dropShadow = false;
+                infoBar.addChild("player_name", playerNameLabel);
+
+                FillWidget spiltLine = new FillWidget(8, 32, WIDTH - 16, 1, 0x30FFFFFF);
+                infoBar.addChild("spilt_line", spiltLine);
+            }
+
+            PanelWidget appArea = new PanelWidget(0, 32, WIDTH, HEIGHT - 32);
+            appArea.setZ(appArea.getZ() + 1);
+            root.addChild("app_area", appArea);
+            {
+
+            }
+        }
+
         CursorWidget cursorWidget = new CursorWidget(8, 8);
-        cursorWidget.setZ(0.01f);
+        cursorWidget.setEnabled(false);
+        cursorWidget.setZ(99);
         rootContainer.addChild("cursor", cursorWidget);
-        ImageButtonWidget buttonWidget = new ImageButtonWidget(10, 10, 32, 16, TextureResources.RenderTypes.RENDER_TYPE_BUTTON, null);
-        buttonWidget.setZ(0.02f);
-        rootContainer.addChild("button", buttonWidget);
     }
 
     public static void toggle() {
         MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
-        active = !active;
+        if (Minecraft.getInstance().screen != null) {
+            active = false;
+        } else {
+            active = !active;
+        }
+        Window window = Minecraft.getInstance().getWindow();
         if (active) {
-            mouseHandler.releaseMouse();
-            Window window = Minecraft.getInstance().getWindow();
+            if (mouseHandler.isMouseGrabbed()) mouseHandler.releaseMouse();
             GLFW.glfwSetInputMode(window.getWindow(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+            double guiScale = window.getGuiScale();
+            GLFW.glfwSetCursorPos(window.getWindow(), (window.getGuiScaledWidth() - WIDTH * 1.25 / 2) * guiScale, window.getGuiScaledHeight() * 0.5 * guiScale);
             initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
         } else {
-            mouseHandler.grabMouse();
+            if (!mouseHandler.isMouseGrabbed()) {
+                if (Minecraft.getInstance().screen != null) {
+                    GLFW.glfwSetInputMode(window.getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                }
+                mouseHandler.grabMouse();
+            }
         }
     }
 
@@ -136,7 +184,7 @@ public class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onMouseButton(MouseButtonEvent event) {
-        if (active) {
+        if (active && Minecraft.getInstance().screen == null) {
             if (event.button == GLFW_MOUSE_BUTTON_1) {
                 rootContainer.mouseClicked(xpos, ypos, event.action);
             }
@@ -148,7 +196,7 @@ public class DataTerminalHUD implements HUDRenderer {
     public static void onMouseMove(MouseMoveEvent event) {
         MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
 
-        if (active) {
+        if (active && Minecraft.getInstance().screen == null) {
             Window window = Minecraft.getInstance().getWindow();
             float guiScale = (float) window.getGuiScale();
 
@@ -181,7 +229,7 @@ public class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onMouseScroll(MouseScrollEvent event) {
-        if (active) {
+        if (active && Minecraft.getInstance().screen == null) {
             rootContainer.mouseScrolled(xpos, ypos, event.yOffset);
             event.setCanceled(true);
         }
@@ -189,7 +237,7 @@ public class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onKey(KeyEvent event) {
-        if (active) {
+        if (active && Minecraft.getInstance().screen == null) {
             int key = event.key;
             int scanCode = event.scanCode;
             Options options = Minecraft.getInstance().options;
@@ -218,6 +266,25 @@ public class DataTerminalHUD implements HUDRenderer {
     @SubscribeEvent
     public static void onResizeDisplay(ResizeDisplayEvent event) {
         initGui(event.width, event.height);
+    }
+
+    @SubscribeEvent
+    public static void onTick(ClientTickEvent event) {
+        if (active) {
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (playerNameLabel != null && player != null) {
+                String name = player.getGameProfile().getName();
+                Font font = Minecraft.getInstance().font;
+                playerNameLabel.setX(WIDTH - font.width(name) - 4);
+                playerNameLabel.value = name;
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onScreenChange(ChangeScreenEvent.Post event) {
+        if (active && event.currentScreen instanceof PauseScreen)
+            toggle();
     }
 
     private DataTerminalHUD() {

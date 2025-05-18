@@ -16,6 +16,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.util.GameUtil;
+import org.academy.api.common.vanilla.EnvType;
 import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFabric;
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.BlockEntityTypesFabric;
 import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftBlocksFabric;
@@ -41,7 +42,7 @@ public class AcademyCraftRegisterFabric {
 
         registerCreativeModeTab();
         registerEntityType();
-        if (GameUtil.getEnvType() == GameUtil.EnvType.CLIENT) {
+        if (GameUtil.getEnvType() == EnvType.CLIENT) {
             registerEntityRenderer();
             registerBlockEntityRenderer();
         }

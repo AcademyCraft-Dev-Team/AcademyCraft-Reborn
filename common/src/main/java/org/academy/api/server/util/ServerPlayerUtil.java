@@ -5,8 +5,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.api.common.util.FriendlyByteBufUtil;
+import org.academy.api.common.vanilla.OpenScreenPacket;
 
 public class ServerPlayerUtil {
     public static void openMenuScreen(ServerPlayer serverPlayer, MenuProvider menuProvider, String screenName, Object... objects) {
@@ -25,7 +26,7 @@ public class ServerPlayerUtil {
             allValues[1] = abstractcontainermenu.containerId;
             allValues[2] = menuProvider.getDisplayName();
             System.arraycopy(objects, 0, allValues, 3, objects.length);
-            serverPlayer.connection.send(new S2CPacket(Packets.S2C_OPEN_SCREEN, allValues));
+            serverPlayer.connection.send(new S2CPacket(new OpenScreenPacket(screenName, FriendlyByteBufUtil.autoSerializable(allValues))));
             serverPlayer.initMenu(abstractcontainermenu);
             serverPlayer.containerMenu = abstractcontainermenu;
         }

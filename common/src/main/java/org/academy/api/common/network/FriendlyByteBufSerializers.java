@@ -13,15 +13,9 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 需要注意的是泛型的类型不能为 Object 或类似的
- */
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class FriendlyByteBufSerializers {
     public static final BiMap<FriendlyByteBufSerializer, Integer> SERIALIZER_IDS = HashBiMap.create();
@@ -47,12 +41,16 @@ public class FriendlyByteBufSerializers {
             buffer.writeBoolean(true);
             Class<?> commonSuperclass = value.get(0).getClass();
             for (Object obj : value) {
-                while (!commonSuperclass.isAssignableFrom(obj.getClass())) {
+                Class<?> currentClass = obj.getClass();
+                while (!commonSuperclass.isAssignableFrom(currentClass)) {
                     commonSuperclass = commonSuperclass.getSuperclass();
+                    if (commonSuperclass == null || commonSuperclass == Object.class) {
+                        throw new IllegalArgumentException("Could not find a suitable common superclass for elements in ArrayList for serialization.");
+                    }
                 }
             }
             buffer.writeUtf(commonSuperclass.getCanonicalName());
-            FriendlyByteBufSerializer serializer = getArrayListFriendlyByteBufSerializer(commonSuperclass);
+            FriendlyByteBufSerializer serializer = getCollectionFriendlyByteBufSerializer(commonSuperclass);
             serializer.serialize(buffer, value);
         } else {
             buffer.writeBoolean(false);
@@ -62,8 +60,9 @@ public class FriendlyByteBufSerializers {
         buffer.writeVarInt(value.size());
         buffer.writeBoolean(value.isEmpty());
         if (!value.isEmpty()) {
-            buffer.writeUtf(value.keySet().iterator().next().getClass().getCanonicalName());
-            buffer.writeUtf(value.get(0).getClass().getCanonicalName());
+            Map.Entry firstEntry = (Map.Entry) value.entrySet().iterator().next();
+            buffer.writeUtf(firstEntry.getKey().getClass().getCanonicalName());
+            buffer.writeUtf(firstEntry.getValue().getClass().getCanonicalName());
             value.forEach((k, v) -> {
                 FriendlyByteBufSerializer keySerializer = getRequiredSerializer(k.getClass());
                 FriendlyByteBufSerializer valueSerializer = getRequiredSerializer(v.getClass());
@@ -72,12 +71,32 @@ public class FriendlyByteBufSerializers {
             });
         }
     });
+    public static final FriendlyByteBufSerializer<HashSet> HASH_SET_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(HashSet.class, (buffer, value) -> {
+        if (!value.isEmpty()) {
+            buffer.writeBoolean(true);
+            Class<?> commonSuperclass = value.iterator().next().getClass();
+            for (Object obj : value) {
+                Class<?> currentClass = obj.getClass();
+                while (!commonSuperclass.isAssignableFrom(currentClass)) {
+                    commonSuperclass = commonSuperclass.getSuperclass();
+                    if (commonSuperclass == null || commonSuperclass == Object.class) {
+                        throw new IllegalArgumentException("Could not find a suitable common superclass for elements in HashSet for serialization.");
+                    }
+                }
+            }
+            buffer.writeUtf(commonSuperclass.getCanonicalName());
+            FriendlyByteBufSerializer serializer = getCollectionFriendlyByteBufSerializer(commonSuperclass);
+            serializer.serialize(buffer, value);
+        } else {
+            buffer.writeBoolean(false);
+        }
+    });
     public static final FriendlyByteBufSerializer<FriendlyByteBufSerializers> FRIENDLY_BYTE_BUF_SERIALIZERS_FRIENDLY_BYTE_BUF_SERIALIZERS = registerSerializer(FriendlyByteBufSerializers.class, (buffer, value) -> {
         buffer.writeUtf(value.getClass().getCanonicalName());
 
     });
     public static final FriendlyByteBufSerializer<Class> CLASS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Class.class, (buffer, value) -> buffer.writeUtf(value.getCanonicalName()));
-    public static final FriendlyByteBufSerializer<ArrayList<Skill>> SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = getArrayListFriendlyByteBufSerializer(Skill.class);
+    public static final FriendlyByteBufSerializer<ArrayList<Skill>> SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = getCollectionFriendlyByteBufSerializer(Skill.class);
     public static final FriendlyByteBufSerializer<ImmutablePair> PAIR_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ImmutablePair.class, (buffer, pair) -> {
         Object left = pair.getLeft();
         Object right = pair.getRight();
@@ -96,12 +115,12 @@ public class FriendlyByteBufSerializers {
     private FriendlyByteBufSerializers() {
     }
 
-    public static <T> FriendlyByteBufSerializer<ArrayList<T>> getArrayListFriendlyByteBufSerializer(Class<T> clazz) {
-        return (buffer, value) -> {
-            buffer.writeVarInt(value.size());
-            FriendlyByteBufSerializer<T> serializer = getRequiredSerializer(clazz);
-            for (T t : value) {
-                serializer.serialize(buffer, t);
+    public static <T, C extends Collection<T>> FriendlyByteBufSerializer<C> getCollectionFriendlyByteBufSerializer(Class<T> elementType) {
+        return (buffer, collection) -> {
+            buffer.writeVarInt(collection.size());
+            FriendlyByteBufSerializer<T> elementSerializer = getRequiredSerializer(elementType);
+            for (T element : collection) {
+                elementSerializer.serialize(buffer, element);
             }
         };
     }
@@ -131,7 +150,12 @@ public class FriendlyByteBufSerializers {
     public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<T> clazz) {
         FriendlyByteBufSerializer<T> serializer = getSerializer(clazz);
         if (serializer == null) {
-            throw new NullPointerException("Serializer for " + clazz.getCanonicalName() + " was null");
+            for (Map.Entry<Class<?>, FriendlyByteBufSerializer<?>> entry : FRIENDLY_BYTE_BUF_SERIALIZER_MAP.entrySet()) {
+                if (entry.getKey().isAssignableFrom(clazz)) {
+                    return (FriendlyByteBufSerializer<T>) entry.getValue();
+                }
+            }
+            throw new NullPointerException("Serializer for " + clazz.getCanonicalName() + " was null and no assignable serializer found.");
         } else {
             return serializer;
         }

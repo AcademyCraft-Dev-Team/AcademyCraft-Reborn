@@ -106,7 +106,7 @@ public class RadioGroupWidget extends PanelWidget {
         if (selectedButton == null) {
             return null;
         }
-        for (Map.Entry<String, Widget> entry : children.entrySet()) {
+        for (Map.Entry<String, Widget> entry : getChildren().entrySet()) {
             if (entry.getValue() == selectedButton) {
                 return entry.getKey();
             }
@@ -128,7 +128,7 @@ public class RadioGroupWidget extends PanelWidget {
 
     @Override
     public void clearChildren() {
-        for (Widget child : children.values()) {
+        for (Widget child : getChildren().values()) {
             if (child instanceof ImageRadioButtonWidget radioButton) {
                 radioButton.setRadioGroup(null);
             }

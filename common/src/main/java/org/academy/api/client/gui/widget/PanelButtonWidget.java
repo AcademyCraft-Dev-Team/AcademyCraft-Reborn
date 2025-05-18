@@ -1,15 +1,13 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.framework.WidgetContainer;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -69,12 +67,6 @@ public class PanelButtonWidget extends AbstractWidget implements WidgetContainer
 
     @Override
     public Map<String, Widget> getChildren() {
-        return children;
-    }
-
-    @NotNull
-    @Override
-    public Iterator<Widget> iterator() {
-        return children.values().iterator();
+        return Collections.unmodifiableMap(children);
     }
 }
