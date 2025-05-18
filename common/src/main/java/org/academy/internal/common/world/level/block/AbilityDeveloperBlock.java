@@ -1,8 +1,10 @@
 package org.academy.internal.common.world.level.block;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -16,8 +18,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -54,15 +56,20 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public @NotNull InteractionResult use(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
+    public @NotNull InteractionResult use(@NotNull BlockState state,
+                                          @NotNull Level level,
+                                          @NotNull BlockPos pos,
+                                          @NotNull Player player,
+                                          @NotNull InteractionHand hand,
+                                          @NotNull BlockHitResult hit) {
         if (!player.isShiftKeyDown()) {
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-                if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity abilityDeveloperBlockEntity) {
-                    if (abilityDeveloperBlockEntity.mainPos != null) {
+                if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity blockEntity) {
+                    if (blockEntity.mainPos != null) {
                         serverPlayer.connection.send(new S2CPacket(
-                                Packets.S2C_OPEN_SCREEN,
-                                ABILITY_DEVELOPER_SCREEN,
-                                abilityDeveloperBlockEntity.mainPos
+                                new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN,
+                                        new FriendlyByteBuf(Unpooled.buffer()).
+                                                writeBlockPos(blockEntity.mainPos))
                         ));
                     }
                 }
@@ -77,7 +84,10 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level,
+                                                                  @NotNull BlockState state,
+                                                                  @NotNull BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof AbilityDeveloperBlockEntity abe) {
                 if (abe.isMain()) {

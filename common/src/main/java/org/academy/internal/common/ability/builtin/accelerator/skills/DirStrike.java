@@ -151,7 +151,6 @@ public class DirStrike extends Skill {
         }
     }
 
-    @SuppressWarnings("unused")
     public static final class Server {
         public static final Map<UUID, ServerContext> CONTEXT_MAP = new HashMap<>();
 

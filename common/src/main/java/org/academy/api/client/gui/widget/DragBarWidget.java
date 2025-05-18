@@ -4,6 +4,7 @@ import org.academy.api.client.gui.framework.AbstractWidget;
 
 public abstract class DragBarWidget extends AbstractWidget {
     public boolean showBackground = true;
+    public boolean startDragging = false;
     public float dragOffset = 0f;
 
     public DragBarWidget(float x, float y, float width, float height) {
@@ -23,20 +24,21 @@ public abstract class DragBarWidget extends AbstractWidget {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 && isHovered()) {
+            startDragging = true;
             dragOffset = getThumbSize() / 2f;
             updateTargetFromMouse(getMouseRelative((float) mouseX, (float) mouseY));
             return true;
         }
+        startDragging = false;
         return false;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (button == 0 && isHovered()) {
+        if (startDragging) {
             updateTargetFromMouse(getMouseRelative((float) mouseX, (float) mouseY));
             return true;
         }
-
         return false;
     }
 }

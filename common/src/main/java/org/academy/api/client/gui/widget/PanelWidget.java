@@ -16,8 +16,6 @@ public class PanelWidget extends AbstractContainerWidget {
     private HorizontalGravity horizontalGravity = HorizontalGravity.LEFT;
     private VerticalGravity verticalGravity = VerticalGravity.TOP;
 
-    public boolean shouldFocus = false;
-
     public PanelWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
     }
@@ -36,11 +34,6 @@ public class PanelWidget extends AbstractContainerWidget {
 
     public VerticalGravity getVerticalGravity() {
         return verticalGravity;
-    }
-
-    @Override
-    public boolean shouldFocus() {
-        return shouldFocus;
     }
 
     @Override

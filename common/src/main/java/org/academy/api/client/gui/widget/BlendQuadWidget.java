@@ -6,7 +6,10 @@ import org.academy.api.client.gui.animation.Animation;
 import org.academy.api.client.resource.TextureResources;
 
 public class BlendQuadWidget extends ImageWidget {
-    public float margin = 8;
+    public float marginTop = 2f;
+    public float marginBottom = 2f;
+    public float marginLeft = 2f;
+    public float marginRight = 2f;
     public boolean drawLine = true;
 
     public BlendQuadWidget(float x, float y, float width, float height) {
@@ -28,8 +31,8 @@ public class BlendQuadWidget extends ImageWidget {
 
         float x0 = origX, x1 = origX + origW;
         float y0 = origY, y1 = origY + origH;
-        float[] xs = { x0, x0 + margin, x1 - margin, x1 };
-        float[] ys = { y0, y0 + margin, y1 - margin, y1 };
+        float[] xs = { x0, x0 + marginLeft, x1 - marginRight, x1 };
+        float[] ys = { y0, y0 + marginTop, y1 - marginBottom, y1 };
 
         float savedU0 = this.u0, savedV0 = this.v0, savedU1 = this.u1, savedV1 = this.v1;
         RenderType savedType = this.renderType;
@@ -62,9 +65,9 @@ public class BlendQuadWidget extends ImageWidget {
         this.blue = 1f;
         this.alpha = 1f;
 
-        setX(origX + margin / 10);
+        setX(origX + 0.2f);
         setY(origY - 2.5f);
-        setWidth(origW - margin / 5);
+        setWidth(origW - 0.4f);
         setHeight(5);
         if (drawLine) {
             super.render(guiGraphics, mouseX, mouseY, partialTick);

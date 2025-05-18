@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 
 import java.util.Map;
 
-public interface WidgetContainer extends Widget, Iterable<Widget> {
+public interface WidgetContainer extends Widget{
     void addChild(String name, Widget child);
 
     void removeChild(String name);

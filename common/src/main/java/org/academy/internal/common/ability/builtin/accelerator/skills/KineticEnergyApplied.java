@@ -63,7 +63,6 @@ public class KineticEnergyApplied extends Skill {
     public static final class Server {
         public static final Map<UUID, Boolean> SKILL_STATS = new HashMap<>();
 
-        @SuppressWarnings("unused")
         @PacketHandler(packet = Packets.C2S_KINETIC_ENERGY_APPLIED_TOGGLE)
         public static void handleToggle(ServerPlayer player) {
             if (SKILL_STATS.containsKey(player.getUUID())) {

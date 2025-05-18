@@ -24,6 +24,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.util.GameUtil;
+import org.academy.api.common.vanilla.EnvType;
 import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraftBlockEntityRenderersForge;
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
 import org.academy.forge.internal.common.world.level.block.entity.forge.AcademyCraftBlockEntityTypesForge;
@@ -61,7 +62,7 @@ public class AcademyCraftRegisterForge {
         registerItem(event);
         registerBlock(event);
         registerBlockEntityType(event);
-        if (GameUtil.getEnvType() == GameUtil.EnvType.CLIENT) {
+        if (GameUtil.getEnvType() == EnvType.CLIENT) {
             registerEntityRenderer();
             registerBlockEntityRenderer();
         }

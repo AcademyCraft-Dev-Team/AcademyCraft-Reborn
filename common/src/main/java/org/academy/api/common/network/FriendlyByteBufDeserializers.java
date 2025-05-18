@@ -5,8 +5,6 @@ import com.google.common.collect.HashBiMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
@@ -14,15 +12,10 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
-/**
- * 需要注意的是泛型的类型不能为 Object 或类似的
- */
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class FriendlyByteBufDeserializers {
     public static final BiMap<FriendlyByteBufDeserializer, Integer> DESERIALIZER_IDS = HashBiMap.create();
@@ -43,7 +36,6 @@ public class FriendlyByteBufDeserializers {
     public static final FriendlyByteBufDeserializer<Vector3f> VECTOR_3_F_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Vector3f.class, FriendlyByteBuf::readVector3f);
     public static final FriendlyByteBufDeserializer<Tag> COMPOUND_TAG_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Tag.class, FriendlyByteBuf::readNbt);
     public static final FriendlyByteBufDeserializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(ArrayList.class, buffer -> {
-        ArrayList<Object> list;
         boolean nonEmpty = buffer.readBoolean();
         if (nonEmpty) {
             Class<?> clazz;
@@ -52,12 +44,11 @@ public class FriendlyByteBufDeserializers {
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException("The data transmission may be corrupted." + e);
             }
-            FriendlyByteBufDeserializer deserializer = getArrayListFriendlyByteBufDeserializer(clazz);
-            list = (ArrayList<Object>) deserializer.deserialize(buffer);
+            FriendlyByteBufDeserializer<ArrayList> deserializer = getCollectionFriendlyByteBufDeserializer(clazz, ArrayList::new);
+            return deserializer.deserialize(buffer);
         } else {
-            list = new ArrayList<>();
+            return new ArrayList<>();
         }
-        return list;
     });
     public static final FriendlyByteBufDeserializer<HashMap> MAP_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(HashMap.class, buffer -> {
         int size = buffer.readVarInt();
@@ -81,6 +72,21 @@ public class FriendlyByteBufDeserializers {
             }
         }
         return map;
+    });
+    public static final FriendlyByteBufDeserializer<HashSet> HASH_SET_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(HashSet.class, buffer -> {
+        boolean nonEmpty = buffer.readBoolean();
+        if (nonEmpty) {
+            Class<?> clazz;
+            try {
+                clazz = Class.forName(buffer.readUtf());
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException("The data transmission may be corrupted for HashSet element type.", e);
+            }
+            FriendlyByteBufDeserializer<HashSet> deserializer = getCollectionFriendlyByteBufDeserializer(clazz, HashSet::new);
+            return deserializer.deserialize(buffer);
+        } else {
+            return new HashSet<>();
+        }
     });
     public static final FriendlyByteBufDeserializer<Class> CLASS_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Class.class, buffer -> {
         try {
@@ -106,15 +112,15 @@ public class FriendlyByteBufDeserializers {
         }
     });
 
-    public static <T> FriendlyByteBufDeserializer<ArrayList<T>> getArrayListFriendlyByteBufDeserializer(Class<T> clazz) {
+    public static <T, C extends Collection<T>> FriendlyByteBufDeserializer<C> getCollectionFriendlyByteBufDeserializer(Class<T> elementType, Supplier<C> collectionFactory) {
         return buffer -> {
-            ArrayList<T> result = new ArrayList<>();
+            C collection = collectionFactory.get();
             int size = buffer.readVarInt();
-            FriendlyByteBufDeserializer<T> deserializer = getRequiredDeserializer(clazz);
+            FriendlyByteBufDeserializer<T> elementDeserializer = getRequiredDeserializer(elementType);
             for (int i = 0; i < size; i++) {
-                result.add(deserializer.deserialize(buffer));
+                collection.add(elementDeserializer.deserialize(buffer));
             }
-            return result;
+            return collection;
         };
     }
 
@@ -152,7 +158,12 @@ public class FriendlyByteBufDeserializers {
     public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(Class<T> clazz) {
         FriendlyByteBufDeserializer<T> deserializer = getDeserializer(clazz);
         if (deserializer == null) {
-            throw new NullPointerException("Deserializer for " + clazz.getCanonicalName() + " was null");
+            for (Map.Entry<Class<?>, FriendlyByteBufDeserializer<?>> entry : FRIENDLY_BYTE_BUF_DESERIALIZER_MAP.entrySet()) {
+                if (entry.getKey().isAssignableFrom(clazz)) {
+                    return (FriendlyByteBufDeserializer<T>) entry.getValue();
+                }
+            }
+            throw new NullPointerException("Deserializer for " + clazz.getCanonicalName() + " was null and no assignable deserializer found.");
         } else {
             return deserializer;
         }
