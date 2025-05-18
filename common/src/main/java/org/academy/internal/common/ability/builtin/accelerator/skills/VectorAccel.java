@@ -5,9 +5,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
@@ -21,10 +23,14 @@ import org.academy.api.client.renderer.CameraRenderer;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.annotation.PacketHandler;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.ReceiverConstructor;
+import org.academy.api.common.network.SenderConstructor;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.common.vanilla.EnvType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.network.NetworkSystemServer;
@@ -32,13 +38,17 @@ import org.academy.api.server.tick.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class VectorAccel extends Skill {
+    public static final int MAX_CHARGE_TICKS = 40;
     public static final Skill INSTANCE = new VectorAccel();
 
     private VectorAccel() {
@@ -159,7 +169,6 @@ public class VectorAccel extends Skill {
             }
             Client.currentContext = new Context(player);
             AbilitySystemClient.registerContext(Client.currentContext);
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_VEC_ACCEL_CHARGE_START));
         }
 
         public static void onChargeRelease() {
@@ -168,13 +177,13 @@ public class VectorAccel extends Skill {
             }
         }
 
+
         public static final class VecAccelClientConfig extends ClientConfig.KeyBindingConfig {
         }
 
         public static final class Context implements ClientContext {
             private final LocalPlayer player;
             private boolean released = false;
-            private static final int MAX_CHARGE_TICKS = 40;
             private int clientTicker = 0;
 
             public Context(LocalPlayer player) {
@@ -184,7 +193,7 @@ public class VectorAccel extends Skill {
             public void release() {
                 if (released) return;
                 released = true;
-                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_VEC_ACCEL_DASH, (long) Math.min(clientTicker, MAX_CHARGE_TICKS)));
+                NetworkSystemClient.sendPacket(new C2SPacket(new DashPacket(Math.min(clientTicker, MAX_CHARGE_TICKS))));
                 cleanup();
             }
 
@@ -227,25 +236,13 @@ public class VectorAccel extends Skill {
     }
 
     public static final class Server {
-        private static final Map<UUID, ChargeData> CHARGING_PLAYERS = new ConcurrentHashMap<>();
-        private static final float MAX_CHARGE_TICKS_SERVER = 40.0f;
         public static final double MAX_VELOCITY_SCALAR = 2.5;
 
-        @SuppressWarnings("resource")
-        @PacketHandler(packet = Packets.C2S_VEC_ACCEL_CHARGE_START)
-        public static void handleChargeStart(ServerPlayer player) {
-            CHARGING_PLAYERS.put(player.getUUID(), new ChargeData(player.serverLevel().getGameTime()));
-        }
-
-        @PacketHandler(packet = Packets.C2S_VEC_ACCEL_DASH)
-        public static void handleDash(ServerPlayer player, Long chargeTicksLong) {
-            ChargeData data = CHARGING_PLAYERS.remove(player.getUUID());
-            if (data == null) {
-                return;
-            }
-
-            float chargeTicks = chargeTicksLong.floatValue();
-            float chargeRatio = MathUtil.clamp(chargeTicks / MAX_CHARGE_TICKS_SERVER, 0.0f, 1.0f);
+        @ClassPacketHandler
+        public static void handleDash(DashPacket packet) {
+            ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
+            float chargeTicks = packet.chargeTicks;
+            float chargeRatio = MathUtil.clamp(chargeTicks / MAX_CHARGE_TICKS, 0.0f, 1.0f);
 
             double speedScalarProg = MathUtil.lerpFactorStartEnd(chargeRatio, 0.4f, 1.0f);
             double actualSpeedScalar = Math.sin(speedScalarProg) * Server.MAX_VELOCITY_SCALAR;
@@ -255,19 +252,16 @@ public class VectorAccel extends Skill {
 
             float durationTicks = 5;
 
-            DashContext context = new DashContext(player, dashVelocity, durationTicks);
+            Context context = new Context(player, dashVelocity, durationTicks);
             AbilitySystemServer.registerContext(context);
             player.fallDistance = 0;
         }
 
-        private record ChargeData(long startTimeGameTick) {
-        }
-
-        private static final class DashContext implements ServerContext {
+        private static final class Context implements ServerContext {
             private final ServerPlayer player;
             private float remainingTicks;
 
-            public DashContext(ServerPlayer player, Vec3 dashVelocity, float durationTicks) {
+            public Context(ServerPlayer player, Vec3 dashVelocity, float durationTicks) {
                 this.player = player;
                 this.remainingTicks = durationTicks;
                 player.setDeltaMovement(dashVelocity);
@@ -291,6 +285,30 @@ public class VectorAccel extends Skill {
                     remainingTicks = 0;
                 }
             }
+        }
+    }
+
+    @PacketTarget(EnvType.SERVER)
+    public static final class DashPacket extends IPacket<ServerGamePacketListenerImpl> {
+        public int chargeTicks;
+
+        @ReceiverConstructor
+        public DashPacket() {
+        }
+
+        @SenderConstructor
+        public DashPacket(int chargeTicks) {
+            this.chargeTicks = chargeTicks;
+        }
+
+        @Override
+        public void read(@NotNull FriendlyByteBuf buf) {
+            chargeTicks = buf.readVarInt();
+        }
+
+        @Override
+        public void write(@NotNull FriendlyByteBuf buf) {
+            buf.writeVarInt(chargeTicks);
         }
     }
 }

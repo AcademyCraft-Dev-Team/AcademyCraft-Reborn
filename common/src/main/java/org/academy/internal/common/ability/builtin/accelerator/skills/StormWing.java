@@ -2,10 +2,12 @@ package org.academy.internal.common.ability.builtin.accelerator.skills;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
@@ -17,15 +19,17 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.annotation.PacketHandler;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.*;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.common.network.packet.EmptyPacket;
+import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.vanilla.EnvType;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.academy.internal.common.world.entity.player.PlayerSyncData;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -63,7 +67,7 @@ public class StormWing extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketHandlerClass(Server.class);
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -76,72 +80,38 @@ public class StormWing extends Skill {
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
             if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null && Minecraft.getInstance().player.getEntityData().get(PlayerSyncData.DATA).getBoolean(TAG_KEY)) {
-                boolean handled = false;
+                State state = State.KEEP;
                 for (Integer key : InputSystem.KEYBOARD_STATE.keySet()) {
-                    Integer state = InputSystem.KEYBOARD_STATE.get(key);
+                    Integer keyState = InputSystem.KEYBOARD_STATE.get(key);
                     switch (key) {
                         case GLFW.GLFW_KEY_W:
-                            if (state == GLFW.GLFW_PRESS || state == GLFW.GLFW_REPEAT) {
-                                front();
-                                handled = true;
+                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
+                                state = State.FRONT;
                             }
                             break;
                         case GLFW.GLFW_KEY_S:
-                            if (state == GLFW.GLFW_PRESS || state == GLFW.GLFW_REPEAT) {
-                                back();
-                                handled = true;
+                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
+                                state = State.BACK;
                             }
                             break;
                         case GLFW.GLFW_KEY_A:
-                            if (state == GLFW.GLFW_PRESS || state == GLFW.GLFW_REPEAT) {
-                                left();
-                                handled = true;
+                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
+                                state = State.LEFT;
                             }
                             break;
                         case GLFW.GLFW_KEY_D:
-                            if (state == GLFW.GLFW_PRESS || state == GLFW.GLFW_REPEAT) {
-                                right();
-                                handled = true;
+                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
+                                state = State.RIGHT;
                             }
                             break;
                     }
                 }
-                if (!handled) {
-                    keep();
-                }
+                NetworkSystemClient.sendPacket(new C2SPacket(new ControlPacket(state)));
             }
         }
 
         public static void toggle() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_TOGGLE));
-        }
-
-        public static void front() {
-            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
-                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_FRONT));
-            }
-        }
-
-        public static void back() {
-            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
-                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_BACK));
-            }
-        }
-
-        public static void left() {
-            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
-                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_LEFT));
-            }
-        }
-
-        public static void right() {
-            if (Minecraft.getInstance().level != null && Minecraft.getInstance().screen == null) {
-                NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_RIGHT));
-            }
-        }
-
-        public static void keep() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_STORM_WING_KEEP));
+            NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
         public static final class StormWingClientConfig extends ClientConfig.KeyBindingConfig {
@@ -150,10 +120,10 @@ public class StormWing extends Skill {
         }
     }
 
-    @SuppressWarnings("unused")
     public static final class Server {
-        @PacketHandler(packet = Packets.C2S_STORM_WING_TOGGLE)
-        public static void handleToggle(ServerPlayer player) {
+        @ClassPacketHandler
+        public static void handleToggle(TogglePacket packet) {
+            ServerPlayer player = packet.packetListenerSupplier.get().player;
             SynchedEntityData synchedEntityData = player.getEntityData();
             CompoundTag compoundTag = synchedEntityData.get(PlayerSyncData.DATA);
             CompoundTag newTag = new CompoundTag();
@@ -162,53 +132,35 @@ public class StormWing extends Skill {
             player.getAbilities().mayfly = synchedEntityData.get(PlayerSyncData.DATA).getBoolean(TAG_KEY);
         }
 
-        @PacketHandler(packet = Packets.C2S_STORM_WING_FRONT)
-        public static void handleFront(ServerPlayer player) {
+        @ClassPacketHandler
+        public static void handleControl(ControlPacket packet) {
+            State state = packet.state;
+            ServerPlayer player = packet.packetListenerSupplier.get().player;
             if (isActive(player)) {
-                Vec3 vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
-                player.push(vec3.x, vec3.y * 1.5, vec3.z);
-                player.connection.send(new ClientboundSetEntityMotionPacket(player));
-            }
-        }
-
-        @PacketHandler(packet = Packets.C2S_STORM_WING_BACK)
-        public static void handleBack(ServerPlayer player) {
-            if (isActive(player)) {
-                Vec3 vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
-                player.push(vec3.x, vec3.y, vec3.z);
-                player.connection.send(new ClientboundSetEntityMotionPacket(player));
-            }
-        }
-
-        @PacketHandler(packet = Packets.C2S_STORM_WING_RIGHT)
-        public static void handleRight(ServerPlayer player) {
-            if (isActive(player)) {
-                Vec3 look = player.getLookAngle();
-                Vec3 right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2);
-                player.push(right.x, right.y, right.z);
-                player.connection.send(new ClientboundSetEntityMotionPacket(player));
-            }
-        }
-
-        @PacketHandler(packet = Packets.C2S_STORM_WING_LEFT)
-        public static void handleLeft(ServerPlayer player) {
-            if (isActive(player)) {
-                Vec3 look = player.getLookAngle();
-                Vec3 left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2);
-                player.push(left.x, left.y, left.z);
-                player.connection.send(new ClientboundSetEntityMotionPacket(player));
-            }
-        }
-
-        @PacketHandler(packet = Packets.C2S_STORM_WING_KEEP)
-        public static void handleKeep(ServerPlayer player) {
-            if (isActive(player)) {
-                if (Math.abs(player.getDeltaMovement().y) > 0.25) {
-                    player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
-                } else {
-                    player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
+                switch (state) {
+                    case FRONT: {
+                        Vec3 vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
+                        player.push(vec3.x, vec3.y * 1.5, vec3.z);
+                        break;
+                    }
+                    case BACK: {
+                        Vec3 vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
+                        player.push(vec3.x, vec3.y, vec3.z);
+                        break;
+                    }
+                    case LEFT: {
+                        Vec3 look = player.getLookAngle();
+                        Vec3 left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2);
+                        player.push(left.x, left.y, left.z);
+                        break;
+                    }
+                    case RIGHT: {
+                        Vec3 look = player.getLookAngle();
+                        Vec3 right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2);
+                        player.push(right.x, right.y, right.z);
+                        break;
+                    }
                 }
-                player.resetFallDistance();
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
             }
         }
@@ -216,5 +168,37 @@ public class StormWing extends Skill {
         public static boolean isActive(ServerPlayer player) {
             return player.getEntityData().get(PlayerSyncData.DATA).getBoolean(StormWing.TAG_KEY);
         }
+    }
+
+    @PacketTarget(EnvType.SERVER)
+    public static final class ControlPacket extends IPacket<ServerGamePacketListenerImpl> {
+        public State state;
+
+        @ReceiverConstructor
+        public ControlPacket() {
+        }
+
+        @SenderConstructor
+        public ControlPacket(State state) {
+            this.state = state;
+        }
+
+        @Override
+        public void read(@NotNull FriendlyByteBuf buf) {
+            state = State.values()[buf.readVarInt()];
+        }
+
+        @Override
+        public void write(@NotNull FriendlyByteBuf buf) {
+            buf.writeVarInt(state.ordinal());
+        }
+    }
+
+    @PacketTarget(EnvType.SERVER)
+    public static final class TogglePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
+    }
+
+    public enum State {
+        FRONT, BACK, RIGHT, LEFT, KEEP
     }
 }

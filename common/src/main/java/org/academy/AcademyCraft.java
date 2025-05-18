@@ -7,6 +7,7 @@ import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.Packets;
 import org.academy.api.common.util.GameUtil;
+import org.academy.api.common.vanilla.EnvType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -57,10 +58,10 @@ public final class AcademyCraft {
 
     public static void saveConfig() {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        File configFile = GameUtil.getEnvType() == GameUtil.EnvType.CLIENT ? AcademyCraftClient.CLIENT_CONFIG_FILE : AcademyCraftServer.serverConfigFile;
+        File configFile = GameUtil.getEnvType() == EnvType.CLIENT ? AcademyCraftClient.CLIENT_CONFIG_FILE : AcademyCraftServer.serverConfigFile;
 
         try (FileWriter writer = new FileWriter(configFile)) {
-            gson.toJson(GameUtil.getEnvType() == GameUtil.EnvType.CLIENT ? AcademyCraftClient.CLIENT_CONFIG : AcademyCraftServer.serverConfig, writer);
+            gson.toJson(GameUtil.getEnvType() == EnvType.CLIENT ? AcademyCraftClient.CLIENT_CONFIG : AcademyCraftServer.serverConfig, writer);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save config file: " + configFile.getAbsolutePath(), e);
         }

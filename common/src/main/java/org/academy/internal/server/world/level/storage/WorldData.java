@@ -96,7 +96,7 @@ public class WorldData {
 
     public static class Player {
         @SerializedName("skills")
-        private final Set<String> skills = new HashSet<>();
+        private final HashSet<String> skills = new HashSet<>();
         @SerializedName("skillData")
         private final Map<String, SkillData> skillData = new HashMap<>();
         @SerializedName("abilityCategory")
@@ -118,7 +118,7 @@ public class WorldData {
             this.abilityCategory = abilityCategory;
         }
 
-        public final Set<String> getSkills() {
+        public final HashSet<String> getSkills() {
             return skills;
         }
 

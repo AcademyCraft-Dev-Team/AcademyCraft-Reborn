@@ -19,12 +19,9 @@ public class HighSpeedElectronBeam extends Entity {
     public static final int maxRayLifeTicks = 15;
     public int currentChargerTicks = 0;
     public int currentRayLifeTicks = maxRayLifeTicks;
-    public float rayProgress = 0;
     public boolean shouldStopRay = true;
-    public int endShootTicks = 0;
     public float progress = 0;
     public float smoothProgress;
-    public float smoothRayProgress;
     public float length = 50f;
     public boolean fired = false;
 
@@ -76,24 +73,32 @@ public class HighSpeedElectronBeam extends Entity {
             push(offsetX, offsetY, offsetZ);
         }
 
-        if (currentChargerTicks >= maxChargerTicks) {
+        boolean isCharging = currentChargerTicks < maxChargerTicks;
+
+        if (isCharging) {
+            currentChargerTicks++;
+            progress = (float) currentChargerTicks / (float) maxChargerTicks;
+        } else {
+            if (currentRayLifeTicks == maxRayLifeTicks) {
+                progress = 1.0f;
+            }
             if (shouldStopRay) {
                 if (currentRayLifeTicks <= 0) {
                     kill();
                 } else {
                     currentRayLifeTicks--;
-                    if (!(endShootTicks > 15)) {
-                        endShootTicks++;
-                    }
+                    progress *= 0.75f;
                 }
             }
-            rayProgress = (float) currentRayLifeTicks / maxRayLifeTicks;
-        } else {
-            currentChargerTicks++;
         }
-        progress = (float) currentChargerTicks / (float) maxChargerTicks - (float) endShootTicks / 15;
+
+        if (progress < 0.001f) progress = 0f;
+        progress = Math.max(0f, progress);
+
         move(MoverType.SELF, this.getDeltaMovement());
-        if (rayProgress > 0.125f && !fired) {
+
+        boolean rayShouldBeActive = !isCharging;
+        if (rayShouldBeActive && progress > 0.01f && !fired) {
             Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.25f, 10, false, true, true, level().isClientSide);
             if (result.getKey()) {
                 double d = result.getValue();
@@ -105,6 +110,11 @@ public class HighSpeedElectronBeam extends Entity {
             }
             fired = true;
         }
+    }
+
+
+    public boolean isCharging() {
+        return currentChargerTicks < maxChargerTicks;
     }
 
     @Override

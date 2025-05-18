@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
@@ -14,10 +15,13 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.packet.EmptyPacket;
+import org.academy.api.common.vanilla.EnvType;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
@@ -38,6 +42,10 @@ public class VectorReflection extends Skill {
         super(SkillNames.VECTOR_REFLECTION, 2);
     }
 
+    static {
+        NetworkSystem.registerPacketType(TogglePacket.class);
+    }
+
     @Override
     public void initClient() {
         Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, new Client.VectorReflectionClientConfig());
@@ -56,9 +64,7 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_TOGGLE_REFLECTION,
-                (listener, packet) -> Server.toggleReflection(listener.player.getUUID())
-        );
+        NetworkSystem.unregisterPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -69,7 +75,7 @@ public class VectorReflection extends Skill {
         public static VectorReflectionClientConfig CONFIG = new VectorReflectionClientConfig();
 
         public static void toggleReflection() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_TOGGLE_REFLECTION));
+            NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
         public static final class VectorReflectionClientConfig extends ClientConfig.KeyBindingConfig {
@@ -79,7 +85,9 @@ public class VectorReflection extends Skill {
     public static final class Server {
         public static final Map<UUID, Boolean> ACTIVE_REFLECTION_MAP = new LinkedHashMap<>();
 
-        public static void toggleReflection(UUID uuid) {
+        @ClassPacketHandler
+        public static void toggleReflection(TogglePacket packet) {
+            UUID uuid = packet.packetListenerSupplier.get().getPlayer().getUUID();
             if (ACTIVE_REFLECTION_MAP.containsKey(uuid)) {
                 ACTIVE_REFLECTION_MAP.put(uuid, !ACTIVE_REFLECTION_MAP.get(uuid));
             } else {
@@ -167,5 +175,9 @@ public class VectorReflection extends Skill {
                 sourceEntity.hurt(source, reflectedDamage);
             }
         }
+    }
+
+    @PacketTarget(EnvType.SERVER)
+    public static final class TogglePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }

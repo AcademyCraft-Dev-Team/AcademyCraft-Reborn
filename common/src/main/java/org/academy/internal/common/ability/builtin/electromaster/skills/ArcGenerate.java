@@ -71,7 +71,6 @@ public class ArcGenerate extends Skill {
     }
 
     public static final class Server {
-        @SuppressWarnings("unused")
         @PacketHandler(packet = Packets.C2S_ARC_GENERATE)
         public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
             float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());

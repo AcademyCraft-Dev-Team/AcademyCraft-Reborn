@@ -3,6 +3,9 @@ package org.academy.api.client.gui.widget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
+import org.academy.AcademyCraft;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.util.RenderUtil;
 import org.lwjgl.glfw.GLFW;
@@ -100,12 +103,18 @@ public class TextBoxWidget extends AbstractWidget {
 
     @Override
     public void onFocusGained() {
+        FocusGainedEvent event = new FocusGainedEvent(this);
+        AcademyCraft.EVENT_BUS.post(event);
+        if (event.isCanceled()) return;
         showCaret = true;
         lastBlinkTime = System.currentTimeMillis();
     }
 
     @Override
     public void onFocusLost() {
+        FocusLostEvent event = new FocusLostEvent(this);
+        AcademyCraft.EVENT_BUS.post(event);
+        if (event.isCanceled()) return;
         showCaret = false;
     }
 
@@ -158,5 +167,21 @@ public class TextBoxWidget extends AbstractWidget {
         }
 
         guiGraphics.pose().popPose();
+    }
+
+    public static final class FocusGainedEvent extends Event implements ICancellableEvent {
+        public final TextBoxWidget textBoxWidget;
+
+        public FocusGainedEvent(TextBoxWidget widget) {
+            this.textBoxWidget = widget;
+        }
+    }
+
+    public static final class FocusLostEvent extends Event implements ICancellableEvent {
+        public final TextBoxWidget textBoxWidget;
+
+        public FocusLostEvent(TextBoxWidget widget) {
+            this.textBoxWidget = widget;
+        }
     }
 }

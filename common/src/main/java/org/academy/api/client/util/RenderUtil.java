@@ -174,7 +174,7 @@ public final class RenderUtil {
                 DefaultVertexFormat.POSITION_TEX,
                 VertexFormat.Mode.QUADS,
                 512,
-                false,
+                true,
                 true,
                 RenderType.CompositeState.builder()
                         .setTextureState(new TextureStateShard(resourceLocation, false, false))

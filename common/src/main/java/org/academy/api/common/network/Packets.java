@@ -13,11 +13,6 @@ public final class Packets {
      */
     public static final String C2S_LEARN_SKILL = "c2s_learn_skill";
     public static final String C2S_ACQUIRE_CATEGORY = "c2s_acquire_category";
-    public static final String S2C_COMPUTING_POWER_SYNC = "s2c_computing_power_sync";
-    public static final String S2C_MAX_COMPUTING_POWER_SYNC = "s2c_max_computing_power_sync";
-    public static final String S2C_SKILLS_SYC = "s2c_skills_sync";
-    public static final String S2C_ABILITY_CATEGORY_SYNC = "s2c_ability_category_sync";
-    public static final String S2C_LEVEL_SYNC = "s2c_level_sync";
     public static final String S2C_EXP_SYNC = "s2c_exp_sync";
     /**
      * Wireless Network
@@ -44,23 +39,10 @@ public final class Packets {
     /**
      * Accelerator
      */
-    public static final String C2S_TOGGLE_REFLECTION = "c2s_toggle_reflection";
     public static final String C2S_REVERSE_BLOODFLOW = "c2s_reverse_bloodflow";
-    public static final String C2S_STORM_WING_TOGGLE = "c2s_storming_toggle";
-    public static final String C2S_STORM_WING_FRONT = "c2s_storming_front";
-    public static final String C2S_STORM_WING_BACK = "c2s_storming_back";
-    public static final String C2S_STORM_WING_LEFT = "c2s_storming_left";
-    public static final String C2S_STORM_WING_RIGHT = "c2s_storming_right";
-    public static final String C2S_STORM_WING_KEEP = "c2s_storming_keep";
     public static final String C2S_KINETIC_ENERGY_APPLIED_TOGGLE = "c2s_kinetic_energy_applied_toggle";
     public static final String C2S_DIR_STRIKE_START = "c2s_dir_strike_start";
     public static final String C2S_DIR_STRIKE_END = "c2s_dir_strike_end";
-    public static final String C2S_VEC_ACCEL_CHARGE_START = "c2s_vec_accel_charge_start";
-    public static final String C2S_VEC_ACCEL_DASH = "c2s_vec_accel_dash";
-    /**
-     * Other
-     */
-    public static final String S2C_OPEN_SCREEN = "s2c_open_screen";
 
     public static void init() {
         Field[] fields = Packets.class.getDeclaredFields();
@@ -74,7 +56,7 @@ public final class Packets {
                 String fieldValue;
                 try {
                     fieldValue = (String) field.get(null);
-                    NetworkSystem.registerPacket(fieldValue);
+                    NetworkSystem.registerPacketName(fieldValue);
                 } catch (IllegalAccessException ignored) {
                 }
             }

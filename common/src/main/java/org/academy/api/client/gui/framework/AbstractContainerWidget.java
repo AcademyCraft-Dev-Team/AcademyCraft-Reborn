@@ -1,7 +1,10 @@
 package org.academy.api.client.gui.framework;
 
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -20,7 +23,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             child.getParent().removeChild(name);
         }
         child.setParent(this);
-        this.children.put(name, child);
+        children.put(name, child);
     }
 
     @Override
@@ -42,7 +45,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     @Override
     public Map<String, Widget> getChildren() {
-        return children;
+        return Collections.unmodifiableMap(children);
     }
 
     @SuppressWarnings("unchecked")
@@ -52,12 +55,6 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             throw new NoSuchElementException("No such child: " + name);
         }
         return (T) children.get(name);
-    }
-
-    @NotNull
-    @Override
-    public Iterator<Widget> iterator() {
-        return children.values().iterator();
     }
 
     public void setFocusedChild(Widget child) {
@@ -179,7 +176,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     public boolean charTyped(char codePoint, int modifiers) {
         if (!isVisible() || !isEnabled()) return false;
 
-        for (Widget widget : children.values()) {
+        for (Widget widget : getChildren().values()) {
             widget.charTyped(codePoint, modifiers);
         }
         return false;
@@ -187,7 +184,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        for (Widget widget : children.values()) {
+        for (Widget widget : getChildren().values()) {
             widget.mouseReleased(mouseX, mouseY, button);
         }
         return false;
@@ -195,7 +192,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        for (Widget widget : children.values()) {
+        for (Widget widget : getChildren().values()) {
             widget.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         }
         return false;
@@ -203,7 +200,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        for (Widget widget : children.values()) {
+        for (Widget widget : getChildren().values()) {
             widget.mouseScrolled(mouseX, mouseY, delta);
         }
         return false;
@@ -214,6 +211,15 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         super.setFocused(focused);
         if (!focused && focusedChild != null) {
             setFocusedChild(null);
+        }
+    }
+
+    public static class ContainerSetFocusedChildEvent extends Event implements ICancellableEvent {
+        @Nullable
+        public Widget child;
+
+        public ContainerSetFocusedChildEvent(@Nullable Widget child) {
+            this.child = child;
         }
     }
 }

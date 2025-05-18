@@ -9,15 +9,15 @@ import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
+import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.FriendlyByteBufDeserializer;
-import org.academy.api.common.network.FriendlyByteBufDeserializers;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.Packets;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -42,14 +42,15 @@ public final class AbilitySystemClient {
             )
     );
     @NotNull
-    public static volatile AbilityCategory category = Level0.INSTANCE   ;
+    public static volatile AbilityCategory category = Level0.INSTANCE;
     private static volatile boolean activeHUD = false;
     private static volatile float computingPower;
     private static volatile float maximumComputingPower;
     private static volatile int level;
 
     public static void init() {
-        registerPacketHandler();
+        NetworkSystem.registerPacketListener(AbilitySystemClient.class);
+
         InputSystem.addKeyBinding(KEY_NAME, KEY, () -> {
             if (ClientUtil.hasScreen()) return;
             setActiveHUD(!activeHUD);
@@ -60,39 +61,7 @@ public final class AbilitySystemClient {
                 skill.initClient();
             }
         }
-    }
 
-    public static void registerPacketHandler() {
-        NetworkSystemClient.registerS2CPacketHandler(
-                Packets.S2C_ABILITY_CATEGORY_SYNC,
-                (handler, packet) ->
-                        category = FriendlyByteBufDeserializers
-                                .ABILITY_CATEGORY_FRIENDLY_BYTE_BUF_DESERIALIZER.deserialize(packet.friendlyByteBuf)
-        );
-        NetworkSystemClient.registerS2CPacketHandler(
-                Packets.S2C_COMPUTING_POWER_SYNC,
-                (handler, packet) ->
-                        setComputingPower(packet.friendlyByteBuf.readFloat())
-        );
-        NetworkSystemClient.registerS2CPacketHandler(
-                Packets.S2C_MAX_COMPUTING_POWER_SYNC,
-                (handler, packet) ->
-                        setMaximumComputingPower(packet.friendlyByteBuf.readFloat())
-        );
-        NetworkSystemClient.registerS2CPacketHandler(
-                Packets.S2C_SKILLS_SYC,
-                (listener, packet) -> {
-                    FriendlyByteBufDeserializer<ArrayList<Skill>> friendlyByteBufDeserializer =
-                            FriendlyByteBufDeserializers.getArrayListFriendlyByteBufDeserializer(Skill.class);
-                    ArrayList<Skill> skillList = friendlyByteBufDeserializer.deserialize(packet.friendlyByteBuf);
-                    LEARNED_SKILLS.clear();
-                    LEARNED_SKILLS.addAll(skillList);
-                }
-        );
-        NetworkSystemClient.registerS2CPacketHandler(
-                Packets.S2C_LEVEL_SYNC,
-                (listener, packet) -> setLevel(packet.friendlyByteBuf.readVarInt())
-        );
         NetworkSystemClient.registerS2CPacketHandler(
                 Packets.S2C_EXP_SYNC,
                 (listener, packet) -> {
@@ -105,6 +74,41 @@ public final class AbilitySystemClient {
                     }
                 }
         );
+    }
+
+    @ClassPacketHandler
+    public static void handleSync(PlayerSyncPacket packet) {
+        if (packet.levelChanged) {
+            setLevel(packet.level);
+        }
+        if (packet.maxComputingPowerChanged) {
+            setMaximumComputingPower(packet.maxComputingPower);
+        }
+        if (packet.currentComputingPowerChanged) {
+            setComputingPower(packet.currentComputingPower);
+        }
+        if (packet.abilityCategoryChanged) {
+            AbilityCategory newCategory = AbilitySystem.ABILITY_CATEGORY_MAP.get(packet.abilityCategory);
+            if (newCategory != null) {
+                category = newCategory;
+            } else {
+                AcademyCraft.LOGGER.warn("Received unknown ability category: {}", packet.abilityCategory);
+                category = Level0.INSTANCE;
+            }
+        }
+        if (packet.skillsChanged) {
+            LEARNED_SKILLS.clear();
+            if (packet.skills != null) {
+                for (String skillName : packet.skills) {
+                    Skill skill = SKILL_MAP.get(skillName);
+                    if (skill != null) {
+                        LEARNED_SKILLS.add(skill);
+                    } else {
+                        AcademyCraft.LOGGER.warn("Received unknown skill name during sync: {}", skillName);
+                    }
+                }
+            }
+        }
     }
 
     public static float getSkillExp(Skill skill) {

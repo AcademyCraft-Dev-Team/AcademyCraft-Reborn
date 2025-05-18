@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.client.gui.framework.ContainerSetFocusedChildEvent;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
@@ -48,6 +47,8 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
 
     @Override
     protected void onInit() {
+        rootContainer.setWidth(width);
+        rootContainer.setHeight(height);
         PanelWidget invPage = new PanelWidget(0, 0, width, height);
         invPage.animation = new AnimationTopToBottom(invPage);
         rootContainer.addChild("page_inv", invPage);
@@ -77,17 +78,14 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
             switch (imageRadioButtonWidget.getId()) {
                 case 0:
-                    handleContainer = true;
                     renderInventory = true;
                     invPage.setVisible(true);
                     wirelessPanel.setVisible(false);
                     wirelessPanel.setEnabled(false);
                     break;
                 case 1:
-                    handleContainer = false;
                     renderInventory = false;
                     invPage.setVisible(false);
-                    requestAvailableNodes(nodeListPanel);
                     wirelessPanel.setVisible(true);
                     wirelessPanel.setEnabled(true);
                     break;
@@ -218,6 +216,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
                     NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SET_NODE_NAME, wirelessNodeBlockEntity.getBlockPos(), s));
                 }
             };
+            nameTextBox.onFocusGained();
             infoArea.addChild("label_name_text_box", nameTextBox);
 
             LabelWidget passLabel = new LabelWidget("Password", 10, 122);
@@ -237,7 +236,6 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             LabelWidget inputPassLabelRight = new LabelWidget("]", 100, 122);
             AnimationTopToBottom animationInputPassLabelRight = new AnimationTopToBottom(inputPassLabelRight);
             animationInputPassLabelRight.animationTime = 0.75f;
-            inputPassLabelRight.scale = 0.65f;
             inputPassLabelRight.animation = animationInputPassLabelRight;
             infoArea.addChild("label_input_pass_right", inputPassLabelRight);
 
@@ -325,8 +323,13 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
     }
 
     @SubscribeEvent
-    public void onContainerSetFocusedChild(ContainerSetFocusedChildEvent event) {
-        handleContainer = !(event.child instanceof TextBoxWidget);
+    public void onFocusGainedEvent(TextBoxWidget.FocusGainedEvent event) {
+        handleContainer = false;
+    }
+
+    @SubscribeEvent
+    public void onFocusLostEvent(TextBoxWidget.FocusLostEvent event) {
+        handleContainer = true;
     }
 
     @Override

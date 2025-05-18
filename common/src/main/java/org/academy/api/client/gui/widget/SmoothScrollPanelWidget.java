@@ -23,7 +23,7 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
 
     public float getMaxScroll() {
         float maxY = 0f;
-        for (Widget child : children.values()) {
+        for (Widget child : getChildren().values()) {
             maxY = Math.max(maxY, child.getY() + child.getHeight());
         }
         return Math.max(0, maxY - getHeight());
