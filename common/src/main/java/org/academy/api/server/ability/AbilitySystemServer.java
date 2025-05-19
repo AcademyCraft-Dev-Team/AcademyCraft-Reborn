@@ -1,8 +1,6 @@
 package org.academy.api.server.ability;
 
-import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -14,12 +12,13 @@ import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.api.common.ability.C2SAcquireCategoryPacket;
+import org.academy.api.common.ability.C2SLearnSkillPacket;
+import org.academy.api.common.ability.S2CExpSyncPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.network.FutureManagerServer;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.Nullable;
@@ -64,11 +63,10 @@ public class AbilitySystemServer {
 
     @SuppressWarnings("resource")
     public static void registerPacketHandler() {
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_ACQUIRE_CATEGORY, (listener, packet) -> {
+        FutureManagerServer.registerFutureProcessor(C2SAcquireCategoryPacket.class, (packet, listener) -> {
             ServerPlayer player = listener.player;
             ServerLevel level = player.serverLevel();
-            int id = packet.friendlyByteBuf.readVarInt();
-            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
+            BlockPos userPos = packet.userPos;
             BlockEntity be = level.getBlockEntity(userPos);
             if (be instanceof WirelessUser user) {
                 List<String> outputList = new ArrayList<>();
@@ -87,15 +85,16 @@ public class AbilitySystemServer {
                 } else {
                     outputList.add("Insufficient energy available.");
                 }
-                FutureManagerServer.sendResult(listener, id, outputList);
+                return outputList;
             }
+            return Collections.singletonList("Error: Block is not a WirelessUser.");
         });
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_LEARN_SKILL, (listener, packet) -> {
+
+        FutureManagerServer.registerFutureProcessor(C2SLearnSkillPacket.class, (packet, listener) -> {
             ServerPlayer player = listener.player;
             ServerLevel level = player.serverLevel();
-            int id = packet.friendlyByteBuf.readVarInt();
-            String skillName = packet.friendlyByteBuf.readUtf();
-            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
+            String skillName = packet.skillName;
+            BlockPos userPos = packet.userPos;
             BlockEntity be = level.getBlockEntity(userPos);
             if (be instanceof WirelessUser user) {
                 if (SKILL_MAP.containsKey(skillName)) {
@@ -105,6 +104,7 @@ public class AbilitySystemServer {
                     for (Skill dep : skill.dependencies) {
                         if (!getPlayerSkills(player.getUUID()).contains(dep.name)) {
                             depLearned = false;
+                            break;
                         }
                     }
                     boolean learned = playerMap.get(player.getUUID()).getSkills().contains(skillName);
@@ -113,11 +113,13 @@ public class AbilitySystemServer {
                         user.extractEnergy(energy, false);
                         addPlayerSkill(player.getUUID(), skillName);
                     }
-                    FutureManagerServer.sendResult(listener, id, can);
+                    return can;
                 }
             }
+            return false;
         });
     }
+
 
     public static void addAllPlayerSyncTask(final UUID uuid) {
         SyncType[] syncType = SyncType.values();
@@ -183,12 +185,7 @@ public class AbilitySystemServer {
             skillData.exp = exp;
             Player player = LIVE_PLAYER_MAP.get(uuid);
             if (player != null) {
-                FriendlyByteBuf friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
-                friendlyByteBuf.writeUtf(skill);
-                friendlyByteBuf.writeFloat(skillData.exp);
-                player.packetConsumer.accept(new S2CPacket(
-                        Packets.S2C_EXP_SYNC, friendlyByteBuf
-                ));
+                player.packetConsumer.accept(new S2CPacket(new S2CExpSyncPacket(skill, skillData.exp)));
             }
         }
     }
@@ -223,22 +220,25 @@ public class AbilitySystemServer {
         playerMap.get(uuid).setComputingPowerRecoverySpeed(speed);
     }
 
-    /**
-     * You must check return.
-     */
     public static float getPlayerAdditionalComputingPower(UUID uuid) {
         if (!playerMap.containsKey(uuid)) {
             return -1;
         } else {
-            return LIVE_PLAYER_MAP.get(uuid).additionalComputingPower;
+            Player livePlayer = LIVE_PLAYER_MAP.get(uuid);
+            return livePlayer != null ? livePlayer.additionalComputingPower : 0;
         }
     }
 
+
     public static void setPlayerAdditionalComputingPower(UUID uuid, float power) {
         if (playerMap.containsKey(uuid)) {
-            LIVE_PLAYER_MAP.get(uuid).additionalComputingPower = power;
+            Player livePlayer = LIVE_PLAYER_MAP.get(uuid);
+            if (livePlayer != null) {
+                livePlayer.additionalComputingPower = power;
+            }
         }
     }
+
 
     public static float getDamageMultiplier() {
         return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();

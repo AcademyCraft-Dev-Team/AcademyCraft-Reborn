@@ -21,12 +21,12 @@ public class ServerPlayerUtil {
                 serverPlayer.displayClientMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED), true);
             }
         } else {
-            Object[] allValues = new Object[3 + objects.length];
-            allValues[0] = screenName;
-            allValues[1] = abstractcontainermenu.containerId;
-            allValues[2] = menuProvider.getDisplayName();
-            System.arraycopy(objects, 0, allValues, 3, objects.length);
-            serverPlayer.connection.send(new S2CPacket(new OpenScreenPacket(screenName, FriendlyByteBufUtil.autoSerializable(allValues))));
+            Object[] allValuesForPayload = new Object[2 + objects.length];
+            allValuesForPayload[0] = abstractcontainermenu.containerId;
+            allValuesForPayload[1] = menuProvider.getDisplayName();
+            System.arraycopy(objects, 0, allValuesForPayload, 2, objects.length);
+
+            serverPlayer.connection.send(new S2CPacket(new OpenScreenPacket(screenName, FriendlyByteBufUtil.autoSerializable(allValuesForPayload))));
             serverPlayer.initMenu(abstractcontainermenu);
             serverPlayer.containerMenu = abstractcontainermenu;
         }

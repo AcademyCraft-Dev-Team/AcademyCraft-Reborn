@@ -27,7 +27,6 @@ import org.academy.api.common.network.*;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.util.MathUtil;
-import org.academy.api.common.vanilla.EnvType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -239,7 +238,7 @@ public class VectorAccel extends Skill {
     public static final class Server {
         public static final double MAX_VELOCITY_SCALAR = 2.5;
 
-        @ClassPacketHandler
+        @SubscribePacket
         public static void handleDash(DashPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             float chargeTicks = packet.chargeTicks;

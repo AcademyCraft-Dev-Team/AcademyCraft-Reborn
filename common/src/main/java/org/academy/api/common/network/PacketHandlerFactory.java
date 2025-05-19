@@ -23,10 +23,10 @@ public class PacketHandlerFactory {
         Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketHandlerFactory.class.getSimpleName() + "$"
-                    + method.getDeclaringClass().getSimpleName() + "$"
+            String className = PacketHandlerFactory.class.getName().replace('.', '/') + "$"
+                    + method.getDeclaringClass().getName().replace('.', '_') + "$"
                     + method.getName() + "$"
-                    + specificPacketParameterType.getSimpleName();
+                    + specificPacketParameterType.getName().replace('.', '_');
 
             byte[] classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, true);
 
@@ -45,11 +45,10 @@ public class PacketHandlerFactory {
         Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketHandlerFactory.class.getSimpleName() + "$"
+            String className = PacketHandlerFactory.class.getName().replace('.', '/') + "$"
                     + targetInstance.getClass().getSimpleName() + "$"
                     + Integer.toHexString(System.identityHashCode(targetInstance)) + "$"
-                    + method.getName() + "$"
-                    + specificPacketParameterType.getSimpleName();
+                    + method.getName();
 
             byte[] classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, false);
 

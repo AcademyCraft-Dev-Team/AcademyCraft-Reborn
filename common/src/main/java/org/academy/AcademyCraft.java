@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import net.neoforged.bus.BusBuilderImpl;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.network.NetworkSystem;
-import org.academy.api.common.network.Packets;
 import org.academy.api.common.util.GameUtil;
 import org.academy.api.common.vanilla.ThreadType;
 import org.apache.logging.log4j.LogManager;
@@ -26,7 +25,6 @@ public final class AcademyCraft {
     public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
 
     public static void init() {
-        Packets.init();
         NetworkSystem.init();
     }
 

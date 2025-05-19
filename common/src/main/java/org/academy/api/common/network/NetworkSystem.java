@@ -9,6 +9,11 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.api.common.ability.S2CExpSyncPacket;
+import org.academy.api.common.wireless.C2SConnectNodePacket;
+import org.academy.api.common.wireless.C2SDisconnectNodePacket;
+import org.academy.api.common.wireless.C2SSetNodeNamePacket;
+import org.academy.api.common.wireless.C2SSetNodePassPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,8 +28,6 @@ public class NetworkSystem {
     private static final Set<Class<? extends IPacket<?>>> REGISTERED_PACKET_TYPES = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private static final BiMap<Class<? extends IPacket<?>>, Integer> CLASS_TO_ID = HashBiMap.create();
     private static final BiMap<Integer, Class<? extends IPacket<?>>> ID_TO_CLASS = CLASS_TO_ID.inverse();
-    private static final BiMap<String, Integer> NAME_TO_ID = HashBiMap.create();
-    private static final BiMap<Integer, String> ID_TO_NAME = NAME_TO_ID.inverse();
 
     private static final ConcurrentHashMap<Class<? extends IPacket<?>>, List<PacketHandler>> TYPED_LISTENERS = new ConcurrentHashMap<>();
     private static final Map<Object, List<PacketHandler>> LISTENERS_BY_TARGET = new MapMaker().weakKeys().makeMap();
@@ -33,6 +36,14 @@ public class NetworkSystem {
     public static void init() {
         ConnectionProtocol.PROTOCOL_BY_PACKET.put(C2SPacket.class, ConnectionProtocol.PLAY);
         ConnectionProtocol.PROTOCOL_BY_PACKET.put(S2CPacket.class, ConnectionProtocol.PLAY);
+
+        registerPacketType(C2SFuturePacket.class);
+        registerPacketType(S2CFuturePacket.class);
+        registerPacketType(S2CExpSyncPacket.class);
+        registerPacketType(C2SConnectNodePacket.class);
+        registerPacketType(C2SDisconnectNodePacket.class);
+        registerPacketType(C2SSetNodeNamePacket.class);
+        registerPacketType(C2SSetNodePassPacket.class);
 
         List<Class<? extends IPacket<?>>> sortedPackets = new ArrayList<>(REGISTERED_PACKET_TYPES);
         sortedPackets.sort(Comparator.comparing(Class::getName));
@@ -71,7 +82,7 @@ public class NetworkSystem {
         boolean foundAnnotation = false;
 
         for (Method method : clazz.getDeclaredMethods()) {
-            if (!method.isAnnotationPresent(ClassPacketHandler.class)) continue;
+            if (!method.isAnnotationPresent(SubscribePacket.class)) continue;
             foundAnnotation = true;
 
             if (!Modifier.isPublic(method.getModifiers())) {
@@ -140,28 +151,8 @@ public class NetworkSystem {
         }
     }
 
-    public static void registerPacketName(String packetName) {
-        lock.writeLock().lock();
-        try {
-            if (!NAME_TO_ID.containsKey(packetName)) {
-                NAME_TO_ID.put(packetName, NAME_TO_ID.size());
-            }
-        } finally {
-            lock.writeLock().unlock();
-        }
-    }
-
     public static <T extends IPacket<?>> void registerPacketType(Class<T> packetClass) {
         REGISTERED_PACKET_TYPES.add(packetClass);
-    }
-
-    public static int getPacketIdByName(String packetName) {
-        lock.readLock().lock();
-        try {
-            return NAME_TO_ID.getOrDefault(packetName, -1);
-        } finally {
-            lock.readLock().unlock();
-        }
     }
 
     public static <T extends IPacket<?>> int getPacketIdByType(Class<T> packetClass) {
@@ -174,20 +165,11 @@ public class NetworkSystem {
     }
 
     @SuppressWarnings("unchecked")
+    @Nullable
     public static <T extends IPacket<?>> Class<T> getClassById(int id) {
         lock.readLock().lock();
         try {
             return (Class<T>) ID_TO_CLASS.get(id);
-        } finally {
-            lock.readLock().unlock();
-        }
-    }
-
-    @Nullable
-    public static String getNameById(int id) {
-        lock.readLock().lock();
-        try {
-            return ID_TO_NAME.get(id);
         } finally {
             lock.readLock().unlock();
         }

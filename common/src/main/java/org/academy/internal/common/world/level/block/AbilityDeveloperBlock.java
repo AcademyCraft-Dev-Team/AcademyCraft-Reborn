@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.network.packet.S2CPacket;
+import org.academy.api.common.util.FriendlyByteBufUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
@@ -68,8 +69,7 @@ public class AbilityDeveloperBlock extends MultiBlock {
                     if (blockEntity.mainPos != null) {
                         serverPlayer.connection.send(new S2CPacket(
                                 new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN,
-                                        new FriendlyByteBuf(Unpooled.buffer()).
-                                                writeBlockPos(blockEntity.mainPos))
+                                        FriendlyByteBufUtil.autoSerializable(blockEntity.mainPos))
                         ));
                     }
                 }

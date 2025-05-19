@@ -12,33 +12,39 @@ import org.jetbrains.annotations.NotNull;
 @PacketTarget(ThreadType.CLIENT)
 public class OpenScreenPacket extends IPacket<ClientPacketListener> {
     public String screenName;
-    public FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+    public FriendlyByteBuf dataPayload;
 
     @ReceiverConstructor
     public OpenScreenPacket() {
+        this.dataPayload = new FriendlyByteBuf(Unpooled.buffer());
     }
 
     @SenderConstructor
-    public OpenScreenPacket(@NotNull String screenName, @NotNull FriendlyByteBuf buf) {
+    public OpenScreenPacket(@NotNull String screenName, @NotNull FriendlyByteBuf payload) {
         this.screenName = screenName;
-        this.buf = buf;
+        this.dataPayload = new FriendlyByteBuf(Unpooled.buffer(payload.readableBytes()));
+        payload.readBytes(this.dataPayload, payload.readableBytes());
     }
 
     @SuppressWarnings("unused")
     @SenderConstructor
     public OpenScreenPacket(@NotNull String screenName) {
         this.screenName = screenName;
+        this.dataPayload = new FriendlyByteBuf(Unpooled.buffer());
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
         this.screenName = buf.readUtf();
-        this.buf = new FriendlyByteBuf(buf.readBytes(buf.readableBytes()));
+        int readableBytes = buf.readableBytes();
+        this.dataPayload = new FriendlyByteBuf(buf.readBytes(readableBytes));
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
         buf.writeUtf(this.screenName);
-        buf.writeBytes(this.buf);
+        if (this.dataPayload != null && this.dataPayload.readableBytes() > 0) {
+            buf.writeBytes(this.dataPayload.copy());
+        }
     }
 }

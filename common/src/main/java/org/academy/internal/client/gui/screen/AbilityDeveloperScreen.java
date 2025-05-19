@@ -20,7 +20,8 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.ability.C2SAcquireCategoryPacket;
+import org.academy.api.common.ability.C2SLearnSkillPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -148,7 +149,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                             if ("learn".equals(s)) {
                                 if (!learned) {
                                     if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
-                                        FutureManagerClient.sendFuturePacket(Packets.C2S_ACQUIRE_CATEGORY, (Consumer<ArrayList<String>>) strings -> {
+                                        FutureManagerClient.sendFuturePacket(C2SAcquireCategoryPacket.class, (Consumer<ArrayList<String>>) strings -> {
                                             Widget lastWidget = outputCommand;
                                             for (String string : strings) {
                                                 LabelWidget newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
@@ -276,7 +277,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                             int learned = AbilitySystemClient.LEARNED_SKILLS.size();
                             int all = abilityCategory.skillList.size();
                             if (all == 0) return 100.0f;
-                            else return (float) (learned / all);
+                            else return (float) learned / all;
                         });
                 learnProgress.progressBarColor = Color.WHITE.hashCode();
                 leftPanelInfoPanel.addChild("learn_progress", learnProgress);
@@ -422,7 +423,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             @Override
             public void run() {
                 if (skillInfo == null) return;
-                FutureManagerClient.<Boolean>sendFuturePacket(Packets.C2S_LEARN_SKILL, aBoolean -> {
+                FutureManagerClient.sendFuturePacket(C2SLearnSkillPacket.class, (Boolean aBoolean) -> {
                     if (aBoolean) {
                         init();
                     }

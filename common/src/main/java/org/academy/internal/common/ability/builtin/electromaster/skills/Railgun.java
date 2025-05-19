@@ -18,7 +18,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -90,7 +90,7 @@ public class Railgun extends Skill {
 
     @SuppressWarnings("resource")
     public static final class Server {
-        @ClassPacketHandler
+        @SubscribePacket
         public static void handleShoot(ShootPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;

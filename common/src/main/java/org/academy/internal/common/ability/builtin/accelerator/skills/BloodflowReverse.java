@@ -15,7 +15,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -85,7 +85,7 @@ public class BloodflowReverse extends Skill {
 
     public static final class Server {
         @SuppressWarnings("resource")
-        @ClassPacketHandler
+        @SubscribePacket
         public static void reverseBloodflow(ReverseBloodflowPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             HitResult hitResult = player.pick(1, 1, false);

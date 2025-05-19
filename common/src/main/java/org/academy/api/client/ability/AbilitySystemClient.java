@@ -1,19 +1,17 @@
 package org.academy.api.client.ability;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.FriendlyByteBuf;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.ability.S2CExpSyncPacket;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
@@ -61,22 +59,20 @@ public final class AbilitySystemClient {
                 skill.initClient();
             }
         }
-
-        NetworkSystemClient.registerS2CPacketHandler(
-                Packets.S2C_EXP_SYNC,
-                (listener, packet) -> {
-                    FriendlyByteBuf friendlyByteBuf = packet.friendlyByteBuf;
-                    String name =  friendlyByteBuf.readUtf();
-                    float exp =  friendlyByteBuf.readFloat();
-                    Skill skill = SKILL_MAP.get(name);
-                    if (skill != null) {
-                        setSkillExp(skill, exp);
-                    }
-                }
-        );
     }
 
-    @ClassPacketHandler
+    @SubscribePacket
+    public static void handleExpSync(S2CExpSyncPacket packet) {
+        String name = packet.skillName;
+        float exp = packet.exp;
+        Skill skill = SKILL_MAP.get(name);
+        if (skill != null) {
+            setSkillExp(skill, exp);
+        }
+    }
+
+
+    @SubscribePacket
     public static void handleSync(PlayerSyncPacket packet) {
         if (packet.levelChanged) {
             setLevel(packet.level);
