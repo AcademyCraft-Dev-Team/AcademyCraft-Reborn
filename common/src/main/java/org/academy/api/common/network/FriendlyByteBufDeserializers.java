@@ -136,6 +136,10 @@ public class FriendlyByteBufDeserializers {
         return DESERIALIZER_IDS.get(serializer);
     }
 
+    public static int getDeserializerId(Class<?> clazz) {
+        return DESERIALIZER_IDS.get(getRequiredDeserializer(clazz));
+    }
+
     @Nullable
     public static <T> FriendlyByteBufDeserializer<T> getDeserializer(int id) {
         return (FriendlyByteBufDeserializer<T>) DESERIALIZER_IDS.inverse().get(id);
@@ -151,11 +155,11 @@ public class FriendlyByteBufDeserializers {
     }
 
     @Nullable
-    public static <T> FriendlyByteBufDeserializer<T> getDeserializer(Class<T> clazz) {
+    public static <T> FriendlyByteBufDeserializer<T> getDeserializer(Class<?> clazz) {
         return (FriendlyByteBufDeserializer<T>) FRIENDLY_BYTE_BUF_DESERIALIZER_MAP.get(clazz);
     }
 
-    public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(Class<T> clazz) {
+    public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(Class<?> clazz) {
         FriendlyByteBufDeserializer<T> deserializer = getDeserializer(clazz);
         if (deserializer == null) {
             for (Map.Entry<Class<?>, FriendlyByteBufDeserializer<?>> entry : FRIENDLY_BYTE_BUF_DESERIALIZER_MAP.entrySet()) {

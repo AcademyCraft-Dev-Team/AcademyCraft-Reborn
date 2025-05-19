@@ -4,12 +4,12 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import org.academy.api.common.network.*;
 import org.academy.api.common.network.packet.IPacket;
-import org.academy.api.common.vanilla.EnvType;
+import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
 
-@PacketTarget(EnvType.CLIENT)
+@PacketTarget(ThreadType.CLIENT)
 public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
     public boolean levelChanged;
     public int level;

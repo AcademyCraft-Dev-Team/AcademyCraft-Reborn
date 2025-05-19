@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
@@ -11,18 +12,19 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.annotation.PacketHandler;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.electromaster.Electromaster;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -33,6 +35,10 @@ public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
     public static final String KEY_NAME = SkillNames.ARC_GENERATE + ".generate";
     public static final float BASE_DAMAGE = 2.0F;
+
+    static {
+        NetworkSystem.registerPacketType(GeneratePacket.class);
+    }
 
     private ArcGenerate() {
         super(SkillNames.ARC_GENERATE, 1);
@@ -52,7 +58,7 @@ public class ArcGenerate extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketHandlerClass(Server.class);
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -63,7 +69,7 @@ public class ArcGenerate extends Skill {
 
         public static void handler() {
             //   if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_ARC_GENERATE));
+            NetworkSystemClient.sendPacket(new C2SPacket(new GeneratePacket()));
         }
 
         public static final class ArcGenerateSKillConfig extends ClientConfig.KeyBindingConfig {
@@ -71,8 +77,10 @@ public class ArcGenerate extends Skill {
     }
 
     public static final class Server {
-        @PacketHandler(packet = Packets.C2S_ARC_GENERATE)
-        public static void handle(final @NotNull ServerPlayer player, final @NotNull ServerLevel level) {
+        @ClassPacketHandler
+        public static void handle(GeneratePacket packet) {
+            ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
+            ServerLevel level = player.serverLevel();
             float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower <= 10) return;
             AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
@@ -97,5 +105,9 @@ public class ArcGenerate extends Skill {
             DamageSource src = player.damageSources().playerAttack(player);
             LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, damage);
         }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class GeneratePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }
