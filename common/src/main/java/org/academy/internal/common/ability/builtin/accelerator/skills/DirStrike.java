@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -12,14 +13,17 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
+import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.annotation.PacketHandler;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.packet.EmptyPacket;
+import org.academy.api.common.vanilla.EnvType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.network.NetworkSystemServer;
@@ -80,14 +84,14 @@ public class DirStrike extends Skill {
         public static Context context;
         public static final String KEY_NAME_START = SkillNames.DIR_STRIKE + "_start";
         public static final String KEY_NAME_END = SkillNames.DIR_STRIKE + "_end";
-        public static final ClientConfig CONFIG = new ClientConfig();
+        public static final Config CONFIG = new Config();
 
         public static void onStart() {
             if (context != null) return;
             if (Minecraft.getInstance().player == null) return;
             context = new Client.Context(Minecraft.getInstance().player);
             AbilitySystemClient.registerContext(context);
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_DIR_STRIKE_START));
+            NetworkSystemClient.sendPacket(new C2SPacket(new StartPacket()));
         }
 
         public static void onEnd() {
@@ -97,8 +101,8 @@ public class DirStrike extends Skill {
             }
         }
 
-        public static final class ClientConfig extends org.academy.api.client.config.ClientConfig.KeyBindingConfig {
-            private ClientConfig() {
+        public static final class Config extends ClientConfig.KeyBindingConfig {
+            private Config() {
             }
         }
 
@@ -144,7 +148,7 @@ public class DirStrike extends Skill {
                     if (Math.abs(newPitch - targetPitch) < 1e-3) {
                         AbilitySystemClient.unregisterContext(this);
                         context = null;
-                        NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_DIR_STRIKE_END));
+                        NetworkSystemClient.sendPacket(new C2SPacket(new EndPacket()));
                     }
                 }
             }
@@ -154,8 +158,9 @@ public class DirStrike extends Skill {
     public static final class Server {
         public static final Map<UUID, ServerContext> CONTEXT_MAP = new HashMap<>();
 
-        @PacketHandler(packet = Packets.C2S_DIR_STRIKE_START)
-        public static void onStart(ServerPlayer serverPlayer) {
+        @ClassPacketHandler
+        public static void onStart(StartPacket packet) {
+            ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();
             if (CONTEXT_MAP.containsKey(serverPlayer.getUUID())) {
                 ServerContext context = CONTEXT_MAP.get(serverPlayer.getUUID());
                 AbilitySystemServer.unregisterContext(context);
@@ -165,8 +170,9 @@ public class DirStrike extends Skill {
             AbilitySystemServer.registerContext(context);
         }
 
-        @PacketHandler(packet = Packets.C2S_DIR_STRIKE_END)
-        public static void onEnd(ServerPlayer serverPlayer) {
+        @ClassPacketHandler
+        public static void onEnd(EndPacket packet) {
+            ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();
             UUID uuid = serverPlayer.getUUID();
             if (CONTEXT_MAP.containsKey(uuid)) {
                 ServerContext context = CONTEXT_MAP.get(uuid);
@@ -205,5 +211,13 @@ public class DirStrike extends Skill {
             public void onTickEvent(ServerTickEvent event) {
             }
         }
+    }
+
+    @PacketTarget(EnvType.SERVER)
+    public static final class StartPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
+    }
+
+    @PacketTarget(EnvType.SERVER)
+    public static final class EndPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }

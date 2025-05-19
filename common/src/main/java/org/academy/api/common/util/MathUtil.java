@@ -1,5 +1,9 @@
 package org.academy.api.common.util;
 
+import net.minecraft.world.phys.AABB;
+import org.joml.*;
+
+import java.lang.Math;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
@@ -39,36 +43,75 @@ public class MathUtil {
         return x * x * (3.0 - 2.0 * x);
     }
 
-    public static boolean rayIntersectPanelFastAngles(
-            double rayOx, double rayOy, double rayOz,
-            double rayPitchDeg, double rayYawDeg,
-            double panelCx, double panelCy, double panelCz,
-            double panelPitchDeg, double panelYawDeg,
-            double[] outIntersection
-    ) {
-        double ry = Math.toRadians(rayYawDeg),  rp = Math.toRadians(rayPitchDeg);
-        double rayDx = -Math.cos(rp) * Math.sin(ry);
-        double rayDy = -Math.sin(rp);
-        double rayDz =  Math.cos(rp) * Math.cos(ry);
+    public static class RayUtil {
+        public static boolean intersectRayTransformedAABB(
+                Vector3fc rayOriginWorld,
+                Vector3fc rayEndWorld,
+                AABB aabbLocal,
+                Matrix4fc worldTransform,
+                Vector3f intersectionPointWorld
+        ) {
+            Matrix4f invTransform = new Matrix4f();
+            worldTransform.invert(invTransform);
 
-        double py = Math.toRadians(panelYawDeg), pp = Math.toRadians(panelPitchDeg);
-        double nx = -Math.cos(pp) * Math.sin(py);
-        double ny = -Math.sin(pp);
-        double nz =  Math.cos(pp) * Math.cos(py);
+            Vector3f rayOriginLocal = new Vector3f();
+            invTransform.transformPosition(rayOriginWorld, rayOriginLocal);
 
-        double dx = panelCx - rayOx;
-        double dy = panelCy - rayOy;
-        double dz = panelCz - rayOz;
+            Vector3f rayEndLocal = new Vector3f();
+            invTransform.transformPosition(rayEndWorld, rayEndLocal);
 
-        double denom = nx*rayDx + ny*rayDy + nz*rayDz;
-        if (Math.abs(denom) < 1e-6) return false;  // 平行，无交点
+            Vector3f rayDirLocal = new Vector3f();
+            rayEndLocal.sub(rayOriginLocal, rayDirLocal);
 
-        double t = (nx*dx + ny*dy + nz*dz) / denom;
+            float lengthSq = rayDirLocal.lengthSquared();
 
-        outIntersection[0] = rayOx + t * rayDx;
-        outIntersection[1] = rayOy + t * rayDy;
-        outIntersection[2] = rayOz + t * rayDz;
-        return true;
+            Vector3f localAabbMinJoml = new Vector3f((float)aabbLocal.minX, (float)aabbLocal.minY, (float)aabbLocal.minZ);
+            Vector3f localAabbMaxJoml = new Vector3f((float)aabbLocal.maxX, (float)aabbLocal.maxY, (float)aabbLocal.maxZ);
+
+            if (lengthSq < 1.0E-12f) {
+                if (rayOriginLocal.x >= localAabbMinJoml.x() && rayOriginLocal.x <= localAabbMaxJoml.x() &&
+                        rayOriginLocal.y >= localAabbMinJoml.y() && rayOriginLocal.y <= localAabbMaxJoml.y() &&
+                        rayOriginLocal.z >= localAabbMinJoml.z() && rayOriginLocal.z <= localAabbMaxJoml.z()) {
+                    intersectionPointWorld.set(rayOriginWorld);
+                    return true;
+                }
+                return false;
+            }
+
+            float rayLengthLocal = (float) Math.sqrt(lengthSq);
+            rayDirLocal.div(rayLengthLocal);
+
+            Vector2f nearFar = new Vector2f();
+            boolean intersects = Intersectionf.intersectRayAab(
+                    rayOriginLocal,
+                    rayDirLocal,
+                    localAabbMinJoml,
+                    localAabbMaxJoml,
+                    nearFar
+            );
+
+            if (!intersects) {
+                return false;
+            }
+
+            float tNear = nearFar.x;
+            float tFar = nearFar.y;
+
+            float effectiveNear = Math.max(0.0f, tNear);
+            float effectiveFar = Math.min(rayLengthLocal, tFar);
+
+            if (effectiveNear > effectiveFar) {
+                return false;
+            }
+
+            Vector3f intersectionPointLocal = new Vector3f();
+            rayDirLocal.mul(effectiveNear, intersectionPointLocal);
+            intersectionPointLocal.add(rayOriginLocal);
+
+            worldTransform.transformPosition(intersectionPointLocal, intersectionPointWorld);
+
+            return true;
+        }
     }
 
     public static float magicAnimationFactor(float animationDuration, float partialTick) {
