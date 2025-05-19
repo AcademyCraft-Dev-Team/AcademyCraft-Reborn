@@ -41,8 +41,6 @@ public final class Packets {
      */
     public static final String C2S_REVERSE_BLOODFLOW = "c2s_reverse_bloodflow";
     public static final String C2S_KINETIC_ENERGY_APPLIED_TOGGLE = "c2s_kinetic_energy_applied_toggle";
-    public static final String C2S_DIR_STRIKE_START = "c2s_dir_strike_start";
-    public static final String C2S_DIR_STRIKE_END = "c2s_dir_strike_end";
 
     public static void init() {
         Field[] fields = Packets.class.getDeclaredFields();
