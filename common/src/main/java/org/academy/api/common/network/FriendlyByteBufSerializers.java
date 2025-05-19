@@ -143,11 +143,11 @@ public class FriendlyByteBufSerializers {
     }
 
     @Nullable
-    public static <T> FriendlyByteBufSerializer<T> getSerializer(Class<T> clazz) {
+    public static <T> FriendlyByteBufSerializer<T> getSerializer(Class<?> clazz) {
         return (FriendlyByteBufSerializer<T>) FRIENDLY_BYTE_BUF_SERIALIZER_MAP.get(clazz);
     }
 
-    public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<T> clazz) {
+    public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<?> clazz) {
         FriendlyByteBufSerializer<T> serializer = getSerializer(clazz);
         if (serializer == null) {
             for (Map.Entry<Class<?>, FriendlyByteBufSerializer<?>> entry : FRIENDLY_BYTE_BUF_SERIALIZER_MAP.entrySet()) {

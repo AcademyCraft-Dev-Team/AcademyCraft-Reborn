@@ -23,7 +23,7 @@ import org.academy.api.common.network.*;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.IPacket;
-import org.academy.api.common.vanilla.EnvType;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -39,6 +39,11 @@ import java.util.Set;
 public class StormWing extends Skill {
     public static final Skill INSTANCE = new StormWing();
     public static final String TAG_KEY = "activated_storm_wing";
+
+    static {
+        NetworkSystem.registerPacketType(TogglePacket.class);
+        NetworkSystem.registerPacketType(ControlPacket.class);
+    }
 
     private StormWing() {
         super(SkillNames.STORM_WING, 4, List.of(VectorReflection.INSTANCE));
@@ -160,6 +165,15 @@ public class StormWing extends Skill {
                         player.push(right.x, right.y, right.z);
                         break;
                     }
+                    case KEEP: {
+                        if (Math.abs(player.getDeltaMovement().y) > 0.25) {
+                            player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
+                        } else {
+                            player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
+                        }
+                        player.resetFallDistance();
+                        break;
+                    }
                 }
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
             }
@@ -170,7 +184,7 @@ public class StormWing extends Skill {
         }
     }
 
-    @PacketTarget(EnvType.SERVER)
+    @PacketTarget(ThreadType.SERVER)
     public static final class ControlPacket extends IPacket<ServerGamePacketListenerImpl> {
         public State state;
 
@@ -194,7 +208,7 @@ public class StormWing extends Skill {
         }
     }
 
-    @PacketTarget(EnvType.SERVER)
+    @PacketTarget(ThreadType.SERVER)
     public static final class TogglePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 

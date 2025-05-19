@@ -6,10 +6,10 @@ import org.jetbrains.annotations.NotNull;
 
 public abstract class EmptyPacket<T extends PacketListener> extends IPacket<T> {
     @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
+    public final void write(@NotNull FriendlyByteBuf buf) {
     }
 
     @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
+    public final void read(@NotNull FriendlyByteBuf buf) {
     }
 }

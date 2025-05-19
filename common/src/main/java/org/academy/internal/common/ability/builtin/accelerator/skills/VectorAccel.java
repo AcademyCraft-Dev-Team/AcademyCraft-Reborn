@@ -23,17 +23,14 @@ import org.academy.api.client.renderer.CameraRenderer;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.ReceiverConstructor;
-import org.academy.api.common.network.SenderConstructor;
+import org.academy.api.common.network.*;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.EnvType;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.tick.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -50,6 +47,10 @@ import java.util.Set;
 public class VectorAccel extends Skill {
     public static final int MAX_CHARGE_TICKS = 40;
     public static final Skill INSTANCE = new VectorAccel();
+
+    static {
+        NetworkSystem.registerPacketType(DashPacket.class);
+    }
 
     private VectorAccel() {
         super(SkillNames.VECTOR_ACCEL, 1);
@@ -83,7 +84,7 @@ public class VectorAccel extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketHandlerClass(Server.class);
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -288,7 +289,7 @@ public class VectorAccel extends Skill {
         }
     }
 
-    @PacketTarget(EnvType.SERVER)
+    @PacketTarget(ThreadType.SERVER)
     public static final class DashPacket extends IPacket<ServerGamePacketListenerImpl> {
         public int chargeTicks;
 
