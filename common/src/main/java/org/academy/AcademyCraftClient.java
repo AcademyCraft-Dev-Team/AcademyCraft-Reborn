@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.neoforged.bus.BusBuilderImpl;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.AcademyCraftClientConfig;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.hud.HUDManager;
 import org.academy.internal.client.gui.screen.Screens;
@@ -21,7 +20,7 @@ public final class AcademyCraftClient {
     static {
         CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
         AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
-        CLIENT_CONFIG = new AcademyCraftClientConfig();
+        CLIENT_CONFIG = AcademyCraftClientConfig.loadConfig(CLIENT_CONFIG_FILE);
     }
 
     public static void init() {
