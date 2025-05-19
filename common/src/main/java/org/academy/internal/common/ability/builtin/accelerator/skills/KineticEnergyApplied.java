@@ -11,12 +11,11 @@ import org.academy.api.client.config.ClientConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
-import org.academy.api.common.vanilla.EnvType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -71,7 +70,7 @@ public class KineticEnergyApplied extends Skill {
     public static final class Server {
         public static final Map<UUID, Boolean> SKILL_STATS = new HashMap<>();
 
-        @ClassPacketHandler
+        @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             if (SKILL_STATS.containsKey(player.getUUID())) {

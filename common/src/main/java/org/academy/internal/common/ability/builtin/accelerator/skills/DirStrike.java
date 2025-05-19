@@ -19,12 +19,11 @@ import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
-import org.academy.api.common.vanilla.EnvType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -164,7 +163,7 @@ public class DirStrike extends Skill {
     public static final class Server {
         public static final Map<UUID, ServerContext> CONTEXT_MAP = new HashMap<>();
 
-        @ClassPacketHandler
+        @SubscribePacket
         public static void onStart(StartPacket packet) {
             ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();
             if (CONTEXT_MAP.containsKey(serverPlayer.getUUID())) {
@@ -176,7 +175,7 @@ public class DirStrike extends Skill {
             AbilitySystemServer.registerContext(context);
         }
 
-        @ClassPacketHandler
+        @SubscribePacket
         public static void onEnd(EndPacket packet) {
             ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();
             UUID uuid = serverPlayer.getUUID();

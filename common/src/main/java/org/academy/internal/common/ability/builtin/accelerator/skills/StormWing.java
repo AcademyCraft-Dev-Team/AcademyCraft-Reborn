@@ -126,7 +126,7 @@ public class StormWing extends Skill {
     }
 
     public static final class Server {
-        @ClassPacketHandler
+        @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().player;
             SynchedEntityData synchedEntityData = player.getEntityData();
@@ -137,7 +137,7 @@ public class StormWing extends Skill {
             player.getAbilities().mayfly = synchedEntityData.get(PlayerSyncData.DATA).getBoolean(TAG_KEY);
         }
 
-        @ClassPacketHandler
+        @SubscribePacket
         public static void handleControl(ControlPacket packet) {
             State state = packet.state;
             ServerPlayer player = packet.packetListenerSupplier.get().player;

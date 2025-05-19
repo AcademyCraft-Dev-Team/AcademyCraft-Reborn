@@ -4,8 +4,11 @@ import net.minecraft.core.BlockPos;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.FutureManagerClient;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.common.network.Packets;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.wireless.C2SConnectNodePacket;
+import org.academy.api.common.wireless.C2SDisconnectNodePacket;
+import org.academy.api.common.wireless.C2SGetAvailableNodesPacket;
+import org.academy.api.common.wireless.C2SGetCurrentNodePacket;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
@@ -55,7 +58,7 @@ public class WirelessPanelHelper {
         BlockPos getPosition();
 
         default void requestAvailableNodes(SmoothScrollPanelWidget listPanel) {
-            FutureManagerClient.<List<String>>sendFuturePacket(Packets.C2S_GET_AVAILABLE_NODES, availableNodeNames -> {
+            FutureManagerClient.sendFuturePacket(C2SGetAvailableNodesPacket.class, (List<String> availableNodeNames) -> {
                 listPanel.clearChildren();
                 availableNodeNames.removeIf(s -> s.equals(getConnectedNodeName()));
                 for (int i = 0; i < availableNodeNames.size(); i++) {
@@ -77,7 +80,7 @@ public class WirelessPanelHelper {
                 nodeViewPanel.addChild("node_name", nodeNameLabel);
                 if (!isConnected) {
                     Consumer<String> connect = password -> {
-                        NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_CONNECT_NODE, getPosition(), nodeName, password));
+                        NetworkSystemClient.sendPacket(new C2SPacket(new C2SConnectNodePacket(getPosition(), nodeName, password)));
                         requestCurrentNodeStatus();
                     };
                     TextBoxWidget inputBox = new TextBoxWidget(12, 70, 3, 46, 10);
@@ -93,7 +96,7 @@ public class WirelessPanelHelper {
                     if (!isNull) {
                         ImageButtonWidget buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_CONNECTED, () ->
                         {
-                            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_DISCONNECT_NODE, getPosition()));
+                            NetworkSystemClient.sendPacket(new C2SPacket(new C2SDisconnectNodePacket(getPosition())));
                             requestCurrentNodeStatus();
                             requestAvailableNodes(getNodeList());
                         }
@@ -106,7 +109,8 @@ public class WirelessPanelHelper {
         }
 
         default void requestCurrentNodeStatus() {
-            FutureManagerClient.<Pair<Boolean, String>>sendFuturePacket(Packets.C2S_GET_CURRENT_NODE, pair -> updateConnectedNodeDisplay(pair.getLeft(), pair.getRight()), getPosition());
+            FutureManagerClient.sendFuturePacket(C2SGetCurrentNodePacket.class, (Pair<Boolean, String> pair) ->
+                    updateConnectedNodeDisplay(pair.getLeft(), pair.getRight()), getPosition());
         }
 
         default void updateConnectedNodeDisplay(boolean isNull, String nodeName) {
