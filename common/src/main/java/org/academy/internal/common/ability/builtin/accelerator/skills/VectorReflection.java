@@ -15,7 +15,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -85,7 +85,7 @@ public class VectorReflection extends Skill {
     public static final class Server {
         public static final Map<UUID, Boolean> ACTIVE_REFLECTION_MAP = new LinkedHashMap<>();
 
-        @ClassPacketHandler
+        @SubscribePacket
         public static void toggleReflection(TogglePacket packet) {
             UUID uuid = packet.packetListenerSupplier.get().getPlayer().getUUID();
             if (ACTIVE_REFLECTION_MAP.containsKey(uuid)) {

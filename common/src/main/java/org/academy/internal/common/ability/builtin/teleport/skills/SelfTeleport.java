@@ -16,7 +16,7 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -68,7 +68,7 @@ public final class SelfTeleport extends Skill {
     }
 
     private static final class Server {
-        @ClassPacketHandler
+        @SubscribePacket
         public static void handleTeleport(SelfTeleportPacket packet) {
             ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();
             //      if (ServerUtil.lacksSkill(serverPlayer.getUUID(), INSTANCE)) return;

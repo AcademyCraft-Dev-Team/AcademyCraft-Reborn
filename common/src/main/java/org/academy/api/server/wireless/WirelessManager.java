@@ -1,16 +1,14 @@
 package org.academy.api.server.wireless;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
-import org.academy.api.common.network.Packets;
-import org.academy.api.common.wireless.WirelessNode;
-import org.academy.api.common.wireless.WirelessUser;
+import org.academy.api.common.network.SubscribePacket;
+import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.wireless.*;
 import org.academy.api.server.network.FutureManagerServer;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -18,56 +16,56 @@ import java.util.*;
 
 public class WirelessManager {
     public static void initServer() {
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_CONNECT_NODE, (listener, packet) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            FriendlyByteBuf buf = packet.friendlyByteBuf;
-            BlockPos userPos = buf.readBlockPos();
-            String targetNodeName = buf.readUtf();
-            String passwordAttempt = buf.readUtf();
-            handleConnect(player, level, userPos, targetNodeName, passwordAttempt);
-        });
+        NetworkSystem.registerPacketListener(WirelessManager.class);
 
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_DISCONNECT_NODE, (listener, packet) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
-            handleDisconnect(player, level, userPos);
-        });
-
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_GET_AVAILABLE_NODES,
-                (listener, packet) -> {
-                    ServerLevel level = listener.player.serverLevel();
-                    int id = packet.friendlyByteBuf.readVarInt();
-                    BlockPos requesterPos = packet.friendlyByteBuf.readBlockPos();
-                    FutureManagerServer.sendResult(listener, id, getAvailableNodes(level, requesterPos));
-                }
-        );
-
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_GET_CURRENT_NODE, (listener, packet) -> {
+        FutureManagerServer.registerFutureProcessor(C2SGetAvailableNodesPacket.class, (packet, listener) -> {
             ServerLevel level = listener.player.serverLevel();
-            int id = packet.friendlyByteBuf.readVarInt();
-            BlockPos userPos = packet.friendlyByteBuf.readBlockPos();
+            BlockPos requesterPos = packet.requesterPos;
+            return getAvailableNodes(level, requesterPos);
+        });
+
+        FutureManagerServer.registerFutureProcessor(C2SGetCurrentNodePacket.class, (packet, listener) -> {
+            ServerLevel level = listener.player.serverLevel();
+            BlockPos userPos = packet.userPos;
             Pair<Boolean, String> currentNode = getCurrentNode(level, userPos);
-            boolean isNull = currentNode.getLeft();
-            FutureManagerServer.sendResult(listener, id, Pair.of(isNull, currentNode.getRight()));
+            return Pair.of(currentNode.getLeft(), currentNode.getRight());
         });
+    }
 
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_SET_NODE_NAME, (listener, packet) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            BlockPos nodePos = packet.friendlyByteBuf.readBlockPos();
-            String newName = packet.friendlyByteBuf.readUtf();
-            WirelessManager.setNodeName(player, level, nodePos, newName);
-        });
+    @SubscribePacket
+    public static void handleConnectNode(C2SConnectNodePacket packet) {
+        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
+        ServerLevel level = player.serverLevel();
+        BlockPos userPos = packet.userPos;
+        String targetNodeName = packet.targetNodeName;
+        String passwordAttempt = packet.passwordAttempt;
+        handleConnect(player, level, userPos, targetNodeName, passwordAttempt);
+    }
 
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_SET_NODE_PASS, (listener, packet) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            BlockPos nodePos = packet.friendlyByteBuf.readBlockPos();
-            String newPass = packet.friendlyByteBuf.readUtf();
-            WirelessManager.setNodePass(player, level, nodePos, newPass);
-        });
+    @SubscribePacket
+    public static void handleDisconnectNode(C2SDisconnectNodePacket packet) {
+        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
+        ServerLevel level = player.serverLevel();
+        BlockPos userPos = packet.userPos;
+        handleDisconnect(player, level, userPos);
+    }
+
+    @SubscribePacket
+    public static void handleSetNodeName(C2SSetNodeNamePacket packet) {
+        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
+        ServerLevel level = player.serverLevel();
+        BlockPos nodePos = packet.nodePos;
+        String newName = packet.newName;
+        WirelessManager.setNodeName(player, level, nodePos, newName);
+    }
+
+    @SubscribePacket
+    public static void handleSetNodePass(C2SSetNodePassPacket packet) {
+        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
+        ServerLevel level = player.serverLevel();
+        BlockPos nodePos = packet.nodePos;
+        String newPass = packet.newPass;
+        WirelessManager.setNodePass(player, level, nodePos, newPass);
     }
 
     public static void setNodeName(ServerPlayer player,
