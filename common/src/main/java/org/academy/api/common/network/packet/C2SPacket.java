@@ -12,7 +12,6 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
-    public boolean clazz;
     public int id;
     public FriendlyByteBuf friendlyByteBuf;
 
@@ -20,21 +19,18 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
     public <T extends IPacket<ServerGamePacketListenerImpl>> C2SPacket(T packet) {
         Class<T> clazz = (Class<T>) packet.getClass();
         id = NetworkSystem.getPacketIdByType(clazz);
-        this.clazz = true;
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
     }
 
     @ApiStatus.Internal
     public C2SPacket(@NotNull FriendlyByteBuf friendlyByteBuf) {
-        this.clazz = friendlyByteBuf.readBoolean();
         this.id = friendlyByteBuf.readVarInt();
         this.friendlyByteBuf = new FriendlyByteBuf(friendlyByteBuf.readBytes(friendlyByteBuf.readableBytes()));
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buffer) {
-        buffer.writeBoolean(clazz);
         buffer.writeVarInt(id);
         buffer.writeBytes(friendlyByteBuf.copy());
     }
@@ -47,32 +43,30 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
         if (event.isCanceled()) return;
 
         handler.getPlayer().server.execute(() -> {
-            if (clazz) {
-                Class<?> packetClass = NetworkSystem.getClassById(id);
-                if (packetClass != null) {
-                    if (packetClass.isAnnotationPresent(PacketTarget.class)) {
-                        ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
-                        if (targetType != ThreadType.SERVER) return;
-                    }
-                    try {
-                        IPacket<ServerGamePacketListenerImpl> instance = (IPacket<ServerGamePacketListenerImpl>)
-                                packetClass.getDeclaredConstructor().newInstance();
-                        instance.packetListenerSupplier = () -> handler;
-                        instance.read(friendlyByteBuf);
-                        NetworkSystem.dispatchPacket(instance);
-                    } catch (Throwable e) {
-                        AcademyCraft.LOGGER.error(
-                                "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",
-                                packetClass.getSimpleName(),
-                                id,
-                                handler.player.getGameProfile().getName(),
-                                e.getMessage(),
-                                e
-                        );
-                    }
-                } else {
-                    AcademyCraft.LOGGER.error("Unknown C2S class packetID {}", id);
+            Class<?> packetClass = NetworkSystem.getClassById(id);
+            if (packetClass != null) {
+                if (packetClass.isAnnotationPresent(PacketTarget.class)) {
+                    ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
+                    if (targetType != ThreadType.SERVER) return;
                 }
+                try {
+                    IPacket<ServerGamePacketListenerImpl> instance = (IPacket<ServerGamePacketListenerImpl>)
+                            packetClass.getDeclaredConstructor().newInstance();
+                    instance.packetListenerSupplier = () -> handler;
+                    instance.read(friendlyByteBuf);
+                    NetworkSystem.dispatchPacket(instance);
+                } catch (Throwable e) {
+                    AcademyCraft.LOGGER.error(
+                            "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",
+                            packetClass.getSimpleName(),
+                            id,
+                            handler.player.getGameProfile().getName(),
+                            e.getMessage(),
+                            e
+                    );
+                }
+            } else {
+                AcademyCraft.LOGGER.error("Unknown C2S class packetID {}", id);
             }
         });
     }

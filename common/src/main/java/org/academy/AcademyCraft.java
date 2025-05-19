@@ -1,17 +1,12 @@
 package org.academy;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import net.neoforged.bus.BusBuilderImpl;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.network.NetworkSystem;
-import org.academy.api.common.util.GameUtil;
-import org.academy.api.common.vanilla.ThreadType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,17 +46,6 @@ public final class AcademyCraft {
 
         if (errorMessage != null) {
             throw new RuntimeException(errorMessage);
-        }
-    }
-
-    public static void saveConfig() {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        File configFile = GameUtil.getThreadType() == ThreadType.CLIENT ? AcademyCraftClient.CLIENT_CONFIG_FILE : AcademyCraftServer.serverConfigFile;
-
-        try (FileWriter writer = new FileWriter(configFile)) {
-            gson.toJson(GameUtil.getThreadType() == ThreadType.CLIENT ? AcademyCraftClient.CLIENT_CONFIG : AcademyCraftServer.serverConfig, writer);
-        } catch (Throwable e) {
-            throw new RuntimeException("Failed to save config file: " + configFile.getAbsolutePath(), e);
         }
     }
 }
