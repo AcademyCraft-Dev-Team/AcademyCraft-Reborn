@@ -1,10 +1,16 @@
 package org.academy;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class AcademyCraftServerConfig extends AcademyCraftConfig<AcademyCraftServerConfig> {
+    @Override
+    protected File getConfigurationFile() {
+        return AcademyCraftServer.serverConfigFile;
+    }
+
     @Override
     protected void writeDefaultConfig(AcademyCraftServerConfig academyCraftConfig) {
         Ability ability = academyCraftConfig.getAbility();
@@ -36,7 +42,7 @@ public class AcademyCraftServerConfig extends AcademyCraftConfig<AcademyCraftSer
         metalEntities.put("academy", academyMetalEntities);
 
         ability.getSkills().put("railgun", railGun);
-        Generic generic = getGeneric();
+        Generic generic = academyCraftConfig.getGeneric();
         generic.getBooleanMap().put("attackPlayer", true);
         generic.getBooleanMap().put("destroyBlocks", true);
         generic.getBooleanMap().put("genOres", true);

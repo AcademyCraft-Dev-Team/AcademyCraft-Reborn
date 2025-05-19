@@ -19,11 +19,13 @@ import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
-public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
+public abstract class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
     @SerializedName("ability")
     private final Ability ability = new Ability();
     @SerializedName("generic")
     private final Generic generic = new Generic();
+
+    protected abstract File getConfigurationFile();
 
     public Ability getAbility() {
         return ability;
@@ -33,16 +35,22 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
         return generic;
     }
 
-    public T loadConfig(File file) {
+    public T loadConfig() {
+        File file = getConfigurationFile();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         if (!isValidConfig(file)) {
             return writeDefaultConfig(gson, file);
         }
         try (FileReader reader = new FileReader(file)) {
             Type type = getClass();
-            return gson.fromJson(reader, type);
+            T loadedConfig = gson.fromJson(reader, type);
+            if (loadedConfig == null) {
+                AcademyCraft.LOGGER.warn("Config file {} was empty or malformed, writing default.", file.getAbsolutePath());
+                return writeDefaultConfig(gson, file);
+            }
+            return loadedConfig;
         } catch (IOException e) {
-            throw new RuntimeException("Failed to read config file", e);
+            throw new RuntimeException("Failed to read config file: " + file.getAbsolutePath(), e);
         }
     }
 
@@ -63,8 +71,13 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
             }
 
             Field[] fields = AcademyCraftConfig.class.getDeclaredFields();
-
-            return GsonUtil.isValidField(jsonObject, fields);
+            List<Field> relevantFields = new java.util.ArrayList<>();
+            for (Field field : fields) {
+                if (field.isAnnotationPresent(SerializedName.class)) {
+                    relevantFields.add(field);
+                }
+            }
+            return GsonUtil.isValidField(jsonObject, relevantFields.toArray(new Field[0]));
         } catch (IOException e) {
             return false;
         }
@@ -75,7 +88,7 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
         try (FileWriter writer = new FileWriter(file)) {
             gson.toJson(defaultConfig, writer);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to write default config", e);
+            throw new RuntimeException("Failed to write default config: " + file.getAbsolutePath(), e);
         }
         return defaultConfig;
     }
@@ -97,7 +110,17 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
     protected void writeDefaultConfig(T academyCraftConfig) {
     }
 
-    public static class Ability {
+    public void save() {
+        File configFile = getConfigurationFile();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        try (FileWriter writer = new FileWriter(configFile)) {
+            gson.toJson(this, writer);
+        } catch (Throwable e) {
+            throw new RuntimeException("Failed to save config file: " + configFile.getAbsolutePath(), e);
+        }
+    }
+
+    public class Ability {
         @SerializedName("metalEntities")
         private final Map<String, List<String>> metalEntities = new HashMap<>();
         @SerializedName("metalBlocks")
@@ -126,7 +149,7 @@ public class AcademyCraftConfig<T extends AcademyCraftConfig<T>> {
 
         public void setCpRecoverSpeed(float cpRecoverSpeed) {
             this.cpRecoverSpeed = cpRecoverSpeed;
-            AcademyCraft.saveConfig();
+            save();
         }
 
         public Map<String, List<String>> getMetalEntities() {

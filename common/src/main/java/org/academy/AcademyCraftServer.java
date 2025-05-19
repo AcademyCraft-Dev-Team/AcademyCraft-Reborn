@@ -23,7 +23,7 @@ public class AcademyCraftServer {
         worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);
         AcademyCraft.checkFile(worldDataFile);
-        serverConfig = new AcademyCraftServerConfig().loadConfig(serverConfigFile);
+        serverConfig = new AcademyCraftServerConfig().loadConfig();
         worldData = WorldData.getWorldData(worldDataFile);
         AbilitySystemServer.init(server);
         WirelessManager.initServer();
