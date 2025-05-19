@@ -20,13 +20,14 @@ import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.vanilla.EnvType;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.tick.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -39,6 +40,11 @@ import java.util.*;
 
 public class DirStrike extends Skill {
     public static final Skill INSTANCE = new DirStrike();
+
+    static {
+        NetworkSystem.registerPacketType(StartPacket.class);
+        NetworkSystem.registerPacketType(EndPacket.class);
+    }
 
     private DirStrike() {
         super(SkillNames.DIR_STRIKE, 3, List.of(VectorReflection.INSTANCE));
@@ -74,7 +80,7 @@ public class DirStrike extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketHandlerClass(Server.class);
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -213,11 +219,11 @@ public class DirStrike extends Skill {
         }
     }
 
-    @PacketTarget(EnvType.SERVER)
+    @PacketTarget(ThreadType.SERVER)
     public static final class StartPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 
-    @PacketTarget(EnvType.SERVER)
+    @PacketTarget(ThreadType.SERVER)
     public static final class EndPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }

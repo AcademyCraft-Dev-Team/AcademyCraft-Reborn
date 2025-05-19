@@ -1,22 +1,23 @@
 package org.academy.internal.common.ability.builtin.meltdowner.skills;
 
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.common.network.packet.EmptyPacket;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -24,6 +25,10 @@ import java.util.Set;
 
 public class SingleHighSpeedElectronBeam extends Skill {
     public static final Skill INSTANCE = new SingleHighSpeedElectronBeam();
+
+    static {
+        NetworkSystem.registerPacketType(ShootPacket.class);
+    }
 
     private SingleHighSpeedElectronBeam() {
         super(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM, 1);
@@ -47,7 +52,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM, (serverPacketListener, packet) -> Server.handle(serverPacketListener.player));
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -56,12 +61,14 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
         public static void handleKey() {
             //       if (!ClientUtil.isScreenNull() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_SINGLE_HIGH_SPEED_ELECTRON_BEAM, new FriendlyByteBuf(Unpooled.buffer())));
+            NetworkSystemClient.sendPacket(new C2SPacket(new ShootPacket()));
         }
     }
 
     public static final class Server {
-        public static void handle(final @NotNull ServerPlayer player) {
+        @ClassPacketHandler
+        public static void handle(ShootPacket packet) {
+            ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             //       if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final Level level = player.level();
             final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
@@ -93,5 +100,9 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
             level.addFreshEntity(highSpeedElectronBeam);
         }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class ShootPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }

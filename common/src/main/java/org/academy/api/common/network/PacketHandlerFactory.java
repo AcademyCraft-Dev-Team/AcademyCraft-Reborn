@@ -20,13 +20,13 @@ public class PacketHandlerFactory {
     private static final String CLASS_DESCRIPTOR = Type.getDescriptor(Class.class);
 
     public static StaticPacketHandler createStatic(Method method) {
-        Class<? extends IPacket> specificPacketParameterType = (Class<? extends IPacket>) method.getParameterTypes()[0];
+        Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketHandlerFactory.class.getName().replace('.', '/') + "$"
-                    + method.getDeclaringClass().getName().replace('.', '_') + "$"
+            String className = PacketHandlerFactory.class.getSimpleName() + "$"
+                    + method.getDeclaringClass().getSimpleName() + "$"
                     + method.getName() + "$"
-                    + specificPacketParameterType.getName().replace('.', '_');
+                    + specificPacketParameterType.getSimpleName();
 
             byte[] classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, true);
 
@@ -42,13 +42,14 @@ public class PacketHandlerFactory {
     }
 
     public static InstancePacketHandler createInstance(Method method, Object targetInstance) {
-        Class<? extends IPacket> specificPacketParameterType = (Class<? extends IPacket>) method.getParameterTypes()[0];
+        Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketHandlerFactory.class.getName().replace('.', '/') + "$"
+            String className = PacketHandlerFactory.class.getSimpleName() + "$"
                     + targetInstance.getClass().getSimpleName() + "$"
                     + Integer.toHexString(System.identityHashCode(targetInstance)) + "$"
-                    + method.getName();
+                    + method.getName() + "$"
+                    + specificPacketParameterType.getSimpleName();
 
             byte[] classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, false);
 
@@ -62,7 +63,7 @@ public class PacketHandlerFactory {
     }
 
     private static byte[] makeHandlerClassBytecode(String classNameInternal, Method targetMethod,
-                                                   Class<? extends IPacket> specificPacketParameterType, boolean isStatic) {
+                                                   Class<? extends IPacket<?>> specificPacketParameterType, boolean isStatic) {
         ClassWriter cv = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         String parentInternalName = isStatic ? STATIC_HANDLER_PARENT_INTERNAL_NAME : INSTANCE_HANDLER_PARENT_INTERNAL_NAME;
         String targetClassInternalName = Type.getInternalName(targetMethod.getDeclaringClass());

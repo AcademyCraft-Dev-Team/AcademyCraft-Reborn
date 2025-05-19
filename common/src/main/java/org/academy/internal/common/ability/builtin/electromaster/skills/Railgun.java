@@ -3,11 +3,12 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
@@ -17,11 +18,14 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.electromaster.Electromaster;
@@ -30,7 +34,6 @@ import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
@@ -43,16 +46,17 @@ import static org.academy.internal.common.ability.builtin.electromaster.skills.R
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
 
+    static {
+        NetworkSystem.registerPacketType(ShootPacket.class);
+    }
+
     private Railgun() {
         super(SkillNames.RAILGUN, 5, 15000, List.of(ArcGenerate.INSTANCE));
     }
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_RAILGUN_SHOOT,
-                (serverPacketListener, packet) ->
-                        Server.handleShoot(serverPacketListener.player)
-        );
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     @Override
@@ -77,7 +81,7 @@ public class Railgun extends Skill {
 
         public static void handleKey() {
             //       if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_RAILGUN_SHOOT));
+            NetworkSystemClient.sendPacket(new C2SPacket(new ShootPacket()));
         }
 
         public static final class RailgunClientConfig extends ClientConfig.KeyBindingConfig {
@@ -86,7 +90,9 @@ public class Railgun extends Skill {
 
     @SuppressWarnings("resource")
     public static final class Server {
-        public static void handleShoot(final @NotNull Player player) {
+        @ClassPacketHandler
+        public static void handleShoot(ShootPacket packet) {
+            ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final UUID uuid = player.getUUID();
             final float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
@@ -133,5 +139,9 @@ public class Railgun extends Skill {
                 player.sendSystemMessage(Component.literal("No"));
             }
         }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class ShootPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }

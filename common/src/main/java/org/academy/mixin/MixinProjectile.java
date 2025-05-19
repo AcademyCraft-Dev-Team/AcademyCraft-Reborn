@@ -30,7 +30,7 @@ public abstract class MixinProjectile {
         Projectile projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide()) return;
         if (KineticEnergyApplied.Server.SKILL_STATS.containsKey(shooter.getUUID()) && KineticEnergyApplied.Server.SKILL_STATS.get(shooter.getUUID())) {
-            velocity = KineticEnergyApplied.Server.onShoot(projectile,shooter, x, y, z, velocity, inaccuracy);
+            velocity = KineticEnergyApplied.Server.onShoot(projectile,shooter, velocity);
 
             float f = -Mth.sin(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
             float f1 = -Mth.sin((x + z) * ((float) Math.PI / 180F));

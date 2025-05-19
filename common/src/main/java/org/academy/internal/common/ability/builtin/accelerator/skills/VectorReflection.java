@@ -20,7 +20,7 @@ import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
-import org.academy.api.common.vanilla.EnvType;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -177,7 +177,7 @@ public class VectorReflection extends Skill {
         }
     }
 
-    @PacketTarget(EnvType.SERVER)
+    @PacketTarget(ThreadType.SERVER)
     public static final class TogglePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }

@@ -11,7 +11,7 @@ import org.academy.api.common.network.FriendlyByteBufSerializer;
 import org.academy.api.common.network.FriendlyByteBufSerializers;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.vanilla.EnvType;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.network.C2SPacketHandler;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.jetbrains.annotations.ApiStatus;
@@ -85,10 +85,10 @@ public class C2SPacket implements Packet<ServerGamePacketListener> {
                     Class<?> packetClass = NetworkSystem.getClassById(id);
                     if (packetClass != null) {
                         if (packetClass.isAnnotationPresent(PacketTarget.class)) {
-                            EnvType[] envTypes = packetClass.getAnnotation(PacketTarget.class).value();
+                            ThreadType[] threadTypes = packetClass.getAnnotation(PacketTarget.class).value();
                             boolean hasEnvironment = false;
-                            for (EnvType envType : envTypes) {
-                                hasEnvironment = hasEnvironment || envType == EnvType.SERVER;
+                            for (ThreadType threadType : threadTypes) {
+                                hasEnvironment = hasEnvironment || threadType == ThreadType.SERVER;
                             }
                             if (!hasEnvironment) return;
                         }

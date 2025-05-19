@@ -9,7 +9,7 @@ import org.academy.api.common.network.SenderConstructor;
 import org.academy.api.common.network.packet.IPacket;
 import org.jetbrains.annotations.NotNull;
 
-@PacketTarget(EnvType.CLIENT)
+@PacketTarget(ThreadType.CLIENT)
 public class OpenScreenPacket extends IPacket<ClientPacketListener> {
     public String screenName;
     public FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
@@ -24,6 +24,7 @@ public class OpenScreenPacket extends IPacket<ClientPacketListener> {
         this.buf = buf;
     }
 
+    @SuppressWarnings("unused")
     @SenderConstructor
     public OpenScreenPacket(@NotNull String screenName) {
         this.screenName = screenName;

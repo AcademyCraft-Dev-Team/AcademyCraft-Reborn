@@ -1,6 +1,6 @@
 package org.academy.api.common.vanilla;
 
-public enum EnvType {
+public enum ThreadType {
     CLIENT,
-    DEDICATED_SERVER,
+    SERVER,
 }

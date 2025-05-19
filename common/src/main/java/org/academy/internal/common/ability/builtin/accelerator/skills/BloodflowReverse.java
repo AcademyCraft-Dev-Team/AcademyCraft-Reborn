@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.builtin.accelerator.skills;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,9 +15,12 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.Packets;
+import org.academy.api.common.network.ClassPacketHandler;
+import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.common.network.packet.EmptyPacket;
+import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
@@ -30,6 +34,10 @@ import static org.academy.internal.common.ability.builtin.accelerator.skills.Blo
 
 public class BloodflowReverse extends Skill {
     public static final Skill INSTANCE = new BloodflowReverse();
+
+    static {
+        NetworkSystem.registerPacketType(ReverseBloodflowPacket.class);
+    }
 
     private BloodflowReverse() {
         super(SkillNames.BLOODFLOW_REVERSE, 2, List.of(VectorReflection.INSTANCE));
@@ -55,9 +63,7 @@ public class BloodflowReverse extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerC2SPacketHandler(Packets.C2S_REVERSE_BLOODFLOW,
-                (listener, packet) -> Server.reverseBloodflow(listener.player)
-        );
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -68,7 +74,7 @@ public class BloodflowReverse extends Skill {
         public static final BloodflowReverseClientConfig CONFIG = new BloodflowReverseClientConfig();
 
         public static void reverseBloodflow() {
-            NetworkSystemClient.sendPacket(new C2SPacket(Packets.C2S_REVERSE_BLOODFLOW));
+            NetworkSystemClient.sendPacket(new C2SPacket(new ReverseBloodflowPacket()));
         }
 
         public static final class BloodflowReverseClientConfig extends ClientConfig.KeyBindingConfig {
@@ -79,7 +85,9 @@ public class BloodflowReverse extends Skill {
 
     public static final class Server {
         @SuppressWarnings("resource")
-        public static void reverseBloodflow(ServerPlayer player) {
+        @ClassPacketHandler
+        public static void reverseBloodflow(ReverseBloodflowPacket packet) {
+            ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             HitResult hitResult = player.pick(1, 1, false);
             List<LivingEntity> entityList = player.level().getEntitiesOfClass(LivingEntity.class,
                     new AABB(new BlockPos((int) hitResult.getLocation().x, (int) hitResult.getLocation().y, (int) hitResult.getLocation().z))
@@ -91,5 +99,9 @@ public class BloodflowReverse extends Skill {
                 }
             }
         }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class ReverseBloodflowPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }
