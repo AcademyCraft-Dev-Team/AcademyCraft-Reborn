@@ -20,7 +20,7 @@ public final class AcademyCraftClient {
     static {
         CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
         AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
-        CLIENT_CONFIG = AcademyCraftClientConfig.loadConfig(CLIENT_CONFIG_FILE);
+        CLIENT_CONFIG = new AcademyCraftClientConfig(CLIENT_CONFIG_FILE);
     }
 
     public static void init() {

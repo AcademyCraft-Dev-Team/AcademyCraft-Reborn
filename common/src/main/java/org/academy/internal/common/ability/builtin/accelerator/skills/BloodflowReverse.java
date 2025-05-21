@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -10,7 +13,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.ClientConfig;
+import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
@@ -24,13 +28,14 @@ import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-
-import static org.academy.internal.common.ability.builtin.accelerator.skills.BloodflowReverse.Client.KEY_NAME;
 
 public class BloodflowReverse extends Skill {
     public static final Skill INSTANCE = new BloodflowReverse();
@@ -45,15 +50,24 @@ public class BloodflowReverse extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
-        InputSystem.addKeyBinding(KEY_NAME, Client.CONFIG.getKeyBinding(KEY_NAME,
+        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.BloodflowReverseClientConfigData());
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
+                INSTANCE.name,
+                Client.BloodflowReverseClientConfigData.class
+        );
+        if (Client.CONFIG == null) {
+            Client.CONFIG = new Client.BloodflowReverseClientConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
+        }
+
+        InputSystem.addKeyBinding(Client.KEY_NAME_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_ACTION,
                         new InputSystem.InputPair(
                                 InputSystem.InputType.KEYBOARD,
                                 new InputSystem.KeyInfo(
                                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
                                         GLFW.GLFW_RELEASE,
                                         new LinkedHashSet<>(
-                                                GLFW.GLFW_MOD_ALT
+                                                Set.of(GLFW.GLFW_MOD_ALT)
                                         )
                                 )
                         )
@@ -70,15 +84,45 @@ public class BloodflowReverse extends Skill {
         public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_BLOODFLOW_REVERSE_ICON, 90, 50);
-        public static final String KEY_NAME = "bloodflow_reverse";
-        public static final BloodflowReverseClientConfig CONFIG = new BloodflowReverseClientConfig();
+        public static final String KEY_NAME_ACTION = SkillNames.BLOODFLOW_REVERSE + "_action";
+        public static BloodflowReverseClientConfigData CONFIG = new BloodflowReverseClientConfigData();
 
         public static void reverseBloodflow() {
             NetworkSystemClient.sendPacket(new C2SPacket(new ReverseBloodflowPacket()));
         }
 
-        public static final class BloodflowReverseClientConfig extends ClientConfig.KeyBindingConfig {
-            private BloodflowReverseClientConfig() {
+        public static class BloodflowReverseClientConfigData implements IClientConfigActions<BloodflowReverseClientConfigData> {
+            @SerializedName("keyBindings")
+            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+
+            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+                if (!keyBindings.containsKey(name)) {
+                    setKeyBinding(name, defaultConfig);
+                }
+                return keyBindings.get(name);
+            }
+            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+                this.keyBindings.put(name, keyBinding);
+            }
+
+            @Override
+            public @NotNull BloodflowReverseClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, BloodflowReverseClientConfigData.class);
+            }
+
+            @Override
+            public @NotNull JsonElement serialize(@NotNull BloodflowReverseClientConfigData configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull BloodflowReverseClientConfigData getDefaultConfig() {
+                return new BloodflowReverseClientConfigData();
+            }
+
+            @Override
+            public @NotNull Class<BloodflowReverseClientConfigData> getConfigClass() {
+                return BloodflowReverseClientConfigData.class;
             }
         }
     }

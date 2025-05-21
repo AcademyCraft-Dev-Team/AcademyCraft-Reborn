@@ -1,9 +1,10 @@
-package org.academy.api.common.network;
+package org.academy.api.common.network.packet;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.packet.FuturePacket;
-import org.academy.api.common.network.packet.FutureRequestPayload;
+import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.ReceiverConstructor;
+import org.academy.api.common.network.SenderConstructor;
 import org.academy.api.common.vanilla.ThreadType;
 
 @PacketTarget(ThreadType.SERVER)

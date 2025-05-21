@@ -20,8 +20,8 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.C2SAcquireCategoryPacket;
-import org.academy.api.common.ability.C2SLearnSkillPacket;
+import org.academy.api.common.ability.AcquireCategoryPacket;
+import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -149,7 +149,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                             if ("learn".equals(s)) {
                                 if (!learned) {
                                     if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
-                                        FutureManagerClient.sendFuturePacket(C2SAcquireCategoryPacket.class, (Consumer<ArrayList<String>>) strings -> {
+                                        FutureManagerClient.sendFutureRequestToServer(AcquireCategoryPacket.class, (Consumer<ArrayList<String>>) strings -> {
                                             Widget lastWidget = outputCommand;
                                             for (String string : strings) {
                                                 LabelWidget newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
@@ -423,7 +423,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             @Override
             public void run() {
                 if (skillInfo == null) return;
-                FutureManagerClient.sendFuturePacket(C2SLearnSkillPacket.class, (Boolean aBoolean) -> {
+                FutureManagerClient.sendFutureRequestToServer(LearnSkillPacket.class, (Boolean aBoolean) -> {
                     if (aBoolean) {
                         init();
                     }

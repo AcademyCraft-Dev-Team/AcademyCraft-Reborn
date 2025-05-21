@@ -7,6 +7,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.asm.InstanceCreator;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -43,22 +44,29 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
         if (event.isCanceled()) return;
 
         handler.getPlayer().server.execute(() -> {
-            Class<?> packetClass = NetworkSystem.getClassById(id);
-            if (packetClass != null) {
-                if (packetClass.isAnnotationPresent(PacketTarget.class)) {
-                    ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
+            Class<?> packetClassUntyped = NetworkSystem.getClassById(id);
+            if (packetClassUntyped != null) {
+                if (packetClassUntyped.isAnnotationPresent(PacketTarget.class)) {
+                    ThreadType targetType = packetClassUntyped.getAnnotation(PacketTarget.class).value();
                     if (targetType != ThreadType.SERVER) return;
                 }
                 try {
-                    IPacket<ServerGamePacketListenerImpl> instance = (IPacket<ServerGamePacketListenerImpl>)
-                            packetClass.getDeclaredConstructor().newInstance();
+                    Class<IPacket<ServerGamePacketListenerImpl>> packetClass =
+                            (Class<IPacket<ServerGamePacketListenerImpl>>) packetClassUntyped;
+                    InstanceCreator<IPacket<ServerGamePacketListenerImpl>> creator = NetworkSystem.getPacketCreator(packetClass);
+
+                    if (creator == null) {
+                        AcademyCraft.LOGGER.error("No creator instance found for C2S packet class: {}", packetClass.getName());
+                        return;
+                    }
+                    IPacket<ServerGamePacketListenerImpl> instance = creator.create();
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
                     NetworkSystem.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",
-                            packetClass.getSimpleName(),
+                            packetClassUntyped.getSimpleName(),
                             id,
                             handler.player.getGameProfile().getName(),
                             e.getMessage(),
