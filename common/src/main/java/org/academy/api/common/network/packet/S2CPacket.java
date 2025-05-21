@@ -9,6 +9,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.asm.InstanceCreator;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -44,22 +45,29 @@ public class S2CPacket implements Packet<ClientPacketListener> {
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
         Minecraft.getInstance().execute(() -> {
-            Class<?> packetClass = NetworkSystem.getClassById(id);
-            if (packetClass != null) {
-                if (packetClass.isAnnotationPresent(PacketTarget.class)) {
-                    ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
+            Class<?> packetClassUntyped = NetworkSystem.getClassById(id);
+            if (packetClassUntyped != null) {
+                if (packetClassUntyped.isAnnotationPresent(PacketTarget.class)) {
+                    ThreadType targetType = packetClassUntyped.getAnnotation(PacketTarget.class).value();
                     if (targetType != ThreadType.CLIENT) return;
                 }
                 try {
-                    IPacket<ClientGamePacketListener> instance = (IPacket<ClientGamePacketListener>)
-                            packetClass.getDeclaredConstructor().newInstance();
+                    Class<IPacket<ClientGamePacketListener>> packetClass =
+                            (Class<IPacket<ClientGamePacketListener>>) packetClassUntyped;
+                    InstanceCreator<IPacket<ClientGamePacketListener>> creator = NetworkSystem.getPacketCreator(packetClass);
+
+                    if (creator == null) {
+                        AcademyCraft.LOGGER.error("No creator instance found for S2C packet class: {}", packetClass.getName());
+                        return;
+                    }
+                    IPacket<ClientGamePacketListener> instance = creator.create();
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
                     NetworkSystem.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing S2C packet. Class: {}, ID: {}. Listener: {}. Error: {}",
-                            packetClass.getSimpleName(),
+                            packetClassUntyped.getSimpleName(),
                             id,
                             handler.getClass().getSimpleName(),
                             e.getMessage(),

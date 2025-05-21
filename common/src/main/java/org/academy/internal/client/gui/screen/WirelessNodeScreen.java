@@ -13,8 +13,8 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.wireless.C2SSetNodeNamePacket;
-import org.academy.api.common.wireless.C2SSetNodePassPacket;
+import org.academy.api.common.wireless.SetNodeNamePacket;
+import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 
@@ -214,7 +214,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             TextBoxWidget nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
             nameTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
-                    NetworkSystemClient.sendPacket(new C2SPacket(new C2SSetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
+                    NetworkSystemClient.sendPacket(new C2SPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
                 }
             };
             nameTextBox.onFocusGained();
@@ -243,7 +243,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
             TextBoxWidget passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
             passTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
-                    NetworkSystemClient.sendPacket(new C2SPacket(new C2SSetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
+                    NetworkSystemClient.sendPacket(new C2SPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
                 }
             };
             passTextBox.onFocusGained();

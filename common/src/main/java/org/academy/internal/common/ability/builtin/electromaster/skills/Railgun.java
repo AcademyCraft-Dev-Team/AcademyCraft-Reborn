@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.builtin.electromaster.skills;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -13,7 +16,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.ClientConfig;
+import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
@@ -34,14 +38,10 @@ import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.academy.internal.common.ability.builtin.electromaster.skills.Railgun.Client.KEY_NAME;
+import java.util.*;
 
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
@@ -61,8 +61,17 @@ public class Railgun extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClient.CLIENT_CONFIG.setSkillClientConfig(INSTANCE.name, Client.CLIENT_CONFIG);
-        InputSystem.addKeyBinding(KEY_NAME, Client.CLIENT_CONFIG.getKeyBinding(KEY_NAME,
+        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.RailgunClientConfigData());
+        Client.CLIENT_CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
+                INSTANCE.name,
+                Client.RailgunClientConfigData.class
+        );
+        if (Client.CLIENT_CONFIG == null) {
+            Client.CLIENT_CONFIG = new Client.RailgunClientConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CLIENT_CONFIG);
+        }
+
+        InputSystem.addKeyBinding(Client.KEY_NAME_ACTION, Client.CLIENT_CONFIG.getKeyBinding(Client.KEY_NAME_ACTION,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
@@ -76,15 +85,46 @@ public class Railgun extends Skill {
         public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(),
                         TextureResources.TEXTURE_RAILGUN_ICON, 200, 70.25f);
-        public static final String KEY_NAME = SkillNames.RAILGUN + ".shoot";
-        public static RailgunClientConfig CLIENT_CONFIG = new RailgunClientConfig();
+        public static final String KEY_NAME_ACTION = SkillNames.RAILGUN + ".shoot_action";
+        public static RailgunClientConfigData CLIENT_CONFIG = new RailgunClientConfigData();
 
         public static void handleKey() {
-            //       if (ClientUtil.hasScreen() || ClientUtil.lacksSkill(INSTANCE)) return;
             NetworkSystemClient.sendPacket(new C2SPacket(new ShootPacket()));
         }
 
-        public static final class RailgunClientConfig extends ClientConfig.KeyBindingConfig {
+        public static class RailgunClientConfigData implements IClientConfigActions<RailgunClientConfigData> {
+            @SerializedName("keyBindings")
+            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+
+            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+                if (!keyBindings.containsKey(name)) {
+                    setKeyBinding(name, defaultConfig);
+                }
+                return keyBindings.get(name);
+            }
+            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+                this.keyBindings.put(name, keyBinding);
+            }
+
+            @Override
+            public @NotNull RailgunClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, RailgunClientConfigData.class);
+            }
+
+            @Override
+            public @NotNull JsonElement serialize(@NotNull RailgunClientConfigData configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull RailgunClientConfigData getDefaultConfig() {
+                return new RailgunClientConfigData();
+            }
+
+            @Override
+            public @NotNull Class<RailgunClientConfigData> getConfigClass() {
+                return RailgunClientConfigData.class;
+            }
         }
     }
 
@@ -93,7 +133,6 @@ public class Railgun extends Skill {
         @SubscribePacket
         public static void handleShoot(ShootPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
-            //      if (ServerUtil.lacksSkill(player.getUUID(), INSTANCE)) return;
             final UUID uuid = player.getUUID();
             final float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
             if (computingPower < 100) {

@@ -7,7 +7,7 @@ public class NetworkSystemClient {
     public static Connection connection;
 
     public static void init() {
-        FutureManagerClient.register();
+        FutureManagerClient.init();
     }
 
     private NetworkSystemClient() {

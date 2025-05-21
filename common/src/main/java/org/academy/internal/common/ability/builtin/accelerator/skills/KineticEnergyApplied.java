@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -7,7 +10,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.ClientConfig;
+import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
@@ -20,6 +24,7 @@ import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -37,8 +42,17 @@ public class KineticEnergyApplied extends Skill {
 
     @Override
     public void initClient() {
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
-        InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME,
+        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.KineticEnergyAppliedClientConfigData());
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
+                INSTANCE.name,
+                Client.KineticEnergyAppliedClientConfigData.class
+        );
+        if (Client.CONFIG == null) {
+            Client.CONFIG = new Client.KineticEnergyAppliedClientConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
+        }
+
+        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE_ACTION,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -56,14 +70,46 @@ public class KineticEnergyApplied extends Skill {
     }
 
     public static final class Client {
-        public static final String KEY_NAME = INSTANCE.name + "_toggle";
-        public static Config CONFIG = new Config();
+        public static final String KEY_NAME_TOGGLE_ACTION = SkillNames.KINETIC_ENERGY_APPLIED + "_toggle_action";
+        public static KineticEnergyAppliedClientConfigData CONFIG = new KineticEnergyAppliedClientConfigData();
 
         public static void toggle() {
             NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
-        public static final class Config extends ClientConfig.KeyBindingConfig {
+        public static class KineticEnergyAppliedClientConfigData implements IClientConfigActions<KineticEnergyAppliedClientConfigData> {
+            @SerializedName("keyBindings")
+            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+
+            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+                if (!keyBindings.containsKey(name)) {
+                    setKeyBinding(name, defaultConfig);
+                }
+                return keyBindings.get(name);
+            }
+            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+                this.keyBindings.put(name, keyBinding);
+            }
+
+            @Override
+            public @NotNull KineticEnergyAppliedClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, KineticEnergyAppliedClientConfigData.class);
+            }
+
+            @Override
+            public @NotNull JsonElement serialize(@NotNull KineticEnergyAppliedClientConfigData configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull KineticEnergyAppliedClientConfigData getDefaultConfig() {
+                return new KineticEnergyAppliedClientConfigData();
+            }
+
+            @Override
+            public @NotNull Class<KineticEnergyAppliedClientConfigData> getConfigClass() {
+                return KineticEnergyAppliedClientConfigData.class;
+            }
         }
     }
 

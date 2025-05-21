@@ -1,7 +1,8 @@
-package org.academy.api.common.ability;
+package org.academy.api.common.wireless;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.ReceiverConstructor;
 import org.academy.api.common.network.SenderConstructor;
@@ -9,30 +10,26 @@ import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
 
-@PacketTarget(ThreadType.CLIENT)
-public class S2CExpSyncPacket extends IPacket<ClientPacketListener> {
-    public String skillName;
-    public float exp;
+@PacketTarget(ThreadType.SERVER)
+public class DisconnectNodePacket extends IPacket<ServerGamePacketListenerImpl> {
+    public BlockPos userPos;
 
     @ReceiverConstructor
-    public S2CExpSyncPacket() {
+    public DisconnectNodePacket() {
     }
 
     @SenderConstructor
-    public S2CExpSyncPacket(String skillName, float exp) {
-        this.skillName = skillName;
-        this.exp = exp;
+    public DisconnectNodePacket(BlockPos userPos) {
+        this.userPos = userPos;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.skillName = buf.readUtf();
-        this.exp = buf.readFloat();
+        this.userPos = buf.readBlockPos();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeUtf(this.skillName);
-        buf.writeFloat(this.exp);
+        buf.writeBlockPos(this.userPos);
     }
 }

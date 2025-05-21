@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
-import net.minecraft.server.MinecraftServer;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
@@ -14,16 +13,6 @@ public class PlasmaGeneration extends Skill {
 
     private PlasmaGeneration() {
         super(SkillNames.PLASMA_GENERATION, 5, List.of(VectorReflection.INSTANCE, StormWing.INSTANCE));
-    }
-
-    @Override
-    public void initClient() {
-        Client.SKILL_INFO.x();
-    }
-
-    @Override
-    public void initServer(MinecraftServer server) {
-        super.initServer(server);
     }
 
     public static final class Client {

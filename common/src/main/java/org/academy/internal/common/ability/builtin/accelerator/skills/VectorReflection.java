@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -10,7 +13,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.ClientConfig;
+import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
@@ -29,11 +33,10 @@ import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
-
-import static org.academy.internal.common.ability.builtin.accelerator.skills.VectorReflection.Client.KEY_NAME_TOGGLE;
 
 public class VectorReflection extends Skill {
     public static final Skill INSTANCE = new VectorReflection();
@@ -48,8 +51,17 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initClient() {
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, new Client.VectorReflectionClientConfig());
-        InputSystem.addKeyBinding(KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(KEY_NAME_TOGGLE,
+        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.VectorReflectionClientConfigData());
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
+                INSTANCE.name,
+                Client.VectorReflectionClientConfigData.class
+        );
+        if (Client.CONFIG == null) {
+            Client.CONFIG = new Client.VectorReflectionClientConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
+        }
+
+        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE_ACTION,
                         new InputSystem.InputPair(
                                 InputSystem.InputType.KEYBOARD,
                                 new InputSystem.KeyInfo(
@@ -64,21 +76,53 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystem.unregisterPacketListener(Server.class);
+        NetworkSystem.registerPacketListener(Server.class);
     }
 
     public static final class Client {
         public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         TextureResources.TEXTURE_VECTOR_REFLECTION_ICON, 20, 70.25f);
-        public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + ".toggle";
-        public static VectorReflectionClientConfig CONFIG = new VectorReflectionClientConfig();
+        public static final String KEY_NAME_TOGGLE_ACTION = SkillNames.VECTOR_REFLECTION + "_toggle_action";
+        public static VectorReflectionClientConfigData CONFIG = new VectorReflectionClientConfigData();
 
         public static void toggleReflection() {
             NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
-        public static final class VectorReflectionClientConfig extends ClientConfig.KeyBindingConfig {
+        public static class VectorReflectionClientConfigData implements IClientConfigActions<VectorReflectionClientConfigData> {
+            @SerializedName("keyBindings")
+            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+
+            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+                if (!keyBindings.containsKey(name)) {
+                    setKeyBinding(name, defaultConfig);
+                }
+                return keyBindings.get(name);
+            }
+            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+                this.keyBindings.put(name, keyBinding);
+            }
+
+            @Override
+            public @NotNull VectorReflectionClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, VectorReflectionClientConfigData.class);
+            }
+
+            @Override
+            public @NotNull JsonElement serialize(@NotNull VectorReflectionClientConfigData configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull VectorReflectionClientConfigData getDefaultConfig() {
+                return new VectorReflectionClientConfigData();
+            }
+
+            @Override
+            public @NotNull Class<VectorReflectionClientConfigData> getConfigClass() {
+                return VectorReflectionClientConfigData.class;
+            }
         }
     }
 

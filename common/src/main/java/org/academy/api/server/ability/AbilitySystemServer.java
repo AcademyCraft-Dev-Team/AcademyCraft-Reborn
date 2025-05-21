@@ -12,10 +12,11 @@ import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.packet.S2CPacket;
-import org.academy.api.common.ability.C2SAcquireCategoryPacket;
-import org.academy.api.common.ability.C2SLearnSkillPacket;
-import org.academy.api.common.ability.S2CExpSyncPacket;
+import org.academy.api.common.ability.AcquireCategoryPacket;
+import org.academy.api.common.ability.LearnSkillPacket;
+import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.network.FutureManagerServer;
@@ -63,7 +64,7 @@ public class AbilitySystemServer {
 
     @SuppressWarnings("resource")
     public static void registerPacketHandler() {
-        FutureManagerServer.registerFutureProcessor(C2SAcquireCategoryPacket.class, (packet, listener) -> {
+        FutureManagerServer.registerFutureProcessor(AcquireCategoryPacket.class, (packet, listener) -> {
             ServerPlayer player = listener.player;
             ServerLevel level = player.serverLevel();
             BlockPos userPos = packet.userPos;
@@ -90,7 +91,7 @@ public class AbilitySystemServer {
             return Collections.singletonList("Error: Block is not a WirelessUser.");
         });
 
-        FutureManagerServer.registerFutureProcessor(C2SLearnSkillPacket.class, (packet, listener) -> {
+        FutureManagerServer.registerFutureProcessor(LearnSkillPacket.class, (packet, listener) -> {
             ServerPlayer player = listener.player;
             ServerLevel level = player.serverLevel();
             String skillName = packet.skillName;
@@ -185,7 +186,7 @@ public class AbilitySystemServer {
             skillData.exp = exp;
             Player player = LIVE_PLAYER_MAP.get(uuid);
             if (player != null) {
-                player.packetConsumer.accept(new S2CPacket(new S2CExpSyncPacket(skill, skillData.exp)));
+                player.packetConsumer.accept(new S2CPacket(new ExpSyncPacket(skill, skillData.exp)));
             }
         }
     }
@@ -358,9 +359,11 @@ public class AbilitySystemServer {
 
     public static void registerContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.register(serverContext);
+        NetworkSystem.registerPacketListener(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.unregister(serverContext);
+        NetworkSystem.unregisterPacketListener(serverContext);
     }
 }

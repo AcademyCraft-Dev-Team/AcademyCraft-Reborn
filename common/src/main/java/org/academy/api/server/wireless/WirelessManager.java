@@ -18,13 +18,13 @@ public class WirelessManager {
     public static void initServer() {
         NetworkSystem.registerPacketListener(WirelessManager.class);
 
-        FutureManagerServer.registerFutureProcessor(C2SGetAvailableNodesPacket.class, (packet, listener) -> {
+        FutureManagerServer.registerFutureProcessor(GetAvailableNodesPacket.class, (packet, listener) -> {
             ServerLevel level = listener.player.serverLevel();
             BlockPos requesterPos = packet.requesterPos;
             return getAvailableNodes(level, requesterPos);
         });
 
-        FutureManagerServer.registerFutureProcessor(C2SGetCurrentNodePacket.class, (packet, listener) -> {
+        FutureManagerServer.registerFutureProcessor(GetCurrentNodePacket.class, (packet, listener) -> {
             ServerLevel level = listener.player.serverLevel();
             BlockPos userPos = packet.userPos;
             Pair<Boolean, String> currentNode = getCurrentNode(level, userPos);
@@ -33,7 +33,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleConnectNode(C2SConnectNodePacket packet) {
+    public static void handleConnectNode(ConnectNodePacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos userPos = packet.userPos;
@@ -43,7 +43,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleDisconnectNode(C2SDisconnectNodePacket packet) {
+    public static void handleDisconnectNode(DisconnectNodePacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos userPos = packet.userPos;
@@ -51,7 +51,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleSetNodeName(C2SSetNodeNamePacket packet) {
+    public static void handleSetNodeName(SetNodeNamePacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos nodePos = packet.nodePos;
@@ -60,7 +60,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleSetNodePass(C2SSetNodePassPacket packet) {
+    public static void handleSetNodePass(SetNodePassPacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos nodePos = packet.nodePos;
