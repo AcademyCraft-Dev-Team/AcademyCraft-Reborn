@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.MinecraftServer;
@@ -11,9 +14,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
-import org.academy.api.client.config.ClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
@@ -27,12 +31,13 @@ import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.tick.ServerTickEvent;
+import org.academy.api.server.vanilla.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.Smoke;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -51,7 +56,16 @@ public class DirStrike extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(name, Client.CONFIG);
+        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.DirStrikeClientConfigData());
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
+                INSTANCE.name,
+                Client.DirStrikeClientConfigData.class
+        );
+        if (Client.CONFIG == null) {
+            Client.CONFIG = new Client.DirStrikeClientConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
+        }
+
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(Client.KEY_NAME_START, new InputSystem.InputPair(
                 InputSystem.InputType.KEYBOARD,
                 new InputSystem.KeyInfo(
@@ -87,9 +101,9 @@ public class DirStrike extends Skill {
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_DIR_STRIKE_ICON, 100, 110);
         public static Context context;
-        public static final String KEY_NAME_START = SkillNames.DIR_STRIKE + "_start";
-        public static final String KEY_NAME_END = SkillNames.DIR_STRIKE + "_end";
-        public static final Config CONFIG = new Config();
+        public static final String KEY_NAME_START = SkillNames.DIR_STRIKE + "_action_start";
+        public static final String KEY_NAME_END = SkillNames.DIR_STRIKE + "_action_end";
+        public static DirStrikeClientConfigData CONFIG = new DirStrikeClientConfigData();
 
         public static void onStart() {
             if (context != null) return;
@@ -106,10 +120,41 @@ public class DirStrike extends Skill {
             }
         }
 
-        public static final class Config extends ClientConfig.KeyBindingConfig {
-            private Config() {
+        public static class DirStrikeClientConfigData implements IClientConfigActions<DirStrikeClientConfigData> {
+            @SerializedName("keyBindings")
+            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+
+            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+                if (!keyBindings.containsKey(name)) {
+                    setKeyBinding(name, defaultConfig);
+                }
+                return keyBindings.get(name);
+            }
+            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+                this.keyBindings.put(name, keyBinding);
+            }
+
+            @Override
+            public @NotNull DirStrikeClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, DirStrikeClientConfigData.class);
+            }
+
+            @Override
+            public @NotNull JsonElement serialize(@NotNull DirStrikeClientConfigData configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull DirStrikeClientConfigData getDefaultConfig() {
+                return new DirStrikeClientConfigData();
+            }
+
+            @Override
+            public @NotNull Class<DirStrikeClientConfigData> getConfigClass() {
+                return DirStrikeClientConfigData.class;
             }
         }
+
 
         public static final class Context implements ClientContext {
             public LocalPlayer player;

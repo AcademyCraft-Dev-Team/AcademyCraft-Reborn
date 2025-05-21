@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -12,7 +15,8 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.api.client.config.ClientConfig;
+import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.RendererManager;
@@ -32,8 +36,10 @@ import org.academy.internal.common.world.entity.player.PlayerSyncData;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class StormWing extends Skill {
@@ -52,8 +58,17 @@ public class StormWing extends Skill {
     @Override
     public void initClient() {
         RendererManager.registerEffectRenderer(StormWingEffectRenderer.INSTANCE);
-        AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(INSTANCE.name, Client.CONFIG);
-        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
+        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.StormWingClientConfigData());
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
+                INSTANCE.name,
+                Client.StormWingClientConfigData.class
+        );
+        if (Client.CONFIG == null) {
+            Client.CONFIG = new Client.StormWingClientConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
+        }
+
+        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE_ACTION,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -79,8 +94,8 @@ public class StormWing extends Skill {
         public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_STORM_WING_ICON, 150, 70.25f);
-        public static final String KEY_NAME_TOGGLE = SkillNames.STORM_WING + "_toggle";
-        public static final StormWingClientConfig CONFIG = new StormWingClientConfig();
+        public static final String KEY_NAME_TOGGLE_ACTION = SkillNames.STORM_WING + "_toggle_action";
+        public static StormWingClientConfigData CONFIG = new StormWingClientConfigData();
 
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
@@ -119,8 +134,38 @@ public class StormWing extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
-        public static final class StormWingClientConfig extends ClientConfig.KeyBindingConfig {
-            private StormWingClientConfig() {
+        public static class StormWingClientConfigData implements IClientConfigActions<StormWingClientConfigData> {
+            @SerializedName("keyBindings")
+            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+
+            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+                if (!keyBindings.containsKey(name)) {
+                    setKeyBinding(name, defaultConfig);
+                }
+                return keyBindings.get(name);
+            }
+            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+                this.keyBindings.put(name, keyBinding);
+            }
+
+            @Override
+            public @NotNull StormWingClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, StormWingClientConfigData.class);
+            }
+
+            @Override
+            public @NotNull JsonElement serialize(@NotNull StormWingClientConfigData configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull StormWingClientConfigData getDefaultConfig() {
+                return new StormWingClientConfigData();
+            }
+
+            @Override
+            public @NotNull Class<StormWingClientConfigData> getConfigClass() {
+                return StormWingClientConfigData.class;
             }
         }
     }

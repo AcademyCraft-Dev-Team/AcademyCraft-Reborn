@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.builtin.accelerator.skills;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -14,9 +17,10 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
-import org.academy.api.client.config.ClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.CameraRenderer;
@@ -30,7 +34,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.tick.ServerTickEvent;
+import org.academy.api.server.vanilla.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
@@ -38,10 +42,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class VectorAccel extends Skill {
     public static final int MAX_CHARGE_TICKS = 40;
@@ -57,8 +58,17 @@ public class VectorAccel extends Skill {
 
     @Override
     public void initClient() {
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getSkillClientConfig(name, new Client.VecAccelClientConfig());
-        InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
+        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.VectorAccelClientConfigData());
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
+                INSTANCE.name,
+                Client.VectorAccelClientConfigData.class
+        );
+        if (Client.CONFIG == null) {
+            Client.CONFIG = new Client.VectorAccelClientConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
+        }
+
+        InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE_ACTION,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -68,7 +78,7 @@ public class VectorAccel extends Skill {
                         )
                 )
         ), Client::onChargeStart);
-        InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE,
+        InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE_ACTION,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -87,14 +97,14 @@ public class VectorAccel extends Skill {
     }
 
     public static final class Client {
-        public static Client.VecAccelClientConfig CONFIG = new Client.VecAccelClientConfig();
+        public static VectorAccelClientConfigData CONFIG = new VectorAccelClientConfigData();
         public static Context currentContext = null;
         public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/vec_accel/icon.png"), 20, 40);
 
-        public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
-        public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";
+        public static final String KEY_NAME_CHARGE_ACTION = SkillNames.VECTOR_ACCEL + "_charge_action";
+        public static final String KEY_NAME_RELEASE_ACTION = SkillNames.VECTOR_ACCEL + "_release_action";
 
         private static final CameraRenderer CAMERA_RENDERER = (poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix) -> {
             if (Client.currentContext == null || Client.currentContext.player == null || Minecraft.getInstance().screen != null) {
@@ -177,8 +187,39 @@ public class VectorAccel extends Skill {
             }
         }
 
+        public static class VectorAccelClientConfigData implements IClientConfigActions<VectorAccelClientConfigData> {
+            @SerializedName("keyBindings")
+            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
-        public static final class VecAccelClientConfig extends ClientConfig.KeyBindingConfig {
+            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+                if (!keyBindings.containsKey(name)) {
+                    setKeyBinding(name, defaultConfig);
+                }
+                return keyBindings.get(name);
+            }
+            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+                this.keyBindings.put(name, keyBinding);
+            }
+
+            @Override
+            public @NotNull VectorAccelClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, VectorAccelClientConfigData.class);
+            }
+
+            @Override
+            public @NotNull JsonElement serialize(@NotNull VectorAccelClientConfigData configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull VectorAccelClientConfigData getDefaultConfig() {
+                return new VectorAccelClientConfigData();
+            }
+
+            @Override
+            public @NotNull Class<VectorAccelClientConfigData> getConfigClass() {
+                return VectorAccelClientConfigData.class;
+            }
         }
 
         public static final class Context implements ClientContext {

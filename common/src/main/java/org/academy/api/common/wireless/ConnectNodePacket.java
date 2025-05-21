@@ -11,29 +11,33 @@ import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.SERVER)
-public class C2SSetNodeNamePacket extends IPacket<ServerGamePacketListenerImpl> {
-    public BlockPos nodePos;
-    public String newName;
+public class ConnectNodePacket extends IPacket<ServerGamePacketListenerImpl> {
+    public BlockPos userPos;
+    public String targetNodeName;
+    public String passwordAttempt;
 
     @ReceiverConstructor
-    public C2SSetNodeNamePacket() {
+    public ConnectNodePacket() {
     }
 
     @SenderConstructor
-    public C2SSetNodeNamePacket(BlockPos nodePos, String newName) {
-        this.nodePos = nodePos;
-        this.newName = newName;
+    public ConnectNodePacket(BlockPos userPos, String targetNodeName, String passwordAttempt) {
+        this.userPos = userPos;
+        this.targetNodeName = targetNodeName;
+        this.passwordAttempt = passwordAttempt;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.nodePos = buf.readBlockPos();
-        this.newName = buf.readUtf();
+        this.userPos = buf.readBlockPos();
+        this.targetNodeName = buf.readUtf();
+        this.passwordAttempt = buf.readUtf();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.nodePos);
-        buf.writeUtf(this.newName);
+        buf.writeBlockPos(this.userPos);
+        buf.writeUtf(this.targetNodeName);
+        buf.writeUtf(this.passwordAttempt);
     }
 }

@@ -1,5 +1,8 @@
 package org.academy.internal.client.hud;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -16,6 +19,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
@@ -24,10 +29,13 @@ import org.academy.api.client.renderer.hud.HUDRenderer;
 import org.academy.api.client.vanilla.ChangeScreenEvent;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -37,7 +45,8 @@ public class DataTerminalHUD implements HUDRenderer {
     public static boolean active = false;
     public static double xpos;
     public static double ypos;
-    public static final String KEY_NAME = "data_terminal_hud";
+    public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
+    public static final String KEY_NAME_TOGGLE_HUD = "toggle_data_terminal_hud_action";
     public static final DataTerminalHUD INSTANCE = new DataTerminalHUD();
     public static InputSystem.InputPair keyBinding;
     public static final float WIDTH = 150;
@@ -169,7 +178,14 @@ public class DataTerminalHUD implements HUDRenderer {
     public static void init() {
         HUDManager.registerHUDRenderer(INSTANCE);
         AcademyCraft.EVENT_BUS.register(DataTerminalHUD.class);
-        keyBinding = AcademyCraftClient.CLIENT_CONFIG.getKey(KEY_NAME,
+        AcademyCraftClientConfig.registerConfigActions(CONFIG_KEY_DATA_TERMINAL, new DataTerminalHUDConfigData());
+        DataTerminalHUDConfigData configData = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_DATA_TERMINAL, DataTerminalHUDConfigData.class);
+        if (configData == null) {
+            configData = new DataTerminalHUDConfigData();
+            AcademyCraftClient.CLIENT_CONFIG.setConfig(CONFIG_KEY_DATA_TERMINAL, configData);
+        }
+
+        keyBinding = configData.getKeyBinding(KEY_NAME_TOGGLE_HUD,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -179,7 +195,7 @@ public class DataTerminalHUD implements HUDRenderer {
                         )
                 )
         );
-        InputSystem.addKeyBinding(KEY_NAME, keyBinding, DataTerminalHUD::toggle);
+        InputSystem.addKeyBinding(KEY_NAME_TOGGLE_HUD, keyBinding, DataTerminalHUD::toggle);
     }
 
     @SubscribeEvent
@@ -288,5 +304,41 @@ public class DataTerminalHUD implements HUDRenderer {
     }
 
     private DataTerminalHUD() {
+    }
+
+    public static class DataTerminalHUDConfigData implements IClientConfigActions<DataTerminalHUDConfigData> {
+        @SerializedName("keyBindings")
+        private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+
+        public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+            if (!keyBindings.containsKey(name)) {
+                setKeyBinding(name, defaultConfig);
+            }
+            return keyBindings.get(name);
+        }
+
+        public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+            this.keyBindings.put(name, keyBinding);
+        }
+
+        @Override
+        public @NotNull DataTerminalHUDConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+            return gson.fromJson(jsonElement, DataTerminalHUDConfigData.class);
+        }
+
+        @Override
+        public @NotNull JsonElement serialize(@NotNull DataTerminalHUDConfigData configInstance, @NotNull Gson gson) {
+            return gson.toJsonTree(configInstance);
+        }
+
+        @Override
+        public @NotNull DataTerminalHUDConfigData getDefaultConfig() {
+            return new DataTerminalHUDConfigData();
+        }
+
+        @Override
+        public @NotNull Class<DataTerminalHUDConfigData> getConfigClass() {
+            return DataTerminalHUDConfigData.class;
+        }
     }
 }

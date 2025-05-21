@@ -5,13 +5,13 @@ import net.minecraft.network.FriendlyByteBuf;
 import org.academy.api.common.network.packet.FutureRequestPayload;
 import org.jetbrains.annotations.NotNull;
 
-public class C2SGetAvailableNodesPacket extends FutureRequestPayload {
+public class GetAvailableNodesPacket extends FutureRequestPayload {
     public BlockPos requesterPos;
 
-    public C2SGetAvailableNodesPacket() {
+    public GetAvailableNodesPacket() {
     }
 
-    public C2SGetAvailableNodesPacket(BlockPos requesterPos) {
+    public GetAvailableNodesPacket(BlockPos requesterPos) {
         this.requesterPos = requesterPos;
     }
 

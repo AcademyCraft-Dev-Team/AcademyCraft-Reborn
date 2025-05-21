@@ -1,16 +1,20 @@
-package org.academy.api.common.wireless;
+package org.academy.api.common.ability;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.FutureRequestPayload;
+import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
 
-public class C2SGetCurrentNodePacket extends FutureRequestPayload {
+@PacketTarget(ThreadType.SERVER)
+public class AcquireCategoryPacket extends FutureRequestPayload {
     public BlockPos userPos;
 
-    public C2SGetCurrentNodePacket() {}
+    public AcquireCategoryPacket() {
+    }
 
-    public C2SGetCurrentNodePacket(BlockPos userPos) {
+    public AcquireCategoryPacket(BlockPos userPos) {
         this.userPos = userPos;
     }
 

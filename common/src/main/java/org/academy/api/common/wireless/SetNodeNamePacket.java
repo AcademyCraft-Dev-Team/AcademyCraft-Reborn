@@ -11,29 +11,29 @@ import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.SERVER)
-public class C2SSetNodePassPacket extends IPacket<ServerGamePacketListenerImpl> {
+public class SetNodeNamePacket extends IPacket<ServerGamePacketListenerImpl> {
     public BlockPos nodePos;
-    public String newPass;
+    public String newName;
 
     @ReceiverConstructor
-    public C2SSetNodePassPacket() {
+    public SetNodeNamePacket() {
     }
 
     @SenderConstructor
-    public C2SSetNodePassPacket(BlockPos nodePos, String newPass) {
+    public SetNodeNamePacket(BlockPos nodePos, String newName) {
         this.nodePos = nodePos;
-        this.newPass = newPass;
+        this.newName = newName;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
         this.nodePos = buf.readBlockPos();
-        this.newPass = buf.readUtf();
+        this.newName = buf.readUtf();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
         buf.writeBlockPos(this.nodePos);
-        buf.writeUtf(this.newPass);
+        buf.writeUtf(this.newName);
     }
 }

@@ -6,14 +6,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import net.minecraft.network.ConnectionProtocol;
 import org.academy.AcademyCraft;
-import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.IPacket;
-import org.academy.api.common.network.packet.S2CPacket;
-import org.academy.api.common.ability.S2CExpSyncPacket;
-import org.academy.api.common.wireless.C2SConnectNodePacket;
-import org.academy.api.common.wireless.C2SDisconnectNodePacket;
-import org.academy.api.common.wireless.C2SSetNodeNamePacket;
-import org.academy.api.common.wireless.C2SSetNodePassPacket;
+import org.academy.api.common.network.packet.*;
+import org.academy.api.common.ability.ExpSyncPacket;
+import org.academy.api.common.asm.InstanceCreatorFactory;
+import org.academy.api.common.asm.InstanceCreator;
+import org.academy.api.common.wireless.ConnectNodePacket;
+import org.academy.api.common.wireless.DisconnectNodePacket;
+import org.academy.api.common.wireless.SetNodeNamePacket;
+import org.academy.api.common.wireless.SetNodePassPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,10 +28,22 @@ public class NetworkSystem {
     private static final Set<Class<? extends IPacket<?>>> REGISTERED_PACKET_TYPES = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private static final BiMap<Class<? extends IPacket<?>>, Integer> CLASS_TO_ID = HashBiMap.create();
     private static final BiMap<Integer, Class<? extends IPacket<?>>> ID_TO_CLASS = CLASS_TO_ID.inverse();
+    private static final Map<Class<? extends IPacket<?>>, InstanceCreator<? extends IPacket<?>>> PACKET_CREATORS = new ConcurrentHashMap<>();
 
     private static final ConcurrentHashMap<Class<? extends IPacket<?>>, List<PacketHandler>> TYPED_LISTENERS = new ConcurrentHashMap<>();
     private static final Map<Object, List<PacketHandler>> LISTENERS_BY_TARGET = new MapMaker().weakKeys().makeMap();
     private static final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    public static <T extends IPacket<?>> void registerPacketType(Class<T> packetClass) {
+        REGISTERED_PACKET_TYPES.add(packetClass);
+        PACKET_CREATORS.put(packetClass, InstanceCreatorFactory.createInstanceCreator(packetClass));
+    }
+
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public static <T extends IPacket<?>> InstanceCreator<T> getPacketCreator(Class<T> packetClass) {
+        return (InstanceCreator<T>) PACKET_CREATORS.get(packetClass);
+    }
 
     public static void init() {
         ConnectionProtocol.PROTOCOL_BY_PACKET.put(C2SPacket.class, ConnectionProtocol.PLAY);
@@ -39,11 +51,11 @@ public class NetworkSystem {
 
         registerPacketType(C2SFuturePacket.class);
         registerPacketType(S2CFuturePacket.class);
-        registerPacketType(S2CExpSyncPacket.class);
-        registerPacketType(C2SConnectNodePacket.class);
-        registerPacketType(C2SDisconnectNodePacket.class);
-        registerPacketType(C2SSetNodeNamePacket.class);
-        registerPacketType(C2SSetNodePassPacket.class);
+        registerPacketType(ExpSyncPacket.class);
+        registerPacketType(ConnectNodePacket.class);
+        registerPacketType(DisconnectNodePacket.class);
+        registerPacketType(SetNodeNamePacket.class);
+        registerPacketType(SetNodePassPacket.class);
 
         List<Class<? extends IPacket<?>>> sortedPackets = new ArrayList<>(REGISTERED_PACKET_TYPES);
         sortedPackets.sort(Comparator.comparing(Class::getName));
@@ -149,10 +161,6 @@ public class NetworkSystem {
         } finally {
             lock.writeLock().unlock();
         }
-    }
-
-    public static <T extends IPacket<?>> void registerPacketType(Class<T> packetClass) {
-        REGISTERED_PACKET_TYPES.add(packetClass);
     }
 
     public static <T extends IPacket<?>> int getPacketIdByType(Class<T> packetClass) {

@@ -2,11 +2,13 @@ package org.academy;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.google.gson.annotations.SerializedName;
-import org.academy.api.client.config.ClientConfig;
-import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.config.IClientConfigActions;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileReader;
@@ -14,89 +16,178 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
-@SuppressWarnings("unchecked")
 public class AcademyCraftClientConfig {
-    @SerializedName("skills")
-    private final Map<String, ClientConfig> skills = new HashMap<>();
-    @SerializedName("key")
-    private final Map<String, InputSystem.InputPair> key = new HashMap<>();
+    private final File configFile;
+    private JsonObject rootJsonConfig;
 
-    public AcademyCraftClientConfig() {}
+    private final Map<String, Object> runtimeConfigCache = new HashMap<>();
+    private static final Map<String, IClientConfigActions<?>> CONFIG_ACTIONS_MAP = new HashMap<>();
+    private static final Gson GSON_INTERNAL_SERIALIZER = new GsonBuilder().create();
 
-    public <T extends ClientConfig> T getSkillClientConfig(String skill, T defaultConfig) {
-        if (!skills.containsKey(skill)) {
-            setSkillClientConfig(skill, defaultConfig);
+    public AcademyCraftClientConfig(@NotNull File configFile) {
+        this.configFile = Objects.requireNonNull(configFile, "Config file cannot be null");
+        load();
+    }
+
+    public static void registerConfigActions(@NotNull String configKey, @NotNull IClientConfigActions<?> actions) {
+        Objects.requireNonNull(configKey, "Config key for registration cannot be null");
+        Objects.requireNonNull(actions, "ConfigActions for " + configKey + " cannot be null");
+        CONFIG_ACTIONS_MAP.put(configKey, actions);
+    }
+
+    private void load() {
+        if (!configFile.exists() || configFile.length() == 0) {
+            this.rootJsonConfig = new JsonObject();
+            applyAndSaveDefaults();
+            return;
         }
-        return (T) skills.get(skill);
-    }
 
-    public <T extends ClientConfig> void setSkillClientConfig(String skill, T newConfig) {
-        skills.put(skill, newConfig);
-    }
-
-    public InputSystem.InputPair getKey(String name, InputSystem.InputPair defaultValue) {
-        if (!key.containsKey(name)) {
-            setKey(name, defaultValue);
-        }
-        return key.get(name);
-    }
-
-    public void setKey(String name, InputSystem.InputPair value) {
-        key.put(name, value);
-        save();
-    }
-
-    public static AcademyCraftClientConfig loadConfig(File file) {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        if (!isValidClientConfig(file)) {
-            return writeDefaultClientConfig(gson, file);
-        }
-        try (FileReader reader = new FileReader(file)) {
-            AcademyCraftClientConfig loadedConfig = gson.fromJson(reader, AcademyCraftClientConfig.class);
-            if (loadedConfig == null) {
-                AcademyCraft.LOGGER.warn("Client config file {} was empty or malformed, writing default.", file.getAbsolutePath());
-                return writeDefaultClientConfig(gson, file);
+        try (FileReader reader = new FileReader(configFile)) {
+            JsonElement parsedElement = JsonParser.parseReader(reader);
+            if (parsedElement.isJsonObject()) {
+                this.rootJsonConfig = parsedElement.getAsJsonObject();
+                if (applyMissingDefaults()) {
+                    saveInternal();
+                }
+            } else {
+                this.rootJsonConfig = new JsonObject();
+                applyAndSaveDefaults();
             }
-            return loadedConfig;
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read client config file: " + file.getAbsolutePath(), e);
+        } catch (IOException | JsonSyntaxException e) {
+            this.rootJsonConfig = new JsonObject();
+            applyAndSaveDefaults();
         }
     }
 
-    private static boolean isValidClientConfig(File file) {
-        Gson gson = new GsonBuilder().create();
-        try (FileReader fileReader = new FileReader(file)) {
-            JsonObject jsonObject;
-            try {
-                jsonObject = gson.fromJson(fileReader, JsonObject.class);
-            } catch (JsonSyntaxException e) {
-                return false;
+    private boolean applyDefaultsInternal() {
+        boolean changed = false;
+        for (Map.Entry<String, IClientConfigActions<?>> entry : CONFIG_ACTIONS_MAP.entrySet()) {
+            String configKey = entry.getKey();
+            IClientConfigActions<?> actions = entry.getValue();
+            if (!this.rootJsonConfig.has(configKey)) {
+                this.rootJsonConfig.add(configKey, actions.serializeRaw(actions.getDefaultConfig(), GSON_INTERNAL_SERIALIZER));
+                changed = true;
             }
-            if (jsonObject == null) return false;
-            return jsonObject.has("key") && jsonObject.has("skills");
-        } catch (IOException e) {
-            return false;
+        }
+        return changed;
+    }
+
+    private void applyAndSaveDefaults() {
+        if (applyDefaultsInternal()) {
+            saveInternal();
         }
     }
 
-    private static AcademyCraftClientConfig writeDefaultClientConfig(Gson gson, File file) {
-        AcademyCraftClientConfig defaultConfig = new AcademyCraftClientConfig();
-        try (FileWriter writer = new FileWriter(file)) {
-            gson.toJson(defaultConfig, writer);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to write default client config: " + file.getAbsolutePath(), e);
+    private boolean applyMissingDefaults() {
+        return applyDefaultsInternal();
+    }
+
+    private void saveInternal() {
+        Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
+        try (FileWriter writer = new FileWriter(configFile)) {
+            gsonPretty.toJson(this.rootJsonConfig, writer);
+         String s =   gsonPretty.toJson(rootJsonConfig);
+         AcademyCraft.LOGGER.info(s);
+        } catch (Throwable e) {
+            AcademyCraft.LOGGER.warn("Failed to save config to {}", configFile.getAbsolutePath(), e);
         }
-        return defaultConfig;
     }
 
     public void save() {
-        File configFile = AcademyCraftClient.CLIENT_CONFIG_FILE;
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        try (FileWriter writer = new FileWriter(configFile)) {
-            gson.toJson(this, writer);
-        } catch (Throwable e) {
-            throw new RuntimeException("Failed to save client config file: " + configFile.getAbsolutePath(), e);
+        for (Map.Entry<String, Object> cacheEntry : runtimeConfigCache.entrySet()) {
+            String configKey = cacheEntry.getKey();
+            Object configInstance = cacheEntry.getValue();
+            IClientConfigActions<?> actions = CONFIG_ACTIONS_MAP.get(configKey);
+
+            if (actions != null) {
+                if (actions.getConfigClass().isInstance(configInstance)) {
+                    this.rootJsonConfig.add(configKey, actions.serializeRaw(configInstance, GSON_INTERNAL_SERIALIZER));
+                }
+            }
         }
+        saveInternal();
+    }
+
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public <T> T getConfig(@NotNull String configKey, @NotNull Class<T> expectedConfigClass) {
+        Objects.requireNonNull(configKey, "Config key cannot be null.");
+        Objects.requireNonNull(expectedConfigClass, "Expected config class cannot be null for key: " + configKey);
+
+        if (runtimeConfigCache.containsKey(configKey)) {
+            Object cachedConfig = runtimeConfigCache.get(configKey);
+            if (expectedConfigClass.isInstance(cachedConfig)) {
+                return (T) cachedConfig;
+            }
+            runtimeConfigCache.remove(configKey);
+        }
+
+        IClientConfigActions<?> actionsRaw = CONFIG_ACTIONS_MAP.get(configKey);
+        if (actionsRaw == null) {
+            AcademyCraft.LOGGER.warn("No config actions registered for key: {}. Returning null.", configKey);
+            return null;
+        }
+        if (!expectedConfigClass.isAssignableFrom(actionsRaw.getConfigClass())) {
+            AcademyCraft.LOGGER.warn("Requested config class {} for key {} does not match registered config class {}. Returning null.",
+                    expectedConfigClass.getName(), configKey, actionsRaw.getConfigClass().getName());
+            return null;
+        }
+        IClientConfigActions<T> actions = (IClientConfigActions<T>) actionsRaw;
+
+        JsonElement element = this.rootJsonConfig.get(configKey);
+
+        if (element != null && !element.isJsonNull()) {
+            return deserializeAndCache(configKey, element, actions);
+        } else {
+            return deserializeAndCacheDefault(configKey, actions);
+        }
+    }
+
+    private <T> T deserializeAndCache(String cacheKey, JsonElement element, IClientConfigActions<T> actions) {
+        T configInstance;
+        try {
+            configInstance = actions.deserialize(element, GSON_INTERNAL_SERIALIZER);
+        } catch (Exception e) {
+            AcademyCraft.LOGGER.warn("Failed to deserialize config for key: {}. Using default. Error: {}", cacheKey, e.getMessage());
+            configInstance = actions.getDefaultConfig();
+            updateJsonWithDefault(cacheKey, actions, configInstance);
+        }
+        runtimeConfigCache.put(cacheKey, configInstance);
+        return configInstance;
+    }
+
+    private <T> T deserializeAndCacheDefault(String cacheKey, IClientConfigActions<T> actions) {
+        T configInstance = actions.getDefaultConfig();
+        updateJsonWithDefault(cacheKey, actions, configInstance);
+        runtimeConfigCache.put(cacheKey, configInstance);
+        return configInstance;
+    }
+
+    private <T> void updateJsonWithDefault(String key, IClientConfigActions<T> actions, T defaultConfigInstance) {
+        JsonElement defaultJson = actions.serialize(defaultConfigInstance, GSON_INTERNAL_SERIALIZER);
+        this.rootJsonConfig.add(key, defaultJson);
+    }
+
+    public void setConfig(@NotNull String configKey, @NotNull Object configInstance) {
+        Objects.requireNonNull(configKey, "Config key cannot be null when setting config.");
+        Objects.requireNonNull(configInstance, "Config instance for " + configKey + " cannot be null.");
+
+        IClientConfigActions<?> actions = CONFIG_ACTIONS_MAP.get(configKey);
+        if (actions == null) {
+            AcademyCraft.LOGGER.warn("Attempted to set config for unregistered key: {}", configKey);
+            return;
+        }
+        if (!actions.getConfigClass().isInstance(configInstance)) {
+            AcademyCraft.LOGGER.warn("Attempted to set config with incorrect type for key: {}. Expected {}, got {}",
+                    configKey, actions.getConfigClass().getName(), configInstance.getClass().getName());
+            return;
+        }
+
+        runtimeConfigCache.put(configKey, configInstance);
+        JsonElement newJsonElement = actions.serializeRaw(configInstance, GSON_INTERNAL_SERIALIZER);
+        this.rootJsonConfig.add(configKey, newJsonElement);
+        save();
     }
 }
