@@ -1,10 +1,9 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "org.academy.fabric.mixin",
+  "package": "org.academy.forge.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
-    "MixinGui",
     "MixinRenderTarget"
   ],
   "injectors": {

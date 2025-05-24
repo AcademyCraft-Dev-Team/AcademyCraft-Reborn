@@ -2,13 +2,13 @@ package org.academy.api.common.ability;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.packet.FutureRequestPayload;
-import org.academy.api.common.vanilla.ThreadType;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.api.common.network.future.IRequestPayload;
+import org.academy.api.common.network.future.IResponsePayload;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-@PacketTarget(ThreadType.SERVER)
-public class LearnSkillPacket extends FutureRequestPayload {
+public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerImpl> {
     public String skillName;
     public BlockPos userPos;
 
@@ -20,14 +20,41 @@ public class LearnSkillPacket extends FutureRequestPayload {
     }
 
     @Override
-    public void readPayload(@NotNull FriendlyByteBuf buf) {
+    public void write(@NotNull FriendlyByteBuf buf) {
+        buf.writeUtf(this.skillName);
+        buf.writeBlockPos(this.userPos);
+    }
+
+    @Override
+    public void read(@NotNull FriendlyByteBuf buf) {
         this.skillName = buf.readUtf();
         this.userPos = buf.readBlockPos();
     }
 
+    @Nullable
     @Override
-    public void writePayload(@NotNull FriendlyByteBuf buf) {
-        buf.writeUtf(this.skillName);
-        buf.writeBlockPos(this.userPos);
+    public Class<Response> getExpectedResponseType() {
+        return Response.class;
+    }
+
+    public static class Response implements IResponsePayload {
+        public boolean success;
+
+        public Response() {
+        }
+
+        public Response(boolean success) {
+            this.success = success;
+        }
+
+        @Override
+        public void write(@NotNull FriendlyByteBuf buf) {
+            buf.writeBoolean(success);
+        }
+
+        @Override
+        public void read(@NotNull FriendlyByteBuf buf) {
+            this.success = buf.readBoolean();
+        }
     }
 }

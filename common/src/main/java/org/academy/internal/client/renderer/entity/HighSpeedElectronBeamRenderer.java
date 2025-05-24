@@ -101,7 +101,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
 
         Matrix4f headModelViewMatrix = poseStack.last().pose();
-        float headDiameterIncrease = 0.25f * entity.smoothProgress;
+        float headDiameterIncrease = 0.5f * entity.smoothProgress;
         float headDiameter = (ballRadius * 2.0f) + headDiameterIncrease;
         float headHalfDiameter = headDiameter / 2.0f;
 

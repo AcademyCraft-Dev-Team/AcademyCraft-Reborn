@@ -15,13 +15,13 @@ import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.network.FutureManagerClient;
+import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
+import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.academy.api.client.resource.TextureResources.RenderTypes.*;
@@ -149,17 +148,21 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                             if ("learn".equals(s)) {
                                 if (!learned) {
                                     if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
-                                        FutureManagerClient.sendFutureRequestToServer(AcquireCategoryPacket.class, (Consumer<ArrayList<String>>) strings -> {
-                                            Widget lastWidget = outputCommand;
-                                            for (String string : strings) {
-                                                LabelWidget newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
-                                                addOutput("output_info_" + string + newOutput.hashCode(), newOutput, outputList);
-                                                os.setY(newOutput.getY() + newOutput.getHeight());
-                                                textBox.setY(newOutput.getY() + newOutput.getHeight());
-                                                outputList.scrollToBottom();
-                                                lastWidget = newOutput;
-                                            }
-                                        }, mainPos);
+                                        AcquireCategoryPacket request = new AcquireCategoryPacket(mainPos);
+                                        FutureManagerClient.sendRequestToServer(request,
+                                                (AcquireCategoryPacket.Response response) -> {
+                                                    if (response != null && response.messages != null) {
+                                                        Widget lastWidget = outputCommand;
+                                                        for (String string : response.messages) {
+                                                            LabelWidget newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
+                                                            addOutput("output_info_" + string + newOutput.hashCode(), newOutput, outputList);
+                                                            os.setY(newOutput.getY() + newOutput.getHeight());
+                                                            textBox.setY(newOutput.getY() + newOutput.getHeight());
+                                                            outputList.scrollToBottom();
+                                                            lastWidget = newOutput;
+                                                        }
+                                                    }
+                                                });
                                         return;
                                     } else {
                                         singleLineOutput = "Insufficient energy available.";
@@ -218,11 +221,11 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             };
             screenWirelessPanel.addChild("screen_back", backgroundWidget);
 
-            PanelWidget wirelessPanel = WirelessPanelHelper.getWirelessPanel((width - WirelessPanelHelper.PANEL_WIDTH) / 2, (height - WirelessPanelHelper.PANEL_HEIGHT) / 2);
-            this.wirelessPanel = wirelessPanel;
-            screenWirelessPanel.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, wirelessPanel);
+            PanelWidget localWirelessPanel = WirelessPanelHelper.getWirelessPanel((width - WirelessPanelHelper.PANEL_WIDTH) / 2, (height - WirelessPanelHelper.PANEL_HEIGHT) / 2);
+            this.wirelessPanel = localWirelessPanel;
+            screenWirelessPanel.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, localWirelessPanel);
             {
-                nodeListPanel = wirelessPanel.getChildUnSafe("node_list");
+                nodeListPanel = localWirelessPanel.getChildUnSafe("node_list");
             }
         }
         rootContainer.addChild("panel_skill_info", skillInfoPanel);
@@ -249,16 +252,16 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     }
 
     private @NotNull PanelWidget getLeftPanel() {
-        PanelWidget leftPanel = new PanelWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT);
+        PanelWidget localLeftPanel = new PanelWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT);
         {
             ImageWidget leftPanelBack = new ImageWidget(0, 70, PANEL_LEFT_WIDTH, 115, RENDER_TYPE_ELEMENT_BACK_DARK);
-            leftPanel.addChild("left_panel_back", leftPanelBack);
+            localLeftPanel.addChild("left_panel_back", leftPanelBack);
             ImageWidget leftPanelBackBottom = new ImageWidget(4.25f, 0, 100, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE);
-            leftPanel.addChild("left_panel_back_bottom", leftPanelBackBottom);
+            localLeftPanel.addChild("left_panel_back_bottom", leftPanelBackBottom);
             ImageWidget leftPanelBackTop = new ImageWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_TOP);
-            leftPanel.addChild("left_panel_back_top", leftPanelBackTop);
+            localLeftPanel.addChild("left_panel_back_top", leftPanelBackTop);
             PanelWidget leftPanelInfoPanel = new PanelWidget(0, 70, PANEL_LEFT_WIDTH, 32);
-            leftPanel.addChild("left_panel_info", leftPanelInfoPanel);
+            localLeftPanel.addChild("left_panel_info", leftPanelInfoPanel);
             {
                 ImageWidget iconBack = new ImageWidget(0, 0, leftPanelInfoPanel.getHeight(), leftPanelInfoPanel.getHeight(), RENDER_TYPE_ICON_BOX);
                 leftPanelInfoPanel.addChild("icon_back", iconBack);
@@ -290,7 +293,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 leftPanelInfoPanel.addChild("label_level", levelLabel);
             }
             LabelWidget wirelessLabel = new LabelWidget("Current Node:", 8, 110);
-            leftPanel.addChild("label_wireless", wirelessLabel);
+            localLeftPanel.addChild("label_wireless", wirelessLabel);
             PanelButtonWidget wirelessButtonPanel = new PanelButtonWidget(8, 120, 90, 16, () -> {
                 AbstractContainerWidget wirelessRoot = screenWirelessPanel;
                 wirelessRoot.setVisible(true);
@@ -298,7 +301,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 requestCurrentNodeStatus();
                 requestAvailableNodes(getNodeList());
             });
-            leftPanel.addChild("button_wireless", wirelessButtonPanel);
+            localLeftPanel.addChild("button_wireless", wirelessButtonPanel);
             {
                 ImageWidget back = new ImageWidget(0, 0, 90, 14, RENDER_TYPE_ELEMENT_BACK_LIGHT);
                 wirelessButtonPanel.addChild("back", back);
@@ -308,17 +311,17 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 wirelessButtonPanel.addChild("label_name", nameLabel);
             }
             LabelWidget powerLabel = new LabelWidget("Current Power:", 8, 142.5f);
-            leftPanel.addChild("power_label", powerLabel);
+            localLeftPanel.addChild("power_label", powerLabel);
             ProgressBarWidget progressBarWidget = new ProgressBarWidget(9.25f, 157f, 90f, 9, () -> (float) abilityDeveloperBlockEntity.getEnergyStored() / abilityDeveloperBlockEntity.getMaxEnergyStorage());
-            leftPanel.addChild("progress_bar", progressBarWidget);
+            localLeftPanel.addChild("progress_bar", progressBarWidget);
         }
-        return leftPanel;
+        return localLeftPanel;
     }
 
     @Override
     public void updateConnectedNodeDisplay(boolean isNull, String nodeName) {
         WirelessPanelHelper.WirelessPanel.super.updateConnectedNodeDisplay(isNull, nodeName);
-        if (leftPanel.<PanelButtonWidget>getChildUnSafe("button_wireless").getChildren().get("label_name") instanceof LabelWidget labelWidget) {
+        if (leftPanel != null && leftPanel.<PanelButtonWidget>getChildUnSafe("button_wireless").getChildren().get("label_name") instanceof LabelWidget labelWidget) {
             labelWidget.value = getConnectedNodeName();
         }
     }
@@ -419,16 +422,15 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         final LabelWidget nameLabel = new LabelWidget("", 0, 0);
         final LabelWidget stateLabel = new LabelWidget("", 0, 0);
         final PanelWidget depPanel = new PanelWidget(0, 0, 0, 16);
-        final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, RENDER_TYPE_BUTTON, new Runnable() {
-            @Override
-            public void run() {
-                if (skillInfo == null) return;
-                FutureManagerClient.sendFutureRequestToServer(LearnSkillPacket.class, (Boolean aBoolean) -> {
-                    if (aBoolean) {
-                        init();
-                    }
-                }, skillInfo.skill.name, mainPos);
-            }
+        final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, RENDER_TYPE_BUTTON, () -> {
+            if (skillInfo == null) return;
+            LearnSkillPacket request = new LearnSkillPacket(skillInfo.skill.name, mainPos);
+            FutureManagerClient.sendRequestToServer(request,
+                    (LearnSkillPacket.Response response) -> {
+                        if (response != null && response.success) {
+                            init();
+                        }
+                    });
         });
         final LabelWidget energyLabel = new LabelWidget("", 0, 0);
 
@@ -457,7 +459,6 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         public float xOffset, yOffset;
         public final List<SkillInfo> dependencies = new ArrayList<>();
 
-        @SuppressWarnings("SuspiciousNameCombination")
         SkillWidget(SkillInfo skillInfo) {
             super(skillInfo.x, skillInfo.y, PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE,
                     RENDER_TYPE_SKILL_ICON.apply(skillInfo.skill.name, skillInfo.texture),
@@ -473,7 +474,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             Matrix4f root = guiGraphics.pose().last().pose();
             root.translate(xOffset, yOffset, 0f);
             targetScale = isHovered() ? 1.25f : 1.0f;
-            currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.getInstance().getDeltaFrameTime()));
+            currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, MathUtil.animationFactor(MathUtil.PI / 1.5f, Minecraft.getInstance().getDeltaFrameTime()));
             widthScale = currentScale;
             heightScale = currentScale;
             RenderType oldType = renderType;

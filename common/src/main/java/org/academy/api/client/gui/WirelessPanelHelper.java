@@ -2,17 +2,15 @@ package org.academy.api.client.gui;
 
 import net.minecraft.core.BlockPos;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.network.FutureManagerClient;
 import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.ConnectNodePacket;
 import org.academy.api.common.wireless.DisconnectNodePacket;
 import org.academy.api.common.wireless.GetAvailableNodesPacket;
 import org.academy.api.common.wireless.GetCurrentNodePacket;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 import static org.academy.api.client.resource.TextureResources.RenderTypes.*;
@@ -58,15 +56,21 @@ public class WirelessPanelHelper {
         BlockPos getPosition();
 
         default void requestAvailableNodes(SmoothScrollPanelWidget listPanel) {
-            FutureManagerClient.sendFutureRequestToServer(GetAvailableNodesPacket.class, (List<String> availableNodeNames) -> {
-                listPanel.clearChildren();
-                availableNodeNames.removeIf(s -> s.equals(getConnectedNodeName()));
-                for (int i = 0; i < availableNodeNames.size(); i++) {
-                    String name = availableNodeNames.get(i);
-                    PanelWidget nodeViewPanel = getNodeWidget(2, i * 18f, name, false, false);
-                    listPanel.addChild("node_" + name, nodeViewPanel);
-                }
-            }, getPosition());
+            GetAvailableNodesPacket requestPayload = new GetAvailableNodesPacket(getPosition());
+            FutureManagerClient.sendRequestToServer(
+                    requestPayload,
+                    (GetAvailableNodesPacket.Response response) -> {
+                        if (response != null && response.availableNodeNames != null) {
+                            listPanel.clearChildren();
+                            response.availableNodeNames.removeIf(s -> s.equals(getConnectedNodeName()));
+                            for (int i = 0; i < response.availableNodeNames.size(); i++) {
+                                String name = response.availableNodeNames.get(i);
+                                PanelWidget nodeViewPanel = getNodeWidget(2, i * 18f, name, false, false);
+                                listPanel.addChild("node_" + name, nodeViewPanel);
+                            }
+                        }
+                    }
+            );
         }
 
         default @NotNull PanelWidget getNodeWidget(float x, float y, String nodeName, boolean isConnected, boolean isNull) {
@@ -109,8 +113,15 @@ public class WirelessPanelHelper {
         }
 
         default void requestCurrentNodeStatus() {
-            FutureManagerClient.sendFutureRequestToServer(GetCurrentNodePacket.class, (Pair<Boolean, String> pair) ->
-                    updateConnectedNodeDisplay(pair.getLeft(), pair.getRight()), getPosition());
+            GetCurrentNodePacket requestPayload = new GetCurrentNodePacket(getPosition());
+            FutureManagerClient.sendRequestToServer(
+                    requestPayload,
+                    (GetCurrentNodePacket.Response response) -> {
+                        if (response != null) {
+                            updateConnectedNodeDisplay(response.isNull, response.nodeName);
+                        }
+                    }
+            );
         }
 
         default void updateConnectedNodeDisplay(boolean isNull, String nodeName) {
