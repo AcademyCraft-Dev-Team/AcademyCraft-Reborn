@@ -3,33 +3,57 @@ package org.academy.api.server.wireless;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.future.SubscribePayload;
 import org.academy.api.common.wireless.*;
 import org.academy.api.server.network.FutureManagerServer;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 public class WirelessManager {
     public static void initServer() {
-        NetworkSystem.registerPacketListener(WirelessManager.class);
+        NetworkSystemServer.registerPacketListener(WirelessManager.class);
+        FutureManagerServer.registerPayloadHandler(WirelessManager.class);
+    }
 
-        FutureManagerServer.registerFutureProcessor(GetAvailableNodesPacket.class, (packet, listener) -> {
-            ServerLevel level = listener.player.serverLevel();
-            BlockPos requesterPos = packet.requesterPos;
-            return getAvailableNodes(level, requesterPos);
-        });
+    @SubscribePayload
+    public static GetAvailableNodesPacket.Response handleGetAvailableNodes(GetAvailableNodesPacket payload) {
+        ServerPlayer player = null;
+        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        if (supplier != null) {
+            player = supplier.get().player;
+        }
+        if (player == null) {
+            AcademyCraft.LOGGER.error("WirelessManager: Player context not found for GetAvailableNodesPacket.");
+            return new GetAvailableNodesPacket.Response(Collections.emptyList());
+        }
+        ServerLevel level = player.serverLevel();
+        BlockPos requesterPos = payload.requesterPos;
+        return new GetAvailableNodesPacket.Response(getAvailableNodes(level, requesterPos));
+    }
 
-        FutureManagerServer.registerFutureProcessor(GetCurrentNodePacket.class, (packet, listener) -> {
-            ServerLevel level = listener.player.serverLevel();
-            BlockPos userPos = packet.userPos;
-            Pair<Boolean, String> currentNode = getCurrentNode(level, userPos);
-            return Pair.of(currentNode.getLeft(), currentNode.getRight());
-        });
+    @SubscribePayload
+    public static GetCurrentNodePacket.Response handleGetCurrentNode(GetCurrentNodePacket payload) {
+        ServerPlayer player = null;
+        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        if (supplier != null) {
+            player = supplier.get().player;
+        }
+        if (player == null) {
+            AcademyCraft.LOGGER.error("WirelessManager: Player context not found for GetCurrentNodePacket.");
+            return new GetCurrentNodePacket.Response(true, "Error");
+        }
+        ServerLevel level = player.serverLevel();
+        BlockPos userPos = payload.userPos;
+        Pair<Boolean, String> currentNode = getCurrentNode(level, userPos);
+        return new GetCurrentNodePacket.Response(currentNode.getLeft(), currentNode.getRight());
     }
 
     @SubscribePacket
@@ -81,19 +105,20 @@ public class WirelessManager {
             return;
         }
 
-        if (data.findNodePositionByName(newName) != null) {
-            AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken",
-                    player.getGameProfile().getName(), nodePos, newName);
+        if (data.findNodePositionByName(newName) != null && !data.findNodePositionByName(newName).equals(nodePos)) {
+            AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken by node at {}",
+                    player.getGameProfile().getName(), nodePos, newName, data.findNodePositionByName(newName));
             return;
         }
 
-        data.nodeNameMap.remove(oldCfg.name);
+        String oldNameForMap = oldCfg.name;
         oldCfg.name = newName;
+        data.nodeNameMap.remove(oldNameForMap);
         data.nodeNameMap.put(newName, nodePos);
 
         data.setDirty();
         AcademyCraft.LOGGER.debug("Player {} renamed node at {} from '{}' to '{}'",
-                player.getGameProfile().getName(), nodePos, oldCfg.name, newName);
+                player.getGameProfile().getName(), nodePos, oldNameForMap, newName);
     }
 
     public static void setNodePass(ServerPlayer player,
@@ -156,7 +181,7 @@ public class WirelessManager {
             wirelessUser.setConnectedNodePosition(nodePos);
             AcademyCraft.LOGGER.debug("User at {} successfully connected to node '{}' (at {}).", userPos, targetNodeName, nodePos);
         } else {
-            AcademyCraft.LOGGER.warn("Failed connecting user {} to node '{}': Node likely full.", userPos, targetNodeName);
+            AcademyCraft.LOGGER.warn("Failed connecting user {} to node '{}': Node likely full or user already connected elsewhere.", userPos, targetNodeName);
         }
     }
 
@@ -264,7 +289,7 @@ public class WirelessManager {
                 int capacity = entry.getValue();
                 double weight = userConfigMap.get(user).getSendWeight();
 
-                int share = (int) Math.floor((weight / insertWeight) * transferRate);
+                int share = (insertWeight > 0) ? (int) Math.floor((weight / insertWeight) * transferRate) : 0;
                 int amount = Math.min(Math.min(share, capacity), Math.min(energyStored, remainingBandwidth));
                 if (amount <= 0) continue;
 
@@ -283,7 +308,7 @@ public class WirelessManager {
                 int capacity = entry.getValue();
                 double weight = userConfigMap.get(user).getReceiveWeight();
 
-                int share = (int) Math.floor((weight / extractWeight) * remainingBandwidth);
+                int share = (extractWeight > 0) ? (int) Math.floor((weight / extractWeight) * remainingBandwidth) : 0;
                 int amount = Math.min(Math.min(share, capacity), Math.min(maxEnergy - energyStored, remainingBandwidth));
                 if (amount <= 0) continue;
 

@@ -9,6 +9,7 @@ import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.asm.InstanceCreator;
 import org.academy.api.common.vanilla.ThreadType;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -39,11 +40,11 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
     @SuppressWarnings("unchecked")
     @Override
     public void handle(@NotNull ServerGamePacketListenerImpl handler) {
-        C2SPacketEvent event = new C2SPacketEvent(this);
-        AcademyCraft.EVENT_BUS.post(event);
-        if (event.isCanceled()) return;
-
         handler.getPlayer().server.execute(() -> {
+            C2SPacketEvent event = new C2SPacketEvent(this);
+            AcademyCraft.EVENT_BUS.post(event);
+            if (event.isCanceled()) return;
+
             Class<?> packetClassUntyped = NetworkSystem.getClassById(id);
             if (packetClassUntyped != null) {
                 if (packetClassUntyped.isAnnotationPresent(PacketTarget.class)) {
@@ -62,7 +63,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
                     IPacket<ServerGamePacketListenerImpl> instance = creator.create();
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
-                    NetworkSystem.dispatchPacket(instance);
+                    NetworkSystemServer.dispatchServerPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",

@@ -20,6 +20,7 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.vanilla.ThreadType;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
@@ -70,7 +71,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystem.registerPacketListener(Server.class);
+        NetworkSystemServer.registerPacketListener(Server.class);
     }
 
     public static final class Client {

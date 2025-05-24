@@ -23,12 +23,17 @@ public abstract class DragBarWidget extends AbstractWidget {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && isHovered()) {
+        if (isHovered()) {
             startDragging = true;
             dragOffset = getThumbSize() / 2f;
             updateTargetFromMouse(getMouseRelative((float) mouseX, (float) mouseY));
             return true;
         }
+        return false;
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         startDragging = false;
         return false;
     }

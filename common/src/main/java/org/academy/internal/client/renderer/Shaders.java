@@ -15,6 +15,7 @@ public class Shaders {
     public static final List<Function<ResourceProvider, ShaderInstance>> SHADERS = new ArrayList<>();
     public static ShaderInstance test;
     public static ShaderInstance positionColorShader;
+    public static ShaderInstance gaussianBlurShader;
 
     static {
         SHADERS.add(new Function<>() {

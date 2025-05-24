@@ -7,6 +7,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.vanilla.OpenScreenPacket;
@@ -63,7 +64,7 @@ public class Screens {
 
     public static void register() {
         NetworkSystem.registerPacketType(OpenScreenPacket.class);
-        NetworkSystem.registerPacketListener(Screens.class);
+        NetworkSystemClient.registerPacketListener(Screens.class);
     }
 
     @SubscribePacket

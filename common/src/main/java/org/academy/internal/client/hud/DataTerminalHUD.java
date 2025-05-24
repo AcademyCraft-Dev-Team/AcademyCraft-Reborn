@@ -26,6 +26,7 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
 import org.academy.api.client.renderer.hud.HUDManager;
 import org.academy.api.client.renderer.hud.HUDRenderer;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ChangeScreenEvent;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
@@ -65,20 +66,20 @@ public class DataTerminalHUD implements HUDRenderer {
         float winW = window.getWidth(), winH = window.getHeight();
         float guiW = window.getGuiScaledWidth(), guiH = window.getGuiScaledHeight();
         float aspect = winW / winH;
-        float fov = (float) mc.options.fov().get();
+        float fov = 80;
         float fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspect);
 
-        RenderSystem.setProjectionMatrix(new Matrix4f().perspective(fovY, aspect, 1, 100), VertexSorting.DISTANCE_TO_ORIGIN);
+        RenderSystem.setProjectionMatrix(new Matrix4f().perspective(fovY, aspect, 1, 1000), VertexSorting.DISTANCE_TO_ORIGIN);
 
         PoseStack pose = RenderSystem.getModelViewStack();
         pose.pushPose();
         pose.setIdentity();
 
-        float z = -2;
+        float z = -1.985f;
         float scale = (2f * Math.abs(z) * (float) Math.tan(fovY / 2f)) / guiH;
         pose.translate(0, 0, z);
         pose.scale(scale, -scale, scale);
-        pose.translate(0, 0, -z - 2);
+        pose.translate(0, 0, -WIDTH * 0.5f);
 
         float panelX = guiW / 2 - WIDTH * 1.25f;
         float panelY = -HEIGHT * 0.5f;
@@ -117,10 +118,10 @@ public class DataTerminalHUD implements HUDRenderer {
         back.alpha = 0.25f;
         rootContainer.addChild("back", back);
         PanelWidget root = new PanelWidget(0, 0, WIDTH, HEIGHT);
+        root.setZ(root.getZ() + 1);
         rootContainer.addChild("root", root);
         {
             PanelWidget infoBar = new PanelWidget(0, 0, WIDTH, 32);
-            infoBar.setZ(infoBar.getZ() + 1);
             root.addChild("info_bar", infoBar);
             {
                 LocalPlayer player = Minecraft.getInstance().player;
@@ -137,12 +138,19 @@ public class DataTerminalHUD implements HUDRenderer {
                 infoBar.addChild("spilt_line", spiltLine);
             }
 
-            PanelWidget appArea = new PanelWidget(0, 32, WIDTH, HEIGHT - 32);
-            appArea.setZ(appArea.getZ() + 1);
-            root.addChild("app_area", appArea);
+            SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(0, 36, WIDTH, HEIGHT - 40);
+            root.addChild("area_app", appArea);
             {
-
+                int i = 20;
+                for (int i1 = 0; i1 < i; i1++) {
+                    ImageWidget imageWidget = new ImageWidget(0, i1 * 18, 32, 16, TextureResources.RenderTypes.RENDER_TYPE_BLEND_QUAD);
+                    appArea.addChild("image_widget_" + i1, imageWidget);
+                }
             }
+            VerticalScrollBarWidget appAreaBar = new VerticalScrollBarWidget(appArea,
+                    appArea.getX() + appArea.getWidth() - 8, appArea.getY(), 4, appArea.getHeight());
+            appAreaBar.showBackground = false;
+            root.addChild("bar_area_app", appAreaBar);
         }
 
         CursorWidget cursorWidget = new CursorWidget(8, 8);
@@ -201,8 +209,13 @@ public class DataTerminalHUD implements HUDRenderer {
     @SubscribeEvent
     public static void onMouseButton(MouseButtonEvent event) {
         if (active && Minecraft.getInstance().screen == null) {
-            if (event.button == GLFW_MOUSE_BUTTON_1) {
+            InputSystem.currentMouseButton = event.button;
+            InputSystem.currentMouseAction = event.action;
+            InputSystem.currentMouseModifier = event.modifiers;
+            if (event.action == GLFW_PRESS) {
                 rootContainer.mouseClicked(xpos, ypos, event.action);
+            } else {
+                rootContainer.mouseReleased(xpos, ypos, event.action);
             }
             event.setCanceled(true);
         }
@@ -233,12 +246,18 @@ public class DataTerminalHUD implements HUDRenderer {
             double newX = hudScreenX + DataTerminalHUD.xpos;
             double newY = hudScreenY + DataTerminalHUD.ypos;
 
+            rootContainer.mouseMoved(xpos, ypos);
+
+            if (InputSystem.currentMouseAction == GLFW_PRESS || InputSystem.currentMouseAction == GLFW_REPEAT) {
+                double f = (xpos - mouseHandler.xpos) * window.getGuiScaledWidth() / window.getScreenWidth();
+                double g = (ypos - mouseHandler.ypos) * window.getGuiScaledHeight() / window.getScreenHeight();
+                rootContainer.mouseDragged(xpos, ypos, InputSystem.currentMouseButton, f, g);
+            }
+
             mouseHandler.xpos = newX * guiScale;
             mouseHandler.ypos = newY * guiScale;
 
             GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().getWindow(), mouseHandler.xpos, mouseHandler.ypos);
-
-            rootContainer.mouseMoved(xpos, ypos);
             event.setCanceled(true);
         }
     }
@@ -246,7 +265,12 @@ public class DataTerminalHUD implements HUDRenderer {
     @SubscribeEvent
     public static void onMouseScroll(MouseScrollEvent event) {
         if (active && Minecraft.getInstance().screen == null) {
-            rootContainer.mouseScrolled(xpos, ypos, event.yOffset);
+            double yOffset = event.yOffset;
+            Options options = Minecraft.getInstance().options;
+            boolean discreteMouseScroll = options.discreteMouseScroll().get();
+            double mouseWheelSensitivity = options.mouseWheelSensitivity().get();
+            double d0 = (discreteMouseScroll ? Math.signum(yOffset) : yOffset) * mouseWheelSensitivity;
+            rootContainer.mouseScrolled(xpos, ypos, d0);
             event.setCanceled(true);
         }
     }

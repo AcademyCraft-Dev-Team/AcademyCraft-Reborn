@@ -7,6 +7,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.AcademyCraft;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.asm.InstanceCreator;
@@ -41,10 +42,11 @@ public class S2CPacket implements Packet<ClientPacketListener> {
     @SuppressWarnings("unchecked")
     @Override
     public void handle(@NotNull ClientPacketListener handler) {
-        S2CPacketEvent event = new S2CPacketEvent(this);
-        AcademyCraft.EVENT_BUS.post(event);
-        if (event.isCanceled()) return;
         Minecraft.getInstance().execute(() -> {
+            S2CPacketEvent event = new S2CPacketEvent(this);
+            AcademyCraft.EVENT_BUS.post(event);
+            if (event.isCanceled()) return;
+
             Class<?> packetClassUntyped = NetworkSystem.getClassById(id);
             if (packetClassUntyped != null) {
                 if (packetClassUntyped.isAnnotationPresent(PacketTarget.class)) {
@@ -63,7 +65,7 @@ public class S2CPacket implements Packet<ClientPacketListener> {
                     IPacket<ClientGamePacketListener> instance = creator.create();
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
-                    NetworkSystem.dispatchPacket(instance);
+                    NetworkSystemClient.dispatchClientPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing S2C packet. Class: {}, ID: {}. Listener: {}. Error: {}",

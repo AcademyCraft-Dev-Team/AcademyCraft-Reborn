@@ -1,20 +1,20 @@
-package org.academy.api.server.network;
+package org.academy.api.client.network.future;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.PacketListener;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraft;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.asm.InstanceCreator;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.future.*;
 import org.academy.api.common.network.future.asm.IPayloadHandlerInvoker;
 import org.academy.api.common.network.future.asm.PayloadHandlerInvokerFactory;
+import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.FutureRequestPacket;
 import org.academy.api.common.network.packet.FutureResponsePacket;
-import org.academy.api.common.network.packet.S2CPacket;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class FutureManagerServer {
+public class FutureManagerClient {
     private static final Map<Integer, PendingFutureInfo> pendingFutures = new HashMap<>();
     private static final BitSet usedFutureIds = new BitSet();
     private static final Map<Integer, IPayloadHandlerInvoker> requestHandlers = new HashMap<>();
@@ -33,11 +33,11 @@ public class FutureManagerServer {
     private record PendingFutureInfo(Consumer<?> callback, int expectedResponsePayloadId) {
     }
 
-    private FutureManagerServer() {
+    private FutureManagerClient() {
     }
 
     public static void init() {
-        NetworkSystemServer.registerPacketListener(FutureManagerServer.class);
+        NetworkSystemClient.registerPacketListener(FutureManagerClient.class);
     }
 
     private static int generateFutureId() {
@@ -65,20 +65,20 @@ public class FutureManagerServer {
             if (method.isAnnotationPresent(SubscribePayload.class)) {
                 boolean isStaticMethod = Modifier.isStatic(method.getModifiers());
                 if (!isStaticMethod && owner instanceof Class) {
-                    AcademyCraft.LOGGER.warn("Server: Cannot register non-static @SubscribePayload method {} from a Class object. Provide an instance.", method);
+                    AcademyCraft.LOGGER.warn("Client: Cannot register non-static @SubscribePayload method {} from a Class object. Provide an instance.", method);
                     continue;
                 }
                 if (isStaticMethod && !(owner instanceof Class)) {
-                    AcademyCraft.LOGGER.warn("Server: Should register static @SubscribePayload method {} using its Class object.", method);
+                    AcademyCraft.LOGGER.warn("Client: Should register static @SubscribePayload method {} using its Class object.", method);
                 }
 
                 Parameter[] parameters = method.getParameters();
                 if (parameters.length != 1 || !IRequestPayload.class.isAssignableFrom(parameters[0].getType())) {
-                    AcademyCraft.LOGGER.error("Server: Method {} annotated with @SubscribePayload must have exactly one IRequestPayload parameter.", method);
+                    AcademyCraft.LOGGER.error("Client: Method {} annotated with @SubscribePayload must have exactly one IRequestPayload parameter.", method);
                     continue;
                 }
                 if (!IResponsePayload.class.isAssignableFrom(method.getReturnType()) || method.getReturnType() == void.class) {
-                    AcademyCraft.LOGGER.error("Server: Method {} annotated with @SubscribePayload must return a type implementing IResponsePayload.", method);
+                    AcademyCraft.LOGGER.error("Client: Method {} annotated with @SubscribePayload must return a type implementing IResponsePayload.", method);
                     continue;
                 }
 
@@ -95,7 +95,7 @@ public class FutureManagerServer {
                 int requestTypeId = FutureManager.getPayloadId(requestType);
 
                 if (requestHandlers.containsKey(requestTypeId) && AcademyCraft.DEBUG_MODE) {
-                    AcademyCraft.LOGGER.warn("Server: Replacing payload handler for request type ID: {}", requestTypeId);
+                    AcademyCraft.LOGGER.warn("Client: Replacing payload handler for request type ID: {}", requestTypeId);
                 }
                 requestHandlers.put(requestTypeId, invoker);
             }
@@ -103,8 +103,8 @@ public class FutureManagerServer {
     }
 
     @SuppressWarnings("DuplicatedCode")
-    public static <T_RESP extends IResponsePayload, T_REQ_LISTENER extends PacketListener, REQUEST extends IRequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToClient(
-            ServerPlayer player, REQUEST requestPayload, Consumer<T_RESP> callback) {
+    public static <T_RESP extends IResponsePayload, T_REQ_LISTENER extends PacketListener, REQUEST extends IRequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToServer(
+            REQUEST requestPayload, Consumer<T_RESP> callback) {
         Class<T_RESP> responseClass = requestPayload.getExpectedResponseType();
         FutureManager.registerPayloadType(requestPayload.getClass());
         FutureManager.registerPayloadType(responseClass);
@@ -116,63 +116,51 @@ public class FutureManagerServer {
         FriendlyByteBuf payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
         requestPayload.write(payloadBuffer);
 
-        FutureRequestPacket<ClientPacketListener> packet = new FutureRequestPacket<>(futureId, requestTypeId, payloadBuffer);
-        player.connection.send(new S2CPacket(packet));
+        FutureRequestPacket<ServerGamePacketListenerImpl> packet = new FutureRequestPacket<>(futureId, requestTypeId, payloadBuffer);
+        NetworkSystemClient.sendPacket(new C2SPacket(packet));
     }
 
     @SubscribePacket
-    public static void handleFutureRequestFromClient(FutureRequestPacket<ServerGamePacketListenerImpl> requestPacket) {
-        Supplier<ServerGamePacketListenerImpl> supplier = requestPacket.packetListenerSupplier;
-        ServerGamePacketListenerImpl listener = supplier.get();
-        ServerPlayer player = listener.player;
-
-        IPayloadHandlerInvoker invoker = requestHandlers.get(requestPacket.payloadTypeId);
-        InstanceCreator<IRequestPayload<ServerGamePacketListenerImpl, ?>> creator = FutureManager.getPayloadCreator(requestPacket.payloadTypeId);
-        IRequestPayload<ServerGamePacketListenerImpl, ?> requestPayload = creator.create();
-        requestPayload.packetListenerSupplier = supplier;
-        requestPayload.read(requestPacket.payloadData);
-
-        IResponsePayload responsePayload = invoker.invoke(requestPayload);
-        int responseTypeId = FutureManager.getPayloadId(responsePayload.getClass());
-        FriendlyByteBuf responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
-        responsePayload.write(responseBuffer);
-        FutureResponsePacket<ClientPacketListener> responsePkt = new FutureResponsePacket<>(requestPacket.futureId, responseTypeId, responseBuffer);
-        player.connection.send(new S2CPacket(responsePkt));
-    }
-
-    @SubscribePacket
-    public static void handleFutureResponseFromClient(FutureResponsePacket<ServerGamePacketListenerImpl> responsePacket) {
-        Supplier<ServerGamePacketListenerImpl> supplier = responsePacket.packetListenerSupplier;
+    public static void handleFutureRequestFromServer(FutureRequestPacket<ClientPacketListener> requestPacket) {
+        Supplier<ClientPacketListener> supplier = requestPacket.packetListenerSupplier;
         if (supplier == null || supplier.get() == null) return;
 
-        PendingFutureInfo pendingInfo = getAndRemovePendingFuture(responsePacket.futureId);
-        if (pendingInfo == null) {
-            AcademyCraft.LOGGER.warn("Server: Received response for unknown/timed-out futureId: {}", responsePacket.futureId);
+        IPayloadHandlerInvoker invoker = requestHandlers.get(requestPacket.payloadTypeId);
+        if (invoker == null) {
+            AcademyCraft.LOGGER.error("Client: No handler for request payload ID {}", requestPacket.payloadTypeId);
             return;
         }
 
-        if (pendingInfo.expectedResponsePayloadId() != -1 && pendingInfo.expectedResponsePayloadId() != responsePacket.payloadTypeId) {
-            AcademyCraft.LOGGER.error("Server: Mismatched response. Expected ID {}, Got ID {}", pendingInfo.expectedResponsePayloadId(), responsePacket.payloadTypeId);
+        InstanceCreator<IRequestPayload<ClientPacketListener, ?>> creator = FutureManager.getPayloadCreator(requestPacket.payloadTypeId);
+        if (creator == null) {
+            AcademyCraft.LOGGER.error("Client: No creator for request payload ID {}", requestPacket.payloadTypeId);
             return;
         }
+        IRequestPayload<ClientPacketListener, ?> requestPayload = creator.create();
+        requestPayload.read(requestPacket.payloadData);
+        requestPayload.packetListenerSupplier = supplier;
+
+        IResponsePayload responsePayload = invoker.invoke(requestPayload);
+
+        if (responsePayload != null) {
+            int responseTypeId = FutureManager.getPayloadId(responsePayload.getClass());
+            FriendlyByteBuf responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
+            responsePayload.write(responseBuffer);
+            FutureResponsePacket<ServerGamePacketListenerImpl> responsePkt = new FutureResponsePacket<>(requestPacket.futureId, responseTypeId, responseBuffer);
+            NetworkSystemClient.sendPacket(new C2SPacket(responsePkt));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @SubscribePacket
+    public static void handleFutureResponseFromServer(FutureResponsePacket<ClientPacketListener> responsePacket) {
+        PendingFutureInfo pendingInfo = getAndRemovePendingFuture(responsePacket.futureId);
 
         InstanceCreator<? extends IPayload> creator = FutureManager.getPayloadCreator(responsePacket.payloadTypeId);
-        if (creator == null) {
-            AcademyCraft.LOGGER.error("Server: No creator for response payload ID {}", responsePacket.payloadTypeId);
-            return;
-        }
+        IPayload responsePayload = creator.create();
+        responsePayload.read(responsePacket.payloadData);
 
-        try {
-            IPayload responsePayload = creator.create();
-            responsePayload.read(responsePacket.payloadData);
-
-            @SuppressWarnings("unchecked")
-            Consumer<IPayload> unsafeConsumer = (Consumer<IPayload>) pendingInfo.callback();
-            if (unsafeConsumer != null) {
-                unsafeConsumer.accept(responsePayload);
-            }
-        } catch (Exception e) {
-            AcademyCraft.LOGGER.error("Server: Error processing response for futureId {}: {}", responsePacket.futureId, e.getMessage(), e);
-        }
+        Consumer<IPayload> callback = (Consumer<IPayload>) pendingInfo.callback();
+        callback.accept(responsePayload);
     }
 }
