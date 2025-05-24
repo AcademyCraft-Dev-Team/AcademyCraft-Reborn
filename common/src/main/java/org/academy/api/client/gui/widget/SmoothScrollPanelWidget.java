@@ -1,9 +1,15 @@
 package org.academy.api.client.gui.widget;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
+import org.lwjgl.opengl.GL30;
+
+import static org.lwjgl.opengl.GL30.*;
 
 public class SmoothScrollPanelWidget extends AbstractContainerWidget {
     public float scrollOffset;
@@ -33,23 +39,32 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
     public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, MathUtil.magicAnimationFactor(0.25f, partialTick));
+        RenderSystem.clear(GL30.GL_STENCIL_BUFFER_BIT, false);
+        scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, MathUtil.animationFactor(MathUtil.PI / 1.5f, Minecraft.getInstance().getDeltaFrameTime()));
 
         guiGraphics.pose().pushPose();
         guiGraphics.flush();
 
-        int x0 = (int) getAbsoluteX();
-        int y0 = (int) super.getAbsoluteY();
-        int x1 = x0 + (int) getWidth();
-        int y1 = y0 + (int) getHeight();
+        GL30.glEnable(GL30.GL_STENCIL_TEST);
 
-        guiGraphics.enableScissor(x0, y0, x1, y1);
-        guiGraphics.pose().translate(0, -scrollOffset, 0);
+        RenderSystem.colorMask(false, false, false, false);
+        RenderSystem.depthMask(false);
+        RenderSystem.stencilFunc(GL_ALWAYS, 1, 0xFF);
+        RenderSystem.stencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-
+        RenderUtil.fill(guiGraphics.pose().last().pose(), getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFFFFFFF, guiGraphics.bufferSource());
         guiGraphics.flush();
-        guiGraphics.disableScissor();
+
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.depthMask(true);
+        RenderSystem.stencilFunc(GL_EQUAL, 1, 0xFF);
+        RenderSystem.stencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+        guiGraphics.pose().translate(0, -scrollOffset, 0);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.flush();
+
+        GL30.glDisable(GL30.GL_STENCIL_TEST);
         guiGraphics.pose().popPose();
     }
 

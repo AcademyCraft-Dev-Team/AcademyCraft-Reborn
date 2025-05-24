@@ -6,7 +6,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-@SuppressWarnings("InvalidInjectorMethodSignature")
 @Mixin(ShaderInstance.class)
 public abstract class MixinShaderInstance {
     @ModifyArg(
@@ -17,7 +16,7 @@ public abstract class MixinShaderInstance {
             ),
             allow = 1
     )
-    private static String resourceLocation(String original) {
+    private String resourceLocation(String original) {
         String prefix = "shaders/core/";
         String[] parts = original.split(":");
 

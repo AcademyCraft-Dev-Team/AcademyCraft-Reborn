@@ -1,10 +1,12 @@
 package org.academy.api.server.ability;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.PacketListener;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
@@ -12,13 +14,14 @@ import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.ExpSyncPacket;
+import org.academy.api.common.network.future.SubscribePayload;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.network.FutureManagerServer;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.server.world.level.storage.WorldData;
@@ -27,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
@@ -42,7 +46,7 @@ public class AbilitySystemServer {
     public static boolean paused;
 
     public static void init(final MinecraftServer server) {
-        registerPacketHandler();
+        FutureManagerServer.registerPayloadHandler(AbilitySystemServer.class);
         minecraftServer = server;
         playerMap = AcademyCraftServer.worldData.getPlayers();
         for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
@@ -62,63 +66,93 @@ public class AbilitySystemServer {
         );
     }
 
-    @SuppressWarnings("resource")
-    public static void registerPacketHandler() {
-        FutureManagerServer.registerFutureProcessor(AcquireCategoryPacket.class, (packet, listener) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            BlockPos userPos = packet.userPos;
-            BlockEntity be = level.getBlockEntity(userPos);
-            if (be instanceof WirelessUser user) {
-                List<String> outputList = new ArrayList<>();
-                int energyStored = user.getEnergyStored();
-                if (energyStored > 10_000) {
-                    user.extractEnergy(10_000, false);
-                    MathUtil.WeightedRandom<AbilityCategory> weightedRandom = new MathUtil.WeightedRandom<>();
-                    for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
-                        if (abilityCategory != Level0.INSTANCE) {
-                            weightedRandom.addItem(abilityCategory, abilityCategory.probability);
-                        }
+    @SubscribePayload
+    public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
+        ServerPlayer player = null;
+        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        if (supplier != null) {
+            PacketListener listener = supplier.get();
+            if (listener instanceof ServerGamePacketListenerImpl gameListener) {
+                player = gameListener.player;
+            }
+        }
+
+        if (player == null) {
+            AcademyCraft.LOGGER.error("Failed to get ServerPlayer from AcquireCategoryPacket listener supplier.");
+            return new AcquireCategoryPacket.Response(Collections.singletonList("Error: Player context not found."));
+        }
+
+        ServerLevel level = player.serverLevel();
+        BlockPos userPos = payload.userPos;
+        BlockEntity be = level.getBlockEntity(userPos);
+        if (be instanceof WirelessUser user) {
+            List<String> outputList = new ArrayList<>();
+            int energyStored = user.getEnergyStored();
+            if (energyStored > 10_000) {
+                user.extractEnergy(10_000, false);
+                MathUtil.WeightedRandom<AbilityCategory> weightedRandom = new MathUtil.WeightedRandom<>();
+                for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
+                    if (abilityCategory != Level0.INSTANCE) {
+                        weightedRandom.addItem(abilityCategory, abilityCategory.probability);
                     }
-                    AbilityCategory abilityCategory = weightedRandom.getRandomItem();
+                }
+                AbilityCategory abilityCategory = weightedRandom.getRandomItem();
+                if (abilityCategory != null) {
                     setPlayerAbilityCategory(player.getUUID(), abilityCategory);
                     outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
                 } else {
-                    outputList.add("Insufficient energy available.");
+                    outputList.add("Error: No ability category could be selected.");
+                    AcademyCraft.LOGGER.error("WeightedRandom returned null for ability category selection.");
                 }
-                return outputList;
+            } else {
+                outputList.add("Insufficient energy available.");
             }
-            return Collections.singletonList("Error: Block is not a WirelessUser.");
-        });
+            return new AcquireCategoryPacket.Response(outputList);
+        }
+        return new AcquireCategoryPacket.Response(Collections.singletonList("Error: Block is not a WirelessUser."));
+    }
 
-        FutureManagerServer.registerFutureProcessor(LearnSkillPacket.class, (packet, listener) -> {
-            ServerPlayer player = listener.player;
-            ServerLevel level = player.serverLevel();
-            String skillName = packet.skillName;
-            BlockPos userPos = packet.userPos;
-            BlockEntity be = level.getBlockEntity(userPos);
-            if (be instanceof WirelessUser user) {
-                if (SKILL_MAP.containsKey(skillName)) {
-                    Skill skill = SKILL_MAP.get(skillName);
-                    int energy = skill.energy;
-                    boolean depLearned = true;
-                    for (Skill dep : skill.dependencies) {
-                        if (!getPlayerSkills(player.getUUID()).contains(dep.name)) {
-                            depLearned = false;
-                            break;
-                        }
-                    }
-                    boolean learned = playerMap.get(player.getUUID()).getSkills().contains(skillName);
-                    boolean can = user.getEnergyStored() > energy && depLearned && !learned;
-                    if (can) {
-                        user.extractEnergy(energy, false);
-                        addPlayerSkill(player.getUUID(), skillName);
-                    }
-                    return can;
-                }
+    @SubscribePayload
+    public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
+        ServerPlayer player = null;
+        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        if (supplier != null) {
+            PacketListener listener = supplier.get();
+            if (listener instanceof ServerGamePacketListenerImpl gameListener) {
+                player = gameListener.player;
             }
-            return false;
-        });
+        }
+
+        if (player == null) {
+            AcademyCraft.LOGGER.error("Failed to get ServerPlayer from LearnSkillPacket listener supplier.");
+            return new LearnSkillPacket.Response(false);
+        }
+
+        ServerLevel level = player.serverLevel();
+        String skillName = payload.skillName;
+        BlockPos userPos = payload.userPos;
+        BlockEntity be = level.getBlockEntity(userPos);
+        if (be instanceof WirelessUser user) {
+            if (SKILL_MAP.containsKey(skillName)) {
+                Skill skill = SKILL_MAP.get(skillName);
+                int energy = skill.energy;
+                boolean depLearned = true;
+                for (Skill dep : skill.dependencies) {
+                    if (!getPlayerSkills(player.getUUID()).contains(dep.name)) {
+                        depLearned = false;
+                        break;
+                    }
+                }
+                boolean learned = playerMap.get(player.getUUID()).getSkills().contains(skillName);
+                boolean can = user.getEnergyStored() > energy && depLearned && !learned;
+                if (can) {
+                    user.extractEnergy(energy, false);
+                    addPlayerSkill(player.getUUID(), skillName);
+                }
+                return new LearnSkillPacket.Response(can);
+            }
+        }
+        return new LearnSkillPacket.Response(false);
     }
 
 
@@ -359,11 +393,11 @@ public class AbilitySystemServer {
 
     public static void registerContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.register(serverContext);
-        NetworkSystem.registerPacketListener(serverContext);
+        NetworkSystemServer.registerPacketListener(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.unregister(serverContext);
-        NetworkSystem.unregisterPacketListener(serverContext);
+        NetworkSystemServer.unregisterPacketListener(serverContext);
     }
 }

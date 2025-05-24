@@ -9,11 +9,10 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.NetworkSystem;
-import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
@@ -61,7 +60,7 @@ public final class AbilitySystemClient {
     }
 
     public static void init() {
-        NetworkSystem.registerPacketListener(AbilitySystemClient.class);
+        NetworkSystemClient.registerPacketListener(AbilitySystemClient.class);
 
         InputSystem.addKeyBinding(KEY_NAME_ACTIVATE_HUD, ACTIVATE_HUD_KEY, () -> {
             if (ClientUtil.hasScreen()) return;
@@ -168,12 +167,12 @@ public final class AbilitySystemClient {
 
     public static void registerContext(ClientContext clientContext) {
         AcademyCraft.EVENT_BUS.register(clientContext);
-        NetworkSystem.registerPacketListener(clientContext);
+        NetworkSystemClient.registerPacketListener(clientContext);
     }
 
     public static void unregisterContext(ClientContext clientContext) {
         AcademyCraft.EVENT_BUS.unregister(clientContext);
-        NetworkSystem.unregisterPacketListener(clientContext);
+        NetworkSystemClient.unregisterPacketListener(clientContext);
     }
 
     public static class AbilitySystemClientConfigData implements IClientConfigActions<AbilitySystemClientConfigData> {

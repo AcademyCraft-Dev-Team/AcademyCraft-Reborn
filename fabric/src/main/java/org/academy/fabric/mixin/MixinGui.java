@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Gui.class)
-public class GuiMixin {
+public class MixinGui {
     @Inject(method = "render", at = @At("HEAD"))
     private void render(GuiGraphics guiGraphics, float partialTick, CallbackInfo ci) {
         HUDManager.render(guiGraphics, partialTick);

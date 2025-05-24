@@ -30,6 +30,7 @@ import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.electromaster.Electromaster;
@@ -56,7 +57,7 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystem.registerPacketListener(Server.class);
+        NetworkSystemServer.registerPacketListener(Server.class);
     }
 
     @Override
