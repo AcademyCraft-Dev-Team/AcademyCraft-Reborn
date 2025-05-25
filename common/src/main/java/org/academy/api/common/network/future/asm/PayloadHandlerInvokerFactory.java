@@ -12,7 +12,7 @@ public class PayloadHandlerInvokerFactory {
     private PayloadHandlerInvokerFactory() {
     }
 
-    public static StaticPayloadHandlerInvoker createStaticInvoker(Method targetMethod, Class<? extends IRequestPayload<?>> requestType, Class<? extends IResponsePayload> responseType) {
+    public static StaticPayloadHandlerInvoker createStaticInvoker(Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType) {
         String generatedClassName = generateClassName(targetMethod, requestType, true);
         byte[] classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, true);
         try {
@@ -24,7 +24,7 @@ public class PayloadHandlerInvokerFactory {
         }
     }
 
-    public static InstancePayloadHandlerInvoker createInstanceInvoker(Method targetMethod, Class<? extends IRequestPayload<?>> requestType, Class<? extends IResponsePayload> responseType, Object targetInstance) {
+    public static InstancePayloadHandlerInvoker createInstanceInvoker(Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType, Object targetInstance) {
         String generatedClassName = generateClassName(targetMethod, requestType, false);
         byte[] classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, false);
         try {
@@ -45,7 +45,7 @@ public class PayloadHandlerInvokerFactory {
                 + requestType.getSimpleName() + "$";
     }
 
-    private static byte[] generateInvokerBytecode(String generatedClassNameInternal, Method targetMethod, Class<? extends IRequestPayload<?>> requestType, Class<? extends IResponsePayload> responseType, boolean isStatic) {
+    private static byte[] generateInvokerBytecode(String generatedClassNameInternal, Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType, boolean isStatic) {
         String handlerClassNameInternal = Type.getInternalName(targetMethod.getDeclaringClass());
         String requestTypeInternalName = Type.getInternalName(requestType);
         String iRequestPayloadInternalName = Type.getInternalName(IRequestPayload.class);

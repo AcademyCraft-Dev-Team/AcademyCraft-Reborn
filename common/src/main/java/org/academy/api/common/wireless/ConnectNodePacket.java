@@ -4,8 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.ReceiverConstructor;
-import org.academy.api.common.network.SenderConstructor;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
@@ -16,11 +14,9 @@ public class ConnectNodePacket extends IPacket<ServerGamePacketListenerImpl> {
     public String targetNodeName;
     public String passwordAttempt;
 
-    @ReceiverConstructor
     public ConnectNodePacket() {
     }
 
-    @SenderConstructor
     public ConnectNodePacket(BlockPos userPos, String targetNodeName, String passwordAttempt) {
         this.userPos = userPos;
         this.targetNodeName = targetNodeName;

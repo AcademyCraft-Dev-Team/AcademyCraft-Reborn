@@ -7,13 +7,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.AcademyCraft;
-import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.common.network.NetworkSystem;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftServer;
 import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.asm.InstanceCreator;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.function.Function;
 
 public class S2CPacket implements Packet<ClientPacketListener> {
     public final int id;
@@ -22,7 +23,7 @@ public class S2CPacket implements Packet<ClientPacketListener> {
     @SuppressWarnings("unchecked")
     public <T extends IPacket<ClientPacketListener>> S2CPacket(T packet) {
         Class<T> clazz = (Class<T>) packet.getClass();
-        id = NetworkSystem.getPacketIdByType(clazz);
+        id = AcademyCraftServer.NETWORK_SYSTEM_INSTANCE.getPacketIdByType(clazz);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
     }
@@ -39,7 +40,6 @@ public class S2CPacket implements Packet<ClientPacketListener> {
         buffer.writeBytes(friendlyByteBuf.copy());
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void handle(@NotNull ClientPacketListener handler) {
         Minecraft.getInstance().execute(() -> {
@@ -47,29 +47,27 @@ public class S2CPacket implements Packet<ClientPacketListener> {
             AcademyCraft.EVENT_BUS.post(event);
             if (event.isCanceled()) return;
 
-            Class<?> packetClassUntyped = NetworkSystem.getClassById(id);
-            if (packetClassUntyped != null) {
-                if (packetClassUntyped.isAnnotationPresent(PacketTarget.class)) {
-                    ThreadType targetType = packetClassUntyped.getAnnotation(PacketTarget.class).value();
+            Class<IPacket<ClientGamePacketListener>> packetClass = AcademyCraftClient.NETWORK_SYSTEM_INSTANCE.getClassById(id);
+            if (packetClass != null) {
+                if (packetClass.isAnnotationPresent(PacketTarget.class)) {
+                    ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
                     if (targetType != ThreadType.CLIENT) return;
                 }
                 try {
-                    Class<IPacket<ClientGamePacketListener>> packetClass =
-                            (Class<IPacket<ClientGamePacketListener>>) packetClassUntyped;
-                    InstanceCreator<IPacket<ClientGamePacketListener>> creator = NetworkSystem.getPacketCreator(packetClass);
-
-                    if (creator == null) {
-                        AcademyCraft.LOGGER.error("No creator instance found for S2C packet class: {}", packetClass.getName());
+                    Function<ClientGamePacketListener, IPacket<ClientGamePacketListener>> factory =
+                            AcademyCraftClient.NETWORK_SYSTEM_INSTANCE.getPacketFactory(packetClass);
+                    if (factory == null) {
+                        AcademyCraft.LOGGER.error("No factory found for S2C packet class: {}", packetClass.getName());
                         return;
                     }
-                    IPacket<ClientGamePacketListener> instance = creator.create();
+                    IPacket<ClientGamePacketListener> instance = factory.apply(handler);
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
-                    NetworkSystemClient.dispatchClientPacket(instance);
+                    AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.dispatchClientPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing S2C packet. Class: {}, ID: {}. Listener: {}. Error: {}",
-                            packetClassUntyped.getSimpleName(),
+                            packetClass.getSimpleName(),
                             id,
                             handler.getClass().getSimpleName(),
                             e.getMessage(),

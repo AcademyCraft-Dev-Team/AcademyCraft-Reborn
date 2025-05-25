@@ -2,7 +2,7 @@ package org.academy.api.common.network.future.asm;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public abstract class InstancePayloadHandlerInvoker implements IPayloadHandlerInvoker {
-    private final Object instance;
+    protected final Object instance;
 
     protected InstancePayloadHandlerInvoker(Object instance) {
         if (instance == null) {

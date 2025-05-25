@@ -13,10 +13,6 @@ public abstract class Skill {
     public final List<Skill> dependencies = new ArrayList<>();
     public final int energy;
 
-    /**
-     * @param name  技能名称
-     * @param level 推荐学习等级
-     */
     protected Skill(String name, int level) {
         this.name = name;
         this.level = level;
@@ -39,6 +35,9 @@ public abstract class Skill {
         this.level = level;
         this.energy = energy;
         this.dependencies.addAll(dependencies);
+    }
+
+    public void init() {
     }
 
     public void initClient() {

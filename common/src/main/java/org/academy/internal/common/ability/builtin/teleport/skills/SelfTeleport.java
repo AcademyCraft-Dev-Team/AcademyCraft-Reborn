@@ -13,6 +13,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftServer;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -21,13 +22,11 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.vanilla.ThreadType;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
@@ -43,10 +42,6 @@ public final class SelfTeleport extends Skill {
     public static InputSystem.InputPair KEY_START;
     public static InputSystem.InputPair KEY_END;
     public static Client.SelfTeleportClientConfigData CONFIG;
-
-    static {
-        NetworkSystem.registerPacketType(SelfTeleportPacket.class);
-    }
 
     private SelfTeleport() {
         super(SkillNames.SELF_TELEPORT, 2);
@@ -84,10 +79,10 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
     }
 
-    private static final class Server {
+    public static final class Server {
         @SubscribePacket
         public static void handleTeleport(SelfTeleportPacket packet) {
             ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();

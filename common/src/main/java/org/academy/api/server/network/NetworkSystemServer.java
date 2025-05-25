@@ -4,7 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.NetworkSystem;
-import org.academy.api.common.network.PacketHandler;
+import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.packet.IPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,92 +17,106 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class NetworkSystemServer {
-    private static final ConcurrentHashMap<Class<? extends IPacket<?>>, List<PacketHandler>> SERVER_TYPED_LISTENERS = new ConcurrentHashMap<>();
-    private static final Map<Object, List<PacketHandler>> SERVER_LISTENERS_BY_TARGET = new MapMaker().weakKeys().makeMap();
-    private static final ReadWriteLock serverLock = new ReentrantReadWriteLock();
+    private final NetworkSystem networkSystem;
+    private final ConcurrentHashMap<Class<? extends IPacket<?>>, List<IPacketListener>> serverTypedListeners;
+    private final Map<Object, List<IPacketListener>> serverListenersByTarget;
+    private final ReadWriteLock serverLock;
 
-    public static void init() {
-        FutureManagerServer.init();
+    public NetworkSystemServer(NetworkSystem networkSystem) {
+        this.networkSystem = networkSystem;
+        this.serverTypedListeners = new ConcurrentHashMap<>();
+        this.serverListenersByTarget = new MapMaker().weakKeys().makeMap();
+        this.serverLock = new ReentrantReadWriteLock();
     }
 
-    public static void registerPacketListener(@NotNull Class<?> targetClass) {
-        registerPacketListenerInternal(targetClass, null);
-    }
-
-    public static void registerPacketListener(@NotNull Object targetInstance) {
-        registerPacketListenerInternal(targetInstance.getClass(), targetInstance);
-    }
-
-    public static void registerPacketListener(@NotNull PacketHandler packetHandler) {
-        serverLock.writeLock().lock();
+    public void init() {
+        this.serverLock.writeLock().lock();
         try {
-            SERVER_LISTENERS_BY_TARGET.computeIfAbsent(packetHandler.getPacketType(), o -> new ArrayList<>()).add(packetHandler);
-            SERVER_TYPED_LISTENERS.computeIfAbsent(packetHandler.getPacketType(), k -> new ArrayList<>()).add(packetHandler);
+            this.serverTypedListeners.clear();
+            this.serverListenersByTarget.clear();
         } finally {
-            serverLock.writeLock().unlock();
+            this.serverLock.writeLock().unlock();
         }
     }
 
-    private static void registerPacketListenerInternal(@NotNull Class<?> clazz, @Nullable Object instance) {
-        List<PacketHandler> generatedHandlers = NetworkSystem.findPacketHandlers(clazz, instance);
+    public void registerPacketListener(@NotNull Class<?> targetClass) {
+        registerPacketListenerInternal(targetClass, null);
+    }
+
+    public void registerPacketListener(@NotNull Object targetInstance) {
+        registerPacketListenerInternal(targetInstance.getClass(), targetInstance);
+    }
+
+    public void registerPacketListener(@NotNull IPacketListener iPacketListener) {
+        this.serverLock.writeLock().lock();
+        try {
+            this.serverListenersByTarget.computeIfAbsent(iPacketListener.getPacketType(), o -> new ArrayList<>()).add(iPacketListener);
+            this.serverTypedListeners.computeIfAbsent(iPacketListener.getPacketType(), k -> new ArrayList<>()).add(iPacketListener);
+        } finally {
+            this.serverLock.writeLock().unlock();
+        }
+    }
+
+    private void registerPacketListenerInternal(@NotNull Class<?> clazz, @Nullable Object instance) {
+        List<IPacketListener> generatedHandlers = NetworkSystem.findPacketListeners(clazz, instance);
 
         if (!generatedHandlers.isEmpty()) {
-            serverLock.writeLock().lock();
+            this.serverLock.writeLock().lock();
             try {
                 Object key = (instance == null) ? clazz : instance;
-                SERVER_LISTENERS_BY_TARGET.put(key, List.copyOf(generatedHandlers));
+                this.serverListenersByTarget.put(key, List.copyOf(generatedHandlers));
 
-                for (PacketHandler handler : generatedHandlers) {
-                    SERVER_TYPED_LISTENERS.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
+                for (IPacketListener handler : generatedHandlers) {
+                    this.serverTypedListeners.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
                 }
             } finally {
-                serverLock.writeLock().unlock();
+                this.serverLock.writeLock().unlock();
             }
         }
     }
 
-    public static void unregisterPacketListener(@NotNull Class<?> targetClass) {
+    public void unregisterPacketListener(@NotNull Class<?> targetClass) {
         unregisterPacketListenerInternal(targetClass);
     }
 
-    public static void unregisterPacketListener(@NotNull Object targetInstance) {
+    public void unregisterPacketListener(@NotNull Object targetInstance) {
         unregisterPacketListenerInternal(targetInstance);
     }
 
-    private static void unregisterPacketListenerInternal(@NotNull Object keyToRemove) {
-        serverLock.writeLock().lock();
+    private void unregisterPacketListenerInternal(@NotNull Object keyToRemove) {
+        this.serverLock.writeLock().lock();
         try {
-            List<PacketHandler> handlersToRemove = SERVER_LISTENERS_BY_TARGET.remove(keyToRemove);
+            List<IPacketListener> handlersToRemove = this.serverListenersByTarget.remove(keyToRemove);
             if (handlersToRemove != null) {
-                for (PacketHandler handler : handlersToRemove) {
-                    List<PacketHandler> typedList = SERVER_TYPED_LISTENERS.get(handler.getPacketType());
+                for (IPacketListener handler : handlersToRemove) {
+                    List<IPacketListener> typedList = this.serverTypedListeners.get(handler.getPacketType());
                     if (typedList != null) {
                         typedList.remove(handler);
                         if (typedList.isEmpty()) {
-                            SERVER_TYPED_LISTENERS.remove(handler.getPacketType());
+                            this.serverTypedListeners.remove(handler.getPacketType());
                         }
                     }
                 }
             }
         } finally {
-            serverLock.writeLock().unlock();
+            this.serverLock.writeLock().unlock();
         }
     }
 
-    public static <T extends IPacket<?>> void dispatchServerPacket(T packet) {
-        List<PacketHandler> handlers = null;
-        serverLock.readLock().lock();
+    public <T extends IPacket<?>> void dispatchServerPacket(T packet) {
+        List<IPacketListener> handlers = null;
+        this.serverLock.readLock().lock();
         try {
-            List<PacketHandler> typedList = SERVER_TYPED_LISTENERS.get(packet.getClass());
+            List<IPacketListener> typedList = this.serverTypedListeners.get(packet.getClass());
             if (typedList != null && !typedList.isEmpty()) {
                 handlers = Lists.newArrayList(typedList);
             }
         } finally {
-            serverLock.readLock().unlock();
+            this.serverLock.readLock().unlock();
         }
 
         if (handlers != null) {
-            for (PacketHandler handler : handlers) {
+            for (IPacketListener handler : handlers) {
                 try {
                     handler.handlePacket(packet);
                 } catch (Throwable e) {
@@ -110,5 +124,9 @@ public class NetworkSystemServer {
                 }
             }
         }
+    }
+
+    public NetworkSystem getNetworkSystem() {
+        return networkSystem;
     }
 }

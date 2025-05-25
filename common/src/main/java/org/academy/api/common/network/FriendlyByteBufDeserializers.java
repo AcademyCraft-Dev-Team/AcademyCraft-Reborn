@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-@SuppressWarnings({"unchecked", "rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes", "unused"})
 public class FriendlyByteBufDeserializers {
     public static final BiMap<FriendlyByteBufDeserializer, Integer> DESERIALIZER_IDS = HashBiMap.create();
     private static final Map<Class<?>, FriendlyByteBufDeserializer<?>> FRIENDLY_BYTE_BUF_DESERIALIZER_MAP = new ConcurrentHashMap<>();

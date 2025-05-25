@@ -4,22 +4,18 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.ReceiverConstructor;
-import org.academy.api.common.network.SenderConstructor;
 import org.academy.api.common.network.packet.IPacket;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
 public class OpenScreenPacket extends IPacket<ClientPacketListener> {
     public String screenName;
-    public FriendlyByteBuf dataPayload;
+    private FriendlyByteBuf dataPayload;
 
-    @ReceiverConstructor
     public OpenScreenPacket() {
         this.dataPayload = new FriendlyByteBuf(Unpooled.buffer());
     }
 
-    @SenderConstructor
     public OpenScreenPacket(@NotNull String screenName, @NotNull FriendlyByteBuf payload) {
         this.screenName = screenName;
         this.dataPayload = new FriendlyByteBuf(Unpooled.buffer(payload.readableBytes()));
@@ -27,7 +23,6 @@ public class OpenScreenPacket extends IPacket<ClientPacketListener> {
     }
 
     @SuppressWarnings("unused")
-    @SenderConstructor
     public OpenScreenPacket(@NotNull String screenName) {
         this.screenName = screenName;
         this.dataPayload = new FriendlyByteBuf(Unpooled.buffer());
@@ -46,5 +41,9 @@ public class OpenScreenPacket extends IPacket<ClientPacketListener> {
         if (this.dataPayload != null && this.dataPayload.readableBytes() > 0) {
             buf.writeBytes(this.dataPayload.copy());
         }
+    }
+
+    public FriendlyByteBuf getDataPayload() {
+        return new FriendlyByteBuf(dataPayload.copy());
     }
 }

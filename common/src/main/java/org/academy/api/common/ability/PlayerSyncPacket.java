@@ -22,11 +22,9 @@ public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
     public boolean skillsChanged;
     public HashSet<String> skills;
 
-    @ReceiverConstructor
     public PlayerSyncPacket() {
     }
 
-    @SenderConstructor
     public PlayerSyncPacket(boolean levelChanged,
                             int level,
                             boolean currentComputingPowerChanged,

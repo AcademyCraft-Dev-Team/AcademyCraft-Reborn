@@ -7,9 +7,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.inventory.WindGenMenu;
@@ -63,15 +62,14 @@ public class Screens {
 
 
     public static void register() {
-        NetworkSystem.registerPacketType(OpenScreenPacket.class);
-        NetworkSystemClient.registerPacketListener(Screens.class);
+        AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.registerPacketListener(Screens.class);
     }
 
     @SubscribePacket
     public static void handle(OpenScreenPacket packet) {
         BiConsumer<ClientPacketListener, FriendlyByteBuf> handler = SCREEN_HANDLERS.get(packet.screenName);
         if (handler != null && packet.packetListenerSupplier != null && packet.packetListenerSupplier.get() != null) {
-            handler.accept(packet.packetListenerSupplier.get(), packet.dataPayload);
+            handler.accept(packet.packetListenerSupplier.get(), packet.getDataPayload());
         }
     }
 
