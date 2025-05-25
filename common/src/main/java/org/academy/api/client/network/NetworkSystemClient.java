@@ -5,9 +5,8 @@ import com.google.common.collect.MapMaker;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import org.academy.AcademyCraft;
-import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.common.network.NetworkSystem;
-import org.academy.api.common.network.PacketHandler;
+import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.packet.IPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,92 +20,106 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class NetworkSystemClient {
     public static Connection connection;
-    private static final ConcurrentHashMap<Class<? extends IPacket<?>>, List<PacketHandler>> CLIENT_TYPED_LISTENERS = new ConcurrentHashMap<>();
-    private static final Map<Object, List<PacketHandler>> CLIENT_LISTENERS_BY_TARGET = new MapMaker().weakKeys().makeMap();
-    private static final ReadWriteLock clientLock = new ReentrantReadWriteLock();
+    private final NetworkSystem networkSystem;
+    private final ConcurrentHashMap<Class<? extends IPacket<?>>, List<IPacketListener>> clientTypedListeners;
+    private final Map<Object, List<IPacketListener>> clientListenersByTarget;
+    private final ReadWriteLock clientLock;
 
-    public static void init() {
-        FutureManagerClient.init();
+    public NetworkSystemClient(NetworkSystem networkSystem) {
+        this.networkSystem = networkSystem;
+        this.clientTypedListeners = new ConcurrentHashMap<>();
+        this.clientListenersByTarget = new MapMaker().weakKeys().makeMap();
+        this.clientLock = new ReentrantReadWriteLock();
     }
 
-    public static void registerPacketListener(@NotNull Class<?> targetClass) {
-        registerPacketListenerInternal(targetClass, null);
-    }
-
-    public static void registerPacketListener(@NotNull Object targetInstance) {
-        registerPacketListenerInternal(targetInstance.getClass(), targetInstance);
-    }
-
-    public static void registerPacketListener(@NotNull PacketHandler packetHandler) {
-        clientLock.writeLock().lock();
+    public void init() {
+        this.clientLock.writeLock().lock();
         try {
-            CLIENT_LISTENERS_BY_TARGET.computeIfAbsent(packetHandler.getPacketType(), o -> new ArrayList<>()).add(packetHandler);
-            CLIENT_TYPED_LISTENERS.computeIfAbsent(packetHandler.getPacketType(), k -> new ArrayList<>()).add(packetHandler);
+            this.clientTypedListeners.clear();
+            this.clientListenersByTarget.clear();
         } finally {
-            clientLock.writeLock().unlock();
+            this.clientLock.writeLock().unlock();
         }
     }
 
-    private static void registerPacketListenerInternal(@NotNull Class<?> clazz, @Nullable Object instance) {
-        List<PacketHandler> generatedHandlers = NetworkSystem.findPacketHandlers(clazz, instance);
+    public void registerPacketListener(@NotNull Class<?> targetClass) {
+        registerPacketListenerInternal(targetClass, null);
+    }
+
+    public void registerPacketListener(@NotNull Object targetInstance) {
+        registerPacketListenerInternal(targetInstance.getClass(), targetInstance);
+    }
+
+    public void registerPacketListener(@NotNull IPacketListener iPacketListener) {
+        this.clientLock.writeLock().lock();
+        try {
+            this.clientListenersByTarget.computeIfAbsent(iPacketListener.getPacketType(), o -> new ArrayList<>()).add(iPacketListener);
+            this.clientTypedListeners.computeIfAbsent(iPacketListener.getPacketType(), k -> new ArrayList<>()).add(iPacketListener);
+        } finally {
+            this.clientLock.writeLock().unlock();
+        }
+    }
+
+    private void registerPacketListenerInternal(@NotNull Class<?> clazz, @Nullable Object instance) {
+        List<IPacketListener> generatedHandlers = NetworkSystem.findPacketListeners(clazz, instance);
 
         if (!generatedHandlers.isEmpty()) {
-            clientLock.writeLock().lock();
+            this.clientLock.writeLock().lock();
             try {
                 Object key = (instance == null) ? clazz : instance;
-                CLIENT_LISTENERS_BY_TARGET.put(key, List.copyOf(generatedHandlers));
+                this.clientListenersByTarget.put(key, List.copyOf(generatedHandlers));
 
-                for (PacketHandler handler : generatedHandlers) {
-                    CLIENT_TYPED_LISTENERS.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
+                for (IPacketListener handler : generatedHandlers) {
+                    this.clientTypedListeners.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
                 }
             } finally {
-                clientLock.writeLock().unlock();
+                this.clientLock.writeLock().unlock();
             }
         }
     }
 
-    public static void unregisterPacketListener(@NotNull Class<?> targetClass) {
+    public void unregisterPacketListener(@NotNull Class<?> targetClass) {
         unregisterPacketListenerInternal(targetClass);
     }
 
-    public static void unregisterPacketListener(@NotNull Object targetInstance) {
+    public void unregisterPacketListener(@NotNull Object targetInstance) {
         unregisterPacketListenerInternal(targetInstance);
     }
 
-    private static void unregisterPacketListenerInternal(@NotNull Object keyToRemove) {
-        clientLock.writeLock().lock();
+    private void unregisterPacketListenerInternal(@NotNull Object keyToRemove) {
+        this.clientLock.writeLock().lock();
         try {
-            List<PacketHandler> handlersToRemove = CLIENT_LISTENERS_BY_TARGET.remove(keyToRemove);
+            List<IPacketListener> handlersToRemove = this.clientListenersByTarget.remove(keyToRemove);
             if (handlersToRemove != null) {
-                for (PacketHandler handler : handlersToRemove) {
-                    List<PacketHandler> typedList = CLIENT_TYPED_LISTENERS.get(handler.getPacketType());
+                for (IPacketListener handler : handlersToRemove) {
+                    List<IPacketListener> typedList = this.clientTypedListeners.get(handler.getPacketType());
                     if (typedList != null) {
                         typedList.remove(handler);
                         if (typedList.isEmpty()) {
-                            CLIENT_TYPED_LISTENERS.remove(handler.getPacketType());
+                            this.clientTypedListeners.remove(handler.getPacketType());
                         }
                     }
                 }
             }
         } finally {
-            clientLock.writeLock().unlock();
+            this.clientLock.writeLock().unlock();
         }
     }
 
-    public static <T extends IPacket<?>> void dispatchClientPacket(T packet) {
-        List<PacketHandler> handlers = null;
-        clientLock.readLock().lock();
+    public <T extends IPacket<?>> void dispatchClientPacket(T packet) {
+        List<IPacketListener> handlers = null;
+        this.clientLock.readLock().lock();
         try {
-            List<PacketHandler> typedList = CLIENT_TYPED_LISTENERS.get(packet.getClass());
+            List<IPacketListener> typedList = this.clientTypedListeners.get(packet.getClass());
             if (typedList != null && !typedList.isEmpty()) {
                 handlers = Lists.newArrayList(typedList);
             }
         } finally {
-            clientLock.readLock().unlock();
+            this.clientLock.readLock().unlock();
         }
 
         if (handlers != null) {
-            for (PacketHandler handler : handlers) {
+            for (IPacketListener handler : handlers) {
                 try {
                     handler.handlePacket(packet);
                 } catch (Throwable e) {
@@ -116,10 +129,13 @@ public class NetworkSystemClient {
         }
     }
 
-
     public static void sendPacket(Packet<?> packet) {
         if (connection != null) {
             connection.send(packet);
         }
+    }
+
+    public NetworkSystem getNetworkSystem() {
+        return networkSystem;
     }
 }

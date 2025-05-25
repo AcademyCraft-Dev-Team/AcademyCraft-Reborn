@@ -4,8 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.ReceiverConstructor;
-import org.academy.api.common.network.SenderConstructor;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
@@ -14,11 +12,9 @@ import org.jetbrains.annotations.NotNull;
 public class DisconnectNodePacket extends IPacket<ServerGamePacketListenerImpl> {
     public BlockPos userPos;
 
-    @ReceiverConstructor
     public DisconnectNodePacket() {
     }
 
-    @SenderConstructor
     public DisconnectNodePacket(BlockPos userPos) {
         this.userPos = userPos;
     }

@@ -4,8 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.ReceiverConstructor;
-import org.academy.api.common.network.SenderConstructor;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
@@ -15,11 +13,9 @@ public class SetNodeNamePacket extends IPacket<ServerGamePacketListenerImpl> {
     public BlockPos nodePos;
     public String newName;
 
-    @ReceiverConstructor
     public SetNodeNamePacket() {
     }
 
-    @SenderConstructor
     public SetNodeNamePacket(BlockPos nodePos, String newName) {
         this.nodePos = nodePos;
         this.newName = newName;

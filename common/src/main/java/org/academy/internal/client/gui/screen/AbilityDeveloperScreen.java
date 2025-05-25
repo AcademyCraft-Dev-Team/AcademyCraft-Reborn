@@ -9,13 +9,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
@@ -149,7 +149,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                                 if (!learned) {
                                     if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
                                         AcquireCategoryPacket request = new AcquireCategoryPacket(mainPos);
-                                        FutureManagerClient.sendRequestToServer(request,
+                                        AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(request,
                                                 (AcquireCategoryPacket.Response response) -> {
                                                     if (response != null && response.messages != null) {
                                                         Widget lastWidget = outputCommand;
@@ -425,7 +425,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, RENDER_TYPE_BUTTON, () -> {
             if (skillInfo == null) return;
             LearnSkillPacket request = new LearnSkillPacket(skillInfo.skill.name, mainPos);
-            FutureManagerClient.sendRequestToServer(request,
+            AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(request,
                     (LearnSkillPacket.Response response) -> {
                         if (response != null && response.success) {
                             init();
@@ -459,6 +459,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         public float xOffset, yOffset;
         public final List<SkillInfo> dependencies = new ArrayList<>();
 
+        @SuppressWarnings("SuspiciousNameCombination")
         SkillWidget(SkillInfo skillInfo) {
             super(skillInfo.x, skillInfo.y, PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE,
                     RENDER_TYPE_SKILL_ICON.apply(skillInfo.skill.name, skillInfo.texture),

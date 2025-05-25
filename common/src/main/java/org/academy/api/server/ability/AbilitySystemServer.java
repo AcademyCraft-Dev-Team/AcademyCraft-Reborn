@@ -1,8 +1,8 @@
 package org.academy.api.server.ability;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.Connection;
 import net.minecraft.network.PacketListener;
-import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,25 +11,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
-import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.PlayerSyncPacket;
-import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.packet.S2CPacket;
-import org.academy.api.common.ability.AcquireCategoryPacket;
-import org.academy.api.common.ability.LearnSkillPacket;
-import org.academy.api.common.ability.ExpSyncPacket;
+import org.academy.api.common.ability.*;
 import org.academy.api.common.network.future.SubscribePayload;
+import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
-import org.academy.api.server.network.NetworkSystemServer;
-import org.academy.api.server.network.FutureManagerServer;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -46,7 +38,7 @@ public class AbilitySystemServer {
     public static boolean paused;
 
     public static void init(final MinecraftServer server) {
-        FutureManagerServer.registerPayloadHandler(AbilitySystemServer.class);
+        AcademyCraftServer.FUTURE_MANAGER_SERVER_INSTANCE.registerPayloadHandler(AbilitySystemServer.class);
         minecraftServer = server;
         playerMap = AcademyCraftServer.worldData.getPlayers();
         for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
@@ -59,13 +51,14 @@ public class AbilitySystemServer {
                 () -> {
                     try {
                         AbilitySystemServerThread.tick();
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         AcademyCraft.LOGGER.error(e.getMessage());
                     }
                 }, 0, 50, TimeUnit.MILLISECONDS
         );
     }
 
+    @SuppressWarnings("resource")
     @SubscribePayload
     public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
         ServerPlayer player = null;
@@ -113,6 +106,7 @@ public class AbilitySystemServer {
     }
 
     @SubscribePayload
+    @SuppressWarnings("resource")
     public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
         ServerPlayer player = null;
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
@@ -198,8 +192,8 @@ public class AbilitySystemServer {
         return playerMap.get(uuid).getLevel();
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
+    @SuppressWarnings("unchecked")
     public static <T extends WorldData.Player.SkillData> T getPlayerSkillData(UUID uuid, String skill) {
         playerMap.get(uuid).getSkillData().get(skill);
         return (T) playerMap.get(uuid).getSkillData().get(skill);
@@ -220,7 +214,7 @@ public class AbilitySystemServer {
             skillData.exp = exp;
             Player player = LIVE_PLAYER_MAP.get(uuid);
             if (player != null) {
-                player.packetConsumer.accept(new S2CPacket(new ExpSyncPacket(skill, skillData.exp)));
+                player.connection.send(new S2CPacket(new ExpSyncPacket(skill, skillData.exp)));
             }
         }
     }
@@ -309,7 +303,8 @@ public class AbilitySystemServer {
             }
         }
 
-        public static void tickPlayer(Player player) {final Consumer<Packet<?>> packetConsumer = player.packetConsumer;
+        public static void tickPlayer(Player player) {
+            final Connection connection = player.connection;
             final UUID uuid = player.uuid;
             ConcurrentLinkedQueue<SyncType> syncQueue = player.syncQueue;
             boolean levelChanged = syncQueue.contains(SyncType.LEVEL);
@@ -324,7 +319,7 @@ public class AbilitySystemServer {
                     abilityCategoryChanged, getPlayerAbilityCategory(uuid).name,
                     skillsChanged, getPlayerSkills(uuid)
             );
-            packetConsumer.accept(new S2CPacket(packet));
+            connection.send(new S2CPacket(packet));
             player.syncQueue.clear();
 
             final float currentComputingPower = getPlayerComputingPower(uuid);
@@ -364,7 +359,8 @@ public class AbilitySystemServer {
                 final UUID uuid = serverPlayer.getUUID();
                 if (!LIVE_PLAYER_MAP.containsKey(uuid)) {
                     LIVE_PLAYER_MAP.put(uuid, new Player(
-                            uuid, playerMap.get(uuid), packet -> serverPlayer.connection.send(packet))
+                                    uuid, playerMap.get(uuid), serverPlayer.connection.connection
+                            )
                     );
                     addAllPlayerSyncTask(uuid);
                 }
@@ -381,23 +377,23 @@ public class AbilitySystemServer {
         public final UUID uuid;
         public final WorldData.Player data;
         public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
-        private final Consumer<Packet<?>> packetConsumer;
+        private final Connection connection;
         public float additionalComputingPower;
 
-        public Player(final UUID uuid, final WorldData.Player data, final Consumer<Packet<?>> packetConsumer) {
+        public Player(final UUID uuid, final WorldData.Player data, final Connection connection) {
             this.uuid = uuid;
             this.data = data;
-            this.packetConsumer = packetConsumer;
+            this.connection = connection;
         }
     }
 
     public static void registerContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.register(serverContext);
-        NetworkSystemServer.registerPacketListener(serverContext);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.unregister(serverContext);
-        NetworkSystemServer.unregisterPacketListener(serverContext);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.unregisterPacketListener(serverContext);
     }
 }

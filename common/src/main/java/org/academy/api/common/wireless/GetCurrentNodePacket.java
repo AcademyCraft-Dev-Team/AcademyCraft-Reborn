@@ -8,7 +8,7 @@ import org.academy.api.common.network.future.IResponsePayload;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListenerImpl> {
+public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListenerImpl, GetCurrentNodePacket.Response> {
     public BlockPos userPos;
 
     public GetCurrentNodePacket() {}

@@ -73,7 +73,13 @@ public class HUDManager {
 
         float[] originColor = RenderSystem.getShaderColor().clone();
 
+        for (HUDRenderer renderer : HUD_RENDERERS) {
+            renderer.render(guiGraphics, partialTick);
+        }
+        guiGraphics.flush();
+
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
+
         HUDManager.renderComputingPowerBarBackground(guiGraphics);
         guiGraphics.flush();
 
@@ -92,16 +98,12 @@ public class HUDManager {
 
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
         HUDManager.renderAbilityIcon(guiGraphics);
-
         guiGraphics.flush();
-        RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], originColor[3]);
 
-        for (HUDRenderer renderer : HUD_RENDERERS) {
-            renderer.render(guiGraphics, partialTick);
-        }
+        RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], originColor[3]);
     }
 
-    @SuppressWarnings("UnnecessaryLocalVariable")
+    @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
     public static void renderAbilityIcon(GuiGraphics guiGraphics) {
         final AbilityCategory abilityCategory = AbilitySystemClient.getCategory();
         final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(ABILITY_ICON.apply(abilityCategory));
@@ -125,13 +127,9 @@ public class HUDManager {
 
         final float leftBottomX = rightBottomX - width;
         final float leftBottomY = rightBottomY;
-        // Left Top
         vertexConsumer.vertex(leftTopX, leftTopY, z).uv(0, 0).endVertex();
-        // Left Bottom
         vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(0, 1).endVertex();
-        // Right Bottom
         vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
-        // Right Top
         vertexConsumer.vertex(rightTopX, rightTopY, z).uv(1, 0).endVertex();
     }
 
@@ -179,17 +177,13 @@ public class HUDManager {
         final float leftTopUv = 1 - ((width - leftTopOffset) / width);
         final float leftBottomUv = 1 - ((width - leftBottomOffset) / width);
 
-        // Left Top
         vertexConsumer.vertex(leftTopX, leftTopY, z).uv(leftTopUv, 0).endVertex();
-        // Left Bottom
         vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(leftBottomUv, 1).endVertex();
-        // Right Bottom
         vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
-        // Right Top
         vertexConsumer.vertex(rightTopX, rightTopY, z).uv(1, 0).endVertex();
     }
 
-    @SuppressWarnings("UnnecessaryLocalVariable")
+    @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
     public static void renderComputingPowerBarBackground(GuiGraphics guiGraphics) {
         final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(COMPUTING_POWER_BAR_BACKGROUND);
         final int imageWidth = 946;
@@ -214,13 +208,9 @@ public class HUDManager {
 
         final float leftBottomX = rightBottomX - width;
         final float leftBottomY = height;
-        // Left Top
         vertexConsumer.vertex(leftTopX, leftTopY, z).uv(0, 0).endVertex();
-        // Left Bottom
         vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(0, 1).endVertex();
-        // Right Bottom
         vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
-        // Right Top
         vertexConsumer.vertex(rightTopX, rightTopY, z).uv(1, 0).endVertex();
     }
 }

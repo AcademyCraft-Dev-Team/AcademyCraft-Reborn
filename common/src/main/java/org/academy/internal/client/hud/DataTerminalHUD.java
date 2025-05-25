@@ -50,8 +50,27 @@ public class DataTerminalHUD implements HUDRenderer {
     public static final String KEY_NAME_TOGGLE_HUD = "toggle_data_terminal_hud_action";
     public static final DataTerminalHUD INSTANCE = new DataTerminalHUD();
     public static InputSystem.InputPair keyBinding;
-    public static final float WIDTH = 150;
-    public static final float HEIGHT = 187.5f;
+
+    private static final float APP_ICON_SIZE = 48;
+    private static final float APP_TEXT_HEIGHT = 8;
+    private static final float ICON_TEXT_SPACING = 2;
+    private static final float APP_WIDGET_HEIGHT = APP_ICON_SIZE + ICON_TEXT_SPACING + APP_TEXT_HEIGHT;
+    private static final float APP_WIDGET_WIDTH = 52;
+
+    private static final float APP_HORIZONTAL_SPACING = 4;
+    private static final float APP_VERTICAL_SPACING = 4;
+    private static final float APP_AREA_PADDING = 4;
+    private static final int APP_COLS = 3;
+    private static final int VISIBLE_APP_ROWS = 3;
+
+    private static final float APP_AREA_ACTUAL_WIDTH = (APP_WIDGET_WIDTH * APP_COLS) + (APP_HORIZONTAL_SPACING * (APP_COLS - 1)) + (APP_AREA_PADDING * 2);
+    private static final float APP_AREA_VISIBLE_HEIGHT = (APP_WIDGET_HEIGHT * VISIBLE_APP_ROWS) + (APP_VERTICAL_SPACING * (VISIBLE_APP_ROWS - 1)) + (APP_AREA_PADDING * 2);
+    private static final float APP_AREA_X = 8;
+    private static final float APP_AREA_Y = 32 + 4;
+    private static final float APP_AREA_BAR_WIDTH = 4;
+
+    public static final float WIDTH = APP_AREA_X + APP_AREA_ACTUAL_WIDTH + APP_AREA_BAR_WIDTH + 8;
+    public static final float HEIGHT = APP_AREA_Y + APP_AREA_VISIBLE_HEIGHT + 8;
     public static LabelWidget playerNameLabel;
 
     @Override
@@ -138,17 +157,28 @@ public class DataTerminalHUD implements HUDRenderer {
                 infoBar.addChild("spilt_line", spiltLine);
             }
 
-            SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(0, 36, WIDTH, HEIGHT - 40);
+            SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_ACTUAL_WIDTH, APP_AREA_VISIBLE_HEIGHT);
             root.addChild("area_app", appArea);
             {
-                int i = 20;
-                for (int i1 = 0; i1 < i; i1++) {
-                    ImageWidget imageWidget = new ImageWidget(0, i1 * 18, 32, 16, TextureResources.RenderTypes.RENDER_TYPE_BLEND_QUAD);
-                    appArea.addChild("image_widget_" + i1, imageWidget);
+                int totalAppsToCreate = 14;
+
+                for (int i = 0; i < totalAppsToCreate; i++) {
+                    int row = i / APP_COLS;
+                    int col = i % APP_COLS;
+                    float currentAppX = APP_AREA_PADDING + col * (APP_WIDGET_WIDTH + APP_HORIZONTAL_SPACING);
+                    float currentAppY = APP_AREA_PADDING + row * (APP_WIDGET_HEIGHT + APP_VERTICAL_SPACING);
+
+                    int finalI = i;
+                    PanelWidget appButton = getAppWidget("App " + i, () -> {
+                        AcademyCraft.LOGGER.info("App {} clicked", finalI);
+                    });
+                    appButton.setX(currentAppX);
+                    appButton.setY(currentAppY);
+                    appArea.addChild("app_" + i, appButton);
                 }
             }
             VerticalScrollBarWidget appAreaBar = new VerticalScrollBarWidget(appArea,
-                    appArea.getX() + appArea.getWidth() - 8, appArea.getY(), 4, appArea.getHeight());
+                    appArea.getX() + appArea.getWidth(), appArea.getY(), APP_AREA_BAR_WIDTH, appArea.getHeight());
             appAreaBar.showBackground = false;
             root.addChild("bar_area_app", appAreaBar);
         }
@@ -206,6 +236,34 @@ public class DataTerminalHUD implements HUDRenderer {
         InputSystem.addKeyBinding(KEY_NAME_TOGGLE_HUD, keyBinding, DataTerminalHUD::toggle);
     }
 
+    public static PanelWidget getAppWidget(String appName, Runnable onPress) {
+        PanelWidget appPanel = new PanelWidget(0, 0, APP_WIDGET_WIDTH, APP_WIDGET_HEIGHT);
+
+        ImageButtonWidget appIconButton = new ImageButtonWidget(
+                (APP_WIDGET_WIDTH - APP_ICON_SIZE) / 2,
+                0,
+                APP_ICON_SIZE,
+                APP_ICON_SIZE,
+                TextureResources.RenderTypes.RENDER_TYPE_BLEND_QUAD,
+                onPress
+        );
+        appIconButton.hoverEffect = true;
+        appIconButton.red = 0.3f + (float) Math.random() * 0.7f;
+        appIconButton.green = 0.3f + (float) Math.random() * 0.7f;
+        appIconButton.blue = 0.3f + (float) Math.random() * 0.7f;
+        appPanel.addChild("icon_button", appIconButton);
+
+        Font font = Minecraft.getInstance().font;
+        LabelWidget nameLabel = new LabelWidget(appName, 0, APP_ICON_SIZE + ICON_TEXT_SPACING);
+        nameLabel.dropShadow = false;
+
+        float textWidthScaled = font.width(appName) * nameLabel.scale;
+        nameLabel.setX((APP_WIDGET_WIDTH - textWidthScaled) / 2);
+        appPanel.addChild("name_label", nameLabel);
+
+        return appPanel;
+    }
+
     @SubscribeEvent
     public static void onMouseButton(MouseButtonEvent event) {
         if (active && Minecraft.getInstance().screen == null) {
@@ -213,9 +271,9 @@ public class DataTerminalHUD implements HUDRenderer {
             InputSystem.currentMouseAction = event.action;
             InputSystem.currentMouseModifier = event.modifiers;
             if (event.action == GLFW_PRESS) {
-                rootContainer.mouseClicked(xpos, ypos, event.action);
+                rootContainer.mouseClicked(xpos, ypos, event.button);
             } else {
-                rootContainer.mouseReleased(xpos, ypos, event.action);
+                rootContainer.mouseReleased(xpos, ypos, event.button);
             }
             event.setCanceled(true);
         }
