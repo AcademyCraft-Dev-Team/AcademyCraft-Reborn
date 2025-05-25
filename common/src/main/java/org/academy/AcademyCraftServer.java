@@ -4,8 +4,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.BusBuilderImpl;
 import net.neoforged.bus.api.IEventBus;
+import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.future.FutureManager;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
+import org.academy.api.server.network.future.FutureManagerServer;
 import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.server.world.level.storage.WorldData;
 
@@ -17,6 +20,15 @@ public class AcademyCraftServer {
     public static File serverConfigFile;
     public static File worldDataFile;
     public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
+    public static final NetworkSystem NETWORK_SYSTEM_INSTANCE = new NetworkSystem();
+    public static final FutureManager FUTURE_MANAGER_INSTANCE = new FutureManager();
+    public static final NetworkSystemServer NETWORK_SYSTEM_SERVER_INSTANCE = new NetworkSystemServer(NETWORK_SYSTEM_INSTANCE);
+    public static final FutureManagerServer FUTURE_MANAGER_SERVER_INSTANCE = new FutureManagerServer(FUTURE_MANAGER_INSTANCE, NETWORK_SYSTEM_SERVER_INSTANCE);
+
+    static {
+        NETWORK_SYSTEM_SERVER_INSTANCE.init();
+        FUTURE_MANAGER_SERVER_INSTANCE.init();
+    }
 
     public static void init(final MinecraftServer server) {
         serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
@@ -27,6 +39,5 @@ public class AcademyCraftServer {
         worldData = WorldData.getWorldData(worldDataFile);
         AbilitySystemServer.init(server);
         WirelessManager.initServer();
-        NetworkSystemServer.init();
     }
 }

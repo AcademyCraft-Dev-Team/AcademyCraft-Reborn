@@ -6,11 +6,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
+import org.academy.AcademyCraftServer;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.future.SubscribePayload;
 import org.academy.api.common.wireless.*;
-import org.academy.api.server.network.FutureManagerServer;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -19,8 +18,8 @@ import java.util.function.Supplier;
 
 public class WirelessManager {
     public static void initServer() {
-        NetworkSystemServer.registerPacketListener(WirelessManager.class);
-        FutureManagerServer.registerPayloadHandler(WirelessManager.class);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(WirelessManager.class);
+        AcademyCraftServer.FUTURE_MANAGER_SERVER_INSTANCE.registerPayloadHandler(WirelessManager.class);
     }
 
     @SubscribePayload
@@ -105,9 +104,10 @@ public class WirelessManager {
             return;
         }
 
-        if (data.findNodePositionByName(newName) != null && !data.findNodePositionByName(newName).equals(nodePos)) {
+        BlockPos newNodePos = data.findNodePositionByName(newName);
+        if (newNodePos != null && !newNodePos.equals(nodePos)) {
             AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken by node at {}",
-                    player.getGameProfile().getName(), nodePos, newName, data.findNodePositionByName(newName));
+                    player.getGameProfile().getName(), nodePos, newName, newNodePos);
             return;
         }
 

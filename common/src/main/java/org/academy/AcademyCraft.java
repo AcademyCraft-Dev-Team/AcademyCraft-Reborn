@@ -2,7 +2,13 @@ package org.academy;
 
 import net.neoforged.bus.BusBuilderImpl;
 import net.neoforged.bus.api.IEventBus;
+import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.network.NetworkSystem;
+import org.academy.api.common.network.future.FutureManager;
+import org.academy.api.common.util.GameUtil;
+import org.academy.api.common.vanilla.ThreadType;
+import org.academy.internal.common.network.Packets;
+import org.academy.internal.common.network.future.Payloads;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -20,7 +26,15 @@ public final class AcademyCraft {
     public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
 
     public static void init() {
-        NetworkSystem.init();
+        NetworkSystem.registerVanillaPacketsOnce();
+        ThreadType threadType = GameUtil.getThreadType();
+        NetworkSystem networkSystem = threadType == ThreadType.CLIENT ?
+                AcademyCraftClient.NETWORK_SYSTEM_INSTANCE : AcademyCraftServer.NETWORK_SYSTEM_INSTANCE;
+        FutureManager futureManager = threadType == ThreadType.CLIENT ?
+                AcademyCraftClient.FUTURE_MANAGER_INSTANCE : AcademyCraftServer.FUTURE_MANAGER_INSTANCE;
+        Packets.registerAll(networkSystem);
+        AbilitySystem.init();
+        Payloads.registerAll(futureManager);
     }
 
     public static void checkFile(File file) {

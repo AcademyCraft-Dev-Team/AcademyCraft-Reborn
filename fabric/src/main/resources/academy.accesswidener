@@ -56,6 +56,7 @@ accessible method net/minecraft/server/level/ServerPlayer nextContainerCounter (
 accessible method net/minecraft/server/level/ServerPlayer initMenu (Lnet/minecraft/world/inventory/AbstractContainerMenu;)V
 accessible field net/minecraft/server/level/ServerPlayer containerCounter I
 accessible method net/minecraft/world/entity/player/Player closeContainer ()V
+accessible field net/minecraft/server/network/ServerGamePacketListenerImpl connection Lnet/minecraft/network/Connection;
 
 accessible field net/minecraft/client/MouseHandler xpos D
 accessible field net/minecraft/client/MouseHandler ypos D

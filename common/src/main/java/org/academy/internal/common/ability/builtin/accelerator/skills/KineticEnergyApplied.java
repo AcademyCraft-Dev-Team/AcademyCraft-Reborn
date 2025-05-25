@@ -11,17 +11,16 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftServer;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.vanilla.ThreadType;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -32,10 +31,6 @@ import java.util.*;
 
 public class KineticEnergyApplied extends Skill {
     public static final Skill INSTANCE = new KineticEnergyApplied();
-
-    static {
-        NetworkSystem.registerPacketType(TogglePacket.class);
-    }
 
     private KineticEnergyApplied() {
         super(SkillNames.KINETIC_ENERGY_APPLIED, 1);
@@ -67,7 +62,7 @@ public class KineticEnergyApplied extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
     }
 
     public static final class Client {

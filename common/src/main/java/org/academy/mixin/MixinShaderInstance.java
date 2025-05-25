@@ -8,6 +8,11 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
 
 @Mixin(ShaderInstance.class)
 public abstract class MixinShaderInstance {
+    /**
+     *  这里使用 static 的原因是, forge 的 mixin 要求这个方法为 static
+     *  Mixin apply failed academy.mixins.json:MixinShaderInstance -> net.minecraft.client.renderer.ShaderInstance: org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException @ModifyArg handler before this() invocation must be static in injector net/minecraft/client/renderer/ShaderInstance::resourceLocation [INJECT Applicator Phase -> academy.mixins.json:MixinShaderInstance -> Apply Injections ->  -> Inject -> academy.mixins.json:MixinShaderInstance->@ModifyArg::resourceLocation(Ljava/lang/String;)Ljava/lang/String;]
+     */
+    @SuppressWarnings("InvalidInjectorMethodSignature")
     @ModifyArg(
             method = {"<init>"},
             at = @At(
@@ -16,7 +21,7 @@ public abstract class MixinShaderInstance {
             ),
             allow = 1
     )
-    private String resourceLocation(String original) {
+    private static String resourceLocation(String original) {
         String prefix = "shaders/core/";
         String[] parts = original.split(":");
 

@@ -8,7 +8,7 @@ import org.academy.api.common.network.future.IResponsePayload;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerImpl> {
+public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerImpl, LearnSkillPacket.Response> {
     public String skillName;
     public BlockPos userPos;
 

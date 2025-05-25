@@ -10,17 +10,16 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftServer;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.vanilla.ThreadType;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
@@ -34,10 +33,6 @@ import java.util.Set;
 
 public class SingleHighSpeedElectronBeam extends Skill {
     public static final Skill INSTANCE = new SingleHighSpeedElectronBeam();
-
-    static {
-        NetworkSystem.registerPacketType(ShootPacket.class);
-    }
 
     private SingleHighSpeedElectronBeam() {
         super(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM, 1);
@@ -71,7 +66,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
     }
 
     public static final class Client {

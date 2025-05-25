@@ -15,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.IClientConfigActions;
@@ -23,15 +24,13 @@ import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.vanilla.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -45,11 +44,6 @@ import java.util.*;
 
 public class DirStrike extends Skill {
     public static final Skill INSTANCE = new DirStrike();
-
-    static {
-        NetworkSystem.registerPacketType(StartPacket.class);
-        NetworkSystem.registerPacketType(EndPacket.class);
-    }
 
     private DirStrike() {
         super(SkillNames.DIR_STRIKE, 3, List.of(VectorReflection.INSTANCE));
@@ -94,7 +88,7 @@ public class DirStrike extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
     }
 
     public static final class Client {

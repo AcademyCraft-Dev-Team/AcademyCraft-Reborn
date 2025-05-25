@@ -1,9 +1,9 @@
 package org.academy.api.client.gui;
 
 import net.minecraft.core.BlockPos;
+import org.academy.AcademyCraftClient;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.NetworkSystemClient;
-import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.ConnectNodePacket;
 import org.academy.api.common.wireless.DisconnectNodePacket;
@@ -57,7 +57,7 @@ public class WirelessPanelHelper {
 
         default void requestAvailableNodes(SmoothScrollPanelWidget listPanel) {
             GetAvailableNodesPacket requestPayload = new GetAvailableNodesPacket(getPosition());
-            FutureManagerClient.sendRequestToServer(
+            AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(
                     requestPayload,
                     (GetAvailableNodesPacket.Response response) -> {
                         if (response != null && response.availableNodeNames != null) {
@@ -114,7 +114,7 @@ public class WirelessPanelHelper {
 
         default void requestCurrentNodeStatus() {
             GetCurrentNodePacket requestPayload = new GetCurrentNodePacket(getPosition());
-            FutureManagerClient.sendRequestToServer(
+            AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(
                     requestPayload,
                     (GetCurrentNodePacket.Response response) -> {
                         if (response != null) {

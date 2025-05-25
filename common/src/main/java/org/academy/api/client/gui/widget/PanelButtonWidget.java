@@ -22,7 +22,7 @@ public class PanelButtonWidget extends AbstractWidget implements WidgetContainer
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isFocused() && button == 0) {
+        if (isFocused()) {
             playDownSound(Minecraft.getInstance().getSoundManager());
             if (onPress != null) {
                 onPress.run();

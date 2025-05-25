@@ -16,7 +16,7 @@ import org.joml.Vector3f;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"unchecked", "rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes", "unused"})
 public class FriendlyByteBufSerializers {
     public static final BiMap<FriendlyByteBufSerializer, Integer> SERIALIZER_IDS = HashBiMap.create();
     private static final Map<Class<?>, FriendlyByteBufSerializer<?>> FRIENDLY_BYTE_BUF_SERIALIZER_MAP = new ConcurrentHashMap<>();
@@ -91,10 +91,7 @@ public class FriendlyByteBufSerializers {
             buffer.writeBoolean(false);
         }
     });
-    public static final FriendlyByteBufSerializer<FriendlyByteBufSerializers> FRIENDLY_BYTE_BUF_SERIALIZERS_FRIENDLY_BYTE_BUF_SERIALIZERS = registerSerializer(FriendlyByteBufSerializers.class, (buffer, value) -> {
-        buffer.writeUtf(value.getClass().getCanonicalName());
-
-    });
+    public static final FriendlyByteBufSerializer<FriendlyByteBufSerializers> FRIENDLY_BYTE_BUF_SERIALIZERS_FRIENDLY_BYTE_BUF_SERIALIZERS = registerSerializer(FriendlyByteBufSerializers.class, (buffer, value) -> buffer.writeUtf(value.getClass().getCanonicalName()));
     public static final FriendlyByteBufSerializer<Class> CLASS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Class.class, (buffer, value) -> buffer.writeUtf(value.getCanonicalName()));
     public static final FriendlyByteBufSerializer<ArrayList<Skill>> SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = getCollectionFriendlyByteBufSerializer(Skill.class);
     public static final FriendlyByteBufSerializer<ImmutablePair> PAIR_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ImmutablePair.class, (buffer, pair) -> {

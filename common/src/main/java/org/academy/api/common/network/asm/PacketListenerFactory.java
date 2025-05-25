@@ -1,4 +1,4 @@
-package org.academy.api.common.network;
+package org.academy.api.common.network.asm;
 
 import org.academy.api.common.network.packet.IPacket;
 import org.objectweb.asm.ClassWriter;
@@ -11,19 +11,19 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 
 @SuppressWarnings("unchecked")
-public class PacketHandlerFactory {
+public class PacketListenerFactory {
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
     private static final String IPACKET_DESCRIPTOR = Type.getDescriptor(IPacket.class);
-    private static final String STATIC_HANDLER_PARENT_INTERNAL_NAME = Type.getInternalName(StaticPacketHandler.class);
-    private static final String INSTANCE_HANDLER_PARENT_INTERNAL_NAME = Type.getInternalName(InstancePacketHandler.class);
+    private static final String STATIC_HANDLER_PARENT_INTERNAL_NAME = Type.getInternalName(StaticPacketListener.class);
+    private static final String INSTANCE_HANDLER_PARENT_INTERNAL_NAME = Type.getInternalName(InstancePacketListener.class);
     private static final String OBJECT_DESCRIPTOR = Type.getDescriptor(Object.class);
     private static final String CLASS_DESCRIPTOR = Type.getDescriptor(Class.class);
 
-    public static StaticPacketHandler createStatic(Method method) {
+    public static StaticPacketListener createStatic(Method method) {
         Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketHandlerFactory.class.getName().replace('.', '/') + "$"
+            String className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
                     + method.getDeclaringClass().getName().replace('.', '_') + "$"
                     + method.getName() + "$"
                     + specificPacketParameterType.getName().replace('.', '_');
@@ -33,7 +33,7 @@ public class PacketHandlerFactory {
             MethodHandles.Lookup hiddenClassLookup = LOOKUP.defineHiddenClass(
                     classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE
             );
-            return (StaticPacketHandler) hiddenClassLookup
+            return (StaticPacketListener) hiddenClassLookup
                     .findConstructor(hiddenClassLookup.lookupClass(), MethodType.methodType(void.class))
                     .invoke();
         } catch (Throwable e) {
@@ -41,11 +41,11 @@ public class PacketHandlerFactory {
         }
     }
 
-    public static InstancePacketHandler createInstance(Method method, Object targetInstance) {
+    public static InstancePacketListener createInstance(Method method, Object targetInstance) {
         Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketHandlerFactory.class.getName().replace('.', '/') + "$"
+            String className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
                     + targetInstance.getClass().getSimpleName() + "$"
                     + Integer.toHexString(System.identityHashCode(targetInstance)) + "$"
                     + method.getName();
@@ -53,7 +53,7 @@ public class PacketHandlerFactory {
             byte[] classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, false);
 
             MethodHandles.Lookup hiddenClassLookup = LOOKUP.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE);
-            return (InstancePacketHandler) hiddenClassLookup
+            return (InstancePacketListener) hiddenClassLookup
                     .findConstructor(hiddenClassLookup.lookupClass(), MethodType.methodType(void.class, Object.class))
                     .invoke(targetInstance);
         } catch (Throwable e) {
@@ -69,7 +69,7 @@ public class PacketHandlerFactory {
         String specificPacketParameterTypeInternalName = Type.getInternalName(specificPacketParameterType);
         String targetMethodDescriptor = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(specificPacketParameterType));
 
-        cv.visit(Opcodes.V17, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL | Opcodes.ACC_SUPER, classNameInternal, null, parentInternalName, new String[]{Type.getInternalName(PacketHandler.class)});
+        cv.visit(Opcodes.V17, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL | Opcodes.ACC_SUPER, classNameInternal, null, parentInternalName, new String[]{Type.getInternalName(IPacketListener.class)});
 
         MethodVisitor constructor;
         String constructorDescriptor = isStatic ? "()V" : "(" + OBJECT_DESCRIPTOR + ")V";

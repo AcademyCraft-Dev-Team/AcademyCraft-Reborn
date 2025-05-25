@@ -18,6 +18,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.IClientConfigActions;
@@ -27,14 +28,14 @@ import org.academy.api.client.renderer.CameraRenderer;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.*;
+import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.vanilla.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -48,10 +49,6 @@ import java.util.*;
 public class VectorAccel extends Skill {
     public static final int MAX_CHARGE_TICKS = 40;
     public static final Skill INSTANCE = new VectorAccel();
-
-    static {
-        NetworkSystem.registerPacketType(DashPacket.class);
-    }
 
     private VectorAccel() {
         super(SkillNames.VECTOR_ACCEL, 1);
@@ -94,7 +91,7 @@ public class VectorAccel extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -334,11 +331,9 @@ public class VectorAccel extends Skill {
     public static final class DashPacket extends IPacket<ServerGamePacketListenerImpl> {
         public int chargeTicks;
 
-        @ReceiverConstructor
         public DashPacket() {
         }
 
-        @SenderConstructor
         public DashPacket(int chargeTicks) {
             this.chargeTicks = chargeTicks;
         }

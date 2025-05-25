@@ -16,6 +16,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftServer;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -23,12 +24,12 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.*;
+import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
-import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.builtin.SkillNames;
@@ -37,20 +38,11 @@ import org.academy.internal.common.world.entity.player.PlayerSyncData;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class StormWing extends Skill {
     public static final Skill INSTANCE = new StormWing();
     public static final String TAG_KEY = "activated_storm_wing";
-
-    static {
-        NetworkSystem.registerPacketType(TogglePacket.class);
-        NetworkSystem.registerPacketType(ControlPacket.class);
-    }
 
     private StormWing() {
         super(SkillNames.STORM_WING, 4, List.of(VectorReflection.INSTANCE));
@@ -88,7 +80,7 @@ public class StormWing extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        NetworkSystemServer.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -234,11 +226,9 @@ public class StormWing extends Skill {
     public static final class ControlPacket extends IPacket<ServerGamePacketListenerImpl> {
         public State state;
 
-        @ReceiverConstructor
         public ControlPacket() {
         }
 
-        @SenderConstructor
         public ControlPacket(State state) {
             this.state = state;
         }

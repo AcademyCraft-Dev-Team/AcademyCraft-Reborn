@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AcquireCategoryPacket extends IRequestPayload<ServerGamePacketListenerImpl> {
+public class AcquireCategoryPacket extends IRequestPayload<ServerGamePacketListenerImpl, AcquireCategoryPacket.Response> {
     public BlockPos userPos;
 
     public AcquireCategoryPacket() {
