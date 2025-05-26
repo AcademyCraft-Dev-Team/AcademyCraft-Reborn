@@ -57,6 +57,10 @@ public final class TextureResources {
     public static final ResourceLocation TEXTURE_ICON_BOX = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_box.png");
     public static final ResourceLocation TEXTURE_CURSOR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/cursor.png");
     /**
+     * Data Terminal
+     */
+    public static final ResourceLocation TEXTURE_APP_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/app_back.png");
+    /**
      * Meltdowner
      */
     public static final ResourceLocation TEXTURE_MELTDOWNER_RAY_GLOW = new ResourceLocation(AcademyCraft.MOD_ID,"textures/ability/meltdowner/ray/ray.png");
@@ -171,6 +175,12 @@ public final class TextureResources {
         );
         public static final RenderType RENDER_TYPE_CURSOR = RenderUtil.getPositionTexRenderType(
                 "cursor", TEXTURE_CURSOR, true
+        );
+        /**
+         * Data Terminal
+         */
+        public static final RenderType RENDER_TYPE_APP_BACK = RenderUtil.getPositionTexRenderType(
+                "app_back", TEXTURE_APP_BACK, false
         );
     }
 }

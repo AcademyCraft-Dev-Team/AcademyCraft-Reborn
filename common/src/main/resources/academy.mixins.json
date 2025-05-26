@@ -6,6 +6,7 @@
   "mixins": [
     "MixinConnectionProtocol",
     "MixinDimensionDataStorage",
+    "MixinItemModelGenerators",
     "MixinMinecraftServer",
     "MixinPlayer",
     "MixinPlayerList",
@@ -19,6 +20,7 @@
     "MixinKeyboardHandler",
     "MixinLevelRenderer",
     "MixinMinecraft",
+    "MixinModelBakery",
     "MixinMouseHandler",
     "MixinPlayerRenderer",
     "MixinShaderInstance"

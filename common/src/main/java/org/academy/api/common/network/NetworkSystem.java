@@ -51,7 +51,12 @@ public class NetworkSystem {
     }
 
     public <T extends IPacket<?>> int getPacketIdByType(Class<T> packetClass) {
-        return this.classToId.getOrDefault(packetClass, -1);
+        if (this.classToId.containsKey(packetClass)) {
+            return this.classToId.get(packetClass);
+        } else {
+            AcademyCraft.LOGGER.info(packetClass.getName() + " has no id registered");
+            return -1;
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -7,6 +7,7 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.client.renderer.hud.HUDManager;
+import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.FutureManager;
 import org.academy.internal.client.gui.screen.Screens;
@@ -39,5 +40,11 @@ public final class AcademyCraftClient {
         Screens.register();
         DataTerminalHUD.init();
         HUDManager.init();
+        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_ICON_WIND_GEN_TOP, "Test", new Runnable() {
+            @Override
+            public void run() {
+                AcademyCraft.LOGGER.info("Hello World!");
+            }
+        }));
     }
 }
