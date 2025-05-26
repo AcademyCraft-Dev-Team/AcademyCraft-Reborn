@@ -15,7 +15,7 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     public ImageRadioButtonWidget(float x, float y, float width, float height,
                                   RenderType renderType, Runnable onPress) {
         super(x, y, width, height, renderType, onPress);
-        hoverEffect = false;
+        defaultHoverEffect = false;
         updateVisualState();
     }
 

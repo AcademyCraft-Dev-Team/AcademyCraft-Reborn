@@ -37,16 +37,8 @@ public interface Widget {
 
     void setHovered(boolean hovered);
 
-    /**
-     * Gets the parent container, if any.
-     * @return The parent WidgetContainer, or null if this is a root widget.
-     */
     WidgetContainer getParent();
 
-    /**
-     * Sets the parent container. Should generally only be called by the container itself.
-     * @param parent The parent container.
-     */
     void setParent(WidgetContainer parent);
 
     void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick);
@@ -95,13 +87,6 @@ public interface Widget {
     default void onFocusLost() {
     }
 
-    /**
-     * Checks if the given screen coordinates are within the bounds of this widget.
-     * Considers parent positions if applicable (absolute screen coordinates).
-     * @param checkX Screen X coordinate.
-     * @param checkY Screen Y coordinate.
-     * @return True if the point is within the widget's bounds.
-     */
     default boolean isMouseOver(double checkX, double checkY) {
         float absX = getAbsoluteX();
         float absY = getAbsoluteY();
@@ -117,18 +102,10 @@ public interface Widget {
         return parentMouseOver && mouseOver;
     }
 
-    /**
-     * Calculates the absolute X coordinate on the screen.
-     * @return Absolute X coordinate.
-     */
     default float getAbsoluteX() {
         return getX() + (getParent() != null ? getParent().getAbsoluteX() : 0);
     }
 
-    /**
-     * Calculates the absolute Y coordinate on the screen.
-     * @return Absolute Y coordinate.
-     */
     default float getAbsoluteY() {
         return getY() + (getParent() != null ? getParent().getAbsoluteY() : 0);
     }

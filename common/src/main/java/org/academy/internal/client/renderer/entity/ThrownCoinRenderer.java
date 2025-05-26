@@ -1,6 +1,7 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -29,9 +30,20 @@ public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
         BakedModel bakedModel = minecraft.getItemRenderer().getItemModelShaper().getItemModel(itemStack);
         RandomSource randomSource = RandomSource.create();
         randomSource.setSeed(42L);
+        entity.renderAngle = MathUtil.lerpStartEndFactor(entity.renderAngle, entity.angle, MathUtil.animationFactor(1, Minecraft.instance.getDeltaFrameTime()));
+        bakedModel.getTransforms().ground.apply(false, poseStack);
+        poseStack.mulPose(Axis.YP.rotationDegrees(entityYaw));
         Matrix4f matrix4f = new Matrix4f();
-        entity.renderAngle = MathUtil.lerpStartEndFactor(entity.renderAngle, entity.angle, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.instance.getDeltaFrameTime()));
+
+        float x, y, z;
+        x = -0.5f;
+        y = -0.5f;
+        z = -0.5f;
+
+        matrix4f.translate(-0.5f, -0.5f, -0.5f);
+        matrix4f.translate(-x, -y, -z);
         matrix4f.rotateX(entity.renderAngle);
+        matrix4f.translate(x, y, z);
         poseStack.mulPoseMatrix(matrix4f);
         RenderUtil.BakedModelRenderer.render(poseStack, bakedModel, buffer, randomSource, false, packedLight, OverlayTexture.NO_OVERLAY);
         poseStack.popPose();

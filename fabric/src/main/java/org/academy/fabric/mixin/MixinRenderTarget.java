@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(value = RenderTarget.class, remap = false)
+@Mixin(RenderTarget.class)
 public class MixinRenderTarget {
     @Shadow
     public int width;

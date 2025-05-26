@@ -13,7 +13,7 @@ public class EntityTypes {
     public static final List<Type<?>> TYPE_LIST = new ArrayList<>();
 
     public static final EntityType<ThrownCoin> THROWN_COIN_ENTITY_TYPE = register(
-            ThrownCoin::new, MobCategory.MISC, 0.5F, 0.5F, "thrown_coin");
+            ThrownCoin::new, MobCategory.MISC, 0.25F, 0.25F, "thrown_coin");
     public static final EntityType<RailgunRay> RAILGUN_RAY_ENTITY_TYPE = register(
             RailgunRay::new, MobCategory.MISC, 0, 0, "railgun_ray");
     public static final EntityType<Arc> ARC_ENTITY_TYPE = register(
