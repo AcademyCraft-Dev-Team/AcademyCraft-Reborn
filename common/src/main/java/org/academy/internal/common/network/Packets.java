@@ -12,10 +12,7 @@ import org.academy.api.common.wireless.ConnectNodePacket;
 import org.academy.api.common.wireless.DisconnectNodePacket;
 import org.academy.api.common.wireless.SetNodeNamePacket;
 import org.academy.api.common.wireless.SetNodePassPacket;
-import org.academy.internal.common.ability.builtin.accelerator.skills.DirStrike;
-import org.academy.internal.common.ability.builtin.accelerator.skills.KineticEnergyApplied;
-import org.academy.internal.common.ability.builtin.accelerator.skills.StormWing;
-import org.academy.internal.common.ability.builtin.accelerator.skills.VectorAccel;
+import org.academy.internal.common.ability.builtin.accelerator.skills.*;
 import org.academy.internal.common.ability.builtin.electromaster.skills.ArcGenerate;
 import org.academy.internal.common.ability.builtin.electromaster.skills.Railgun;
 import org.academy.internal.common.ability.builtin.meltdowner.skills.SingleHighSpeedElectronBeam;
@@ -39,45 +36,49 @@ public final class Packets {
         return packetClass;
     }
 
-    public static final Class<PlayerSyncPacket> PLAYER_SYNC_PACKET =
+    public static final Class<PlayerSyncPacket> PLAYER_SYNC =
             register(PlayerSyncPacket.class, listener -> new PlayerSyncPacket());
-    public static final Class<ExpSyncPacket> EXP_SYNC_PACKET =
+    public static final Class<ExpSyncPacket> EXP_SYNC =
             register(ExpSyncPacket.class, listener -> new ExpSyncPacket());
-    public static final Class<ConnectNodePacket> CONNECT_NODE_PACKET =
+    public static final Class<ConnectNodePacket> CONNECT_NODE =
             register(ConnectNodePacket.class, listener -> new ConnectNodePacket());
-    public static final Class<DisconnectNodePacket> DISCONNECT_NODE_PACKET =
+    public static final Class<DisconnectNodePacket> DISCONNECT_NODE =
             register(DisconnectNodePacket.class, listener -> new DisconnectNodePacket());
-    public static final Class<SetNodeNamePacket> SET_NODE_NAME_PACKET =
+    public static final Class<SetNodeNamePacket> SET_NODE_NAME =
             register(SetNodeNamePacket.class, listener -> new SetNodeNamePacket());
-    public static final Class<SetNodePassPacket> SET_NODE_PASS_PACKET =
+    public static final Class<SetNodePassPacket> SET_NODE_PASS =
             register(SetNodePassPacket.class, listener -> new SetNodePassPacket());
-    public static final Class<OpenScreenPacket> OPEN_SCREEN_PACKET =
+    public static final Class<OpenScreenPacket> OPEN_SCREEN =
             register(OpenScreenPacket.class, listener -> new OpenScreenPacket());
-    public static final Class<FutureRequestPacket> FUTURE_REQUEST_PACKET =
+    public static final Class<FutureRequestPacket> FUTURE_REQUEST =
             register(FutureRequestPacket.class, listener -> new FutureRequestPacket<>());
-    public static final Class<FutureResponsePacket> FUTURE_RESPONSE_PACKET =
+    public static final Class<FutureResponsePacket> FUTURE_RESPONSE =
             register(FutureResponsePacket.class, listener -> new FutureResponsePacket<>());
 
-    public static final Class<StormWing.TogglePacket> STORM_WING_TOGGLE_PACKET =
+    public static final Class<StormWing.TogglePacket> STORM_WING_TOGGLE =
             register(StormWing.TogglePacket.class, listener -> new StormWing.TogglePacket());
-    public static final Class<StormWing.ControlPacket> STORM_WING_CONTROL_PACKET =
+    public static final Class<StormWing.ControlPacket> STORM_WING_CONTROL =
             register(StormWing.ControlPacket.class, listener -> new StormWing.ControlPacket());
-    public static final Class<VectorAccel.DashPacket> VECTOR_ACCEL_DASH_PACKET =
+    public static final Class<VectorAccel.DashPacket> VECTOR_ACCEL_DASH =
             register(VectorAccel.DashPacket.class, listener -> new VectorAccel.DashPacket());
-    public static final Class<ArcGenerate.GeneratePacket> ARC_GENERATE_GENERATE_PACKET =
+    public static final Class<ArcGenerate.GeneratePacket> ARC_GENERATE_GENERATE =
             register(ArcGenerate.GeneratePacket.class, listener -> new ArcGenerate.GeneratePacket());
-    public static final Class<Railgun.ShootPacket> RAILGUN_SHOOT_PACKET =
+    public static final Class<Railgun.ShootPacket> RAILGUN_SHOOT =
             register(Railgun.ShootPacket.class, listener -> new Railgun.ShootPacket());
-    public static final Class<SingleHighSpeedElectronBeam.ShootPacket> SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT_PACKET =
+    public static final Class<SingleHighSpeedElectronBeam.ShootPacket> SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT =
             register(SingleHighSpeedElectronBeam.ShootPacket.class, listener -> new SingleHighSpeedElectronBeam.ShootPacket());
-    public static final Class<SelfTeleport.SelfTeleportPacket> SELF_TELEPORT_PACKET =
+    public static final Class<SelfTeleport.SelfTeleportPacket> SELF_TELEPORT =
             register(SelfTeleport.SelfTeleportPacket.class, listener -> new SelfTeleport.SelfTeleportPacket());
-    public static final Class<DirStrike.StartPacket> DIR_STRIKE_START_PACKET =
+    public static final Class<DirStrike.StartPacket> DIR_STRIKE_START =
             register(DirStrike.StartPacket.class, listener -> new DirStrike.StartPacket());
-    public static final Class<DirStrike.EndPacket> DIR_STRIKE_END_PACKET =
+    public static final Class<DirStrike.EndPacket> DIR_STRIKE_END =
             register(DirStrike.EndPacket.class, listener -> new DirStrike.EndPacket());
-    public static final Class<KineticEnergyApplied.TogglePacket> KINETIC_ENERGY_APPLIED_TOGGLE_PACKET =
+    public static final Class<KineticEnergyApplied.TogglePacket> KINETIC_ENERGY_APPLIED_TOGGLE =
             register(KineticEnergyApplied.TogglePacket.class, listener -> new KineticEnergyApplied.TogglePacket());
+    public static final Class<VectorReflection.TogglePacket> VECTOR_REFLECTION_TOGGLE =
+            register(VectorReflection.TogglePacket.class, listener -> new VectorReflection.TogglePacket());
+    public static final Class<BloodflowReverse.ReverseBloodflowPacket> REVERSE_BLOODFLOW =
+            register(BloodflowReverse.ReverseBloodflowPacket.class, listener -> new BloodflowReverse.ReverseBloodflowPacket());
 
     @SuppressWarnings({"unchecked"})
     public static void registerAll(NetworkSystem networkSystem) {

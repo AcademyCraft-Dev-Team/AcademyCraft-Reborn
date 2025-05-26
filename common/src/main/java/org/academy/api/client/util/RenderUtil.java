@@ -336,7 +336,7 @@ public final class RenderUtil {
         }
 
         public static void renderCylinder(Matrix4f matrix4f, VertexConsumer vertexConsumer, float[][] vertexBuffer,
-                                                  float red, float green, float blue, float alpha) {
+                                          float red, float green, float blue, float alpha) {
             for (float[] floats : vertexBuffer) {
                 float x = floats[0];
                 float y = floats[1];

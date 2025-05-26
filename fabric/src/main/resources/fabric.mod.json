@@ -28,7 +28,6 @@
     "fabricloader": "*",
     "fabric": "*",
     "minecraft": "${minecraft_version}",
-    "modernui": "*",
     "special-model-loader": "*"
   },
   "accessWidener": "academy.accesswidener"

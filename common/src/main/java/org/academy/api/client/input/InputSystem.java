@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class InputSystem {
+public final class InputSystem {
     public static final Map<String, KeyBinding> MOUSE_KEY_BINDINGS = new HashMap<>();
     public static final Map<String, KeyBinding> KEYBOARD_KEY_BINDING_MAP = new HashMap<>();
     public static final Map<String, Consumer<Integer>> scrollListeners = new HashMap<>();

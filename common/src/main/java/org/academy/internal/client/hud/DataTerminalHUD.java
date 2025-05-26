@@ -14,8 +14,11 @@ import net.minecraft.client.MouseHandler;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.PostChain;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -27,29 +30,28 @@ import org.academy.api.client.input.*;
 import org.academy.api.client.renderer.hud.HUDManager;
 import org.academy.api.client.renderer.hud.HUDRenderer;
 import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.vanilla.ChangeScreenEvent;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
+import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 
-public class DataTerminalHUD implements HUDRenderer {
-    public static final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
-    public static boolean active = false;
-    public static double xpos;
-    public static double ypos;
+public final class DataTerminalHUD implements HUDRenderer {
+    private static final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
+    private static boolean active = false;
+    private static double xpos;
+    private static double ypos;
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE_HUD = "toggle_data_terminal_hud_action";
     public static final DataTerminalHUD INSTANCE = new DataTerminalHUD();
-    public static InputSystem.InputPair keyBinding;
 
     private static final float APP_ICON_SIZE = 48;
     private static final float APP_TEXT_HEIGHT = 8;
@@ -69,9 +71,21 @@ public class DataTerminalHUD implements HUDRenderer {
     private static final float APP_AREA_Y = 32 + 4;
     private static final float APP_AREA_BAR_WIDTH = 4;
 
-    public static final float WIDTH = APP_AREA_X + APP_AREA_ACTUAL_WIDTH + APP_AREA_BAR_WIDTH + 8;
-    public static final float HEIGHT = APP_AREA_Y + APP_AREA_VISIBLE_HEIGHT + 8;
-    public static LabelWidget playerNameLabel;
+    private static final float WIDTH = APP_AREA_X + APP_AREA_ACTUAL_WIDTH + APP_AREA_BAR_WIDTH + 8;
+    private static final float HEIGHT = APP_AREA_Y + APP_AREA_VISIBLE_HEIGHT + 8;
+    private static LabelWidget playerNameLabel;
+    private static final PostChain postChain;
+    private static final List<App> APP_LIST = new ArrayList<>();
+    private static final List<Class<? extends Screen>> IGNORE_SCREEN_LIST = new ArrayList<>();
+
+    static {
+        try {
+            postChain = new PostChain(Minecraft.getInstance().getTextureManager(), Minecraft.getInstance().getResourceManager(), Minecraft.getInstance().getMainRenderTarget(), new ResourceLocation("shaders/post/blur_mask.json"));
+            postChain.resize(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Override
     public void render(GuiGraphics guiGraphics, float partialTick) {
@@ -79,6 +93,8 @@ public class DataTerminalHUD implements HUDRenderer {
         guiGraphics.pose().pushPose();
 
         RenderSystem.backupProjectionMatrix();
+        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
 
         Minecraft mc = Minecraft.getInstance();
         Window window = mc.getWindow();
@@ -117,9 +133,18 @@ public class DataTerminalHUD implements HUDRenderer {
         RenderSystem.applyModelViewMatrix();
 
         guiGraphics.pose().pushPose();
+        {
+            guiGraphics.bufferSource().endBatch(RenderType.gui());
+            postChain.getTempTarget("maskInput").clear(false);
+            postChain.getTempTarget("maskInput").bindWrite(false);
+            RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF, guiGraphics.bufferSource());
+            guiGraphics.bufferSource().endBatch(RenderType.gui());
+            postChain.process(partialTick);
+            Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
+        }
         rootContainer.render(guiGraphics, xpos, ypos, partialTick);
-        guiGraphics.flush();
         guiGraphics.pose().popPose();
+        guiGraphics.flush();
 
         pose.popPose();
         RenderSystem.applyModelViewMatrix();
@@ -134,10 +159,9 @@ public class DataTerminalHUD implements HUDRenderer {
         rootContainer.clearChildren();
         BlendQuadWidget back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
         back.drawLine = false;
-        back.alpha = 0.25f;
+        back.alpha = 0.125f;
         rootContainer.addChild("back", back);
         PanelWidget root = new PanelWidget(0, 0, WIDTH, HEIGHT);
-        root.setZ(root.getZ() + 1);
         rootContainer.addChild("root", root);
         {
             PanelWidget infoBar = new PanelWidget(0, 0, WIDTH, 32);
@@ -160,21 +184,20 @@ public class DataTerminalHUD implements HUDRenderer {
             SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_ACTUAL_WIDTH, APP_AREA_VISIBLE_HEIGHT);
             root.addChild("area_app", appArea);
             {
-                int totalAppsToCreate = 14;
+                List<App> apps = new ArrayList<>(APP_LIST);
+                int totalAppsToCreate = apps.size();
 
                 for (int i = 0; i < totalAppsToCreate; i++) {
+                    App app = apps.get(i);
                     int row = i / APP_COLS;
                     int col = i % APP_COLS;
                     float currentAppX = APP_AREA_PADDING + col * (APP_WIDGET_WIDTH + APP_HORIZONTAL_SPACING);
                     float currentAppY = APP_AREA_PADDING + row * (APP_WIDGET_HEIGHT + APP_VERTICAL_SPACING);
 
-                    int finalI = i;
-                    PanelWidget appButton = getAppWidget("App " + i, () -> {
-                        AcademyCraft.LOGGER.info("App {} clicked", finalI);
-                    });
+                    PanelWidget appButton = getAppWidget(app);
                     appButton.setX(currentAppX);
                     appButton.setY(currentAppY);
-                    appArea.addChild("app_" + i, appButton);
+                    appArea.addChild("app_" + app.name, appButton);
                 }
             }
             VerticalScrollBarWidget appAreaBar = new VerticalScrollBarWidget(appArea,
@@ -223,7 +246,7 @@ public class DataTerminalHUD implements HUDRenderer {
             AcademyCraftClient.CLIENT_CONFIG.setConfig(CONFIG_KEY_DATA_TERMINAL, configData);
         }
 
-        keyBinding = configData.getKeyBinding(KEY_NAME_TOGGLE_HUD,
+        InputSystem.InputPair keyBinding = configData.getKeyBinding(KEY_NAME_TOGGLE_HUD,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -236,32 +259,32 @@ public class DataTerminalHUD implements HUDRenderer {
         InputSystem.addKeyBinding(KEY_NAME_TOGGLE_HUD, keyBinding, DataTerminalHUD::toggle);
     }
 
-    public static PanelWidget getAppWidget(String appName, Runnable onPress) {
+    private static PanelWidget getAppWidget(App app) {
         PanelWidget appPanel = new PanelWidget(0, 0, APP_WIDGET_WIDTH, APP_WIDGET_HEIGHT);
 
-        ImageButtonWidget appIconButton = new ImageButtonWidget(
+        AppWidget appWidget = new AppWidget(
                 (APP_WIDGET_WIDTH - APP_ICON_SIZE) / 2,
                 0,
-                APP_ICON_SIZE,
-                APP_ICON_SIZE,
-                TextureResources.RenderTypes.RENDER_TYPE_BLEND_QUAD,
-                onPress
-        );
-        appIconButton.hoverEffect = true;
-        appIconButton.red = 0.3f + (float) Math.random() * 0.7f;
-        appIconButton.green = 0.3f + (float) Math.random() * 0.7f;
-        appIconButton.blue = 0.3f + (float) Math.random() * 0.7f;
-        appPanel.addChild("icon_button", appIconButton);
+                app.icon, app.runnable);
+        appPanel.addChild("app", appWidget);
 
         Font font = Minecraft.getInstance().font;
-        LabelWidget nameLabel = new LabelWidget(appName, 0, APP_ICON_SIZE + ICON_TEXT_SPACING);
+        LabelWidget nameLabel = new LabelWidget(app.name, 0, APP_ICON_SIZE + ICON_TEXT_SPACING);
         nameLabel.dropShadow = false;
 
-        float textWidthScaled = font.width(appName) * nameLabel.scale;
+        float textWidthScaled = font.width(app.name) * nameLabel.scale;
         nameLabel.setX((APP_WIDGET_WIDTH - textWidthScaled) / 2);
         appPanel.addChild("name_label", nameLabel);
 
         return appPanel;
+    }
+
+    public static void registerApp(App app) {
+        APP_LIST.add(app);
+    }
+
+    public static <T extends Screen> void registerIgnoreScreen(Class<T> screenClass) {
+        IGNORE_SCREEN_LIST.add(screenClass);
     }
 
     @SubscribeEvent
@@ -344,12 +367,29 @@ public class DataTerminalHUD implements HUDRenderer {
             KeyMapping keyUp = options.keyUp;
             KeyMapping keyDown = options.keyDown;
             KeyMapping keyJump = options.keyJump;
+            KeyMapping keyShift = options.keyShift;
+            KeyMapping keySprint = options.keySprint;
+            KeyMapping[] keyHotbarSlots = options.keyHotbarSlots;
 
-            if (!(keyLeft.matches(key, scanCode)
+            boolean keyHotbar = false;
+
+            for (KeyMapping keyHotbarSlot : keyHotbarSlots) {
+                if (!keyHotbar){
+                    keyHotbar = keyHotbarSlot.matches(key, scanCode);
+                }
+            }
+
+            if (!(
+                    keyLeft.matches(key, scanCode)
                     || keyRight.matches(key, scanCode)
                     || keyUp.matches(key, scanCode)
                     || keyDown.matches(key, scanCode)
-                    || keyJump.matches(key, scanCode))) {
+                    || keyShift.matches(key, scanCode)
+                    || keySprint.matches(key, scanCode)
+                    || keyJump.matches(key, scanCode)
+                    || keyHotbar
+            )
+            ) {
                 if (event.action == GLFW.GLFW_RELEASE) {
                     toggle();
                 }
@@ -363,7 +403,24 @@ public class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onResizeDisplay(ResizeDisplayEvent event) {
+        postChain.resize(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight());
         initGui(event.width, event.height);
+    }
+
+    @SubscribeEvent
+    public static void onScreenChange(ChangeScreenEvent.Post event) {
+        if (active) {
+            boolean ignore = false;
+            if (event.currentScreen != null){
+                Class<?> clazz = event.currentScreen.getClass();
+                if (IGNORE_SCREEN_LIST.contains(clazz)) {
+                    ignore = true;
+                }
+            }
+            if (!ignore) {
+                toggle();
+            }
+        }
     }
 
     @SubscribeEvent
@@ -379,11 +436,6 @@ public class DataTerminalHUD implements HUDRenderer {
         }
     }
 
-    @SubscribeEvent
-    public static void onScreenChange(ChangeScreenEvent.Post event) {
-        if (active && event.currentScreen instanceof PauseScreen)
-            toggle();
-    }
 
     private DataTerminalHUD() {
     }
@@ -421,6 +473,40 @@ public class DataTerminalHUD implements HUDRenderer {
         @Override
         public @NotNull Class<DataTerminalHUDConfigData> getConfigClass() {
             return DataTerminalHUDConfigData.class;
+        }
+    }
+
+    public record App(RenderType icon, String name, Runnable runnable) {
+    }
+
+    public static final class AppWidget extends ImageButtonWidget {
+        public float targetScale;
+
+        public AppWidget(float x, float y, RenderType renderType, Runnable onPress) {
+            super(x, y, APP_ICON_SIZE, APP_ICON_SIZE, renderType, onPress);
+            defaultHoverEffect = true;
+        }
+
+        @SuppressWarnings("SuspiciousNameCombination")
+        @Override
+        public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+            widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale, MathUtil.animationFactor(
+                    1, Minecraft.getInstance().getDeltaFrameTime()));
+            heightScale = widthScale;
+            RenderType oringinRenderType = renderType;
+            renderType = TextureResources.RenderTypes.RENDER_TYPE_APP_BACK;
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
+            renderType = oringinRenderType;
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
+        }
+
+        @Override
+        public void mouseMoved(double mouseX, double mouseY) {
+            targetScale = isHovered() ? 1 : 0.875f;
+            if (isHovered() != this.previousHoveredState && isHovered()) {
+                playDownSound(Minecraft.getInstance().getSoundManager());
+            }
+            super.mouseMoved(mouseX, mouseY);
         }
     }
 }

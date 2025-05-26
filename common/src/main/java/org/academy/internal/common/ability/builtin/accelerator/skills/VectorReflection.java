@@ -62,7 +62,7 @@ public class VectorReflection extends Skill {
                                 InputSystem.InputType.KEYBOARD,
                                 new InputSystem.KeyInfo(
                                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
-                                        GLFW.GLFW_RELEASE,
+                                        GLFW.GLFW_PRESS,
                                         new LinkedHashSet<>()
                                 )
                         )

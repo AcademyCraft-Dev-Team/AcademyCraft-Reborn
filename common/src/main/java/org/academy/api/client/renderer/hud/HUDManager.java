@@ -52,6 +52,7 @@ public class HUDManager {
     public static float targetAlpha;
     public static float currentAlpha;
     public static float smoothProgress;
+    private static RenderType currentIconRenderType;
 
     private HUDManager() {
     }
@@ -65,7 +66,6 @@ public class HUDManager {
     }
 
     public static void render(GuiGraphics guiGraphics, float partialTick) {
-        guiGraphics.flush();
         targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
 
         float factor = MathUtil.animationFactor(MathUtil.PI, Minecraft.getInstance().getDeltaFrameTime());
@@ -76,12 +76,11 @@ public class HUDManager {
         for (HUDRenderer renderer : HUD_RENDERERS) {
             renderer.render(guiGraphics, partialTick);
         }
-        guiGraphics.flush();
 
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
 
         HUDManager.renderComputingPowerBarBackground(guiGraphics);
-        guiGraphics.flush();
+        guiGraphics.bufferSource().endBatch(COMPUTING_POWER_BAR_BACKGROUND);
 
         float targetR = 1.0f;
         float targetG = 174 / 255.0f;
@@ -94,11 +93,11 @@ public class HUDManager {
 
         RenderSystem.setShaderColor(finalR, finalG, finalB, finalA);
         HUDManager.renderComputingPowerBar(guiGraphics, partialTick);
-        guiGraphics.flush();
+        guiGraphics.bufferSource().endBatch(COMPUTING_POWER_BAR);
 
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
         HUDManager.renderAbilityIcon(guiGraphics);
-        guiGraphics.flush();
+        guiGraphics.bufferSource().endBatch(currentIconRenderType);
 
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], originColor[3]);
     }
@@ -106,7 +105,8 @@ public class HUDManager {
     @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
     public static void renderAbilityIcon(GuiGraphics guiGraphics) {
         final AbilityCategory abilityCategory = AbilitySystemClient.getCategory();
-        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(ABILITY_ICON.apply(abilityCategory));
+        currentIconRenderType = ABILITY_ICON.apply(abilityCategory);
+        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(currentIconRenderType);
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
         final float width = ABILITY_ICON_WIDTH * scale;

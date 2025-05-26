@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(value = RenderTarget.class, remap = false)
+@Mixin(RenderTarget.class)
 public abstract class MixinRenderTarget {
     @Shadow
     public int width;
@@ -21,7 +21,7 @@ public abstract class MixinRenderTarget {
     protected int depthBufferId;
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    @Shadow
+    @Shadow(remap = false)
     public abstract boolean isStencilEnabled();
 
     @Inject(method = "createBuffers", at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lcom/mojang/blaze3d/platform/GlStateManager;_texImage2D(IIIIIIIILjava/nio/IntBuffer;)V", ordinal = 0))

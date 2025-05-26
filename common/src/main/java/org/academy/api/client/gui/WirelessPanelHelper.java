@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 
 import static org.academy.api.client.resource.TextureResources.RenderTypes.*;
 
-public class WirelessPanelHelper {
+public final class WirelessPanelHelper {
     public static final float PANEL_WIDTH = 176f;
     public static final float PANEL_HEIGHT = 187;
     public static final String PANEL_WIRELESS_NAME = "panel_wireless";
@@ -95,6 +95,7 @@ public class WirelessPanelHelper {
                         String password = inputBox.getText();
                         connect.accept(password);
                     });
+                    buttonWidget.defaultHoverEffect = true;
                     nodeViewPanel.addChild("button", buttonWidget);
                 } else {
                     if (!isNull) {
