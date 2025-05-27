@@ -22,7 +22,7 @@ public class ClientUtil {
         return MINECRAFT.getDeltaFrameTime() / animationDuration;
     }
 
-    public static float magicAnimationFactor(float animationDuration, float partialTick) {
+    public static float magicAnimationFactor(float animationDuration) {
         return 1 - (float) Math.exp(-Math.log(20) * MINECRAFT.getDeltaFrameTime() / 20 / animationDuration);
     }
 }

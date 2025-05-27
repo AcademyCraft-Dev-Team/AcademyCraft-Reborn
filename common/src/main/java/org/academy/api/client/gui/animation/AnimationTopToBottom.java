@@ -34,7 +34,7 @@ public class AnimationTopToBottom implements Animation {
             previousColor = RenderSystem.getShaderColor().clone();
         }
 
-        float factorHeight = ClientUtil.magicAnimationFactor(animationTime, partialTick);
+        float factorHeight = ClientUtil.magicAnimationFactor(animationTime);
         currentHeight = MathUtil.lerpStartEndFactor(currentHeight, originHeight, factorHeight);
         widget.setHeight(currentHeight);
 
@@ -46,7 +46,7 @@ public class AnimationTopToBottom implements Animation {
 
         if (alpha) {
             if (startAlpha) {
-                float factorAlpha = ClientUtil.magicAnimationFactor(alphaTime, partialTick);
+                float factorAlpha = ClientUtil.magicAnimationFactor(alphaTime);
                 currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, 1, factorAlpha);
             }
             RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha);
