@@ -33,13 +33,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("deprecation")
-public abstract class WirelessNodeBlock extends BaseEntityBlock {
+public class WirelessNodeBlock extends BaseEntityBlock {
     public static final String WIRELESS_NODE_SCREEN = "wireless_node_screen";
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
     private static final IntegerProperty ENERGY = IntegerProperty.create("energy", 0, 4);
 
     public WirelessNodeBlock(Properties properties) {
-        super(properties);
+        super(properties.noOcclusion());
         registerDefaultState(stateDefinition.any().setValue(CONNECTED, false).setValue(ENERGY, 0));
     }
 
@@ -50,7 +50,7 @@ public abstract class WirelessNodeBlock extends BaseEntityBlock {
 
     @Override
     public @NotNull RenderShape getRenderShape(@NotNull BlockState state) {
-        return RenderShape.MODEL;
+        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
     @Override
@@ -58,7 +58,7 @@ public abstract class WirelessNodeBlock extends BaseEntityBlock {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
             String nodeName = "Node_" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ();
-            String password = "123456";
+            String password = "";
             int radius = 32;
             int maxConnections = 8;
             if (WorldData.WirelessNetworkData.get(serverLevel).registerNode(pos, nodeName, password, radius, maxConnections)) {
@@ -72,7 +72,7 @@ public abstract class WirelessNodeBlock extends BaseEntityBlock {
     @Override
     public void onRemove(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState newState, boolean movedByPiston) {
         if (level instanceof ServerLevel serverLevel) {
-            WorldData.WirelessNetworkData.get(serverLevel).unregisterNode(pos);
+            WorldData.WirelessNetworkData.get(serverLevel).unregisterNode(pos, serverLevel);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
@@ -93,10 +93,18 @@ public abstract class WirelessNodeBlock extends BaseEntityBlock {
     }
 
     @Override
+    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos blockPos, @NotNull BlockState blockState) {
+        return new WirelessNodeBlockEntity(blockPos, blockState);
+    }
+
+    @Override
     public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
-            if (blockEntity instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity && level1 instanceof ServerLevel serverLevel) {
-                wirelessNodeBlockEntity.serverTick(serverLevel, pos);
+            if (blockEntity instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
+                wirelessNodeBlockEntity.ticks++;
+                if (wirelessNodeBlockEntity.getLevel() instanceof ServerLevel serverLevel) {
+                    wirelessNodeBlockEntity.serverTick(serverLevel, pos);
+                }
             }
         };
     }

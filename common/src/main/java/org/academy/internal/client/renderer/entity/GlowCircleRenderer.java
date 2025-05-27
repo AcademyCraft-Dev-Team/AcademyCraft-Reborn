@@ -3,7 +3,6 @@ package org.academy.internal.client.renderer.entity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -11,6 +10,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -26,8 +26,8 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle> {
 
     @Override
     public void render(@NotNull GlowCircle entity, float entityYaw, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
-        entity.renderAlpha = MathUtil.lerpStartEndFactor(entity.renderAlpha, entity.alpha, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.instance.getDeltaFrameTime()));
-        entity.renderRadius = MathUtil.lerpStartEndFactor(entity.renderRadius, entity.radius, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.instance.getDeltaFrameTime()));
+        entity.renderAlpha = MathUtil.lerpStartEndFactor(entity.renderAlpha, entity.alpha, ClientUtil.animationFactor(MathUtil.PI / 2));
+        entity.renderRadius = MathUtil.lerpStartEndFactor(entity.renderRadius, entity.radius, ClientUtil.animationFactor(MathUtil.PI / 2));
 
         boolean shaderPackInUse = RenderUtil.IS_SHADER_PACK_IN_USE.get();
         VertexConsumer vertexConsumer = buffer.getBuffer(

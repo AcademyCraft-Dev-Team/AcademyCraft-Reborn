@@ -15,6 +15,7 @@ public class BlockEntityRenderers {
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_TOP, new WindGenTopBlockEntityRenderer());
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ABILITY_DEVELOPER, new AbilityDeveloperBlockEntityRenderer());
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_PILLAR, new WindGenPillarBlockEntityRenderer());
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ADVANCED_WIRELESS_NODE, new WirelessNodeBlockEntityRenderer());
     }
 
     private BlockEntityRenderers() {

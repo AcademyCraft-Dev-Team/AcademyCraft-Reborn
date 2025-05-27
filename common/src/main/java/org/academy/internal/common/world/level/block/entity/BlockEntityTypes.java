@@ -15,9 +15,9 @@ import java.util.Map;
 public class BlockEntityTypes {
     public static final Map<ResourceLocation, BlockEntityType<?>> BLOCK_ENTITY_TYPES = new HashMap<>();
 
-    public static final BlockEntityType<AdvancedWirelessNodeBlockEntity> ADVANCED_WIRELESS_NODE = register(
+    public static final BlockEntityType<WirelessNodeBlockEntity> ADVANCED_WIRELESS_NODE = register(
             BlockEntityType.Builder.of(
-                    AdvancedWirelessNodeBlockEntity::new, Blocks.ADVANCED_WIRELESS_NODE_BLOCK),
+                    WirelessNodeBlockEntity::new, Blocks.WIRELESS_NODE_BLOCK),
             "advanced_wireless_node");
 
     public static final BlockEntityType<WindGenBaseBlockEntity> WIND_GEN_BASE = register(

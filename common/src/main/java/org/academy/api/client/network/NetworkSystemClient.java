@@ -32,7 +32,7 @@ public class NetworkSystemClient {
         this.clientLock = new ReentrantReadWriteLock();
     }
 
-    public void init() {
+    public void clear() {
         this.clientLock.writeLock().lock();
         try {
             this.clientTypedListeners.clear();

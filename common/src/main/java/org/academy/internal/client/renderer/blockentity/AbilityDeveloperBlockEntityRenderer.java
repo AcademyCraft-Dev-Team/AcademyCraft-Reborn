@@ -45,7 +45,6 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
             VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(TEXTURE));
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.setupAnim(blockEntity, partialTick);
             ABILITY_DEVELOPER_BLOCK_ENTITY_MODEL.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay, 1f, 1f, 1f, 1f);
-
             poseStack.popPose();
         }
     }

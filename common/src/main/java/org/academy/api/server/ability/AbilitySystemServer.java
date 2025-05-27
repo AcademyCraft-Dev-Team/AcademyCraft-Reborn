@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.*;
-import org.academy.api.common.network.future.SubscribePayload;
+import org.academy.api.common.network.future.HandlePayload;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
@@ -59,7 +59,7 @@ public class AbilitySystemServer {
     }
 
     @SuppressWarnings("resource")
-    @SubscribePayload
+    @HandlePayload
     public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
         ServerPlayer player = null;
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
@@ -105,7 +105,7 @@ public class AbilitySystemServer {
         return new AcquireCategoryPacket.Response(Collections.singletonList("Error: Block is not a WirelessUser."));
     }
 
-    @SubscribePayload
+    @HandlePayload
     @SuppressWarnings("resource")
     public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
         ServerPlayer player = null;

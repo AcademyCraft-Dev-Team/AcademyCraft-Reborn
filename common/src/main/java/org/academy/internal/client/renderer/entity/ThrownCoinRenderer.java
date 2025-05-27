@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -29,8 +30,7 @@ public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
         Minecraft minecraft = Minecraft.getInstance();
         BakedModel bakedModel = minecraft.getItemRenderer().getItemModelShaper().getItemModel(itemStack);
         RandomSource randomSource = RandomSource.create();
-        randomSource.setSeed(42L);
-        entity.renderAngle = MathUtil.lerpStartEndFactor(entity.renderAngle, entity.angle, MathUtil.animationFactor(1, Minecraft.instance.getDeltaFrameTime()));
+        entity.renderAngle = MathUtil.lerpStartEndFactor(entity.renderAngle, entity.angle, ClientUtil.animationFactor(1));
         bakedModel.getTransforms().ground.apply(false, poseStack);
         poseStack.mulPose(Axis.YP.rotationDegrees(entityYaw));
         Matrix4f matrix4f = new Matrix4f();

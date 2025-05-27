@@ -3,6 +3,7 @@ package org.academy.api.client.gui.animation;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,7 +34,7 @@ public class AnimationTopToBottom implements Animation {
             previousColor = RenderSystem.getShaderColor().clone();
         }
 
-        float factorHeight = MathUtil.magicAnimationFactor(animationTime, partialTick);
+        float factorHeight = ClientUtil.magicAnimationFactor(animationTime, partialTick);
         currentHeight = MathUtil.lerpStartEndFactor(currentHeight, originHeight, factorHeight);
         widget.setHeight(currentHeight);
 
@@ -45,7 +46,7 @@ public class AnimationTopToBottom implements Animation {
 
         if (alpha) {
             if (startAlpha) {
-                float factorAlpha = MathUtil.magicAnimationFactor(alphaTime, partialTick);
+                float factorAlpha = ClientUtil.magicAnimationFactor(alphaTime, partialTick);
                 currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, 1, factorAlpha);
             }
             RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha);

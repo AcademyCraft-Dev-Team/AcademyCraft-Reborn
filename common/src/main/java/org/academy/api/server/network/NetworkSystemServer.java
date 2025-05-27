@@ -29,7 +29,7 @@ public class NetworkSystemServer {
         this.serverLock = new ReentrantReadWriteLock();
     }
 
-    public void init() {
+    public void clear() {
         this.serverLock.writeLock().lock();
         try {
             this.serverTypedListeners.clear();

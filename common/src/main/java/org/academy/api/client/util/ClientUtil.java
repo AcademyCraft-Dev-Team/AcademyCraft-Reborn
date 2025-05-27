@@ -5,6 +5,8 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.common.ability.Skill;
 
 public class ClientUtil {
+    public static final Minecraft MINECRAFT = Minecraft.getInstance();
+
     private ClientUtil() {
     }
 
@@ -14,5 +16,13 @@ public class ClientUtil {
 
     public static boolean lacksSkill(Skill skill) {
         return !AbilitySystemClient.LEARNED_SKILLS.contains(skill);
+    }
+
+    public static float animationFactor(float animationDuration) {
+        return MINECRAFT.getDeltaFrameTime() / animationDuration;
+    }
+
+    public static float magicAnimationFactor(float animationDuration, float partialTick) {
+        return 1 - (float) Math.exp(-Math.log(20) * MINECRAFT.getDeltaFrameTime() / 20 / animationDuration);
     }
 }

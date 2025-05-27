@@ -8,10 +8,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.future.SubscribePayload;
+import org.academy.api.common.network.future.HandlePayload;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -22,7 +23,7 @@ public class WirelessManager {
         AcademyCraftServer.FUTURE_MANAGER_SERVER_INSTANCE.registerPayloadHandler(WirelessManager.class);
     }
 
-    @SubscribePayload
+    @HandlePayload
     public static GetAvailableNodesPacket.Response handleGetAvailableNodes(GetAvailableNodesPacket payload) {
         ServerPlayer player = null;
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
@@ -38,7 +39,7 @@ public class WirelessManager {
         return new GetAvailableNodesPacket.Response(getAvailableNodes(level, requesterPos));
     }
 
-    @SubscribePayload
+    @HandlePayload
     public static GetCurrentNodePacket.Response handleGetCurrentNode(GetCurrentNodePacket payload) {
         ServerPlayer player = null;
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
@@ -185,27 +186,30 @@ public class WirelessManager {
         }
     }
 
-    public static void handleDisconnect(ServerPlayer player, ServerLevel level, BlockPos userPos) {
+    public static void handleDisconnect(@Nullable ServerPlayer player, ServerLevel level, BlockPos userPos) {
         BlockEntity userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
-            AcademyCraft.LOGGER.warn("Player {} tried to disconnect invalid block at {}.", player.getGameProfile().getName(), userPos);
+            String playerName = (player != null) ? player.getGameProfile().getName() : "System";
+            AcademyCraft.LOGGER.warn("{} tried to disconnect invalid block at {}.", playerName, userPos);
             return;
         }
 
-        BlockPos connectedNodePos = wirelessUser.getConnectedNodePosition();
-        if (connectedNodePos == null) {
-            AcademyCraft.LOGGER.debug("User at {} tried to disconnect but wasn't connected.", userPos);
-            return;
-        }
+        BlockPos connectedNodePosition = wirelessUser.getConnectedNodePosition();
 
-        WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(level);
-
-        if (networkData.disconnectUserFromNode(connectedNodePos, userPos)) {
-            wirelessUser.setConnectedNodePosition(null);
-            AcademyCraft.LOGGER.debug("User at {} successfully disconnected from node at {}.", userPos, connectedNodePos);
+        if (connectedNodePosition != null) {
+            WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(level);
+            boolean removedFromData = networkData.disconnectUserFromNode(connectedNodePosition, userPos);
+            if (removedFromData) {
+                AcademyCraft.LOGGER.debug("Successfully removed user {} from node {}'s list in SavedData.", userPos, connectedNodePosition);
+            } else {
+                AcademyCraft.LOGGER.debug("Attempted to remove user {} from node {}'s list in SavedData, but the association was not found (possibly already removed or node unregistered).", userPos, connectedNodePosition);
+            }
         } else {
-            AcademyCraft.LOGGER.warn("Failed request to disconnect user {} from node {}.", userPos, connectedNodePos);
+            AcademyCraft.LOGGER.debug("User at {} was not connected to any node according to its own state.", userPos);
         }
+
+        wirelessUser.setConnectedNodePosition(null);
+        AcademyCraft.LOGGER.debug("User at {} connection state (WirelessUser instance) cleared.", userPos);
     }
 
     public static List<String> getAvailableNodes(ServerLevel level, BlockPos requesterPos) {

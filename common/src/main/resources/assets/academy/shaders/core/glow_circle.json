@@ -5,7 +5,7 @@
     "dstrgb": "1-srcalpha"
   },
   "vertex": "position_tex",
-  "fragment": "academy:ring_effect",
+  "fragment": "academy:glow_circle",
   "attributes": [
     "Position",
     "UV0"
