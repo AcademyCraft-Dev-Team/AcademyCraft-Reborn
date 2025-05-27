@@ -114,14 +114,6 @@ public class MathUtil {
         }
     }
 
-    public static float magicAnimationFactor(float animationDuration, float partialTick) {
-        return 1 - (float) Math.exp(-Math.log(20) * partialTick / 20 / animationDuration);
-    }
-
-    public static float animationFactor(float animationDuration, float deltaTime) {
-        return deltaTime / animationDuration;
-    }
-
     public static class WeightedRandom<T> {
         private final NavigableMap<Double, T> map = new TreeMap<>();
         private double totalWeight = 0.0;

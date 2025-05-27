@@ -1,10 +1,10 @@
 package org.academy.api.client.gui.widget;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.lwjgl.opengl.GL30;
@@ -40,7 +40,7 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
         if (!isVisible()) return;
 
         RenderSystem.clear(GL30.GL_STENCIL_BUFFER_BIT, false);
-        scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, MathUtil.animationFactor(MathUtil.PI / 1.5f, Minecraft.getInstance().getDeltaFrameTime()));
+        scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
 
         guiGraphics.pose().pushPose();
         guiGraphics.flush();

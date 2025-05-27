@@ -26,15 +26,14 @@ public final class AcademyCraftClient {
     public static final FutureManagerClient FUTURE_MANAGER_CLIENT_INSTANCE = new FutureManagerClient(FUTURE_MANAGER_INSTANCE, NETWORK_SYSTEM_CLIENT_INSTANCE);
 
     static {
-        NETWORK_SYSTEM_CLIENT_INSTANCE.init();
-        FUTURE_MANAGER_CLIENT_INSTANCE.init();
-
         CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
         AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
         CLIENT_CONFIG = new AcademyCraftClientConfig(CLIENT_CONFIG_FILE);
     }
 
     public static void init() {
+        NETWORK_SYSTEM_CLIENT_INSTANCE.clear();
+        FUTURE_MANAGER_CLIENT_INSTANCE.clear();
         AbilitySystemClient.init();
         ItemRenderers.init();
         Screens.register();

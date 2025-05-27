@@ -30,6 +30,7 @@ import org.academy.api.client.input.*;
 import org.academy.api.client.renderer.hud.HUDManager;
 import org.academy.api.client.renderer.hud.HUDRenderer;
 import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.vanilla.ChangeScreenEvent;
 import org.academy.api.client.vanilla.ClientTickEvent;
@@ -490,8 +491,8 @@ public final class DataTerminalHUD implements HUDRenderer {
         @SuppressWarnings("SuspiciousNameCombination")
         @Override
         public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
-            widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale, MathUtil.animationFactor(
-                    1, Minecraft.getInstance().getDeltaFrameTime()));
+            widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale,
+                    ClientUtil.animationFactor(1));
             heightScale = widthScale;
             RenderType oringinRenderType = renderType;
             renderType = TextureResources.RenderTypes.RENDER_TYPE_APP_BACK;

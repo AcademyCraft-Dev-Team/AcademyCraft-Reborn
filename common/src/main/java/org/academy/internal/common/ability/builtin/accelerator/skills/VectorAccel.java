@@ -9,6 +9,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,9 +35,6 @@ import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.ThreadType;
-import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.vanilla.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
@@ -289,41 +287,9 @@ public class VectorAccel extends Skill {
             Vec3 lookAngle = Vec3.directionFromRotation(player.getXRot() - 10, player.getYRot());
             Vec3 dashVelocity = lookAngle.scale(actualSpeedScalar);
 
-            float durationTicks = 5;
-
-            Context context = new Context(player, dashVelocity, durationTicks);
-            AbilitySystemServer.registerContext(context);
+            player.setDeltaMovement(dashVelocity);
+            player.connection.send(new ClientboundSetEntityMotionPacket(player));
             player.fallDistance = 0;
-        }
-
-        private static final class Context implements ServerContext {
-            private final ServerPlayer player;
-            private float remainingTicks;
-
-            public Context(ServerPlayer player, Vec3 dashVelocity, float durationTicks) {
-                this.player = player;
-                this.remainingTicks = durationTicks;
-                player.setDeltaMovement(dashVelocity);
-                player.hurtMarked = true;
-            }
-
-            @SubscribeEvent
-            public void onServerTick(ServerTickEvent event) {
-                if (player.isRemoved() || remainingTicks <= 0) {
-                    AbilitySystemServer.unregisterContext(this);
-                    player.setDeltaMovement(player.getDeltaMovement().x(), 0, player.getDeltaMovement().z());
-                    return;
-                }
-
-                player.setDeltaMovement(player.getDeltaMovement().scale(0.98));
-                player.setDeltaMovement(player.getDeltaMovement().subtract(0, 0.02 * 1.9, 0));
-
-                remainingTicks--;
-
-                if (player.horizontalCollision || player.verticalCollision) {
-                    remainingTicks = 0;
-                }
-            }
         }
     }
 

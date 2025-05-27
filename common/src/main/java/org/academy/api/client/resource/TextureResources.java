@@ -36,6 +36,7 @@ public final class TextureResources {
     /**
      * Wireless Node
      */
+    public static final ResourceLocation TEXTURE_WIRELESS_NODE_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wireless_node.png");
     public static final ResourceLocation TEXTURE_WIRELESS_NODE_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/node/ui_node.png");
     public static final ResourceLocation TEXTURE_WIRELESS_NODE_STATE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/node/state_node.png");
     /**
@@ -87,15 +88,15 @@ public final class TextureResources {
         public static final BiFunction<String, ResourceLocation, RenderType> RENDER_TYPE_SKILL_ICON =
                 (string, resourceLocation) ->
                         RenderUtil.getPositionColorTexRenderType(string, resourceLocation, false);
-        public static final RenderType DEBUG = new RenderType.CompositeRenderType(
-                "debug_aaa",
+        public static final RenderType GLOW_CIRCLE = new RenderType.CompositeRenderType(
+                "glow_circle",
                 DefaultVertexFormat.POSITION_TEX,
                 VertexFormat.Mode.QUADS,
                 64,
                 false,
                 true,
                 RenderType.CompositeState.builder()
-                        .setShaderState(RenderStateUtil.DEBUG)
+                        .setShaderState(RenderStateUtil.GLOW_CIRCLE)
                         .setCullState(RenderStateUtil.NO_CULL)
                         .setWriteMaskState(RenderStateUtil.COLOR_WRITE)
                         .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)

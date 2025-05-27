@@ -9,11 +9,11 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
@@ -25,7 +25,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public abstract class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
+public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
+    private static final int MAX_ENERGY = 2_400_000;
+    private static final int TRANSFER_RATE = 20000;
+
     private int energyStored = 5000;
     public WorldData.WirelessNetworkData.NodeConfig cachedConfig = null;
     public NonNullList<ItemStack> items = NonNullList.withSize(2, ItemStack.EMPTY);
@@ -33,9 +36,12 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
     public int connectedUsersCount;
     public int maxConnectedUsers;
     public int radius;
+    public int ticks;
+    public final AnimationState coreState = new AnimationState();
 
-    public WirelessNodeBlockEntity(BlockEntityType<? extends WirelessNodeBlockEntity> blockEntityType, BlockPos pos, BlockState blockState) {
-        super(blockEntityType, pos, blockState);
+    public WirelessNodeBlockEntity(BlockPos pos, BlockState blockState) {
+        super(BlockEntityTypes.ADVANCED_WIRELESS_NODE, pos, blockState);
+        coreState.start(ticks);
     }
 
     public void serverTick(ServerLevel serverLevel, BlockPos pos) {
@@ -252,5 +258,15 @@ public abstract class WirelessNodeBlockEntity extends BlockEntity implements Wir
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public int getMaxEnergyStorage() {
+        return MAX_ENERGY;
+    }
+
+    @Override
+    public int getEnergyTransferRate() {
+        return TRANSFER_RATE;
     }
 }

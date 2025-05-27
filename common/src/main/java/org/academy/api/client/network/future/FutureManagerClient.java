@@ -43,7 +43,7 @@ public class FutureManagerClient {
         this.requestHandlers = new HashMap<>();
     }
 
-    public void init() {
+    public void clear() {
         this.pendingFutures.clear();
         this.usedFutureIds.clear();
         this.requestHandlers.clear();
@@ -78,7 +78,7 @@ public class FutureManagerClient {
         }
 
         for (Method method : clazz.getDeclaredMethods()) {
-            if (method.isAnnotationPresent(SubscribePayload.class)) {
+            if (method.isAnnotationPresent(HandlePayload.class)) {
                 boolean isStaticMethod = Modifier.isStatic(method.getModifiers());
                 if (!isStaticMethod && owner instanceof Class) {
                     AcademyCraft.LOGGER.warn("Client: Cannot register non-static @SubscribePayload method {} from a Class object. Provide an instance.", method);
