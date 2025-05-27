@@ -44,7 +44,7 @@ public class FutureManagerServer {
         this.requestHandlers = new HashMap<>();
     }
 
-    public void init() {
+    public void clear() {
         this.pendingFutures.clear();
         this.usedFutureIds.clear();
         this.requestHandlers.clear();
@@ -73,7 +73,7 @@ public class FutureManagerServer {
     public void registerPayloadHandler(Object owner) {
         Class<?> clazz = owner instanceof Class ? (Class<?>) owner : owner.getClass();
         for (Method method : clazz.getDeclaredMethods()) {
-            if (method.isAnnotationPresent(SubscribePayload.class)) {
+            if (method.isAnnotationPresent(HandlePayload.class)) {
                 boolean isStaticMethod = Modifier.isStatic(method.getModifiers());
                 if (!isStaticMethod && owner instanceof Class) {
                     AcademyCraft.LOGGER.warn("Server: Cannot register non-static @SubscribePayload method {} from a Class object. Provide an instance.", method);

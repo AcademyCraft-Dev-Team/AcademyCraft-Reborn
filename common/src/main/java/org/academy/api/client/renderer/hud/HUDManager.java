@@ -2,13 +2,13 @@ package org.academy.api.client.renderer.hud;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.util.MathUtil;
@@ -68,7 +68,7 @@ public class HUDManager {
     public static void render(GuiGraphics guiGraphics, float partialTick) {
         targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
 
-        float factor = MathUtil.animationFactor(MathUtil.PI, Minecraft.getInstance().getDeltaFrameTime());
+        float factor = ClientUtil.animationFactor(MathUtil.PI);
         currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, factor);
 
         float[] originColor = RenderSystem.getShaderColor().clone();
@@ -144,7 +144,7 @@ public class HUDManager {
         } else {
             progress = 0;
         }
-        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, MathUtil.animationFactor(MathUtil.PI / 2, Minecraft.getInstance().getDeltaFrameTime()));
+        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, ClientUtil.animationFactor(MathUtil.PI / 2));
         if (Float.isNaN(smoothProgress)) {
             smoothProgress = 0f;
         }

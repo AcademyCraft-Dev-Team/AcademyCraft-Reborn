@@ -16,6 +16,7 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.wireless.WirelessManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -193,12 +194,23 @@ public class WorldData {
             return true;
         }
 
-        public void unregisterNode(BlockPos pos) {
-            NodeConfig config = nodeConfigurations.remove(pos);
+        public void unregisterNode(BlockPos pos, ServerLevel level) {
+            NodeConfig config = nodeConfigurations.get(pos);
             if (config != null) {
-                nodeNameMap.remove(config.name);
+                Set<BlockPos> usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
+
+                String nodeName = config.name;
+                nodeNameMap.remove(nodeName);
+                nodeConfigurations.remove(pos);
                 setDirty();
-                AcademyCraft.LOGGER.debug("Unregistered node '{}' at {}", config.name, pos);
+
+                AcademyCraft.LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", nodeName, pos);
+
+                for (BlockPos userPos : usersToDisconnect) {
+                    WirelessManager.handleDisconnect(null, level, userPos);
+                }
+            } else {
+                AcademyCraft.LOGGER.warn("Attempted to unregister a node at {} but it was not found in configurations.", pos);
             }
         }
 

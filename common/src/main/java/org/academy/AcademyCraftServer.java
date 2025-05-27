@@ -25,12 +25,9 @@ public class AcademyCraftServer {
     public static final NetworkSystemServer NETWORK_SYSTEM_SERVER_INSTANCE = new NetworkSystemServer(NETWORK_SYSTEM_INSTANCE);
     public static final FutureManagerServer FUTURE_MANAGER_SERVER_INSTANCE = new FutureManagerServer(FUTURE_MANAGER_INSTANCE, NETWORK_SYSTEM_SERVER_INSTANCE);
 
-    static {
-        NETWORK_SYSTEM_SERVER_INSTANCE.init();
-        FUTURE_MANAGER_SERVER_INSTANCE.init();
-    }
-
     public static void init(final MinecraftServer server) {
+        NETWORK_SYSTEM_SERVER_INSTANCE.clear();
+        FUTURE_MANAGER_SERVER_INSTANCE.clear();
         serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
         worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);

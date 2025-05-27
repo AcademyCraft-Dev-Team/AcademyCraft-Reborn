@@ -23,6 +23,7 @@ import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
+import org.academy.internal.client.renderer.Shaders;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
@@ -457,6 +458,8 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         public float currentScale = 1.0f;
         public boolean dynamicFollow = true;
         public float xOffset, yOffset;
+        public float targetProgress;
+        public float progress;
         public final List<SkillInfo> dependencies = new ArrayList<>();
 
         @SuppressWarnings("SuspiciousNameCombination")
@@ -465,6 +468,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                     RENDER_TYPE_SKILL_ICON.apply(skillInfo.skill.name, skillInfo.texture),
                     () -> AbilityDeveloperScreen.this.openSkillViewPanel(skillInfo));
             this.dependencies.addAll(skillInfo.dependencies);
+            targetProgress = AbilitySystemClient.getSkillExp(skillInfo.skill) / 100f;
         }
 
         @Override
@@ -475,7 +479,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             Matrix4f root = guiGraphics.pose().last().pose();
             root.translate(xOffset, yOffset, 0f);
             targetScale = isHovered() ? 1.25f : 1.0f;
-            currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, MathUtil.animationFactor(MathUtil.PI / 1.5f, Minecraft.getInstance().getDeltaFrameTime()));
+            currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
             widthScale = currentScale;
             heightScale = currentScale;
             RenderType oldType = renderType;
@@ -520,8 +524,12 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             blue = oBlue;
             widthScale /= 0.5f;
             heightScale /= 0.5f;
-            renderType = DEBUG;
+            renderType = GLOW_CIRCLE;
+            progress = MathUtil.lerpStartEndFactor(progress, targetProgress,
+                    ClientUtil.animationFactor(MathUtil.PI / 2));
+            Shaders.glowCircle.getUniform("progress").set(progress);
             super.render(guiGraphics, mouseX, mouseY, partialTick);
+            guiGraphics.bufferSource().endBatch(GLOW_CIRCLE);
             renderType = oldType;
             guiGraphics.pose().popPose();
         }

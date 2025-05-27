@@ -13,18 +13,17 @@ import java.util.function.Function;
 
 public class Shaders {
     public static final List<Function<ResourceProvider, ShaderInstance>> SHADERS = new ArrayList<>();
-    public static ShaderInstance test;
+    public static ShaderInstance glowCircle;
     public static ShaderInstance positionColorShader;
-    public static ShaderInstance gaussianBlurShader;
 
     static {
         SHADERS.add(new Function<>() {
             @Override
             public ShaderInstance apply(ResourceProvider resourceProvider) {
                 try {
-                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "ring_effect");
+                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "glow_circle");
                     ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
-                    test = shaderInstance;
+                    glowCircle = shaderInstance;
                     return shaderInstance;
                 } catch (IOException e) {
                     throw new RuntimeException(e);

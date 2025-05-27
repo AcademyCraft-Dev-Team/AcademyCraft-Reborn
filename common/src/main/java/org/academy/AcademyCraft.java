@@ -32,6 +32,7 @@ public final class AcademyCraft {
                 AcademyCraftClient.NETWORK_SYSTEM_INSTANCE : AcademyCraftServer.NETWORK_SYSTEM_INSTANCE;
         FutureManager futureManager = threadType == ThreadType.CLIENT ?
                 AcademyCraftClient.FUTURE_MANAGER_INSTANCE : AcademyCraftServer.FUTURE_MANAGER_INSTANCE;
+        networkSystem.clear();
         Packets.registerAll(networkSystem);
         AbilitySystem.init();
         Payloads.registerAll(futureManager);

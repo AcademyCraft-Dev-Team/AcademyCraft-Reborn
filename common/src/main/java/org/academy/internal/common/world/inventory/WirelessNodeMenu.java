@@ -8,7 +8,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.academy.internal.common.world.level.block.WirelessNodeBlock;
 import org.jetbrains.annotations.NotNull;
 
 public class WirelessNodeMenu extends AbstractContainerMenu {

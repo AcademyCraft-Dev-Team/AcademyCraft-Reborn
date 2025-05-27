@@ -31,6 +31,12 @@ public class NetworkSystem {
         this.packetFactories = new HashMap<>();
     }
 
+    public void clear() {
+        classToId.clear();
+        packetFactories.clear();
+        vanillaPacketsRegistered = false;
+    }
+
     public <T extends IPacket<?>, PL extends PacketListener> void registerPacketType(Class<T> packetClass, Function<PL, T> factory) {
         this.packetFactories.put(packetClass, factory);
         this.classToId.put(packetClass, this.classToId.size());
