@@ -39,10 +39,22 @@ public final class AcademyCraftClient {
         Screens.register();
         DataTerminalHUD.init();
         HUDManager.init();
-        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_ICON_WIND_GEN_TOP, "Test", new Runnable() {
+        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_APP_SETTINGS, "Settings", new Runnable() {
             @Override
             public void run() {
-                AcademyCraft.LOGGER.info("Hello World!");
+                AcademyCraft.LOGGER.info("C World!");
+            }
+        }));
+        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_APP_MEDIA_PLAYER, "Media Player", new Runnable() {
+            @Override
+            public void run() {
+                AcademyCraft.LOGGER.info("B World!");
+            }
+        }));
+        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_APP_MISAKA_CLOUD, "Misaka Cloud", new Runnable() {
+            @Override
+            public void run() {
+                AcademyCraft.LOGGER.info("A World!");
             }
         }));
     }

@@ -12,10 +12,6 @@ import java.util.Map;
 public class ItemRenderers {
     public static final Map<Item, ItemRenderer> ITEM_RENDERER_MAP = new HashMap<>();
 
-    public static final ItemRenderer WIND_GEN_TOP_BLOCK_ITEM_RENDERER =
-            register(Items.WIND_GEN_TOP_BLOCK_ITEM, new WindGenTopBlockItemRenderer());
-    public static final ItemRenderer WIND_GEN_PILLAR_ITEM_BLOCK_RENDERER =
-            register(Items.WIND_GEN_PILLAR_BLOCK_ITEM, new WindGenPillarBlockItemRenderer());
     public static final ItemRenderer WIRELESS_NODE =
             register(Items.WIRELESS_NODE_BLOCK_ITEM, new WirelessNodeBlockItemRenderer());
 

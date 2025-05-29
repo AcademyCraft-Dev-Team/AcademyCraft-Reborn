@@ -19,19 +19,17 @@ public class WindGenWorldGUI {
     }
 
     public void onInit() {
-        PanelWidget mainPanel = new PanelWidget(0, 0, WIDTH, HEIGHT);
-        rootContainer.addChild("main_panel", mainPanel);
-        {
+
             ImageWidget back = new ImageWidget(0, 0, WIDTH, HEIGHT, TextureResources.RenderTypes.RENDER_TYPE_SKILL_PANEL_INFO);
-            mainPanel.addChild("back", back);
-            ImageButtonWidget buttonWidget = new ImageButtonWidget(320, 200, 50, 50, TextureResources.RenderTypes.RENDER_TYPE_ICON_NODE, new Runnable() {
+        rootContainer.addChild("back", back);
+            ImageButtonWidget buttonWidget = new ImageButtonWidget(320, 200, 50, 50, TextureResources.RenderTypes.RENDER_TYPE_CURSOR, new Runnable() {
                 @Override
                 public void run() {
 
                 }
             });
-            mainPanel.addChild("button", buttonWidget);
-        }
+        rootContainer.addChild("button", buttonWidget);
+
     }
 
     public void mouseClicked() {

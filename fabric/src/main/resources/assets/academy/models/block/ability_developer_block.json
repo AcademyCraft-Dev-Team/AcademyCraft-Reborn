@@ -1,6 +1,6 @@
 {
   "parent": "special-model-loader:builtin/obj",
   "flip_v": true,
-  "particle": "academy:item/ability_developer_block_item",
-  "model": "academy:models/block/ability_developer_block.obj"
+  "particle": "academy:block/break_db",
+  "model": "academy:models/block/ability_developer.obj"
 }

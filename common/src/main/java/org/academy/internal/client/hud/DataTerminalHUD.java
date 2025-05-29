@@ -117,7 +117,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         pose.scale(scale, -scale, scale);
         pose.translate(0, 0, -WIDTH * 0.5f);
 
-        float panelX = guiW / 2 - WIDTH * 1.25f;
+        float panelX = guiW / 2 - WIDTH * 0.85f;
         float panelY = -HEIGHT * 0.5f;
         float centerX = panelX + WIDTH / 2f;
         float centerY = panelY + HEIGHT / 2f;
@@ -163,11 +163,20 @@ public final class DataTerminalHUD implements HUDRenderer {
         back.alpha = 0.125f;
         rootContainer.addChild("back", back);
         PanelWidget root = new PanelWidget(0, 0, WIDTH, HEIGHT);
+        DynamicGeometricBackgroundWidget dynamicGeometricBack = new DynamicGeometricBackgroundWidget(
+                0, 0, WIDTH, HEIGHT,
+                48, 1, 48,
+                0x30FFFFFF, true, 16);
+        rootContainer.addChild("back_dynamic", dynamicGeometricBack);
         rootContainer.addChild("root", root);
         {
             PanelWidget infoBar = new PanelWidget(0, 0, WIDTH, 32);
             root.addChild("info_bar", infoBar);
             {
+                ImageWidget icon = new ImageWidget(4, 4, 16, 16,
+                        TextureResources.RenderTypes.RENDER_TYPE_ICON_DATA_TERMINAL);
+                infoBar.addChild("icon", icon);
+
                 LocalPlayer player = Minecraft.getInstance().player;
                 String playerName = "N/A";
                 if (player != null) {
@@ -203,6 +212,8 @@ public final class DataTerminalHUD implements HUDRenderer {
             }
             VerticalScrollBarWidget appAreaBar = new VerticalScrollBarWidget(appArea,
                     appArea.getX() + appArea.getWidth(), appArea.getY(), APP_AREA_BAR_WIDTH, appArea.getHeight());
+            appAreaBar.setThumbColor(0x50AAAAAA);
+            appAreaBar.setTrackColor(0x70202020);
             appAreaBar.showBackground = false;
             root.addChild("bar_area_app", appAreaBar);
         }
@@ -215,6 +226,7 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     public static void toggle() {
         MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
+        ClientUtil.playDownSound();
         if (Minecraft.getInstance().screen != null) {
             active = false;
         } else {
@@ -225,7 +237,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             if (mouseHandler.isMouseGrabbed()) mouseHandler.releaseMouse();
             GLFW.glfwSetInputMode(window.getWindow(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
             double guiScale = window.getGuiScale();
-            GLFW.glfwSetCursorPos(window.getWindow(), (window.getGuiScaledWidth() - WIDTH * 1.25 / 2) * guiScale, window.getGuiScaledHeight() * 0.5 * guiScale);
+            GLFW.glfwSetCursorPos(window.getWindow(), (window.getGuiScaledWidth() - WIDTH * 0.85 / 2) * guiScale, window.getGuiScaledHeight() * 0.5 * guiScale);
             initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
         } else {
             if (!mouseHandler.isMouseGrabbed()) {
@@ -263,18 +275,16 @@ public final class DataTerminalHUD implements HUDRenderer {
     private static PanelWidget getAppWidget(App app) {
         PanelWidget appPanel = new PanelWidget(0, 0, APP_WIDGET_WIDTH, APP_WIDGET_HEIGHT);
 
-        AppWidget appWidget = new AppWidget(
+        AppWidget appIconWidget = new AppWidget(
                 (APP_WIDGET_WIDTH - APP_ICON_SIZE) / 2,
                 0,
                 app.icon, app.runnable);
-        appPanel.addChild("app", appWidget);
+        appPanel.addChild("app_icon", appIconWidget);
 
-        Font font = Minecraft.getInstance().font;
-        LabelWidget nameLabel = new LabelWidget(app.name, 0, APP_ICON_SIZE + ICON_TEXT_SPACING);
+        AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget(app.name, -3, APP_ICON_SIZE, APP_WIDGET_WIDTH, true);
+        nameLabel.scale = 0.85f;
         nameLabel.dropShadow = false;
 
-        float textWidthScaled = font.width(app.name) * nameLabel.scale;
-        nameLabel.setX((APP_WIDGET_WIDTH - textWidthScaled) / 2);
         appPanel.addChild("name_label", nameLabel);
 
         return appPanel;
@@ -313,8 +323,8 @@ public final class DataTerminalHUD implements HUDRenderer {
 
             float screenWidthGui = window.getGuiScaledWidth();
             float screenHeightGui = window.getGuiScaledHeight();
-            float hudScreenX = screenWidthGui - 1.25f * WIDTH;
-            float hudScreenY = (screenHeightGui - HEIGHT) / 2f;
+            float hudScreenX = screenWidthGui - WIDTH;
+            float hudScreenY = (screenHeightGui - HEIGHT * 0.85f) / 2f;
 
             double mouseGuiX = event.xpos / guiScale;
             double mouseGuiY = event.ypos / guiScale;
@@ -382,13 +392,13 @@ public final class DataTerminalHUD implements HUDRenderer {
 
             if (!(
                     keyLeft.matches(key, scanCode)
-                    || keyRight.matches(key, scanCode)
-                    || keyUp.matches(key, scanCode)
-                    || keyDown.matches(key, scanCode)
-                    || keyShift.matches(key, scanCode)
-                    || keySprint.matches(key, scanCode)
-                    || keyJump.matches(key, scanCode)
-                    || keyHotbar
+                            || keyRight.matches(key, scanCode)
+                            || keyUp.matches(key, scanCode)
+                            || keyDown.matches(key, scanCode)
+                            || keyShift.matches(key, scanCode)
+                            || keySprint.matches(key, scanCode)
+                            || keyJump.matches(key, scanCode)
+                            || keyHotbar
             )
             ) {
                 if (event.action == GLFW.GLFW_RELEASE) {
@@ -498,14 +508,19 @@ public final class DataTerminalHUD implements HUDRenderer {
             renderType = TextureResources.RenderTypes.RENDER_TYPE_APP_BACK;
             super.render(guiGraphics, mouseX, mouseY, partialTick);
             renderType = oringinRenderType;
+            guiGraphics.pose().translate(3, 7, 1);
+            width = APP_ICON_SIZE * 0.8F;
+            height = APP_ICON_SIZE * 0.8F;
             super.render(guiGraphics, mouseX, mouseY, partialTick);
+            width = APP_ICON_SIZE;
+            height = APP_ICON_SIZE;
         }
 
         @Override
         public void mouseMoved(double mouseX, double mouseY) {
-            targetScale = isHovered() ? 1 : 0.875f;
+            targetScale = isHovered() ? 1.25f : 1;
             if (isHovered() != this.previousHoveredState && isHovered()) {
-                playDownSound(Minecraft.getInstance().getSoundManager());
+                ClientUtil.playDownSound();
             }
             super.mouseMoved(mouseX, mouseY);
         }
