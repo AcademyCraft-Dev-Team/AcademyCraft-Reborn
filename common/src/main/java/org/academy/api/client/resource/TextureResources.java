@@ -60,7 +60,11 @@ public final class TextureResources {
     /**
      * Data Terminal
      */
+    public static final ResourceLocation TEXTURE_ICON_DATA_TERMINAL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_data_terminal.png");
     public static final ResourceLocation TEXTURE_APP_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/app_back.png");
+    public static final ResourceLocation TEXTURE_APP_MEDIA_PLAYER = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/app_media_player.png");
+    public static final ResourceLocation TEXTURE_APP_MISAKA_CLOUD = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/app_misaka_cloud.png");
+    public static final ResourceLocation TEXTURE_APP_SETTINGS = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/app_settings.png");
     /**
      * Meltdowner
      */
@@ -108,7 +112,7 @@ public final class TextureResources {
                 "panel_left_back_middle", TEXTURE_PANEL_LEFT_BACK_MIDDLE, false);
         public static final RenderType RENDER_TYPE_SKILL_PANEL_BACK = RenderUtil.getPositionTexRenderType(
                 "skill_panel_back", TEXTURE_PANEL_RIGHT_SKILL_BACK, true);
-        public static final RenderType RENDER_TYPE_SKILL_PANEL_INFO = RenderUtil.getPositionColorTexRenderType(
+        public static final RenderType RENDER_TYPE_SKILL_PANEL_INFO = RenderUtil.getPositionTexRenderType(
                 "skill_panel_info", TEXTURE_PANEL_RIGHT_INFO, false);
         public static final RenderType RENDER_TYPE_PANEL_RIGHT_BACK = RenderUtil.getPositionColorTexRenderType(
                 "panel_right_back", TEXTURE_PANEL_RIGHT_BACK, false);
@@ -180,8 +184,20 @@ public final class TextureResources {
         /**
          * Data Terminal
          */
-        public static final RenderType RENDER_TYPE_APP_BACK = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_ICON_DATA_TERMINAL = RenderUtil.getPositionTexRenderType(
+                "icon_data_terminal", TEXTURE_ICON_DATA_TERMINAL, false
+        );
+        public static final RenderType RENDER_TYPE_APP_BACK = RenderUtil.getPositionColorTexRenderType(
                 "app_back", TEXTURE_APP_BACK, false
+        );
+        public static final RenderType RENDER_TYPE_APP_MEDIA_PLAYER = RenderUtil.getPositionColorTexRenderType(
+                "app_media_player", TEXTURE_APP_MEDIA_PLAYER, false
+        );
+        public static final RenderType RENDER_TYPE_APP_MISAKA_CLOUD = RenderUtil.getPositionColorTexRenderType(
+                "app_misaka_cloud", TEXTURE_APP_MISAKA_CLOUD, false
+        );
+        public static final RenderType RENDER_TYPE_APP_SETTINGS = RenderUtil.getPositionColorTexRenderType(
+                "app_settings", TEXTURE_APP_SETTINGS, false
         );
     }
 }
