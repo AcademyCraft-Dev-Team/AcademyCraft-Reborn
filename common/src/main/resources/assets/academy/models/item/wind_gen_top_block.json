@@ -1,3 +1,6 @@
 {
-  "parent": "academy:block/wind_gen_top_block"
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "academy:item/wind_gen_top_block"
+  }
 }

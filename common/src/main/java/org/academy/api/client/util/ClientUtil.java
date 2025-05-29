@@ -1,8 +1,10 @@
 package org.academy.api.client.util;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.common.ability.Skill;
+import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 
 public class ClientUtil {
     public static final Minecraft MINECRAFT = Minecraft.getInstance();
@@ -24,5 +26,9 @@ public class ClientUtil {
 
     public static float magicAnimationFactor(float animationDuration) {
         return 1 - (float) Math.exp(-Math.log(20) * MINECRAFT.getDeltaFrameTime() / 20 / animationDuration);
+    }
+
+    public static void playDownSound(){
+        MINECRAFT.getSoundManager().play(SimpleSoundInstance.forUI(AcademyCraftSoundEvents.SELECT, 1.0F));
     }
 }

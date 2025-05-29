@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "academy:block/radio_frequency_energy_output_bridge_block"
-  }
-}

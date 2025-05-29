@@ -63,12 +63,12 @@ public class HorizontalScrollBarWidget extends DragBarWidget {
         MultiBufferSource buffer = graphics.bufferSource();
 
         if (showBackground) {
-            RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFF202020, buffer);
+            RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), getTrackColor(), buffer);
         }
 
         float thumbLeft = getThumbPosition();
         float thumbWidth = getThumbSize();
-        RenderUtil.fill(matrix, thumbLeft, getY(), thumbLeft + thumbWidth, getY() + getHeight(), 0xFFAAAAAA, buffer);
+        RenderUtil.fill(matrix, thumbLeft, getY(), thumbLeft + thumbWidth, getY() + getHeight(), getThumbColor(), buffer);
 
         graphics.flush();
     }

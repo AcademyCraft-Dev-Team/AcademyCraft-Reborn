@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/handheld",
   "textures": {
-    "layer0": "academy:item/ability_developer_block_item"
+    "layer0": "academy:item/ability_developer_block"
   }
 }

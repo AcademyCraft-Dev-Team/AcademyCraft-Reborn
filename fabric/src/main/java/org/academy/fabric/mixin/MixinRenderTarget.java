@@ -20,12 +20,12 @@ public class MixinRenderTarget {
     @Shadow
     protected int depthBufferId;
 
-    @Inject(method = "createBuffers", at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lcom/mojang/blaze3d/platform/GlStateManager;_texImage2D(IIIIIIIILjava/nio/IntBuffer;)V", ordinal = 0))
+    @Inject(method = "createBuffers", at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lcom/mojang/blaze3d/platform/GlStateManager;_texImage2D(IIIIIIIILjava/nio/IntBuffer;)V", ordinal = 0), remap = false)
     private void createBuffers(CallbackInfo ci) {
         GlStateManager._texImage2D(3553, 0, 36013, this.width, this.height, 0, 34041, 36269, null);
     }
 
-    @Redirect(method = "createBuffers", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/GlStateManager;_glFramebufferTexture2D(IIIII)V", ordinal = 1))
+    @Redirect(method = "createBuffers", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/GlStateManager;_glFramebufferTexture2D(IIIII)V", ordinal = 1), remap = false)
     private void createBuffersDep(int target, int attachment, int texTarget, int texture, int level) {
         GlStateManager._glFramebufferTexture2D(36160, 33306, 3553, this.depthBufferId, 0);
     }

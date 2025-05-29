@@ -1,13 +1,10 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.client.sounds.SoundManager;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
+import org.academy.api.client.util.ClientUtil;
 import org.lwjgl.glfw.GLFW;
 
 public class ImageButtonWidget extends ImageWidget {
@@ -27,17 +24,13 @@ public class ImageButtonWidget extends ImageWidget {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (hovered && button == GLFW.GLFW_RELEASE && isAbsoluteEnabled()) {
-            playDownSound(Minecraft.getInstance().getSoundManager());
+            ClientUtil.playDownSound();
             if (onPress != null) {
                 onPress.run();
             }
             return true;
         }
         return false;
-    }
-
-    public void playDownSound(SoundManager soundManager) {
-        soundManager.play(SimpleSoundInstance.forUI(AcademyCraftSoundEvents.SELECT, 1.0F));
     }
 
     @Override

@@ -73,12 +73,12 @@ public class VerticalScrollBarWidget extends DragBarWidget {
         matrix.translate(0, 0, z);
 
         if (showBackground) {
-            RenderUtil.fill(matrix, x, y, x + w, y + h, 0xFF202020, buffer);
+            RenderUtil.fill(matrix, x, y, x + w, y + h, getTrackColor(), buffer);
         }
 
         float thumbTop = getThumbPosition();
         float thumbHeight = getThumbSize();
-        RenderUtil.fill(matrix, x, thumbTop, x + w, thumbTop + thumbHeight, 0xFFAAAAAA, buffer);
+        RenderUtil.fill(matrix, x, thumbTop, x + w, thumbTop + thumbHeight, getThumbColor(), buffer);
 
         poseStack.popPose();
     }
