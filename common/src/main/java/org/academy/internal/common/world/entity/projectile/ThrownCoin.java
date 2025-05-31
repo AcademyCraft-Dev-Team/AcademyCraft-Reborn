@@ -37,7 +37,7 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
 
     @Override
     public @NotNull ItemStack getItem() {
-        return new ItemStack(Items.COIN_ITEM);
+        return new ItemStack(Items.COIN);
     }
 
     @Override

@@ -1,27 +1,36 @@
 package org.academy.internal.common.world.level.block;
 
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import org.academy.AcademyCraft;
+import net.minecraft.world.level.material.PushReaction;
+import org.academy.internal.common.world.level.material.Fluids;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class Blocks {
-    public static final Map<ResourceLocation, Block> BLOCKS = new HashMap<>();
-    public static final Block WIRELESS_NODE_BLOCK = new WirelessNodeBlock(BlockBehaviour.Properties.of());
-    public static final Block WIND_GEN_BASE_BLOCK = new WindGenBaseBlock(BlockBehaviour.Properties.of());
-    public static final MultiBlock WIND_GEN_TOP_BLOCK = new WindGenTopBlock();
-    public static final Block WIND_GEN_PILLAR_BLOCK = new WindGenPillarBlock();
-    public static final MultiBlock ABILITY_DEVELOPER_BLOCK = new AbilityDeveloperBlock();
+    public static final Map<String, Block> BLOCKS = new HashMap<>();
+    public static final Block WIRELESS_NODE = register("wireless_node_block", new WirelessNodeBlock(BlockBehaviour.Properties.of()));
+    public static final Block WIND_GEN_BASE = register("wind_gen_base_block", new WindGenBaseBlock(BlockBehaviour.Properties.of()));
+    public static final MultiBlock WIND_GEN_TOP = register("wind_gen_top_block", new WindGenTopBlock());
+    public static final Block WIND_GEN_PILLAR = register("wind_gen_pillar_block", new WindGenPillarBlock());
+    public static final MultiBlock ABILITY_DEVELOPER = register("ability_developer_block", new AbilityDeveloperBlock());
+    public static final Block IMAG_PHASE = register("imag_phase", new LiquidBlock(Fluids.IMAG_PHASE,
+            BlockBehaviour.Properties.of()
+                    .replaceable()
+                    .noCollission()
+                    .randomTicks()
+                    .strength(100.0F)
+                    .pushReaction(PushReaction.DESTROY)
+                    .noLootTable()
+                    .liquid()
+                    .sound(SoundType.EMPTY)));
 
-    static {
-        BLOCKS.put(new ResourceLocation(AcademyCraft.MOD_ID,"wireless_node_block"), WIRELESS_NODE_BLOCK);
-        BLOCKS.put(new ResourceLocation(AcademyCraft.MOD_ID,"wind_gen_base_block"), WIND_GEN_BASE_BLOCK);
-        BLOCKS.put(new ResourceLocation(AcademyCraft.MOD_ID, "wind_gen_top_block"), WIND_GEN_TOP_BLOCK);
-        BLOCKS.put(new ResourceLocation(AcademyCraft.MOD_ID, "wind_gen_pillar_block"), WIND_GEN_PILLAR_BLOCK);
-        BLOCKS.put(new ResourceLocation(AcademyCraft.MOD_ID, "ability_developer_block"), ABILITY_DEVELOPER_BLOCK);
+    public static <T extends Block> T register(String name, T block) {
+        BLOCKS.put(name, block);
+        return block;
     }
 
     private Blocks() {

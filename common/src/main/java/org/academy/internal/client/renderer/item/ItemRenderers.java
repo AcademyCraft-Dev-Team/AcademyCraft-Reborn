@@ -13,7 +13,7 @@ public class ItemRenderers {
     public static final Map<Item, ItemRenderer> ITEM_RENDERER_MAP = new HashMap<>();
 
     public static final ItemRenderer WIRELESS_NODE =
-            register(Items.WIRELESS_NODE_BLOCK_ITEM, new WirelessNodeBlockItemRenderer());
+            register(Items.WIRELESS_NODE_BLOCK, new WirelessNodeBlockItemRenderer());
 
     public static ItemRenderer register(Item item, ItemRenderer itemRenderer) {
         ITEM_RENDERER_MAP.put(item, itemRenderer);
