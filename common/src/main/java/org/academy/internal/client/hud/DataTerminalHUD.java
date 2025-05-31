@@ -43,7 +43,8 @@ import org.lwjgl.glfw.GLFW;
 import java.io.IOException;
 import java.util.*;
 
-import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_REPEAT;
 
 public final class DataTerminalHUD implements HUDRenderer {
     private static final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
@@ -225,7 +226,6 @@ public final class DataTerminalHUD implements HUDRenderer {
     }
 
     public static void toggle() {
-        MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
         ClientUtil.playDownSound();
         if (Minecraft.getInstance().screen != null) {
             active = false;
@@ -234,18 +234,11 @@ public final class DataTerminalHUD implements HUDRenderer {
         }
         Window window = Minecraft.getInstance().getWindow();
         if (active) {
-            if (mouseHandler.isMouseGrabbed()) mouseHandler.releaseMouse();
-            GLFW.glfwSetInputMode(window.getWindow(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
             double guiScale = window.getGuiScale();
-            GLFW.glfwSetCursorPos(window.getWindow(), (window.getGuiScaledWidth() - WIDTH * 0.85 / 2) * guiScale, window.getGuiScaledHeight() * 0.5 * guiScale);
+            GLFW.glfwSetCursorPos(window.getWindow(),
+                    (window.getGuiScaledWidth() - WIDTH * 0.85 / 2) * guiScale,
+                    window.getGuiScaledHeight() * 0.5 * guiScale);
             initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
-        } else {
-            if (!mouseHandler.isMouseGrabbed()) {
-                if (Minecraft.getInstance().screen != null) {
-                    GLFW.glfwSetInputMode(window.getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                }
-                mouseHandler.grabMouse();
-            }
         }
     }
 
@@ -385,7 +378,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             boolean keyHotbar = false;
 
             for (KeyMapping keyHotbarSlot : keyHotbarSlots) {
-                if (!keyHotbar){
+                if (!keyHotbar) {
                     keyHotbar = keyHotbarSlot.matches(key, scanCode);
                 }
             }
@@ -422,7 +415,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     public static void onScreenChange(ChangeScreenEvent.Post event) {
         if (active) {
             boolean ignore = false;
-            if (event.currentScreen != null){
+            if (event.currentScreen != null) {
                 Class<?> clazz = event.currentScreen.getClass();
                 if (IGNORE_SCREEN_LIST.contains(clazz)) {
                     ignore = true;
@@ -491,7 +484,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     }
 
     public static final class AppWidget extends ImageButtonWidget {
-        public float targetScale;
+        public float targetScale = 1;
 
         public AppWidget(float x, float y, RenderType renderType, Runnable onPress) {
             super(x, y, APP_ICON_SIZE, APP_ICON_SIZE, renderType, onPress);
