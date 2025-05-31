@@ -160,13 +160,13 @@ public final class DataTerminalHUD implements HUDRenderer {
         rootContainer.clearChildren();
         BlendQuadWidget back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
         back.drawLine = false;
-        back.alpha = 0.125f;
+        back.alpha = 0.075f;
         rootContainer.addChild("back", back);
         PanelWidget root = new PanelWidget(0, 0, WIDTH, HEIGHT);
         DynamicGeometricBackgroundWidget dynamicGeometricBack = new DynamicGeometricBackgroundWidget(
                 0, 0, WIDTH, HEIGHT,
-                48, 1, 48,
-                0x30FFFFFF, true, 16);
+                48, 1, 64,
+                0x20FFFFFF, true, 32);
         rootContainer.addChild("back_dynamic", dynamicGeometricBack);
         rootContainer.addChild("root", root);
         {

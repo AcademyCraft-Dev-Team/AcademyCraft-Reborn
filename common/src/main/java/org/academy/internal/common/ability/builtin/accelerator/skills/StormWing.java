@@ -164,15 +164,16 @@ public class StormWing extends Skill {
     }
 
     public static final class Server {
+        @SuppressWarnings("DataFlowIssue")
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().player;
             SynchedEntityData synchedEntityData = player.getEntityData();
             CompoundTag compoundTag = synchedEntityData.get(PlayerSyncData.DATA);
             CompoundTag newTag = new CompoundTag();
+            compoundTag.getAllKeys().forEach(key -> newTag.put(key, compoundTag.get(key)));
             newTag.putBoolean(TAG_KEY, !compoundTag.getBoolean(TAG_KEY));
             synchedEntityData.set(PlayerSyncData.DATA, newTag);
-            player.getAbilities().mayfly = synchedEntityData.get(PlayerSyncData.DATA).getBoolean(TAG_KEY);
         }
 
         @SubscribePacket

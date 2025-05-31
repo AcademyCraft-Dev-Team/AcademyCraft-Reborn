@@ -69,12 +69,12 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
                 }
                 Block block = currentState.getBlock();
 
-                if (block == Blocks.WIND_GEN_PILLAR_BLOCK) {
+                if (block == Blocks.WIND_GEN_PILLAR) {
                     ++pillars;
                     if (pillars > 64) {
                         break;
                     }
-                } else if (block == Blocks.WIND_GEN_TOP_BLOCK) {
+                } else if (block == Blocks.WIND_GEN_TOP) {
                     if (currentState.hasBlockEntity()) {
                         if (level.getBlockEntity(pos) instanceof WindGenTopBlockEntity windGenTopBlockEntity && windGenTopBlockEntity.isMain()) {
                             topBlockEntity = windGenTopBlockEntity;

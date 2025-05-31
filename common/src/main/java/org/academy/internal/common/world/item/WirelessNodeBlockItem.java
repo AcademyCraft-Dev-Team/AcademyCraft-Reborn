@@ -5,6 +5,6 @@ import org.academy.internal.common.world.level.block.Blocks;
 
 public class WirelessNodeBlockItem extends BlockItem {
     public WirelessNodeBlockItem() {
-        super(Blocks.WIRELESS_NODE_BLOCK, new Properties());
+        super(Blocks.WIRELESS_NODE, new Properties());
     }
 }

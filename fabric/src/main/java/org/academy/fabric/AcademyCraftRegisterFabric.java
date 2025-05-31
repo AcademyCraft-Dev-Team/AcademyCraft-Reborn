@@ -1,12 +1,15 @@
 package org.academy.fabric;
 
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
+import net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -21,47 +24,54 @@ import org.academy.fabric.internal.common.world.item.fabric.AcademyCraftItemsFab
 import org.academy.fabric.internal.common.world.level.block.entity.fabric.BlockEntityTypesFabric;
 import org.academy.fabric.internal.common.world.level.block.fabric.AcademyCraftBlocksFabric;
 import org.academy.internal.client.renderer.blockentity.BlockEntityRenderers;
-import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.internal.common.ability.builtin.AbilityCategories;
+import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.inventory.MenuTypes;
-import org.academy.internal.common.world.item.AcademyCraftIconItem;
+import org.academy.internal.common.world.item.IconItem;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
+import org.academy.internal.common.world.level.material.Fluids;
 
 public class AcademyCraftRegisterFabric {
     private AcademyCraftRegisterFabric() {
     }
 
     public static void register() {
-        registerItem();
+        registerFluid();
         registerBlock();
+        registerItem();
+
+        registerParticleType();
         registerBlockEntityType();
 
         registerCreativeModeTab();
         registerEntityType();
-        if (GameUtil.getEnvType() == EnvType.CLIENT) {
-            registerEntityRenderer();
-            registerBlockEntityRenderer();
-        }
+
         registerSoundEvent();
         registerAbilityCategory();
         registerMenuType();
+
+        if (GameUtil.getEnvType() == EnvType.CLIENT) {
+            registerBlockEntityRenderer();
+        }
     }
 
     private static void registerItem() {
         AcademyCraftItemsFabric.init();
-        for (ResourceLocation resourceLocation : Items.ITEMS.keySet()) {
-            Registry.register(BuiltInRegistries.ITEM, resourceLocation, Items.ITEMS.get(resourceLocation));
+        for (String key : Items.ITEMS.keySet()) {
+            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            Registry.register(BuiltInRegistries.ITEM, resourceLocation, Items.ITEMS.get(key));
         }
     }
 
     private static void registerBlock() {
         AcademyCraftBlocksFabric.init();
-        for (ResourceLocation resourceLocation : Blocks.BLOCKS.keySet()) {
-            Registry.register(BuiltInRegistries.BLOCK, resourceLocation, Blocks.BLOCKS.get(resourceLocation));
+        for (String key : Blocks.BLOCKS.keySet()) {
+            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            Registry.register(BuiltInRegistries.BLOCK, resourceLocation, Blocks.BLOCKS.get(key));
         }
     }
 
@@ -80,10 +90,10 @@ public class AcademyCraftRegisterFabric {
     }
 
     private static void registerCreativeModeTab() {
-        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(AcademyCraft.MOD_ID, "item_group"), CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0).icon(() -> new ItemStack(Items.ACADEMY_CRAFT_ICON_ITEM)).displayItems((itemDisplayParameters, output) -> {
-            for (ResourceLocation resourceLocation : Items.ITEMS.keySet()) {
-                Item item = Items.ITEMS.get(resourceLocation);
-                if (!(item instanceof AcademyCraftIconItem)) {
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(AcademyCraft.MOD_ID, "item_group"), CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0).icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {
+            for (String key : Items.ITEMS.keySet()) {
+                Item item = Items.ITEMS.get(key);
+                if (!(item instanceof IconItem)) {
                     output.accept(item);
                 }
             }
@@ -93,13 +103,6 @@ public class AcademyCraftRegisterFabric {
     private static void registerEntityType() {
         for (EntityTypes.Type<?> type : EntityTypes.TYPE_LIST) {
             Registry.register(BuiltInRegistries.ENTITY_TYPE, new ResourceLocation(AcademyCraft.MOD_ID, type.name()), type.entityType());
-        }
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void registerEntityRenderer() {
-        for (EntityType entityType : EntityRenderers.RENDERER_MAP.keySet()) {
-            net.minecraft.client.renderer.entity.EntityRenderers.register(entityType, EntityRenderers.RENDERER_MAP.get(entityType));
         }
     }
 
@@ -119,6 +122,24 @@ public class AcademyCraftRegisterFabric {
         for (String name : MenuTypes.MENU_TYPES.keySet()) {
             MenuType<?> menuType = MenuTypes.MENU_TYPES.get(name);
             Registry.register(BuiltInRegistries.MENU, new ResourceLocation(AcademyCraft.MOD_ID, name), menuType);
+        }
+    }
+
+    private static void registerFluid() {
+        for (String key : Fluids.FLUIDS.keySet()) {
+            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            Registry.register(BuiltInRegistries.FLUID, resourceLocation, Fluids.FLUIDS.get(key));
+        }
+        ResourceLocation imagTexture = new ResourceLocation(AcademyCraft.MOD_ID, "block/black");
+        FluidRenderHandlerRegistry.INSTANCE.register(Fluids.IMAG_PHASE, Fluids.FLOWING_IMAG_PHASE,
+                new SimpleFluidRenderHandler(imagTexture, imagTexture));
+        BlockRenderLayerMap.INSTANCE.putFluids(RenderType.translucent(), Fluids.IMAG_PHASE, Fluids.FLOWING_IMAG_PHASE);
+    }
+
+    private static void registerParticleType() {
+        for (String key : ParticleTypes.PARTICLE_TYPES.keySet()) {
+            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            Registry.register(BuiltInRegistries.PARTICLE_TYPE, resourceLocation, ParticleTypes.PARTICLE_TYPES.get(key));
         }
     }
 }

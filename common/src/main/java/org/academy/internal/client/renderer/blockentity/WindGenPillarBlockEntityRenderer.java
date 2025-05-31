@@ -16,7 +16,7 @@ public class WindGenPillarBlockEntityRenderer implements BlockEntityRenderer<Win
     public void render(@NotNull WindGenPillarBlockEntity windGenPillarBlockEntity, float v, @NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int i, int i1) {
         poseStack.pushPose();
         Minecraft minecraft = Minecraft.getInstance();
-        BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR_BLOCK.defaultBlockState());
+        BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());
         RandomSource randomSource = RandomSource.create();
         randomSource.setSeed(42L);
         RenderUtil.BakedModelRenderer.render(poseStack, bakedModel, multiBufferSource, randomSource, false, i, i1);

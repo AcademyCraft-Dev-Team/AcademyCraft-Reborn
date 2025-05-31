@@ -59,6 +59,6 @@ public class WindGenMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(@NotNull Player player) {
-        return stillValid(access, player, Blocks.WIND_GEN_BASE_BLOCK);
+        return stillValid(access, player, Blocks.WIND_GEN_BASE);
     }
 }

@@ -30,8 +30,11 @@ public class EntityRenderers {
             register(EntityTypes.SMOKE_ENTITY_TYPE, SmokeRenderer::new);
 
     public static <T extends Entity> EntityRendererProvider<T> register(EntityType<T> type, EntityRendererProvider<T> provider) {
-        RENDERER_MAP.put(type, provider);
+        net.minecraft.client.renderer.entity.EntityRenderers.register(type, provider);
         return provider;
+    }
+
+    public static void init() {
     }
 
     private EntityRenderers() {

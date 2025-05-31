@@ -12,6 +12,7 @@ import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.FutureManager;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.DataTerminalHUD;
+import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.internal.client.renderer.item.ItemRenderers;
 
 import java.io.File;
@@ -57,5 +58,6 @@ public final class AcademyCraftClient {
                 AcademyCraft.LOGGER.info("A World!");
             }
         }));
+        EntityRenderers.init();
     }
 }
