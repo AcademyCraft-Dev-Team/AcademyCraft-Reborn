@@ -5,6 +5,6 @@ import org.academy.internal.common.world.level.block.Blocks;
 
 public class WindGenPillarBlockItem extends BlockItem {
     public WindGenPillarBlockItem() {
-        super(Blocks.WIND_GEN_PILLAR_BLOCK, new Properties());
+        super(Blocks.WIND_GEN_PILLAR, new Properties());
     }
 }

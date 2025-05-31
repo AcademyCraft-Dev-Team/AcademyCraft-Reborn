@@ -17,27 +17,27 @@ public class BlockEntityTypes {
 
     public static final BlockEntityType<WirelessNodeBlockEntity> ADVANCED_WIRELESS_NODE = register(
             BlockEntityType.Builder.of(
-                    WirelessNodeBlockEntity::new, Blocks.WIRELESS_NODE_BLOCK),
+                    WirelessNodeBlockEntity::new, Blocks.WIRELESS_NODE),
             "advanced_wireless_node");
 
     public static final BlockEntityType<WindGenBaseBlockEntity> WIND_GEN_BASE = register(
             BlockEntityType.Builder.of(
-                    WindGenBaseBlockEntity::new, Blocks.WIND_GEN_BASE_BLOCK),
+                    WindGenBaseBlockEntity::new, Blocks.WIND_GEN_BASE),
             "wind_gen_base");
 
     public static final BlockEntityType<WindGenTopBlockEntity> WIND_GEN_TOP = register(
             BlockEntityType.Builder.of(
-                    WindGenTopBlockEntity::new, Blocks.WIND_GEN_TOP_BLOCK),
+                    WindGenTopBlockEntity::new, Blocks.WIND_GEN_TOP),
             "wind_gen_top");
 
     public static final BlockEntityType<WindGenPillarBlockEntity> WIND_GEN_PILLAR = register(
             BlockEntityType.Builder.of(
-                    WindGenPillarBlockEntity::new, Blocks.WIND_GEN_PILLAR_BLOCK),
+                    WindGenPillarBlockEntity::new, Blocks.WIND_GEN_PILLAR),
             "wind_gen_pillar");
 
     public static final BlockEntityType<AbilityDeveloperBlockEntity> ABILITY_DEVELOPER = register(
             BlockEntityType.Builder.of(
-                    AbilityDeveloperBlockEntity::new, Blocks.ABILITY_DEVELOPER_BLOCK),
+                    AbilityDeveloperBlockEntity::new, Blocks.ABILITY_DEVELOPER),
             "ability_developer"
     );
 

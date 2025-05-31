@@ -10,6 +10,8 @@ import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
 
 public class DataTerminalItem extends Item {
+    public static String HAS_DATA_TERMINAL = "has_data_terminal";
+
     public DataTerminalItem() {
         super(new Properties().stacksTo(1));
     }

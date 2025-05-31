@@ -27,7 +27,7 @@ public class MixinItemModelGenerators {
 
     @Inject(method = "run", at = @At("TAIL"))
     private void runMixin(CallbackInfo ci) {
-        ResourceLocation itemKey = BuiltInRegistries.ITEM.getKey(Items.COIN_ITEM);
-        ModelTemplates.COIN.create(ModelLocationUtils.getModelLocation(Items.COIN_ITEM), new TextureMapping().put(TextureSlot.FRONT, itemKey).put(TextureSlot.BACK, itemKey), output);
+        ResourceLocation itemKey = BuiltInRegistries.ITEM.getKey(Items.COIN);
+        ModelTemplates.COIN.create(ModelLocationUtils.getModelLocation(Items.COIN), new TextureMapping().put(TextureSlot.FRONT, itemKey).put(TextureSlot.BACK, itemKey), output);
     }
 }
