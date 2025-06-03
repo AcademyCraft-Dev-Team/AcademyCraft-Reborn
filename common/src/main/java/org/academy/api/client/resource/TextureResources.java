@@ -84,6 +84,10 @@ public final class TextureResources {
     public static final ResourceLocation TEXTURE_STORM_WING_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/storm_wing/icon.png");
     public static final ResourceLocation TEXTURE_PLASMA_GENERATION_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/plasma_generation/icon.png");
     public static final ResourceLocation TEXTURE_DIR_STRIKE_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/dir_strike/icon.png");
+    /**
+     * Imag Phase Dowsing Rod
+     */
+    public static final ResourceLocation TEXTURE_IMAG_PHASE_DOWSING_ROD_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/imag_phase_dosing_rod.png");
 
     public static final class RenderTypes {
         /**

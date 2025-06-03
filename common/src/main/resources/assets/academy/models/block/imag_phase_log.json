@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "academy:block/imag_phase_log_top",
+    "side": "academy:block/imag_phase_log"
+  }
+}
