@@ -13,6 +13,11 @@ import org.academy.api.client.renderer.ItemRenderer;
 import static org.academy.internal.client.renderer.blockentity.WirelessNodeBlockEntityRenderer.WIRELESS_NODE_MODEL;
 
 public class WirelessNodeBlockItemRenderer implements ItemRenderer {
+    public static final ItemRenderer INSTANCE = new WirelessNodeBlockItemRenderer();
+
+    private WirelessNodeBlockItemRenderer() {
+    }
+
     @Override
     public void render(ItemStack itemStack, ItemDisplayContext displayContext, boolean leftHand, PoseStack poseStack, MultiBufferSource buffer, int combinedLight, int combinedOverlay, BakedModel model) {
         poseStack.pushPose();

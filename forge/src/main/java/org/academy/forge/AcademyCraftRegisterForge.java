@@ -35,10 +35,10 @@ import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.inventory.MenuTypes;
-import org.academy.internal.common.world.item.IconItem;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
+import org.academy.internal.common.world.level.levelgen.feature.Features;
 import org.academy.internal.common.world.level.material.Fluids;
 
 import java.util.function.Consumer;
@@ -50,7 +50,7 @@ public class AcademyCraftRegisterForge {
     public static final RegistryObject<CreativeModeTab> BASE_CREATIVE_TAB = CREATIVE_MODE_TAB_DEFERRED_REGISTER.register("all", () -> CreativeModeTab.builder().icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {
         for (String key : Items.ITEMS.keySet()) {
             Item item = Items.ITEMS.get(key);
-            if (!(item instanceof IconItem)) {
+            if (!(item == Items.ICON)) {
                 output.accept(item);
             }
         }
@@ -80,6 +80,8 @@ public class AcademyCraftRegisterForge {
             registerParticleType(event);
         } else if (event.getRegistryKey() == ForgeRegistries.Keys.MENU_TYPES) {
             registerMenuType(event);
+        } else if (event.getRegistryKey() == ForgeRegistries.Keys.FEATURES) {
+            registerFeature(event);
         }
     }
 
@@ -190,6 +192,13 @@ public class AcademyCraftRegisterForge {
             ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
             event.register(ForgeRegistries.Keys.PARTICLE_TYPES, resourceLocation,
                     () -> ParticleTypes.PARTICLE_TYPES.get(key));
+        }
+    }
+
+    private static void registerFeature(RegisterEvent event) {
+        for (String key : Features.FEATURES.keySet()) {
+            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            event.register(ForgeRegistries.Keys.FEATURES, resourceLocation, () -> Features.FEATURES.get(key));
         }
     }
 

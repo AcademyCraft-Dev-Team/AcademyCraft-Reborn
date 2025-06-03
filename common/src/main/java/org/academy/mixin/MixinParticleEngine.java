@@ -3,7 +3,7 @@ package org.academy.mixin;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
-import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.client.particle.ParticleRenderTypes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,8 +18,8 @@ public abstract class MixinParticleEngine {
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Inject(method = "registerProviders", at = @At("TAIL"))
     private void registerProviders(CallbackInfo ci) {
-        for (ParticleType<?> particleType : ParticleTypes.PARTICLE_PROVIDERS.keySet()) {
-            ParticleEngine.SpriteParticleRegistration particleMetaFactory = ParticleTypes.PARTICLE_PROVIDERS.get(particleType);
+        for (ParticleType<?> particleType : ParticleRenderTypes.PARTICLE_PROVIDERS.keySet()) {
+            ParticleEngine.SpriteParticleRegistration particleMetaFactory = ParticleRenderTypes.PARTICLE_PROVIDERS.get(particleType);
             register(particleType, particleMetaFactory);
         }
     }

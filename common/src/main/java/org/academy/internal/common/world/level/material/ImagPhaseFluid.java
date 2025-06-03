@@ -23,11 +23,12 @@ import org.jetbrains.annotations.NotNull;
 public abstract class ImagPhaseFluid extends FlowingFluid {
     @Override
     protected void animateTick(@NotNull Level level, @NotNull BlockPos pos, @NotNull FluidState state, @NotNull RandomSource random) {
+        int amount = state.hasProperty(LEVEL) ? state.getValue(LEVEL) : 8;
         int particleCount = MathUtil.RANDOM.nextInt(2, 5);
         for (int i = 0; i < particleCount; i++) {
-            level.addParticle(ParticleTypes.IMAG_PHASE,
+            level.addParticle(ParticleTypes.IMAG_PHASE_FLUID,
                     pos.getX() + random.nextDouble(),
-                    pos.getY() + random.nextDouble(),
+                    pos.getY() + MathUtil.RANDOM.nextDouble(0, amount * 0.125),
                     pos.getZ() + random.nextDouble(),
                     0.0D, 0.0D, 0.0D);
         }
@@ -57,6 +58,7 @@ public abstract class ImagPhaseFluid extends FlowingFluid {
     protected void beforeDestroyingBlock(@NotNull LevelAccessor levelAccessor, @NotNull BlockPos blockPos, @NotNull BlockState blockState) {
     }
 
+
     @Override
     protected int getSlopeFindDistance(@NotNull LevelReader levelReader) {
         return 4;
@@ -69,7 +71,12 @@ public abstract class ImagPhaseFluid extends FlowingFluid {
 
     @Override
     public @NotNull Item getBucket() {
-        return Items.IMAG_PHASE_BUCKET;
+        return Items.IMAG_PHASE_UNIT;
+    }
+
+    @Override
+    protected int getSpreadDelay(@NotNull Level level, @NotNull BlockPos pos, @NotNull FluidState currentState, @NotNull FluidState newState) {
+        return 0;
     }
 
     @Override
@@ -79,7 +86,7 @@ public abstract class ImagPhaseFluid extends FlowingFluid {
 
     @Override
     public int getTickDelay(@NotNull LevelReader levelReader) {
-        return 3;
+        return 2;
     }
 
     @Override

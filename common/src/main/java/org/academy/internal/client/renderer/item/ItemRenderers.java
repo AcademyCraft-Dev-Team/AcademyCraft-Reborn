@@ -13,7 +13,9 @@ public class ItemRenderers {
     public static final Map<Item, ItemRenderer> ITEM_RENDERER_MAP = new HashMap<>();
 
     public static final ItemRenderer WIRELESS_NODE =
-            register(Items.WIRELESS_NODE_BLOCK, new WirelessNodeBlockItemRenderer());
+            register(Items.WIRELESS_NODE, WirelessNodeBlockItemRenderer.INSTANCE);
+    public static final ItemRenderer IMAG_PHASE_DOWSING_ROD =
+            register(Items.IMAG_PHASE_DOWSING_ROD, ImagPhaseDowsingRodItemRenderer.INSTANCE);
 
     public static ItemRenderer register(Item item, ItemRenderer itemRenderer) {
         ITEM_RENDERER_MAP.put(item, itemRenderer);

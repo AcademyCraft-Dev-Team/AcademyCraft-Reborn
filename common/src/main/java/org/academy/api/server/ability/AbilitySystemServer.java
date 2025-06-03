@@ -17,6 +17,7 @@ import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.ability.builtin.level0.Level0;
+import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,11 +79,11 @@ public class AbilitySystemServer {
         ServerLevel level = player.serverLevel();
         BlockPos userPos = payload.userPos;
         BlockEntity be = level.getBlockEntity(userPos);
-        if (be instanceof WirelessUser user) {
+        if (be instanceof AbilityDeveloperBlockEntity blockEntity) {
             List<String> outputList = new ArrayList<>();
-            int energyStored = user.getEnergyStored();
+            int energyStored = blockEntity.getEnergyStored();
             if (energyStored > 10_000) {
-                user.extractEnergy(10_000, false);
+                blockEntity.setEnergyStored(energyStored - 10_000);
                 MathUtil.WeightedRandom<AbilityCategory> weightedRandom = new MathUtil.WeightedRandom<>();
                 for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
                     if (abilityCategory != Level0.INSTANCE) {

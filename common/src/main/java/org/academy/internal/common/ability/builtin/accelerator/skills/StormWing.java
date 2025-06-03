@@ -92,7 +92,8 @@ public class StormWing extends Skill {
 
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
-            if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null && Minecraft.getInstance().player.getEntityData().get(PlayerSyncData.DATA).getBoolean(TAG_KEY)) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && mc.screen == null && mc.player.getEntityData().get(PlayerSyncData.DATA).getBoolean(TAG_KEY)) {
                 State state = State.KEEP;
                 for (Integer key : InputSystem.KEYBOARD_STATE.keySet()) {
                     Integer keyState = InputSystem.KEYBOARD_STATE.get(key);

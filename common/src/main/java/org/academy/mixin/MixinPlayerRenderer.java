@@ -1,19 +1,24 @@
 package org.academy.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.item.ItemStack;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
+import org.academy.internal.common.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(PlayerRenderer.class)
 public abstract class MixinPlayerRenderer {
@@ -51,6 +56,14 @@ public abstract class MixinPlayerRenderer {
                 SkillEffectsLayer.INSTANCE.render(poseStack, buffer, packedLight, entity, 0, 0, partialTicks, 0, 0, 0);
                 poseStack.popPose();
             }
+        }
+    }
+
+    @Inject(method = "getArmPose", at = @At("HEAD"), cancellable = true)
+    private static void getArmPose(AbstractClientPlayer player, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
+        ItemStack itemstack = player.getItemInHand(hand);
+        if (itemstack.getItem() == Items.IMAG_PHASE_DOWSING_ROD) {
+            cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
         }
     }
 }

@@ -10,6 +10,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.network.future.FutureManagerServer;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.common.world.item.ImagPhaseDosingRodItem;
 import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.io.File;
@@ -28,6 +29,7 @@ public class AcademyCraftServer {
     public static void init(final MinecraftServer server) {
         NETWORK_SYSTEM_SERVER_INSTANCE.clear();
         FUTURE_MANAGER_SERVER_INSTANCE.clear();
+        FUTURE_MANAGER_SERVER_INSTANCE.registerPayloadHandler(ImagPhaseDosingRodItem.class);
         serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
         worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);

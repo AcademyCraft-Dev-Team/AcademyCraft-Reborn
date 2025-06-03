@@ -7,6 +7,7 @@ import org.academy.api.common.network.future.FutureManager;
 import org.academy.api.common.network.future.IPayload;
 import org.academy.api.common.wireless.GetAvailableNodesPacket;
 import org.academy.api.common.wireless.GetCurrentNodePacket;
+import org.academy.internal.common.world.item.ImagPhaseDosingRodItem;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,6 +45,12 @@ public final class Payloads {
             register(GetCurrentNodePacket.class, (listener) -> new GetCurrentNodePacket());
     public static final Class<GetCurrentNodePacket.Response> GET_CURRENT_NODE_PACKET_RESPONSE =
             register(GetCurrentNodePacket.Response.class, (listener) -> new GetCurrentNodePacket.Response());
+
+    public static final Class<ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket> GET_LEVEL_CHUNK_SECTIONS_PACKET =
+            register(ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.class, listener -> new ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket());
+    public static final Class<ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response> GET_LEVEL_CHUNK_SECTIONS_PACKET_RESPONSE =
+            register(ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response.class, listener -> new ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response());
+
 
     @SuppressWarnings({"unchecked"})
     public static void registerAll(FutureManager futureManager) {

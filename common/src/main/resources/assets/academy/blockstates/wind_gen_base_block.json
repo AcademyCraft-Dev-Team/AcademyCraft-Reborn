@@ -1,9 +1,0 @@
-{
-  "variants": {
-    "": [
-      {
-        "model": "academy:block/wind_gen_base_block"
-      }
-    ]
-  }
-}
