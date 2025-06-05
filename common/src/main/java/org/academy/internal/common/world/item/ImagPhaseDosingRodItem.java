@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.item;
 
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerChunkCache;
@@ -8,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -29,14 +31,28 @@ import java.util.function.Supplier;
 
 public class ImagPhaseDosingRodItem extends Item {
     public static List<BlockPos> RENDER_TARGET_POSITIONS = new ArrayList<>();
+
     public ImagPhaseDosingRodItem() {
         super(new Item.Properties());
+    }
+
+    @Override
+    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
+        if (level.isClientSide) {
+            if (!isSelected && entity instanceof LocalPlayer localPlayer) {
+                if (!(localPlayer.getItemInHand(InteractionHand.MAIN_HAND).getItem() == this
+                        || localPlayer.getItemInHand(InteractionHand.OFF_HAND).getItem() == this)) {
+                    RENDER_TARGET_POSITIONS.clear();
+                }
+            }
+        }
     }
 
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         ItemStack itemstack = player.getItemInHand(hand);
         if (level.isClientSide()) {
+            RENDER_TARGET_POSITIONS.clear();
             GetLevelChunkSectionsPacket packet = new GetLevelChunkSectionsPacket(player.blockPosition());
             AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(packet, (GetLevelChunkSectionsPacket.Response response) -> {
                 if (response != null && response.sectionsWithImagPhase != null) {
@@ -94,13 +110,12 @@ public class ImagPhaseDosingRodItem extends Item {
         }
     }
 
+    @SuppressWarnings("resource")
     @HandlePayload
     public static ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response handleGetLevelChunkSections(ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket payload) {
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
         if (supplier == null || supplier.get() == null) {
             return new ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response(new ArrayList<>());
-        } else {
-            supplier.get();
         }
         ServerPlayer player = supplier.get().player;
         ServerLevel serverLevel = player.serverLevel();
