@@ -26,7 +26,7 @@ public class ImagPhaseLeavesParticle extends TextureSheetParticle {
 
     @Override
     public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderTypes.IMAG_PHASE;
+        return ParticleRenderType.PARTICLE_SHEET_LIT;
     }
 
     @Override

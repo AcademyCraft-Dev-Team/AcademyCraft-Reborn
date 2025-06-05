@@ -7,12 +7,23 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
 import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.PipeBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
 import net.minecraft.world.level.levelgen.synth.ImprovedNoise;
+import org.academy.api.common.util.MathUtil;
+import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class ImagPhaseLakeFeature extends Feature<ImagPhaseLakeFeature.Configuration> {
     public ImagPhaseLakeFeature(Codec<Configuration> codec) {
@@ -144,6 +155,12 @@ public class ImagPhaseLakeFeature extends Feature<ImagPhaseLakeFeature.Configura
             }
         }
 
+        generateTreesAndLichen(random,
+                maskSizeX, totalMaskHeight, maskSizeZ,
+                liquidSurfaceYInMask, finalBlockStates,
+                deepslateState, imagPhaseVegetationState
+        );
+
 
         for (int y = 0; y < totalMaskHeight; y++) {
             for (int x = 0; x < maskSizeX; x++) {
@@ -171,6 +188,7 @@ public class ImagPhaseLakeFeature extends Feature<ImagPhaseLakeFeature.Configura
                 }
             }
         }
+
         return true;
     }
 
@@ -227,6 +245,167 @@ public class ImagPhaseLakeFeature extends Feature<ImagPhaseLakeFeature.Configura
     private static int toIndex(int x, int y, int z, int sizeY, int sizeZ) {
         return (x * sizeZ + z) * sizeY + y;
     }
+
+    private static void generateTreesAndLichen(RandomSource random,
+                                               int maskSizeX, int totalMaskHeight, int maskSizeZ,
+                                               int liquidSurfaceYInMask, BlockState[] finalBlockStates,
+                                               BlockState deepslateState, BlockState imagPhaseVegetationState
+    ) {
+        BlockState logState = Blocks.IMAG_PHASE_LOG.defaultBlockState();
+        BlockState leavesState = Blocks.IMAG_PHASE_LEAVES.defaultBlockState();
+        BlockState lichenState = Blocks.IMAG_PHASE_LICHEN.defaultBlockState();
+
+        Map<Direction, BooleanProperty> facingProperties = PipeBlock.PROPERTY_BY_DIRECTION;
+
+        List<BlockPos> potentialTreeBasePositions = new ArrayList<>();
+        int shoreY = liquidSurfaceYInMask + 1;
+
+        if (shoreY < totalMaskHeight) {
+            for (int x = 0; x < maskSizeX; x++) {
+                for (int z = 0; z < maskSizeZ; z++) {
+                    int indexAboveLiquid = toIndex(x, shoreY, z, totalMaskHeight, maskSizeZ);
+                    if (indexAboveLiquid < 0 || indexAboveLiquid >= finalBlockStates.length) continue;
+
+                    BlockState stateAboveLiquid = finalBlockStates[indexAboveLiquid];
+                    if ((stateAboveLiquid == null || stateAboveLiquid.isAir()) && shoreY > 0) {
+                        int indexBelowLiquid = toIndex(x, shoreY - 1, z, totalMaskHeight, maskSizeZ);
+                        if (indexBelowLiquid >= 0 && indexBelowLiquid < finalBlockStates.length) {
+                            BlockState stateBelowLiquid = finalBlockStates[indexBelowLiquid];
+                            if (stateBelowLiquid == deepslateState || stateBelowLiquid == imagPhaseVegetationState) {
+                                potentialTreeBasePositions.add(new BlockPos(x, shoreY, z));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!potentialTreeBasePositions.isEmpty()) {
+            int treesToGenerate = 1 + random.nextInt(2);
+            Collections.shuffle(potentialTreeBasePositions, MathUtil.RANDOM);
+
+            for (int i = 0; i < treesToGenerate && !potentialTreeBasePositions.isEmpty(); i++) {
+                BlockPos treeBaseMaskPos = potentialTreeBasePositions.remove(0);
+                generateSingleTree(treeBaseMaskPos, random, finalBlockStates, logState, leavesState, maskSizeX, totalMaskHeight, maskSizeZ);
+            }
+        }
+
+        for (int x = 0; x < maskSizeX; x++) {
+            for (int y = 0; y < totalMaskHeight; y++) {
+                for (int z = 0; z < maskSizeZ; z++) {
+                    int currentBlockIndex = toIndex(x, y, z, totalMaskHeight, maskSizeZ);
+                    if (currentBlockIndex < 0 || currentBlockIndex >= finalBlockStates.length) continue;
+                    BlockState blockToAttachTo = finalBlockStates[currentBlockIndex];
+
+                    if (blockToAttachTo == logState) {
+                        if (y < liquidSurfaceYInMask) {
+                            continue;
+                        }
+
+                        for (Direction faceToPlaceLichenOn : Direction.Plane.HORIZONTAL) {
+                            int lichenX = x + faceToPlaceLichenOn.getStepX();
+                            int lichenZ = z + faceToPlaceLichenOn.getStepZ();
+
+                            if (lichenX >= 0 && lichenX < maskSizeX && lichenZ >= 0 && lichenZ < maskSizeZ) {
+                                int lichenIndexInArray = toIndex(lichenX, y, lichenZ, totalMaskHeight, maskSizeZ);
+                                if (lichenIndexInArray < 0 || lichenIndexInArray >= finalBlockStates.length) continue;
+
+                                BlockState stateAtLichenPos = finalBlockStates[lichenIndexInArray];
+
+                                if (stateAtLichenPos == null || stateAtLichenPos.isAir()) {
+                                    if (random.nextFloat() < 0.2f) {
+                                        BlockState newLichenState = lichenState;
+                                        BooleanProperty property = facingProperties.get(faceToPlaceLichenOn.getOpposite());
+                                        if (property != null && newLichenState.hasProperty(property)) {
+                                            newLichenState = newLichenState.setValue(property, Boolean.TRUE);
+                                        }
+                                        finalBlockStates[lichenIndexInArray] = newLichenState;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private static void generateSingleTree(BlockPos baseMaskPos, RandomSource random, BlockState[] finalBlockStates, BlockState logState, BlockState leavesState, int maskSizeX, int totalMaskHeight, int maskSizeZ) {
+        int trunkHeight = 3 + random.nextInt(3);
+        int baseX = baseMaskPos.getX();
+        int baseY = baseMaskPos.getY();
+        int baseZ = baseMaskPos.getZ();
+
+        for (int i = 0; i < trunkHeight; i++) {
+            int currentY = baseY + i;
+            if (currentY >= totalMaskHeight) return;
+            int trunkIndex = toIndex(baseX, currentY, baseZ, totalMaskHeight, maskSizeZ);
+            if (trunkIndex < 0 || trunkIndex >= finalBlockStates.length) return;
+
+            BlockState existingState = finalBlockStates[trunkIndex];
+            if (existingState != null && !existingState.isAir() && existingState.getBlock() != leavesState.getBlock()) {
+                return;
+            }
+            finalBlockStates[trunkIndex] = logState;
+        }
+
+        int leavesCenterY = baseY + trunkHeight - 1;
+        int leavesRadius = 2;
+
+        for (int yo = -leavesRadius + 1; yo <= leavesRadius; yo++) {
+            for (int xo = -leavesRadius; xo <= leavesRadius; xo++) {
+                for (int zo = -leavesRadius; zo <= leavesRadius; zo++) {
+                    if (xo * xo + yo * yo + zo * zo > leavesRadius * leavesRadius +1) {
+                        continue;
+                    }
+                    if (yo < 0 && xo * xo + zo * zo > (leavesRadius - 1) * (leavesRadius - 1)) continue;
+                    if (yo == -leavesRadius + 1 && xo * xo + zo * zo > (leavesRadius * leavesRadius) - 2) continue;
+
+                    int leafX = baseX + xo;
+                    int leafY = leavesCenterY + yo;
+                    int leafZ = baseZ + zo;
+
+                    if (leafX < 0 || leafX >= maskSizeX || leafY < 0 || leafY >= totalMaskHeight || leafZ < 0 || leafZ >= maskSizeZ) {
+                        continue;
+                    }
+
+                    int leafIndex = toIndex(leafX, leafY, leafZ, totalMaskHeight, maskSizeZ);
+                    if (leafIndex < 0 || leafIndex >= finalBlockStates.length) continue;
+
+                    BlockState existingState = finalBlockStates[leafIndex];
+                    if (existingState == null || existingState.isAir() || existingState.getBlock() == leavesState.getBlock()) {
+                        int minDistance = LeavesBlock.DECAY_DISTANCE;
+
+                        for (Direction direction : Direction.values()) {
+                            int neighborX = leafX + direction.getStepX();
+                            int neighborY = leafY + direction.getStepY();
+                            int neighborZ = leafZ + direction.getStepZ();
+
+                            if (neighborX >= 0 && neighborX < maskSizeX &&
+                                    neighborY >= 0 && neighborY < totalMaskHeight &&
+                                    neighborZ >= 0 && neighborZ < maskSizeZ) {
+
+                                int neighborInternalIndex = toIndex(neighborX, neighborY, neighborZ, totalMaskHeight, maskSizeZ);
+                                BlockState neighborState = finalBlockStates[neighborInternalIndex];
+
+                                if (neighborState != null) {
+                                    if (neighborState.is(logState.getBlock())) {
+                                        minDistance = 1;
+                                        break;
+                                    } else if (neighborState.getBlock() instanceof LeavesBlock && neighborState.hasProperty(BlockStateProperties.DISTANCE)) {
+                                        minDistance = Math.min(minDistance, neighborState.getValue(BlockStateProperties.DISTANCE) + 1);
+                                    }
+                                }
+                            }
+                        }
+                        finalBlockStates[leafIndex] = leavesState.setValue(BlockStateProperties.DISTANCE, minDistance);
+                    }
+                }
+            }
+        }
+    }
+
 
     public record Configuration(
             IntProvider radius,

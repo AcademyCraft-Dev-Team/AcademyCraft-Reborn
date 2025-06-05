@@ -24,7 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class ImagPhaseUnitItem extends Item {
     public ImagPhaseUnitItem() {
-        super(new Properties().stacksTo(1));
+        super(new Properties().stacksTo(16));
     }
 
     @Override
