@@ -1,11 +1,11 @@
 {
   "textures": [
+    "academy:imag_phase_leaves_0",
     "academy:imag_phase_leaves_1",
     "academy:imag_phase_leaves_2",
     "academy:imag_phase_leaves_3",
     "academy:imag_phase_leaves_4",
     "academy:imag_phase_leaves_5",
-    "academy:imag_phase_leaves_6",
-    "academy:imag_phase_leaves_7"
+    "academy:imag_phase_leaves_6"
   ]
 }
