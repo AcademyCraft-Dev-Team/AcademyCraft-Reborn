@@ -17,6 +17,10 @@ public class MathUtil {
         return a + t * (b - a);
     }
 
+    public static double lerpStartEndFactor(double a, double b, double t) {
+        return a + t * (b - a);
+    }
+
     public static float lerpFactorStartEnd(float delta, float start, float end) {
         return start + delta * (end - start);
     }

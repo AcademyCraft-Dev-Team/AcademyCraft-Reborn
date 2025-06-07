@@ -4,39 +4,39 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerChunkCache;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
-import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
-import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
+import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.ThreadType;
-import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.vanilla.ServerTickEvent;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
-import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.skill.Smoke;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -61,29 +61,18 @@ public class DirStrike extends Skill {
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(Client.KEY_NAME_START, new InputSystem.InputPair(
-                InputSystem.InputType.KEYBOARD,
-                new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
-                        GLFW.GLFW_PRESS,
-                        new LinkedHashSet<>(
-                                Set.of(
-                                        GLFW.GLFW_MOD_ALT
-                                )
-                        )
-                )
-        )), Client::onStart);
-        InputSystem.addKeyBinding(Client.KEY_NAME_END, Client.CONFIG.getKeyBinding(Client.KEY_NAME_END, new InputSystem.InputPair(
+        InputSystem.addKeyBinding(Client.KEY_NAME_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_ACTION, new InputSystem.InputPair(
                 InputSystem.InputType.KEYBOARD,
                 new InputSystem.KeyInfo(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
                         GLFW.GLFW_RELEASE,
                         new LinkedHashSet<>(
                                 Set.of(
+                                        GLFW.GLFW_MOD_ALT
                                 )
                         )
                 )
-        )), Client::onEnd);
+        )), Client::onAction);
     }
 
     @Override
@@ -95,24 +84,12 @@ public class DirStrike extends Skill {
         public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_DIR_STRIKE_ICON, 100, 110);
-        public static Context context;
-        public static final String KEY_NAME_START = SkillNames.DIR_STRIKE + "_action_start";
-        public static final String KEY_NAME_END = SkillNames.DIR_STRIKE + "_action_end";
+        public static final String KEY_NAME_ACTION = SkillNames.DIR_STRIKE + "_action";
         public static DirStrikeClientConfigData CONFIG = new DirStrikeClientConfigData();
 
-        public static void onStart() {
-            if (context != null) return;
+        public static void onAction() {
             if (Minecraft.getInstance().player == null) return;
-            context = new Client.Context(Minecraft.getInstance().player);
-            AbilitySystemClient.registerContext(context);
-            NetworkSystemClient.sendPacket(new C2SPacket(new StartPacket()));
-        }
-
-        public static void onEnd() {
-            if (Minecraft.getInstance().player == null) return;
-            if (context != null) {
-                context.release();
-            }
+            NetworkSystemClient.sendPacket(new C2SPacket(new ActionPacket()));
         }
 
         public static class DirStrikeClientConfigData implements IClientConfigActions<DirStrikeClientConfigData> {
@@ -149,120 +126,99 @@ public class DirStrike extends Skill {
                 return DirStrikeClientConfigData.class;
             }
         }
-
-
-        public static final class Context implements ClientContext {
-            public LocalPlayer player;
-            public int ticks;
-            public float originPitch;
-            public float maxPitch;
-            private boolean released = false;
-            private float targetPitch;
-
-            public Context(LocalPlayer player) {
-                this.player = player;
-                originPitch = player.getXRot();
-                maxPitch = originPitch - 20;
-            }
-
-            public void release() {
-                if (!released) {
-                    released = true;
-                    targetPitch = originPitch;
-                }
-            }
-
-            @SubscribeEvent
-            public void onClientTick(ClientTickEvent event) {
-                ticks++;
-                if (ticks > 40) release();
-
-                float currentPitch = player.getXRot();
-
-                if (!released) {
-                    targetPitch = maxPitch;
-                    if (currentPitch > targetPitch) {
-                        float newPitch = currentPitch - 0.35f;
-                        player.setXRot(newPitch);
-                    }
-                } else {
-                    float newPitch = currentPitch + 5;
-                    if (newPitch > targetPitch) newPitch = targetPitch;
-                    player.setXRot(newPitch);
-
-                    if (Math.abs(newPitch - targetPitch) < 1e-3) {
-                        AbilitySystemClient.unregisterContext(this);
-                        context = null;
-                        NetworkSystemClient.sendPacket(new C2SPacket(new EndPacket()));
-                    }
-                }
-            }
-        }
     }
 
     public static final class Server {
-        public static final Map<UUID, ServerContext> CONTEXT_MAP = new HashMap<>();
-
         @SubscribePacket
-        public static void onStart(StartPacket packet) {
+        public static void onAction(ActionPacket packet) {
             ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();
-            if (CONTEXT_MAP.containsKey(serverPlayer.getUUID())) {
-                ServerContext context = CONTEXT_MAP.get(serverPlayer.getUUID());
-                AbilitySystemServer.unregisterContext(context);
-            }
-            Context context = new Context(serverPlayer);
-            CONTEXT_MAP.put(serverPlayer.getUUID(), context);
-            AbilitySystemServer.registerContext(context);
-        }
 
-        @SubscribePacket
-        public static void onEnd(EndPacket packet) {
-            ServerPlayer serverPlayer = packet.packetListenerSupplier.get().getPlayer();
-            UUID uuid = serverPlayer.getUUID();
-            if (CONTEXT_MAP.containsKey(uuid)) {
-                ServerContext context = CONTEXT_MAP.get(uuid);
-                AbilitySystemServer.unregisterContext(context);
-                CONTEXT_MAP.remove(uuid);
+            ServerLevel level = serverPlayer.serverLevel();
+            ServerChunkCache chunkCache = level.getChunkSource();
+            Vec3 lookDir = serverPlayer.getLookAngle();
+            Vec3 horizontalLookDir = new Vec3(lookDir.x, 0, lookDir.z).normalize();
 
-                Vec3 basePos = serverPlayer.position();
-                Vec3 lookDir = Vec3.directionFromRotation(0, serverPlayer.getYRot()).normalize();
-                Level level = serverPlayer.level();
+            BlockPos playerPos = serverPlayer.blockPosition();
 
-                for (int i = 1; i <= 5; i++) {
-                    Vec3 targetPos = basePos.add(lookDir.scale(i));
-                    Smoke smoke = new Smoke(EntityTypes.SMOKE_ENTITY_TYPE, level);
-                    smoke.setPos(targetPos.x, targetPos.y + 0.5, targetPos.z);
-                    level.addFreshEntity(smoke);
-                }
+            int range = 5;
+            int width = 5;
+            int verticalRange = 2;
 
-                var attackArea = new AABB(basePos, basePos.add(lookDir.scale(5))).inflate(1.0);
-                List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, attackArea, e ->
-                        e != serverPlayer && e.isAlive());
+            List<BlockPos> affectedBlocks = new ArrayList<>();
+            Set<BlockPos> processedPositions = new HashSet<>();
 
-                for (LivingEntity target : targets) {
-                    target.hurt(level.damageSources().playerAttack(serverPlayer), 6.0f);
+            level.playSound(null, playerPos, SoundEvents.GENERIC_BIG_FALL, SoundSource.PLAYERS, 0.7f, 0.9f);
+
+            for (int yOffset = -1; yOffset <= verticalRange - 1; ++yOffset) {
+                int targetY = playerPos.getY() + yOffset;
+                for (int i = 1; i <= range; ++i) {
+                    for (int j = -width / 2; j <= width / 2; ++j) {
+                        Vec3 forwardOffset = horizontalLookDir.scale(i);
+                        Vec3 sideOffset = horizontalLookDir.yRot((float) Math.toRadians(90)).scale(j);
+
+                        BlockPos groundPos = BlockPos.containing(playerPos.getX() + forwardOffset.x + sideOffset.x,
+                                targetY,
+                                playerPos.getZ() + forwardOffset.z + sideOffset.z);
+
+                        if (processedPositions.add(groundPos)) {
+                            affectedBlocks.add(groundPos);
+                        }
+                    }
                 }
             }
-        }
 
-        public static final class Context implements ServerContext {
-            public final ServerPlayer serverPlayer;
+            for (BlockPos pos : affectedBlocks) {
+                BlockState blockState = level.getBlockState(pos);
+                if (!blockState.isAir() && !blockState.hasBlockEntity() && blockState.getDestroySpeed(level, pos) >= 0 && blockState.getFluidState().isEmpty()) {
+                    SoundType soundType = blockState.getSoundType();
+                    level.playSound(null, pos, soundType.getBreakSound(), SoundSource.BLOCKS, soundType.getVolume() * 0.8f, soundType.getPitch() * 0.9f);
 
-            private Context(ServerPlayer serverPlayer) {
-                this.serverPlayer = serverPlayer;
+                    FallingBlockEntity fallingBlock = new FallingBlockEntity(EntityType.FALLING_BLOCK, level);
+                    fallingBlock.disableDrop();
+                    fallingBlock.blockState = blockState;
+                    fallingBlock.blocksBuilding = true;
+                    fallingBlock.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+                    fallingBlock.setStartPos(pos);
+                    fallingBlock.dropItem = false;
+                    fallingBlock.setHurtsEntities(0.0f, 0);
+                    fallingBlock.time = 1;
+
+                    Vec3 blockCenter = Vec3.atCenterOf(pos);
+                    Vec3 playerCenter = serverPlayer.position();
+                    Vec3 outwardDir = blockCenter.subtract(playerCenter).normalize();
+
+                    double yVel = MathUtil.RANDOM.nextDouble(0.2, 0.3);
+                    double outwardVel = 0.1 + level.random.nextDouble();
+
+                    Vec3 velocity = new Vec3(outwardDir.x * outwardVel, yVel, outwardDir.z * outwardVel);
+
+                    fallingBlock.setDeltaMovement(velocity);
+
+                    level.addFreshEntity(fallingBlock);
+                    chunkCache.broadcast(fallingBlock, new ClientboundSetEntityMotionPacket(fallingBlock));
+
+                    level.sendParticles(
+                            new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK, blockState),
+                            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                            40,
+                            0.4, 0.4, 0.4,
+                            0.2
+                    );
+                }
             }
 
-            @SubscribeEvent
-            public void onTickEvent(ServerTickEvent event) {
+            Vec3 basePos = serverPlayer.position();
+            var attackArea = new AABB(basePos, basePos.add(horizontalLookDir.scale(5))).inflate(1.0);
+            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, attackArea, e ->
+                    e != serverPlayer && e.isAlive());
+
+            for (LivingEntity target : targets) {
+                target.hurt(level.damageSources().playerAttack(serverPlayer), 6.0f);
             }
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class StartPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-    }
-
-    @PacketTarget(ThreadType.SERVER)
-    public static final class EndPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
+    public static final class ActionPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
     }
 }

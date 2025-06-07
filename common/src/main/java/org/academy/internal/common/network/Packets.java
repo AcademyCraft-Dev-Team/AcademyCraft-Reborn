@@ -69,10 +69,8 @@ public final class Packets {
             register(SingleHighSpeedElectronBeam.ShootPacket.class, listener -> new SingleHighSpeedElectronBeam.ShootPacket());
     public static final Class<SelfTeleport.SelfTeleportPacket> SELF_TELEPORT =
             register(SelfTeleport.SelfTeleportPacket.class, listener -> new SelfTeleport.SelfTeleportPacket());
-    public static final Class<DirStrike.StartPacket> DIR_STRIKE_START =
-            register(DirStrike.StartPacket.class, listener -> new DirStrike.StartPacket());
-    public static final Class<DirStrike.EndPacket> DIR_STRIKE_END =
-            register(DirStrike.EndPacket.class, listener -> new DirStrike.EndPacket());
+    public static final Class<DirStrike.ActionPacket> DIR_STRIKE =
+            register(DirStrike.ActionPacket.class, listener -> new DirStrike.ActionPacket());
     public static final Class<KineticEnergyApplied.TogglePacket> KINETIC_ENERGY_APPLIED_TOGGLE =
             register(KineticEnergyApplied.TogglePacket.class, listener -> new KineticEnergyApplied.TogglePacket());
     public static final Class<VectorReflection.TogglePacket> VECTOR_REFLECTION_TOGGLE =
