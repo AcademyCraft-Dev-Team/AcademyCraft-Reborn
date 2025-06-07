@@ -34,7 +34,9 @@ public class ParticleRenderTypes {
             public @NotNull ParticleProvider<ParticleOptions> create(@NotNull SpriteSet spriteSet) {
                 return new ParticleProvider<>() {
                     @Override
-                    public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
+                    public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level,
+                                                            double x, double y, double z,
+                                                            double xSpeed, double ySpeed, double zSpeed) {
                         ImagPhaseFluidParticle particle = new ImagPhaseFluidParticle(level, spriteSet, x, y, z);
                         Random random = MathUtil.RANDOM;
                         particle.scale(random.nextFloat(0.5f, 0.75f));
@@ -64,7 +66,9 @@ public class ParticleRenderTypes {
             public @NotNull ParticleProvider<ParticleOptions> create(@NotNull SpriteSet spriteSet) {
                 return new ParticleProvider<>() {
                     @Override
-                    public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
+                    public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level,
+                                                            double x, double y, double z,
+                                                            double xSpeed, double ySpeed, double zSpeed) {
                         ImagPhaseLeavesParticle particle = new ImagPhaseLeavesParticle(level, x, y, z, spriteSet);
                         Random random = MathUtil.RANDOM;
                         particle.scale(random.nextFloat(0.5f, 0.75f));
@@ -85,6 +89,19 @@ public class ParticleRenderTypes {
 
                         particle.setColor(finalR, finalG, finalB);
                         return particle;
+                    }
+                };
+            }
+        });
+        PARTICLE_PROVIDERS.put(ParticleTypes.ARC, new ParticleEngine.SpriteParticleRegistration<>() {
+            @Override
+            public @NotNull ParticleProvider<ParticleOptions> create(@NotNull SpriteSet spriteSet) {
+                return new ParticleProvider<>() {
+                    @Override
+                    public @NotNull Particle createParticle(@NotNull ParticleOptions particleOptions, @NotNull ClientLevel clientLevel,
+                                                            double x, double y, double z, double xSpeed,
+                                                            double ySpeed, double zSpeed) {
+                        return new ArcParticle(clientLevel,spriteSet,x,y,z);
                     }
                 };
             }

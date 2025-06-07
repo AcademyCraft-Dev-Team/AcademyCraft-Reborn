@@ -22,8 +22,8 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElectronBeam> {
-    public static final float[][][] BALL_BUFFER = VertexUtil.Ball.getBallVertexBuffer(1, 16);
-    public static final float[][] RAY_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 1, 8, true);
+    public static final float[][] HEAD =  VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 1, 4, true);
+    public static final float[][] RAY = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 4, true);
 
     public HighSpeedElectronBeamRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -48,14 +48,14 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
 
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(ballRadius));
-        RenderUtil.BallRenderer.renderBall(poseStack, buffer, BALL_BUFFER, 0.906f, 0.827f, 0.694f, 1f);
+        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, HEAD, 0.906f, 0.827f, 0.694f, 1f);
         poseStack.popPose();
 
         float rayVisualProgress = entity.isCharging() ? 0f : entity.smoothProgress;
 
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(rayVisualProgress * 0.125f,  entity.length, rayVisualProgress * 0.125f));
-        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, RAY_BUFFER, 0.906f, 0.827f, 0.694f, 1f);
+        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, RAY, 0.906f, 0.827f, 0.694f, 1f);
         poseStack.popPose();
 
         poseStack.popPose();
