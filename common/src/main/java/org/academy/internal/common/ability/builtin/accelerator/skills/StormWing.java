@@ -40,6 +40,8 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
+import static org.lwjgl.glfw.GLFW.*;
+
 public class StormWing extends Skill {
     public static final Skill INSTANCE = new StormWing();
     public static final String TAG_KEY = "activated_storm_wing";
@@ -94,33 +96,24 @@ public class StormWing extends Skill {
         public static void tick(ClientTickEvent event) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null && mc.screen == null && mc.player.getEntityData().get(PlayerSyncData.DATA).getBoolean(TAG_KEY)) {
-                State state = State.KEEP;
-                for (Integer key : InputSystem.KEYBOARD_STATE.keySet()) {
-                    Integer keyState = InputSystem.KEYBOARD_STATE.get(key);
-                    switch (key) {
-                        case GLFW.GLFW_KEY_W:
-                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
-                                state = State.FRONT;
-                            }
-                            break;
-                        case GLFW.GLFW_KEY_S:
-                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
-                                state = State.BACK;
-                            }
-                            break;
-                        case GLFW.GLFW_KEY_A:
-                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
-                                state = State.LEFT;
-                            }
-                            break;
-                        case GLFW.GLFW_KEY_D:
-                            if (keyState == GLFW.GLFW_PRESS || keyState == GLFW.GLFW_REPEAT) {
-                                state = State.RIGHT;
-                            }
-                            break;
-                    }
-                }
-                NetworkSystemClient.sendPacket(new C2SPacket(new ControlPacket(state)));
+                Map<Integer, Integer> keyStates = InputSystem.KEYBOARD_STATE;
+
+                boolean front = keyStates.containsKey(GLFW_KEY_W) && keyStates.get(GLFW_KEY_W) != GLFW.GLFW_RELEASE;
+                boolean back = keyStates.containsKey(GLFW_KEY_S) && keyStates.get(GLFW_KEY_S) != GLFW.GLFW_RELEASE;
+                boolean left = keyStates.containsKey(GLFW_KEY_A) && keyStates.get(GLFW_KEY_A) != GLFW.GLFW_RELEASE;
+                boolean right = keyStates.containsKey(GLFW_KEY_D) && keyStates.get(GLFW_KEY_D) != GLFW.GLFW_RELEASE;
+
+                Set<State> states = new HashSet<>();
+
+                if (front && !back) states.add(State.FRONT);
+                else if (back && !front) states.add(State.BACK);
+
+                if (left && !right) states.add(State.LEFT);
+                else if (right && !left) states.add(State.RIGHT);
+
+                if (states.isEmpty()) states.add(State.KEEP);
+
+                for (State state : states) NetworkSystemClient.sendPacket(new C2SPacket(new ControlPacket(state)));
             }
         }
 
@@ -138,6 +131,7 @@ public class StormWing extends Skill {
                 }
                 return keyBindings.get(name);
             }
+
             public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
                 this.keyBindings.put(name, keyBinding);
             }

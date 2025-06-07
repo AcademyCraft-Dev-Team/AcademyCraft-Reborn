@@ -23,7 +23,7 @@ import org.joml.Quaternionf;
 public class StormWingEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new StormWingEffectRenderer();
     public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
-    public static final int RING_SEGMENTS = 12; // 每个环的顶点数
+    public static final int RING_SEGMENTS = 4; // 每个环的顶点数
     private static final RandomSource RAND = RandomSource.create(); // 随机数生成器
     private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0); // 基础变换矩阵
     private static final RenderType RENDER_TYPE = RenderUtil.RingRenderer.RING_RENDER_TYPE.apply(TEXTURE); // 渲染类型

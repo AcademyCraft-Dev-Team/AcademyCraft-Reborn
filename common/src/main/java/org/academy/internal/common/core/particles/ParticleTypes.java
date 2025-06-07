@@ -9,8 +9,10 @@ import java.util.Map;
 public class ParticleTypes {
     public static final Map<String, ParticleType<?>> PARTICLE_TYPES = new HashMap<>();
     public static final SimpleParticleType IMAG_PHASE_FLUID = register("imag_phase_fluid",
-            new SimpleParticleType(true));
+            new SimpleParticleType(false));
     public static final SimpleParticleType IMAG_PHASE_LEAVES = register("imag_phase_leaves",
+            new SimpleParticleType(false));
+    public static final SimpleParticleType ARC = register("arc",
             new SimpleParticleType(false));
 
     public static <T extends ParticleType<?>> T register(String key, T particleType) {

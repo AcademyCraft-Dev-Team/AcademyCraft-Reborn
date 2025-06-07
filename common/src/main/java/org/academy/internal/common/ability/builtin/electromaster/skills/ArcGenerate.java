@@ -128,7 +128,7 @@ public class ArcGenerate extends Skill {
             Vec3 playerPos = player.position();
             Vec3 eyePos = player.getEyePosition();
             Vec3 rightVec = lookVec.cross(new Vec3(0, 1, 0)).normalize();
-            Vec3 handPos = playerPos.add(rightVec.scale(0.4)).add(0, 1.2, 0);
+            Vec3 handPos = playerPos.add(rightVec.scale(0.4)).add(0, 1.2, 0).add(lookVec.scale(0.5));
             Vec3 targetPos = eyePos.add(lookVec.scale(10));
             Arc arc = new Arc(level, handPos, targetPos);
 
