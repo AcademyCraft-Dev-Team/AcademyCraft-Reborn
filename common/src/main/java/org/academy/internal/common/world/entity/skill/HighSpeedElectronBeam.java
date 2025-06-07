@@ -99,7 +99,7 @@ public class HighSpeedElectronBeam extends Entity {
 
         boolean rayShouldBeActive = !isCharging;
         if (rayShouldBeActive && progress > 0.01f && !fired) {
-            Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.25f, 10, false, true, true, level().isClientSide);
+            Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.25f, 3, false, true, true, level().isClientSide);
             if (result.getKey()) {
                 double d = result.getValue();
                 length = (float) d;

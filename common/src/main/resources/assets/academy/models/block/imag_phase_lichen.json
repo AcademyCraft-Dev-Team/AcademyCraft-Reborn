@@ -2,7 +2,7 @@
   "ambientocclusion": false,
   "textures": {
     "particle": "academy:block/imag_phase_lichen",
-    "glow_lichen": "academy:block/imag_phase_lichen"
+    "imag_phase_lichen": "academy:block/imag_phase_lichen"
   },
   "elements": [
     {
@@ -24,7 +24,7 @@
             0,
             16
           ],
-          "texture": "#glow_lichen"
+          "texture": "#imag_phase_lichen"
         },
         "south": {
           "uv": [
@@ -33,7 +33,7 @@
             16,
             16
           ],
-          "texture": "#glow_lichen"
+          "texture": "#imag_phase_lichen"
         }
       }
     }

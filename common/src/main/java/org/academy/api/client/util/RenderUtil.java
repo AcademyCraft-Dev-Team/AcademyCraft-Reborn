@@ -349,8 +349,6 @@ public final class RenderUtil {
     public static final class LineBoxRenderer {
         public static void renderWireframeBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
                                               float r, float g, float b, float a) {
-            if (box == null) return;
-
             final VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lines());
             final PoseStack.Pose pose = poseStack.last();
             final Matrix4f matrix4f = pose.pose();

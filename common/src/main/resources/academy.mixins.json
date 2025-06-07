@@ -16,6 +16,7 @@
     "MixinClientPacketListener",
     "MixinGameRenderer",
     "MixinIntegratedServer",
+    "MixinItemBlockRenderTypes",
     "MixinItemRenderer",
     "MixinKeyboardHandler",
     "MixinLevelRenderer",

@@ -38,35 +38,19 @@ public class LevelUtil {
 
     @SuppressWarnings("DataFlowIssue")
     public static boolean canBreakBlock(BlockState blockState, int miningLevel) {
-        if (miningLevel == -1 || blockState.isAir() || blockState.getDestroySpeed(null, null) < 0) {
+        if (miningLevel == -1|| blockState.getDestroySpeed(null,null) == -1) {
             return false;
         }
 
         return switch (miningLevel) {
-            case 3 -> blockState.is(BlockTags.NEEDS_DIAMOND_TOOL)
-                    || blockState.is(BlockTags.NEEDS_IRON_TOOL)
-                    || blockState.is(BlockTags.NEEDS_STONE_TOOL)
-                    || (!blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_AXE)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_HOE));
-            case 2 -> blockState.is(BlockTags.NEEDS_IRON_TOOL)
-                    || blockState.is(BlockTags.NEEDS_STONE_TOOL)
-                    || (!blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_AXE)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_HOE));
-            case 1 -> blockState.is(BlockTags.NEEDS_STONE_TOOL)
-                    || (!blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_AXE)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)
-                    && !blockState.is(BlockTags.MINEABLE_WITH_HOE));
+            case 3 -> true;
+            case 2 -> !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL);
+            case 1 -> !blockState.is(BlockTags.NEEDS_IRON_TOOL)
+                    && !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL);
             case 0 -> !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL)
                     && !blockState.is(BlockTags.NEEDS_IRON_TOOL)
                     && !blockState.is(BlockTags.NEEDS_STONE_TOOL);
-            default -> !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL)
-                    && !blockState.is(BlockTags.NEEDS_IRON_TOOL)
-                    && !blockState.is(BlockTags.NEEDS_STONE_TOOL);
+            default -> false;
         };
     }
 

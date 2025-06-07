@@ -22,7 +22,7 @@ public class WindGenWorldGUI {
 
             ImageWidget back = new ImageWidget(0, 0, WIDTH, HEIGHT, TextureResources.RenderTypes.RENDER_TYPE_SKILL_PANEL_INFO);
         rootContainer.addChild("back", back);
-            ImageButtonWidget buttonWidget = new ImageButtonWidget(320, 200, 50, 50, TextureResources.RenderTypes.RENDER_TYPE_CURSOR, new Runnable() {
+            ImageButtonWidget buttonWidget = new ImageButtonWidget(320 - 25, 200 - 25, 50, 50, TextureResources.RenderTypes.RENDER_TYPE_CURSOR, new Runnable() {
                 @Override
                 public void run() {
 
