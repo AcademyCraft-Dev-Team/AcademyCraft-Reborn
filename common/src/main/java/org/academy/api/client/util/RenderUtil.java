@@ -201,100 +201,6 @@ public final class RenderUtil {
         }
     }
 
-    public static final class BallRenderer {
-        public static final RenderType BALL_RENDER_TYPE = new RenderType.CompositeRenderType(
-                "ball_render_type",
-                DefaultVertexFormat.POSITION_COLOR,
-                VertexFormat.Mode.TRIANGLES,
-                256,
-                false,
-                true,
-                RenderType.CompositeState.builder()
-                        .setShaderState(POSITION_COLOR_SHADER)
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                        .setOutputState(ITEM_ENTITY_TARGET)
-                        .setCullState(NO_CULL)
-                        .createCompositeState(false)
-        );
-
-        @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
-        public static void renderBall(final PoseStack poseStack, final MultiBufferSource buffer,
-                                      final float radius, final int faces,
-                                      float red, float green, float blue, float alpha) {
-            if (radius <= 0 || faces < 3) return;
-
-            final PoseStack.Pose pose = poseStack.last();
-            final Matrix4f matrix = pose.pose();
-            final VertexConsumer vertexConsumer = buffer.getBuffer(BALL_RENDER_TYPE);
-
-            final int latBands = faces;
-            final int lonBands = faces;
-            final float pi = MathUtil.PI;
-            final float twoPi = MathUtil.TWO_PI;
-
-            for (int lat = 0; lat < latBands; lat++) {
-                float theta1 = pi * (-0.5f + (float) lat / latBands);
-                float theta2 = pi * (-0.5f + (float) (lat + 1) / latBands);
-                float y1 = radius * (float) Math.sin(theta1);
-                float y2 = radius * (float) Math.sin(theta2);
-                float scale1 = radius * (float) Math.cos(theta1);
-                float scale2 = radius * (float) Math.cos(theta2);
-
-                for (int lon = 0; lon < lonBands; lon++) {
-                    float phi1 = twoPi * (float) lon / lonBands;
-                    float phi2 = twoPi * (float) (lon + 1) / lonBands;
-                    float cosPhi1 = (float) Math.cos(phi1);
-                    float sinPhi1 = (float) Math.sin(phi1);
-                    float cosPhi2 = (float) Math.cos(phi2);
-                    float sinPhi2 = (float) Math.sin(phi2);
-                    float x1 = scale1 * cosPhi1;
-                    float z1 = scale1 * sinPhi1;
-                    float x2 = scale1 * cosPhi2;
-                    float z2 = scale1 * sinPhi2;
-                    float x3 = scale2 * cosPhi1;
-                    float z3 = scale2 * sinPhi1;
-                    float x4 = scale2 * cosPhi2;
-                    float z4 = scale2 * sinPhi2;
-
-                    vertexConsumer.vertex(matrix, x1, y1, z1).color(red, green, blue, alpha).endVertex();
-                    vertexConsumer.vertex(matrix, x3, y2, z3).color(red, green, blue, alpha).endVertex();
-                    vertexConsumer.vertex(matrix, x2, y1, z2).color(red, green, blue, alpha).endVertex();
-                    vertexConsumer.vertex(matrix, x2, y1, z2).color(red, green, blue, alpha).endVertex();
-                    vertexConsumer.vertex(matrix, x3, y2, z3).color(red, green, blue, alpha).endVertex();
-                    vertexConsumer.vertex(matrix, x4, y2, z4).color(red, green, blue, alpha).endVertex();
-                }
-            }
-        }
-
-        public static void renderBall(PoseStack poseStack, MultiBufferSource buffer, float[][][] vertexBuffer,
-                                      float red, float green, float blue, float alpha) {
-            if (vertexBuffer == null || vertexBuffer.length == 0) return;
-            final PoseStack.Pose pose = poseStack.last();
-            final Matrix4f matrix = pose.pose();
-            final VertexConsumer vertexConsumer = buffer.getBuffer(BALL_RENDER_TYPE);
-            renderBall(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
-        }
-
-        public static void renderBall(Matrix4f matrix, VertexConsumer vertexConsumer,
-                                      float[][][] vertexBuffer, float red, float green, float blue, float alpha) {
-            for (float[][] floats : vertexBuffer) {
-                float x0 = floats[0][0];
-                float y0 = floats[0][1];
-                float z0 = floats[0][2];
-                float x1 = floats[1][0];
-                float y1 = floats[1][1];
-                float z1 = floats[1][2];
-                float x2 = floats[2][0];
-                float y2 = floats[2][1];
-                float z2 = floats[2][2];
-
-                vertexConsumer.vertex(matrix, x0, y0, z0).color(red, green, blue, alpha).endVertex();
-                vertexConsumer.vertex(matrix, x1, y1, z1).color(red, green, blue, alpha).endVertex();
-                vertexConsumer.vertex(matrix, x2, y2, z2).color(red, green, blue, alpha).endVertex();
-            }
-        }
-    }
-
     public static final class CylinderRenderer {
         public static final RenderType CYLINDER_RENDER_TYPE = new RenderType.CompositeRenderType(
                 "cylinder_render_type",
@@ -395,6 +301,39 @@ public final class RenderUtil {
             }
             vc.vertex(mat, x1, y1, z1).color(r, g, b, a).normal(normMat, nx, ny, nz).endVertex();
             vc.vertex(mat, x2, y2, z2).color(r, g, b, a).normal(normMat, nx, ny, nz).endVertex();
+        }
+    }
+
+    public static final class BoxRenderer {
+        public static final RenderType FILLED_BOX_RENDER_TYPE = new RenderType.CompositeRenderType(
+                "filled_box_render_type",
+                DefaultVertexFormat.POSITION_COLOR,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .setWriteMaskState(COLOR_WRITE)
+                        .setOutputState(ITEM_ENTITY_TARGET)
+                        .createCompositeState(false)
+        );
+
+        public static void renderFilledBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
+                                           float r, float g, float b, float a) {
+            final VertexConsumer vertexConsumer = bufferSource.getBuffer(FILLED_BOX_RENDER_TYPE);
+            final Matrix4f matrix4f = poseStack.last().pose();
+
+            float[][][] faces = VertexUtil.Box.getBoxVertices(box);
+
+            for (float[][] face : faces) {
+                vertexConsumer.vertex(matrix4f, face[0][0], face[0][1], face[0][2]).color(r, g, b, a).endVertex();
+                vertexConsumer.vertex(matrix4f, face[1][0], face[1][1], face[1][2]).color(r, g, b, a).endVertex();
+                vertexConsumer.vertex(matrix4f, face[2][0], face[2][1], face[2][2]).color(r, g, b, a).endVertex();
+                vertexConsumer.vertex(matrix4f, face[3][0], face[3][1], face[3][2]).color(r, g, b, a).endVertex();
+            }
         }
     }
 

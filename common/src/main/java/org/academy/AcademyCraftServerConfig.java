@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AcademyCraftServerConfig {
+public final class AcademyCraftServerConfig {
     @SerializedName("ability")
     private final Ability ability = new Ability();
     @SerializedName("generic")
@@ -26,7 +26,7 @@ public class AcademyCraftServerConfig {
 
     public AcademyCraftServerConfig() {}
 
-    protected File getConfigurationFile() {
+    private File getConfigurationFile() {
         return AcademyCraftServer.serverConfigFile;
     }
 
@@ -56,7 +56,7 @@ public class AcademyCraftServerConfig {
         }
     }
 
-    protected boolean isValidConfig(File file) {
+    private boolean isValidConfig(File file) {
         Gson gson = new GsonBuilder().create();
         try (FileReader fileReader = new FileReader(file)) {
             JsonObject jsonObject;
@@ -91,7 +91,7 @@ public class AcademyCraftServerConfig {
         return defaultConfig;
     }
 
-    protected void writeDefaultConfigValues(AcademyCraftServerConfig academyCraftConfig) {
+    private void writeDefaultConfigValues(AcademyCraftServerConfig academyCraftConfig) {
         Ability abilityConfig = academyCraftConfig.getAbility();
         Map<String, List<String>> metalBlocks = abilityConfig.getMetalBlocks();
         Map<String, List<String>> metalEntities = abilityConfig.getMetalEntities();

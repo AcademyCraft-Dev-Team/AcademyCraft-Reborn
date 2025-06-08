@@ -23,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -81,7 +82,7 @@ public class DirStrike extends Skill {
     }
 
     public static final class Client {
-        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_DIR_STRIKE_ICON, 100, 110);
         public static final String KEY_NAME_ACTION = SkillNames.DIR_STRIKE + "_action";

@@ -12,6 +12,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -70,7 +71,7 @@ public class ArcGenerate extends Skill {
     }
 
     public static final class Client {
-        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(Railgun.Client.SKILL_INFO),
                         TextureResources.TEXTURE_ARC_GENERATE_ICON, 20, 70.25f);
         public static ArcGenerateClientConfigData CONFIG = new ArcGenerateClientConfigData();

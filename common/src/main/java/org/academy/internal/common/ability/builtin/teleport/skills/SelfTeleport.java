@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -99,6 +100,9 @@ public final class SelfTeleport extends Skill {
                 double teleportY = packet.y - (playerHeight / 2.0);
                 serverPlayer.teleportTo(packet.x, teleportY, packet.z);
                 serverPlayer.resetFallDistance();
+                serverPlayer.setDeltaMovement(0, 0.25, 0);
+
+                serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(serverPlayer));
             }
         }
     }

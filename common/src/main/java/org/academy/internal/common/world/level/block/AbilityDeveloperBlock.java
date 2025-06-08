@@ -45,6 +45,11 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
+    public @Nullable BlockState getStateForPlacement(BlockPlaceContext pContext) {
+        return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
+    }
+
+    @Override
     public boolean canBeReplaced(@NotNull BlockState state, @NotNull BlockPlaceContext useContext) {
         return false;
     }

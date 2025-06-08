@@ -15,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -76,7 +77,7 @@ public class VectorReflection extends Skill {
     }
 
     public static final class Client {
-        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         TextureResources.TEXTURE_VECTOR_REFLECTION_ICON, 20, 70.25f);
         public static final String KEY_NAME_TOGGLE_ACTION = SkillNames.VECTOR_REFLECTION + "_toggle_action";
