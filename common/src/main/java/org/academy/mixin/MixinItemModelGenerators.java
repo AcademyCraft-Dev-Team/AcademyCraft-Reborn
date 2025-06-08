@@ -20,7 +20,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 @Mixin(ItemModelGenerators.class)
-public class MixinItemModelGenerators {
+public abstract class MixinItemModelGenerators {
     @Shadow
     @Final
     private BiConsumer<ResourceLocation, Supplier<JsonElement>> output;

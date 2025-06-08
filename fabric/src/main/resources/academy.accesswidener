@@ -65,6 +65,7 @@ accessible class net/minecraft/client/particle/ParticleEngine$SpriteParticleRegi
 accessible method net/minecraft/client/particle/SuspendedParticle <init> (Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/client/particle/SpriteSet;DDD)V
 accessible method net/minecraft/server/level/ChunkMap getChunks ()Ljava/lang/Iterable;
 accessible field net/minecraft/world/entity/item/FallingBlockEntity blockState Lnet/minecraft/world/level/block/state/BlockState;
+extendable method net/minecraft/world/entity/Entity discard ()V
 
 accessible field net/minecraft/client/MouseHandler xpos D
 accessible field net/minecraft/client/MouseHandler ypos D

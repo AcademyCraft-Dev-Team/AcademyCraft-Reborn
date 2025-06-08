@@ -17,28 +17,39 @@ public class BlockEntityTypes {
 
     public static final BlockEntityType<WirelessNodeBlockEntity> ADVANCED_WIRELESS_NODE = register(
             BlockEntityType.Builder.of(
-                    WirelessNodeBlockEntity::new, Blocks.WIRELESS_NODE),
+                    WirelessNodeBlockEntity::new, Blocks.WIRELESS_NODE
+            ),
             "advanced_wireless_node");
 
     public static final BlockEntityType<WindGenBaseBlockEntity> WIND_GEN_BASE = register(
             BlockEntityType.Builder.of(
-                    WindGenBaseBlockEntity::new, Blocks.WIND_GEN_BASE),
+                    WindGenBaseBlockEntity::new, Blocks.WIND_GEN_BASE
+            ),
             "wind_gen_base");
 
     public static final BlockEntityType<WindGenTopBlockEntity> WIND_GEN_TOP = register(
             BlockEntityType.Builder.of(
-                    WindGenTopBlockEntity::new, Blocks.WIND_GEN_TOP),
+                    WindGenTopBlockEntity::new, Blocks.WIND_GEN_TOP
+            ),
             "wind_gen_top");
 
     public static final BlockEntityType<WindGenPillarBlockEntity> WIND_GEN_PILLAR = register(
             BlockEntityType.Builder.of(
-                    WindGenPillarBlockEntity::new, Blocks.WIND_GEN_PILLAR),
+                    WindGenPillarBlockEntity::new, Blocks.WIND_GEN_PILLAR
+            ),
             "wind_gen_pillar");
 
     public static final BlockEntityType<AbilityDeveloperBlockEntity> ABILITY_DEVELOPER = register(
             BlockEntityType.Builder.of(
-                    AbilityDeveloperBlockEntity::new, Blocks.ABILITY_DEVELOPER),
+                    AbilityDeveloperBlockEntity::new, Blocks.ABILITY_DEVELOPER
+            ),
             "ability_developer"
+    );
+    public static final BlockEntityType<OmniCraftingTableBlockEntity> OMNI_CRAFTING_TABLE = register(
+            BlockEntityType.Builder.of(
+                    OmniCraftingTableBlockEntity::new, Blocks.OMNI_CRAFTING_TABLE
+            ),
+            "omni_crafting_table"
     );
 
     public static <T extends BlockEntity> BlockEntityType<T> register(BlockEntityType.Builder<T> builder, String choiceName) {

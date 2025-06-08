@@ -17,10 +17,13 @@ import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 import org.jetbrains.annotations.NotNull;
-import org.joml.Matrix4f;
 
 public class WindGenBaseBlockEntityRenderer implements BlockEntityRenderer<WindGenBaseBlockEntity> {
+    public static final BlockEntityRenderer<WindGenBaseBlockEntity> INSTANCE = new WindGenBaseBlockEntityRenderer();
     public static final WindGenBaseModel MODEL = new WindGenBaseModel(WindGenBaseModel.createBodyLayer().bakeRoot());
+
+    private WindGenBaseBlockEntityRenderer() {
+    }
 
     @Override
     public void render(@NotNull WindGenBaseBlockEntity blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {

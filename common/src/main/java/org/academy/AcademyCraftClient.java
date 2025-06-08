@@ -4,14 +4,14 @@ import net.minecraft.client.Minecraft;
 import net.neoforged.bus.BusBuilderImpl;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.hud.DataTerminalHUD;
+import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.network.future.FutureManagerClient;
-import org.academy.api.client.renderer.hud.HUDManager;
-import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.FutureManager;
+import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
-import org.academy.internal.client.hud.DataTerminalHUD;
 import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.internal.client.renderer.item.ItemRenderers;
 
@@ -40,24 +40,7 @@ public final class AcademyCraftClient {
         Screens.register();
         DataTerminalHUD.init();
         HUDManager.init();
-        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_APP_SETTINGS, "Settings", new Runnable() {
-            @Override
-            public void run() {
-                AcademyCraft.LOGGER.info("C World!");
-            }
-        }));
-        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_APP_MEDIA_PLAYER, "Media Player", new Runnable() {
-            @Override
-            public void run() {
-                AcademyCraft.LOGGER.info("B World!");
-            }
-        }));
-        DataTerminalHUD.registerApp(new DataTerminalHUD.App(TextureResources.RenderTypes.RENDER_TYPE_APP_MISAKA_CLOUD, "Misaka Cloud", new Runnable() {
-            @Override
-            public void run() {
-                AcademyCraft.LOGGER.info("A World!");
-            }
-        }));
+        Apps.register();
         EntityRenderers.init();
     }
 }

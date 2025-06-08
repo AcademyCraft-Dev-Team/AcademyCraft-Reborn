@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class AcademyCraftClientConfig {
+public final class AcademyCraftClientConfig {
     private final File configFile;
     private JsonObject rootJsonConfig;
 

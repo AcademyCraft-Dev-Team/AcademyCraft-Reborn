@@ -15,7 +15,7 @@ import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.io.File;
 
-public class AcademyCraftServer {
+public final class AcademyCraftServer {
     public static AcademyCraftServerConfig serverConfig;
     public static WorldData worldData;
     public static File serverConfigFile;

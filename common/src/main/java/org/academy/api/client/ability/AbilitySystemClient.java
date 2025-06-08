@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
@@ -16,10 +17,7 @@ import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -31,6 +29,7 @@ public final class AbilitySystemClient {
     public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system_client_config";
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
     public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
+    public static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
 
     @NotNull
     public static volatile AbilityCategory category = Level0.INSTANCE;
@@ -207,5 +206,8 @@ public final class AbilitySystemClient {
         public @NotNull Class<AbilitySystemClientConfigData> getConfigClass() {
             return AbilitySystemClientConfigData.class;
         }
+    }
+
+    public record SkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation texture, float x, float y) {
     }
 }

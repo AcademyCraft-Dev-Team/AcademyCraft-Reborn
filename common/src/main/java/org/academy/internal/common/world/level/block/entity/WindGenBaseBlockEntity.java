@@ -44,6 +44,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
         if (isMain()) {
             windGenWorldGUI = new WindGenWorldGUI();
             windGenWorldGUI.onInit();
+            setupState.start(ticks);
         }
     }
 

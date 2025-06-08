@@ -16,6 +16,8 @@ public class ItemRenderers {
             register(Items.WIRELESS_NODE, WirelessNodeBlockItemRenderer.INSTANCE);
     public static final ItemRenderer IMAG_PHASE_DOWSING_ROD =
             register(Items.IMAG_PHASE_DOWSING_ROD, ImagPhaseDowsingRodItemRenderer.INSTANCE);
+    public static final ItemRenderer OMNI_CRAFTING_TABLE =
+            register(Items.OMNI_CRAFTING_TABLE, OmniCraftingTableBlockItemRenderer.INSTANCE);
 
     public static ItemRenderer register(Item item, ItemRenderer itemRenderer) {
         ITEM_RENDERER_MAP.put(item, itemRenderer);

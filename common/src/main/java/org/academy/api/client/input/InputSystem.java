@@ -78,7 +78,7 @@ public final class InputSystem {
             if (requiredKeys.isEmpty()) throw new IllegalStateException("Missing required keys");
 
             int requiredMask = requiredModifiers.stream().reduce(0, (a, b) -> a | b);
-            boolean modSuccess = requiredModifiers.isEmpty() || modifiers == requiredMask;
+            boolean modSuccess = modifiers == requiredMask;
 
             boolean keySuccess;
             if (requiredAction == GLFW.GLFW_RELEASE) {
