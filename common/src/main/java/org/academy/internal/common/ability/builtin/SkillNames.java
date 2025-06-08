@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.builtin;
 
-public class SkillNames {
+public final class SkillNames {
     public static final String RAILGUN = "railgun";
     public static final String ARC_GENERATE = "arc_generate";
     public static final String SELF_TELEPORT = "self_teleport";

@@ -20,7 +20,7 @@ public class ImagPhaseLeavesBlock extends LeavesBlock {
                 .strength(0.2F)
                 .randomTicks()
                 .noOcclusion()
-                .sound(SoundType.GRASS)
+                .sound(SoundType.CHAIN)
                 .isValidSpawn((state, level, pos, value)
                         -> value == EntityType.OCELOT || value == EntityType.PARROT)
                 .isSuffocating((state, level, pos) -> false)

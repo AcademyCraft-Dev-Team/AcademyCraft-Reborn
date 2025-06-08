@@ -11,11 +11,12 @@ public class BlockEntityRenderers {
     public static final Map<BlockEntityType<?>, BlockEntityRenderer<?>> BLOCK_ENTITY_RENDERERS = new HashMap<>();
 
     static {
-        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_BASE, new WindGenBaseBlockEntityRenderer());
-        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_TOP, new WindGenTopBlockEntityRenderer());
-        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ABILITY_DEVELOPER, new AbilityDeveloperBlockEntityRenderer());
-        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_PILLAR, new WindGenPillarBlockEntityRenderer());
-        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ADVANCED_WIRELESS_NODE, new WirelessNodeBlockEntityRenderer());
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_BASE, WindGenBaseBlockEntityRenderer.INSTANCE);
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_TOP, WindGenTopBlockEntityRenderer.INSTANCE);
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ABILITY_DEVELOPER, AbilityDeveloperBlockEntityRenderer.INSTANCE);
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_PILLAR, WindGenPillarBlockEntityRenderer.INSTANCE);
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ADVANCED_WIRELESS_NODE, WirelessNodeBlockEntityRenderer.INSTANCE);
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.OMNI_CRAFTING_TABLE, OmniCraftingTableBlockEntityRenderer.INSTANCE);
     }
 
     private BlockEntityRenderers() {

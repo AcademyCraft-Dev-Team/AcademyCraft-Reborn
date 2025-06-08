@@ -12,6 +12,11 @@ import org.academy.internal.common.world.level.block.entity.WindGenPillarBlockEn
 import org.jetbrains.annotations.NotNull;
 
 public class WindGenPillarBlockEntityRenderer implements BlockEntityRenderer<WindGenPillarBlockEntity> {
+    public static final BlockEntityRenderer<WindGenPillarBlockEntity> INSTANCE = new WindGenPillarBlockEntityRenderer();
+
+    private WindGenPillarBlockEntityRenderer() {
+    }
+
     @Override
     public void render(@NotNull WindGenPillarBlockEntity windGenPillarBlockEntity, float v, @NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int i, int i1) {
         poseStack.pushPose();

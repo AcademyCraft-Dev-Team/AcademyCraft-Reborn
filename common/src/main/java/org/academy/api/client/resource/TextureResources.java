@@ -88,6 +88,10 @@ public final class TextureResources {
      * Imag Phase Dowsing Rod
      */
     public static final ResourceLocation TEXTURE_IMAG_PHASE_DOWSING_ROD_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/imag_phase_dosing_rod.png");
+    /**
+     * Omni Crafting Table
+     */
+    public static final ResourceLocation TEXTURE_OMNI_CRAFTING_TABLE_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/omni_crafting_table.png");
 
     public static final class RenderTypes {
         /**
@@ -179,7 +183,7 @@ public final class TextureResources {
         public static final RenderType RENDER_TYPE_BUTTON = RenderUtil.getPositionColorTexRenderType(
                 "button", TEXTURE_BUTTON, false
         );
-        public static final RenderType RENDER_TYPE_ICON_BOX = RenderUtil.getPositionTexRenderType(
+        public static final RenderType RENDER_TYPE_ICON_BOX = RenderUtil.getPositionColorTexRenderTypeFull(
                 "icon_box", TEXTURE_ICON_BOX, false
         );
         public static final RenderType RENDER_TYPE_CURSOR = RenderUtil.getPositionTexRenderType(

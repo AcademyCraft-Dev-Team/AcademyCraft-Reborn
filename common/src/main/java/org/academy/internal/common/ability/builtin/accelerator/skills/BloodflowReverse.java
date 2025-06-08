@@ -15,6 +15,7 @@ import net.minecraft.world.phys.HitResult;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
@@ -73,7 +74,7 @@ public class BloodflowReverse extends Skill {
     }
 
     public static final class Client {
-        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_BLOODFLOW_REVERSE_ICON, 90, 50);
         public static final String KEY_NAME_ACTION = SkillNames.BLOODFLOW_REVERSE + "_action";

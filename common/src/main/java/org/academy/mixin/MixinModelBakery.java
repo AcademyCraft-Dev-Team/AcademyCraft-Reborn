@@ -1,6 +1,5 @@
 package org.academy.mixin;
 
-import net.minecraft.Util;
 import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.resources.ResourceLocation;

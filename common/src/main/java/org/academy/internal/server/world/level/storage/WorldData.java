@@ -29,7 +29,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class WorldData {
+public final class WorldData {
     @SerializedName("players")
     private final Map<UUID, Player> players = new HashMap<>();
 

@@ -32,9 +32,16 @@ public class Blocks {
                     .sound(SoundType.EMPTY)));
     public static final Block IMAG_PHASE_VEGETATION = register("imag_phase_vegetation", new Block(BlockBehaviour.Properties.of()));
     public static final Block IMAG_PHASE_LEAVES = register("imag_phase_leaves", new ImagPhaseLeavesBlock());
-    public static final Block IMAG_PHASE_LOG = register("imag_phase_log", new RotatedPillarBlock(BlockBehaviour.Properties.of()
-            .instrument(NoteBlockInstrument.BASS).strength(2.0F).sound(SoundType.WOOD).ignitedByLava()));
+    public static final Block IMAG_PHASE_LOG = register("imag_phase_log", new RotatedPillarBlock(
+                    BlockBehaviour.Properties.of()
+                            .instrument(NoteBlockInstrument.BASS)
+                            .strength(3, 6)
+                            .sound(SoundType.DEEPSLATE)
+                            .ignitedByLava()
+            )
+    );
     public static final Block IMAG_PHASE_LICHEN = register("imag_phase_lichen", new ImagPhaseLichenBlock());
+    public static final Block OMNI_CRAFTING_TABLE = register("omni_crafting_table", new OmniCraftingTableBlock());
 
     public static <T extends Block> T register(String name, T block) {
         BLOCKS.put(name, block);

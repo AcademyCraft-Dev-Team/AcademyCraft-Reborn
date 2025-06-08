@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Map;
 
 @Mixin(ItemBlockRenderTypes.class)
-public class MixinItemBlockRenderTypes {
+public abstract class MixinItemBlockRenderTypes {
     @Shadow @Final private static Map<Block, RenderType> TYPE_BY_BLOCK;
 
     @Inject(method = "<clinit>",at = @At("TAIL"))

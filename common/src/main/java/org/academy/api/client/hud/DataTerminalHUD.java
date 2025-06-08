@@ -1,4 +1,4 @@
-package org.academy.internal.client.hud;
+package org.academy.api.client.hud;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -14,7 +14,6 @@ import net.minecraft.client.MouseHandler;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderType;
@@ -23,12 +22,12 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftClientConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
+import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
-import org.academy.api.client.renderer.hud.HUDManager;
-import org.academy.api.client.renderer.hud.HUDRenderer;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
@@ -78,7 +77,6 @@ public final class DataTerminalHUD implements HUDRenderer {
     private static LabelWidget playerNameLabel;
     private static final PostChain postChain;
     private static final List<App> APP_LIST = new ArrayList<>();
-    private static final List<Class<? extends Screen>> IGNORE_SCREEN_LIST = new ArrayList<>();
 
     static {
         try {
@@ -140,6 +138,10 @@ public final class DataTerminalHUD implements HUDRenderer {
             postChain.getTempTarget("maskInput").clear(false);
             postChain.getTempTarget("maskInput").bindWrite(false);
             RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF, guiGraphics.bufferSource());
+            if (rootContainer.getChildren().containsKey("area_app")) {
+                Widget widget = rootContainer.getChildren().get("area_app");
+                RenderUtil.fill(guiGraphics.pose().last().pose(), -widget.getWidth(), widget.getHeight(), 0, 0, 0XFFFFFFFF, guiGraphics.bufferSource());
+            }
             guiGraphics.bufferSource().endBatch(RenderType.gui());
             postChain.process(partialTick);
             Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
@@ -193,7 +195,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             }
 
             SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_ACTUAL_WIDTH, APP_AREA_VISIBLE_HEIGHT);
-            root.addChild("area_app", appArea);
+            root.addChild("area_app_list", appArea);
             {
                 List<App> apps = new ArrayList<>(APP_LIST);
                 int totalAppsToCreate = apps.size();
@@ -208,7 +210,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                     PanelWidget appButton = getAppWidget(app);
                     appButton.setX(currentAppX);
                     appButton.setY(currentAppY);
-                    appArea.addChild("app_" + app.name, appButton);
+                    appArea.addChild("app_" + app.getName(), appButton);
                 }
             }
             VerticalScrollBarWidget appAreaBar = new VerticalScrollBarWidget(appArea,
@@ -216,7 +218,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             appAreaBar.setThumbColor(0x50AAAAAA);
             appAreaBar.setTrackColor(0x70202020);
             appAreaBar.showBackground = false;
-            root.addChild("bar_area_app", appAreaBar);
+            root.addChild("bar_area_app_list", appAreaBar);
         }
 
         CursorWidget cursorWidget = new CursorWidget(8, 8);
@@ -234,6 +236,9 @@ public final class DataTerminalHUD implements HUDRenderer {
         }
         Window window = Minecraft.getInstance().getWindow();
         if (active) {
+            if (AbilitySystemClient.isActiveHUD()){
+                AbilitySystemClient.setActiveHUD(false);
+            }
             double guiScale = window.getGuiScale();
             GLFW.glfwSetCursorPos(window.getWindow(),
                     (window.getGuiScaledWidth() - WIDTH * 0.85 / 2) * guiScale,
@@ -271,10 +276,10 @@ public final class DataTerminalHUD implements HUDRenderer {
         AppWidget appIconWidget = new AppWidget(
                 (APP_WIDGET_WIDTH - APP_ICON_SIZE) / 2,
                 0,
-                app.icon, app.runnable);
+                app.getIcon(), app.onClick());
         appPanel.addChild("app_icon", appIconWidget);
 
-        AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget(app.name, -3, APP_ICON_SIZE, APP_WIDGET_WIDTH, true);
+        AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget(app.getName(), -3, APP_ICON_SIZE, APP_WIDGET_WIDTH, true);
         nameLabel.scale = 0.85f;
         nameLabel.dropShadow = false;
 
@@ -285,10 +290,6 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     public static void registerApp(App app) {
         APP_LIST.add(app);
-    }
-
-    public static <T extends Screen> void registerIgnoreScreen(Class<T> screenClass) {
-        IGNORE_SCREEN_LIST.add(screenClass);
     }
 
     @SubscribeEvent
@@ -413,18 +414,7 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onScreenChange(ChangeScreenEvent.Post event) {
-        if (active) {
-            boolean ignore = false;
-            if (event.currentScreen != null) {
-                Class<?> clazz = event.currentScreen.getClass();
-                if (IGNORE_SCREEN_LIST.contains(clazz)) {
-                    ignore = true;
-                }
-            }
-            if (!ignore) {
-                toggle();
-            }
-        }
+        if (active) toggle();
     }
 
     @SubscribeEvent
@@ -480,7 +470,19 @@ public final class DataTerminalHUD implements HUDRenderer {
         }
     }
 
-    public record App(RenderType icon, String name, Runnable runnable) {
+    public interface App {
+        RenderType getIcon();
+
+        String getName();
+
+        Runnable onClick();
+    }
+
+    public static void setAppArea(PanelWidget panel) {
+        Widget back = rootContainer.getChildUnSafe("back");
+        panel.setX(back.getX() - panel.getWidth());
+        panel.setY(back.getY());
+        rootContainer.addChild("area_app", panel);
     }
 
     public static final class AppWidget extends ImageButtonWidget {

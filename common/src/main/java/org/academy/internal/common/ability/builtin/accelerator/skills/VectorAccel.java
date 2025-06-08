@@ -95,7 +95,7 @@ public class VectorAccel extends Skill {
     public static final class Client {
         public static VectorAccelClientConfigData CONFIG = new VectorAccelClientConfigData();
         public static Context currentContext = null;
-        public static final AbilityDeveloperScreen.SkillInfo SKILL_INFO =
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/vec_accel/icon.png"), 20, 40);
 

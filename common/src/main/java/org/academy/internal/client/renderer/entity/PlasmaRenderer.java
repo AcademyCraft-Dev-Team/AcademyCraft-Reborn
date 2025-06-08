@@ -232,12 +232,6 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
         float pulseFactor = 0.5f + 0.5f * (float) Math.sin(effectiveTime * CORE_PULSATION_FREQ * MathUtil.TWO_PI);
         float currentRadius = MathUtil.lerpFactorStartEnd(pulseFactor, CORE_BASE_RADIUS - CORE_PULSATION_AMP, CORE_BASE_RADIUS + CORE_PULSATION_AMP);
         float glowRadius = currentRadius * (1.0f + pulseFactor * 0.15f);
-
-        RenderUtil.BallRenderer.renderBall(poseStack, buffer, currentRadius, CORE_SPHERE_FACES,
-                CORE_COLOR_INNER[0], CORE_COLOR_INNER[1], CORE_COLOR_INNER[2], CORE_COLOR_INNER[3]);
-
-        RenderUtil.BallRenderer.renderBall(poseStack, buffer, glowRadius, CORE_SPHERE_FACES,
-                CORE_COLOR_GLOW[0], CORE_COLOR_GLOW[1], CORE_COLOR_GLOW[2], CORE_COLOR_GLOW[3]);
     }
 
     private void renderCoreTendrils(PoseStack poseStack, MultiBufferSource buffer, float effectiveTime, long entityId) {

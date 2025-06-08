@@ -14,6 +14,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
+import static org.academy.internal.common.world.level.block.MultiBlock.FACING;
+
 public class MultiBlockItem extends BlockItem {
     public final List<Vec3i> subBlocks;
 
@@ -28,7 +30,7 @@ public class MultiBlockItem extends BlockItem {
         Level level = context.getLevel();
         CollisionContext collisionContext = context.getPlayer() == null ? CollisionContext.empty() : CollisionContext.of(context.getPlayer());
 
-        List<BlockPos> requiredPositions = MultiBlock.getRotatedSubjectBlocks(basePos, context.getHorizontalDirection(), subBlocks);
+        List<BlockPos> requiredPositions = MultiBlock.getRotatedSubjectBlocks(basePos, state.getValue(FACING), subBlocks);
         requiredPositions.add(basePos);
 
         for (BlockPos pos : requiredPositions) {

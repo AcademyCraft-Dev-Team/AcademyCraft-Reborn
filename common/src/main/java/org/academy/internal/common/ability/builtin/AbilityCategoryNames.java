@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.builtin;
 
-public class AbilityCategoryNames {
+public final class AbilityCategoryNames {
     public static final String LEVEL0 = "level0";
     public static final String ELECTROMASTER = "electromaster";
     public static final String TELEPORT = "teleport";

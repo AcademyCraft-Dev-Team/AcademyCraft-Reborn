@@ -10,7 +10,7 @@ import org.academy.internal.common.ability.builtin.teleport.Teleport;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AbilityCategories {
+public final class AbilityCategories {
     public static final List<AbilityCategory> ABILITY_CATEGORY_LIST = new ArrayList<>();
 
     static {

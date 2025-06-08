@@ -2,7 +2,7 @@ package org.academy.fabric.mixin;
 
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
-import org.academy.api.client.renderer.hud.HUDManager;
+import org.academy.api.client.hud.HUDManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

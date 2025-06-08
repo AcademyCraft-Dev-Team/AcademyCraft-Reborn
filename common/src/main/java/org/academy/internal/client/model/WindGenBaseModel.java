@@ -2,6 +2,7 @@ package org.academy.internal.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.animation.AnimationChannel;
 import net.minecraft.client.animation.AnimationDefinition;
@@ -208,8 +209,8 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
         BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());
         RandomSource randomSource = RandomSource.create();
         randomSource.setSeed(42L);
+        poseStack.rotateAround(Axis.YP.rotationDegrees(-90), 0, 0, 0);
         Matrix4f matrix4f = new Matrix4f();
-        matrix4f.rotateY((float) Math.toRadians(-90));
         matrix4f.translate(-0.5f, 0.505f, -0.5f);
         matrix4f.scale(1,0.9f,1);
         poseStack.mulPoseMatrix(matrix4f);

@@ -1,5 +1,6 @@
 package org.academy.api.client.util;
 
+import net.minecraft.world.phys.AABB;
 import org.academy.api.common.util.MathUtil;
 
 public class VertexUtil {
@@ -35,72 +36,6 @@ public class VertexUtil {
 
         public static float[][][] getVerticalVertexBuffer(float radius, float height, int segments) {
             return getRingVertexBuffer(radius, segments, 0f, height);
-        }
-    }
-
-    public static final class Ball {
-        public static float[][][] getBallVertexBuffer(final float radius, final int faces) {
-            if (radius <= 0 || faces < 3) return null;
-
-            final int numTriangles = faces * faces * 2;
-            final float[][][] vertexBuffer = new float[numTriangles][3][3];
-
-            final float pi = MathUtil.PI;
-            final float twoPi = MathUtil.TWO_PI;
-            int triangleIndex = 0;
-
-            for (int lat = 0; lat < faces; lat++) {
-                float theta1 = pi * (-0.5f + (float) lat / faces);
-                float theta2 = pi * (-0.5f + (float) (lat + 1) / faces);
-
-                float y1 = radius * (float) Math.sin(theta1);
-                float y2 = radius * (float) Math.sin(theta2);
-
-                float scale1 = radius * (float) Math.cos(theta1);
-                float scale2 = radius * (float) Math.cos(theta2);
-
-                for (int lon = 0; lon < faces; lon++) {
-                    float phi1 = twoPi * (float) lon / faces;
-                    float phi2 = twoPi * (float) (lon + 1) / faces;
-
-                    float cosPhi1 = (float) Math.cos(phi1);
-                    float sinPhi1 = (float) Math.sin(phi1);
-                    float cosPhi2 = (float) Math.cos(phi2);
-                    float sinPhi2 = (float) Math.sin(phi2);
-
-                    float x1 = scale1 * cosPhi1;
-                    float z1 = scale1 * sinPhi1;
-                    float x2 = scale1 * cosPhi2;
-                    float z2 = scale1 * sinPhi2;
-                    float x3 = scale2 * cosPhi1;
-                    float z3 = scale2 * sinPhi1;
-                    float x4 = scale2 * cosPhi2;
-                    float z4 = scale2 * sinPhi2;
-
-                    vertexBuffer[triangleIndex][0][0] = x1;
-                    vertexBuffer[triangleIndex][0][1] = y1;
-                    vertexBuffer[triangleIndex][0][2] = z1;
-                    vertexBuffer[triangleIndex][1][0] = x3;
-                    vertexBuffer[triangleIndex][1][1] = y2;
-                    vertexBuffer[triangleIndex][1][2] = z3;
-                    vertexBuffer[triangleIndex][2][0] = x2;
-                    vertexBuffer[triangleIndex][2][1] = y1;
-                    vertexBuffer[triangleIndex][2][2] = z2;
-                    triangleIndex++;
-
-                    vertexBuffer[triangleIndex][0][0] = x2;
-                    vertexBuffer[triangleIndex][0][1] = y1;
-                    vertexBuffer[triangleIndex][0][2] = z2;
-                    vertexBuffer[triangleIndex][1][0] = x3;
-                    vertexBuffer[triangleIndex][1][1] = y2;
-                    vertexBuffer[triangleIndex][1][2] = z3;
-                    vertexBuffer[triangleIndex][2][0] = x4;
-                    vertexBuffer[triangleIndex][2][1] = y2;
-                    vertexBuffer[triangleIndex][2][2] = z4;
-                    triangleIndex++;
-                }
-            }
-            return vertexBuffer;
         }
     }
 
@@ -161,6 +96,51 @@ public class VertexUtil {
             }
 
             return vertexBuffer;
+        }
+    }
+
+    public static final class Box {
+        public static float[][][] getBoxVertices(AABB box) {
+            float minX = (float) box.minX;
+            float minY = (float) box.minY;
+            float minZ = (float) box.minZ;
+            float maxX = (float) box.maxX;
+            float maxY = (float) box.maxY;
+            float maxZ = (float) box.maxZ;
+
+            float[][][] faces = new float[6][4][3];
+
+            faces[0][0] = new float[]{ minX, minY, maxZ };
+            faces[0][1] = new float[]{ maxX, minY, maxZ };
+            faces[0][2] = new float[]{ maxX, maxY, maxZ };
+            faces[0][3] = new float[]{ minX, maxY, maxZ };
+
+            faces[1][0] = new float[]{ maxX, minY, minZ };
+            faces[1][1] = new float[]{ minX, minY, minZ };
+            faces[1][2] = new float[]{ minX, maxY, minZ };
+            faces[1][3] = new float[]{ maxX, maxY, minZ };
+
+            faces[2][0] = new float[]{ minX, maxY, maxZ };
+            faces[2][1] = new float[]{ maxX, maxY, maxZ };
+            faces[2][2] = new float[]{ maxX, maxY, minZ };
+            faces[2][3] = new float[]{ minX, maxY, minZ };
+
+            faces[3][0] = new float[]{ minX, minY, minZ };
+            faces[3][1] = new float[]{ maxX, minY, minZ };
+            faces[3][2] = new float[]{ maxX, minY, maxZ };
+            faces[3][3] = new float[]{ minX, minY, maxZ };
+
+            faces[4][0] = new float[]{ maxX, minY, maxZ };
+            faces[4][1] = new float[]{ maxX, minY, minZ };
+            faces[4][2] = new float[]{ maxX, maxY, minZ };
+            faces[4][3] = new float[]{ maxX, maxY, maxZ };
+
+            faces[5][0] = new float[]{ minX, minY, minZ };
+            faces[5][1] = new float[]{ minX, minY, maxZ };
+            faces[5][2] = new float[]{ minX, maxY, maxZ };
+            faces[5][3] = new float[]{ minX, maxY, minZ };
+
+            return faces;
         }
     }
 

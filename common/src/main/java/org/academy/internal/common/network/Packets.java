@@ -17,6 +17,8 @@ import org.academy.internal.common.ability.builtin.electromaster.skills.ArcGener
 import org.academy.internal.common.ability.builtin.electromaster.skills.Railgun;
 import org.academy.internal.common.ability.builtin.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.builtin.teleport.skills.SelfTeleport;
+import org.academy.internal.common.world.item.CoinItem;
+
 
 import java.util.HashMap;
 import java.util.Map;
@@ -54,6 +56,8 @@ public final class Packets {
             register(FutureRequestPacket.class, listener -> new FutureRequestPacket<>());
     public static final Class<FutureResponsePacket> FUTURE_RESPONSE =
             register(FutureResponsePacket.class, listener -> new FutureResponsePacket<>());
+    public static final Class<CoinItem.ThrowCoinPacket> THROW_COIN_WITH_VELOCITY =
+            register(CoinItem.ThrowCoinPacket.class, listener -> new CoinItem.ThrowCoinPacket());
 
     public static final Class<StormWing.TogglePacket> STORM_WING_TOGGLE =
             register(StormWing.TogglePacket.class, listener -> new StormWing.TogglePacket());
