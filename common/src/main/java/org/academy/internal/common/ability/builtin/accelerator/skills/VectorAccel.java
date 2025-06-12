@@ -18,17 +18,17 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
-import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.CameraRenderer;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -54,17 +54,14 @@ public class VectorAccel extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.VectorAccelClientConfigData());
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
-                INSTANCE.name,
-                Client.VectorAccelClientConfigData.class
-        );
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, new Client.VectorAccelConfig());
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.VectorAccelClientConfigData();
+            Client.CONFIG = new Client.VectorAccelConfig();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE_ACTION,
+        InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -74,7 +71,7 @@ public class VectorAccel extends Skill {
                         )
                 )
         ), Client::onChargeStart);
-        InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE_ACTION,
+        InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -93,14 +90,14 @@ public class VectorAccel extends Skill {
     }
 
     public static final class Client {
-        public static VectorAccelClientConfigData CONFIG = new VectorAccelClientConfigData();
+        public static VectorAccelConfig CONFIG = new VectorAccelConfig();
         public static Context currentContext = null;
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/vec_accel/icon.png"), 20, 40);
 
-        public static final String KEY_NAME_CHARGE_ACTION = SkillNames.VECTOR_ACCEL + "_charge_action";
-        public static final String KEY_NAME_RELEASE_ACTION = SkillNames.VECTOR_ACCEL + "_release_action";
+        public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
+        public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";
 
         private static final CameraRenderer CAMERA_RENDERER = (poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix) -> {
             if (Client.currentContext == null || Client.currentContext.player == null || Minecraft.getInstance().screen != null) {
@@ -183,7 +180,7 @@ public class VectorAccel extends Skill {
             }
         }
 
-        public static class VectorAccelClientConfigData implements IClientConfigActions<VectorAccelClientConfigData> {
+        public static class VectorAccelConfig implements IConfigAction<VectorAccelConfig> {
             @SerializedName("keyBindings")
             private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -198,23 +195,23 @@ public class VectorAccel extends Skill {
             }
 
             @Override
-            public @NotNull VectorAccelClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, VectorAccelClientConfigData.class);
+            public @NotNull VectorAccel.Client.VectorAccelConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, VectorAccelConfig.class);
             }
 
             @Override
-            public @NotNull JsonElement serialize(@NotNull VectorAccelClientConfigData configInstance, @NotNull Gson gson) {
+            public @NotNull JsonElement serialize(@NotNull VectorAccel.Client.VectorAccelConfig configInstance, @NotNull Gson gson) {
                 return gson.toJsonTree(configInstance);
             }
 
             @Override
-            public @NotNull VectorAccelClientConfigData getDefaultConfig() {
-                return new VectorAccelClientConfigData();
+            public @NotNull VectorAccel.Client.VectorAccelConfig getDefaultConfig() {
+                return new VectorAccelConfig();
             }
 
             @Override
-            public @NotNull Class<VectorAccelClientConfigData> getConfigClass() {
-                return VectorAccelClientConfigData.class;
+            public @NotNull Class<VectorAccelConfig> getConfigClass() {
+                return VectorAccelConfig.class;
             }
         }
 

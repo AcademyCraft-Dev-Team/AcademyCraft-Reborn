@@ -10,14 +10,14 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -37,7 +37,7 @@ import java.util.*;
 
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
-    public static final String KEY_NAME_ACTION = SkillNames.ARC_GENERATE + ".generate_action";
+    public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
     public static final float BASE_DAMAGE = 2.0F;
 
     private ArcGenerate() {
@@ -46,17 +46,14 @@ public class ArcGenerate extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.ArcGenerateClientConfigData());
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
-                INSTANCE.name,
-                Client.ArcGenerateClientConfigData.class
-        );
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.ArcGenerateConfig.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.ArcGenerateClientConfigData();
+            Client.CONFIG = new Client.ArcGenerateConfig();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
-        InputSystem.addKeyBinding(KEY_NAME_ACTION, Client.CONFIG.getKeyBinding(KEY_NAME_ACTION,
+        InputSystem.addKeyBinding(KEY_NAME_GENERATE, Client.CONFIG.getKeyBinding(KEY_NAME_GENERATE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_G)),
                         GLFW.GLFW_RELEASE,
@@ -74,13 +71,13 @@ public class ArcGenerate extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(Railgun.Client.SKILL_INFO),
                         TextureResources.TEXTURE_ARC_GENERATE_ICON, 20, 70.25f);
-        public static ArcGenerateClientConfigData CONFIG = new ArcGenerateClientConfigData();
+        public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
             NetworkSystemClient.sendPacket(new C2SPacket(new GeneratePacket()));
         }
 
-        public static class ArcGenerateClientConfigData implements IClientConfigActions<ArcGenerateClientConfigData> {
+        public static class ArcGenerateConfig {
             @SerializedName("keyBindings")
             private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -94,24 +91,31 @@ public class ArcGenerate extends Skill {
                 this.keyBindings.put(name, keyBinding);
             }
 
-            @Override
-            public @NotNull ArcGenerateClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, ArcGenerateClientConfigData.class);
-            }
+            public static final class Action implements IConfigAction<ArcGenerateConfig> {
+                public static final IConfigAction<ArcGenerateConfig> INSTANCE = new Action();
 
-            @Override
-            public @NotNull JsonElement serialize(@NotNull ArcGenerateClientConfigData configInstance, @NotNull Gson gson) {
-                return gson.toJsonTree(configInstance);
-            }
+                private Action() {
+                }
 
-            @Override
-            public @NotNull ArcGenerateClientConfigData getDefaultConfig() {
-                return new ArcGenerateClientConfigData();
-            }
+                @Override
+                public @NotNull ArcGenerate.Client.ArcGenerateConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, ArcGenerateConfig.class);
+                }
 
-            @Override
-            public @NotNull Class<ArcGenerateClientConfigData> getConfigClass() {
-                return ArcGenerateClientConfigData.class;
+                @Override
+                public @NotNull JsonElement serialize(@NotNull ArcGenerate.Client.ArcGenerateConfig configInstance, @NotNull Gson gson) {
+                    return gson.toJsonTree(configInstance);
+                }
+
+                @Override
+                public @NotNull ArcGenerate.Client.ArcGenerateConfig getDefaultConfig() {
+                    return new ArcGenerateConfig();
+                }
+
+                @Override
+                public @NotNull Class<ArcGenerateConfig> getConfigClass() {
+                    return ArcGenerateConfig.class;
+                }
             }
         }
     }
