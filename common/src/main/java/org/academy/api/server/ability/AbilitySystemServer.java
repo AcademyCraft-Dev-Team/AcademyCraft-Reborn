@@ -271,7 +271,7 @@ public class AbilitySystemServer {
 
 
     public static float getDamageMultiplier() {
-        return AcademyCraftServer.serverConfig.getAbility().getDamageMultiplier();
+        return AcademyCraftServer.abilityConfig.damageMultiplier;
     }
 
     public static void addPlayerSyncTask(final UUID uuid, final SyncType syncType) {

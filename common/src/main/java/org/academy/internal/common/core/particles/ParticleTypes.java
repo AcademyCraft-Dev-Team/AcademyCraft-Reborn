@@ -12,7 +12,9 @@ public class ParticleTypes {
             new SimpleParticleType(false));
     public static final SimpleParticleType IMAG_PHASE_LEAVES = register("imag_phase_leaves",
             new SimpleParticleType(false));
-    public static final SimpleParticleType ARC = register("arc",
+    public static final SimpleParticleType ARC_SMALL = register("arc_small",
+            new SimpleParticleType(false));
+    public static final SimpleParticleType ARC_MEDIUM = register("arc_medium",
             new SimpleParticleType(false));
 
     public static <T extends ParticleType<?>> T register(String key, T particleType) {

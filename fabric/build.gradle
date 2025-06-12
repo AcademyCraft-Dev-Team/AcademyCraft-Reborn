@@ -38,8 +38,6 @@ dependencies {
     include(modApi("dev.felnull:special-model-loader:1.2.0"))
     include(modApi('teamreborn:energy:3.0.0'))
     modImplementation "maven.modrinth:jade:11.12.3+fabric"
-    modImplementation "curse.maven:techreborn-233564:6168112"
-    modImplementation "curse.maven:reborncore-237903:6168111"
     modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.1'

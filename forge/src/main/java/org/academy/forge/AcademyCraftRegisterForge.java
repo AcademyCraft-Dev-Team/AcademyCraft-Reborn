@@ -12,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fluids.FluidType;
@@ -22,7 +21,6 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegisterEvent;
 import net.minecraftforge.registries.RegistryObject;
 import org.academy.AcademyCraft;
-import org.academy.api.client.hud.HUDManager;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraftBlockEntityRenderersForge;
@@ -206,7 +204,5 @@ public class AcademyCraftRegisterForge {
     public static void registerOverlays(RegisterGuiOverlaysEvent event) {
         registerAbilityCategory();
         registerBlockEntityRenderer();
-        event.registerBelow(VanillaGuiOverlay.CROSSHAIR.id(), "ability_hud",
-                (forgeGui, arg, f, i, j) -> HUDManager.render(arg, f));
     }
 }

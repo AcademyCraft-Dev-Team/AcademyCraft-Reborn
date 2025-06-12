@@ -13,8 +13,12 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
+import net.minecraft.world.level.Level;
+import org.academy.AcademyCraftClient;
+import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -93,7 +97,7 @@ public class ParticleRenderTypes {
                 };
             }
         });
-        PARTICLE_PROVIDERS.put(ParticleTypes.ARC, new ParticleEngine.SpriteParticleRegistration<>() {
+        PARTICLE_PROVIDERS.put(ParticleTypes.ARC_SMALL, new ParticleEngine.SpriteParticleRegistration<>() {
             @Override
             public @NotNull ParticleProvider<ParticleOptions> create(@NotNull SpriteSet spriteSet) {
                 return new ParticleProvider<>() {
@@ -101,7 +105,18 @@ public class ParticleRenderTypes {
                     public @NotNull Particle createParticle(@NotNull ParticleOptions particleOptions, @NotNull ClientLevel clientLevel,
                                                             double x, double y, double z, double xSpeed,
                                                             double ySpeed, double zSpeed) {
-                        return new ArcParticle(clientLevel,spriteSet,x,y,z);
+                        return new SmallArcParticle(clientLevel, spriteSet, x, y, z);
+                    }
+                };
+            }
+        });
+        PARTICLE_PROVIDERS.put(ParticleTypes.ARC_MEDIUM, new ParticleEngine.SpriteParticleRegistration<>() {
+            @Override
+            public @NotNull ParticleProvider<ParticleOptions> create(@NotNull SpriteSet spriteSet) {
+                return new ParticleProvider<>() {
+                    @Override
+                    public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level, double x, double y, double z, double yaw, double pitch, double zSpeed) {
+                        return new MediumArcParticle(level, x, y, z, (float) yaw, (float) pitch, spriteSet);
                     }
                 };
             }
@@ -128,6 +143,18 @@ public class ParticleRenderTypes {
             tesselator.end();
         }
     };
+
+    public static void init() {
+        AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.registerPacketListener(ParticleRenderTypes.class);
+    }
+
+    @SubscribePacket
+    public static void handleSpawnArcMediumParticle(SpawnArcMediumParticlePacket packet) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level != null) {
+            level.addParticle(ParticleTypes.ARC_MEDIUM, packet.getX(), packet.getY(), packet.getZ(), packet.getYaw(), packet.getPitch(), 0.0D);
+        }
+    }
 
     private ParticleRenderTypes() {
     }

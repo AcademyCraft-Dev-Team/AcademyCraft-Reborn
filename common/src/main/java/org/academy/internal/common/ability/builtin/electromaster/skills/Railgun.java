@@ -3,8 +3,6 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -16,18 +14,15 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.SubscribeEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
-import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -38,7 +33,6 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.gui.screen.AbilityDeveloperScreen;
 import org.academy.internal.common.ability.builtin.SkillNames;
 import org.academy.internal.common.ability.builtin.electromaster.Electromaster;
-import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
@@ -50,6 +44,7 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Railgun extends Skill {
     public static final Skill INSTANCE = new Railgun();
@@ -65,17 +60,14 @@ public class Railgun extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.RailgunClientConfigData());
-        Client.CLIENT_CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
-                INSTANCE.name,
-                Client.RailgunClientConfigData.class
-        );
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.RailgunConfig.Action.INSTANCE);
+        Client.CLIENT_CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CLIENT_CONFIG == null) {
-            Client.CLIENT_CONFIG = new Client.RailgunClientConfigData();
+            Client.CLIENT_CONFIG = new Client.RailgunConfig();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CLIENT_CONFIG);
         }
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_ACTION, Client.CLIENT_CONFIG.getKeyBinding(Client.KEY_NAME_ACTION,
+        InputSystem.addKeyBinding(Client.KEY_NAME_SHOOT, Client.CLIENT_CONFIG.getKeyBinding(Client.KEY_NAME_SHOOT,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
@@ -83,82 +75,21 @@ public class Railgun extends Skill {
                                 new LinkedHashSet<>())
                 )
         ), Client::handleKey);
-        AcademyCraft.EVENT_BUS.register(Client.class);
     }
 
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(),
                         TextureResources.TEXTURE_RAILGUN_ICON, 200, 70.25f);
-        public static final String KEY_NAME_ACTION = SkillNames.RAILGUN + ".shoot_action";
-        public static RailgunClientConfigData CLIENT_CONFIG = new RailgunClientConfigData();
-        private static boolean anyPlayerCoinInAir = false;
-        private static int trackedCoinEntityIdForHandEffect = -1;
+        public static final String KEY_NAME_SHOOT = SkillNames.RAILGUN + "_shoot";
+        public static RailgunConfig CLIENT_CONFIG = new RailgunConfig();
 
 
         public static void handleKey() {
             NetworkSystemClient.sendPacket(new C2SPacket(new ShootPacket()));
         }
 
-        @SubscribeEvent
-        public static void onClientTick(ClientTickEvent event) {
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player == null) {
-                anyPlayerCoinInAir = false;
-                trackedCoinEntityIdForHandEffect = -1;
-                return;
-            }
-
-            if (trackedCoinEntityIdForHandEffect != -1) {
-                Entity coin = player.level().getEntity(trackedCoinEntityIdForHandEffect);
-                if (coin == null || coin.isRemoved() || !(coin instanceof ThrownCoin) || coin.onGround()) {
-                    anyPlayerCoinInAir = false;
-                    trackedCoinEntityIdForHandEffect = -1;
-                } else {
-                    anyPlayerCoinInAir = true;
-                }
-            } else {
-                anyPlayerCoinInAir = false;
-            }
-
-
-            if (anyPlayerCoinInAir && player.level().getGameTime() % 2 == 0) {
-                float sideFactor = (player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT) ? 0.4f : -0.4f;
-                Vec3 handPos = player.position()
-                        .add(player.getLookAngle().cross(new Vec3(0, 1, 0)).normalize().scale(sideFactor))
-                        .add(0, player.getEyeHeight() * 0.8, 0)
-                        .add(player.getLookAngle().scale(0.3));
-
-                spawnHandParticles(player, handPos);
-            }
-        }
-
-        private static void spawnHandParticles(LocalPlayer player, Vec3 handPos) {
-            for (int i = 0; i < 2; ++i) {
-                player.level().addParticle(ParticleTypes.ARC,
-                        handPos.x + (player.level().random.nextDouble() - 0.5D) * 0.1D,
-                        handPos.y + (player.level().random.nextDouble() - 0.5D) * 0.1D,
-                        handPos.z + (player.level().random.nextDouble() - 0.5D) * 0.1D,
-                        (player.level().random.nextDouble() - 0.5D) * 0.05D,
-                        (player.level().random.nextDouble() - 0.5D) * 0.05D,
-                        (player.level().random.nextDouble() - 0.5D) * 0.05D);
-            }
-        }
-
-        public static void accessSetAnyPlayerCoinInAir(boolean value) {
-            anyPlayerCoinInAir = value;
-        }
-
-        public static int accessGetTrackedCoinEntityIdForHandEffect() {
-            return trackedCoinEntityIdForHandEffect;
-        }
-
-        public static void accessSetTrackedCoinEntityIdForHandEffect(int value) {
-            trackedCoinEntityIdForHandEffect = value;
-        }
-
-
-        public static class RailgunClientConfigData implements IClientConfigActions<RailgunClientConfigData> {
+        public static class RailgunConfig {
             @SerializedName("keyBindings")
             private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -172,30 +103,39 @@ public class Railgun extends Skill {
                 this.keyBindings.put(name, keyBinding);
             }
 
-            @Override
-            public @NotNull RailgunClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, RailgunClientConfigData.class);
-            }
+            public static final class Action implements IConfigAction<RailgunConfig> {
+                public static final IConfigAction<RailgunConfig> INSTANCE = new Action();
 
-            @Override
-            public @NotNull JsonElement serialize(@NotNull RailgunClientConfigData configInstance, @NotNull Gson gson) {
-                return gson.toJsonTree(configInstance);
-            }
+                private Action() {
+                }
 
-            @Override
-            public @NotNull RailgunClientConfigData getDefaultConfig() {
-                return new RailgunClientConfigData();
-            }
+                @Override
+                public @NotNull Railgun.Client.RailgunConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, RailgunConfig.class);
+                }
 
-            @Override
-            public @NotNull Class<RailgunClientConfigData> getConfigClass() {
-                return RailgunClientConfigData.class;
+                @Override
+                public @NotNull JsonElement serialize(@NotNull Railgun.Client.RailgunConfig configInstance, @NotNull Gson gson) {
+                    return gson.toJsonTree(configInstance);
+                }
+
+                @Override
+                public @NotNull Railgun.Client.RailgunConfig getDefaultConfig() {
+                    return new RailgunConfig();
+                }
+
+                @Override
+                public @NotNull Class<RailgunConfig> getConfigClass() {
+                    return RailgunConfig.class;
+                }
             }
         }
     }
 
     @SuppressWarnings("resource")
     public static final class Server {
+        public static final Map<UUID, Integer> ACTIVE_COIN_IDS = new ConcurrentHashMap<>();
+
         @SubscribePacket
         public static void handleThrowCoinWithVelocity(CoinItem.ThrowCoinPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
@@ -222,13 +162,13 @@ public class Railgun extends Skill {
             thrownCoin.setPos(player.getX(), player.getEyeY() - 0.1D, player.getZ());
 
             thrownCoin.setDeltaMovement(packet.initialVelocity);
-            thrownCoin.setYRot(packet.yRot);
-            thrownCoin.setXRot(packet.xRot);
+            thrownCoin.setRot(packet.yRot,packet.xRot);
             thrownCoin.yRotO = packet.yRot;
             thrownCoin.xRotO = packet.xRot;
 
             level.addFreshEntity(thrownCoin);
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), AcademyCraftSoundEvents.COIN, player.getSoundSource(), 1.0F, 1.0F);
+            ACTIVE_COIN_IDS.put(player.getUUID(), thrownCoin.getId());
         }
 
         @SubscribePacket
@@ -248,7 +188,9 @@ public class Railgun extends Skill {
             List<Entity> entities = player.level().getEntities(player, detectionBox, entity -> entity.getType() == targetEntity);
 
             if (!entities.isEmpty()) {
-                if (!AcademyCraft.DEBUG_MODE) {
+                ACTIVE_COIN_IDS.remove(uuid);
+
+                if (!player.isCreative()) {
                     AbilitySystemServer.setPlayerComputingPower(uuid, computingPower - 100);
                 }
 

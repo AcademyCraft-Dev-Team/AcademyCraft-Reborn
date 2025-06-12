@@ -15,16 +15,16 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -54,17 +54,14 @@ public class StormWing extends Skill {
     @Override
     public void initClient() {
         RendererManager.registerEffectRenderer(StormWingEffectRenderer.INSTANCE);
-        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.StormWingClientConfigData());
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
-                INSTANCE.name,
-                Client.StormWingClientConfigData.class
-        );
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.StormWingConfig.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.StormWingClientConfigData();
+            Client.CONFIG = new Client.StormWingConfig();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE_ACTION,
+        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
@@ -90,8 +87,8 @@ public class StormWing extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_STORM_WING_ICON, 150, 70.25f);
-        public static final String KEY_NAME_TOGGLE_ACTION = SkillNames.STORM_WING + "_toggle_action";
-        public static StormWingClientConfigData CONFIG = new StormWingClientConfigData();
+        public static final String KEY_NAME_TOGGLE = SkillNames.STORM_WING + "_toggle";
+        public static StormWingConfig CONFIG = new StormWingConfig();
 
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
@@ -122,7 +119,7 @@ public class StormWing extends Skill {
             NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
-        public static class StormWingClientConfigData implements IClientConfigActions<StormWingClientConfigData> {
+        public static class StormWingConfig {
             @SerializedName("keyBindings")
             private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -137,24 +134,31 @@ public class StormWing extends Skill {
                 this.keyBindings.put(name, keyBinding);
             }
 
-            @Override
-            public @NotNull StormWingClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, StormWingClientConfigData.class);
-            }
+            public static final class Action implements IConfigAction<StormWingConfig> {
+                public static final IConfigAction<StormWingConfig> INSTANCE = new Action();
 
-            @Override
-            public @NotNull JsonElement serialize(@NotNull StormWingClientConfigData configInstance, @NotNull Gson gson) {
-                return gson.toJsonTree(configInstance);
-            }
+                private Action() {
+                }
 
-            @Override
-            public @NotNull StormWingClientConfigData getDefaultConfig() {
-                return new StormWingClientConfigData();
-            }
+                @Override
+                public @NotNull StormWing.Client.StormWingConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, StormWingConfig.class);
+                }
 
-            @Override
-            public @NotNull Class<StormWingClientConfigData> getConfigClass() {
-                return StormWingClientConfigData.class;
+                @Override
+                public @NotNull JsonElement serialize(@NotNull StormWing.Client.StormWingConfig configInstance, @NotNull Gson gson) {
+                    return gson.toJsonTree(configInstance);
+                }
+
+                @Override
+                public @NotNull StormWing.Client.StormWingConfig getDefaultConfig() {
+                    return new StormWingConfig();
+                }
+
+                @Override
+                public @NotNull Class<StormWingConfig> getConfigClass() {
+                    return StormWingConfig.class;
+                }
             }
         }
     }

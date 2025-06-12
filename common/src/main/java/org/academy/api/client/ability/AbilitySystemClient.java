@@ -7,11 +7,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
-import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.*;
+import org.academy.AcademyCraftConfig;
+import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.internal.common.ability.builtin.level0.Level0;
 import org.jetbrains.annotations.NotNull;
@@ -26,7 +26,7 @@ import static org.academy.api.common.ability.AbilitySystem.SKILL_MAP;
 public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
     public static final Map<Skill,Float> SKILL_EXP = new ConcurrentHashMap<>();
-    public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system_client_config";
+    public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system";
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
     public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
     public static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
@@ -39,12 +39,8 @@ public final class AbilitySystemClient {
     private static volatile int level;
 
     static {
-        AcademyCraftClientConfig.registerConfigActions(CONFIG_KEY_ABILITY_SYSTEM, new AbilitySystemClientConfigData());
-        AbilitySystemClientConfigData configData = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_ABILITY_SYSTEM, AbilitySystemClientConfigData.class);
-        if (configData == null) {
-            configData = new AbilitySystemClientConfigData();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(CONFIG_KEY_ABILITY_SYSTEM, configData);
-        }
+        AcademyCraftConfig.registerConfigActions(CONFIG_KEY_ABILITY_SYSTEM, AbilitySystemClientConfig.Action.INSTANCE);
+        AbilitySystemClientConfig configData = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_ABILITY_SYSTEM);
         ACTIVATE_HUD_KEY = configData.getKeyBinding(KEY_NAME_ACTIVATE_HUD,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
@@ -172,7 +168,7 @@ public final class AbilitySystemClient {
         AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.unregisterPacketListener(clientContext);
     }
 
-    public static class AbilitySystemClientConfigData implements IClientConfigActions<AbilitySystemClientConfigData> {
+    public static class AbilitySystemClientConfig {
         @SerializedName("keyBindings")
         private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -187,24 +183,31 @@ public final class AbilitySystemClient {
             this.keyBindings.put(name, keyBinding);
         }
 
-        @Override
-        public @NotNull AbilitySystemClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-            return gson.fromJson(jsonElement, AbilitySystemClientConfigData.class);
-        }
+        public static final class Action implements IConfigAction<AbilitySystemClientConfig> {
+            public static final IConfigAction<AbilitySystemClientConfig> INSTANCE = new Action();
 
-        @Override
-        public @NotNull JsonElement serialize(@NotNull AbilitySystemClientConfigData configInstance, @NotNull Gson gson) {
-            return gson.toJsonTree(configInstance);
-        }
+            private Action() {
+            }
 
-        @Override
-        public @NotNull AbilitySystemClientConfigData getDefaultConfig() {
-            return new AbilitySystemClientConfigData();
-        }
+            @Override
+            public @NotNull AbilitySystemClient.AbilitySystemClientConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, AbilitySystemClientConfig.class);
+            }
 
-        @Override
-        public @NotNull Class<AbilitySystemClientConfigData> getConfigClass() {
-            return AbilitySystemClientConfigData.class;
+            @Override
+            public @NotNull JsonElement serialize(@NotNull AbilitySystemClient.AbilitySystemClientConfig configInstance, @NotNull Gson gson) {
+                return gson.toJsonTree(configInstance);
+            }
+
+            @Override
+            public @NotNull AbilitySystemClient.AbilitySystemClientConfig getDefaultConfig() {
+                return new AbilitySystemClientConfig();
+            }
+
+            @Override
+            public @NotNull Class<AbilitySystemClientConfig> getConfigClass() {
+                return AbilitySystemClientConfig.class;
+            }
         }
     }
 
