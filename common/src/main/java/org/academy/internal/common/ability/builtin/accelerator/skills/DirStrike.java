@@ -21,14 +21,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -52,17 +52,14 @@ public class DirStrike extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.DirStrikeClientConfigData());
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
-                INSTANCE.name,
-                Client.DirStrikeClientConfigData.class
-        );
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.DirStrikeClientConfig.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.DirStrikeClientConfigData();
+            Client.CONFIG = new Client.DirStrikeClientConfig();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_ACTION, new InputSystem.InputPair(
+        InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, new InputSystem.InputPair(
                 InputSystem.InputType.KEYBOARD,
                 new InputSystem.KeyInfo(
                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
@@ -85,15 +82,15 @@ public class DirStrike extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_DIR_STRIKE_ICON, 100, 110);
-        public static final String KEY_NAME_ACTION = SkillNames.DIR_STRIKE + "_action";
-        public static DirStrikeClientConfigData CONFIG = new DirStrikeClientConfigData();
+        public static final String KEY_NAME = SkillNames.DIR_STRIKE + "_use";
+        public static DirStrikeClientConfig CONFIG = new DirStrikeClientConfig();
 
         public static void onAction() {
             if (Minecraft.getInstance().player == null) return;
             NetworkSystemClient.sendPacket(new C2SPacket(new ActionPacket()));
         }
 
-        public static class DirStrikeClientConfigData implements IClientConfigActions<DirStrikeClientConfigData> {
+        public static class DirStrikeClientConfig {
             @SerializedName("keyBindings")
             private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -103,28 +100,36 @@ public class DirStrike extends Skill {
                 }
                 return keyBindings.get(name);
             }
+
             public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
                 this.keyBindings.put(name, keyBinding);
             }
 
-            @Override
-            public @NotNull DirStrikeClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, DirStrikeClientConfigData.class);
-            }
+            public static final class Action implements IConfigAction<DirStrikeClientConfig> {
+                public static final IConfigAction<DirStrikeClientConfig> INSTANCE = new Action();
 
-            @Override
-            public @NotNull JsonElement serialize(@NotNull DirStrikeClientConfigData configInstance, @NotNull Gson gson) {
-                return gson.toJsonTree(configInstance);
-            }
+                private Action() {
+                }
 
-            @Override
-            public @NotNull DirStrikeClientConfigData getDefaultConfig() {
-                return new DirStrikeClientConfigData();
-            }
+                @Override
+                public @NotNull DirStrike.Client.DirStrikeClientConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, DirStrikeClientConfig.class);
+                }
 
-            @Override
-            public @NotNull Class<DirStrikeClientConfigData> getConfigClass() {
-                return DirStrikeClientConfigData.class;
+                @Override
+                public @NotNull JsonElement serialize(@NotNull DirStrike.Client.DirStrikeClientConfig configInstance, @NotNull Gson gson) {
+                    return gson.toJsonTree(configInstance);
+                }
+
+                @Override
+                public @NotNull DirStrike.Client.DirStrikeClientConfig getDefaultConfig() {
+                    return new DirStrikeClientConfig();
+                }
+
+                @Override
+                public @NotNull Class<DirStrikeClientConfig> getConfigClass() {
+                    return DirStrikeClientConfig.class;
+                }
             }
         }
     }

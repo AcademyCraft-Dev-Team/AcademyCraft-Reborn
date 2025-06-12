@@ -13,14 +13,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftClientConfig;
+import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.IClientConfigActions;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkSystemClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -48,17 +48,14 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftClientConfig.registerConfigActions(INSTANCE.name, new Client.VectorReflectionClientConfigData());
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(
-                INSTANCE.name,
-                Client.VectorReflectionClientConfigData.class
-        );
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.VectorReflectionConfig.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.VectorReflectionClientConfigData();
+            Client.CONFIG = new Client.VectorReflectionConfig();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE_ACTION, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE_ACTION,
+        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                         new InputSystem.InputPair(
                                 InputSystem.InputType.KEYBOARD,
                                 new InputSystem.KeyInfo(
@@ -80,14 +77,14 @@ public class VectorReflection extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
                         TextureResources.TEXTURE_VECTOR_REFLECTION_ICON, 20, 70.25f);
-        public static final String KEY_NAME_TOGGLE_ACTION = SkillNames.VECTOR_REFLECTION + "_toggle_action";
-        public static VectorReflectionClientConfigData CONFIG = new VectorReflectionClientConfigData();
+        public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
+        public static VectorReflectionConfig CONFIG = new VectorReflectionConfig();
 
         public static void toggleReflection() {
             NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
-        public static class VectorReflectionClientConfigData implements IClientConfigActions<VectorReflectionClientConfigData> {
+        public static class VectorReflectionConfig {
             @SerializedName("keyBindings")
             private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -101,24 +98,31 @@ public class VectorReflection extends Skill {
                 this.keyBindings.put(name, keyBinding);
             }
 
-            @Override
-            public @NotNull VectorReflectionClientConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, VectorReflectionClientConfigData.class);
-            }
+            public static final class Action implements IConfigAction<VectorReflectionConfig> {
+                public static final IConfigAction<VectorReflectionConfig> INSTANCE = new Action();
 
-            @Override
-            public @NotNull JsonElement serialize(@NotNull VectorReflectionClientConfigData configInstance, @NotNull Gson gson) {
-                return gson.toJsonTree(configInstance);
-            }
+                private Action() {
+                }
 
-            @Override
-            public @NotNull VectorReflectionClientConfigData getDefaultConfig() {
-                return new VectorReflectionClientConfigData();
-            }
+                @Override
+                public @NotNull VectorReflection.Client.VectorReflectionConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, VectorReflectionConfig.class);
+                }
 
-            @Override
-            public @NotNull Class<VectorReflectionClientConfigData> getConfigClass() {
-                return VectorReflectionClientConfigData.class;
+                @Override
+                public @NotNull JsonElement serialize(@NotNull VectorReflection.Client.VectorReflectionConfig configInstance, @NotNull Gson gson) {
+                    return gson.toJsonTree(configInstance);
+                }
+
+                @Override
+                public @NotNull VectorReflection.Client.VectorReflectionConfig getDefaultConfig() {
+                    return new VectorReflectionConfig();
+                }
+
+                @Override
+                public @NotNull Class<VectorReflectionConfig> getConfigClass() {
+                    return VectorReflectionConfig.class;
+                }
             }
         }
     }

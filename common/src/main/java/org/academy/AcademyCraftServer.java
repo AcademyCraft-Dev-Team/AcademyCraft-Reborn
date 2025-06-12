@@ -11,13 +11,17 @@ import org.academy.api.server.network.NetworkSystemServer;
 import org.academy.api.server.network.future.FutureManagerServer;
 import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.common.world.item.ImagPhaseDosingRodItem;
+import org.academy.internal.server.config.AbilityConfig;
+import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.WorldData;
 
 import java.io.File;
 
 public final class AcademyCraftServer {
-    public static AcademyCraftServerConfig serverConfig;
+    public static AcademyCraftConfig serverConfig;
     public static WorldData worldData;
+    public static AbilityConfig abilityConfig;
+    public static GenericConfig genericConfig;
     public static File serverConfigFile;
     public static File worldDataFile;
     public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
@@ -34,7 +38,14 @@ public final class AcademyCraftServer {
         worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);
         AcademyCraft.checkFile(worldDataFile);
-        serverConfig = new AcademyCraftServerConfig().loadConfig();
+
+        serverConfig = new AcademyCraftConfig(serverConfigFile);
+
+        AcademyCraftConfig.registerConfigActions(AbilityConfig.KEY, AbilityConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerConfigActions(GenericConfig.KEY, GenericConfig.Action.INSTANCE);
+        abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
+        genericConfig = serverConfig.getConfig(GenericConfig.KEY);
+
         worldData = WorldData.getWorldData(worldDataFile);
         AbilitySystemServer.init(server);
         WirelessManager.initServer();

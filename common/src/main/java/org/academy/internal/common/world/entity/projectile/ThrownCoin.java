@@ -1,10 +1,6 @@
 package org.academy.internal.common.world.entity.projectile;
 
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.AbstractArrow;
@@ -14,18 +10,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.internal.common.ability.builtin.electromaster.skills.Railgun;
 import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
-    public static final EntityDataAccessor<Boolean> ID_FIRED = SynchedEntityData.defineId(ThrownCoin.class, EntityDataSerializers.BOOLEAN);
     public int angle;
     public float renderAngle;
-
 
     public ThrownCoin(EntityType<? extends AbstractArrow> entityType, Level level) {
         super(entityType, level);
@@ -39,7 +35,6 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        entityData.define(ID_FIRED, false);
     }
 
     @Override
@@ -56,34 +51,52 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
         }
     }
 
-
     @Override
     public void tick() {
         angle++;
         super.tick();
 
-        if (this.level().isClientSide && !this.isNoGravity()) {
-            for (int i = 0; i < 2; ++i) {
-                this.level().addParticle(ParticleTypes.ARC,
-                        this.getRandomX(0.3D),
-                        this.getRandomY() - 0.1D,
-                        this.getRandomZ(0.3D),
-                        (this.random.nextDouble() - 0.5D) * 0.1D,
-                        (this.random.nextDouble() - 0.5D) * 0.1D,
-                        (this.random.nextDouble() - 0.5D) * 0.1D);
+        if (!this.level().isClientSide() && getOwner() instanceof ServerPlayer ownerPlayer) {
+            Integer activeCoinId = Railgun.Server.ACTIVE_COIN_IDS.get(ownerPlayer.getUUID());
+            if (activeCoinId != null && activeCoinId == this.getId() && !this.onGround() && !this.isRemoved()) {
+                if (this.level().getGameTime() % 4 == 0) {
+                    Vec3 playerPos = ownerPlayer.position();
+                    float playerYaw = ownerPlayer.getYRot();
+                    float playerHeight = ownerPlayer.getBbHeight();
+                    float playerWidth = ownerPlayer.getBbWidth();
+
+                    Vec3 lookVec = ownerPlayer.getLookAngle();
+                    Vec3 horizontalLook = new Vec3(lookVec.x, 0, lookVec.z).normalize();
+                    Vec3 left = horizontalLook.yRot(90);
+                    Vec3 right = horizontalLook.yRot(-90);
+
+                    double sideOffset = playerWidth * 0.5 + 0.3 + 0.5; // ← 加了 0.5 格距离
+
+                    // 左上
+                    Vec3 leftUp = playerPos.add(0, playerHeight * 0.85, 0).add(left.scale(sideOffset));
+                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(leftUp.x, leftUp.y, leftUp.z, playerYaw + 90, -45)));
+
+                    // 左下
+                    Vec3 leftDown = playerPos.add(0, playerHeight * 0.15, 0).add(left.scale(sideOffset));
+                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(leftDown.x, leftDown.y, leftDown.z, playerYaw + 90, 45)));
+
+                    // 右上
+                    Vec3 rightUp = playerPos.add(0, playerHeight * 0.85, 0).add(right.scale(sideOffset));
+                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(rightUp.x, rightUp.y, rightUp.z, playerYaw - 90, -45)));
+
+                    // 右下
+                    Vec3 rightDown = playerPos.add(0, playerHeight * 0.15, 0).add(right.scale(sideOffset));
+                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(rightDown.x, rightDown.y, rightDown.z, playerYaw - 90, 45)));
+                }
+            } else {
+                if (activeCoinId != null && activeCoinId == this.getId()) {
+                    Railgun.Server.ACTIVE_COIN_IDS.remove(ownerPlayer.getUUID());
+                }
             }
         }
 
-        if (this.level().isClientSide && getOwner() instanceof LocalPlayer) {
-            if (!this.onGround() && !this.isRemoved()) {
-                Railgun.Client.accessSetAnyPlayerCoinInAir(true);
-                Railgun.Client.accessSetTrackedCoinEntityIdForHandEffect(this.getId());
-            } else {
-                if (Railgun.Client.accessGetTrackedCoinEntityIdForHandEffect() == this.getId()) {
-                    Railgun.Client.accessSetAnyPlayerCoinInAir(false);
-                    Railgun.Client.accessSetTrackedCoinEntityIdForHandEffect(-1);
-                }
-            }
+        if (level().isClientSide) {
+            level().addParticle(ParticleTypes.ARC_SMALL, getX(), getY(), getZ(), 0, 0, 0);
         }
     }
 
@@ -98,29 +111,33 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
 
     @Override
     protected void onHitBlock(@NotNull BlockHitResult blockHitResult) {
+        if (!level().isClientSide() && getOwner() instanceof ServerPlayer ownerPlayer) {
+            Integer activeCoinId = Railgun.Server.ACTIVE_COIN_IDS.get(ownerPlayer.getUUID());
+            if (activeCoinId != null && activeCoinId == this.getId()) {
+                Railgun.Server.ACTIVE_COIN_IDS.remove(ownerPlayer.getUUID());
+            }
+        }
         if (!level().isClientSide()) {
             this.spawnAtLocation(this.getPickupItem(), 0.1F);
             this.discard();
-        }
-        if (this.level().isClientSide && getOwner() instanceof LocalPlayer) {
-            if (Railgun.Client.accessGetTrackedCoinEntityIdForHandEffect() == this.getId()) {
-                Railgun.Client.accessSetAnyPlayerCoinInAir(false);
-                Railgun.Client.accessSetTrackedCoinEntityIdForHandEffect(-1);
-            }
         }
     }
 
     @Override
     public void discard() {
-        super.discard();
-        if (this.level().isClientSide && getOwner() instanceof LocalPlayer) {
-            if (Railgun.Client.accessGetTrackedCoinEntityIdForHandEffect() == this.getId()) {
-                Railgun.Client.accessSetAnyPlayerCoinInAir(false);
-                Railgun.Client.accessSetTrackedCoinEntityIdForHandEffect(-1);
+        if (!level().isClientSide() && getOwner() instanceof ServerPlayer ownerPlayer) {
+            Integer activeCoinId = Railgun.Server.ACTIVE_COIN_IDS.get(ownerPlayer.getUUID());
+            if (activeCoinId != null && activeCoinId == this.getId()) {
+                Railgun.Server.ACTIVE_COIN_IDS.remove(ownerPlayer.getUUID());
             }
         }
+        super.discard();
     }
 
+    @Override
+    public void setRot(float yRot, float xRot) {
+        super.setRot(yRot, xRot);
+    }
 
     @Override
     protected @NotNull ItemStack getPickupItem() {

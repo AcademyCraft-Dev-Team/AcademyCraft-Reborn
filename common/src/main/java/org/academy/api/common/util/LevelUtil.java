@@ -131,16 +131,32 @@ public class LevelUtil {
     }
 
     public static double distanceSqToLineSegment(Vec3 point, Vec3 segStart, Vec3 segEnd) {
-        Vec3 segment = segEnd.subtract(segStart);
-        double segLengthSq = segment.lengthSqr();
+        double segDx = segEnd.x - segStart.x;
+        double segDy = segEnd.y - segStart.y;
+        double segDz = segEnd.z - segStart.z;
+
+        double segLengthSq = segDx * segDx + segDy * segDy + segDz * segDz;
+
         if (segLengthSq < 1.0E-12) {
             return point.distanceToSqr(segStart);
         }
 
-        double t = point.subtract(segStart).dot(segment) / segLengthSq;
-        t = Mth.clamp(t, 0.0, 1.0);
-        Vec3 closestPoint = segStart.add(segment.scale(t));
-        return point.distanceToSqr(closestPoint);
+        double pointToStartDx = point.x - segStart.x;
+        double pointToStartDy = point.y - segStart.y;
+        double pointToStartDz = point.z - segStart.z;
+
+        double dot = pointToStartDx * segDx + pointToStartDy * segDy + pointToStartDz * segDz;
+        double t = Math.max(0, Math.min(1, dot / segLengthSq));
+
+        double closestX = segStart.x + t * segDx;
+        double closestY = segStart.y + t * segDy;
+        double closestZ = segStart.z + t * segDz;
+
+        double finalDx = point.x - closestX;
+        double finalDy = point.y - closestY;
+        double finalDz = point.z - closestZ;
+
+        return finalDx * finalDx + finalDy * finalDy + finalDz * finalDz;
     }
 
     public static double calculateDistanceToBlockIntersection(Vec3 start, Vec3 direction,

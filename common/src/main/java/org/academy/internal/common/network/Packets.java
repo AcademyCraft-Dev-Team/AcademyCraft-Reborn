@@ -17,6 +17,7 @@ import org.academy.internal.common.ability.builtin.electromaster.skills.ArcGener
 import org.academy.internal.common.ability.builtin.electromaster.skills.Railgun;
 import org.academy.internal.common.ability.builtin.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.builtin.teleport.skills.SelfTeleport;
+import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.item.CoinItem;
 
 
@@ -81,6 +82,8 @@ public final class Packets {
             register(VectorReflection.TogglePacket.class, listener -> new VectorReflection.TogglePacket());
     public static final Class<BloodflowReverse.ReverseBloodflowPacket> REVERSE_BLOODFLOW =
             register(BloodflowReverse.ReverseBloodflowPacket.class, listener -> new BloodflowReverse.ReverseBloodflowPacket());
+    public static final Class<SpawnArcMediumParticlePacket> SPAWN_ARC_MEDIUM_PARTICLE =
+            register(SpawnArcMediumParticlePacket.class, listener -> new SpawnArcMediumParticlePacket());
 
     @SuppressWarnings({"unchecked"})
     public static void registerAll(NetworkSystem networkSystem) {
