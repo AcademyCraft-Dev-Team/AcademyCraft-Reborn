@@ -52,7 +52,7 @@ public class OmniCraftingTableModel extends HierarchicalModel<Entity> {
     private final ModelPart rshell;
     private final ModelPart effect;
     private final ModelPart inner_ef;
-    private final ModelPart tebletop_ef;
+    private final ModelPart tabletop_ef;
 
     public OmniCraftingTableModel(ModelPart root) {
         this.all = root.getChild("all");
@@ -83,7 +83,7 @@ public class OmniCraftingTableModel extends HierarchicalModel<Entity> {
         this.rshell = this.shell.getChild("rshell");
         this.effect = this.all.getChild("effect");
         this.inner_ef = this.effect.getChild("inner_ef");
-        this.tebletop_ef = this.effect.getChild("tebletop_ef");
+        this.tabletop_ef = this.effect.getChild("tabletop_ef");
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -169,7 +169,7 @@ public class OmniCraftingTableModel extends HierarchicalModel<Entity> {
                 .texOffs(3, 57).addBox(3.0F, -14.0F, 4.11F, 4.0F, 6.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(3, 53).addBox(1.99F, -14.0F, -0.9F, 0.0F, 6.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offset(-5.0F, 4.0F, -1.1F));
 
-        PartDefinition tebletop_ef = effect.addOrReplaceChild("tebletop_ef", CubeListBuilder.create().texOffs(64, 83).addBox(-5.0F, -14.0F, 4.0F, 10.0F, 0.0F, 1.0F, new CubeDeformation(0.0F))
+        PartDefinition tebletop_ef = effect.addOrReplaceChild("tabletop_ef", CubeListBuilder.create().texOffs(64, 83).addBox(-5.0F, -14.0F, 4.0F, 10.0F, 0.0F, 1.0F, new CubeDeformation(0.0F))
                 .texOffs(64, 83).addBox(-5.0F, -14.0F, 1.0F, 10.0F, 0.0F, 1.0F, new CubeDeformation(0.0F))
                 .texOffs(64, 83).addBox(-5.0F, -14.0F, -2.0F, 10.0F, 0.0F, 1.0F, new CubeDeformation(0.0F))
                 .texOffs(64, 83).addBox(-5.0F, -14.0F, -5.0F, 10.0F, 0.0F, 1.0F, new CubeDeformation(0.0F))
@@ -272,7 +272,7 @@ public class OmniCraftingTableModel extends HierarchicalModel<Entity> {
                     new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
                     new Keyframe(2.1667F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
             ))
-            .addAnimation("tebletop_ef", new AnimationChannel(AnimationChannel.Targets.POSITION,
+            .addAnimation("tabletop_ef", new AnimationChannel(AnimationChannel.Targets.POSITION,
                     new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
                     new Keyframe(2.25F, KeyframeAnimations.posVec(0.0F, 0.1F, 0.0F), AnimationChannel.Interpolations.LINEAR)
             ))
@@ -298,7 +298,7 @@ public class OmniCraftingTableModel extends HierarchicalModel<Entity> {
         arm42.resetPose();
         arm43.resetPose();
         inner_ef.resetPose();
-        tebletop_ef.resetPose();
+        tabletop_ef.resetPose();
 
         animate(blockEntity.unfoldingState, unfolding, blockEntity.ticks + partialTick);
     }

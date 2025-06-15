@@ -1,15 +1,7 @@
 package org.academy.api.client.resource;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
-import org.academy.api.client.util.RenderStateUtil;
-import org.academy.api.client.util.RenderUtil;
-import org.academy.internal.client.renderer.Shaders;
-
-import java.util.function.BiFunction;
 
 public final class TextureResources {
     /**
@@ -24,8 +16,8 @@ public final class TextureResources {
     /**
      * HUD
      */
-    public static final ResourceLocation TEXTURE_COMPUTING_POWER_BAR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/hud/computing_power_bar.png");
-    public static final ResourceLocation TEXTURE_COMPUTING_POWER_BAR_BACKGROUND = new ResourceLocation(AcademyCraft.MOD_ID, "textures/hud/computing_power_bar_background.png");
+    public static final ResourceLocation TEXTURE_CP_BAR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/hud/cp_bar.png");
+    public static final ResourceLocation TEXTURE_CP_BAR_BACKGROUND = new ResourceLocation(AcademyCraft.MOD_ID, "textures/hud/cp_bar_background.png");
     /**
      * Wind Gen
      */
@@ -80,7 +72,7 @@ public final class TextureResources {
     /**
      * Imag Phase Dowsing Rod
      */
-    public static final ResourceLocation TEXTURE_IMAG_PHASE_DOWSING_ROD_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/imag_phase_dosing_rod.png");
+    public static final ResourceLocation TEXTURE_IMAG_PHASE_DOWSING_ROD_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/imag_phase_dowsing_rod.png");
     /**
      * Omni Crafting Table
      */

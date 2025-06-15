@@ -43,7 +43,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.1'
 
-    include(implementation('net.neoforged:bus:8.0.2'))
+    include(implementation("net.neoforged:bus:${bus_version}"))
 
     modCompileOnlyApi("mezz.jei:jei-${minecraft_version}-fabric-api:${jei_version}")
     modRuntimeOnly("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}")
@@ -53,7 +53,8 @@ dependencies {
 
 loom {
     accessWidenerPath.set(file("src/main/resources/academy.accesswidener"))
-    def hotswapAgentFile = configurations.hotswapAgent.asFileTree.getSingleFile().absolutePath
+    def javaHome = System.getProperty("java.home")
+    def hotswapAgentFile = new File(javaHome, "lib/hotswap/hotswap-agent-core.jar").absolutePath
 
     mixin {
         defaultRefmapName.set("${mod_id}.refmap.json")
@@ -70,7 +71,7 @@ loom {
             vmArg "-XX:HotswapAgent=core"
             vmArg "--add-opens=java.base/sun.security.action=ALL-UNNAMED"
             vmArg "-XX:+AllowEnhancedClassRedefinition"
-            vmArg "-javaagent:${hotswapAgentFile}"
+            vmArg "-javaagent:${hotswapAgentFile}=[autoHotswap]=false"
         }
         server {
             server()
@@ -83,7 +84,7 @@ loom {
             vmArg "-XX:HotswapAgent=core"
             vmArg "--add-opens=java.base/sun.security.action=ALL-UNNAMED"
             vmArg "-XX:+AllowEnhancedClassRedefinition"
-            vmArg "-javaagent:${hotswapAgentFile}"
+            vmArg "-javaagent:${hotswapAgentFile}=[autoHotswap]=false"
         }
     }
 }

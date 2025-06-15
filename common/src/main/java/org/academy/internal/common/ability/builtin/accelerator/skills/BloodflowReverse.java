@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.accelerator.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +15,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.resource.TextureResources;
@@ -32,7 +32,9 @@ import org.academy.internal.common.ability.builtin.accelerator.Accelerator;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class BloodflowReverse extends Skill {
     public static final Skill INSTANCE = new BloodflowReverse();
@@ -43,10 +45,10 @@ public class BloodflowReverse extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.BloodflowReverseClientConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.BloodflowReverseClientConfig();
+            Client.CONFIG = new Client.Config();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
@@ -67,7 +69,7 @@ public class BloodflowReverse extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -75,50 +77,37 @@ public class BloodflowReverse extends Skill {
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_BLOODFLOW_REVERSE_ICON, 90, 50);
         public static final String KEY_NAME = SkillNames.BLOODFLOW_REVERSE + "_use";
-        public static BloodflowReverseClientConfig CONFIG = new BloodflowReverseClientConfig();
+        public static Config CONFIG = new Config();
 
         public static void reverseBloodflow() {
             NetworkManagerClient.sendPacket(new C2SPacket(new ReverseBloodflowPacket()));
         }
 
-        public static class BloodflowReverseClientConfig {
-            @SerializedName("keyBindings")
-            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-                if (!keyBindings.containsKey(name)) {
-                    setKeyBinding(name, defaultConfig);
-                }
-                return keyBindings.get(name);
-            }
-            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-                this.keyBindings.put(name, keyBinding);
-            }
-
-            public static final class Action implements IConfigAction<BloodflowReverseClientConfig> {
-                public static final IConfigAction<BloodflowReverseClientConfig> INSTANCE = new Action();
+        public static class Config extends KeyBindingConfig {
+            public static final class Action implements IConfigAction<Config> {
+                public static final IConfigAction<Config> INSTANCE = new Action();
 
                 private Action() {
                 }
 
                 @Override
-                public @NotNull BloodflowReverse.Client.BloodflowReverseClientConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                    return gson.fromJson(jsonElement, BloodflowReverseClientConfig.class);
+                public @NotNull BloodflowReverse.Client.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, Config.class);
                 }
 
                 @Override
-                public @NotNull JsonElement serialize(@NotNull BloodflowReverse.Client.BloodflowReverseClientConfig configInstance, @NotNull Gson gson) {
+                public @NotNull JsonElement serialize(@NotNull BloodflowReverse.Client.Config configInstance, @NotNull Gson gson) {
                     return gson.toJsonTree(configInstance);
                 }
 
                 @Override
-                public @NotNull BloodflowReverse.Client.BloodflowReverseClientConfig getDefaultConfig() {
-                    return new BloodflowReverseClientConfig();
+                public @NotNull BloodflowReverse.Client.Config getDefaultConfig() {
+                    return new Config();
                 }
 
                 @Override
-                public @NotNull Class<BloodflowReverseClientConfig> getConfigClass() {
-                    return BloodflowReverseClientConfig.class;
+                public @NotNull Class<Config> getConfigClass() {
+                    return Config.class;
                 }
             }
         }
@@ -127,7 +116,7 @@ public class BloodflowReverse extends Skill {
     public static final class Server {
         @SuppressWarnings("resource")
         @SubscribePacket
-        public static void reverseBloodflow(ReverseBloodflowPacket packet) {
+        public static void onAction(ReverseBloodflowPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             HitResult hitResult = player.pick(1, 1, false);
             List<LivingEntity> entityList = player.level().getEntitiesOfClass(LivingEntity.class,

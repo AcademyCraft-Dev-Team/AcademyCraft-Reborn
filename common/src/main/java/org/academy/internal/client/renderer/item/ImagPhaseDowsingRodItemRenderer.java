@@ -17,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.renderer.ItemRenderer;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.internal.client.model.ImagPhaseDowsingRodModel;
-import org.academy.internal.common.world.item.ImagPhaseDosingRodItem;
+import org.academy.internal.common.world.item.ImagPhaseDowsingRodItem;
 import org.joml.Matrix4f;
 
 import java.util.List;
@@ -89,7 +89,7 @@ public class ImagPhaseDowsingRodItemRenderer implements ItemRenderer {
 
         MODEL.renderToBuffer(poseStack, buffer.getBuffer(MODEL.renderType(TextureResources.TEXTURE_IMAG_PHASE_DOWSING_ROD_MODEL)), combinedLight, combinedOverlay, 1, 1, 1, 1);
 
-        if (!ImagPhaseDosingRodItem.RENDER_TARGET_POSITIONS.isEmpty()
+        if (!ImagPhaseDowsingRodItem.RENDER_TARGET_POSITIONS.isEmpty()
                 && displayContext != ItemDisplayContext.GUI
                 && displayContext != ItemDisplayContext.FIXED
                 && displayContext != ItemDisplayContext.GROUND
@@ -105,7 +105,7 @@ public class ImagPhaseDowsingRodItemRenderer implements ItemRenderer {
         if (player == null) return;
 
         final Vec3 playerPos = player.position();
-        final List<BlockPos> targetPositions = ImagPhaseDosingRodItem.RENDER_TARGET_POSITIONS;
+        final List<BlockPos> targetPositions = ImagPhaseDowsingRodItem.RENDER_TARGET_POSITIONS;
 
         poseStack.pushPose();
         poseStack.setIdentity();

@@ -43,14 +43,14 @@ public class AutoScaleLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         if (!isVisible() || this.value == null || this.value.isEmpty()) return;
 
         if (animation != null) {
-            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTicks);
+            animation.beforeRender(graphics, mouseX, mouseY, partialTicks);
         }
 
-        guiGraphics.pose().pushPose();
+        graphics.pose().pushPose();
         Font font = Minecraft.getInstance().font;
 
         float finalScale = this.scale * globalScale;
@@ -65,20 +65,20 @@ public class AutoScaleLabelWidget extends LabelWidget {
         float scaledTextRenderHeight = textOriginalHeight * finalScale;
         float yDrawingOffset = (scaledTextRenderHeight - textOriginalHeight) / 2.0f;
 
-        guiGraphics.pose().translate(renderX, this.getY() - yDrawingOffset, 0);
-        guiGraphics.pose().scale(finalScale, finalScale, 1.0f);
+        graphics.pose().translate(renderX, this.getY() - yDrawingOffset, 0);
+        graphics.pose().scale(finalScale, finalScale, 1.0f);
 
         font.drawInBatch(this.value, 0, 0, this.color, this.dropShadow,
-                guiGraphics.pose().last().pose(),
-                guiGraphics.bufferSource(),
+                graphics.pose().last().pose(),
+                graphics.bufferSource(),
                 Font.DisplayMode.NORMAL,
                 0,
                 15728880
         );
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
 
         if (animation != null) {
-            animation.afterRender(guiGraphics, mouseX, mouseY, partialTicks);
+            animation.afterRender(graphics, mouseX, mouseY, partialTicks);
         }
     }
 

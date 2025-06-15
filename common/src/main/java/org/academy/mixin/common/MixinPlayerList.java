@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(PlayerList.class)
 public abstract class MixinPlayerList {
     @Inject(method = "placeNewPlayer",at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;teleport(DDDFF)V"))
-    private void initPlayer(Connection netManager, ServerPlayer player, CallbackInfo ci) {
+    private void onPlayerConnect(Connection netManager, ServerPlayer player, CallbackInfo ci) {
         AcademyCraft.LOGGER.debug("Init player.");
-        AbilitySystemServer.MinecraftServerThread.initPlayer(player);
+        AbilitySystemServer.ServerLifecycleHooks.initPlayer(player);
         WorldData.saveData();
     }
 }

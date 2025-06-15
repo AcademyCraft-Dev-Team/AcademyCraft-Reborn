@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,6 +12,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.resource.TextureResources;
@@ -33,7 +33,9 @@ import org.academy.internal.common.world.entity.skill.Arc;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class ArcGenerate extends Skill {
     public static final Skill INSTANCE = new ArcGenerate();
@@ -64,7 +66,7 @@ public class ArcGenerate extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -77,20 +79,7 @@ public class ArcGenerate extends Skill {
             NetworkManagerClient.sendPacket(new C2SPacket(new GeneratePacket()));
         }
 
-        public static class ArcGenerateConfig {
-            @SerializedName("keyBindings")
-            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-                if (!keyBindings.containsKey(name)) {
-                    setKeyBinding(name, defaultConfig);
-                }
-                return keyBindings.get(name);
-            }
-            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-                this.keyBindings.put(name, keyBinding);
-            }
-
+        public static class ArcGenerateConfig extends KeyBindingConfig {
             public static final class Action implements IConfigAction<ArcGenerateConfig> {
                 public static final IConfigAction<ArcGenerateConfig> INSTANCE = new Action();
 
