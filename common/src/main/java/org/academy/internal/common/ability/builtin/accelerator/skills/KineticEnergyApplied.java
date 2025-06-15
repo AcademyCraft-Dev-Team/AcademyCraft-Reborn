@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.accelerator.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -12,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.common.ability.Skill;
@@ -59,7 +59,7 @@ public class KineticEnergyApplied extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -70,20 +70,7 @@ public class KineticEnergyApplied extends Skill {
             NetworkManagerClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
-        public static class KineticEnergyAppliedConfig {
-            @SerializedName("keyBindings")
-            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-                if (!keyBindings.containsKey(name)) {
-                    setKeyBinding(name, defaultConfig);
-                }
-                return keyBindings.get(name);
-            }
-            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-                this.keyBindings.put(name, keyBinding);
-            }
-
+        public static class KineticEnergyAppliedConfig extends KeyBindingConfig {
             public static final class Action implements IConfigAction<KineticEnergyAppliedConfig> {
                 public static final IConfigAction<KineticEnergyAppliedConfig> INSTANCE = new Action();
 
@@ -127,7 +114,7 @@ public class KineticEnergyApplied extends Skill {
         }
 
         @SuppressWarnings("resource")
-        public static float onShoot(Projectile projectile, Entity shooter, float velocity) {
+        public static float onProjectileShoot(Projectile projectile, Entity shooter, float velocity) {
             GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, shooter.level());
             Vec3 vec3 = shooter.getLookAngle().scale(1);
             glowCircle.setPos(projectile.getX() + vec3.x, projectile.getY() + vec3.y, projectile.getZ() + vec3.z);

@@ -28,7 +28,7 @@ public class BracketProgressBarWidget extends LabelWidget implements Tickable {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         if (isAnimating) {
             currentStep += progressSpeed * (partialTicks / 20.0f);
 
@@ -53,7 +53,7 @@ public class BracketProgressBarWidget extends LabelWidget implements Tickable {
             }
         }
 
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        super.render(graphics, mouseX, mouseY, partialTicks);
     }
 
     @Override

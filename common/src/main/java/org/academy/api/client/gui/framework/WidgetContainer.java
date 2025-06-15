@@ -25,16 +25,16 @@ public interface WidgetContainer extends Widget {
     }
 
     @Override
-    default void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+    default void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(getX(), getY(), getZ());
+        graphics.pose().pushPose();
+        graphics.pose().translate(getX(), getY(), getZ());
 
         for (Widget child : getChildren().values()) {
-            child.render(guiGraphics, mouseX, mouseY, partialTick);
+            child.render(graphics, mouseX, mouseY, partialTick);
         }
 
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
     }
 }

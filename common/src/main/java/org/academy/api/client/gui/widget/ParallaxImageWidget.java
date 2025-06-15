@@ -19,8 +19,8 @@ public class ParallaxImageWidget extends ImageWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
-        guiGraphics.pose().pushPose();
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+        graphics.pose().pushPose();
         float dx = (float) (((mouseX - anchorX) / anchorX) * scaleX);
         float dy = (float) (((mouseY - anchorY) / anchorY) * scaleY);
 
@@ -37,7 +37,7 @@ public class ParallaxImageWidget extends ImageWidget {
         v0 = offsetV;
         u1 = u0 + parallaxWidth;
         v1 = v0 + parallaxHeight;
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
-        guiGraphics.pose().popPose();
+        super.render(graphics, mouseX, mouseY, partialTicks);
+        graphics.pose().popPose();
     }
 }

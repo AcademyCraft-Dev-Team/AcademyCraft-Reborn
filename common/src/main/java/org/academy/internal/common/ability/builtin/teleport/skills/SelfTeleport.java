@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.teleport.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -24,6 +23,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.network.NetworkManagerClient;
@@ -41,16 +41,14 @@ import org.academy.internal.common.ability.builtin.SkillNames;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 
 public final class SelfTeleport extends Skill {
     public static final Skill INSTANCE = new SelfTeleport();
     public static InputSystem.InputPair KEY_START;
     public static InputSystem.InputPair KEY_END;
-    public static Client.SelfTeleportConfig CONFIG;
+    public static Client.Config CONFIG;
 
     private SelfTeleport() {
         super(SkillNames.SELF_TELEPORT, 2);
@@ -58,10 +56,10 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.SelfTeleportConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.Config.Action.INSTANCE);
         CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (CONFIG == null) {
-            CONFIG = new Client.SelfTeleportConfig();
+            CONFIG = new Client.Config();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, CONFIG);
         }
 
@@ -84,7 +82,7 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Server {
@@ -246,45 +244,31 @@ public final class SelfTeleport extends Skill {
             }
         }
 
-        public static class SelfTeleportConfig {
-            @SerializedName("keyBindings")
-            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-                if (!keyBindings.containsKey(name)) {
-                    setKeyBinding(name, defaultConfig);
-                }
-                return keyBindings.get(name);
-            }
-
-            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-                this.keyBindings.put(name, keyBinding);
-            }
-
-            public static final class Action implements IConfigAction<SelfTeleportConfig> {
-                public static final IConfigAction<SelfTeleportConfig> INSTANCE = new Action();
+        public static class Config extends KeyBindingConfig {
+            public static final class Action implements IConfigAction<Config> {
+                public static final IConfigAction<Config> INSTANCE = new Action();
 
                 private Action() {
                 }
 
                 @Override
-                public @NotNull SelfTeleport.Client.SelfTeleportConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                    return gson.fromJson(jsonElement, SelfTeleportConfig.class);
+                public @NotNull SelfTeleport.Client.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, Config.class);
                 }
 
                 @Override
-                public @NotNull JsonElement serialize(@NotNull SelfTeleport.Client.SelfTeleportConfig configInstance, @NotNull Gson gson) {
+                public @NotNull JsonElement serialize(@NotNull SelfTeleport.Client.Config configInstance, @NotNull Gson gson) {
                     return gson.toJsonTree(configInstance);
                 }
 
                 @Override
-                public @NotNull SelfTeleport.Client.SelfTeleportConfig getDefaultConfig() {
-                    return new SelfTeleportConfig();
+                public @NotNull SelfTeleport.Client.Config getDefaultConfig() {
+                    return new Config();
                 }
 
                 @Override
-                public @NotNull Class<SelfTeleportConfig> getConfigClass() {
-                    return SelfTeleportConfig.class;
+                public @NotNull Class<Config> getConfigClass() {
+                    return Config.class;
                 }
             }
         }

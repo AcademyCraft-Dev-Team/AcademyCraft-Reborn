@@ -22,7 +22,7 @@ public class ProgressBarWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (progressSupplier != null) {
             float progress = progressSupplier.get();
             if (progress < 0.0f) progress = 0.0f;
@@ -30,20 +30,20 @@ public class ProgressBarWidget extends AbstractWidget {
 
             if (backgroundVisible) {
                 RenderUtil.fill(
-                        guiGraphics.pose().last().pose(),
+                        graphics.pose().last().pose(),
                         this.getX(), this.getY(),
                         this.getX() + this.getWidth(), this.getY() + this.getHeight(),
-                        backgroundColor, guiGraphics.bufferSource()
+                        backgroundColor, graphics.bufferSource()
                 );
             }
 
             float progressWidth = this.getWidth() * progress;
             RenderUtil.fill(
-                    guiGraphics.pose().last().pose(),
+                    graphics.pose().last().pose(),
                     this.getX(), this.getY(),
                     this.getX() + progressWidth, this.getY() + this.getHeight(),
                     progressBarColor,
-                    guiGraphics.bufferSource()
+                    graphics.bufferSource()
             );
         }
     }

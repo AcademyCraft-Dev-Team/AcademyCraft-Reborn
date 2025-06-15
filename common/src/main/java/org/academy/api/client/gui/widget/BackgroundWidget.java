@@ -15,8 +15,8 @@ public class BackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
-        screen.renderBackground(guiGraphics);
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+        screen.renderBackground(graphics);
     }
 
     @Override

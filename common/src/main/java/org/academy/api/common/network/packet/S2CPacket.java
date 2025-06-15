@@ -23,7 +23,7 @@ public class S2CPacket implements Packet<ClientPacketListener> {
     @SuppressWarnings("unchecked")
     public <T extends IPacket<ClientPacketListener>> S2CPacket(T packet) {
         Class<T> clazz = (Class<T>) packet.getClass();
-        id = AcademyCraftServer.NETWORK_SYSTEM_INSTANCE.getPacketIdByType(clazz);
+        id = AcademyCraftServer.NETWORK_SYSTEM.getPacketIdByType(clazz);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
     }
@@ -47,7 +47,7 @@ public class S2CPacket implements Packet<ClientPacketListener> {
             AcademyCraft.EVENT_BUS.post(event);
             if (event.isCanceled()) return;
 
-            Class<IPacket<ClientGamePacketListener>> packetClass = AcademyCraftClient.NETWORK_SYSTEM_INSTANCE.getClassById(id);
+            Class<IPacket<ClientGamePacketListener>> packetClass = AcademyCraftClient.NETWORK_SYSTEM.getClassById(id);
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {
                     ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
@@ -55,7 +55,7 @@ public class S2CPacket implements Packet<ClientPacketListener> {
                 }
                 try {
                     Function<ClientGamePacketListener, IPacket<ClientGamePacketListener>> factory =
-                            AcademyCraftClient.NETWORK_SYSTEM_INSTANCE.getPacketFactory(packetClass);
+                            AcademyCraftClient.NETWORK_SYSTEM.getPacketFactory(packetClass);
                     if (factory == null) {
                         AcademyCraft.LOGGER.error("No factory found for S2C packet class: {}", packetClass.getName());
                         return;
@@ -63,7 +63,7 @@ public class S2CPacket implements Packet<ClientPacketListener> {
                     IPacket<ClientGamePacketListener> instance = factory.apply(handler);
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
-                    AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.dispatchPacket(instance);
+                    AcademyCraftClient.CLIENT_NETWORK_MANAGER.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing S2C packet. Class: {}, ID: {}. Listener: {}. Error: {}",

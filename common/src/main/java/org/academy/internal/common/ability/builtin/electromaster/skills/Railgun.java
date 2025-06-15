@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.electromaster.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -18,6 +17,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.resource.TextureResources;
@@ -55,15 +55,15 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     @Override
     public void initClient() {
-        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.RailgunConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.Config.Action.INSTANCE);
         Client.CLIENT_CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CLIENT_CONFIG == null) {
-            Client.CLIENT_CONFIG = new Client.RailgunConfig();
+            Client.CLIENT_CONFIG = new Client.Config();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CLIENT_CONFIG);
         }
 
@@ -82,51 +82,38 @@ public class Railgun extends Skill {
                 AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(),
                         TextureResources.TEXTURE_RAILGUN_ICON, 200, 70.25f);
         public static final String KEY_NAME_SHOOT = SkillNames.RAILGUN + "_shoot";
-        public static RailgunConfig CLIENT_CONFIG = new RailgunConfig();
+        public static Config CLIENT_CONFIG = new Config();
 
 
         public static void handleKey() {
             NetworkManagerClient.sendPacket(new C2SPacket(new ShootPacket()));
         }
 
-        public static class RailgunConfig {
-            @SerializedName("keyBindings")
-            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-                if (!keyBindings.containsKey(name)) {
-                    setKeyBinding(name, defaultConfig);
-                }
-                return keyBindings.get(name);
-            }
-            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-                this.keyBindings.put(name, keyBinding);
-            }
-
-            public static final class Action implements IConfigAction<RailgunConfig> {
-                public static final IConfigAction<RailgunConfig> INSTANCE = new Action();
+        public static class Config extends KeyBindingConfig {
+            public static final class Action implements IConfigAction<Config> {
+                public static final IConfigAction<Config> INSTANCE = new Action();
 
                 private Action() {
                 }
 
                 @Override
-                public @NotNull Railgun.Client.RailgunConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                    return gson.fromJson(jsonElement, RailgunConfig.class);
+                public @NotNull Railgun.Client.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, Config.class);
                 }
 
                 @Override
-                public @NotNull JsonElement serialize(@NotNull Railgun.Client.RailgunConfig configInstance, @NotNull Gson gson) {
+                public @NotNull JsonElement serialize(@NotNull Railgun.Client.Config configInstance, @NotNull Gson gson) {
                     return gson.toJsonTree(configInstance);
                 }
 
                 @Override
-                public @NotNull Railgun.Client.RailgunConfig getDefaultConfig() {
-                    return new RailgunConfig();
+                public @NotNull Railgun.Client.Config getDefaultConfig() {
+                    return new Config();
                 }
 
                 @Override
-                public @NotNull Class<RailgunConfig> getConfigClass() {
-                    return RailgunConfig.class;
+                public @NotNull Class<Config> getConfigClass() {
+                    return Config.class;
                 }
             }
         }
@@ -137,7 +124,7 @@ public class Railgun extends Skill {
         public static final Map<UUID, Integer> ACTIVE_COIN_IDS = new ConcurrentHashMap<>();
 
         @SubscribePacket
-        public static void handleThrowCoinWithVelocity(CoinItem.ThrowCoinPacket packet) {
+        public static void onThrowCoin(CoinItem.ThrowCoinPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             Level level = player.level();
 
@@ -172,7 +159,7 @@ public class Railgun extends Skill {
         }
 
         @SubscribePacket
-        public static void handleShoot(ShootPacket packet) {
+        public static void onShoot(ShootPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             final UUID uuid = player.getUUID();
             final float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);

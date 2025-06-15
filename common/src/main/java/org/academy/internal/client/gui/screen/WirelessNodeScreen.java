@@ -6,7 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.client.gui.WirelessPanelController;
+import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.widget.*;
@@ -18,10 +18,12 @@ import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 
-public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
+public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
     public WirelessNodeBlockEntity wirelessNodeBlockEntity;
-    private WirelessPanelController wirelessController;
+    private String connectedNodeName = "None";
+    private PanelWidget wirelessPanel;
+    private SmoothScrollPanelWidget nodeListPanel;
     private VerticalSpriteWidget state;
     private int ticks;
     private final HistogramWidget.Value histogramEnergyValue = new HistogramWidget.Value(25, 5, 0,
@@ -64,24 +66,30 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
             invPage.addChild("state", state);
         }
 
-        this.wirelessController = new WirelessPanelController(this, mainPos, null);
-        this.wirelessController.getScreenPanel().setX(leftPos);
-        this.wirelessController.getScreenPanel().setY(topPos - 22);
-        this.wirelessController.getScreenPanel().setWidth(imageWidth);
-        this.wirelessController.getScreenPanel().setHeight(187);
-        rootContainer.addChild(WirelessPanelController.PANEL_WIRELESS_NAME, this.wirelessController.getScreenPanel());
+        wirelessPanel = WirelessPanelHelper.getWirelessPanel(leftPos, topPos - 22);
+        nodeListPanel = wirelessPanel.getChildUnSafe("node_list");
+        wirelessPanel.setZ(100);
+        wirelessPanel.setVisible(false);
+        wirelessPanel.setEnabled(false);
+        rootContainer.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, wirelessPanel);
+        requestCurrentNodeStatus();
+        requestAvailableNodes(nodeListPanel);
 
         RadioGroupWidget radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
-            boolean showInv = imageRadioButtonWidget.getId() == 0;
-            renderInventory = showInv;
-            invPage.setVisible(showInv);
-            this.wirelessController.getScreenPanel().setVisible(!showInv);
-            this.wirelessController.getScreenPanel().setEnabled(!showInv);
-            if (!showInv) {
-                this.wirelessController.show();
-            } else {
-                this.wirelessController.hide();
+            switch (imageRadioButtonWidget.getId()) {
+                case 0:
+                    renderInventory = true;
+                    invPage.setVisible(true);
+                    wirelessPanel.setVisible(false);
+                    wirelessPanel.setEnabled(false);
+                    break;
+                case 1:
+                    renderInventory = false;
+                    invPage.setVisible(false);
+                    wirelessPanel.setVisible(true);
+                    wirelessPanel.setEnabled(true);
+                    break;
             }
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
@@ -92,8 +100,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
-                    RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
+            ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
             });
             wireless.animation = new AnimationTopToBottom(wireless);
             radioGroupWidget.addChild("wireless", wireless);
@@ -210,6 +217,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
                     NetworkManagerClient.sendPacket(new C2SPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
                 }
             };
+            nameTextBox.onFocusGained();
             infoArea.addChild("label_name_text_box", nameTextBox);
 
             LabelWidget passLabel = new LabelWidget("Password", 10, 122);
@@ -238,6 +246,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
                     NetworkManagerClient.sendPacket(new C2SPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
                 }
             };
+            passTextBox.onFocusGained();
             infoArea.addChild("label_pass_text_box", passTextBox);
         }
     }
@@ -287,6 +296,31 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
 
             state.setFrameIndex(index);
         }
+    }
+
+    @Override
+    public SmoothScrollPanelWidget getNodeList() {
+        return nodeListPanel;
+    }
+
+    @Override
+    public PanelWidget getWirelessPanel() {
+        return wirelessPanel;
+    }
+
+    @Override
+    public String getConnectedNodeName() {
+        return connectedNodeName;
+    }
+
+    @Override
+    public void setConnectedNodeName(String connectedNodeName) {
+        this.connectedNodeName = connectedNodeName;
+    }
+
+    @Override
+    public BlockPos getPosition() {
+        return mainPos;
     }
 
     @SubscribeEvent

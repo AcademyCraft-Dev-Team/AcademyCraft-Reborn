@@ -20,12 +20,12 @@ import java.util.function.Supplier;
 
 public class WirelessManager {
     public static void initServer() {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(WirelessManager.class);
-        AcademyCraftServer.FUTURE_MANAGER_SERVER_INSTANCE.registerPayloadHandler(WirelessManager.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(WirelessManager.class);
+        AcademyCraftServer.SERVER_FUTURE_MANAGER.registerPayloadHandler(WirelessManager.class);
     }
 
     @HandlePayload
-    public static GetAvailableNodesPacket.Response handleGetAvailableNodes(GetAvailableNodesPacket payload) {
+    public static GetAvailableNodesPacket.Response onGetAvailableNodes(GetAvailableNodesPacket payload) {
         ServerPlayer player = null;
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
         if (supplier != null) {
@@ -41,7 +41,7 @@ public class WirelessManager {
     }
 
     @HandlePayload
-    public static GetCurrentNodePacket.Response handleGetCurrentNode(GetCurrentNodePacket payload) {
+    public static GetCurrentNodePacket.Response onGetCurrentNode(GetCurrentNodePacket payload) {
         ServerPlayer player = null;
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
         if (supplier != null) {
@@ -58,7 +58,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleConnectNode(ConnectNodePacket packet) {
+    public static void onConnectNode(ConnectNodePacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos userPos = packet.userPos;
@@ -68,7 +68,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleDisconnectNode(DisconnectNodePacket packet) {
+    public static void onDisconnectNode(DisconnectNodePacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos userPos = packet.userPos;
@@ -76,7 +76,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleSetNodeName(SetNodeNamePacket packet) {
+    public static void onSetNodeName(SetNodeNamePacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos nodePos = packet.nodePos;
@@ -85,7 +85,7 @@ public class WirelessManager {
     }
 
     @SubscribePacket
-    public static void handleSetNodePass(SetNodePassPacket packet) {
+    public static void onSetNodePass(SetNodePassPacket packet) {
         ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
         ServerLevel level = player.serverLevel();
         BlockPos nodePos = packet.nodePos;

@@ -124,16 +124,16 @@ public class TextBoxWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         if (showBackground) {
-            RenderUtil.fill(guiGraphics.pose().last().pose(), x, y, x + width, y + height, borderColor, guiGraphics.bufferSource());
-            RenderUtil.fill(guiGraphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, bgColor, guiGraphics.bufferSource());
+            RenderUtil.fill(graphics.pose().last().pose(), x, y, x + width, y + height, borderColor, graphics.bufferSource());
+            RenderUtil.fill(graphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, bgColor, graphics.bufferSource());
         }
 
         Font font = Minecraft.getInstance().font;
         float finalScale = scale * LabelWidget.globalScale;
 
-        guiGraphics.pose().pushPose();
+        graphics.pose().pushPose();
 
         float textWidth = font.width(text.toString()) + 6;
         if (textWidth > width) {
@@ -145,10 +145,10 @@ public class TextBoxWidget extends AbstractWidget {
         float scaledHeight = textHeight * finalScale;
         float offsetY = (scaledHeight - textHeight) / 2;
 
-        guiGraphics.pose().translate(x + 1, y + (height - scaledHeight) / 4 - offsetY, 0);
-        guiGraphics.pose().scale(finalScale, finalScale, 1.0f);
+        graphics.pose().translate(x + 1, y + (height - scaledHeight) / 4 - offsetY, 0);
+        graphics.pose().scale(finalScale, finalScale, 1.0f);
 
-        guiGraphics.drawString(font, text.toString(), 0, 0, textColor, false);
+        graphics.drawString(font, text.toString(), 0, 0, textColor, false);
 
         if (isFocused()) {
             long now = System.currentTimeMillis();
@@ -163,15 +163,15 @@ public class TextBoxWidget extends AbstractWidget {
                     caretX += font.width(beforeCaret);
                 }
                 RenderUtil.fill(
-                        guiGraphics.pose().last().pose(),
+                        graphics.pose().last().pose(),
                         caretX, textHeight - 0.5f, caretX + 4, textHeight,
                         textColor,
-                        guiGraphics.bufferSource()
+                        graphics.bufferSource()
                 );
             }
         }
 
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
     }
 
     public static final class FocusGainedEvent extends Event implements ICancellableEvent {

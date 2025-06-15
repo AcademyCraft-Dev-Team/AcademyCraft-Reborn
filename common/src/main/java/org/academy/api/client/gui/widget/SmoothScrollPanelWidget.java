@@ -44,14 +44,14 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         RenderSystem.clear(GL30.GL_STENCIL_BUFFER_BIT, false);
         scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.flush();
+        graphics.pose().pushPose();
+        graphics.flush();
 
         GL30.glEnable(GL30.GL_STENCIL_TEST);
 
@@ -60,20 +60,20 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
         RenderSystem.stencilFunc(GL_ALWAYS, 1, 0xFF);
         RenderSystem.stencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
-        RenderUtil.fill(guiGraphics.pose().last().pose(), getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFFFFFFF, guiGraphics.bufferSource());
-        guiGraphics.flush();
+        RenderUtil.fill(graphics.pose().last().pose(), getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFFFFFFF, graphics.bufferSource());
+        graphics.flush();
 
         RenderSystem.colorMask(true, true, true, true);
         RenderSystem.depthMask(true);
         RenderSystem.stencilFunc(GL_EQUAL, 1, 0xFF);
         RenderSystem.stencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-        guiGraphics.pose().translate(0, -scrollOffset, 0);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.flush();
+        graphics.pose().translate(0, -scrollOffset, 0);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        graphics.flush();
 
         GL30.glDisable(GL30.GL_STENCIL_TEST);
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
     }
 
     @Override

@@ -32,15 +32,15 @@ import java.util.function.Supplier;
 public final class HUDManager {
     private static boolean initialized = false;
     private static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
-    public static final RenderType COMPUTING_POWER_BAR =
+    public static final RenderType CP_BAR =
             RenderUtil.getPositionTexRenderType(
-                    "computing_power_bar",
-                    TextureResources.TEXTURE_COMPUTING_POWER_BAR,
+                    "cp_bar",
+                    TextureResources.TEXTURE_CP_BAR,
                     false);
-    public static final RenderType COMPUTING_POWER_BAR_BACKGROUND =
+    public static final RenderType CP_BAR_BACKGROUND =
             RenderUtil.getPositionTexRenderType(
-                    "computing_power_bar_background",
-                    TextureResources.TEXTURE_COMPUTING_POWER_BAR_BACKGROUND,
+                    "cp_bar_background",
+                    TextureResources.TEXTURE_CP_BAR_BACKGROUND,
                     false);
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
             RenderUtil.getPositionTexRenderType("ability_icon", new ResourceLocation(AcademyCraft.MOD_ID,
@@ -48,14 +48,14 @@ public final class HUDManager {
             ), false);
     public static final Supplier<Float> SCALE_FACTOR = () -> 1.0f;
     public static final float DEFAULT_SCALA = 0.2F;
-    public static final int COMPUTING_POWER_BAR_WIDTH = 964;
-    public static final int COMPUTING_POWER_BAR_HEIGHT = 147;
-    public static final int COMPUTING_POWER_BAR_CONSUMABLE_WIDTH = 743;
-    public static final int COMPUTING_POWER_BAR_LEFT_SAFE_ZONE = 46;
-    public static final int COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE = 34;
-    public static final int COMPUTING_POWER_BAR_TOP_SAFE_ZONE = 30;
-    public static final float COMPUTING_POWER_BAR_ANGLE = 50F;
-    public static final float COMPUTING_POWER_BAR_TANGENT = (float) Math.tan(Math.toRadians(COMPUTING_POWER_BAR_ANGLE));
+    public static final int CP_BAR_WIDTH = 964;
+    public static final int CP_BAR_HEIGHT = 147;
+    public static final int CP_BAR_CONSUMABLE_WIDTH = 743;
+    public static final int CP_BAR_LEFT_SAFE_ZONE = 46;
+    public static final int CP_BAR_RIGHT_SAFE_ZONE = 34;
+    public static final int CP_BAR_TOP_SAFE_ZONE = 30;
+    public static final float CP_BAR_ANGLE = 50F;
+    public static final float CP_BAR_TANGENT = (float) Math.tan(Math.toRadians(CP_BAR_ANGLE));
     public static final int ABILITY_ICON_WIDTH = 64;
     public static final int ABILITY_ICON_HEIGHT = 64;
     public static final int ABILITY_ICON_RIGHT_SAFE_ZONE = 10;
@@ -183,7 +183,7 @@ public final class HUDManager {
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
 
         HUDManager.renderComputingPowerBarBackground(guiGraphics);
-        guiGraphics.bufferSource().endBatch(COMPUTING_POWER_BAR_BACKGROUND);
+        guiGraphics.bufferSource().endBatch(CP_BAR_BACKGROUND);
 
         float targetR = 1.0f;
         float targetG = 174 / 255.0f;
@@ -196,7 +196,7 @@ public final class HUDManager {
 
         RenderSystem.setShaderColor(finalR, finalG, finalB, finalA);
         HUDManager.renderComputingPowerBar(guiGraphics, partialTick);
-        guiGraphics.bufferSource().endBatch(COMPUTING_POWER_BAR);
+        guiGraphics.bufferSource().endBatch(CP_BAR);
 
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
         HUDManager.renderAbilityIcon(guiGraphics);
@@ -252,8 +252,8 @@ public final class HUDManager {
 
         final float width = ABILITY_ICON_WIDTH * scale;
         final float height = ABILITY_ICON_HEIGHT * scale;
-        final float rightSafeZone = (COMPUTING_POWER_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
-        final float topSafeZone = (COMPUTING_POWER_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
+        final float rightSafeZone = (CP_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
+        final float topSafeZone = (CP_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
 
         final float z = 0;
 
@@ -276,7 +276,7 @@ public final class HUDManager {
 
     @SuppressWarnings("UnnecessaryLocalVariable")
     public static void renderComputingPowerBar(GuiGraphics guiGraphics, float partialTick) {
-        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(COMPUTING_POWER_BAR);
+        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(CP_BAR);
         final float computingPower = AbilitySystemClient.getComputingPower();
         final float maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
         final float progress;
@@ -291,14 +291,14 @@ public final class HUDManager {
         }
         final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
-        final float width = COMPUTING_POWER_BAR_WIDTH * scale;
-        final float height = COMPUTING_POWER_BAR_HEIGHT * scale;
-        final float leftSafeZoneWidth = (COMPUTING_POWER_BAR_LEFT_SAFE_ZONE - (COMPUTING_POWER_BAR_TOP_SAFE_ZONE / COMPUTING_POWER_BAR_TANGENT)) * scale;
-        final float barLength = COMPUTING_POWER_BAR_CONSUMABLE_WIDTH * scale;
+        final float width = CP_BAR_WIDTH * scale;
+        final float height = CP_BAR_HEIGHT * scale;
+        final float leftSafeZoneWidth = (CP_BAR_LEFT_SAFE_ZONE - (CP_BAR_TOP_SAFE_ZONE / CP_BAR_TANGENT)) * scale;
+        final float barLength = CP_BAR_CONSUMABLE_WIDTH * scale;
 
         final float barWidthOffset = barLength * (1.0f - smoothProgress);
         final float leftTopOffset = barWidthOffset + leftSafeZoneWidth;
-        final float leftBottomOffset = leftTopOffset + (height / COMPUTING_POWER_BAR_TANGENT);
+        final float leftBottomOffset = leftTopOffset + (height / CP_BAR_TANGENT);
 
         final float z = 0;
 
@@ -326,7 +326,7 @@ public final class HUDManager {
 
     @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
     public static void renderComputingPowerBarBackground(GuiGraphics guiGraphics) {
-        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(COMPUTING_POWER_BAR_BACKGROUND);
+        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(CP_BAR_BACKGROUND);
         final int imageWidth = 946;
         final int imageHeight = 147;
 
@@ -417,7 +417,7 @@ public final class HUDManager {
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+        public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
             float animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
             this.currentWidgetAlpha = MathUtil.lerpStartEndFactor(this.currentWidgetAlpha, this.targetWidgetAlpha, animFactor);
 
@@ -449,7 +449,7 @@ public final class HUDManager {
             this.icon.setWidth(iconSize);
             this.icon.setHeight(iconSize);
 
-            super.render(guiGraphics, mouseX, mouseY, partialTick);
+            super.render(graphics, mouseX, mouseY, partialTick);
         }
 
         public void setSelected(boolean selected, float currentFrameBaseX) {

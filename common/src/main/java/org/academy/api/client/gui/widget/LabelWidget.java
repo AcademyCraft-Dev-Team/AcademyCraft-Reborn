@@ -19,29 +19,29 @@ public class LabelWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         if (!isVisible()) return;
         if (animation != null) {
-            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTicks);
+            animation.beforeRender(graphics, mouseX, mouseY, partialTicks);
         }
-        guiGraphics.pose().pushPose();
+        graphics.pose().pushPose();
         Font font = Minecraft.getInstance().font;
         float finalScale = scale * globalScale;
         float textHeight = font.lineHeight;
         float scaledHeight = textHeight * finalScale;
         float offsetY = (scaledHeight - textHeight) / 2;
-        guiGraphics.pose().translate(x, y - offsetY, 0);
-        guiGraphics.pose().scale(finalScale, finalScale, 1.0f);
+        graphics.pose().translate(x, y - offsetY, 0);
+        graphics.pose().scale(finalScale, finalScale, 1.0f);
         Minecraft.getInstance().font.drawInBatch(value, 0, 0, color, dropShadow,
-                guiGraphics.pose().last().pose(),
-                guiGraphics.bufferSource(),
+                graphics.pose().last().pose(),
+                graphics.bufferSource(),
                 Font.DisplayMode.NORMAL,
                 0,
                 15728880
         );
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
         if (animation != null) {
-            animation.afterRender(guiGraphics, mouseX, mouseY, partialTicks);
+            animation.afterRender(graphics, mouseX, mouseY, partialTicks);
         }
     }
 }
