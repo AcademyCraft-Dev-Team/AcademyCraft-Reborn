@@ -15,6 +15,8 @@ public class Shaders {
     public static final List<Function<ResourceProvider, ShaderInstance>> SHADERS = new ArrayList<>();
     public static ShaderInstance glowCircle;
     public static ShaderInstance positionColorShader;
+    public static ShaderInstance sdfCircleGlowShader;
+    public static ShaderInstance sdfSharpQuadWithMarginShader;
 
     static {
         SHADERS.add(new Function<>() {
@@ -37,6 +39,32 @@ public class Shaders {
                     ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "position_color_tex");
                     ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_COLOR_TEX);
                     positionColorShader = shaderInstance;
+                    return shaderInstance;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        SHADERS.add(new Function<>() {
+            @Override
+            public ShaderInstance apply(ResourceProvider resourceProvider) {
+                try {
+                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "sdf_circle_glow");
+                    ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
+                    sdfCircleGlowShader = shaderInstance;
+                    return shaderInstance;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        SHADERS.add(new Function<>() {
+            @Override
+            public ShaderInstance apply(ResourceProvider resourceProvider) {
+                try {
+                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "sdf_sharp_quad_with_margin");
+                    ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
+                    sdfSharpQuadWithMarginShader = shaderInstance;
                     return shaderInstance;
                 } catch (IOException e) {
                     throw new RuntimeException(e);

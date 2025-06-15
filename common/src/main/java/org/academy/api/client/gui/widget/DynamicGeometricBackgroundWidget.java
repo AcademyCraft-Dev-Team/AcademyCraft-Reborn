@@ -10,6 +10,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -119,7 +120,7 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mousePressed(double mouseX, double mouseY, int button) {
         if (mouseInteraction && isHovered() && (button == GLFW.GLFW_MOUSE_BUTTON_LEFT || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
             this.isInteracting = true;
             this.interactingButton = button;
@@ -127,7 +128,7 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
             this.relativeMouseY = mouseY - getAbsoluteY();
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mousePressed(mouseX, mouseY, button);
     }
 
     @Override
@@ -167,18 +168,25 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
             r = g = b = a = 1.0f;
         }
 
+        points.sort(Comparator.comparingDouble(p -> p.x));
+        float connectionDistance = (float) Math.sqrt(connectionDistanceSq);
 
         for (int i = 0; i < points.size(); i++) {
             Point p1 = points.get(i);
             for (int j = i + 1; j < points.size(); j++) {
                 Point p2 = points.get(j);
+
+                if (p2.x - p1.x > connectionDistance) {
+                    break;
+                }
+
                 float dx = p1.x - p2.x;
                 float dy = p1.y - p2.y;
                 float distanceSq = dx * dx + dy * dy;
 
                 if (distanceSq < connectionDistanceSq) {
                     float dist = (float) Math.sqrt(distanceSq);
-                    float lineAlpha = a * (1f - dist / (float) Math.sqrt(connectionDistanceSq));
+                    float lineAlpha = a * (1f - dist / connectionDistance);
                     lineAlpha = Math.max(0, Math.min(lineAlpha, 1.0f));
 
 

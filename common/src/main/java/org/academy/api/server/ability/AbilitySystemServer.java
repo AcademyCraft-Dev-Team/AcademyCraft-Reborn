@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.*;
@@ -76,8 +77,12 @@ public class AbilitySystemServer {
             return new AcquireCategoryPacket.Response(Collections.singletonList("Error: Player context not found."));
         }
 
-        ServerLevel level = player.serverLevel();
         BlockPos userPos = payload.userPos;
+        if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
+            return new AcquireCategoryPacket.Response(Collections.singletonList("Error: You are too far away."));
+        }
+
+        ServerLevel level = player.serverLevel();
         BlockEntity be = level.getBlockEntity(userPos);
         if (be instanceof AbilityDeveloperBlockEntity blockEntity) {
             List<String> outputList = new ArrayList<>();
@@ -123,9 +128,13 @@ public class AbilitySystemServer {
             return new LearnSkillPacket.Response(false);
         }
 
+        BlockPos userPos = payload.userPos;
+        if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
+            return new LearnSkillPacket.Response(false);
+        }
+
         ServerLevel level = player.serverLevel();
         String skillName = payload.skillName;
-        BlockPos userPos = payload.userPos;
         BlockEntity be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
             if (SKILL_MAP.containsKey(skillName)) {
@@ -149,7 +158,6 @@ public class AbilitySystemServer {
         }
         return new LearnSkillPacket.Response(false);
     }
-
 
     public static void addAllPlayerSyncTask(final UUID uuid) {
         SyncType[] syncType = SyncType.values();

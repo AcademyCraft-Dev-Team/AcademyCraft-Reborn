@@ -20,17 +20,13 @@ public class BackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isFocused() && button == 0) {
-            runnable.run();
+    public boolean mousePressed(double mouseX, double mouseY, int button) {
+        if (isAbsoluteMouseOver(mouseX, mouseY) && button == 0) {
+            if (runnable != null) {
+                runnable.run();
+            }
             return true;
-        } else {
-            return false;
         }
-    }
-
-    @Override
-    public boolean canFocus() {
-        return isEnabled();
+        return false;
     }
 }

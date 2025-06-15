@@ -46,7 +46,7 @@ public interface Widget {
     default void mouseMoved(double mouseX, double mouseY) {
     }
 
-    default boolean mouseClicked(double mouseX, double mouseY, int button) {
+    default boolean mousePressed(double mouseX, double mouseY, int button) {
         return false;
     }
 

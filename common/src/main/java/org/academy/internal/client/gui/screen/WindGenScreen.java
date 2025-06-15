@@ -9,7 +9,7 @@ import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.renderer.RenderTypes;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 
@@ -49,7 +49,7 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         invPage.animation = new AnimationTopToBottom(invPage);
         rootContainer.addChild("page_inv", invPage);
         {
-            ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, 187, TextureResources.RenderTypes.RENDER_TYPE_WIND_GEN_UI);
+            ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, 187, RenderTypes.RENDER_TYPE_WIND_GEN_UI);
             invPage.addChild("ui", ui);
             ui.animation = new AnimationTopToBottom(ui);
             PanelWidget statePanel = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
@@ -57,13 +57,13 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
             statePanel.animation = new AnimationTopToBottom(statePanel);
             invPage.addChild("panel_state", statePanel);
             {
-                topIcon = new ImageWidget(0, 13, 24, 24, TextureResources.RenderTypes.RENDER_TYPE_ICON_WIND_GEN_TOP);
+                topIcon = new ImageWidget(0, 13, 24, 24, RenderTypes.RENDER_TYPE_ICON_WIND_GEN_TOP);
                 topIcon.animation = new AnimationTopToBottom(topIcon);
                 statePanel.addChild("icon_top", topIcon);
-                pillarIcon = new ImageWidget(0, 31, 24, 24, TextureResources.RenderTypes.RENDER_TYPE_ICON_WIND_GEN_PILLAR);
+                pillarIcon = new ImageWidget(0, 31, 24, 24, RenderTypes.RENDER_TYPE_ICON_WIND_GEN_PILLAR);
                 pillarIcon.animation = new AnimationTopToBottom(pillarIcon);
                 statePanel.addChild("icon_pillar", pillarIcon);
-                baseIcon = new ImageWidget(0, 49, 24, 24, TextureResources.RenderTypes.RENDER_TYPE_ICON_WIND_GEN_BASE);
+                baseIcon = new ImageWidget(0, 49, 24, 24, RenderTypes.RENDER_TYPE_ICON_WIND_GEN_BASE);
                 baseIcon.animation = new AnimationTopToBottom(baseIcon);
                 statePanel.addChild("icon_base", baseIcon);
             }
@@ -98,21 +98,21 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
             ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
-                    TextureResources.RenderTypes.RENDER_TYPE_ICON_INV, () -> {
+                    RenderTypes.RENDER_TYPE_ICON_INV, () -> {
             });
             inv.animation = new AnimationTopToBottom(inv);
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
             ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
-                    TextureResources.RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
+                    RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
             });
             wireless.animation = new AnimationTopToBottom(wireless);
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);
         }
 
-        PanelWidget infoArea = new PanelWidget(leftPos + imageWidth, topPos - 19.5f, 110, 105);
+        PanelWidget infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 22, 110, 105);
         rootContainer.addChild("area_info", infoArea);
         {
             BlendQuadWidget back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());

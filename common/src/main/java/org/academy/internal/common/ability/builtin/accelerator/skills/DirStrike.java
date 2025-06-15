@@ -25,7 +25,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.config.IConfigAction;
@@ -87,7 +87,7 @@ public class DirStrike extends Skill {
 
         public static void onAction() {
             if (Minecraft.getInstance().player == null) return;
-            NetworkSystemClient.sendPacket(new C2SPacket(new ActionPacket()));
+            NetworkManagerClient.sendPacket(new C2SPacket(new ActionPacket()));
         }
 
         public static class DirStrikeClientConfig {

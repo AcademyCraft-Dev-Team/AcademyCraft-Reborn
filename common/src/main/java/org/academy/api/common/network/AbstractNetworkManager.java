@@ -1,11 +1,8 @@
-package org.academy.api.client.network;
+package org.academy.api.common.network;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
-import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.Packet;
 import org.academy.AcademyCraft;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.packet.IPacket;
 import org.jetbrains.annotations.NotNull;
@@ -18,27 +15,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class NetworkSystemClient {
-    public static Connection connection;
-    private final NetworkSystem networkSystem;
-    private final ConcurrentHashMap<Class<? extends IPacket<?>>, List<IPacketListener>> clientTypedListeners;
-    private final Map<Object, List<IPacketListener>> clientListenersByTarget;
-    private final ReadWriteLock clientLock;
+public abstract class AbstractNetworkManager {
+    protected final NetworkSystem networkSystem;
+    protected final ConcurrentHashMap<Class<? extends IPacket<?>>, List<IPacketListener>> typedListeners;
+    protected final Map<Object, List<IPacketListener>> listenersByTarget;
+    protected final ReadWriteLock lock;
 
-    public NetworkSystemClient(NetworkSystem networkSystem) {
+    protected AbstractNetworkManager(NetworkSystem networkSystem) {
         this.networkSystem = networkSystem;
-        this.clientTypedListeners = new ConcurrentHashMap<>();
-        this.clientListenersByTarget = new MapMaker().weakKeys().makeMap();
-        this.clientLock = new ReentrantReadWriteLock();
+        this.typedListeners = new ConcurrentHashMap<>();
+        this.listenersByTarget = new MapMaker().weakKeys().makeMap();
+        this.lock = new ReentrantReadWriteLock();
     }
 
     public void clear() {
-        this.clientLock.writeLock().lock();
+        this.lock.writeLock().lock();
         try {
-            this.clientTypedListeners.clear();
-            this.clientListenersByTarget.clear();
+            this.typedListeners.clear();
+            this.listenersByTarget.clear();
         } finally {
-            this.clientLock.writeLock().unlock();
+            this.lock.writeLock().unlock();
         }
     }
 
@@ -51,12 +47,12 @@ public class NetworkSystemClient {
     }
 
     public void registerPacketListener(@NotNull IPacketListener iPacketListener) {
-        this.clientLock.writeLock().lock();
+        this.lock.writeLock().lock();
         try {
-            this.clientListenersByTarget.computeIfAbsent(iPacketListener.getPacketType(), o -> new ArrayList<>()).add(iPacketListener);
-            this.clientTypedListeners.computeIfAbsent(iPacketListener.getPacketType(), k -> new ArrayList<>()).add(iPacketListener);
+            this.listenersByTarget.computeIfAbsent(iPacketListener.getPacketType(), o -> new ArrayList<>()).add(iPacketListener);
+            this.typedListeners.computeIfAbsent(iPacketListener.getPacketType(), k -> new ArrayList<>()).add(iPacketListener);
         } finally {
-            this.clientLock.writeLock().unlock();
+            this.lock.writeLock().unlock();
         }
     }
 
@@ -64,16 +60,16 @@ public class NetworkSystemClient {
         List<IPacketListener> generatedHandlers = NetworkSystem.findPacketListeners(clazz, instance);
 
         if (!generatedHandlers.isEmpty()) {
-            this.clientLock.writeLock().lock();
+            this.lock.writeLock().lock();
             try {
                 Object key = (instance == null) ? clazz : instance;
-                this.clientListenersByTarget.put(key, List.copyOf(generatedHandlers));
+                this.listenersByTarget.put(key, List.copyOf(generatedHandlers));
 
                 for (IPacketListener handler : generatedHandlers) {
-                    this.clientTypedListeners.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
+                    this.typedListeners.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
                 }
             } finally {
-                this.clientLock.writeLock().unlock();
+                this.lock.writeLock().unlock();
             }
         }
     }
@@ -87,35 +83,35 @@ public class NetworkSystemClient {
     }
 
     private void unregisterPacketListenerInternal(@NotNull Object keyToRemove) {
-        this.clientLock.writeLock().lock();
+        this.lock.writeLock().lock();
         try {
-            List<IPacketListener> handlersToRemove = this.clientListenersByTarget.remove(keyToRemove);
+            List<IPacketListener> handlersToRemove = this.listenersByTarget.remove(keyToRemove);
             if (handlersToRemove != null) {
                 for (IPacketListener handler : handlersToRemove) {
-                    List<IPacketListener> typedList = this.clientTypedListeners.get(handler.getPacketType());
+                    List<IPacketListener> typedList = this.typedListeners.get(handler.getPacketType());
                     if (typedList != null) {
                         typedList.remove(handler);
                         if (typedList.isEmpty()) {
-                            this.clientTypedListeners.remove(handler.getPacketType());
+                            this.typedListeners.remove(handler.getPacketType());
                         }
                     }
                 }
             }
         } finally {
-            this.clientLock.writeLock().unlock();
+            this.lock.writeLock().unlock();
         }
     }
 
-    public <T extends IPacket<?>> void dispatchClientPacket(T packet) {
+    public <T extends IPacket<?>> void dispatchPacket(T packet) {
         List<IPacketListener> handlers = null;
-        this.clientLock.readLock().lock();
+        this.lock.readLock().lock();
         try {
-            List<IPacketListener> typedList = this.clientTypedListeners.get(packet.getClass());
+            List<IPacketListener> typedList = this.typedListeners.get(packet.getClass());
             if (typedList != null && !typedList.isEmpty()) {
                 handlers = Lists.newArrayList(typedList);
             }
         } finally {
-            this.clientLock.readLock().unlock();
+            this.lock.readLock().unlock();
         }
 
         if (handlers != null) {
@@ -123,15 +119,9 @@ public class NetworkSystemClient {
                 try {
                     handler.handlePacket(packet);
                 } catch (Throwable e) {
-                    AcademyCraft.LOGGER.error("Exception dispatching client packet {} to handler {}: {}", packet.getClass().getSimpleName(), handler.getClass().getName(), e.getMessage(), e);
+                    AcademyCraft.LOGGER.error("Exception dispatching packet {} to handler {}: {}", packet.getClass().getSimpleName(), handler.getClass().getName(), e.getMessage(), e);
                 }
             }
-        }
-    }
-
-    public static void sendPacket(Packet<?> packet) {
-        if (connection != null) {
-            connection.send(packet);
         }
     }
 

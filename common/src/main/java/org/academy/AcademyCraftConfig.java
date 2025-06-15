@@ -46,16 +46,12 @@ public final class AcademyCraftConfig {
     }
 
     public void save() {
+        rootJsonConfig = new JsonObject();
         for (Map.Entry<String, Object> cacheEntry : runtimeConfigCache.entrySet()) {
             String configKey = cacheEntry.getKey();
             Object configInstance = cacheEntry.getValue();
             IConfigAction<?> actions = CONFIG_ACTIONS_MAP.get(configKey);
-
-            if (actions != null) {
-                if (actions.getConfigClass().isInstance(configInstance)) {
-                    this.rootJsonConfig.add(configKey, actions.serializeRaw(configInstance, GSON));
-                }
-            }
+            this.rootJsonConfig.add(configKey, actions.serializeRaw(configInstance, GSON));
         }
 
         Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
@@ -68,6 +64,10 @@ public final class AcademyCraftConfig {
 
     @SuppressWarnings("unchecked")
     public <T> T getConfig(@NotNull String configKey) {
+        if (runtimeConfigCache.containsKey(configKey)) {
+            return (T) runtimeConfigCache.get(configKey);
+        }
+
         JsonElement jsonElement = rootJsonConfig.get(configKey);
         T configInstance;
         IConfigAction<T> action = (IConfigAction<T>) CONFIG_ACTIONS_MAP.get(configKey);
@@ -75,12 +75,13 @@ public final class AcademyCraftConfig {
             throw new RuntimeException("No config action registered for key: " + configKey + " . Returning null.");
         }
         if (jsonElement == null) {
-            T defaultConfig =  action.getDefaultConfig();
+            T defaultConfig = action.getDefaultConfig();
             runtimeConfigCache.put(configKey, defaultConfig);
             configInstance = defaultConfig;
             save();
         } else {
             configInstance = action.deserialize(jsonElement, GSON);
+            runtimeConfigCache.put(configKey, configInstance);
         }
         return configInstance;
     }

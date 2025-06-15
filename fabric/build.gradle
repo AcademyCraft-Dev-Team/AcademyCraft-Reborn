@@ -13,6 +13,7 @@ repositories {
 }
 
 configurations {
+    hotswapAgent
     includeAndExpose
 
     modApi {
@@ -42,14 +43,18 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.1'
 
-    include (implementation('net.neoforged:bus:8.0.2'))
+    include(implementation('net.neoforged:bus:8.0.2'))
 
     modCompileOnlyApi("mezz.jei:jei-${minecraft_version}-fabric-api:${jei_version}")
     modRuntimeOnly("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}")
+
+    hotswapAgent "org.hotswapagent:hotswap-agent-core:2.0.2"
 }
 
 loom {
     accessWidenerPath.set(file("src/main/resources/academy.accesswidener"))
+    def hotswapAgentFile = configurations.hotswapAgent.asFileTree.getSingleFile().absolutePath
+
     mixin {
         defaultRefmapName.set("${mod_id}.refmap.json")
     }
@@ -59,24 +64,38 @@ loom {
             setConfigName("Fabric Client")
             ideConfigGenerated(true)
             runDir("run")
+            property 'mixin.debug.export', 'true'
+            property 'fabric.systemLibraries', hotswapAgentFile
+            vmArg "-Xmx2048m"
+            vmArg "-XX:HotswapAgent=core"
+            vmArg "--add-opens=java.base/sun.security.action=ALL-UNNAMED"
+            vmArg "-XX:+AllowEnhancedClassRedefinition"
+            vmArg "-javaagent:${hotswapAgentFile}"
         }
         server {
             server()
             setConfigName("Fabric Server")
             ideConfigGenerated(true)
             runDir("run")
+            property 'mixin.debug.export', 'true'
+            property 'fabric.systemLibraries', hotswapAgentFile
+            vmArg "-Xmx2048m"
+            vmArg "-XX:HotswapAgent=core"
+            vmArg "--add-opens=java.base/sun.security.action=ALL-UNNAMED"
+            vmArg "-XX:+AllowEnhancedClassRedefinition"
+            vmArg "-javaagent:${hotswapAgentFile}"
         }
     }
 }
 
 remapSourcesJar {
-    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+    destinationDirectory = project.layout.buildDirectory.dir("output")
 }
 
 javadocJar {
-    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+    destinationDirectory = project.layout.buildDirectory.dir("output")
 }
 
 remapJar {
-    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+    destinationDirectory = project.layout.buildDirectory.dir("output")
 }

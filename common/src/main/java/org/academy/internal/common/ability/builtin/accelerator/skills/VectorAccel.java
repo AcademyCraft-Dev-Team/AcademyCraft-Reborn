@@ -23,7 +23,7 @@ import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.renderer.CameraRenderer;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.ClientTickEvent;
@@ -54,7 +54,7 @@ public class VectorAccel extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftConfig.registerConfigActions(INSTANCE.name, new Client.VectorAccelConfig());
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.VectorAccelConfig.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
             Client.CONFIG = new Client.VectorAccelConfig();
@@ -180,7 +180,7 @@ public class VectorAccel extends Skill {
             }
         }
 
-        public static class VectorAccelConfig implements IConfigAction<VectorAccelConfig> {
+        public static class VectorAccelConfig {
             @SerializedName("keyBindings")
             private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
 
@@ -190,28 +190,33 @@ public class VectorAccel extends Skill {
                 }
                 return keyBindings.get(name);
             }
+
             public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
                 this.keyBindings.put(name, keyBinding);
             }
 
-            @Override
-            public @NotNull VectorAccel.Client.VectorAccelConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, VectorAccelConfig.class);
-            }
+            public static final class Action implements IConfigAction<VectorAccelConfig> {
+                public static final Action INSTANCE = new Action();
 
-            @Override
-            public @NotNull JsonElement serialize(@NotNull VectorAccel.Client.VectorAccelConfig configInstance, @NotNull Gson gson) {
-                return gson.toJsonTree(configInstance);
-            }
+                @Override
+                public @NotNull VectorAccelConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, VectorAccelConfig.class);
+                }
 
-            @Override
-            public @NotNull VectorAccel.Client.VectorAccelConfig getDefaultConfig() {
-                return new VectorAccelConfig();
-            }
+                @Override
+                public @NotNull JsonElement serialize(@NotNull VectorAccelConfig configInstance, @NotNull Gson gson) {
+                    return gson.toJsonTree(configInstance);
+                }
 
-            @Override
-            public @NotNull Class<VectorAccelConfig> getConfigClass() {
-                return VectorAccelConfig.class;
+                @Override
+                public @NotNull VectorAccelConfig getDefaultConfig() {
+                    return new VectorAccelConfig();
+                }
+
+                @Override
+                public @NotNull Class<VectorAccelConfig> getConfigClass() {
+                    return VectorAccelConfig.class;
+                }
             }
         }
 
@@ -227,7 +232,7 @@ public class VectorAccel extends Skill {
             public void release() {
                 if (released) return;
                 released = true;
-                NetworkSystemClient.sendPacket(new C2SPacket(new DashPacket(Math.min(clientTicker, MAX_CHARGE_TICKS))));
+                NetworkManagerClient.sendPacket(new C2SPacket(new DashPacket(Math.min(clientTicker, MAX_CHARGE_TICKS))));
                 cleanup();
             }
 

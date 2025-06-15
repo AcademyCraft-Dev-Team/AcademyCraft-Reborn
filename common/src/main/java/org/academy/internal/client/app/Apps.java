@@ -1,5 +1,6 @@
 package org.academy.internal.client.app;
 
+import org.academy.AcademyCraft;
 import org.academy.api.client.hud.DataTerminalHUD;
 
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ public final class Apps {
         for (DataTerminalHUD.App app : APPS) {
             DataTerminalHUD.registerApp(app);
         }
+        AcademyCraft.EVENT_BUS.register(Settings.class);
     }
 
     private Apps() {

@@ -19,7 +19,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.vanilla.ClientTickEvent;
@@ -111,12 +111,12 @@ public class StormWing extends Skill {
 
                 if (states.isEmpty()) states.add(State.KEEP);
 
-                for (State state : states) NetworkSystemClient.sendPacket(new C2SPacket(new ControlPacket(state)));
+                for (State state : states) NetworkManagerClient.sendPacket(new C2SPacket(new ControlPacket(state)));
             }
         }
 
         public static void toggle() {
-            NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
+            NetworkManagerClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
         public static class StormWingConfig {

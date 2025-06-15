@@ -22,6 +22,14 @@ public class SmoothScrollPanelWidget extends AbstractContainerWidget {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollAmount) {
+        if (!isAbsoluteEnabled() || !isAbsoluteMouseOver(mouseX, mouseY)) {
+            return false;
+        }
+
+        if (super.mouseScrolled(mouseX, mouseY, scrollAmount)) {
+            return true;
+        }
+
         scrollTarget -= (float) (scrollAmount * scrollSpeed);
         scrollTarget = MathUtil.clamp(scrollTarget, 0, getMaxScroll());
         return true;

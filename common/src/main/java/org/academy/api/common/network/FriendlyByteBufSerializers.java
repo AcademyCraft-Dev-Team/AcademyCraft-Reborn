@@ -39,19 +39,15 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ArrayList.class, (buffer, value) -> {
         if (!value.isEmpty()) {
             buffer.writeBoolean(true);
-            Class<?> commonSuperclass = value.get(0).getClass();
-            for (Object obj : value) {
-                Class<?> currentClass = obj.getClass();
-                while (!commonSuperclass.isAssignableFrom(currentClass)) {
-                    commonSuperclass = commonSuperclass.getSuperclass();
-                    if (commonSuperclass == null || commonSuperclass == Object.class) {
-                        throw new IllegalArgumentException("Could not find a suitable common superclass for elements in ArrayList for serialization.");
-                    }
-                }
+            Object firstElement = value.get(0);
+            int elementTypeId = getSerializerId(firstElement.getClass());
+            buffer.writeVarInt(elementTypeId);
+
+            buffer.writeVarInt(value.size());
+            FriendlyByteBufSerializer elementSerializer = getRequiredSerializer(firstElement.getClass());
+            for (Object element : value) {
+                elementSerializer.serialize(buffer, element);
             }
-            buffer.writeUtf(commonSuperclass.getCanonicalName());
-            FriendlyByteBufSerializer serializer = getCollectionFriendlyByteBufSerializer(commonSuperclass);
-            serializer.serialize(buffer, value);
         } else {
             buffer.writeBoolean(false);
         }
@@ -61,11 +57,15 @@ public class FriendlyByteBufSerializers {
         buffer.writeBoolean(value.isEmpty());
         if (!value.isEmpty()) {
             Map.Entry firstEntry = (Map.Entry) value.entrySet().iterator().next();
-            buffer.writeUtf(firstEntry.getKey().getClass().getCanonicalName());
-            buffer.writeUtf(firstEntry.getValue().getClass().getCanonicalName());
+            int keyTypeId = getSerializerId(firstEntry.getKey().getClass());
+            int valueTypeId = getSerializerId(firstEntry.getValue().getClass());
+            buffer.writeVarInt(keyTypeId);
+            buffer.writeVarInt(valueTypeId);
+
+            FriendlyByteBufSerializer keySerializer = getRequiredSerializer(firstEntry.getKey().getClass());
+            FriendlyByteBufSerializer valueSerializer = getRequiredSerializer(firstEntry.getValue().getClass());
+
             value.forEach((k, v) -> {
-                FriendlyByteBufSerializer keySerializer = getRequiredSerializer(k.getClass());
-                FriendlyByteBufSerializer valueSerializer = getRequiredSerializer(v.getClass());
                 keySerializer.serialize(buffer, k);
                 valueSerializer.serialize(buffer, v);
             });
@@ -74,19 +74,15 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<HashSet> HASH_SET_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(HashSet.class, (buffer, value) -> {
         if (!value.isEmpty()) {
             buffer.writeBoolean(true);
-            Class<?> commonSuperclass = value.iterator().next().getClass();
-            for (Object obj : value) {
-                Class<?> currentClass = obj.getClass();
-                while (!commonSuperclass.isAssignableFrom(currentClass)) {
-                    commonSuperclass = commonSuperclass.getSuperclass();
-                    if (commonSuperclass == null || commonSuperclass == Object.class) {
-                        throw new IllegalArgumentException("Could not find a suitable common superclass for elements in HashSet for serialization.");
-                    }
-                }
+            Object firstElement = value.iterator().next();
+            int elementTypeId = getSerializerId(firstElement.getClass());
+            buffer.writeVarInt(elementTypeId);
+
+            buffer.writeVarInt(value.size());
+            FriendlyByteBufSerializer elementSerializer = getRequiredSerializer(firstElement.getClass());
+            for (Object element : value) {
+                elementSerializer.serialize(buffer, element);
             }
-            buffer.writeUtf(commonSuperclass.getCanonicalName());
-            FriendlyByteBufSerializer serializer = getCollectionFriendlyByteBufSerializer(commonSuperclass);
-            serializer.serialize(buffer, value);
         } else {
             buffer.writeBoolean(false);
         }
@@ -98,8 +94,10 @@ public class FriendlyByteBufSerializers {
         Object left = pair.getLeft();
         Object right = pair.getRight();
 
-        buffer.writeUtf(left.getClass().getCanonicalName());
-        buffer.writeUtf(right.getClass().getCanonicalName());
+        int leftTypeId = getSerializerId(left.getClass());
+        int rightTypeId = getSerializerId(right.getClass());
+        buffer.writeVarInt(leftTypeId);
+        buffer.writeVarInt(rightTypeId);
 
         FriendlyByteBufSerializer leftSerializer = getRequiredSerializer(left.getClass());
         FriendlyByteBufSerializer rightSerializer = getRequiredSerializer(right.getClass());
@@ -128,6 +126,10 @@ public class FriendlyByteBufSerializers {
         SERIALIZER_IDS.put(serializer, SERIALIZER_IDS.size());
         FRIENDLY_BYTE_BUF_SERIALIZER_MAP.put(clazz, serializer);
         return serializer;
+    }
+
+    public static int getSerializerId(Class<?> clazz) {
+        return SERIALIZER_IDS.get(getRequiredSerializer(clazz));
     }
 
     public static int getSerializerId(FriendlyByteBufSerializer<?> serializer) {

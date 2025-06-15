@@ -26,7 +26,7 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.renderer.CameraRenderEvent;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
@@ -124,10 +124,10 @@ public final class SelfTeleport extends Skill {
                 Vec3 finalTargetPos = currentContext.currentRenderPos;
                 currentContext.cleanup();
                 if (ClientUtil.hasScreen()) return;
-                NetworkSystemClient.sendPacket(new C2SPacket(new SelfTeleportPacket(finalTargetPos.x(), finalTargetPos.y(), finalTargetPos.z())));
+                NetworkManagerClient.sendPacket(new C2SPacket(new SelfTeleportPacket(finalTargetPos.x(), finalTargetPos.y(), finalTargetPos.z())));
             } else {
                 if (ClientUtil.hasScreen()) return;
-                NetworkSystemClient.sendPacket(new C2SPacket(new SelfTeleportPacket()));
+                NetworkManagerClient.sendPacket(new C2SPacket(new SelfTeleportPacket()));
             }
         }
 

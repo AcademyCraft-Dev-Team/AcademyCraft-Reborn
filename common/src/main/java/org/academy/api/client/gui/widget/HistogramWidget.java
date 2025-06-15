@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.renderer.RenderTypes;
 import org.academy.api.client.util.RenderUtil;
 
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ public class HistogramWidget extends AbstractWidget {
 
     public HistogramWidget(float x, float y, float width, float height, List<Value> initialValues) {
         super(x, y, width, height);
-        this.back = new ImageWidget(x + 5, y - 15, width, height, TextureResources.RenderTypes.RENDER_TYPE_HISTOGRAM);
+        this.back = new ImageWidget(x + 5, y - 15, width, height, RenderTypes.RENDER_TYPE_HISTOGRAM);
         this.values = new ArrayList<>(Objects.requireNonNullElse(initialValues, Collections.emptyList()));
     }
 

@@ -12,8 +12,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public final class InputSystem {
-    public static final Map<String, KeyBinding> MOUSE_KEY_BINDINGS = new HashMap<>();
-    public static final Map<String, KeyBinding> KEYBOARD_KEY_BINDING_MAP = new HashMap<>();
+    public static final Map<String, KeyBinding> KEY_BINDINGS = new HashMap<>();
     public static final Map<String, Consumer<Integer>> scrollListeners = new HashMap<>();
     public static final Map<Integer, Integer> KEYBOARD_STATE = new HashMap<>();
     public static final Map<Integer, Integer> MOUSE_STATE = new HashMap<>();
@@ -41,41 +40,54 @@ public final class InputSystem {
     public static void handleKey(int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
         currentKeyCode = key;
         currentKeyAction = action;
+        KEYBOARD_STATE.put(key, action);
+
         KeyEvent event = new KeyEvent(key, scanCode, action, modifiers);
         AcademyCraft.EVENT_BUS.post(event);
+
         if (event.isCanceled()) {
+            if (action == GLFW.GLFW_RELEASE) {
+                net.minecraft.client.KeyMapping.set(com.mojang.blaze3d.platform.InputConstants.getKey(key, scanCode), false);
+            }
             ci.cancel();
             return;
         }
-        key = event.key;
-        action = event.action;
-        modifiers = event.modifiers;
-        KEYBOARD_STATE.put(key, action);
-        processBindings(KEYBOARD_KEY_BINDING_MAP, KEYBOARD_STATE, key, modifiers);
+
+        processBindings(InputType.KEYBOARD, KEYBOARD_STATE, event.key, event.modifiers);
     }
 
     public static void handleMouseButton(int button, int action, int modifiers, CallbackInfo ci) {
-        MouseButtonEvent event = new MouseButtonEvent(button, action, modifiers);
-        AcademyCraft.EVENT_BUS.post(event);
-        if (event.isCanceled()) {
-            ci.cancel();
-            return;
-        }
-        button = event.button;
-        action = event.action;
-        modifiers = event.modifiers;
         currentMouseButton = button;
         currentMouseAction = action;
         currentMouseModifier = modifiers;
         MOUSE_STATE.put(button, action);
-        processBindings(MOUSE_KEY_BINDINGS, MOUSE_STATE, button, modifiers);
+
+        MouseButtonEvent event = new MouseButtonEvent(button, action, modifiers);
+        AcademyCraft.EVENT_BUS.post(event);
+
+        if (event.isCanceled()) {
+            if (action == GLFW.GLFW_RELEASE) {
+                net.minecraft.client.KeyMapping.set(com.mojang.blaze3d.platform.InputConstants.Type.MOUSE.getOrCreate(button), false);
+            }
+            ci.cancel();
+            return;
+        }
+
+        processBindings(InputType.MOUSE, MOUSE_STATE, event.button, event.modifiers);
     }
 
-    private static void processBindings(Map<String, KeyBinding> bindings, Map<Integer, Integer> state, int input, int modifiers) {
-        bindings.values().forEach(keyBinding -> {
-            LinkedHashSet<Integer> requiredKeys = keyBinding.keyInfo.inputs, requiredModifiers = keyBinding.keyInfo.modifiers;
-            int requiredAction = keyBinding.keyInfo.action;
-            if (requiredKeys.isEmpty()) throw new IllegalStateException("Missing required keys");
+    private static void processBindings(InputType eventType, Map<Integer, Integer> state, int input, int modifiers) {
+        KEY_BINDINGS.values().forEach(binding -> {
+            if (binding.inputPair.inputType != eventType) {
+                return;
+            }
+
+            KeyInfo keyInfo = binding.inputPair.keyInfo;
+            LinkedHashSet<Integer> requiredKeys = keyInfo.inputs;
+            LinkedHashSet<Integer> requiredModifiers = keyInfo.modifiers;
+            int requiredAction = keyInfo.action;
+
+            if (requiredKeys.isEmpty()) return;
 
             int requiredMask = requiredModifiers.stream().reduce(0, (a, b) -> a | b);
             boolean modSuccess = modifiers == requiredMask;
@@ -84,8 +96,7 @@ public final class InputSystem {
             if (requiredAction == GLFW.GLFW_RELEASE) {
                 int lastKey = -1;
                 for (Integer key : requiredKeys) lastKey = key;
-                keySuccess = input == lastKey
-                        && requiredKeys.stream().allMatch(state::containsKey)
+                keySuccess = input == lastKey && requiredKeys.stream().allMatch(state::containsKey)
                         && requiredKeys.stream().allMatch(requiredKey -> state.get(requiredKey) == requiredAction);
             } else {
                 keySuccess = requiredKeys.stream().allMatch(state::containsKey)
@@ -93,7 +104,7 @@ public final class InputSystem {
             }
 
             if (modSuccess && keySuccess)
-                keyBinding.runnable.run();
+                binding.runnable.run();
         });
     }
 
@@ -113,36 +124,13 @@ public final class InputSystem {
         }
     }
 
-    public static void addKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputPair key, @NotNull Runnable runnable) {
-        switch (key.inputType()) {
-            case MOUSE -> MOUSE_KEY_BINDINGS.put(keyName, new KeyBinding(key.keyInfo(), runnable));
-            case KEYBOARD -> KEYBOARD_KEY_BINDING_MAP.put(keyName, new KeyBinding(key.keyInfo(), runnable));
-            default -> throw new IllegalArgumentException("Unknown input type");
-        }
+    public static void addKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputPair pair, @NotNull Runnable runnable) {
+        KeyBinding binding = new KeyBinding(pair, runnable);
+        KEY_BINDINGS.put(keyName, binding);
     }
 
-    /**
-     * Under normal circumstances, use this.
-     *
-     * @param keyName KeyName
-     */
     public static void removeKeyBinding(@NotNull String keyName) {
-        MOUSE_KEY_BINDINGS.keySet().removeIf(keyName::equals);
-        KEYBOARD_KEY_BINDING_MAP.keySet().removeIf(keyName::equals);
-    }
-
-    public static void removeKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputType inputType) {
-        switch (inputType) {
-            case MOUSE -> MOUSE_KEY_BINDINGS.remove(keyName);
-            case KEYBOARD -> KEYBOARD_KEY_BINDING_MAP.remove(keyName);
-        }
-    }
-
-    public static void removeKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputPair key) {
-        switch (key.inputType()) {
-            case MOUSE -> MOUSE_KEY_BINDINGS.remove(keyName);
-            case KEYBOARD -> KEYBOARD_KEY_BINDING_MAP.remove(keyName);
-        }
+        KEY_BINDINGS.remove(keyName);
     }
 
     public enum InputType {
@@ -150,19 +138,35 @@ public final class InputSystem {
         KEYBOARD
     }
 
-    /**
-     * Describes a key event.
-     *
-     * @param inputs    A set of required keys, with at least one key present.
-     * @param action    The expected action for the key (e.g., `GLFW_PRESS` for key press, `GLFW_RELEASE` for key release, or `GLFW_REPEAT` for key repeat, which is specific to keyboards).
-     * @param modifiers A set of modifier keys (e.g., `GLFW_MOD_SHIFT` for Shift).
-     */
-    public record KeyInfo(LinkedHashSet<Integer> inputs, int action, LinkedHashSet<Integer> modifiers) {
+    public static final class KeyInfo {
+        public LinkedHashSet<Integer> inputs;
+        public int action;
+        public LinkedHashSet<Integer> modifiers;
+
+        public KeyInfo(LinkedHashSet<Integer> inputs, int action, LinkedHashSet<Integer> modifiers) {
+            this.inputs = inputs;
+            this.action = action;
+            this.modifiers = modifiers;
+        }
     }
 
-    public record KeyBinding(KeyInfo keyInfo, Runnable runnable) {
+    public static class KeyBinding {
+        public InputPair inputPair;
+        public Runnable runnable;
+
+        public KeyBinding(InputPair inputPair, Runnable runnable) {
+            this.inputPair = inputPair;
+            this.runnable = runnable;
+        }
     }
 
-    public record InputPair(InputType inputType, KeyInfo keyInfo) {
+    public static class InputPair {
+        public InputType inputType;
+        public KeyInfo keyInfo;
+
+        public InputPair(InputType inputType, KeyInfo keyInfo) {
+            this.inputType = inputType;
+            this.keyInfo = keyInfo;
+        }
     }
 }

@@ -63,7 +63,7 @@ public class S2CPacket implements Packet<ClientPacketListener> {
                     IPacket<ClientGamePacketListener> instance = factory.apply(handler);
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
-                    AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.dispatchClientPacket(instance);
+                    AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing S2C packet. Class: {}, ID: {}. Listener: {}. Error: {}",

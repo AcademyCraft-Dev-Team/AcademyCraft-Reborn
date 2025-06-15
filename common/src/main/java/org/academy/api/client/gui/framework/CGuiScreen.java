@@ -51,7 +51,7 @@ public abstract class CGuiScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return rootContainer.mouseClicked(mouseX, mouseY, button);
+        return rootContainer.mousePressed(mouseX, mouseY, button);
     }
 
     @Override
@@ -71,11 +71,17 @@ public abstract class CGuiScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return super.keyPressed(keyCode, scanCode, modifiers) || rootContainer.keyPressed(keyCode, scanCode, modifiers);
+        if (rootContainer.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        return rootContainer.charTyped(codePoint, modifiers);
+        if (rootContainer.charTyped(codePoint, modifiers)) {
+            return true;
+        }
+        return super.charTyped(codePoint, modifiers);
     }
 }

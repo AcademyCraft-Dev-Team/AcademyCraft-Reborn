@@ -1,72 +1,80 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.gui.framework.AbstractContainerWidget;
+import org.academy.api.client.gui.framework.MouseButtonState;
 import org.academy.api.client.gui.framework.Widget;
-import org.academy.api.client.gui.framework.WidgetContainer;
-import org.academy.internal.common.sounds.AcademyCraftSoundEvents;
+import org.academy.api.client.util.ClientUtil;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
 
-public class PanelButtonWidget extends AbstractWidget implements WidgetContainer {
-    protected final Map<String, Widget> children = new LinkedHashMap<>();
-    protected Runnable onPress;
+public class PanelButtonWidget extends AbstractContainerWidget {
+    public Runnable onActive;
+    public MouseButtonState state = MouseButtonState.PRESSED;
 
-    public PanelButtonWidget(float x, float y, float width, float height, Runnable onPress) {
+    public PanelButtonWidget(float x, float y, float width, float height, Runnable onActive) {
         super(x, y, width, height);
-        this.onPress = onPress;
+        this.onActive = onActive;
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isFocused()) {
-            playDownSound(Minecraft.getInstance().getSoundManager());
-            if (onPress != null) {
-                onPress.run();
+    public boolean mousePressed(double mouseX, double mouseY, int button) {
+        if (!isVisible() || !isEnabled()) {
+            return false;
+        }
+
+        List<Widget> childrenList = new ArrayList<>(children.values());
+        Collections.reverse(childrenList);
+        for (Widget child : childrenList) {
+            if (child.mousePressed(mouseX, mouseY, button)) {
+                if (button == 0) {
+                    setFocusedChild(child.canFocus() ? child : null);
+                }
+                return true;
+            }
+        }
+
+        if (isAbsoluteMouseOver(mouseX, mouseY)) {
+            if (button == 0) {
+                setFocusedChild(null);
+                if (isAbsoluteEnabled() && state == MouseButtonState.PRESSED) {
+                    return handlePress();
+                }
             }
             return true;
         }
+
         return false;
     }
 
-    public void playDownSound(net.minecraft.client.sounds.SoundManager soundManager) {
-        soundManager.play(SimpleSoundInstance.forUI(AcademyCraftSoundEvents.SELECT, 1.0F));
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        List<Widget> childrenList = new ArrayList<>(children.values());
+        Collections.reverse(childrenList);
+        for (Widget child : childrenList) {
+            if (child.mouseReleased(mouseX, mouseY, button)) {
+                return true;
+            }
+        }
+
+        if (isAbsoluteEnabled() && isAbsoluteMouseOver(mouseX, mouseY) && button == 0 && state == MouseButtonState.RELEASED) {
+            return handlePress();
+        }
+
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    protected boolean handlePress() {
+        ClientUtil.playDownSound();
+        if (onActive != null) {
+            onActive.run();
+        }
+        return true;
     }
 
     @Override
     public boolean canFocus() {
         return this.enabled;
-    }
-
-    @Override
-    public void addChild(String name, Widget child) {
-        if (child.getParent() != null) {
-            child.getParent().removeChild(name);
-        }
-
-        child.setParent(this);
-        this.children.put(name, child);
-    }
-
-    @Override
-    public void removeChild(String name) {
-        if (children.containsKey(name)) {
-            Widget widget = children.get(name);
-            widget.setParent(null);
-            children.remove(name);
-        }
-    }
-
-    @Override
-    public void clearChildren() {
-        children.clear();
-    }
-
-    @Override
-    public Map<String, Widget> getChildren() {
-        return Collections.unmodifiableMap(children);
     }
 }

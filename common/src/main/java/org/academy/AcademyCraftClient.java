@@ -6,7 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.hud.HUDManager;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.FutureManager;
@@ -24,8 +24,8 @@ public final class AcademyCraftClient {
     public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
     public static final NetworkSystem NETWORK_SYSTEM_INSTANCE = new NetworkSystem();
     public static final FutureManager FUTURE_MANAGER_INSTANCE = new FutureManager();
-    public static final NetworkSystemClient NETWORK_SYSTEM_CLIENT_INSTANCE = new NetworkSystemClient(NETWORK_SYSTEM_INSTANCE);
-    public static final FutureManagerClient FUTURE_MANAGER_CLIENT_INSTANCE = new FutureManagerClient(FUTURE_MANAGER_INSTANCE, NETWORK_SYSTEM_CLIENT_INSTANCE);
+    public static final NetworkManagerClient NETWORK_SYSTEM_CLIENT_INSTANCE = new NetworkManagerClient(NETWORK_SYSTEM_INSTANCE);
+    public static final FutureManagerClient FUTURE_MANAGER_CLIENT_INSTANCE = new FutureManagerClient(FUTURE_MANAGER_INSTANCE);
 
     static {
         CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
@@ -36,6 +36,7 @@ public final class AcademyCraftClient {
     public static void init() {
         NETWORK_SYSTEM_CLIENT_INSTANCE.clear();
         FUTURE_MANAGER_CLIENT_INSTANCE.clear();
+        NETWORK_SYSTEM_CLIENT_INSTANCE.registerPacketListener(FUTURE_MANAGER_CLIENT_INSTANCE);
         AbilitySystemClient.init();
         ItemRenderers.init();
         Screens.register();

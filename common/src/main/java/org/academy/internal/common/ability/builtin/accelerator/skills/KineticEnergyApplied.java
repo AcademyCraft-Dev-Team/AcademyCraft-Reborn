@@ -13,7 +13,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
@@ -67,7 +67,7 @@ public class KineticEnergyApplied extends Skill {
         public static KineticEnergyAppliedConfig CONFIG = new KineticEnergyAppliedConfig();
 
         public static void toggle() {
-            NetworkSystemClient.sendPacket(new C2SPacket(new TogglePacket()));
+            NetworkManagerClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
         public static class KineticEnergyAppliedConfig {

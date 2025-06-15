@@ -14,7 +14,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.config.IConfigAction;
@@ -74,7 +74,7 @@ public class ArcGenerate extends Skill {
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
-            NetworkSystemClient.sendPacket(new C2SPacket(new GeneratePacket()));
+            NetworkManagerClient.sendPacket(new C2SPacket(new GeneratePacket()));
         }
 
         public static class ArcGenerateConfig {

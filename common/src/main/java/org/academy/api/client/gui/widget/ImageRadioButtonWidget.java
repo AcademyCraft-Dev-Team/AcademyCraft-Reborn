@@ -28,8 +28,8 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        boolean result = super.mouseClicked(mouseX, mouseY, button);
+    public boolean mousePressed(double mouseX, double mouseY, int button) {
+        boolean result = super.mousePressed(mouseX, mouseY, button);
         if (result) {
             if (radioGroup != null) {
                 radioGroup.selectButton(this);
