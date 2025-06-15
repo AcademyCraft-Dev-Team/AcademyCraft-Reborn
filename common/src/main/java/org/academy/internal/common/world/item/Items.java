@@ -26,7 +26,7 @@ public class Items {
     public static final Item IMAG_PHASE_CIRCUIT = register("imag_phase_circuit", new Item(new Item.Properties()));
     public static final Item IMAG_PHASE_POLYMER = register("imag_phase_polymer", new Item(new Item.Properties()));
     public static final Item IMAG_PHASE_PLATE = register("imag_phase_plate", new Item(new Item.Properties()));
-    public static final Item IMAG_PHASE_DOWSING_ROD = register("imag_phase_dosing_rod", new ImagPhaseDosingRodItem());
+    public static final Item IMAG_PHASE_DOWSING_ROD = register("imag_phase_dowsing_rod", new ImagPhaseDowsingRodItem());
     public static final Item IMAG_PHASE_VEGETATION = register("imag_phase_vegetation", new BlockItem(Blocks.IMAG_PHASE_VEGETATION, new Item.Properties()));
     public static final Item IMAG_PHASE_LEAVES = register("imag_phase_leaves", new BlockItem(Blocks.IMAG_PHASE_LEAVES, new Item.Properties()));
     public static final Item IMAG_PHASE_LOG = register("imag_phase_log", new BlockItem(Blocks.IMAG_PHASE_LOG, new Item.Properties()));

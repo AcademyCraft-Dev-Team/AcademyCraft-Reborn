@@ -18,7 +18,7 @@ public abstract class MixinPlayer implements PlayerSyncData {
     @SuppressWarnings("UnusedAssignment")
     @Inject(method = "hurt", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"), cancellable = true)
     public void hurt(DamageSource damageSource, float amount, CallbackInfoReturnable<Boolean> cir) {
-        Pair<Boolean, Float> pair = VectorReflection.Server.handleHurt((Player) (Object) this, damageSource, amount);
+        Pair<Boolean, Float> pair = VectorReflection.Server.onPlayerHurt((Player) (Object) this, damageSource, amount);
         if (!pair.getLeft()) {
             cir.setReturnValue(false);
         } else {

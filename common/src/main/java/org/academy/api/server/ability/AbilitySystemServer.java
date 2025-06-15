@@ -33,14 +33,14 @@ import static org.academy.api.server.ability.AbilitySystemServer.SyncType.COMPUT
 
 public class AbilitySystemServer {
     public static final Map<UUID, Player> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
-    private static final List<Runnable> RUNNABLE_LIST = new CopyOnWriteArrayList<>();
+    private static final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
     private static Map<UUID, WorldData.Player> playerMap;
     public static volatile MinecraftServer minecraftServer;
     public static volatile ScheduledFuture<?> scheduledFuture;
     public static boolean paused;
 
     public static void init(final MinecraftServer server) {
-        AcademyCraftServer.FUTURE_MANAGER_SERVER_INSTANCE.registerPayloadHandler(AbilitySystemServer.class);
+        AcademyCraftServer.SERVER_FUTURE_MANAGER.registerPayloadHandler(AbilitySystemServer.class);
         minecraftServer = server;
         playerMap = AcademyCraftServer.worldData.getPlayers();
         for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
@@ -52,7 +52,7 @@ public class AbilitySystemServer {
         scheduledFuture = AcademyCraft.executorService.scheduleAtFixedRate(
                 () -> {
                     try {
-                        AbilitySystemServerThread.tick();
+                        AbilitySystemTicker.tick();
                     } catch (Throwable e) {
                         AcademyCraft.LOGGER.error(e.getMessage());
                     }
@@ -159,10 +159,10 @@ public class AbilitySystemServer {
         return new LearnSkillPacket.Response(false);
     }
 
-    public static void addAllPlayerSyncTask(final UUID uuid) {
+    public static void scheduleFullPlayerSync(final UUID uuid) {
         SyncType[] syncType = SyncType.values();
         for (SyncType type : syncType) {
-            addPlayerSyncTask(uuid, type);
+            schedulePlayerSync(uuid, type);
         }
     }
 
@@ -172,7 +172,7 @@ public class AbilitySystemServer {
 
     public static void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
         playerMap.get(uuid).setAbilityCategory(abilityCategory.name);
-        addPlayerSyncTask(uuid, SyncType.ABILITY_CATEGORY);
+        schedulePlayerSync(uuid, SyncType.ABILITY_CATEGORY);
     }
 
     public static HashSet<String> getPlayerSkills(UUID uuid) {
@@ -185,7 +185,7 @@ public class AbilitySystemServer {
         if (skillI != null) {
             addPlayerSkillData(uuid, skill, skillI.getDefaultSkillData());
         }
-        addPlayerSyncTask(uuid, SyncType.SKILLS);
+        schedulePlayerSync(uuid, SyncType.SKILLS);
     }
 
     public static void addPlayerSkillData(UUID uuid, String skill, WorldData.Player.SkillData skillData) {
@@ -194,7 +194,7 @@ public class AbilitySystemServer {
 
     public static void removePlayerSkill(UUID uuid, String skill) {
         playerMap.get(uuid).getSkills().remove(skill);
-        addPlayerSyncTask(uuid, SyncType.SKILLS);
+        schedulePlayerSync(uuid, SyncType.SKILLS);
     }
 
     public static int getPlayerLevel(UUID uuid) {
@@ -238,7 +238,7 @@ public class AbilitySystemServer {
 
     public static void setPlayerComputingPower(UUID uuid, float power) {
         playerMap.get(uuid).setComputingPower(power);
-        addPlayerSyncTask(uuid, COMPUTING_POWER);
+        schedulePlayerSync(uuid, COMPUTING_POWER);
     }
 
     public static float getPlayerMaxComputingPower(UUID uuid) {
@@ -247,7 +247,7 @@ public class AbilitySystemServer {
 
     public static void setPlayerMaxComputingPower(UUID uuid, float power) {
         playerMap.get(uuid).setMaxComputingPower(power);
-        addPlayerSyncTask(uuid, SyncType.MAX_COMPUTING_POWER);
+        schedulePlayerSync(uuid, SyncType.MAX_COMPUTING_POWER);
     }
 
     public static float getPlayerComputingPowerRecoverySpeed(UUID uuid) {
@@ -282,14 +282,14 @@ public class AbilitySystemServer {
         return AcademyCraftServer.abilityConfig.damageMultiplier;
     }
 
-    public static void addPlayerSyncTask(final UUID uuid, final SyncType syncType) {
+    public static void schedulePlayerSync(final UUID uuid, final SyncType syncType) {
         if (LIVE_PLAYER_MAP.containsKey(uuid)) {
             LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
         }
     }
 
     public static void addTask(Runnable runnable) {
-        RUNNABLE_LIST.add(runnable);
+        pendingTasks.add(runnable);
     }
 
     public enum SyncType {
@@ -300,12 +300,12 @@ public class AbilitySystemServer {
         SKILLS,
     }
 
-    public static final class AbilitySystemServerThread {
+    public static final class AbilitySystemTicker {
         public static void tick() {
             if (paused) return;
-            for (Runnable runnable : RUNNABLE_LIST) {
+            for (Runnable runnable : pendingTasks) {
                 runnable.run();
-                RUNNABLE_LIST.remove(runnable);
+                pendingTasks.remove(runnable);
             }
             for (Player player : LIVE_PLAYER_MAP.values()) {
                 tickPlayer(player);
@@ -347,7 +347,7 @@ public class AbilitySystemServer {
         }
     }
 
-    public static final class MinecraftServerThread {
+    public static final class ServerLifecycleHooks {
         public static void initPlayer(ServerPlayer player) {
             if (AcademyCraftServer.worldData == null) {
                 return;
@@ -371,7 +371,7 @@ public class AbilitySystemServer {
                                     uuid, playerMap.get(uuid), serverPlayer.connection.connection
                             )
                     );
-                    addAllPlayerSyncTask(uuid);
+                    scheduleFullPlayerSync(uuid);
                 }
             });
             Set<UUID> onlinePlayerUUIDs = server.getPlayerList().getPlayers().stream()
@@ -398,11 +398,11 @@ public class AbilitySystemServer {
 
     public static void registerContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.register(serverContext);
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(serverContext);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
         AcademyCraft.EVENT_BUS.unregister(serverContext);
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.unregisterPacketListener(serverContext);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.unregisterPacketListener(serverContext);
     }
 }

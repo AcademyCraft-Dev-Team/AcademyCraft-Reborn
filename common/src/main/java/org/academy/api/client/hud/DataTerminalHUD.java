@@ -25,6 +25,7 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.widget.*;
@@ -55,7 +56,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = CONFIG_KEY_DATA_TERMINAL + "_toggle";
     public static final DataTerminalHUD INSTANCE = new DataTerminalHUD();
-    public static DataTerminalHUDConfig config;
+    public static Config config;
 
     private static float INFO_BAR_HEIGHT;
     private static float APP_ICON_SIZE;
@@ -65,8 +66,8 @@ public final class DataTerminalHUD implements HUDRenderer {
     private static float APP_VERTICAL_SPACING;
     private static float APP_AREA_PADDING;
     private static int APP_COLS;
-    private static float APP_AREA_ACTUAL_WIDTH;
-    private static float APP_AREA_VISIBLE_HEIGHT;
+    private static float APP_AREA_WIDTH;
+    private static float APP_AREA_HEIGHT;
     private static float APP_AREA_X;
     private static float APP_AREA_Y;
     private static float APP_AREA_BAR_WIDTH;
@@ -74,10 +75,10 @@ public final class DataTerminalHUD implements HUDRenderer {
     private static float HEIGHT;
     private static float ICON_X_Y_PADDING_INFO_BAR;
     private static float ICON_SIZE_INFO_BAR;
-    private static float PLAYER_NAME_LABEL_X_PADDING_RIGHT_INFO_BAR;
+    private static float INFO_BAR_PLAYER_NAME_PADDING_X;
     private static float PLAYER_NAME_LABEL_Y_INFO_BAR;
-    private static float SPILT_LINE_X_PADDING_INFO_BAR;
-    private static float SPILT_LINE_WIDTH_REDUCTION_INFO_BAR;
+    private static float SPLIT_LINE_X_PADDING_INFO_BAR;
+    private static float SPLIT_LINE_WIDTH_REDUCTION_INFO_BAR;
     private static float CURSOR_WIDGET_SIZE;
     private static float APP_WIDGET_ICON_TRANSLATE_X;
     private static float APP_WIDGET_ICON_TRANSLATE_Y;
@@ -110,19 +111,19 @@ public final class DataTerminalHUD implements HUDRenderer {
         APP_AREA_PADDING = PADDING_SMALL;
         APP_COLS = config.appCols;
         int VISIBLE_APP_ROWS = config.visibleAppRows;
-        APP_AREA_ACTUAL_WIDTH = (APP_WIDGET_WIDTH * APP_COLS) + (APP_HORIZONTAL_SPACING * (APP_COLS - 1)) + (APP_AREA_PADDING * 2);
-        APP_AREA_VISIBLE_HEIGHT = (APP_WIDGET_HEIGHT * VISIBLE_APP_ROWS) + (APP_VERTICAL_SPACING * (VISIBLE_APP_ROWS - 1)) + (APP_AREA_PADDING * 2);
+        APP_AREA_WIDTH = (APP_WIDGET_WIDTH * APP_COLS) + (APP_HORIZONTAL_SPACING * (APP_COLS - 1)) + (APP_AREA_PADDING * 2);
+        APP_AREA_HEIGHT = (APP_WIDGET_HEIGHT * VISIBLE_APP_ROWS) + (APP_VERTICAL_SPACING * (VISIBLE_APP_ROWS - 1)) + (APP_AREA_PADDING * 2);
         APP_AREA_X = PADDING_GENERAL;
         APP_AREA_Y = INFO_BAR_HEIGHT + PADDING_SMALL;
         APP_AREA_BAR_WIDTH = PADDING_SMALL;
-        WIDTH = APP_AREA_X + APP_AREA_ACTUAL_WIDTH + APP_AREA_BAR_WIDTH + PADDING_GENERAL;
-        HEIGHT = APP_AREA_Y + APP_AREA_VISIBLE_HEIGHT + PADDING_GENERAL;
+        WIDTH = APP_AREA_X + APP_AREA_WIDTH + APP_AREA_BAR_WIDTH + PADDING_GENERAL;
+        HEIGHT = APP_AREA_Y + APP_AREA_HEIGHT + PADDING_GENERAL;
         ICON_X_Y_PADDING_INFO_BAR = 3f;
         ICON_SIZE_INFO_BAR = 14f;
-        PLAYER_NAME_LABEL_X_PADDING_RIGHT_INFO_BAR = 3f;
+        INFO_BAR_PLAYER_NAME_PADDING_X = 3f;
         PLAYER_NAME_LABEL_Y_INFO_BAR = 4f;
-        SPILT_LINE_X_PADDING_INFO_BAR = PADDING_GENERAL;
-        SPILT_LINE_WIDTH_REDUCTION_INFO_BAR = PADDING_GENERAL * 2;
+        SPLIT_LINE_X_PADDING_INFO_BAR = PADDING_GENERAL;
+        SPLIT_LINE_WIDTH_REDUCTION_INFO_BAR = PADDING_GENERAL * 2;
         CURSOR_WIDGET_SIZE = 5f;
         APP_WIDGET_ICON_TRANSLATE_X = 3f;
         APP_WIDGET_ICON_TRANSLATE_Y = 6f;
@@ -227,15 +228,15 @@ public final class DataTerminalHUD implements HUDRenderer {
                         playerName = player.getGameProfile().getName();
                     }
                     Font font = Minecraft.getInstance().font;
-                    playerNameLabel = new LabelWidget(playerName, WIDTH - font.width(playerName) - PLAYER_NAME_LABEL_X_PADDING_RIGHT_INFO_BAR, PLAYER_NAME_LABEL_Y_INFO_BAR);
+                    playerNameLabel = new LabelWidget(playerName, WIDTH - font.width(playerName) - INFO_BAR_PLAYER_NAME_PADDING_X, PLAYER_NAME_LABEL_Y_INFO_BAR);
                     playerNameLabel.dropShadow = false;
                     infoBar.addChild("player_name", playerNameLabel);
 
-                    FillWidget spiltLine = new FillWidget(SPILT_LINE_X_PADDING_INFO_BAR, INFO_BAR_HEIGHT, WIDTH - SPILT_LINE_WIDTH_REDUCTION_INFO_BAR, 1, 0x30FFFFFF);
+                    FillWidget spiltLine = new FillWidget(SPLIT_LINE_X_PADDING_INFO_BAR, INFO_BAR_HEIGHT, WIDTH - SPLIT_LINE_WIDTH_REDUCTION_INFO_BAR, 1, 0x30FFFFFF);
                     infoBar.addChild("spilt_line", spiltLine);
                 }
 
-                SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_ACTUAL_WIDTH, APP_AREA_VISIBLE_HEIGHT);
+                SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_WIDTH, APP_AREA_HEIGHT);
                 root.addChild("area_app_list", appArea);
                 {
                     List<App> apps = new ArrayList<>(APP_LIST);
@@ -290,10 +291,10 @@ public final class DataTerminalHUD implements HUDRenderer {
     public static void init() {
         HUDManager.registerHUDRenderer(INSTANCE);
         AcademyCraft.EVENT_BUS.register(DataTerminalHUD.class);
-        AcademyCraftConfig.registerConfigActions(CONFIG_KEY_DATA_TERMINAL, DataTerminalHUDConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerConfigActions(CONFIG_KEY_DATA_TERMINAL, Config.Action.INSTANCE);
         config = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_DATA_TERMINAL);
         if (config == null) {
-            config = new DataTerminalHUDConfig();
+            config = new Config();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(CONFIG_KEY_DATA_TERMINAL, config);
         }
         updateParametersFromConfig();
@@ -480,16 +481,13 @@ public final class DataTerminalHUD implements HUDRenderer {
             if (playerNameLabel != null && player != null) {
                 String name = player.getGameProfile().getName();
                 Font font = Minecraft.getInstance().font;
-                playerNameLabel.setX(WIDTH - font.width(name) - PLAYER_NAME_LABEL_X_PADDING_RIGHT_INFO_BAR);
+                playerNameLabel.setX(WIDTH - font.width(name) - INFO_BAR_PLAYER_NAME_PADDING_X);
                 playerNameLabel.value = name;
             }
         }
     }
 
-    public static class DataTerminalHUDConfig {
-        @SerializedName("keyBindings")
-        public final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
+    public static class Config extends KeyBindingConfig {
         @SerializedName("blurRadius")
         public float blurRadius = 10.0f;
 
@@ -512,42 +510,30 @@ public final class DataTerminalHUD implements HUDRenderer {
         @SerializedName("visibleAppRows")
         public int visibleAppRows = 3;
 
-
-        public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-            if (!keyBindings.containsKey(name)) {
-                setKeyBinding(name, defaultConfig);
-            }
-            return keyBindings.get(name);
-        }
-
-        public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-            this.keyBindings.put(name, keyBinding);
-        }
-
-        public static final class Action implements IConfigAction<DataTerminalHUDConfig> {
-            public static final IConfigAction<DataTerminalHUDConfig> INSTANCE = new Action();
+        public static final class Action implements IConfigAction<Config> {
+            public static final IConfigAction<Config> INSTANCE = new Action();
 
             private Action() {
             }
 
             @Override
-            public @NotNull DataTerminalHUD.DataTerminalHUDConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, DataTerminalHUDConfig.class);
+            public @NotNull DataTerminalHUD.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, Config.class);
             }
 
             @Override
-            public @NotNull JsonElement serialize(@NotNull DataTerminalHUD.DataTerminalHUDConfig configInstance, @NotNull Gson gson) {
+            public @NotNull JsonElement serialize(@NotNull DataTerminalHUD.Config configInstance, @NotNull Gson gson) {
                 return gson.toJsonTree(configInstance);
             }
 
             @Override
-            public @NotNull DataTerminalHUD.DataTerminalHUDConfig getDefaultConfig() {
-                return new DataTerminalHUDConfig();
+            public @NotNull DataTerminalHUD.Config getDefaultConfig() {
+                return new Config();
             }
 
             @Override
-            public @NotNull Class<DataTerminalHUDConfig> getConfigClass() {
-                return DataTerminalHUDConfig.class;
+            public @NotNull Class<Config> getConfigClass() {
+                return Config.class;
             }
         }
     }
@@ -580,18 +566,18 @@ public final class DataTerminalHUD implements HUDRenderer {
 
         @SuppressWarnings("SuspiciousNameCombination")
         @Override
-        public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+        public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
             widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale,
                     ClientUtil.animationFactor(1));
             heightScale = widthScale;
             RenderType oringinRenderType = renderType;
             renderType = RenderTypes.RENDER_TYPE_APP_BACK;
-            super.render(guiGraphics, mouseX, mouseY, partialTick);
+            super.render(graphics, mouseX, mouseY, partialTick);
             renderType = oringinRenderType;
-            guiGraphics.pose().translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);
+            graphics.pose().translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);
             width = APP_ICON_SIZE * 0.8F;
             height = APP_ICON_SIZE * 0.8F;
-            super.render(guiGraphics, mouseX, mouseY, partialTick);
+            super.render(graphics, mouseX, mouseY, partialTick);
             width = APP_ICON_SIZE;
             height = APP_ICON_SIZE;
         }

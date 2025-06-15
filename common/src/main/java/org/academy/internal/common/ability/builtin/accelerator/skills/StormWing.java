@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.accelerator.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,6 +17,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.renderer.RendererManager;
@@ -54,10 +54,10 @@ public class StormWing extends Skill {
     @Override
     public void initClient() {
         RendererManager.registerEffectRenderer(StormWingEffectRenderer.INSTANCE);
-        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.StormWingConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.StormWingConfig();
+            Client.CONFIG = new Client.Config();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, Client.CONFIG);
         }
 
@@ -80,7 +80,7 @@ public class StormWing extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -88,7 +88,7 @@ public class StormWing extends Skill {
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
                         TextureResources.TEXTURE_STORM_WING_ICON, 150, 70.25f);
         public static final String KEY_NAME_TOGGLE = SkillNames.STORM_WING + "_toggle";
-        public static StormWingConfig CONFIG = new StormWingConfig();
+        public static Config CONFIG = new Config();
 
         @SubscribeEvent
         public static void tick(ClientTickEvent event) {
@@ -119,45 +119,31 @@ public class StormWing extends Skill {
             NetworkManagerClient.sendPacket(new C2SPacket(new TogglePacket()));
         }
 
-        public static class StormWingConfig {
-            @SerializedName("keyBindings")
-            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-                if (!keyBindings.containsKey(name)) {
-                    setKeyBinding(name, defaultConfig);
-                }
-                return keyBindings.get(name);
-            }
-
-            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-                this.keyBindings.put(name, keyBinding);
-            }
-
-            public static final class Action implements IConfigAction<StormWingConfig> {
-                public static final IConfigAction<StormWingConfig> INSTANCE = new Action();
+        public static class Config extends KeyBindingConfig {
+            public static final class Action implements IConfigAction<Config> {
+                public static final IConfigAction<Config> INSTANCE = new Action();
 
                 private Action() {
                 }
 
                 @Override
-                public @NotNull StormWing.Client.StormWingConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                    return gson.fromJson(jsonElement, StormWingConfig.class);
+                public @NotNull StormWing.Client.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, Config.class);
                 }
 
                 @Override
-                public @NotNull JsonElement serialize(@NotNull StormWing.Client.StormWingConfig configInstance, @NotNull Gson gson) {
+                public @NotNull JsonElement serialize(@NotNull StormWing.Client.Config configInstance, @NotNull Gson gson) {
                     return gson.toJsonTree(configInstance);
                 }
 
                 @Override
-                public @NotNull StormWing.Client.StormWingConfig getDefaultConfig() {
-                    return new StormWingConfig();
+                public @NotNull StormWing.Client.Config getDefaultConfig() {
+                    return new Config();
                 }
 
                 @Override
-                public @NotNull Class<StormWingConfig> getConfigClass() {
-                    return StormWingConfig.class;
+                public @NotNull Class<Config> getConfigClass() {
+                    return Config.class;
                 }
             }
         }

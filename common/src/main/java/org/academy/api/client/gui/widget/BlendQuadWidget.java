@@ -28,13 +28,13 @@ public class BlendQuadWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
-        if (animation != null) animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+        if (animation != null) animation.beforeRender(graphics, mouseX, mouseY, partialTick);
         if (!isVisible()) return;
 
-        guiGraphics.pose().pushPose();
+        graphics.pose().pushPose();
 
-        Matrix4f matrix = guiGraphics.pose().last().pose();
+        Matrix4f matrix = graphics.pose().last().pose();
         matrix.translate(getX(), getY(), getZ());
 
         float w = getWidth(), h = getHeight();
@@ -45,22 +45,22 @@ public class BlendQuadWidget extends AbstractWidget {
             shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
             shader.safeGetUniform("u_fillColor").set(this.red, this.green, this.blue, this.alpha);
 
-            VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
+            VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
             vertexConsumer.vertex(matrix, 0, 0, 0).uv(0, 0).endVertex();
             vertexConsumer.vertex(matrix, 0, h, 0).uv(0, 1).endVertex();
             vertexConsumer.vertex(matrix, w, h, 0).uv(1, 1).endVertex();
             vertexConsumer.vertex(matrix, w, 0, 0).uv(1, 0).endVertex();
-            guiGraphics.bufferSource().endBatch(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
+            graphics.bufferSource().endBatch(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
         }
 
         if (drawLine) {
-            lineWidget.render(guiGraphics, mouseX, mouseY, partialTick);
-            guiGraphics.pose().translate(0, getHeight() - marginTop / 2, 0);
-            lineWidget.render(guiGraphics, mouseX, mouseY, partialTick);
+            lineWidget.render(graphics, mouseX, mouseY, partialTick);
+            graphics.pose().translate(0, getHeight() - marginTop / 2, 0);
+            lineWidget.render(graphics, mouseX, mouseY, partialTick);
         }
 
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
 
-        if (animation != null) animation.afterRender(guiGraphics, mouseX, mouseY, partialTick);
+        if (animation != null) animation.afterRender(graphics, mouseX, mouseY, partialTick);
     }
 }

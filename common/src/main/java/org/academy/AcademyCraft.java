@@ -1,6 +1,6 @@
 package org.academy;
 
-import net.neoforged.bus.BusBuilderImpl;
+import net.neoforged.bus.api.BusBuilder;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.network.NetworkSystem;
@@ -19,19 +19,18 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public final class AcademyCraft {
     public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-    public static final boolean DEBUG_MODE = true;
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
-    public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
+    public static final IEventBus EVENT_BUS = BusBuilder.builder().build();
 
     public static void init() {
         NetworkSystem.registerVanillaPacketsOnce();
         ThreadType threadType = GameUtil.getThreadType();
         NetworkSystem networkSystem = threadType == ThreadType.CLIENT ?
-                AcademyCraftClient.NETWORK_SYSTEM_INSTANCE : AcademyCraftServer.NETWORK_SYSTEM_INSTANCE;
+                AcademyCraftClient.NETWORK_SYSTEM : AcademyCraftServer.NETWORK_SYSTEM;
         FutureManager futureManager = threadType == ThreadType.CLIENT ?
-                AcademyCraftClient.FUTURE_MANAGER_INSTANCE : AcademyCraftServer.FUTURE_MANAGER_INSTANCE;
+                AcademyCraftClient.FUTURE_MANAGER : AcademyCraftServer.FUTURE_MANAGER;
         networkSystem.clear();
         Packets.registerAll(networkSystem);
         AbilitySystem.init();

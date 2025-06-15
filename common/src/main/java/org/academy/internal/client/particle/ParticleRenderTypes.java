@@ -13,7 +13,6 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
-import net.minecraft.world.level.Level;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.util.MathUtil;
@@ -145,7 +144,7 @@ public class ParticleRenderTypes {
     };
 
     public static void init() {
-        AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.registerPacketListener(ParticleRenderTypes.class);
+        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(ParticleRenderTypes.class);
     }
 
     @SubscribePacket

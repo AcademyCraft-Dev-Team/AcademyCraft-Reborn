@@ -35,16 +35,16 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (animation != null) {
-            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
+            animation.beforeRender(graphics, mouseX, mouseY, partialTick);
         }
         if (!isVisible()) return;
         if (renderType == null) return;
-        VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(renderType);
+        VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(renderType);
 
-        guiGraphics.pose().pushPose();
-        Matrix4f matrix4f = guiGraphics.pose().last().pose();
+        graphics.pose().pushPose();
+        Matrix4f matrix4f = graphics.pose().last().pose();
 
         float scaledWidth = getWidth() * widthScale;
         float scaledHeight = getHeight() * heightScale;
@@ -61,9 +61,9 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         vertexConsumer.vertex(matrix4f, 1, 1, 0).color(red, green, blue, alpha).uv(u1, v1).endVertex();
         vertexConsumer.vertex(matrix4f, 1, 0, 0).color(red, green, blue, alpha).uv(u1, v0).endVertex();
 
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
         if (animation != null) {
-            animation.afterRender(guiGraphics, mouseX, mouseY, partialTick);
+            animation.afterRender(graphics, mouseX, mouseY, partialTick);
         }
     }
 

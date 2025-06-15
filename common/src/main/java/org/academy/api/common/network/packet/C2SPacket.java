@@ -21,7 +21,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
     @SuppressWarnings("unchecked")
     public <T extends IPacket<ServerGamePacketListenerImpl>> C2SPacket(T packet) {
         Class<T> clazz = (Class<T>) packet.getClass();
-        id = AcademyCraftClient.NETWORK_SYSTEM_INSTANCE.getPacketIdByType(clazz);
+        id = AcademyCraftClient.NETWORK_SYSTEM.getPacketIdByType(clazz);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
     }
@@ -45,7 +45,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
             AcademyCraft.EVENT_BUS.post(event);
             if (event.isCanceled()) return;
 
-            Class<IPacket<ServerGamePacketListenerImpl>> packetClass = AcademyCraftServer.NETWORK_SYSTEM_INSTANCE.getClassById(id);
+            Class<IPacket<ServerGamePacketListenerImpl>> packetClass = AcademyCraftServer.NETWORK_SYSTEM.getClassById(id);
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {
                     ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
@@ -53,7 +53,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
                 }
                 try {
                     Function<ServerGamePacketListenerImpl, IPacket<ServerGamePacketListenerImpl>> factory =
-                            AcademyCraftServer.NETWORK_SYSTEM_INSTANCE.getPacketFactory(packetClass);
+                            AcademyCraftServer.NETWORK_SYSTEM.getPacketFactory(packetClass);
                     if (factory == null) {
                         AcademyCraft.LOGGER.error("No factory found for C2S packet class: {}", packetClass.getName());
                         return;
@@ -61,7 +61,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
                     IPacket<ServerGamePacketListenerImpl> instance = factory.apply(handler);
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
-                    AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.dispatchPacket(instance);
+                    AcademyCraftServer.SERVER_NETWORK_MANAGER.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",

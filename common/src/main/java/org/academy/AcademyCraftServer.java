@@ -2,7 +2,7 @@ package org.academy;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
-import net.neoforged.bus.BusBuilderImpl;
+import net.neoforged.bus.api.BusBuilder;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.FutureManager;
@@ -10,7 +10,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkManagerServer;
 import org.academy.api.server.network.future.FutureManagerServer;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.common.world.item.ImagPhaseDosingRodItem;
+import org.academy.internal.common.world.item.ImagPhaseDowsingRodItem;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.WorldData;
@@ -24,17 +24,17 @@ public final class AcademyCraftServer {
     public static GenericConfig genericConfig;
     public static File serverConfigFile;
     public static File worldDataFile;
-    public static final IEventBus EVENT_BUS = new BusBuilderImpl().build();
-    public static final NetworkSystem NETWORK_SYSTEM_INSTANCE = new NetworkSystem();
-    public static final FutureManager FUTURE_MANAGER_INSTANCE = new FutureManager();
-    public static final NetworkManagerServer NETWORK_SYSTEM_SERVER_INSTANCE = new NetworkManagerServer(NETWORK_SYSTEM_INSTANCE);
-    public static final FutureManagerServer FUTURE_MANAGER_SERVER_INSTANCE = new FutureManagerServer(FUTURE_MANAGER_INSTANCE);
+    public static final IEventBus EVENT_BUS = BusBuilder.builder().build();
+    public static final NetworkSystem NETWORK_SYSTEM = new NetworkSystem();
+    public static final FutureManager FUTURE_MANAGER = new FutureManager();
+    public static final NetworkManagerServer SERVER_NETWORK_MANAGER = new NetworkManagerServer(NETWORK_SYSTEM);
+    public static final FutureManagerServer SERVER_FUTURE_MANAGER = new FutureManagerServer(FUTURE_MANAGER);
 
     public static void init(final MinecraftServer server) {
-        NETWORK_SYSTEM_SERVER_INSTANCE.clear();
-        FUTURE_MANAGER_SERVER_INSTANCE.clear();
-        NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(FUTURE_MANAGER_SERVER_INSTANCE);
-        FUTURE_MANAGER_SERVER_INSTANCE.registerPayloadHandler(ImagPhaseDosingRodItem.class);
+        SERVER_NETWORK_MANAGER.clear();
+        SERVER_FUTURE_MANAGER.clear();
+        SERVER_NETWORK_MANAGER.registerPacketListener(SERVER_FUTURE_MANAGER);
+        SERVER_FUTURE_MANAGER.registerPayloadHandler(ImagPhaseDowsingRodItem.class);
         serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
         worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);

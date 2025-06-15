@@ -44,7 +44,7 @@ sourceSets.main.resources.srcDir 'src/generated/resources'
 
 dependencies {
     compileOnly project(":common")
-    jarJar implementation('net.neoforged:bus:8.0.2')
+    jarJar implementation("net.neoforged:bus:${bus_version}")
     additionalRuntimeClasspath('net.neoforged:bus:8.0.2')
     annotationProcessor("org.spongepowered:mixin:0.8.7:processor")
     modImplementation "maven.modrinth:jade:11.12.3+forge"

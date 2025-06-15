@@ -2,15 +2,15 @@ package org.academy.api.client.ability;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftConfig;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.*;
-import org.academy.AcademyCraftConfig;
 import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.internal.common.ability.builtin.level0.Level0;
@@ -39,8 +39,8 @@ public final class AbilitySystemClient {
     private static volatile int level;
 
     static {
-        AcademyCraftConfig.registerConfigActions(CONFIG_KEY_ABILITY_SYSTEM, AbilitySystemClientConfig.Action.INSTANCE);
-        AbilitySystemClientConfig configData = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_ABILITY_SYSTEM);
+        AcademyCraftConfig.registerConfigActions(CONFIG_KEY_ABILITY_SYSTEM, Config.Action.INSTANCE);
+        Config configData = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_ABILITY_SYSTEM);
         ACTIVATE_HUD_KEY = configData.getKeyBinding(KEY_NAME_ACTIVATE_HUD,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
@@ -54,7 +54,7 @@ public final class AbilitySystemClient {
     }
 
     public static void init() {
-        AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.registerPacketListener(AbilitySystemClient.class);
+        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(AbilitySystemClient.class);
 
         InputSystem.addKeyBinding(KEY_NAME_ACTIVATE_HUD, ACTIVATE_HUD_KEY, () -> {
             if (ClientUtil.hasScreen()) return;
@@ -160,53 +160,39 @@ public final class AbilitySystemClient {
 
     public static void registerContext(ClientContext clientContext) {
         AcademyCraft.EVENT_BUS.register(clientContext);
-        AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.registerPacketListener(clientContext);
+        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(clientContext);
     }
 
     public static void unregisterContext(ClientContext clientContext) {
         AcademyCraft.EVENT_BUS.unregister(clientContext);
-        AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.unregisterPacketListener(clientContext);
+        AcademyCraftClient.CLIENT_NETWORK_MANAGER.unregisterPacketListener(clientContext);
     }
 
-    public static class AbilitySystemClientConfig {
-        @SerializedName("keyBindings")
-        private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-        public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-            if (!keyBindings.containsKey(name)) {
-                setKeyBinding(name, defaultConfig);
-            }
-            return keyBindings.get(name);
-        }
-
-        public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-            this.keyBindings.put(name, keyBinding);
-        }
-
-        public static final class Action implements IConfigAction<AbilitySystemClientConfig> {
-            public static final IConfigAction<AbilitySystemClientConfig> INSTANCE = new Action();
+    public static class Config extends KeyBindingConfig {
+        public static final class Action implements IConfigAction<Config> {
+            public static final IConfigAction<Config> INSTANCE = new Action();
 
             private Action() {
             }
 
             @Override
-            public @NotNull AbilitySystemClient.AbilitySystemClientConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, AbilitySystemClientConfig.class);
+            public @NotNull AbilitySystemClient.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                return gson.fromJson(jsonElement, Config.class);
             }
 
             @Override
-            public @NotNull JsonElement serialize(@NotNull AbilitySystemClient.AbilitySystemClientConfig configInstance, @NotNull Gson gson) {
+            public @NotNull JsonElement serialize(@NotNull AbilitySystemClient.Config configInstance, @NotNull Gson gson) {
                 return gson.toJsonTree(configInstance);
             }
 
             @Override
-            public @NotNull AbilitySystemClient.AbilitySystemClientConfig getDefaultConfig() {
-                return new AbilitySystemClientConfig();
+            public @NotNull AbilitySystemClient.Config getDefaultConfig() {
+                return new Config();
             }
 
             @Override
-            public @NotNull Class<AbilitySystemClientConfig> getConfigClass() {
-                return AbilitySystemClientConfig.class;
+            public @NotNull Class<Config> getConfigClass() {
+                return Config.class;
             }
         }
     }

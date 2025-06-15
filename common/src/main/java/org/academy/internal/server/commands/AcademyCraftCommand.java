@@ -122,7 +122,7 @@ public class AcademyCraftCommand {
 
         AbilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet);
         AbilitySystemServer.getPlayerSkills(playerUuid).clear();
-        AbilitySystemServer.addPlayerSyncTask(playerUuid, AbilitySystemServer.SyncType.SKILLS);
+        AbilitySystemServer.schedulePlayerSync(playerUuid, AbilitySystemServer.SyncType.SKILLS);
         context.getSource().sendSuccess(() -> Component.literal("Ability category set to: " + categoryName + ". All previous skills have been cleared."), true);
         return 1;
     }

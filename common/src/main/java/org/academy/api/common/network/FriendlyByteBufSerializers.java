@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings({"unchecked", "rawtypes", "unused"})
 public class FriendlyByteBufSerializers {
     public static final BiMap<FriendlyByteBufSerializer, Integer> SERIALIZER_IDS = HashBiMap.create();
-    private static final Map<Class<?>, FriendlyByteBufSerializer<?>> FRIENDLY_BYTE_BUF_SERIALIZER_MAP = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, FriendlyByteBufSerializer<?>> SERIALIZER_MAP = new ConcurrentHashMap<>();
     public static final FriendlyByteBufSerializer<String> STRING_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(String.class, FriendlyByteBuf::writeUtf);
     public static final FriendlyByteBufSerializer<Integer> INTEGER_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Integer.class, FriendlyByteBuf::writeVarInt);
     public static final FriendlyByteBufSerializer<Long> LONG_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Long.class, FriendlyByteBuf::writeVarLong);
@@ -124,7 +124,7 @@ public class FriendlyByteBufSerializers {
             Class<T> clazz, FriendlyByteBufSerializer<T> serializer
     ) {
         SERIALIZER_IDS.put(serializer, SERIALIZER_IDS.size());
-        FRIENDLY_BYTE_BUF_SERIALIZER_MAP.put(clazz, serializer);
+        SERIALIZER_MAP.put(clazz, serializer);
         return serializer;
     }
 
@@ -143,13 +143,13 @@ public class FriendlyByteBufSerializers {
 
     @Nullable
     public static <T> FriendlyByteBufSerializer<T> getSerializer(Class<?> clazz) {
-        return (FriendlyByteBufSerializer<T>) FRIENDLY_BYTE_BUF_SERIALIZER_MAP.get(clazz);
+        return (FriendlyByteBufSerializer<T>) SERIALIZER_MAP.get(clazz);
     }
 
     public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<?> clazz) {
         FriendlyByteBufSerializer<T> serializer = getSerializer(clazz);
         if (serializer == null) {
-            for (Map.Entry<Class<?>, FriendlyByteBufSerializer<?>> entry : FRIENDLY_BYTE_BUF_SERIALIZER_MAP.entrySet()) {
+            for (Map.Entry<Class<?>, FriendlyByteBufSerializer<?>> entry : SERIALIZER_MAP.entrySet()) {
                 if (entry.getKey().isAssignableFrom(clazz)) {
                     return (FriendlyByteBufSerializer<T>) entry.getValue();
                 }

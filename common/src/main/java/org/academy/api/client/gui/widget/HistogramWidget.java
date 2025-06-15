@@ -26,18 +26,18 @@ public class HistogramWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
         if (renderBack) {
-            back.render(guiGraphics, mouseX - getX(), mouseY - getY(), partialTick);
+            back.render(graphics, mouseX - getX(), mouseY - getY(), partialTick);
         }
         
         if (animation != null) {
-            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
+            animation.beforeRender(graphics, mouseX, mouseY, partialTick);
         }
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(getX(), getY(), getZ());
+        graphics.pose().pushPose();
+        graphics.pose().translate(getX(), getY(), getZ());
 
         for (Value value : values) {
             float left = value.x;
@@ -55,18 +55,18 @@ public class HistogramWidget extends AbstractWidget {
             int packedColor = (a << 24) | (r << 16) | (g << 8) | b;
 
             RenderUtil.fill(
-                    guiGraphics.pose().last().pose(),
+                    graphics.pose().last().pose(),
                     left, top,
                     right, bottom,
                     packedColor,
-                    guiGraphics.bufferSource()
+                    graphics.bufferSource()
             );
         }
 
-        guiGraphics.pose().popPose();
+        graphics.pose().popPose();
 
         if (animation != null) {
-            animation.afterRender(guiGraphics, mouseX, mouseY, partialTick);
+            animation.afterRender(graphics, mouseX, mouseY, partialTick);
         }
     }
 

@@ -29,10 +29,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class ImagPhaseDosingRodItem extends Item {
+public class ImagPhaseDowsingRodItem extends Item {
     public static List<BlockPos> RENDER_TARGET_POSITIONS = new ArrayList<>();
 
-    public ImagPhaseDosingRodItem() {
+    public ImagPhaseDowsingRodItem() {
         super(new Item.Properties());
     }
 
@@ -54,7 +54,7 @@ public class ImagPhaseDosingRodItem extends Item {
         if (level.isClientSide()) {
             RENDER_TARGET_POSITIONS.clear();
             GetLevelChunkSectionsPacket packet = new GetLevelChunkSectionsPacket(player.blockPosition());
-            AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(packet, (GetLevelChunkSectionsPacket.Response response) -> {
+            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(packet, (GetLevelChunkSectionsPacket.Response response) -> {
                 if (response != null && response.sectionsWithImagPhase != null) {
                     RENDER_TARGET_POSITIONS = response.sectionsWithImagPhase;
                 }
@@ -112,10 +112,10 @@ public class ImagPhaseDosingRodItem extends Item {
 
     @SuppressWarnings("resource")
     @HandlePayload
-    public static ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response handleGetLevelChunkSections(ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket payload) {
+    public static ImagPhaseDowsingRodItem.GetLevelChunkSectionsPacket.Response onGetLevelChunkSections(ImagPhaseDowsingRodItem.GetLevelChunkSectionsPacket payload) {
         Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
         if (supplier == null || supplier.get() == null) {
-            return new ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response(new ArrayList<>());
+            return new ImagPhaseDowsingRodItem.GetLevelChunkSectionsPacket.Response(new ArrayList<>());
         }
         ServerPlayer player = supplier.get().player;
         ServerLevel serverLevel = player.serverLevel();
@@ -135,6 +135,6 @@ public class ImagPhaseDosingRodItem extends Item {
                 }
             }
         });
-        return new ImagPhaseDosingRodItem.GetLevelChunkSectionsPacket.Response(sectionsWithImagPhase);
+        return new ImagPhaseDowsingRodItem.GetLevelChunkSectionsPacket.Response(sectionsWithImagPhase);
     }
 }

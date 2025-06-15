@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 @SuppressWarnings({"unchecked", "rawtypes", "unused"})
 public class FriendlyByteBufDeserializers {
     public static final BiMap<FriendlyByteBufDeserializer, Integer> DESERIALIZER_IDS = HashBiMap.create();
-    private static final Map<Class<?>, FriendlyByteBufDeserializer<?>> FRIENDLY_BYTE_BUF_DESERIALIZER_MAP = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, FriendlyByteBufDeserializer<?>> DESERIALIZER_MAP = new ConcurrentHashMap<>();
     public static final FriendlyByteBufDeserializer<String> STRING_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(String.class, FriendlyByteBuf::readUtf);
     public static final FriendlyByteBufDeserializer<Integer> INTEGER_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Integer.class, FriendlyByteBuf::readVarInt);
     public static final FriendlyByteBufDeserializer<Long> LONG_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Long.class, FriendlyByteBuf::readVarLong);
@@ -118,7 +118,7 @@ public class FriendlyByteBufDeserializers {
             Class<T> clazz, FriendlyByteBufDeserializer<T> deserializer
     ) {
         DESERIALIZER_IDS.put(deserializer, DESERIALIZER_IDS.size());
-        FRIENDLY_BYTE_BUF_DESERIALIZER_MAP.put(clazz, deserializer);
+        DESERIALIZER_MAP.put(clazz, deserializer);
         return deserializer;
     }
 
@@ -146,13 +146,13 @@ public class FriendlyByteBufDeserializers {
 
     @Nullable
     public static <T> FriendlyByteBufDeserializer<T> getDeserializer(Class<?> clazz) {
-        return (FriendlyByteBufDeserializer<T>) FRIENDLY_BYTE_BUF_DESERIALIZER_MAP.get(clazz);
+        return (FriendlyByteBufDeserializer<T>) DESERIALIZER_MAP.get(clazz);
     }
 
     public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(Class<?> clazz) {
         FriendlyByteBufDeserializer<T> deserializer = getDeserializer(clazz);
         if (deserializer == null) {
-            for (Map.Entry<Class<?>, FriendlyByteBufDeserializer<?>> entry : FRIENDLY_BYTE_BUF_DESERIALIZER_MAP.entrySet()) {
+            for (Map.Entry<Class<?>, FriendlyByteBufDeserializer<?>> entry : DESERIALIZER_MAP.entrySet()) {
                 if (entry.getKey().isAssignableFrom(clazz)) {
                     return (FriendlyByteBufDeserializer<T>) entry.getValue();
                 }

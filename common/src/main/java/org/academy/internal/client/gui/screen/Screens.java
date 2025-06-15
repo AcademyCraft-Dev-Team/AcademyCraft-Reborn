@@ -62,7 +62,7 @@ public class Screens {
 
 
     public static void register() {
-        AcademyCraftClient.NETWORK_SYSTEM_CLIENT_INSTANCE.registerPacketListener(Screens.class);
+        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(Screens.class);
     }
 
     @SubscribePacket

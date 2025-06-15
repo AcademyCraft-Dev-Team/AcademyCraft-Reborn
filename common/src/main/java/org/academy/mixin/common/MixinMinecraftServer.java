@@ -23,7 +23,7 @@ public abstract class MixinMinecraftServer {
         ServerTickEvent event = new ServerTickEvent();
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
-        AbilitySystemServer.MinecraftServerThread.tickMinecraftServerThread((MinecraftServer) (Object) this);
+        AbilitySystemServer.ServerLifecycleHooks.tickMinecraftServerThread((MinecraftServer) (Object) this);
     }
 
     @Inject(method = "halt", at = @At("HEAD"))

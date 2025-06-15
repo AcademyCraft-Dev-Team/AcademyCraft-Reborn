@@ -61,7 +61,7 @@ public final class WirelessPanelHelper {
 
         default void requestAvailableNodes(SmoothScrollPanelWidget listPanel) {
             GetAvailableNodesPacket requestPayload = new GetAvailableNodesPacket(getPosition());
-            AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(
+            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
                     requestPayload,
                     (GetAvailableNodesPacket.Response response) -> {
                         if (response != null && response.availableNodeNames != null) {
@@ -119,7 +119,7 @@ public final class WirelessPanelHelper {
 
         default void requestCurrentNodeStatus() {
             GetCurrentNodePacket requestPayload = new GetCurrentNodePacket(getPosition());
-            AcademyCraftClient.FUTURE_MANAGER_CLIENT_INSTANCE.sendRequestToServer(
+            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
                     requestPayload,
                     (GetCurrentNodePacket.Response response) -> {
                         if (response != null) {

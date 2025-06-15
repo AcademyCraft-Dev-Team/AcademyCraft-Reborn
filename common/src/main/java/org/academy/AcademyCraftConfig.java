@@ -46,16 +46,15 @@ public final class AcademyCraftConfig {
     }
 
     public void save() {
-        rootJsonConfig = new JsonObject();
-        for (Map.Entry<String, Object> cacheEntry : runtimeConfigCache.entrySet()) {
-            String configKey = cacheEntry.getKey();
-            Object configInstance = cacheEntry.getValue();
-            IConfigAction<?> actions = CONFIG_ACTIONS_MAP.get(configKey);
-            this.rootJsonConfig.add(configKey, actions.serializeRaw(configInstance, GSON));
-        }
-
-        Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
         try (FileWriter writer = new FileWriter(configFile)) {
+            rootJsonConfig = new JsonObject();
+            for (Map.Entry<String, Object> cacheEntry : runtimeConfigCache.entrySet()) {
+                String configKey = cacheEntry.getKey();
+                Object configInstance = cacheEntry.getValue();
+                IConfigAction<?> actions = CONFIG_ACTIONS_MAP.get(configKey);
+                this.rootJsonConfig.add(configKey, actions.serializeRaw(configInstance, GSON));
+            }
+            Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
             gsonPretty.toJson(this.rootJsonConfig, writer);
         } catch (Throwable e) {
             AcademyCraft.LOGGER.warn("Failed to save config to {}", configFile.getAbsolutePath(), e);

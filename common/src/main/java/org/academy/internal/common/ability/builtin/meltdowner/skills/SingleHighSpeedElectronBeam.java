@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.meltdowner.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -11,6 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.common.ability.Skill;
@@ -26,9 +26,7 @@ import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 
 public class SingleHighSpeedElectronBeam extends Skill {
@@ -40,10 +38,10 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initClient() {
-        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.SingleHighSpeedElectronBeamConfigData.Action.INSTANCE);
-        Client.SingleHighSpeedElectronBeamConfigData skillKeyConfig = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
+        AcademyCraftConfig.registerConfigActions(INSTANCE.name, Client.Config.Action.INSTANCE);
+        Client.Config skillKeyConfig = AcademyCraftClient.CLIENT_CONFIG.getConfig(INSTANCE.name);
         if (skillKeyConfig == null) {
-            skillKeyConfig = new Client.SingleHighSpeedElectronBeamConfigData();
+            skillKeyConfig = new Client.Config();
             AcademyCraftClient.CLIENT_CONFIG.setConfig(INSTANCE.name, skillKeyConfig);
         }
 
@@ -63,7 +61,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.registerPacketListener(Server.class);
+        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -74,45 +72,31 @@ public class SingleHighSpeedElectronBeam extends Skill {
             NetworkManagerClient.sendPacket(new C2SPacket(new ShootPacket()));
         }
 
-        public static class SingleHighSpeedElectronBeamConfigData {
-            @SerializedName("keyBindings")
-            private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
-
-            public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
-                if (!keyBindings.containsKey(name)) {
-                    setKeyBinding(name, defaultConfig);
-                }
-                return keyBindings.get(name);
-            }
-
-            public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-                this.keyBindings.put(name, keyBinding);
-            }
-
-            public static final class Action implements IConfigAction<SingleHighSpeedElectronBeamConfigData> {
-                public static final IConfigAction<SingleHighSpeedElectronBeamConfigData> INSTANCE = new Action();
+        public static class Config extends KeyBindingConfig {
+            public static final class Action implements IConfigAction<Config> {
+                public static final IConfigAction<Config> INSTANCE = new Action();
 
                 private Action() {
                 }
 
                 @Override
-                public @NotNull SingleHighSpeedElectronBeam.Client.SingleHighSpeedElectronBeamConfigData deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                    return gson.fromJson(jsonElement, SingleHighSpeedElectronBeamConfigData.class);
+                public @NotNull SingleHighSpeedElectronBeam.Client.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+                    return gson.fromJson(jsonElement, Config.class);
                 }
 
                 @Override
-                public @NotNull JsonElement serialize(@NotNull SingleHighSpeedElectronBeam.Client.SingleHighSpeedElectronBeamConfigData configInstance, @NotNull Gson gson) {
+                public @NotNull JsonElement serialize(@NotNull SingleHighSpeedElectronBeam.Client.Config configInstance, @NotNull Gson gson) {
                     return gson.toJsonTree(configInstance);
                 }
 
                 @Override
-                public @NotNull SingleHighSpeedElectronBeam.Client.SingleHighSpeedElectronBeamConfigData getDefaultConfig() {
-                    return new SingleHighSpeedElectronBeamConfigData();
+                public @NotNull SingleHighSpeedElectronBeam.Client.Config getDefaultConfig() {
+                    return new Config();
                 }
 
                 @Override
-                public @NotNull Class<SingleHighSpeedElectronBeamConfigData> getConfigClass() {
-                    return SingleHighSpeedElectronBeamConfigData.class;
+                public @NotNull Class<Config> getConfigClass() {
+                    return Config.class;
                 }
             }
         }

@@ -13,17 +13,17 @@ public class FillWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
         if (animation != null) {
-            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
+            animation.beforeRender(graphics, mouseX, mouseY, partialTick);
         }
 
-        RenderUtil.fill(guiGraphics.pose().last().pose(), getX(), getY(),
-                getX() + getWidth(), getY() + getHeight(), color, guiGraphics.bufferSource());
+        RenderUtil.fill(graphics.pose().last().pose(), getX(), getY(),
+                getX() + getWidth(), getY() + getHeight(), color, graphics.bufferSource());
 
         if (animation != null) {
-            animation.afterRender(guiGraphics, mouseX, mouseY, partialTick);
+            animation.afterRender(graphics, mouseX, mouseY, partialTick);
         }
     }
 }

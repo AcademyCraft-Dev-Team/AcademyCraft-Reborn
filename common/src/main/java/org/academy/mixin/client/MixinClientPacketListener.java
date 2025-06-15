@@ -3,7 +3,7 @@ package org.academy.mixin.client;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.Connection;
 import org.academy.api.client.network.NetworkManagerClient;
-import org.academy.internal.common.world.item.ImagPhaseDosingRodItem;
+import org.academy.internal.common.world.item.ImagPhaseDowsingRodItem;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,7 +22,7 @@ public abstract class MixinClientPacketListener {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {
-        ImagPhaseDosingRodItem.RENDER_TARGET_POSITIONS.clear();
+        ImagPhaseDowsingRodItem.RENDER_TARGET_POSITIONS.clear();
         academyCraft$instance = (ClientPacketListener) (Object) this;
         NetworkManagerClient.connection = this.connection;
     }

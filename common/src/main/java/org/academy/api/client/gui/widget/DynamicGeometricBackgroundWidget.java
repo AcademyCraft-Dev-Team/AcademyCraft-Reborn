@@ -151,13 +151,13 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         updatePoints();
 
-        VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(RenderType.lines());
-        Matrix4f matrix = guiGraphics.pose().last().pose();
+        VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(RenderType.lines());
+        Matrix4f matrix = graphics.pose().last().pose();
 
         float r = (float) (lineColor >> 16 & 255) / 255.0F;
         float g = (float) (lineColor >> 8 & 255) / 255.0F;
