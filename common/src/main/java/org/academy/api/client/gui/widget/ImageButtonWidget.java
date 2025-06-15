@@ -1,41 +1,70 @@
 package org.academy.api.client.gui.widget;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.client.util.ClientUtil;
-import org.lwjgl.glfw.GLFW;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 
-public class ImageButtonWidget extends ImageWidget {
-    public Runnable onPress;
+public class ImageButtonWidget extends AbstractButtonWidget {
+    public float u0 = 0;
+    public float v0 = 0;
+    public float u1 = 1;
+    public float v1 = 1;
+    public float red;
+    public float green;
+    public float blue;
+    public float alpha = 1f;
+    public RenderType renderType;
+    public float widthScale = 1.0f;
+    public float heightScale = 1.0f;
+    public boolean centerScale = true;
     public boolean defaultHoverEffect = false;
     public boolean previousHoveredState = false;
 
     public ImageButtonWidget(float x, float y, float width, float height,
-                             RenderType renderType, Runnable onPress) {
-        super(x, y, width, height, renderType);
-        this.onPress = onPress;
+                             @Nullable RenderType renderType, Runnable onPress) {
+        super(x, y, width, height, onPress);
+        this.renderType = renderType;
         red = 0.75F;
         green = 0.75F;
         blue = 0.75F;
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (hovered && button == GLFW.GLFW_RELEASE && isAbsoluteEnabled()) {
-            ClientUtil.playDownSound();
-            if (onPress != null) {
-                onPress.run();
-            }
-            return true;
+    public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+        if (animation != null) {
+            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
         }
-        return false;
-    }
+        if (!isVisible()) return;
+        if (renderType == null) return;
+        VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(renderType);
 
-    @Override
-    public boolean canFocus() {
-        return this.enabled;
+        guiGraphics.pose().pushPose();
+        Matrix4f matrix4f = guiGraphics.pose().last().pose();
+
+        float scaledWidth = getWidth() * widthScale;
+        float scaledHeight = getHeight() * heightScale;
+
+        matrix4f.translate(getX(), getY(), getZ());
+        if (centerScale) {
+            matrix4f.translate((getWidth() - scaledWidth) / 2f, (getHeight() - scaledHeight) / 2f, 0);
+        }
+
+        matrix4f.scale(scaledWidth, scaledHeight, 1);
+
+        vertexConsumer.vertex(matrix4f, 0, 0, 0).color(red, green, blue, alpha).uv(u0, v0).endVertex();
+        vertexConsumer.vertex(matrix4f, 0, 1, 0).color(red, green, blue, alpha).uv(u0, v1).endVertex();
+        vertexConsumer.vertex(matrix4f, 1, 1, 0).color(red, green, blue, alpha).uv(u1, v1).endVertex();
+        vertexConsumer.vertex(matrix4f, 1, 0, 0).color(red, green, blue, alpha).uv(u1, v0).endVertex();
+
+        guiGraphics.pose().popPose();
+        if (animation != null) {
+            animation.afterRender(guiGraphics, mouseX, mouseY, partialTick);
+        }
     }
 
     @Override

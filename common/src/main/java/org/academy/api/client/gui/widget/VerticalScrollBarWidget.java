@@ -78,6 +78,7 @@ public class VerticalScrollBarWidget extends DragBarWidget {
 
         float thumbTop = getThumbPosition();
         float thumbHeight = getThumbSize();
+        matrix.translate(0, 0, 1);
         RenderUtil.fill(matrix, x, thumbTop, x + w, thumbTop + thumbHeight, getThumbColor(), buffer);
 
         poseStack.popPose();

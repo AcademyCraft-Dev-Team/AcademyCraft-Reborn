@@ -38,14 +38,14 @@ public class FriendlyByteBufDeserializers {
     public static final FriendlyByteBufDeserializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(ArrayList.class, buffer -> {
         boolean nonEmpty = buffer.readBoolean();
         if (nonEmpty) {
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(buffer.readUtf());
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException("The data transmission may be corrupted." + e);
+            int elementTypeId = buffer.readVarInt();
+            FriendlyByteBufDeserializer<?> elementDeserializer = getRequiredDeserializer(elementTypeId);
+            int size = buffer.readVarInt();
+            ArrayList list = new ArrayList(size);
+            for (int i = 0; i < size; i++) {
+                list.add(elementDeserializer.deserialize(buffer));
             }
-            FriendlyByteBufDeserializer<ArrayList> deserializer = getCollectionFriendlyByteBufDeserializer(clazz, ArrayList::new);
-            return deserializer.deserialize(buffer);
+            return list;
         } else {
             return new ArrayList<>();
         }
@@ -55,17 +55,12 @@ public class FriendlyByteBufDeserializers {
         boolean isEmpty = buffer.readBoolean();
         HashMap<Object, Object> map = new HashMap<>(size);
         if (!isEmpty) {
-            Class<?> keyClass;
-            Class<?> valueClass;
-            try {
-                keyClass = Class.forName(buffer.readUtf());
-                valueClass = Class.forName(buffer.readUtf());
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException("The data transmission may be corrupted." + e);
-            }
+            int keyTypeId = buffer.readVarInt();
+            int valueTypeId = buffer.readVarInt();
+            FriendlyByteBufDeserializer<?> keyDeserializer = getRequiredDeserializer(keyTypeId);
+            FriendlyByteBufDeserializer<?> valueDeserializer = getRequiredDeserializer(valueTypeId);
+
             for (int i = 0; i < size; i++) {
-                FriendlyByteBufDeserializer keyDeserializer = getRequiredDeserializer(keyClass);
-                FriendlyByteBufDeserializer valueDeserializer = getRequiredDeserializer(valueClass);
                 Object key = keyDeserializer.deserialize(buffer);
                 Object value = valueDeserializer.deserialize(buffer);
                 map.put(key, value);
@@ -76,14 +71,14 @@ public class FriendlyByteBufDeserializers {
     public static final FriendlyByteBufDeserializer<HashSet> HASH_SET_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(HashSet.class, buffer -> {
         boolean nonEmpty = buffer.readBoolean();
         if (nonEmpty) {
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(buffer.readUtf());
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException("The data transmission may be corrupted for HashSet element type.", e);
+            int elementTypeId = buffer.readVarInt();
+            FriendlyByteBufDeserializer<?> elementDeserializer = getRequiredDeserializer(elementTypeId);
+            int size = buffer.readVarInt();
+            HashSet set = new HashSet(size);
+            for (int i = 0; i < size; i++) {
+                set.add(elementDeserializer.deserialize(buffer));
             }
-            FriendlyByteBufDeserializer<HashSet> deserializer = getCollectionFriendlyByteBufDeserializer(clazz, HashSet::new);
-            return deserializer.deserialize(buffer);
+            return set;
         } else {
             return new HashSet<>();
         }
@@ -96,20 +91,15 @@ public class FriendlyByteBufDeserializers {
         }
     });
     public static final FriendlyByteBufDeserializer<ImmutablePair> PAIR_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(ImmutablePair.class, buffer -> {
-        try {
-            Class<?> leftClass = Class.forName(buffer.readUtf());
-            Class<?> rightClass = Class.forName(buffer.readUtf());
+        int leftTypeId = buffer.readVarInt();
+        int rightTypeId = buffer.readVarInt();
+        FriendlyByteBufDeserializer<?> leftDeserializer = getRequiredDeserializer(leftTypeId);
+        FriendlyByteBufDeserializer<?> rightDeserializer = getRequiredDeserializer(rightTypeId);
 
-            FriendlyByteBufDeserializer<?> leftDeserializer = getRequiredDeserializer(leftClass);
-            FriendlyByteBufDeserializer<?> rightDeserializer = getRequiredDeserializer(rightClass);
+        Object left = leftDeserializer.deserialize(buffer);
+        Object right = rightDeserializer.deserialize(buffer);
 
-            Object left = leftDeserializer.deserialize(buffer);
-            Object right = rightDeserializer.deserialize(buffer);
-
-            return new ImmutablePair<>(left, right);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to deserialize Pair due to missing class", e);
-        }
+        return new ImmutablePair<>(left, right);
     });
 
     public static <T, C extends Collection<T>> FriendlyByteBufDeserializer<C> getCollectionFriendlyByteBufDeserializer(Class<T> elementType, Supplier<C> collectionFactory) {

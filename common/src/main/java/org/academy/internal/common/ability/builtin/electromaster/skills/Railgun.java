@@ -19,7 +19,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.config.IConfigAction;
@@ -86,7 +86,7 @@ public class Railgun extends Skill {
 
 
         public static void handleKey() {
-            NetworkSystemClient.sendPacket(new C2SPacket(new ShootPacket()));
+            NetworkManagerClient.sendPacket(new C2SPacket(new ShootPacket()));
         }
 
         public static class RailgunConfig {

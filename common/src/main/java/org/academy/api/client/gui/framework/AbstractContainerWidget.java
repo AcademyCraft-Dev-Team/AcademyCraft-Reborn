@@ -3,18 +3,47 @@ package org.academy.api.client.gui.framework;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
 public abstract class AbstractContainerWidget extends AbstractWidget implements WidgetContainer {
     protected final Map<String, Widget> children = new LinkedHashMap<>();
     protected Widget focusedChild = null;
+    private Widget hoveredWidget = null;
 
     public AbstractContainerWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
+    }
+
+    @Override
+    public boolean canFocus() {
+        return true;
+    }
+
+    public void setFocusedChild(Widget child) {
+        ContainerSetFocusedChildEvent containerSetFocusedChildEvent = new ContainerSetFocusedChildEvent(child);
+        AcademyCraft.EVENT_BUS.post(containerSetFocusedChildEvent);
+        if (containerSetFocusedChildEvent.isCanceled()) return;
+        if (child == this) return;
+        child = containerSetFocusedChildEvent.child;
+
+        if (this.focusedChild == child) {
+            return;
+        }
+
+        if (this.focusedChild != null) {
+            this.focusedChild.setFocused(false);
+        }
+
+        this.focusedChild = child;
+
+        if (this.focusedChild != null) {
+            this.focusedChild.setFocused(true);
+            if (getParent() instanceof AbstractContainerWidget parentContainer) {
+                parentContainer.setFocusedChild(this);
+            }
+        }
     }
 
     @Override
@@ -34,6 +63,9 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             if (focusedChild == widget) {
                 focusedChild = null;
             }
+            if (hoveredWidget == widget) {
+                hoveredWidget = null;
+            }
             children.remove(name);
         }
     }
@@ -41,6 +73,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     @Override
     public void clearChildren() {
         children.clear();
+        focusedChild = null;
+        hoveredWidget = null;
     }
 
     @Override
@@ -48,49 +82,27 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         return Collections.unmodifiableMap(children);
     }
 
-    @SuppressWarnings("unchecked")
-    @NotNull
-    public <T extends Widget> T getChildUnSafe(String name) {
-        if (!children.containsKey(name)) {
-            throw new NoSuchElementException("No such child: " + name);
-        }
-        return (T) children.get(name);
-    }
-
-    public void setFocusedChild(Widget child) {
-        ContainerSetFocusedChildEvent containerSetFocusedChildEvent = new ContainerSetFocusedChildEvent(child);
-        AcademyCraft.EVENT_BUS.post(containerSetFocusedChildEvent);
-        if (containerSetFocusedChildEvent.isCanceled()) return;
-        if (child == this) return;
-        child = containerSetFocusedChildEvent.child;
-
-        if (focusedChild != null){
-            focusedChild.setFocused(false);
-        }
-        focusedChild = child;
-        if (focusedChild != null) {
-            focusedChild.setFocused(true);
-        }
-    }
-
     public Widget getWidgetAt(double mouseX, double mouseY) {
-        List<Widget> widgetList = getAllWidgets();
+        return findTopWidgetAt(mouseX, mouseY, null);
+    }
 
-        widgetList.sort(Comparator.comparing(Widget::getAbsoluteZ).reversed());
+    private Widget findTopWidgetAt(double mouseX, double mouseY, Widget bestCandidate) {
+        for (Widget child : this.children.values()) {
+            if (!child.isVisible() || !child.isEnabled()) {
+                continue;
+            }
 
-        for (Widget widget : widgetList) {
-         //   AcademyCraft.LOGGER.info(widget + " Z : " + widget.getAbsoluteZ() + " Enable : " + widget.isAbsoluteEnabled() + " Overed : " + widget.isMouseOver(mouseX, mouseY) + "Abs Overed " + widget.isAbsoluteMouseOver(mouseX, mouseY));
-        }
-
-        for (Widget widget : widgetList) {
-            boolean enabled = widget.isAbsoluteEnabled();
-            boolean mouseOvered = widget.isAbsoluteMouseOver(mouseX, mouseY);
-            if (enabled && mouseOvered) {
-            //    AcademyCraft.LOGGER.info("Widget " + widget + " is focused");
-                return widget;
+            if (child.isAbsoluteMouseOver(mouseX, mouseY)) {
+                if (child instanceof AbstractContainerWidget container) {
+                    bestCandidate = container.findTopWidgetAt(mouseX, mouseY, bestCandidate);
+                } else {
+                    if (bestCandidate == null || child.getAbsoluteZ() > bestCandidate.getAbsoluteZ()) {
+                        bestCandidate = child;
+                    }
+                }
             }
         }
-        return null;
+        return bestCandidate;
     }
 
     public List<Widget> getAllWidgets() {
@@ -113,52 +125,50 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         if (!isVisible() || !isEnabled()) return;
-        List<Widget> widgetList = getAllWidgets();
-        for (Widget child : widgetList) {
-            child.setHovered(false);
-        }
 
         setHovered(isAbsoluteMouseOver(mouseX, mouseY));
+        Widget newHoveredWidget = isHovered() ? getWidgetAt(mouseX, mouseY) : null;
 
-        Widget widget = getWidgetAt(mouseX, mouseY);
-        if (widget != null) {
-            widget.setHovered(true);
+        if (this.hoveredWidget != newHoveredWidget) {
+            if (this.hoveredWidget != null) {
+                this.hoveredWidget.setHovered(false);
+            }
+            this.hoveredWidget = newHoveredWidget;
+            if (this.hoveredWidget != null) {
+                this.hoveredWidget.setHovered(true);
+            }
         }
 
-        for (Widget child : widgetList) {
+        for (Widget child : getChildren().values()) {
             child.mouseMoved(mouseX, mouseY);
         }
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!isVisible() || !isEnabled()) return false;
-        List<Widget> widgetList = getAllWidgets();
+    public boolean mousePressed(double mouseX, double mouseY, int button) {
+        if (!isVisible() || !isEnabled()) {
+            return false;
+        }
 
-        if (button != GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-            for (Widget child : widgetList) {
-                child.setHovered(false);
-                child.setFocused(false);
+        List<Widget> childrenList = new ArrayList<>(children.values());
+        Collections.reverse(childrenList);
+
+        for (Widget child : childrenList) {
+            if (child.mousePressed(mouseX, mouseY, button)) {
+                if (button == 0) {
+                    setFocusedChild(child.canFocus() ? child : null);
+                }
+                return true;
             }
         }
 
-        if (button == 0) {
-            Widget target = getWidgetAt(mouseX, mouseY);
-            if (target != null) {
-                target.setHovered(true);
-                if (target.canFocus()) {
-                    setFocusedChild(target);
-                } else {
-                    setFocusedChild(null);
-                }
-            } else {
+        if (this.isAbsoluteMouseOver(mouseX, mouseY)) {
+            if (button == 0) {
                 setFocusedChild(null);
             }
+            return true;
         }
 
-        for (Widget child : widgetList) {
-            child.mouseClicked(mouseX, mouseY, button);
-        }
         return false;
     }
 
@@ -174,34 +184,60 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (!isVisible() || !isEnabled()) return false;
-
-        for (Widget widget : getChildren().values()) {
-            widget.charTyped(codePoint, modifiers);
+        if (!isVisible() || !isEnabled()) {
+            return false;
+        }
+        if (focusedChild != null && focusedChild.isEnabled()) {
+            return focusedChild.charTyped(codePoint, modifiers);
         }
         return false;
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        for (Widget widget : getChildren().values()) {
-            widget.mouseReleased(mouseX, mouseY, button);
+        if (!isVisible() || !isEnabled()) {
+            return false;
+        }
+        List<Widget> childrenList = new ArrayList<>(children.values());
+        Collections.reverse(childrenList);
+        for (Widget child : childrenList) {
+            if (child.mouseReleased(mouseX, mouseY, button)) {
+                return true;
+            }
         }
         return false;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        for (Widget widget : getChildren().values()) {
-            widget.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        if (!isVisible() || !isEnabled()) {
+            return false;
+        }
+        List<Widget> childrenList = new ArrayList<>(children.values());
+        Collections.reverse(childrenList);
+        for (Widget child : childrenList) {
+            if (child.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
+                return true;
+            }
         }
         return false;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        for (Widget widget : getChildren().values()) {
-            widget.mouseScrolled(mouseX, mouseY, delta);
+        if (!isVisible() || !isEnabled()) {
+            return false;
+        }
+        if (isAbsoluteMouseOver(mouseX, mouseY)) {
+            List<Widget> childrenList = new ArrayList<>(children.values());
+            Collections.reverse(childrenList);
+
+            for (Widget child : childrenList) {
+                if (child.mouseScrolled(mouseX, mouseY, delta)) {
+                    return true;
+                }
+            }
+            return false;
         }
         return false;
     }

@@ -5,7 +5,7 @@ import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.widget.ImageButtonWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
-import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.renderer.RenderTypes;
 import org.jetbrains.annotations.NotNull;
 
 public class WindGenWorldGUI {
@@ -20,9 +20,9 @@ public class WindGenWorldGUI {
 
     public void onInit() {
 
-            ImageWidget back = new ImageWidget(0, 0, WIDTH, HEIGHT, TextureResources.RenderTypes.RENDER_TYPE_SKILL_PANEL_INFO);
+            ImageWidget back = new ImageWidget(0, 0, WIDTH, HEIGHT, RenderTypes.RENDER_TYPE_SKILL_PANEL_INFO);
         rootContainer.addChild("back", back);
-            ImageButtonWidget buttonWidget = new ImageButtonWidget(320 - 25, 200 - 25, 50, 50, TextureResources.RenderTypes.RENDER_TYPE_CURSOR, new Runnable() {
+            ImageButtonWidget buttonWidget = new ImageButtonWidget(320 - 25, 200 - 25, 50, 50, RenderTypes.RENDER_TYPE_CURSOR, new Runnable() {
                 @Override
                 public void run() {
 
@@ -33,6 +33,6 @@ public class WindGenWorldGUI {
     }
 
     public void mouseClicked() {
-        rootContainer.mouseClicked(mouseX, mouseY, 1);
+        rootContainer.mousePressed(mouseX, mouseY, 1);
     }
 }
