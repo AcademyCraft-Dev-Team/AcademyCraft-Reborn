@@ -3,7 +3,7 @@ package org.academy.api.client.gui;
 import net.minecraft.core.BlockPos;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.ConnectNodePacket;
 import org.academy.api.common.wireless.DisconnectNodePacket;
@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
 
-import static org.academy.api.client.resource.TextureResources.RenderTypes.*;
+import static org.academy.api.client.renderer.RenderTypes.*;
 
 public final class WirelessPanelHelper {
     public static final float PANEL_WIDTH = 176f;
@@ -23,7 +23,11 @@ public final class WirelessPanelHelper {
     public static PanelWidget getWirelessPanel(float x, float y) {
         PanelWidget wirelessPanel = new PanelWidget(x, y, PANEL_WIDTH, PANEL_HEIGHT);
         {
-            ImageWidget back = new ImageWidget(0, 0, PANEL_WIDTH, PANEL_HEIGHT, RENDER_TYPE_ELEMENT_BACK_DARK);
+            BlendQuadWidget back = new BlendQuadWidget(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+            back.red = 0;
+            back.green = 0;
+            back.blue = 0;
+            back.alpha = 0.5f;
             wirelessPanel.addChild("back", back);
 
             ImageWidget icon = new ImageWidget(10, 10, 16, 16, RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON);
@@ -84,7 +88,7 @@ public final class WirelessPanelHelper {
                 nodeViewPanel.addChild("node_name", nodeNameLabel);
                 if (!isConnected) {
                     Consumer<String> connect = password -> {
-                        NetworkSystemClient.sendPacket(new C2SPacket(new ConnectNodePacket(getPosition(), nodeName, password)));
+                        NetworkManagerClient.sendPacket(new C2SPacket(new ConnectNodePacket(getPosition(), nodeName, password)));
                         requestCurrentNodeStatus();
                     };
                     TextBoxWidget inputBox = new TextBoxWidget(12, 70, 3, 46, 10);
@@ -101,7 +105,7 @@ public final class WirelessPanelHelper {
                     if (!isNull) {
                         ImageButtonWidget buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_CONNECTED, () ->
                         {
-                            NetworkSystemClient.sendPacket(new C2SPacket(new DisconnectNodePacket(getPosition())));
+                            NetworkManagerClient.sendPacket(new C2SPacket(new DisconnectNodePacket(getPosition())));
                             requestCurrentNodeStatus();
                             requestAvailableNodes(getNodeList());
                         }

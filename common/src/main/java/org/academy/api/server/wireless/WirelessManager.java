@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.network.SubscribePacket;
@@ -96,6 +97,9 @@ public class WirelessManager {
                                    ServerLevel level,
                                    BlockPos nodePos,
                                    String newName) {
+        if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
+            return;
+        }
         WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
 
         WorldData.WirelessNetworkData.NodeConfig oldCfg = data.getNodeConfig(nodePos);
@@ -126,6 +130,9 @@ public class WirelessManager {
                                    ServerLevel level,
                                    BlockPos nodePos,
                                    String newPass) {
+        if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
+            return;
+        }
         WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
 
         WorldData.WirelessNetworkData.NodeConfig cfg = data.getNodeConfig(nodePos);

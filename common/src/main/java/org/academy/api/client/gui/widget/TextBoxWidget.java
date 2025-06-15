@@ -45,6 +45,11 @@ public class TextBoxWidget extends AbstractWidget {
     }
 
     @Override
+    public boolean mousePressed(double mouseX, double mouseY, int button) {
+        return button == 0 && isAbsoluteMouseOver(mouseX, mouseY);
+    }
+
+    @Override
     public boolean canFocus() {
         return true;
     }

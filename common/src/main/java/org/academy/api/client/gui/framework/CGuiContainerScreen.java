@@ -7,14 +7,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import org.academy.api.client.gui.animation.AnimationTopToBottom;
+import org.academy.api.client.gui.widget.BlendQuadWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
-import org.academy.api.client.resource.TextureResources;
+import org.academy.api.client.renderer.RenderTypes;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
-    public ImageWidget back;
+    public BlendQuadWidget back;
     public ImageWidget inventory;
     public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
     public boolean handleContainer = true;
@@ -27,10 +28,13 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     @Override
     protected void init() {
         super.init();
-        back = new ImageWidget(leftPos, topPos - 22, imageWidth, 187,
-                TextureResources.RenderTypes.RENDER_TYPE_ELEMENT_BACK_DARK);
+        back = new BlendQuadWidget(leftPos, topPos - 22, imageWidth, 187);
+        back.red = 0;
+        back.green = 0;
+        back.blue = 0;
+        back.alpha = 0.5f;
         inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, 187,
-                TextureResources.RenderTypes.RENDER_TYPE_INVENTORY);
+                RenderTypes.RENDER_TYPE_INVENTORY);
         AnimationTopToBottom invAnim = new AnimationTopToBottom(inventory);
         invAnim.currentHeight = inventory.height / 1.25f;
         inventory.animation = invAnim;
@@ -85,7 +89,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        boolean rootResult = rootContainer.mouseClicked(mouseX, mouseY, button);
+        boolean rootResult = rootContainer.mousePressed(mouseX, mouseY, button);
         boolean superResult = shouldHandleContainer() && super.mouseClicked(mouseX, mouseY, button);
         return rootResult || superResult;
     }
@@ -113,20 +117,22 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (rootContainer.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && this.shouldCloseOnEsc()) {
             this.onClose();
             return true;
         }
-        boolean rootResult = rootContainer.keyPressed(keyCode, scanCode, modifiers);
-        boolean superResult = shouldHandleContainer() && super.keyPressed(keyCode, scanCode, modifiers);
-        return superResult || rootResult;
+        return shouldHandleContainer() && super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        boolean rootResult = rootContainer.charTyped(codePoint, modifiers);
-        boolean superResult = shouldHandleContainer() && super.charTyped(codePoint, modifiers);
-        return superResult || rootResult;
+        if (rootContainer.charTyped(codePoint, modifiers)) {
+            return true;
+        }
+        return shouldHandleContainer() && super.charTyped(codePoint, modifiers);
     }
 
     public boolean shouldHandleContainer() {

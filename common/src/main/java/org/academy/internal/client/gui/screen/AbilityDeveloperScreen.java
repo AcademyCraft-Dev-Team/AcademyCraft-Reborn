@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.gui.WirelessPanelHelper;
+import org.academy.api.client.gui.WirelessPanelController;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.framework.Widget;
@@ -34,9 +34,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import static org.academy.api.client.resource.TextureResources.RenderTypes.*;
+import static org.academy.api.client.renderer.RenderTypes.*;
 
-public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelHelper.WirelessPanel {
+public class AbilityDeveloperScreen extends CGuiScreen {
     public final BlockPos mainPos;
     public AbilityDeveloperBlockEntity abilityDeveloperBlockEntity;
     public static final float PANEL_MAIN_WIDTH = 400;
@@ -52,10 +52,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             RenderUtil.getPositionTexRenderType("ability_icon_glow", new ResourceLocation(AcademyCraft.MOD_ID,
                     "textures/ability/" + abilityCategory.name + "/icon_glow.png"
             ), false);
-    private String currentlyConnectedNodeName = "None";
-    private PanelWidget screenWirelessPanel;
-    private PanelWidget wirelessPanel;
-    private SmoothScrollPanelWidget nodeListPanel;
+    private WirelessPanelController wirelessController;
     private PanelWidget leftPanel;
     private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
 
@@ -206,32 +203,13 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             }
         }
 
-        screenWirelessPanel = new PanelWidget(0, 0, width, height);
-        screenWirelessPanel.setZ(100);
-        screenWirelessPanel.setVisible(false);
-        screenWirelessPanel.setEnabled(false);
-        rootContainer.addChild("panel_screen_wireless", screenWirelessPanel);
-        {
-            BackgroundWidget backgroundWidget = new BackgroundWidget(this);
-            backgroundWidget.runnable = () -> {
-                screenWirelessPanel.setVisible(false);
-                screenWirelessPanel.setEnabled(false);
-            };
-            screenWirelessPanel.addChild("screen_back", backgroundWidget);
+        this.wirelessController = new WirelessPanelController(this, this.mainPos, this::onNodeNameChanged);
+        rootContainer.addChild("panel_screen_wireless", this.wirelessController.getScreenPanel());
 
-            PanelWidget localWirelessPanel = WirelessPanelHelper.getWirelessPanel((width - WirelessPanelHelper.PANEL_WIDTH) / 2, (height - WirelessPanelHelper.PANEL_HEIGHT) / 2);
-            this.wirelessPanel = localWirelessPanel;
-            screenWirelessPanel.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, localWirelessPanel);
-            {
-                nodeListPanel = localWirelessPanel.getChildUnSafe("node_list");
-            }
-        }
         rootContainer.addChild("panel_skill_info", skillInfoPanel);
         skillInfoPanel.setZ(150);
         skillInfoPanel.setEnabled(false);
         skillInfoPanel.setVisible(false);
-        requestCurrentNodeStatus();
-        requestAvailableNodes(getNodeList());
     }
 
     public static AbilitySystemClient.SkillInfo registerSkillInfo(AbilityCategory abilityCategory, Skill skill, List<AbilitySystemClient.SkillInfo> dependencies, ResourceLocation icon, float x, float y) {
@@ -252,7 +230,11 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     private @NotNull PanelWidget getLeftPanel() {
         PanelWidget localLeftPanel = new PanelWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT);
         {
-            ImageWidget leftPanelBack = new ImageWidget(0, 70, PANEL_LEFT_WIDTH, 115, RENDER_TYPE_ELEMENT_BACK_DARK);
+            BlendQuadWidget leftPanelBack = new BlendQuadWidget(0, 70, PANEL_LEFT_WIDTH, 115);
+            leftPanelBack.red = 0;
+            leftPanelBack.green = 0;
+            leftPanelBack.blue = 0;
+            leftPanelBack.alpha = 0.5f;
             localLeftPanel.addChild("left_panel_back", leftPanelBack);
             ImageWidget leftPanelBackBottom = new ImageWidget(4.25f, 0, 100, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE);
             localLeftPanel.addChild("left_panel_back_bottom", leftPanelBackBottom);
@@ -292,20 +274,14 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             }
             LabelWidget wirelessLabel = new LabelWidget("Current Node:", 8, 110);
             localLeftPanel.addChild("label_wireless", wirelessLabel);
-            PanelButtonWidget wirelessButtonPanel = new PanelButtonWidget(8, 120, 90, 16, () -> {
-                AbstractContainerWidget wirelessRoot = screenWirelessPanel;
-                wirelessRoot.setVisible(true);
-                wirelessRoot.setEnabled(true);
-                requestCurrentNodeStatus();
-                requestAvailableNodes(getNodeList());
-            });
+            PanelButtonWidget wirelessButtonPanel = new PanelButtonWidget(8, 120, 90, 16, () -> this.wirelessController.show());
             localLeftPanel.addChild("button_wireless", wirelessButtonPanel);
             {
                 ImageWidget back = new ImageWidget(0, 0, 90, 14, RENDER_TYPE_ELEMENT_BACK_LIGHT);
                 wirelessButtonPanel.addChild("back", back);
                 ImageWidget icon = new ImageWidget(6, 1, 12, 12, RENDER_TYPE_ICON_NODE);
                 wirelessButtonPanel.addChild("icon", icon);
-                LabelWidget nameLabel = new LabelWidget(this.currentlyConnectedNodeName, 24, 3);
+                LabelWidget nameLabel = new LabelWidget("None", 24, 3);
                 wirelessButtonPanel.addChild("label_name", nameLabel);
             }
             LabelWidget powerLabel = new LabelWidget("Current Power:", 8, 142.5f);
@@ -316,11 +292,11 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         return localLeftPanel;
     }
 
-    @Override
-    public void updateConnectedNodeDisplay(boolean isNull, String nodeName) {
-        WirelessPanelHelper.WirelessPanel.super.updateConnectedNodeDisplay(isNull, nodeName);
-        if (leftPanel != null && leftPanel.<PanelButtonWidget>getChildUnSafe("button_wireless").getChildren().get("label_name") instanceof LabelWidget labelWidget) {
-            labelWidget.value = getConnectedNodeName();
+    private void onNodeNameChanged(String nodeName) {
+        if (leftPanel != null) {
+            PanelButtonWidget button = leftPanel.getChildUnSafe("button_wireless");
+            LabelWidget label = button.getChildUnSafe("label_name");
+            label.value = nodeName;
         }
     }
 
@@ -385,31 +361,6 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         skillInfoPanel.energyLabel.setWidth(Minecraft.getInstance().font.width(skillInfoPanel.energyLabel.value));
         skillInfoPanel.energyLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.energyLabel.getWidth() * skillInfoPanel.energyLabel.scale / 2);
         skillInfoPanel.energyLabel.setY(skillInfoPanel.learnButton.getY() + 18);
-    }
-
-    @Override
-    public SmoothScrollPanelWidget getNodeList() {
-        return nodeListPanel;
-    }
-
-    @Override
-    public PanelWidget getWirelessPanel() {
-        return wirelessPanel;
-    }
-
-    @Override
-    public String getConnectedNodeName() {
-        return currentlyConnectedNodeName;
-    }
-
-    @Override
-    public void setConnectedNodeName(String connectedNodeName) {
-        this.currentlyConnectedNodeName = connectedNodeName;
-    }
-
-    @Override
-    public BlockPos getPosition() {
-        return mainPos;
     }
 
     final class SkillInfoPanel extends PanelWidget {

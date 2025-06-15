@@ -24,7 +24,7 @@ public abstract class DragBarWidget extends AbstractWidget {
     protected abstract void updateTargetFromMouse(float mouse);
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mousePressed(double mouseX, double mouseY, int button) {
         if (isHovered()) {
             startDragging = true;
             dragOffset = getThumbSize() / 2f;

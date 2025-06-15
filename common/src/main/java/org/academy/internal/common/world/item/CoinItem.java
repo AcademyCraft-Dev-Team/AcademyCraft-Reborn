@@ -9,7 +9,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.network.NetworkSystemClient;
+import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.IPacket;
@@ -32,7 +32,7 @@ public class CoinItem extends Item {
                     :
                     player.getDeltaMovement().multiply(1.5,0,1.5);
 
-            NetworkSystemClient.sendPacket(new C2SPacket(new ThrowCoinPacket(
+            NetworkManagerClient.sendPacket(new C2SPacket(new ThrowCoinPacket(
                     initialVelocity.add(0, 0.5, 0),
                     player.getYRot(), player.getXRot())));
 

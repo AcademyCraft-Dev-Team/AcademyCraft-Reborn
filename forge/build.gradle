@@ -61,14 +61,14 @@ jar {
     ])
 }
 
-javadocJar {
-    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+sourcesJar {
+    destinationDirectory = project.layout.buildDirectory.dir("output")
 }
 
-sourcesJar {
-    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+javadocJar {
+    destinationDirectory = project.layout.buildDirectory.dir("output")
 }
 
 reobfJar {
-    destinationDirectory.set(project.layout.buildDirectory.dir("output"))
+    destinationDirectory = project.layout.buildDirectory.dir("output")
 }

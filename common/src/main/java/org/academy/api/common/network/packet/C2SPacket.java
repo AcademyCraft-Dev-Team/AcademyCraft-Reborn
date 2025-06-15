@@ -61,7 +61,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
                     IPacket<ServerGamePacketListenerImpl> instance = factory.apply(handler);
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
-                    AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.dispatchServerPacket(instance);
+                    AcademyCraftServer.NETWORK_SYSTEM_SERVER_INSTANCE.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",

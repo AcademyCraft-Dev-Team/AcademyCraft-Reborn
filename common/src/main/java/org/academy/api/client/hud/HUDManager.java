@@ -15,6 +15,7 @@ import org.academy.api.client.gui.widget.ColorFillWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RenderTypes;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
@@ -408,7 +409,7 @@ public final class HUDManager {
                     }
                 }
             }
-            return TextureResources.RenderTypes.RENDER_TYPE_ICON_BOX;
+            return RenderTypes.RENDER_TYPE_ICON_BOX;
         }
 
         public void setAlpha(float globalAlpha) {

@@ -1,13 +1,16 @@
-# About
+# AcademyCraft
 
-## How to download ?
+A Minecraft mod about Academy City, for Fabric & Forge 1.20.1.
 
-- GitHub Actions or QQ Group: 217327418
-- GitHub Actions version is outdated.
+## Downloads
 
-## What version ?
+*   **Latest Builds**: GitHub Actions (Recommended)
+*   **Community (QQ Group)**: `217327418`
 
-- 1.20.1 Fabric/Forge
+## Runtime Requirements
 
-## Why is it QQ Group?
-- Network factors
+For runtime, this project requires a JDK that supports the `-XX:+AllowEnhancedClassRedefinition` flag, e.g., JetBrains Runtime (JBR).
+
+## License
+
+This project is licensed under the GPL-3.0.
