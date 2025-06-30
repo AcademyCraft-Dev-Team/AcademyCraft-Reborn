@@ -43,6 +43,7 @@ public final class WirelessPanelHelper {
             wirelessPanel.addChild("node_list", nodeListPanel);
 
             VerticalScrollBarWidget scrollBar = new VerticalScrollBarWidget(nodeListPanel, 160, 64, 5, 114);
+            scrollBar.setZ(scrollBar.getZ() + 1);
             wirelessPanel.addChild("scroll_bar", scrollBar);
         }
         return wirelessPanel;
