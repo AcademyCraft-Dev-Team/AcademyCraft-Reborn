@@ -49,10 +49,11 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_REPEAT;
 
 public final class DataTerminalHUD implements HUDRenderer {
-    private static final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
+    private static final AbstractContainerWidget rootContainer = new LayeredPanelWidget(0, 0, 0, 0);
     private static boolean active = false;
-    private static double xpos;
-    private static double ypos;
+    private static double xpos, ypos;
+    private static double lastRawMouseX, lastRawMouseY;
+    private static boolean isFirstMove = true;
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = CONFIG_KEY_DATA_TERMINAL + "_toggle";
     public static final DataTerminalHUD INSTANCE = new DataTerminalHUD();
@@ -133,8 +134,10 @@ public final class DataTerminalHUD implements HUDRenderer {
     @Override
     public void render(GuiGraphics guiGraphics, float partialTick) {
         if (active) {
-            for (PostPass pass : postChain.passes) {
-                pass.getEffect().getUniform("Radius").set(config.blurRadius);
+            if (config.enableBlur) {
+                for (PostPass pass : postChain.passes) {
+                    pass.getEffect().getUniform("Radius").set(config.blurRadius);
+                }
             }
             guiGraphics.pose().pushPose();
             RenderSystem.backupProjectionMatrix();
@@ -162,28 +165,30 @@ public final class DataTerminalHUD implements HUDRenderer {
             pose.rotateAround(Axis.YP.rotationDegrees(dx * 0.035f - 5), guiW / 2 - WIDTH * 1.25f + WIDTH / 2, 0, 0);
             pose.rotateAround(Axis.XP.rotationDegrees(-dy * 0.035f + 2), 0, 0, 0);
             pose.translate(-guiW / 2, -guiH / 2, 0);
-            guiGraphics.pose().scale(1, 1, 0.035f);
+            guiGraphics.pose().scale(1, 1, 0.01f);
             RenderSystem.applyModelViewMatrix();
             guiGraphics.pose().pushPose();
             {
-                guiGraphics.bufferSource().endBatch(RenderType.gui());
-                RenderTarget maskInput = postChain.getTempTarget("maskInput");
-                maskInput.clear(false);
-                maskInput.bindWrite(false);
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(guiW - WIDTH * 1.25f, (guiH - HEIGHT) / 2, 0);
-                RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF, guiGraphics.bufferSource());
-                guiGraphics.pose().popPose();
-                if (rootContainer.getChildren().containsKey("area_app")) {
+                if (config.enableBlur) {
+                    guiGraphics.bufferSource().endBatch(RenderType.gui());
+                    RenderTarget maskInput = postChain.getTempTarget("maskInput");
+                    maskInput.clear(false);
+                    maskInput.bindWrite(false);
                     guiGraphics.pose().pushPose();
-                    Widget widget = rootContainer.getChildren().get("area_app");
-                    guiGraphics.pose().translate(widget.getAbsoluteX(), widget.getAbsoluteY(), 0);
-                    RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, widget.getWidth(), widget.getHeight(), 0XFFFFFFFF, guiGraphics.bufferSource());
+                    guiGraphics.pose().translate(guiW - WIDTH * 1.25f, (guiH - HEIGHT) / 2, 0);
+                    RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF, guiGraphics.bufferSource());
                     guiGraphics.pose().popPose();
+                    if (rootContainer.getChildren().containsKey("area_app")) {
+                        guiGraphics.pose().pushPose();
+                        Widget widget = rootContainer.getChildren().get("area_app");
+                        guiGraphics.pose().translate(widget.getAbsoluteX(), widget.getAbsoluteY(), 0);
+                        RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, widget.getWidth(), widget.getHeight(), 0XFFFFFFFF, guiGraphics.bufferSource());
+                        guiGraphics.pose().popPose();
+                    }
+                    guiGraphics.bufferSource().endBatch(RenderType.gui());
+                    postChain.process(partialTick);
+                    Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
                 }
-                guiGraphics.bufferSource().endBatch(RenderType.gui());
-                postChain.process(partialTick);
-                Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
             }
             rootContainer.render(guiGraphics, xpos, ypos, partialTick);
             guiGraphics.pose().popPose();
@@ -200,14 +205,14 @@ public final class DataTerminalHUD implements HUDRenderer {
         rootContainer.setWidth(width);
         rootContainer.setHeight(height);
         rootContainer.clearChildren();
-        PanelWidget main = new PanelWidget(width - WIDTH * 1.25f, (height - HEIGHT) / 2, WIDTH, HEIGHT);
+        LayeredPanelWidget main = new LayeredPanelWidget(width - WIDTH * 1.25f, (height - HEIGHT) / 2, WIDTH, HEIGHT);
         rootContainer.addChild("main", main);
         {
             BlendQuadWidget back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
             back.drawLine = false;
             back.alpha = 0.25f;
             main.addChild("back", back);
-            PanelWidget root = new PanelWidget(0, 0, WIDTH, HEIGHT);
+            LayeredPanelWidget root = new LayeredPanelWidget(0, 0, WIDTH, HEIGHT);
             DynamicGeometricBackgroundWidget dynamicGeometricBack = new DynamicGeometricBackgroundWidget(
                     0, 0, WIDTH, HEIGHT,
                     48, 1, 64,
@@ -215,7 +220,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             main.addChild("back_dynamic", dynamicGeometricBack);
             main.addChild("root", root);
             {
-                PanelWidget infoBar = new PanelWidget(0, 0, WIDTH, INFO_BAR_HEIGHT);
+                LayeredPanelWidget infoBar = new LayeredPanelWidget(0, 0, WIDTH, INFO_BAR_HEIGHT);
                 root.addChild("info_bar", infoBar);
                 {
                     ImageWidget icon = new ImageWidget(ICON_X_Y_PADDING_INFO_BAR, ICON_X_Y_PADDING_INFO_BAR, ICON_SIZE_INFO_BAR, ICON_SIZE_INFO_BAR,
@@ -249,7 +254,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                         float currentAppX = APP_AREA_PADDING + col * (APP_WIDGET_WIDTH + APP_HORIZONTAL_SPACING);
                         float currentAppY = APP_AREA_PADDING + row * (APP_WIDGET_HEIGHT + APP_VERTICAL_SPACING);
 
-                        PanelWidget appButton = getAppWidget(app);
+                        LayeredPanelWidget appButton = getAppWidget(app);
                         appButton.setX(currentAppX);
                         appButton.setY(currentAppY);
                         appArea.addChild("app_" + app.getName(), appButton);
@@ -263,7 +268,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                 root.addChild("bar_area_app_list", appAreaBar);
             }
         }
-        PanelWidget appArea = new PanelWidget(0, 0, 0, 0);
+        LayeredPanelWidget appArea = new LayeredPanelWidget(0, 0, 0, 0);
         rootContainer.addChild("area_app", appArea);
 
         CursorWidget cursorWidget = new CursorWidget(CURSOR_WIDGET_SIZE, CURSOR_WIDGET_SIZE);
@@ -284,6 +289,10 @@ public final class DataTerminalHUD implements HUDRenderer {
             if (AbilitySystemClient.isActiveHUD()) {
                 AbilitySystemClient.setActiveHUD(false);
             }
+            isFirstMove = true;
+            MouseHandler m = Minecraft.getInstance().mouseHandler;
+            xpos = m.xpos() * (double) window.getGuiScaledWidth() / (double) window.getScreenWidth();
+            ypos = m.ypos() * (double) window.getGuiScaledHeight() / (double) window.getScreenHeight();
             initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
         }
     }
@@ -311,8 +320,8 @@ public final class DataTerminalHUD implements HUDRenderer {
         ), DataTerminalHUD::toggle);
     }
 
-    private static PanelWidget getAppWidget(App app) {
-        PanelWidget appPanel = new PanelWidget(0, 0, APP_WIDGET_WIDTH, APP_WIDGET_HEIGHT);
+    private static LayeredPanelWidget getAppWidget(App app) {
+        LayeredPanelWidget appPanel = new LayeredPanelWidget(0, 0, APP_WIDGET_WIDTH, APP_WIDGET_HEIGHT);
 
         AppWidget appIconWidget = new AppWidget(
                 (APP_WIDGET_WIDTH - APP_ICON_SIZE) / 2,
@@ -354,18 +363,21 @@ public final class DataTerminalHUD implements HUDRenderer {
 
         if (active && Minecraft.getInstance().screen == null) {
             Window window = Minecraft.getInstance().getWindow();
+            if (isFirstMove) {
+                lastRawMouseX = event.xpos;
+                lastRawMouseY = event.ypos;
+                isFirstMove = false;
+            }
 
-            float screenWidthGui = window.getGuiScaledWidth();
-            float screenHeightGui = window.getGuiScaledHeight();
+            double deltaRawX = event.xpos - lastRawMouseX;
+            double deltaRawY = event.ypos - lastRawMouseY;
 
-            float guiWidthScale = (float) window.getGuiScaledWidth() / screenWidthGui;
-            float guiHeightScale = (float) window.getGuiScaledHeight() / screenHeightGui;
+            double guiScale = window.getGuiScale();
+            double deltaGuiX = deltaRawX * config.mouseSensitivity / guiScale;
+            double deltaGuiY = deltaRawY * config.mouseSensitivity / guiScale;
 
-            double rawMouseX = event.xpos * guiWidthScale;
-            double rawMouseY = event.ypos * guiHeightScale;
-
-            double mouseGuiX = rawMouseX;
-            double mouseGuiY = rawMouseY;
+            xpos += deltaGuiX;
+            ypos += deltaGuiY;
 
             Widget mainPanel = rootContainer.getChildren().get("main");
             if (mainPanel != null) {
@@ -382,25 +394,26 @@ public final class DataTerminalHUD implements HUDRenderer {
                     maxY = Math.max(maxY, appAreaPanel.getAbsoluteY() + appAreaPanel.getHeight());
                 }
 
-                mouseGuiX = MathUtil.clamp(rawMouseX, minX, maxX);
-                mouseGuiY = MathUtil.clamp(rawMouseY, minY, maxY);
+                xpos = MathUtil.clamp(xpos, minX, maxX);
+                ypos = MathUtil.clamp(ypos, minY, maxY);
             }
-
-            xpos = mouseGuiX;
-            ypos = mouseGuiY;
 
             rootContainer.mouseMoved(xpos, ypos);
 
             if (InputSystem.currentMouseAction == GLFW_PRESS || InputSystem.currentMouseAction == GLFW_REPEAT) {
-                double f = (xpos - mouseHandler.xpos * guiWidthScale);
-                double g = (ypos - mouseHandler.ypos * guiHeightScale);
-                rootContainer.mouseDragged(xpos, ypos, InputSystem.currentMouseButton, f, g);
+                rootContainer.mouseDragged(xpos, ypos, InputSystem.currentMouseButton, deltaGuiX, deltaGuiY);
             }
 
-            mouseHandler.xpos = xpos / guiWidthScale;
-            mouseHandler.ypos = ypos / guiHeightScale;
+            double newRawMouseX = xpos * guiScale;
+            double newRawMouseY = ypos * guiScale;
 
-            GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().getWindow(), mouseHandler.xpos, mouseHandler.ypos);
+            lastRawMouseX = newRawMouseX;
+            lastRawMouseY = newRawMouseY;
+
+            mouseHandler.xpos = newRawMouseX;
+            mouseHandler.ypos = newRawMouseY;
+
+            GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().getWindow(), newRawMouseX, newRawMouseY);
             event.setCanceled(true);
         }
     }
@@ -490,6 +503,10 @@ public final class DataTerminalHUD implements HUDRenderer {
     public static class Config extends KeyBindingConfig {
         @SerializedName("blurRadius")
         public float blurRadius = 10.0f;
+        @SerializedName("enableBlur")
+        public boolean enableBlur = true;
+        @SerializedName("mouseSensitivity")
+        public float mouseSensitivity = 1.0f;
 
         @SerializedName("infoBarHeight")
         public float infoBarHeight = 27f;
