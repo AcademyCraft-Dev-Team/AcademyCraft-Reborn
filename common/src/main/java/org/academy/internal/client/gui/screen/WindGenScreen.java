@@ -112,7 +112,7 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
             wireless.setSelected(false);
         }
 
-        PanelWidget infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 18, 110, 105);
+        PanelWidget infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 22, 110, 105);
         rootContainer.addChild("area_info", infoArea);
         {
             BlendQuadWidget back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());

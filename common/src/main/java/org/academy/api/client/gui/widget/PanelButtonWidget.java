@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.MouseButtonState;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.util.ClientUtil;
@@ -9,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class PanelButtonWidget extends AbstractContainerWidget {
+public class PanelButtonWidget extends PanelWidget {
     public Runnable onActive;
     public MouseButtonState state = MouseButtonState.PRESSED;
 
@@ -75,6 +74,6 @@ public class PanelButtonWidget extends AbstractContainerWidget {
 
     @Override
     public boolean canFocus() {
-        return this.enabled;
+        return isEnabled();
     }
 }

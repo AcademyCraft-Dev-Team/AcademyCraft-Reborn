@@ -16,20 +16,22 @@ import org.academy.api.client.util.ClientUtil;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public final class Settings implements DataTerminalHUD.App {
     public static final DataTerminalHUD.App INSTANCE = new Settings();
 
-    private static PanelWidget keybindingControlPanel = null;
-    private static PanelWidget activeKeybindingEntry = null;
+    private static LayeredPanelWidget keybindingControlPanel = null;
+    private static LayeredPanelWidget activeKeybindingEntry = null;
     private static String activeKeyName = null;
-    private static PanelButtonWidget keySelectionButton = null;
+    private static LayeredPanelWidget keySelectionButton = null;
     private static boolean isListeningForKey = false;
-    private static PanelButtonWidget keyboardBtn, mouseBtn;
-    private static PanelButtonWidget shiftModBtn, ctrlModBtn, altModBtn;
-    private static PanelWidget keySelectionPanel = null;
-    private static final Map<Integer, PanelButtonWidget> keyboardButtonMap = new HashMap<>();
-    private static final Map<Integer, PanelButtonWidget> mouseButtonMap = new HashMap<>();
+    private static LayeredPanelWidget keyboardBtn, mouseBtn;
+    private static LayeredPanelWidget shiftModBtn, ctrlModBtn, altModBtn;
+    private static LayeredPanelWidget keySelectionPanel = null;
+    private static final Map<Integer, LayeredPanelWidget> keyboardButtonMap = new HashMap<>();
+    private static final Map<Integer, LayeredPanelWidget> mouseButtonMap = new HashMap<>();
 
     private static final Runnable ON_CLICK = () -> {
         activeKeybindingEntry = null;
@@ -38,7 +40,181 @@ public final class Settings implements DataTerminalHUD.App {
         DataTerminalHUD.setAppArea(createSettingsPanel());
     };
 
-    private static void setKeyButtonSelected(PanelButtonWidget btn, boolean selected) {
+    private static LayeredPanelWidget createSettingsPanel() {
+        LayeredPanelWidget appArea = new LayeredPanelWidget(0, 0, 200, 225);
+
+        BlendQuadWidget back = new BlendQuadWidget(0, 0, appArea.getWidth(), appArea.getHeight());
+        back.drawLine = false;
+        back.alpha = 0.25f;
+        appArea.addChild("back", back);
+
+        SmoothScrollPanelWidget generalPanel = createGeneralPanel();
+        appArea.addChild("panel_general", generalPanel);
+
+        SmoothScrollPanelWidget keybindingsPanel = createKeybindingsPanel(appArea);
+        appArea.addChild("panel_keybindings", keybindingsPanel);
+
+        createTabBar(appArea, generalPanel, keybindingsPanel);
+
+        return appArea;
+    }
+
+    private static void createTabBar(AbstractContainerWidget parent, Widget generalPanel, Widget keybindingsPanel) {
+        LayeredPanelWidget tabBar = new LayeredPanelWidget(5, 5, 190, 20);
+        tabBar.setZ(1);
+        parent.addChild("tab_bar", tabBar);
+
+        LayeredPanelWidget generalButton = createTabButton("General", 0, 90);
+        LayeredPanelWidget keybindingsButton = createTabButton("Keybindings", 95, 95);
+
+        Runnable showGeneral = () -> {
+            generalPanel.setVisible(true);
+            generalPanel.setEnabled(true);
+            keybindingsPanel.setVisible(false);
+            keybindingsPanel.setEnabled(false);
+            generalButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.6f;
+            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.3f;
+        };
+
+        Runnable showKeybindings = () -> {
+            generalPanel.setVisible(false);
+            generalPanel.setEnabled(false);
+            keybindingsPanel.setVisible(true);
+            keybindingsPanel.setEnabled(true);
+            generalButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.3f;
+            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.6f;
+        };
+
+        generalButton.<ImageButtonWidget>getChildUnSafe("button_logic").onPress = showGeneral;
+        keybindingsButton.<ImageButtonWidget>getChildUnSafe("button_logic").onPress = showKeybindings;
+
+        tabBar.addChild("btn_general", generalButton);
+        tabBar.addChild("btn_keybindings", keybindingsButton);
+
+        showGeneral.run();
+    }
+
+    private static LayeredPanelWidget createTabButton(String text, float x, float width) {
+        LayeredPanelWidget panel = new LayeredPanelWidget(x, 0, width, 20);
+        panel.addChild("button_logic", new ImageButtonWidget(0, 0, width, 20, null, () -> {
+        }));
+
+        BlendQuadWidget back = new BlendQuadWidget(0, 0, width, 20);
+        back.drawLine = false;
+        panel.addChild("back", back);
+
+        AutoScaleLabelWidget label = new AutoScaleLabelWidget(text, 0, 0, width, true);
+        label.dropShadow = false;
+        label.setY((20 - label.getHeight()) / 2f);
+        panel.addChild("text", label);
+
+        return panel;
+    }
+
+    private static SmoothScrollPanelWidget createGeneralPanel() {
+        SmoothScrollPanelWidget panel = new SmoothScrollPanelWidget(5, 30, 190, 190);
+        panel.setZ(1);
+
+        float currentY = 10f;
+
+        panel.addChild("label_blur", new AutoScaleLabelWidget("Blur Radius", 0, currentY, 190, true));
+        currentY += 20;
+
+        Consumer<Float> blurRadiusUpdater = val -> {
+            DataTerminalHUD.config.blurRadius = val;
+            AcademyCraftClient.CLIENT_CONFIG.save();
+        };
+        panel.addChild("container_blur", createSliderWithLabel(5, currentY, 180, 8, DataTerminalHUD.config.blurRadius, 0.0f, 20.0f, blurRadiusUpdater));
+        currentY += 20;
+
+        panel.addChild("label_sensitivity", new AutoScaleLabelWidget("Mouse Sensitivity", 0, currentY, 190, true));
+        currentY += 20;
+
+        Consumer<Float> sensitivityUpdater = val -> {
+            DataTerminalHUD.config.mouseSensitivity = val;
+            AcademyCraftClient.CLIENT_CONFIG.save();
+        };
+        panel.addChild("container_sensitivity", createSliderWithLabel(5, currentY, 180, 8, DataTerminalHUD.config.mouseSensitivity, 0.1f, 2.0f, sensitivityUpdater));
+        currentY += 20;
+
+        panel.addChild("label_blur_toggle_title", new AutoScaleLabelWidget("Background Blur", 0, currentY, 190, true));
+        currentY += 20;
+
+        Supplier<Boolean> blurStateSupplier = () -> DataTerminalHUD.config.enableBlur;
+        Runnable blurToggleAction = () -> {
+            DataTerminalHUD.config.enableBlur = !DataTerminalHUD.config.enableBlur;
+            AcademyCraftClient.CLIENT_CONFIG.save();
+        };
+        panel.addChild("blur_toggle_button", createToggleButton(5, currentY, 180, 20, blurStateSupplier, blurToggleAction));
+
+        return panel;
+    }
+
+    private static LayeredPanelWidget createSliderWithLabel(float x, float y, float width, float height, float initialValue, float min, float max, Consumer<Float> onValueChanged) {
+        LayeredPanelWidget container = new LayeredPanelWidget(x, y, width, height);
+        SliderWidget slider = new SliderWidget(0, 0, width - 50, height, min, max, initialValue);
+        container.addChild("slider", slider);
+
+        AutoScaleLabelWidget valueLabel = new AutoScaleLabelWidget(String.format("%.2f", initialValue), slider.getWidth() + 5, 0, 45, true);
+        valueLabel.dropShadow = false;
+        valueLabel.scale = 0.75f;
+        valueLabel.setY((height - valueLabel.getHeight() * valueLabel.scale) / 2f);
+        container.addChild("label_value", valueLabel);
+
+        slider.onValueChanged = val -> {
+            onValueChanged.accept(val);
+            valueLabel.setText(String.format("%.2f", val));
+        };
+        return container;
+    }
+
+    private static LayeredPanelWidget createToggleButton(float x, float y, float w, float h, Supplier<Boolean> stateSupplier, Runnable onPress) {
+        LayeredPanelWidget buttonPanel = new LayeredPanelWidget(x, y, w, h);
+
+        AutoScaleLabelWidget text = new AutoScaleLabelWidget(stateSupplier.get() ? "On" : "Off", 0, 0, w, true);
+        Runnable toggleAction = () -> {
+            onPress.run();
+            text.setText(stateSupplier.get() ? "On" : "Off");
+        };
+
+        ImageButtonWidget logic = new ImageButtonWidget(0, 0, w, h, null, toggleAction);
+        buttonPanel.addChild("button_logic", logic);
+
+        BlendQuadWidget back = new BlendQuadWidget(0, 0, w, h);
+        back.drawLine = false;
+        back.alpha = 0.3f;
+        buttonPanel.addChild("back", back);
+
+        text.dropShadow = false;
+        text.setY((h - text.getHeight() * text.scale) / 2f);
+        buttonPanel.addChild("text", text);
+
+        return buttonPanel;
+    }
+
+    private static SmoothScrollPanelWidget createKeybindingsPanel(AbstractContainerWidget parent) {
+        SmoothScrollPanelWidget keybindingsPanel = new SmoothScrollPanelWidget(5, 30, 190, 190);
+        keybindingsPanel.setVisible(false);
+        keybindingsPanel.setEnabled(false);
+        keybindingsPanel.setZ(1);
+
+        createKeySelectionPanel(parent);
+
+        keybindingControlPanel = createKeybindingControlPanel();
+        keybindingsPanel.addChild("control_panel", keybindingControlPanel);
+
+        List<String> allKeyNames = new ArrayList<>(InputSystem.KEY_BINDINGS.keySet());
+        Collections.sort(allKeyNames);
+
+        for (String keyName : allKeyNames) {
+            LayeredPanelWidget keybindingPanel = createKeybindingWidget(keyName, keyName);
+            keybindingsPanel.addChild("keybinding_" + keyName, keybindingPanel);
+        }
+        updateKeybindingLayout(keybindingsPanel);
+        return keybindingsPanel;
+    }
+
+    private static void setKeyButtonSelected(LayeredPanelWidget btn, boolean selected) {
         if (btn == null) return;
         BlendQuadWidget back = btn.getChildUnSafe("back");
         if (selected) {
@@ -61,7 +237,7 @@ public final class Settings implements DataTerminalHUD.App {
         InputSystem.InputPair binding = getKeyBindingFromInputSystem(activeKeyName);
         if (binding == null || binding.keyInfo.inputs.isEmpty() || binding.keyInfo.inputs.contains(-1)) return;
 
-        Map<Integer, PanelButtonWidget> targetMap = binding.inputType == InputSystem.InputType.KEYBOARD ? keyboardButtonMap : mouseButtonMap;
+        Map<Integer, LayeredPanelWidget> targetMap = binding.inputType == InputSystem.InputType.KEYBOARD ? keyboardButtonMap : mouseButtonMap;
 
         for (int keyCode : binding.keyInfo.inputs) {
             setKeyButtonSelected(targetMap.get(keyCode), true);
@@ -78,115 +254,8 @@ public final class Settings implements DataTerminalHUD.App {
         }
     }
 
-    private static PanelWidget createSettingsPanel() {
-        PanelWidget appArea = new PanelWidget(0, 0, 200, 225);
-
-        BlendQuadWidget back = new BlendQuadWidget(0, 0, appArea.getWidth(), appArea.getHeight());
-        back.drawLine = false;
-        back.alpha = 0.25f;
-        appArea.addChild("back", back);
-
-        PanelWidget tabBar = new PanelWidget(5, 5, 190, 20);
-        appArea.addChild("tab_bar", tabBar);
-        tabBar.setZ(tabBar.getZ() + 1);
-
-        SmoothScrollPanelWidget generalPanel = new SmoothScrollPanelWidget(5, 30, 190, 190);
-        appArea.addChild("panel_general", generalPanel);
-        generalPanel.setZ(generalPanel.getZ() + 1);
-        {
-            float currentY = 10f;
-            AutoScaleLabelWidget blurLabel = new AutoScaleLabelWidget("Blur Radius", 0, currentY, 190, true);
-            blurLabel.dropShadow = false;
-            generalPanel.addChild("label_blur", blurLabel);
-            currentY += 20;
-
-            PanelWidget blurSliderContainer = new PanelWidget(5, currentY, 180, 8);
-            generalPanel.addChild("container_blur", blurSliderContainer);
-
-            SliderWidget blurSlider = new SliderWidget(0, 0, 130, 8, 0.0f, 20.0f, DataTerminalHUD.config.blurRadius);
-            blurSliderContainer.addChild("slider_blur", blurSlider);
-
-            AutoScaleLabelWidget blurValueLabel = new AutoScaleLabelWidget(String.format("%.2f", DataTerminalHUD.config.blurRadius), 135, 0, 45, true);
-            blurValueLabel.dropShadow = false;
-            blurValueLabel.scale = 0.75f;
-            blurValueLabel.setY((blurSlider.getHeight() - blurValueLabel.getHeight() * blurValueLabel.scale) / 2);
-            blurSliderContainer.addChild("label_blur_value", blurValueLabel);
-
-            blurSlider.onValueChanged = (val) -> {
-                DataTerminalHUD.config.blurRadius = val;
-                AcademyCraftClient.CLIENT_CONFIG.save();
-                blurValueLabel.setText(String.format("%.2f", val));
-            };
-        }
-
-        SmoothScrollPanelWidget keybindingsPanel = new SmoothScrollPanelWidget(5, 30, 190, 190);
-        keybindingsPanel.setVisible(false);
-        keybindingsPanel.setEnabled(false);
-        appArea.addChild("panel_keybindings", keybindingsPanel);
-        keybindingsPanel.setZ(keybindingsPanel.getZ() + 1);
-        {
-            List<String> allKeyNames = new ArrayList<>(InputSystem.KEY_BINDINGS.keySet());
-            Collections.sort(allKeyNames);
-
-            for (String keyName : allKeyNames) {
-                PanelWidget keybindingPanel = createKeybindingWidget(keyName, keyName);
-                keybindingsPanel.addChild("keybinding_" + keyName, keybindingPanel);
-            }
-            createKeybindingControlPanel(keybindingsPanel);
-            updateKeybindingLayout(keybindingsPanel);
-        }
-
-        createKeySelectionPanel(appArea);
-
-        PanelButtonWidget generalButton = new PanelButtonWidget(0, 0, 90, 20, null);
-        tabBar.addChild("btn_general", generalButton);
-
-        PanelButtonWidget keybindingsButton = new PanelButtonWidget(95, 0, 95, 20, null);
-        tabBar.addChild("btn_keybindings", keybindingsButton);
-
-        generalButton.onActive = () -> {
-            generalPanel.setVisible(true);
-            generalPanel.setEnabled(true);
-            keybindingsPanel.setVisible(false);
-            keybindingsPanel.setEnabled(false);
-            generalButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.6f;
-            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.3f;
-        };
-        keybindingsButton.onActive = () -> {
-            generalPanel.setVisible(false);
-            generalPanel.setEnabled(false);
-            keybindingsPanel.setVisible(true);
-            keybindingsPanel.setEnabled(true);
-            generalButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.3f;
-            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.6f;
-        };
-
-        BlendQuadWidget generalBack = new BlendQuadWidget(0, 0, generalButton.getWidth(), generalButton.getHeight());
-        generalBack.alpha = 0.6f;
-        generalBack.drawLine = false;
-        generalButton.addChild("back", generalBack);
-        AutoScaleLabelWidget generalLabel = new AutoScaleLabelWidget("General", 0, 0, generalButton.getWidth(), true);
-        generalLabel.dropShadow = false;
-        generalLabel.setY((generalButton.getHeight() - generalLabel.getHeight()) / 2);
-        generalButton.addChild("text", generalLabel);
-
-        BlendQuadWidget keybindingsBack = new BlendQuadWidget(0, 0, keybindingsButton.getWidth(), keybindingsButton.getHeight());
-        keybindingsBack.alpha = 0.3f;
-        keybindingsBack.drawLine = false;
-        keybindingsButton.addChild("back", keybindingsBack);
-        AutoScaleLabelWidget keybindingsLabel = new AutoScaleLabelWidget("Keybindings", 0, 0, keybindingsButton.getWidth(), true);
-        keybindingsLabel.dropShadow = false;
-        keybindingsLabel.setY((keybindingsButton.getHeight() - keybindingsLabel.getHeight()) / 2);
-        keybindingsButton.addChild("text", keybindingsLabel);
-
-        generalPanel.setVisible(true);
-        generalPanel.setEnabled(true);
-
-        return appArea;
-    }
-
     private static void createKeySelectionPanel(AbstractContainerWidget parent) {
-        keySelectionPanel = new PanelWidget(0, 0, 180, 190);
+        keySelectionPanel = new LayeredPanelWidget(0, 0, 180, 190);
         keySelectionPanel.setX((parent.getWidth() - keySelectionPanel.getWidth()) / 2f);
         keySelectionPanel.setY((parent.getHeight() - keySelectionPanel.getHeight()) / 2f);
         keySelectionPanel.setVisible(false);
@@ -199,51 +268,60 @@ public final class Settings implements DataTerminalHUD.App {
         back.drawLine = false;
         keySelectionPanel.addChild("back", back);
 
-        PanelButtonWidget closeButton = new PanelButtonWidget(keySelectionPanel.getWidth() - 25, 5, 20, 15, () -> {
+        LayeredPanelWidget closeButtonPanel = new LayeredPanelWidget(keySelectionPanel.getWidth() - 25, 5, 20, 15);
+        Runnable closeAction = () -> {
             setBackgroundControlsEnabled(true);
             keySelectionPanel.setVisible(false);
             keySelectionPanel.setEnabled(false);
-        });
-        AutoScaleLabelWidget closeLabel = new AutoScaleLabelWidget("X", 0, 0, closeButton.getWidth(), true);
+        };
+        ImageButtonWidget closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, null, closeAction);
+        closeButtonPanel.addChild("button_logic", closeButtonLogic);
+
+        AutoScaleLabelWidget closeLabel = new AutoScaleLabelWidget("X", 0, 0, closeButtonPanel.getWidth(), true);
         closeLabel.dropShadow = false;
-        closeLabel.setY((closeButton.getHeight() - closeLabel.getHeight()) / 2f);
-        closeButton.addChild("text", closeLabel);
+        closeLabel.setY((closeButtonPanel.getHeight() - closeLabel.getHeight()) / 2f);
+        closeButtonPanel.addChild("text", closeLabel);
         BlendQuadWidget closeBack = new BlendQuadWidget(0, 0, 20, 15);
         closeBack.drawLine = false;
         closeBack.alpha = 0.5f;
-        closeButton.addChild("back", closeBack);
-        keySelectionPanel.addChild("close_btn", closeButton);
-        closeButton.setZ(closeButton.getZ() + 1);
+        closeButtonPanel.addChild("back", closeBack);
+        keySelectionPanel.addChild("close_btn", closeButtonPanel);
+        closeButtonPanel.setZ(1);
 
         AutoScaleLabelWidget title = new AutoScaleLabelWidget("Select Key", 5, 5, keySelectionPanel.getWidth() - 10);
         title.dropShadow = false;
         keySelectionPanel.addChild("title", title);
+        title.setZ(1);
 
         SmoothScrollPanelWidget keysContainer = new SmoothScrollPanelWidget(5, 25, 170, 135);
         keySelectionPanel.addChild("keys_container", keysContainer);
+        keysContainer.setZ(1);
 
         VerticalScrollBarWidget scrollBar = new VerticalScrollBarWidget(keysContainer, keysContainer.getX() + keysContainer.getWidth() - 5, keysContainer.getY(), 5, keysContainer.getHeight());
         keySelectionPanel.addChild("scroll_bar", scrollBar);
         scrollBar.setThumbColor(0x50AAAAAA);
         scrollBar.setTrackColor(0x70202020);
-        scrollBar.setZ(scrollBar.getZ() + 1);
+        scrollBar.setZ(2);
 
-        PanelButtonWidget listenBtn = new PanelButtonWidget(5, 165, 170, 20, () -> {
+        LayeredPanelWidget listenBtnPanel = new LayeredPanelWidget(5, 165, 170, 20);
+        Runnable listenAction = () -> {
             isListeningForKey = true;
             setBackgroundControlsEnabled(true);
             keySelectionPanel.setVisible(false);
             keySelectionPanel.setEnabled(false);
             keySelectionButton.<AutoScaleLabelWidget>getChildUnSafe("text").setText("> ... <");
-        });
+        };
+        ImageButtonWidget listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
+        listenBtnPanel.addChild("button_logic", listenButtonLogic);
         BlendQuadWidget listenBtnBack = new BlendQuadWidget(0, 0, 170, 20);
         listenBtnBack.alpha = 0.5f;
         listenBtnBack.drawLine = false;
-        listenBtn.addChild("back", listenBtnBack);
-        AutoScaleLabelWidget listenLabel = new AutoScaleLabelWidget("Listen for Input", 0, 6, listenBtn.getWidth(), true);
+        listenBtnPanel.addChild("back", listenBtnBack);
+        AutoScaleLabelWidget listenLabel = new AutoScaleLabelWidget("Listen for Input", 0, 6, listenBtnPanel.getWidth(), true);
         listenLabel.dropShadow = false;
-        listenBtn.addChild("text", listenLabel);
-        keySelectionPanel.addChild("listen_btn", listenBtn);
-        listenBtn.setZ(listenBtn.getZ() + 1);
+        listenBtnPanel.addChild("text", listenLabel);
+        keySelectionPanel.addChild("listen_btn", listenBtnPanel);
+        listenBtnPanel.setZ(1);
 
         populateKeySelectionContainer(keysContainer);
     }
@@ -260,13 +338,13 @@ public final class Settings implements DataTerminalHUD.App {
         container.addChild("keyboard_label", keyboardLabel);
         yOffset += 15;
 
-        PanelWidget keyboardPanel = new PanelWidget(X_START, yOffset, container.getWidth() - 10, 0);
+        LayeredPanelWidget keyboardPanel = new LayeredPanelWidget(X_START, yOffset, container.getWidth() - 10, 0);
         BlendQuadWidget keyboardBack = new BlendQuadWidget(0, 0, keyboardPanel.getWidth(), 0);
         keyboardBack.alpha = 0.2f;
         keyboardBack.drawLine = false;
         keyboardPanel.addChild("back", keyboardBack);
+        keyboardPanel.setZ(1);
         container.addChild("keyboard_panel", keyboardPanel);
-        keyboardPanel.setZ(keyboardPanel.getZ() + 1);
 
         List<List<Key>> keyboardLayout = List.of(
                 List.of(new Key("ESC", GLFW.GLFW_KEY_ESCAPE, 1.5f),
@@ -308,12 +386,12 @@ public final class Settings implements DataTerminalHUD.App {
         container.addChild("mouse_label", mouseLabel);
         yOffset += 15;
 
-        PanelWidget mousePanel = new PanelWidget(X_START, yOffset, container.getWidth() - 10, 0);
+        LayeredPanelWidget mousePanel = new LayeredPanelWidget(X_START, yOffset, container.getWidth() - 10, 0);
         BlendQuadWidget mouseBack = new BlendQuadWidget(0, 0, mousePanel.getWidth(), 0);
         mouseBack.alpha = 0.2f;
         mouseBack.drawLine = false;
         mousePanel.addChild("back", mouseBack);
-        mousePanel.setZ(mousePanel.getZ() + 1);
+        mousePanel.setZ(1);
         container.addChild("mouse_panel", mousePanel);
 
         List<List<Key>> mouseLayout = List.of(
@@ -336,7 +414,7 @@ public final class Settings implements DataTerminalHUD.App {
         mouseBack.setHeight(mouseContentHeight);
     }
 
-    private static float placeKeyRows(PanelWidget container, float y, List<List<Key>> layout, InputSystem.InputType type, Map<Integer, PanelButtonWidget> buttonMap) {
+    private static float placeKeyRows(PanelWidget container, float y, List<List<Key>> layout, InputSystem.InputType type, Map<Integer, LayeredPanelWidget> buttonMap) {
         final float BASE_UNIT_WIDTH = 8.5f;
         final float BUTTON_HEIGHT = 15f;
         final float H_SPACING = 1.5f;
@@ -368,7 +446,7 @@ public final class Settings implements DataTerminalHUD.App {
                 float btnWidth = key.widthMultiplier * f_BASE_UNIT_WIDTH;
 
                 if (key.code != -1) {
-                    PanelButtonWidget keyBtn = createSmallKeyButton(key.name, currentX, currentY, btnWidth, f_BUTTON_HEIGHT, () -> {
+                    LayeredPanelWidget keyBtn = createSmallKeyButton(key.name, currentX, currentY, btnWidth, f_BUTTON_HEIGHT, () -> {
                         handleRebind(type, new LinkedHashSet<>(Set.of(key.code)));
                         setBackgroundControlsEnabled(true);
                         keySelectionPanel.setVisible(false);
@@ -377,7 +455,7 @@ public final class Settings implements DataTerminalHUD.App {
                     keyBtn.<AutoScaleLabelWidget>getChildUnSafe("label").scale *= scale;
                     container.addChild("btn_" + type.name().toLowerCase() + "_" + key.name, keyBtn);
                     buttonMap.put(key.code, keyBtn);
-                    keyBtn.setZ(keyBtn.getZ() + 1);
+                    keyBtn.setZ(1);
                 }
                 currentX += btnWidth + f_H_SPACING;
             }
@@ -387,41 +465,51 @@ public final class Settings implements DataTerminalHUD.App {
         return currentY - y;
     }
 
-    private static PanelButtonWidget createSmallKeyButton(String text, float x, float y, float w, float h, Runnable onPress) {
-        PanelButtonWidget button = new PanelButtonWidget(x, y, w, h, onPress);
+    private static LayeredPanelWidget createSmallKeyButton(String text, float x, float y, float w, float h, Runnable onPress) {
+        LayeredPanelWidget panel = new LayeredPanelWidget(x, y, w, h);
+        ImageButtonWidget buttonLogic = new ImageButtonWidget(0, 0, w, h, null, onPress);
+        panel.addChild("button_logic", buttonLogic);
+
         BlendQuadWidget back = new BlendQuadWidget(0, 0, w, h);
         back.drawLine = false;
         back.alpha = 0.5f;
-        button.addChild("back", back);
+        panel.addChild("back", back);
 
         AutoScaleLabelWidget label = new AutoScaleLabelWidget(text, 0, 0, w, true);
         label.dropShadow = false;
         label.scale = 0.75f;
         label.setY((h - label.getHeight() * label.scale) / 2f);
-        button.addChild("label", label);
-        return button;
+        panel.addChild("label", label);
+        return panel;
     }
 
-    private static void createKeybindingControlPanel(AbstractContainerWidget parentPanel) {
-        keybindingControlPanel = new PanelWidget(5, 0, 180, 85);
-        keybindingControlPanel.setVisible(false);
-        keybindingControlPanel.setEnabled(false);
-        parentPanel.addChild("control_panel", keybindingControlPanel);
+    private static LayeredPanelWidget createKeybindingControlPanel() {
+        LayeredPanelWidget controlPanel = new LayeredPanelWidget(5, 0, 180, 85);
+        controlPanel.setVisible(false);
+        controlPanel.setEnabled(false);
 
         BlendQuadWidget controlBack = new BlendQuadWidget(0, 0, 180, 85);
         controlBack.alpha = 0.2f;
         controlBack.drawLine = false;
-        keybindingControlPanel.addChild("back", controlBack);
+        controlPanel.addChild("back", controlBack);
 
         AutoScaleLabelWidget typeLabel = new AutoScaleLabelWidget("Type:", 5, 8, 40);
         typeLabel.dropShadow = false;
-        keybindingControlPanel.addChild("type_label", typeLabel);
+        controlPanel.addChild("type_label", typeLabel);
 
-        PanelWidget inputTypePanel = new PanelWidget(50, 5, 125, 20);
-        keybindingControlPanel.addChild("input_type", inputTypePanel);
-        inputTypePanel.setZ(inputTypePanel.getZ() + 1);
+        LayeredPanelWidget inputTypePanel = new LayeredPanelWidget(50, 5, 125, 20);
+        controlPanel.addChild("input_type", inputTypePanel);
+        inputTypePanel.setZ(1);
 
-        keyboardBtn = new PanelButtonWidget(0, 0, 60, 15, null);
+        Runnable keyboardAction = () -> {
+            updateModifierButtonState(keyboardBtn, true);
+            updateModifierButtonState(mouseBtn, false);
+            updateBindingFromControls(true);
+        };
+        keyboardBtn = new LayeredPanelWidget(0, 0, 60, 15);
+        ImageButtonWidget keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, null, keyboardAction);
+        keyboardBtn.addChild("button_logic", keyboardLogic);
+
         AutoScaleLabelWidget keyboardLabel = new AutoScaleLabelWidget("Keyboard", 0, 4, keyboardBtn.getWidth(), true);
         keyboardLabel.dropShadow = false;
         keyboardBtn.addChild("label", keyboardLabel);
@@ -431,7 +519,15 @@ public final class Settings implements DataTerminalHUD.App {
         keyboardBtn.addChild("back", keyboardBtnBack);
         inputTypePanel.addChild("keyboard", keyboardBtn);
 
-        mouseBtn = new PanelButtonWidget(65, 0, 60, 15, null);
+        Runnable mouseAction = () -> {
+            updateModifierButtonState(keyboardBtn, false);
+            updateModifierButtonState(mouseBtn, true);
+            updateBindingFromControls(true);
+        };
+        mouseBtn = new LayeredPanelWidget(65, 0, 60, 15);
+        ImageButtonWidget mouseLogic = new ImageButtonWidget(0, 0, 60, 15, null, mouseAction);
+        mouseBtn.addChild("button_logic", mouseLogic);
+
         AutoScaleLabelWidget mouseLabel = new AutoScaleLabelWidget("Mouse", 0, 4, mouseBtn.getWidth(), true);
         mouseLabel.dropShadow = false;
         mouseBtn.addChild("label", mouseLabel);
@@ -441,43 +537,36 @@ public final class Settings implements DataTerminalHUD.App {
         mouseBtn.addChild("back", mouseBtnBack);
         inputTypePanel.addChild("mouse", mouseBtn);
 
-        keyboardBtn.onActive = () -> {
-            updateModifierButtonState(keyboardBtn, true);
-            updateModifierButtonState(mouseBtn, false);
-            updateBindingFromControls(true);
-        };
-        mouseBtn.onActive = () -> {
-            updateModifierButtonState(keyboardBtn, false);
-            updateModifierButtonState(mouseBtn, true);
-            updateBindingFromControls(true);
-        };
-
         AutoScaleLabelWidget keyLabel = new AutoScaleLabelWidget("Key:", 5, 33, 40);
         keyLabel.dropShadow = false;
-        keybindingControlPanel.addChild("key_label", keyLabel);
-        keySelectionButton = new PanelButtonWidget(50, 30, 125, 20, () -> {
+        controlPanel.addChild("key_label", keyLabel);
+        keySelectionButton = new LayeredPanelWidget(50, 30, 125, 20);
+        Runnable keySelectAction = () -> {
             setBackgroundControlsEnabled(false);
             keySelectionPanel.setVisible(true);
             keySelectionPanel.setEnabled(true);
             updateKeySelectionHighlights();
-        });
+        };
+        ImageButtonWidget keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, null, keySelectAction);
+        keySelectionButton.addChild("button_logic", keySelectionLogic);
+
         BlendQuadWidget keySelectionButtonBack = new BlendQuadWidget(0, 0, 125, 20);
         keySelectionButtonBack.alpha = 0.3f;
         keySelectionButtonBack.drawLine = false;
         keySelectionButton.addChild("back", keySelectionButtonBack);
-        keySelectionButtonBack.setZ(keySelectionButtonBack.getZ() + 1);
+        keySelectionButtonBack.setZ(1);
         AutoScaleLabelWidget keySelectionButtonLabel = new AutoScaleLabelWidget("Set Key", 0, 0, keySelectionButton.getWidth(), true);
         keySelectionButtonLabel.dropShadow = false;
         keySelectionButtonLabel.setY((keySelectionButton.getHeight() - keySelectionButtonLabel.getHeight()) / 2f);
         keySelectionButton.addChild("text", keySelectionButtonLabel);
-        keybindingControlPanel.addChild("key_select", keySelectionButton);
+        controlPanel.addChild("key_select", keySelectionButton);
 
         AutoScaleLabelWidget modLabel = new AutoScaleLabelWidget("Mods:", 5, 63, 40);
         modLabel.dropShadow = false;
-        keybindingControlPanel.addChild("mod_label", modLabel);
-        PanelWidget modsPanel = new PanelWidget(50, 60, 125, 20);
-        keybindingControlPanel.addChild("mods_panel", modsPanel);
-        modsPanel.setZ(modsPanel.getZ() + 1);
+        controlPanel.addChild("mod_label", modLabel);
+        LayeredPanelWidget modsPanel = new LayeredPanelWidget(50, 60, 125, 20);
+        controlPanel.addChild("mods_panel", modsPanel);
+        modsPanel.setZ(1);
 
         shiftModBtn = createModifierButton("Shift", 0, () -> {
             toggleModifierButton(shiftModBtn);
@@ -495,34 +584,25 @@ public final class Settings implements DataTerminalHUD.App {
         modsPanel.addChild("shift", shiftModBtn);
         modsPanel.addChild("ctrl", ctrlModBtn);
         modsPanel.addChild("alt", altModBtn);
+
+        return controlPanel;
     }
 
-    private static void toggleModifierButton(PanelButtonWidget button) {
-        BlendQuadWidget back = button.getChildUnSafe("back");
-        boolean nowSelected = back.alpha != 0.6f;
-        back.alpha = nowSelected ? 0.6f : 0.3f;
-        if (nowSelected) {
-            back.red = 0.8f;
-            back.green = 0.8f;
-        } else {
-            back.red = 1.0f;
-            back.green = 1.0f;
-        }
-        back.blue = 1.0f;
-    }
+    private static LayeredPanelWidget createModifierButton(String text, float x, Runnable onPress) {
+        LayeredPanelWidget panel = new LayeredPanelWidget(x, 0, 35, 15);
+        ImageButtonWidget buttonLogic = new ImageButtonWidget(0, 0, 35, 15, null, onPress);
+        panel.addChild("button_logic", buttonLogic);
 
-    private static PanelButtonWidget createModifierButton(String text, float x, Runnable onPress) {
-        PanelButtonWidget button = new PanelButtonWidget(x, 0, 35, 15, onPress);
         BlendQuadWidget back = new BlendQuadWidget(0, 0, 35, 15);
         back.drawLine = false;
-        button.addChild("back", back);
+        panel.addChild("back", back);
         AutoScaleLabelWidget label = new AutoScaleLabelWidget(text, 0, 4, 35, true);
         label.dropShadow = false;
-        button.addChild("label", label);
-        return button;
+        panel.addChild("label", label);
+        return panel;
     }
 
-    private static void toggleKeybindingControls(PanelWidget entry, String keyName) {
+    private static void toggleKeybindingControls(LayeredPanelWidget entry, String keyName) {
         AbstractContainerWidget list = (AbstractContainerWidget) entry.getParent();
         if (list == null) return;
 
@@ -588,7 +668,7 @@ public final class Settings implements DataTerminalHUD.App {
         updateModifierButton(altModBtn, mods.contains(GLFW.GLFW_MOD_ALT));
     }
 
-    private static void updateModifierButtonState(PanelButtonWidget button, boolean active) {
+    private static void updateModifierButtonState(LayeredPanelWidget button, boolean active) {
         BlendQuadWidget back = button.getChildUnSafe("back");
         back.alpha = active ? 0.6f : 0.3f;
         if (active) {
@@ -623,27 +703,28 @@ public final class Settings implements DataTerminalHUD.App {
         updateDisplayForActiveBinding();
     }
 
-    private static PanelWidget createKeybindingWidget(String displayName, String keyName) {
-        PanelWidget panel = new PanelWidget(0, 0, 180, 20);
+    private static LayeredPanelWidget createKeybindingWidget(String displayName, String keyName) {
+        LayeredPanelWidget panel = new LayeredPanelWidget(0, 0, 180, 20);
 
         HoverLabelWidget label = new HoverLabelWidget(displayName, 5, 5, 95);
         label.dropShadow = false;
         panel.addChild("label", label);
 
-        PanelButtonWidget button = new PanelButtonWidget(105, 0, 75, 20, null);
-        button.onActive = () -> toggleKeybindingControls(panel, keyName);
-        panel.addChild("button", button);
+        LayeredPanelWidget buttonPanel = new LayeredPanelWidget(105, 0, 75, 20);
+        ImageButtonWidget buttonLogic = new ImageButtonWidget(0, 0, 75, 20, null, () -> toggleKeybindingControls(panel, keyName));
+        buttonPanel.addChild("button_logic", buttonLogic);
+        panel.addChild("button", buttonPanel);
 
-        BlendQuadWidget buttonBack = new BlendQuadWidget(0, 0, button.getWidth(), button.getHeight());
+        BlendQuadWidget buttonBack = new BlendQuadWidget(0, 0, buttonPanel.getWidth(), buttonPanel.getHeight());
         buttonBack.alpha = 0.3f;
         buttonBack.drawLine = false;
-        button.addChild("back", buttonBack);
+        buttonPanel.addChild("back", buttonBack);
 
         InputSystem.InputPair binding = getKeyBindingFromInputSystem(keyName);
-        AutoScaleLabelWidget keyLabel = new AutoScaleLabelWidget(formatKeybinding(binding), 3, 0, button.getWidth() - 6, true);
+        AutoScaleLabelWidget keyLabel = new AutoScaleLabelWidget(formatKeybinding(binding), 3, 0, buttonPanel.getWidth() - 6, true);
         keyLabel.dropShadow = false;
-        keyLabel.setY((button.getHeight() - keyLabel.getHeight()) / 2);
-        button.addChild("text", keyLabel);
+        keyLabel.setY((buttonPanel.getHeight() - keyLabel.getHeight()) / 2);
+        buttonPanel.addChild("text", keyLabel);
 
         return panel;
     }
@@ -669,7 +750,8 @@ public final class Settings implements DataTerminalHUD.App {
     }
 
     private static String formatKey(InputSystem.InputPair pair) {
-        if (pair == null || pair.keyInfo == null || pair.keyInfo.inputs.isEmpty() || pair.keyInfo.inputs.contains(-1)) return "NONE";
+        if (pair == null || pair.keyInfo == null || pair.keyInfo.inputs.isEmpty() || pair.keyInfo.inputs.contains(-1))
+            return "NONE";
         int key = pair.keyInfo.inputs.iterator().next();
         String name;
         if (pair.inputType == InputSystem.InputType.KEYBOARD) {
@@ -756,17 +838,31 @@ public final class Settings implements DataTerminalHUD.App {
     private static void updateDisplayForActiveBinding() {
         if (activeKeybindingEntry != null && activeKeyName != null) {
             InputSystem.InputPair binding = getKeyBindingFromInputSystem(activeKeyName);
-            PanelButtonWidget button = activeKeybindingEntry.getChildUnSafe("button");
-            AutoScaleLabelWidget text = button.getChildUnSafe("text");
+            LayeredPanelWidget buttonPanel = activeKeybindingEntry.getChildUnSafe("button");
+            AutoScaleLabelWidget text = buttonPanel.getChildUnSafe("text");
             text.setText(formatKeybinding(binding));
             updateControlPanelContents();
         }
     }
 
-    private static void updateModifierButton(PanelButtonWidget button, boolean active) {
+    private static void updateModifierButton(LayeredPanelWidget button, boolean active) {
         BlendQuadWidget back = button.getChildUnSafe("back");
         back.alpha = active ? 0.6f : 0.3f;
         if (active) {
+            back.red = 0.8f;
+            back.green = 0.8f;
+        } else {
+            back.red = 1.0f;
+            back.green = 1.0f;
+        }
+        back.blue = 1.0f;
+    }
+
+    private static void toggleModifierButton(LayeredPanelWidget button) {
+        BlendQuadWidget back = button.getChildUnSafe("back");
+        boolean nowSelected = back.alpha != 0.6f;
+        back.alpha = nowSelected ? 0.6f : 0.3f;
+        if (nowSelected) {
             back.red = 0.8f;
             back.green = 0.8f;
         } else {
