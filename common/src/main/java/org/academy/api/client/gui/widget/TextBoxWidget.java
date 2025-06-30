@@ -11,6 +11,7 @@ import org.academy.api.client.util.RenderUtil;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class TextBoxWidget extends AbstractWidget {
     private final StringBuilder text = new StringBuilder();
@@ -23,9 +24,11 @@ public class TextBoxWidget extends AbstractWidget {
     public int borderColor = 0x5F5A5A5A;
     public int textColor = 0xFFFFFFFF;
     public Consumer<String> whenEnter;
+    public Runnable onFocusLostCallback = null;
     public boolean clearWhenEnter = true;
     public boolean forceScale = false;
     public float scale = 1.0f;
+    public Predicate<String> inputValidator = null;
 
     public TextBoxWidget(int maxLength, float x, float y, float width, float height) {
         super(x, y, width, height);
@@ -56,11 +59,17 @@ public class TextBoxWidget extends AbstractWidget {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (!isFocused()) return false;
-        if (text.length() < maxLength && !Character.isISOControl(codePoint)) {
+        if (!isFocused() || text.length() >= maxLength || Character.isISOControl(codePoint)) {
+            return false;
+        }
+
+        String potentialText = new StringBuilder(text).insert(caretPos, codePoint).toString();
+
+        if (inputValidator == null || inputValidator.test(potentialText)) {
             text.insert(caretPos++, codePoint);
             return true;
         }
+
         return false;
     }
 
@@ -121,6 +130,9 @@ public class TextBoxWidget extends AbstractWidget {
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
         showCaret = false;
+        if (onFocusLostCallback != null) {
+            onFocusLostCallback.run();
+        }
     }
 
     @Override

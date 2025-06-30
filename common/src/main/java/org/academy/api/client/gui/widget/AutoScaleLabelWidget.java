@@ -65,7 +65,7 @@ public class AutoScaleLabelWidget extends LabelWidget {
         float scaledTextRenderHeight = textOriginalHeight * finalScale;
         float yDrawingOffset = (scaledTextRenderHeight - textOriginalHeight) / 2.0f;
 
-        graphics.pose().translate(renderX, this.getY() - yDrawingOffset, 0);
+        graphics.pose().translate(renderX, this.getY() - yDrawingOffset, getZ());
         graphics.pose().scale(finalScale, finalScale, 1.0f);
 
         font.drawInBatch(this.value, 0, 0, this.color, this.dropShadow,

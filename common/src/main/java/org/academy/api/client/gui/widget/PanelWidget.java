@@ -20,11 +20,6 @@ public class PanelWidget extends AbstractContainerWidget {
         super(x, y, width, height);
     }
 
-    @Override
-    public boolean canFocus() {
-        return true;
-    }
-
     public void setHorizontalGravity(HorizontalGravity horizontalGravity) {
         this.horizontalGravity = horizontalGravity;
     }
