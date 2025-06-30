@@ -38,6 +38,7 @@ public final class InputSystem {
     }
 
     public static void handleKey(int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
+        AcademyCraft.LOGGER.info(key);
         currentKeyCode = key;
         currentKeyAction = action;
         KEYBOARD_STATE.put(key, action);
@@ -90,7 +91,7 @@ public final class InputSystem {
             if (requiredKeys.isEmpty()) return;
 
             int requiredMask = requiredModifiers.stream().reduce(0, (a, b) -> a | b);
-            boolean modSuccess = modifiers == requiredMask;
+            boolean modSuccess = keyInfo.modifiers.isEmpty() || modifiers == requiredMask;
 
             boolean keySuccess;
             if (requiredAction == GLFW.GLFW_RELEASE) {
