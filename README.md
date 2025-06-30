@@ -11,6 +11,8 @@ A Minecraft mod about Academy City, for Fabric & Forge 1.20.1.
 
 For runtime, this project requires a JDK that supports the `-XX:+AllowEnhancedClassRedefinition` flag, e.g., JetBrains Runtime (JBR).
 
+Additionally, place `hotswap-agent-core.jar` into the `JAVA_HOME/lib/hotswap/` directory.
+
 ## License
 
 This project is licensed under the GPL-3.0.
