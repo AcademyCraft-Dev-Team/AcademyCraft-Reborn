@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.framework.Widget;
 
@@ -15,16 +14,11 @@ public class LayeredPanelWidget extends PanelWidget {
         if (!isVisible()) return;
 
         graphics.pose().pushPose();
-        graphics.pose().translate(getX(), getY(), getZ());
+        graphics.pose().translate(getX(), getY(), getZ() + 1);
 
-        RenderSystem.enablePolygonOffset();
-        int layer = 0;
         for (Widget child : getChildren().values()) {
-            layer++;
-            RenderSystem.polygonOffset(10, layer);
             child.render(graphics, mouseX, mouseY, partialTick);
         }
-        RenderSystem.disablePolygonOffset();
 
         graphics.pose().popPose();
         afterRender(graphics, mouseX, mouseY, partialTick);
