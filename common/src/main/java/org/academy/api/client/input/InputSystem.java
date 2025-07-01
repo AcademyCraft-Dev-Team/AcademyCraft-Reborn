@@ -38,7 +38,6 @@ public final class InputSystem {
     }
 
     public static void handleKey(int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
-        AcademyCraft.LOGGER.info(key);
         currentKeyCode = key;
         currentKeyAction = action;
         KEYBOARD_STATE.put(key, action);
