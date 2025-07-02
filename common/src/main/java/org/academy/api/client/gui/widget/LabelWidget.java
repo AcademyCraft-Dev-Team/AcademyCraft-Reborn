@@ -44,4 +44,9 @@ public class LabelWidget extends AbstractWidget {
             animation.afterRender(graphics, mouseX, mouseY, partialTicks);
         }
     }
+
+    @Override
+    public boolean isEnabled() {
+        return false;
+    }
 }
