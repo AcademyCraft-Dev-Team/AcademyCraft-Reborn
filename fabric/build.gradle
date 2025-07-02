@@ -31,9 +31,11 @@ dependencies {
         officialMojangMappings()
         parchment("org.parchmentmc.data:parchment-${parchment_minecraft}:${parchment_version}@zip")
     }
+/*
     modApi "icyllis.modernui:ModernUI-Core:3.11.1"
     modApi "icyllis.modernui:ModernUI-Markdown:3.11.1"
     modImplementation "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
+*/
 
     modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.1"
     include(modApi("dev.felnull:special-model-loader:1.2.0"))

@@ -23,7 +23,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
     public WirelessNodeBlockEntity wirelessNodeBlockEntity;
     private String connectedNodeName = "None";
     private PanelWidget wirelessPanel;
-    private SmoothScrollPanelWidget nodeListPanel;
+    private ScrollPanelWidget nodeListPanel;
     private VerticalSpriteWidget state;
     private int ticks;
     private final HistogramWidget.Value histogramEnergyValue = new HistogramWidget.Value(25, 5, 0,
@@ -299,7 +299,7 @@ public class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> im
     }
 
     @Override
-    public SmoothScrollPanelWidget getNodeList() {
+    public ScrollPanelWidget getNodeList() {
         return nodeListPanel;
     }
 
