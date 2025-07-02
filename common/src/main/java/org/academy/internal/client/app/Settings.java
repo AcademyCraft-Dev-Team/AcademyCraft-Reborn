@@ -48,7 +48,7 @@ public final class Settings implements DataTerminalHUD.App {
         back.alpha = 0.25f;
         appArea.addChild("back", back);
 
-        LayeredPanelWidget main = new LayeredPanelWidget(0,0,appArea.getWidth(),appArea.getHeight());
+        LayeredPanelWidget main = new LayeredPanelWidget(0, 0, appArea.getWidth(), appArea.getHeight());
         appArea.addChild("main", main);
         {
             SmoothScrollPanelWidget generalPanel = createGeneralPanel();
@@ -268,223 +268,231 @@ public final class Settings implements DataTerminalHUD.App {
     }
 
     private static void createKeySelectionPanel(AbstractContainerWidget parent) {
-        keySelectionPanel = new LayeredPanelWidget(0, 0, 180, 190);
+        keySelectionPanel = new PanelWidget(0, 0, 180, 190);
+        keySelectionPanel.setZ(keySelectionPanel.getZ() + 10);
         keySelectionPanel.setX((parent.getWidth() - keySelectionPanel.getWidth()) / 2f);
         keySelectionPanel.setY((parent.getHeight() - keySelectionPanel.getHeight()) / 2f);
         keySelectionPanel.setVisible(false);
         keySelectionPanel.setEnabled(false);
         parent.addChild("key_selection_panel", keySelectionPanel);
+        {
+            BlendQuadWidget back = new BlendQuadWidget(0, 0, keySelectionPanel.getWidth(), keySelectionPanel.getHeight());
+            back.alpha = 0.4f;
+            back.drawLine = false;
+            keySelectionPanel.addChild("back", back);
 
-        BlendQuadWidget back = new BlendQuadWidget(0, 0, keySelectionPanel.getWidth(), keySelectionPanel.getHeight());
-        back.alpha = 0.4f;
-        back.drawLine = false;
-        keySelectionPanel.addChild("back", back);
+            LayeredPanelWidget layered = new LayeredPanelWidget(0, 0, keySelectionPanel.getWidth(), keySelectionPanel.getHeight());
+            layered.setEnabled(false);
+            keySelectionPanel.addChild("key_selection_panel_layered", layered);
+            {
+                AutoScaleLabelWidget closeLabel = new AutoScaleLabelWidget("X", keySelectionPanel.getWidth() - 25, 10, 20, true);
+                closeLabel.dropShadow = false;
+                layered.addChild("text", closeLabel);
 
-        LayeredPanelWidget closeButtonPanel = new LayeredPanelWidget(keySelectionPanel.getWidth() - 25, 5, 20, 15);
-        Runnable closeAction = () -> {
+                AutoScaleLabelWidget title = new AutoScaleLabelWidget("Select Key", 5, 5, keySelectionPanel.getWidth() - 10);
+                title.dropShadow = false;
+                layered.addChild("title", title);
+            }
+
+            LayeredPanelWidget closeButtonPanel = new LayeredPanelWidget(keySelectionPanel.getWidth() - 25, 5, 20, 15);
+            Runnable closeAction = () -> {
+                setBackgroundControlsEnabled(true);
+                keySelectionPanel.setVisible(false);
+                keySelectionPanel.setEnabled(false);
+            };
+            ImageButtonWidget closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, null, closeAction);
+            closeButtonPanel.addChild("button_logic", closeButtonLogic);
+
+
+            BlendQuadWidget closeBack = new BlendQuadWidget(0, 0, 20, 15);
+            closeBack.drawLine = false;
+            closeBack.alpha = 0.5f;
+            closeButtonPanel.addChild("back", closeBack);
+            keySelectionPanel.addChild("close_btn", closeButtonPanel);
+
+            SmoothScrollPanelWidget keysContainer = new SmoothScrollPanelWidget(5, 25, 170, 135);
+            keySelectionPanel.addChild("keys_container", keysContainer);
+
+            var scrollBar = new VerticalScrollBarWidget(keysContainer, keysContainer.getX() + keysContainer.getWidth() - 5, keysContainer.getY(), 5, keysContainer.getHeight());
+            keySelectionPanel.addChild("scroll_bar", scrollBar);
+            scrollBar.setThumbColor(0x50AAAAAA);
+            scrollBar.setTrackColor(0x70202020);
+            scrollBar.setZ(scrollBar.getZ() + 1);
+
+            var listenBtnPanel = new LayeredPanelWidget(5, 165, 170, 20);
+            Runnable listenAction = () -> {
+                isListeningForKey = true;
+                setBackgroundControlsEnabled(true);
+                keySelectionPanel.setVisible(false);
+                keySelectionPanel.setEnabled(false);
+                keySelectionButton.<PanelWidget>getChildUnSafe("layered").<AutoScaleLabelWidget>getChildUnSafe("text").setText("> ... <");
+            };
+            ImageButtonWidget listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
+            listenBtnPanel.addChild("button_logic", listenButtonLogic);
+            BlendQuadWidget listenBtnBack = new BlendQuadWidget(0, 0, 170, 20);
+            listenBtnBack.alpha = 0.5f;
+            listenBtnBack.drawLine = false;
+            listenBtnPanel.addChild("back", listenBtnBack);
+            var listenLabel = new AutoScaleLabelWidget("Listen for Input", 0, 6, listenBtnPanel.getWidth(), true);
+            listenLabel.dropShadow = false;
+            listenLabel.setZ(listenLabel.getZ() + 1);
+            listenBtnPanel.addChild("text", listenLabel);
+            keySelectionPanel.addChild("listen_btn", listenBtnPanel);
+
+            populateKeySelectionContainer(keysContainer);
+        }
+    }
+
+    private static void addKey(PanelWidget container, Map<Integer, PanelWidget> buttonMap, InputSystem.InputType type,
+                               String name, int code, float x, float y, float w, float h) {
+        var keyBtn = createSmallKeyButton(name, x, y, w, h, () -> {
+            handleRebind(type, new LinkedHashSet<>(Set.of(code)));
             setBackgroundControlsEnabled(true);
             keySelectionPanel.setVisible(false);
             keySelectionPanel.setEnabled(false);
-        };
-        ImageButtonWidget closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, null, closeAction);
-        closeButtonPanel.addChild("button_logic", closeButtonLogic);
-
-        AutoScaleLabelWidget closeLabel = new AutoScaleLabelWidget("X", 0, 0, closeButtonPanel.getWidth(), true);
-        closeLabel.dropShadow = false;
-        closeLabel.setY((closeButtonPanel.getHeight() - closeLabel.getHeight()) / 2f);
-        closeButtonPanel.addChild("text", closeLabel);
-        BlendQuadWidget closeBack = new BlendQuadWidget(0, 0, 20, 15);
-        closeBack.drawLine = false;
-        closeBack.alpha = 0.5f;
-        closeButtonPanel.addChild("back", closeBack);
-        keySelectionPanel.addChild("close_btn", closeButtonPanel);
-
-        AutoScaleLabelWidget title = new AutoScaleLabelWidget("Select Key", 5, 5, keySelectionPanel.getWidth() - 10);
-        title.dropShadow = false;
-        keySelectionPanel.addChild("title", title);
-
-        SmoothScrollPanelWidget keysContainer = new SmoothScrollPanelWidget(5, 25, 170, 135);
-        keySelectionPanel.addChild("keys_container", keysContainer);
-
-        VerticalScrollBarWidget scrollBar = new VerticalScrollBarWidget(keysContainer, keysContainer.getX() + keysContainer.getWidth() - 5, keysContainer.getY(), 5, keysContainer.getHeight());
-        keySelectionPanel.addChild("scroll_bar", scrollBar);
-        scrollBar.setThumbColor(0x50AAAAAA);
-        scrollBar.setTrackColor(0x70202020);
-
-        LayeredPanelWidget listenBtnPanel = new LayeredPanelWidget(5, 165, 170, 20);
-        Runnable listenAction = () -> {
-            isListeningForKey = true;
-            setBackgroundControlsEnabled(true);
-            keySelectionPanel.setVisible(false);
-            keySelectionPanel.setEnabled(false);
-            keySelectionButton.<AutoScaleLabelWidget>getChildUnSafe("text").setText("> ... <");
-        };
-        ImageButtonWidget listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
-        listenBtnPanel.addChild("button_logic", listenButtonLogic);
-        BlendQuadWidget listenBtnBack = new BlendQuadWidget(0, 0, 170, 20);
-        listenBtnBack.alpha = 0.5f;
-        listenBtnBack.drawLine = false;
-        listenBtnPanel.addChild("back", listenBtnBack);
-        AutoScaleLabelWidget listenLabel = new AutoScaleLabelWidget("Listen for Input", 0, 6, listenBtnPanel.getWidth(), true);
-        listenLabel.dropShadow = false;
-        listenBtnPanel.addChild("text", listenLabel);
-        keySelectionPanel.addChild("listen_btn", listenBtnPanel);
-
-        populateKeySelectionContainer(keysContainer);
+        });
+        container.addChild("btn_" + type.name().toLowerCase() + "_" + name.toLowerCase().replace(" ", "_"), keyBtn);
+        if (code != -1) {
+            buttonMap.put(code, keyBtn);
+        }
     }
 
     private static void populateKeySelectionContainer(SmoothScrollPanelWidget container) {
         keyboardButtonMap.clear();
         mouseButtonMap.clear();
 
-        final float X_START = 5f;
-        float yOffset = 5f;
+        final float yStart = 5f;
+        float currentY = yStart;
 
-        AutoScaleLabelWidget keyboardLabel = new AutoScaleLabelWidget("Keyboard", 5, yOffset, container.getWidth() - 10);
+        var keyboardLabel = new AutoScaleLabelWidget("Keyboard", 5, currentY, container.getWidth() - 10);
         keyboardLabel.dropShadow = false;
+        keyboardLabel.setZ(keyboardLabel.getZ() + 1);
         container.addChild("keyboard_label", keyboardLabel);
-        yOffset += 15;
+        currentY += 15;
 
-        LayeredPanelWidget keyboardPanel = new LayeredPanelWidget(X_START, yOffset, container.getWidth() - 10, 0);
-        BlendQuadWidget keyboardBack = new BlendQuadWidget(0, 0, keyboardPanel.getWidth(), 0);
+        var keyboardPanel = new LayeredPanelWidget(0, currentY, container.getWidth() - 10, 0);
+        var keyboardBack = new BlendQuadWidget(0, 0, keyboardPanel.getWidth(), 0);
         keyboardBack.alpha = 0.2f;
         keyboardBack.drawLine = false;
         keyboardPanel.addChild("back", keyboardBack);
         container.addChild("keyboard_panel", keyboardPanel);
 
-        List<List<Key>> keyboardLayout = List.of(
-                List.of(new Key("ESC", GLFW.GLFW_KEY_ESCAPE, 1.5f),
-                        new Key("F1", GLFW.GLFW_KEY_F1, 1f), new Key("F2", GLFW.GLFW_KEY_F2, 1f), new Key("F3", GLFW.GLFW_KEY_F3, 1f), new Key("F4", GLFW.GLFW_KEY_F4, 1f),
-                        new Key("", -1, 0.5f),
-                        new Key("F5", GLFW.GLFW_KEY_F5, 1f), new Key("F6", GLFW.GLFW_KEY_F6, 1f), new Key("F7", GLFW.GLFW_KEY_F7, 1f), new Key("F8", GLFW.GLFW_KEY_F8, 1f),
-                        new Key("", -1, 0.5f),
-                        new Key("F9", GLFW.GLFW_KEY_F9, 1f), new Key("F10", GLFW.GLFW_KEY_F10, 1f), new Key("F11", GLFW.GLFW_KEY_F11, 1f), new Key("F12", GLFW.GLFW_KEY_F12, 1f)),
-                List.of(new Key("`", GLFW.GLFW_KEY_GRAVE_ACCENT, 1f), new Key("1", GLFW.GLFW_KEY_1, 1f), new Key("2", GLFW.GLFW_KEY_2, 1f), new Key("3", GLFW.GLFW_KEY_3, 1f),
-                        new Key("4", GLFW.GLFW_KEY_4, 1f), new Key("5", GLFW.GLFW_KEY_5, 1f), new Key("6", GLFW.GLFW_KEY_6, 1f), new Key("7", GLFW.GLFW_KEY_7, 1f),
-                        new Key("8", GLFW.GLFW_KEY_8, 1f), new Key("9", GLFW.GLFW_KEY_9, 1f), new Key("0", GLFW.GLFW_KEY_0, 1f), new Key("-", GLFW.GLFW_KEY_MINUS, 1f),
-                        new Key("=", GLFW.GLFW_KEY_EQUAL, 1f), new Key("BACK", GLFW.GLFW_KEY_BACKSPACE, 2f)),
-                List.of(new Key("TAB", GLFW.GLFW_KEY_TAB, 1.5f), new Key("Q", GLFW.GLFW_KEY_Q, 1f), new Key("W", GLFW.GLFW_KEY_W, 1f), new Key("E", GLFW.GLFW_KEY_E, 1f),
-                        new Key("R", GLFW.GLFW_KEY_R, 1f), new Key("T", GLFW.GLFW_KEY_T, 1f), new Key("Y", GLFW.GLFW_KEY_Y, 1f), new Key("U", GLFW.GLFW_KEY_U, 1f),
-                        new Key("I", GLFW.GLFW_KEY_I, 1f), new Key("O", GLFW.GLFW_KEY_O, 1f), new Key("P", GLFW.GLFW_KEY_P, 1f), new Key("[", GLFW.GLFW_KEY_LEFT_BRACKET, 1f),
-                        new Key("]", GLFW.GLFW_KEY_RIGHT_BRACKET, 1f), new Key("\\", GLFW.GLFW_KEY_BACKSLASH, 1.5f)),
-                List.of(new Key("CAPS", GLFW.GLFW_KEY_CAPS_LOCK, 1.75f), new Key("A", GLFW.GLFW_KEY_A, 1f), new Key("S", GLFW.GLFW_KEY_S, 1f),
-                        new Key("D", GLFW.GLFW_KEY_D, 1f), new Key("F", GLFW.GLFW_KEY_F, 1f), new Key("G", GLFW.GLFW_KEY_G, 1f), new Key("H", GLFW.GLFW_KEY_H, 1f),
-                        new Key("J", GLFW.GLFW_KEY_J, 1f), new Key("K", GLFW.GLFW_KEY_K, 1f), new Key("L", GLFW.GLFW_KEY_L, 1f),
-                        new Key(";", GLFW.GLFW_KEY_SEMICOLON, 1f), new Key("'", GLFW.GLFW_KEY_APOSTROPHE, 1f), new Key("ENTER", GLFW.GLFW_KEY_ENTER, 2.25f)),
-                List.of(new Key("LSHIFT", GLFW.GLFW_KEY_LEFT_SHIFT, 2.25f), new Key("Z", GLFW.GLFW_KEY_Z, 1f), new Key("X", GLFW.GLFW_KEY_X, 1f),
-                        new Key("C", GLFW.GLFW_KEY_C, 1f), new Key("V", GLFW.GLFW_KEY_V, 1f), new Key("B", GLFW.GLFW_KEY_B, 1f),
-                        new Key("N", GLFW.GLFW_KEY_N, 1f), new Key("M", GLFW.GLFW_KEY_M, 1f), new Key(",", GLFW.GLFW_KEY_COMMA, 1f),
-                        new Key(".", GLFW.GLFW_KEY_PERIOD, 1f), new Key("/", GLFW.GLFW_KEY_SLASH, 1f), new Key("RSHIFT", GLFW.GLFW_KEY_RIGHT_SHIFT, 2.75f)),
-                List.of(new Key("LCTRL", GLFW.GLFW_KEY_LEFT_CONTROL, 1.5f), new Key("LALT", GLFW.GLFW_KEY_LEFT_ALT, 1.5f),
-                        new Key("SPACE", GLFW.GLFW_KEY_SPACE, 8.5f),
-                        new Key("RALT", GLFW.GLFW_KEY_RIGHT_ALT, 1.5f), new Key("RCTRL", GLFW.GLFW_KEY_RIGHT_CONTROL, 1.5f)),
-                List.of(new Key("", -1, 13.5f), new Key("UP", GLFW.GLFW_KEY_UP, 1f)),
-                List.of(new Key("", -1, 12.5f), new Key("LEFT", GLFW.GLFW_KEY_LEFT, 1f), new Key("DOWN", GLFW.GLFW_KEY_DOWN, 1f), new Key("RIGHT", GLFW.GLFW_KEY_RIGHT, 1f))
-        );
+        final float KEY_HEIGHT = 15f;
+        final float H_SPACING = 2f;
+        final float V_SPACING = 3f;
+        final float KEY_WIDTH_UNIT = (keyboardPanel.getWidth() - 14 * H_SPACING) / 15f;
 
-        float keyboardContentHeight = placeKeyRows(keyboardPanel, 5, keyboardLayout, InputSystem.InputType.KEYBOARD, keyboardButtonMap);
+        float rowY = 5f;
+        float rowX;
+        float keyWidth;
+
+        // --- Keyboard Block 1: Main keys ---
+        var mainKeysPanel = new LayeredPanelWidget(5, 5, keyboardPanel.getWidth() - 10, 0);
+        keyboardPanel.addChild("main_keys_panel", mainKeysPanel);
+        float mainKeysY = 0;
+
+        // Row 2: Numbers
+        rowX = 0f;
+        keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "`", GLFW.GLFW_KEY_GRAVE_ACCENT, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        for (int i = 1; i <= 9; i++) { keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, String.valueOf(i), GLFW.GLFW_KEY_1 + i - 1, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING; }
+        keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "0", GLFW.GLFW_KEY_0, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "-", GLFW.GLFW_KEY_MINUS, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "=", GLFW.GLFW_KEY_EQUAL, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        keyWidth = mainKeysPanel.getWidth() - rowX; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "BACK", GLFW.GLFW_KEY_BACKSPACE, rowX, mainKeysY, keyWidth, KEY_HEIGHT);
+        mainKeysY += KEY_HEIGHT + V_SPACING;
+
+        // Row 3: QWERTY
+        rowX = 0f;
+        keyWidth = KEY_WIDTH_UNIT * 1.5f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "TAB", GLFW.GLFW_KEY_TAB, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        String[] row3keys = {"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"};
+        int[] row3codes = {GLFW.GLFW_KEY_Q, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_E, GLFW.GLFW_KEY_R, GLFW.GLFW_KEY_T, GLFW.GLFW_KEY_Y, GLFW.GLFW_KEY_U, GLFW.GLFW_KEY_I, GLFW.GLFW_KEY_O, GLFW.GLFW_KEY_P, GLFW.GLFW_KEY_LEFT_BRACKET, GLFW.GLFW_KEY_RIGHT_BRACKET};
+        for(int i=0; i<row3keys.length; i++){ keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, row3keys[i], row3codes[i], rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING; }
+        keyWidth = mainKeysPanel.getWidth() - rowX; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "\\", GLFW.GLFW_KEY_BACKSLASH, rowX, mainKeysY, keyWidth, KEY_HEIGHT);
+        mainKeysY += KEY_HEIGHT + V_SPACING;
+
+        // Row 4: ASDF
+        rowX = 0f;
+        keyWidth = KEY_WIDTH_UNIT * 1.75f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "CAPS", GLFW.GLFW_KEY_CAPS_LOCK, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        String[] row4keys = {"A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'"};
+        int[] row4codes = {GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_F, GLFW.GLFW_KEY_G, GLFW.GLFW_KEY_H, GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K, GLFW.GLFW_KEY_L, GLFW.GLFW_KEY_SEMICOLON, GLFW.GLFW_KEY_APOSTROPHE};
+        for(int i=0; i<row4keys.length; i++){ keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, row4keys[i], row4codes[i], rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING; }
+        keyWidth = mainKeysPanel.getWidth() - rowX; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "ENTER", GLFW.GLFW_KEY_ENTER, rowX, mainKeysY, keyWidth, KEY_HEIGHT);
+        mainKeysY += KEY_HEIGHT + V_SPACING;
+
+        // Row 5: ZXC
+        rowX = 0f;
+        keyWidth = KEY_WIDTH_UNIT * 2.25f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "LSHIFT", GLFW.GLFW_KEY_LEFT_SHIFT, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        String[] row5keys = {"Z", "X", "C", "V", "B", "N", "M", ",", ".", "/"};
+        int[] row5codes = {GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_V, GLFW.GLFW_KEY_B, GLFW.GLFW_KEY_N, GLFW.GLFW_KEY_M, GLFW.GLFW_KEY_COMMA, GLFW.GLFW_KEY_PERIOD, GLFW.GLFW_KEY_SLASH};
+        for(int i=0; i<row5keys.length; i++){ keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, row5keys[i], row5codes[i], rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING; }
+        keyWidth = mainKeysPanel.getWidth() - rowX; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "RSHIFT", GLFW.GLFW_KEY_RIGHT_SHIFT, rowX, mainKeysY, keyWidth, KEY_HEIGHT);
+        mainKeysY += KEY_HEIGHT + V_SPACING;
+
+        // Row 6: Modifiers
+        rowX = 0f;
+        keyWidth = KEY_WIDTH_UNIT * 1.5f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "LCTRL", GLFW.GLFW_KEY_LEFT_CONTROL, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        keyWidth = KEY_WIDTH_UNIT * 1.25f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "LALT", GLFW.GLFW_KEY_LEFT_ALT, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        keyWidth = keyboardPanel.getWidth() - (KEY_WIDTH_UNIT * 1.5f + KEY_WIDTH_UNIT * 1.25f + KEY_WIDTH_UNIT * 1.25f + KEY_WIDTH_UNIT * 1.5f) - H_SPACING*4;
+        addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "SPACE", GLFW.GLFW_KEY_SPACE, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        keyWidth = KEY_WIDTH_UNIT * 1.25f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "RALT", GLFW.GLFW_KEY_RIGHT_ALT, rowX, mainKeysY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        keyWidth = KEY_WIDTH_UNIT * 1.5f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "RCTRL", GLFW.GLFW_KEY_RIGHT_CONTROL, rowX, mainKeysY, keyWidth, KEY_HEIGHT);
+        mainKeysY += KEY_HEIGHT + 5f;
+
+        mainKeysPanel.setHeight(mainKeysY);
+
+        // --- Keyboard Block 2: Side keys ---
+        var sideKeysPanel = new LayeredPanelWidget(5, mainKeysY + 10, keyboardPanel.getWidth() - 10, 0);
+        keyboardPanel.addChild("side_keys_panel", sideKeysPanel);
+        float sideKeysY = 0;
+
+        float arrowsStartX = sideKeysPanel.getWidth() - (3 * KEY_WIDTH_UNIT + 2 * H_SPACING);
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "UP", GLFW.GLFW_KEY_UP, arrowsStartX + KEY_WIDTH_UNIT + H_SPACING, sideKeysY - KEY_HEIGHT - V_SPACING, KEY_WIDTH_UNIT, KEY_HEIGHT);
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "LEFT", GLFW.GLFW_KEY_LEFT, arrowsStartX, sideKeysY, KEY_WIDTH_UNIT, KEY_HEIGHT);
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "DOWN", GLFW.GLFW_KEY_DOWN, arrowsStartX + KEY_WIDTH_UNIT + H_SPACING, sideKeysY, KEY_WIDTH_UNIT, KEY_HEIGHT);
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "RIGHT", GLFW.GLFW_KEY_RIGHT, arrowsStartX + 2 * (KEY_WIDTH_UNIT + H_SPACING), sideKeysY, KEY_WIDTH_UNIT, KEY_HEIGHT);
+        sideKeysY += KEY_HEIGHT + 5f;
+
+        sideKeysPanel.setHeight(sideKeysY);
+
+        float keyboardContentHeight = mainKeysY + sideKeysY + 10;
         keyboardPanel.setHeight(keyboardContentHeight);
         keyboardBack.setHeight(keyboardContentHeight);
-        yOffset += keyboardContentHeight + 10;
+        currentY += keyboardContentHeight + 10;
 
-        AutoScaleLabelWidget mouseLabel = new AutoScaleLabelWidget("Mouse", 5, yOffset, container.getWidth() - 10);
+        // --- Mouse Layout ---
+        var mouseLabel = new AutoScaleLabelWidget("Mouse", 5, currentY, container.getWidth() - 10);
         mouseLabel.dropShadow = false;
+        mouseLabel.setZ(mouseLabel.getZ() + 1);
         container.addChild("mouse_label", mouseLabel);
-        yOffset += 15;
+        currentY += 15;
 
-        LayeredPanelWidget mousePanel = new LayeredPanelWidget(X_START, yOffset, container.getWidth() - 10, 0);
-        BlendQuadWidget mouseBack = new BlendQuadWidget(0, 0, mousePanel.getWidth(), 0);
+        var mousePanel = new LayeredPanelWidget(5, currentY, container.getWidth() - 15, 0);
+        var mouseBack = new BlendQuadWidget(0, 0, mousePanel.getWidth(), 0);
         mouseBack.alpha = 0.2f;
         mouseBack.drawLine = false;
+        mousePanel.setZ(mousePanel.getZ() + 1);
         mousePanel.addChild("back", mouseBack);
         container.addChild("mouse_panel", mousePanel);
 
-        List<List<Key>> mouseLayout = List.of(
-                List.of(
-                        new Key("Left", GLFW.GLFW_MOUSE_BUTTON_LEFT, 2f),
-                        new Key("Right", GLFW.GLFW_MOUSE_BUTTON_RIGHT, 2f),
-                        new Key("Middle", GLFW.GLFW_MOUSE_BUTTON_MIDDLE, 2f)
-                ),
-                List.of(
-                        new Key("M4", GLFW.GLFW_MOUSE_BUTTON_4, 1.5f),
-                        new Key("M5", GLFW.GLFW_MOUSE_BUTTON_5, 1.5f),
-                        new Key("M6", GLFW.GLFW_MOUSE_BUTTON_6, 1.5f),
-                        new Key("M7", GLFW.GLFW_MOUSE_BUTTON_7, 1.5f),
-                        new Key("M8", GLFW.GLFW_MOUSE_BUTTON_8, 1.5f)
-                )
-        );
+        rowY = 5f;
+        rowX = 0f;
+        keyWidth = (mousePanel.getWidth() - 2 * H_SPACING) / 3f;
+        addKey(mousePanel, mouseButtonMap, InputSystem.InputType.MOUSE, "Left", GLFW.GLFW_MOUSE_BUTTON_LEFT, rowX, rowY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        addKey(mousePanel, mouseButtonMap, InputSystem.InputType.MOUSE, "Right", GLFW.GLFW_MOUSE_BUTTON_RIGHT, rowX, rowY, keyWidth, KEY_HEIGHT); rowX += keyWidth + H_SPACING;
+        addKey(mousePanel, mouseButtonMap, InputSystem.InputType.MOUSE, "Middle", GLFW.GLFW_MOUSE_BUTTON_MIDDLE, rowX, rowY, keyWidth, KEY_HEIGHT);
+        rowY += KEY_HEIGHT + V_SPACING;
 
-        float mouseContentHeight = placeKeyRows(mousePanel, 5, mouseLayout, InputSystem.InputType.MOUSE, mouseButtonMap);
+        rowX = 0f;
+        keyWidth = (mousePanel.getWidth() - 4 * H_SPACING) / 5f;
+        for(int i = 4; i <= 8; i++) {
+            addKey(mousePanel, mouseButtonMap, InputSystem.InputType.MOUSE, "M"+i, GLFW.GLFW_MOUSE_BUTTON_4 + i - 4, rowX, rowY, keyWidth, KEY_HEIGHT);
+            rowX += keyWidth + H_SPACING;
+        }
+        rowY += KEY_HEIGHT + 5f;
+
+        float mouseContentHeight = rowY;
         mousePanel.setHeight(mouseContentHeight);
         mouseBack.setHeight(mouseContentHeight);
-    }
-
-    private static float placeKeyRows(PanelWidget container, float y, List<List<Key>> layout, InputSystem.InputType type, Map<Integer, PanelWidget> buttonMap) {
-        final float BASE_UNIT_WIDTH = 8.5f;
-        final float BUTTON_HEIGHT = 15f;
-        final float H_SPACING = 1.5f;
-        final float V_SPACING = 3f;
-        final float X_START = 0f;
-
-        float maxWidth = 0;
-        for (List<Key> row : layout) {
-            float rowWidth = (float) row.stream().mapToDouble(k -> k.widthMultiplier * BASE_UNIT_WIDTH).sum() + Math.max(0, row.size() - 1) * H_SPACING;
-            maxWidth = Math.max(maxWidth, rowWidth);
-        }
-
-        float availableWidth = container.getWidth();
-        float scale = 1.0f;
-        if (maxWidth > availableWidth) {
-            scale = availableWidth / maxWidth;
-        }
-
-        final float f_BASE_UNIT_WIDTH = BASE_UNIT_WIDTH * scale;
-        final float f_BUTTON_HEIGHT = BUTTON_HEIGHT * scale;
-        final float f_H_SPACING = H_SPACING * scale;
-        final float f_V_SPACING = V_SPACING * scale;
-
-        float currentY = y;
-
-        for (List<Key> row : layout) {
-            float currentX = X_START;
-            for (Key key : row) {
-                float btnWidth = key.widthMultiplier * f_BASE_UNIT_WIDTH;
-
-                if (key.code != -1) {
-                    LayeredPanelWidget keyBtn = createSmallKeyButton(key.name, currentX, currentY, btnWidth, f_BUTTON_HEIGHT, () -> {
-                        handleRebind(type, new LinkedHashSet<>(Set.of(key.code)));
-                        setBackgroundControlsEnabled(true);
-                        keySelectionPanel.setVisible(false);
-                        keySelectionPanel.setEnabled(false);
-                    });
-                    keyBtn.<AutoScaleLabelWidget>getChildUnSafe("label").scale *= scale;
-                    container.addChild("btn_" + type.name().toLowerCase() + "_" + key.name, keyBtn);
-                    buttonMap.put(key.code, keyBtn);
-                }
-                currentX += btnWidth + f_H_SPACING;
-            }
-            currentY += f_BUTTON_HEIGHT + f_V_SPACING;
-        }
-
-        return currentY - y;
-    }
-
-    private static LayeredPanelWidget createSmallKeyButton(String text, float x, float y, float w, float h, Runnable onPress) {
-        LayeredPanelWidget panel = new LayeredPanelWidget(x, y, w, h);
-        ImageButtonWidget buttonLogic = new ImageButtonWidget(0, 0, w, h, null, onPress);
-        panel.addChild("button_logic", buttonLogic);
-
-        BlendQuadWidget back = new BlendQuadWidget(0, 0, w, h);
-        back.drawLine = false;
-        back.alpha = 0.5f;
-        panel.addChild("back", back);
-
-        AutoScaleLabelWidget label = new AutoScaleLabelWidget(text, 0, 0, w, true);
-        label.dropShadow = false;
-        label.scale = 0.75f;
-        label.setY((h - label.getHeight() * label.scale) / 2f);
-        panel.addChild("label", label);
-        return panel;
     }
 
     private static PanelWidget createKeybindingControlPanel() {
@@ -531,6 +539,7 @@ public final class Settings implements DataTerminalHUD.App {
         keyboardBtn.addChild("back", keyboardBtnBack);
 
         var keyboardBtnLayered = new LayeredPanelWidget(0, 0, 60, 15);
+        keyboardBtnLayered.setEnabled(false);
         keyboardBtn.addChild("keyboard_btn_layered", keyboardBtnLayered);
         {
             AutoScaleLabelWidget keyboardLabel = new AutoScaleLabelWidget("Keyboard", 0, 4, keyboardBtn.getWidth(), true);
@@ -555,6 +564,7 @@ public final class Settings implements DataTerminalHUD.App {
         mouseBtn.addChild("back", mouseBtnBack);
 
         var mouseBtnLayered = new LayeredPanelWidget(0, 0, 60, 15);
+        mouseBtnLayered.setEnabled(false);
         mouseBtn.addChild("mouse_btn_layered", mouseBtnLayered);
         {
             var mouseLabel = new AutoScaleLabelWidget("Mouse", 0, 4, mouseBtn.getWidth(), true);
@@ -582,7 +592,8 @@ public final class Settings implements DataTerminalHUD.App {
             keySelectionButton.addChild("back", keySelectionButtonBack);
 
             var keySelectionButtonLayered = new LayeredPanelWidget(0, 0, 125, 20);
-            keySelectionButton.addChild("key_select_layered", keySelectionButtonLayered);
+            keySelectionButtonLayered.setEnabled(false);
+            keySelectionButton.addChild("layered", keySelectionButtonLayered);
             {
                 var keySelectionButtonLabel = new AutoScaleLabelWidget("Set Key", 0, 0, keySelectionButton.getWidth(), true);
                 keySelectionButtonLabel.dropShadow = false;
@@ -614,17 +625,25 @@ public final class Settings implements DataTerminalHUD.App {
         return controlPanel;
     }
 
-    private static LayeredPanelWidget createModifierButton(String text, float x, Runnable onPress) {
-        LayeredPanelWidget panel = new LayeredPanelWidget(x, 0, 35, 15);
-        ImageButtonWidget buttonLogic = new ImageButtonWidget(0, 0, 35, 15, null, onPress);
-        panel.addChild("button_logic", buttonLogic);
+    private static PanelWidget createModifierButton(String text, float x, Runnable onPress) {
+        PanelWidget panel = new PanelWidget(x, 0, 35, 15);
+        {
+            ImageButtonWidget buttonLogic = new ImageButtonWidget(0, 0, 35, 15, null, onPress);
+            panel.addChild("button_logic", buttonLogic);
 
-        BlendQuadWidget back = new BlendQuadWidget(0, 0, 35, 15);
-        back.drawLine = false;
-        panel.addChild("back", back);
-        AutoScaleLabelWidget label = new AutoScaleLabelWidget(text, 0, 4, 35, true);
-        label.dropShadow = false;
-        panel.addChild("label", label);
+            BlendQuadWidget back = new BlendQuadWidget(0, 0, 35, 15);
+            back.drawLine = false;
+            panel.addChild("back", back);
+
+            LayeredPanelWidget layered = new LayeredPanelWidget(0, 0, 35, 15);
+            layered.setEnabled(false);
+            panel.addChild("layered", layered);
+            {
+                AutoScaleLabelWidget label = new AutoScaleLabelWidget(text, 0, 4, 35, true);
+                label.dropShadow = false;
+                layered.addChild("label", label);
+            }
+        }
         return panel;
     }
 
@@ -685,7 +704,7 @@ public final class Settings implements DataTerminalHUD.App {
         updateModifierButtonState(keyboardBtn, isKeyboard);
         updateModifierButtonState(mouseBtn, !isKeyboard);
 
-        AutoScaleLabelWidget keyText = keySelectionButton.<PanelWidget>getChildUnSafe("key_select_layered").getChildUnSafe("text");
+        AutoScaleLabelWidget keyText = keySelectionButton.<PanelWidget>getChildUnSafe("layered").getChildUnSafe("text");
         keyText.setText(formatKey(binding));
 
         Set<Integer> mods = binding.keyInfo.modifiers;
@@ -862,7 +881,7 @@ public final class Settings implements DataTerminalHUD.App {
             updateControlPanelContents();
         } else {
             if (keySelectionButton != null) {
-                keySelectionButton.<AutoScaleLabelWidget>getChildUnSafe("text").setText("Set Key");
+                keySelectionButton.<PanelWidget>getChildUnSafe("layered").<AutoScaleLabelWidget>getChildUnSafe("text").setText("Set Key");
             }
         }
     }
@@ -904,6 +923,26 @@ public final class Settings implements DataTerminalHUD.App {
         back.blue = 1.0f;
     }
 
-    record Key(String name, int code, float widthMultiplier) {
+    private static LayeredPanelWidget createSmallKeyButton(String text, float x, float y, float w, float h, Runnable onPress) {
+        var panel = new LayeredPanelWidget(x, y, w, h);
+        ImageButtonWidget buttonLogic = new ImageButtonWidget(0, 0, w, h, null, onPress);
+        panel.addChild("button_logic", buttonLogic);
+
+        BlendQuadWidget back = new BlendQuadWidget(0, 0, w, h);
+        back.drawLine = false;
+        back.alpha = 0.5f;
+        panel.addChild("back", back);
+
+        LayeredPanelWidget layered = new LayeredPanelWidget(0, 0, w, h);
+        layered.setEnabled(false);
+        panel.addChild("layered", layered);
+        {
+            AutoScaleLabelWidget label = new AutoScaleLabelWidget(text, 0, 0, w, true);
+            label.dropShadow = false;
+            label.scale = 0.75f;
+            label.setY((h - label.getHeight() * label.scale) / 2f);
+            layered.addChild("label", label);
+        }
+        return panel;
     }
 }
