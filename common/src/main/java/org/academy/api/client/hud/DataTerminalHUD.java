@@ -43,7 +43,10 @@ import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_REPEAT;
@@ -220,28 +223,28 @@ public final class DataTerminalHUD implements HUDRenderer {
             main.addChild("back_dynamic", dynamicGeometricBack);
             main.addChild("root", root);
             {
-                LayeredPanelWidget infoBar = new LayeredPanelWidget(0, 0, WIDTH, INFO_BAR_HEIGHT);
+                var infoBar = new LayeredPanelWidget(0, 0, WIDTH, INFO_BAR_HEIGHT);
                 root.addChild("info_bar", infoBar);
                 {
-                    ImageWidget icon = new ImageWidget(ICON_X_Y_PADDING_INFO_BAR, ICON_X_Y_PADDING_INFO_BAR, ICON_SIZE_INFO_BAR, ICON_SIZE_INFO_BAR,
+                    var icon = new ImageWidget(ICON_X_Y_PADDING_INFO_BAR, ICON_X_Y_PADDING_INFO_BAR, ICON_SIZE_INFO_BAR, ICON_SIZE_INFO_BAR,
                             RenderTypes.RENDER_TYPE_ICON_DATA_TERMINAL);
                     infoBar.addChild("icon", icon);
 
-                    LocalPlayer player = Minecraft.getInstance().player;
+                    var player = Minecraft.getInstance().player;
                     String playerName = "N/A";
                     if (player != null) {
                         playerName = player.getGameProfile().getName();
                     }
-                    Font font = Minecraft.getInstance().font;
+                    var font = Minecraft.getInstance().font;
                     playerNameLabel = new LabelWidget(playerName, WIDTH - font.width(playerName) - INFO_BAR_PLAYER_NAME_PADDING_X, PLAYER_NAME_LABEL_Y_INFO_BAR);
                     playerNameLabel.dropShadow = false;
                     infoBar.addChild("player_name", playerNameLabel);
 
-                    FillWidget spiltLine = new FillWidget(SPLIT_LINE_X_PADDING_INFO_BAR, INFO_BAR_HEIGHT, WIDTH - SPLIT_LINE_WIDTH_REDUCTION_INFO_BAR, 1, 0x30FFFFFF);
+                    var spiltLine = new FillWidget(SPLIT_LINE_X_PADDING_INFO_BAR, INFO_BAR_HEIGHT, WIDTH - SPLIT_LINE_WIDTH_REDUCTION_INFO_BAR, 1, 0x30FFFFFF);
                     infoBar.addChild("spilt_line", spiltLine);
                 }
 
-                SmoothScrollPanelWidget appArea = new SmoothScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_WIDTH, APP_AREA_HEIGHT);
+                var appArea = new ScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_WIDTH, APP_AREA_HEIGHT);
                 root.addChild("area_app_list", appArea);
                 {
                     List<App> apps = new ArrayList<>(APP_LIST);
@@ -260,21 +263,20 @@ public final class DataTerminalHUD implements HUDRenderer {
                         appArea.addChild("app_" + app.getName(), appButton);
                     }
                 }
-                VerticalScrollBarWidget appAreaBar = new VerticalScrollBarWidget(appArea,
+                var appAreaBar = new VerticalScrollBarWidget(appArea,
                         appArea.getX() + appArea.getWidth(), appArea.getY(), APP_AREA_BAR_WIDTH, appArea.getHeight());
-                appAreaBar.setThumbColor(0x50AAAAAA);
-                appAreaBar.setTrackColor(0x70202020);
-                appAreaBar.showBackground = false;
+                appAreaBar.setThumbColor(0x20AAAAAA);
+                appAreaBar.setTrackColor(0x10202020);
                 root.addChild("bar_area_app_list", appAreaBar);
             }
         }
-        LayeredPanelWidget appArea = new LayeredPanelWidget(0, 0, 0, 0);
+        var appArea = new LayeredPanelWidget(0, 0, 0, 0);
         rootContainer.addChild("area_app", appArea);
 
-        CursorWidget cursorWidget = new CursorWidget(CURSOR_WIDGET_SIZE, CURSOR_WIDGET_SIZE);
+        var cursorWidget = new CursorWidget(CURSOR_WIDGET_SIZE, CURSOR_WIDGET_SIZE);
         cursorWidget.setEnabled(false);
-        cursorWidget.setZ(99);
         rootContainer.addChild("cursor", cursorWidget);
+        cursorWidget.setZ(99);
     }
 
     public static void toggle() {
@@ -321,15 +323,15 @@ public final class DataTerminalHUD implements HUDRenderer {
     }
 
     private static LayeredPanelWidget getAppWidget(App app) {
-        LayeredPanelWidget appPanel = new LayeredPanelWidget(0, 0, APP_WIDGET_WIDTH, APP_WIDGET_HEIGHT);
+        var appPanel = new LayeredPanelWidget(0, 0, APP_WIDGET_WIDTH, APP_WIDGET_HEIGHT);
 
-        AppWidget appIconWidget = new AppWidget(
+        var appIconWidget = new AppWidget(
                 (APP_WIDGET_WIDTH - APP_ICON_SIZE) / 2,
                 0,
                 app.getIcon(), app.onClick());
         appPanel.addChild("app_icon", appIconWidget);
 
-        AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget(app.getName(), APP_NAME_LABEL_OFFSET_X, APP_ICON_SIZE, APP_WIDGET_WIDTH, true);
+        var nameLabel = new AutoScaleLabelWidget(app.getName(), APP_NAME_LABEL_OFFSET_X, APP_ICON_SIZE, APP_WIDGET_WIDTH, true);
         nameLabel.scale = 0.85f;
         nameLabel.dropShadow = false;
 
@@ -359,10 +361,10 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onMouseMove(MouseMoveEvent event) {
-        MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
+        var mouseHandler = Minecraft.getInstance().mouseHandler;
 
         if (active && Minecraft.getInstance().screen == null) {
-            Window window = Minecraft.getInstance().getWindow();
+            var window = Minecraft.getInstance().getWindow();
             if (isFirstMove) {
                 lastRawMouseX = event.xpos;
                 lastRawMouseY = event.ypos;
@@ -379,14 +381,14 @@ public final class DataTerminalHUD implements HUDRenderer {
             xpos += deltaGuiX;
             ypos += deltaGuiY;
 
-            Widget mainPanel = rootContainer.getChildren().get("main");
+            var mainPanel = rootContainer.getChildren().get("main");
             if (mainPanel != null) {
                 float minX = mainPanel.getAbsoluteX();
                 float minY = mainPanel.getAbsoluteY();
                 float maxX = minX + mainPanel.getWidth();
                 float maxY = minY + mainPanel.getHeight();
 
-                Widget appAreaPanel = rootContainer.getChildren().get("area_app");
+                var appAreaPanel = rootContainer.getChildren().get("area_app");
                 if (appAreaPanel != null && appAreaPanel.getWidth() > 0 && appAreaPanel.getHeight() > 0) {
                     minX = Math.min(minX, appAreaPanel.getAbsoluteX());
                     minY = Math.min(minY, appAreaPanel.getAbsoluteY());
@@ -422,7 +424,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     public static void onMouseScroll(MouseScrollEvent event) {
         if (active && Minecraft.getInstance().screen == null) {
             double yOffset = event.yOffset;
-            Options options = Minecraft.getInstance().options;
+            var options = Minecraft.getInstance().options;
             boolean discreteMouseScroll = options.discreteMouseScroll().get();
             double mouseWheelSensitivity = options.mouseWheelSensitivity().get();
             double d0 = (discreteMouseScroll ? Math.signum(yOffset) : yOffset) * mouseWheelSensitivity;
@@ -437,18 +439,18 @@ public final class DataTerminalHUD implements HUDRenderer {
             int key = event.key;
             int scanCode = event.scanCode;
             Options options = Minecraft.getInstance().options;
-            KeyMapping keyLeft = options.keyLeft;
-            KeyMapping keyRight = options.keyRight;
-            KeyMapping keyUp = options.keyUp;
-            KeyMapping keyDown = options.keyDown;
-            KeyMapping keyJump = options.keyJump;
-            KeyMapping keyShift = options.keyShift;
-            KeyMapping keySprint = options.keySprint;
+            var keyLeft = options.keyLeft;
+            var keyRight = options.keyRight;
+            var keyUp = options.keyUp;
+            var keyDown = options.keyDown;
+            var keyJump = options.keyJump;
+            var keyShift = options.keyShift;
+            var keySprint = options.keySprint;
             KeyMapping[] keyHotbarSlots = options.keyHotbarSlots;
 
             boolean keyHotbar = false;
 
-            for (KeyMapping keyHotbarSlot : keyHotbarSlots) {
+            for (var keyHotbarSlot : keyHotbarSlots) {
                 if (!keyHotbar) {
                     keyHotbar = keyHotbarSlot.matches(key, scanCode);
                 }
@@ -490,7 +492,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     @SubscribeEvent
     public static void onTick(ClientTickEvent event) {
         if (active) {
-            LocalPlayer player = Minecraft.getInstance().player;
+            var player = Minecraft.getInstance().player;
             if (playerNameLabel != null && player != null) {
                 String name = player.getGameProfile().getName();
                 Font font = Minecraft.getInstance().font;
@@ -555,8 +557,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         }
     }
 
-    public interface
-    App {
+    public interface App {
         RenderType getIcon();
 
         String getName();
@@ -587,7 +588,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale,
                     ClientUtil.animationFactor(1));
             heightScale = widthScale;
-            RenderType oringinRenderType = renderType;
+            var oringinRenderType = renderType;
             renderType = RenderTypes.RENDER_TYPE_APP_BACK;
             super.render(graphics, mouseX, mouseY, partialTick);
             renderType = oringinRenderType;

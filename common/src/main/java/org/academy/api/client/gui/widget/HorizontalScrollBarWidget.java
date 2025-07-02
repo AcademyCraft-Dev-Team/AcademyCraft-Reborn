@@ -7,9 +7,9 @@ import org.academy.api.common.util.MathUtil;
 import org.joml.Matrix4f;
 
 public class HorizontalScrollBarWidget extends DragBarWidget {
-    public SmoothScrollPanelWidget panel;
+    public ScrollPanelWidget panel;
 
-    public HorizontalScrollBarWidget(SmoothScrollPanelWidget panel, float x, float y, float width, float height) {
+    public HorizontalScrollBarWidget(ScrollPanelWidget panel, float x, float y, float width, float height) {
         super(x, y, width, height);
         this.panel = panel;
     }

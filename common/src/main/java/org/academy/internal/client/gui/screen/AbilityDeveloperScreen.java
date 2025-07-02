@@ -55,7 +55,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     private String currentlyConnectedNodeName = "None";
     private PanelWidget screenWirelessPanel;
     private PanelWidget wirelessPanel;
-    private SmoothScrollPanelWidget nodeListPanel;
+    private ScrollPanelWidget nodeListPanel;
     private PanelWidget leftPanel;
     private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
 
@@ -101,7 +101,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 ImageWidget rightPanelInfo = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, RENDER_TYPE_SKILL_PANEL_INFO);
                 rightPanel.addChild("panel_right_info", rightPanelInfo);
                 boolean bootFailed = AbilitySystemClient.getCategory() == Level0.INSTANCE;
-                SmoothScrollPanelWidget outputList = new SmoothScrollPanelWidget(
+                ScrollPanelWidget outputList = new ScrollPanelWidget(
                         PANEL_RIGHT_SKILL_BACK_X + 5, PANEL_RIGHT_SKILL_BACK_Y + 5, PANEL_RIGHT_WIDTH - 32, 132);
                 outputList.setEnabled(bootFailed);
                 outputList.setVisible(bootFailed);
@@ -392,7 +392,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
     }
 
     @Override
-    public SmoothScrollPanelWidget getNodeList() {
+    public ScrollPanelWidget getNodeList() {
         return nodeListPanel;
     }
 

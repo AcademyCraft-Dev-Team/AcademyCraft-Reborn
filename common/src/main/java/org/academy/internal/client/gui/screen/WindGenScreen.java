@@ -22,7 +22,7 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
     public static final String AF = "%d AF";
     private String connectedNodeName = "None";
     private PanelWidget wirelessPanel;
-    private SmoothScrollPanelWidget nodeListPanel;
+    private ScrollPanelWidget nodeListPanel;
     private LabelWidget bufferValueLabel;
     private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
             37f / 255f, 247f / 255f, 1, 1);
@@ -227,7 +227,7 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
     }
 
     @Override
-    public SmoothScrollPanelWidget getNodeList() {
+    public ScrollPanelWidget getNodeList() {
         return nodeListPanel;
     }
 
