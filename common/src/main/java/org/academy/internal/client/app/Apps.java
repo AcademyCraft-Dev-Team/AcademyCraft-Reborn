@@ -11,10 +11,11 @@ public final class Apps {
 
     static {
         APPS.add(Settings.INSTANCE);
+        APPS.add(MediaPlayer.INSTANCE);
     }
 
     public static void register() {
-        for (DataTerminalHUD.App app : APPS) {
+        for (var app : APPS) {
             DataTerminalHUD.registerApp(app);
         }
         AcademyCraft.EVENT_BUS.register(Settings.class);

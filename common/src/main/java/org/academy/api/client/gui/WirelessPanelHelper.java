@@ -39,7 +39,7 @@ public final class WirelessPanelHelper {
             LabelWidget availableLabel = new LabelWidget("Available", 12, 54);
             wirelessPanel.addChild("available_node_label", availableLabel);
 
-            SmoothScrollPanelWidget nodeListPanel = new SmoothScrollPanelWidget(10, 64, 160, 114);
+            ScrollPanelWidget nodeListPanel = new ScrollPanelWidget(10, 64, 160, 114);
             wirelessPanel.addChild("node_list", nodeListPanel);
 
             VerticalScrollBarWidget scrollBar = new VerticalScrollBarWidget(nodeListPanel, 160, 64, 5, 114);
@@ -50,7 +50,7 @@ public final class WirelessPanelHelper {
     }
 
     public interface WirelessPanel {
-        SmoothScrollPanelWidget getNodeList();
+        ScrollPanelWidget getNodeList();
 
         PanelWidget getWirelessPanel();
 
@@ -60,7 +60,7 @@ public final class WirelessPanelHelper {
 
         BlockPos getPosition();
 
-        default void requestAvailableNodes(SmoothScrollPanelWidget listPanel) {
+        default void requestAvailableNodes(ScrollPanelWidget listPanel) {
             GetAvailableNodesPacket requestPayload = new GetAvailableNodesPacket(getPosition());
             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
                     requestPayload,
@@ -138,7 +138,7 @@ public final class WirelessPanelHelper {
             getWirelessPanel().addChild("connected_node", connectedNodeWidgetRef);
             if (changed) {
                 if (getWirelessPanel().isVisible()) {
-                    SmoothScrollPanelWidget nodeListPanel = getNodeList();
+                    ScrollPanelWidget nodeListPanel = getNodeList();
                     requestAvailableNodes(nodeListPanel);
                 }
             }

@@ -11,12 +11,12 @@ import org.lwjgl.opengl.GL30;
 
 import static org.lwjgl.opengl.GL30.*;
 
-public class SmoothScrollPanelWidget extends AbstractContainerWidget {
+public class ScrollPanelWidget extends AbstractContainerWidget {
     public float scrollOffset;
     public float scrollTarget;
     public float scrollSpeed = 24f;
 
-    public SmoothScrollPanelWidget(float x, float y, float width, float height) {
+    public ScrollPanelWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
     }
 

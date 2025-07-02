@@ -51,10 +51,10 @@ public final class Settings implements DataTerminalHUD.App {
         LayeredPanelWidget main = new LayeredPanelWidget(0, 0, appArea.getWidth(), appArea.getHeight());
         appArea.addChild("main", main);
         {
-            SmoothScrollPanelWidget generalPanel = createGeneralPanel();
+            ScrollPanelWidget generalPanel = createGeneralPanel();
             main.addChild("panel_general", generalPanel);
 
-            SmoothScrollPanelWidget keybindingsPanel = createKeybindingsPanel(appArea);
+            ScrollPanelWidget keybindingsPanel = createKeybindingsPanel(appArea);
             main.addChild("panel_keybindings", keybindingsPanel);
 
             createTabBar(main, generalPanel, keybindingsPanel);
@@ -121,8 +121,8 @@ public final class Settings implements DataTerminalHUD.App {
         return panel;
     }
 
-    private static SmoothScrollPanelWidget createGeneralPanel() {
-        SmoothScrollPanelWidget panel = new SmoothScrollPanelWidget(5, 30, 190, 190);
+    private static ScrollPanelWidget createGeneralPanel() {
+        ScrollPanelWidget panel = new ScrollPanelWidget(5, 30, 190, 190);
 
         float currentY = 10f;
 
@@ -206,8 +206,8 @@ public final class Settings implements DataTerminalHUD.App {
         return buttonPanel;
     }
 
-    private static SmoothScrollPanelWidget createKeybindingsPanel(AbstractContainerWidget parent) {
-        SmoothScrollPanelWidget keybindingsPanel = new SmoothScrollPanelWidget(5, 30, 190, 190);
+    private static ScrollPanelWidget createKeybindingsPanel(AbstractContainerWidget parent) {
+        ScrollPanelWidget keybindingsPanel = new ScrollPanelWidget(5, 30, 190, 190);
         keybindingsPanel.setVisible(false);
         keybindingsPanel.setEnabled(false);
 
@@ -310,7 +310,7 @@ public final class Settings implements DataTerminalHUD.App {
             closeButtonPanel.addChild("back", closeBack);
             keySelectionPanel.addChild("close_btn", closeButtonPanel);
 
-            SmoothScrollPanelWidget keysContainer = new SmoothScrollPanelWidget(5, 25, 170, 135);
+            ScrollPanelWidget keysContainer = new ScrollPanelWidget(5, 25, 170, 135);
             keySelectionPanel.addChild("keys_container", keysContainer);
 
             var scrollBar = new VerticalScrollBarWidget(keysContainer, keysContainer.getX() + keysContainer.getWidth() - 5, keysContainer.getY(), 5, keysContainer.getHeight());
@@ -357,7 +357,7 @@ public final class Settings implements DataTerminalHUD.App {
         }
     }
 
-    private static void populateKeySelectionContainer(SmoothScrollPanelWidget container) {
+    private static void populateKeySelectionContainer(ScrollPanelWidget container) {
         keyboardButtonMap.clear();
         mouseButtonMap.clear();
 
