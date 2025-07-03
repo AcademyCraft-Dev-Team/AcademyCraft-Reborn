@@ -38,20 +38,20 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "resizeDisplay", at = @At("TAIL"))
     private void resizeDisplay(CallbackInfo ci) {
-        ResizeDisplayEvent event = new ResizeDisplayEvent(getWindow().getGuiScaledWidth(), getWindow().getGuiScaledHeight());
+        var event = new ResizeDisplayEvent(getWindow().getGuiScaledWidth(), getWindow().getGuiScaledHeight());
         AcademyCraft.EVENT_BUS.post(event);
     }
 
     @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
     private void setScreenPre(Screen screen, CallbackInfo ci) {
-        ChangeScreenEvent.Pre pre = new ChangeScreenEvent.Pre(this.screen, screen);
+        var pre = new ChangeScreenEvent.Pre(this.screen, screen);
         AcademyCraft.EVENT_BUS.post(pre);
         if (pre.isCanceled()) ci.cancel();
     }
 
     @Inject(method = "setScreen", at = @At("RETURN"))
     private void setScreenPost(Screen screen, CallbackInfo ci) {
-        ChangeScreenEvent.Post post = new ChangeScreenEvent.Post(this.screen, screen);
+        var post = new ChangeScreenEvent.Post(this.screen, screen);
         AcademyCraft.EVENT_BUS.post(post);
     }
 

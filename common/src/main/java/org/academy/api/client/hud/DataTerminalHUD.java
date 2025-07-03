@@ -3,7 +3,6 @@ package org.academy.api.client.hud;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
-import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -15,7 +14,6 @@ import net.minecraft.client.MouseHandler;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostPass;
 import net.minecraft.client.renderer.RenderType;
@@ -174,7 +172,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             {
                 if (config.enableBlur) {
                     guiGraphics.bufferSource().endBatch(RenderType.gui());
-                    RenderTarget maskInput = postChain.getTempTarget("maskInput");
+                    var maskInput = postChain.getTempTarget("maskInput");
                     maskInput.clear(false);
                     maskInput.bindWrite(false);
                     guiGraphics.pose().pushPose();
@@ -208,15 +206,15 @@ public final class DataTerminalHUD implements HUDRenderer {
         rootContainer.setWidth(width);
         rootContainer.setHeight(height);
         rootContainer.clearChildren();
-        LayeredPanelWidget main = new LayeredPanelWidget(width - WIDTH * 1.25f, (height - HEIGHT) / 2, WIDTH, HEIGHT);
+        var main = new LayeredPanelWidget(width - WIDTH * 1.25f, (height - HEIGHT) / 2, WIDTH, HEIGHT);
         rootContainer.addChild("main", main);
         {
-            BlendQuadWidget back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
+            var back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
             back.drawLine = false;
             back.alpha = 0.25f;
             main.addChild("back", back);
-            LayeredPanelWidget root = new LayeredPanelWidget(0, 0, WIDTH, HEIGHT);
-            DynamicGeometricBackgroundWidget dynamicGeometricBack = new DynamicGeometricBackgroundWidget(
+            var root = new LayeredPanelWidget(0, 0, WIDTH, HEIGHT);
+            var dynamicGeometricBack = new DynamicGeometricBackgroundWidget(
                     0, 0, WIDTH, HEIGHT,
                     48, 1, 64,
                     0x20FFFFFF, true, 32);
@@ -257,7 +255,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                         float currentAppX = APP_AREA_PADDING + col * (APP_WIDGET_WIDTH + APP_HORIZONTAL_SPACING);
                         float currentAppY = APP_AREA_PADDING + row * (APP_WIDGET_HEIGHT + APP_VERTICAL_SPACING);
 
-                        LayeredPanelWidget appButton = getAppWidget(app);
+                        var appButton = getAppWidget(app);
                         appButton.setX(currentAppX);
                         appButton.setY(currentAppY);
                         appArea.addChild("app_" + app.getName(), appButton);
@@ -286,7 +284,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         } else {
             active = !active;
         }
-        Window window = Minecraft.getInstance().getWindow();
+        var window = Minecraft.getInstance().getWindow();
         if (active) {
             if (AbilitySystemClient.isActiveHUD()) {
                 AbilitySystemClient.setActiveHUD(false);

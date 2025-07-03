@@ -15,7 +15,7 @@ public class MenuTypes {
     public static final MenuType<WirelessNodeMenu> NODE_MENU = register("node", WirelessNodeMenu::new, FeatureFlags.VANILLA_SET);
 
     public static <T extends AbstractContainerMenu> MenuType<T> register(String name, MenuType.MenuSupplier<T> constructor, FeatureFlagSet requiredFeatures) {
-        MenuType<T> menuType = new MenuType<>(constructor, requiredFeatures);
+        var menuType = new MenuType<>(constructor, requiredFeatures);
         MENU_TYPES.put(name, menuType);
         return menuType;
     }

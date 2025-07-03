@@ -24,7 +24,7 @@ public class WirelessNodeMenu extends AbstractContainerMenu {
 
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
-                this.addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
+                addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
             }
         }
 
@@ -38,10 +38,10 @@ public class WirelessNodeMenu extends AbstractContainerMenu {
     }
 
     public @NotNull ItemStack quickMoveStack(@NotNull Player pPlayer, int pIndex) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(pIndex);
+        var itemstack = ItemStack.EMPTY;
+        var slot = this.slots.get(pIndex);
         if (slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
+            var itemstack1 = slot.getItem();
             itemstack = itemstack1.copy();
             if (pIndex < 2) {
                 if (!this.moveItemStackTo(itemstack1, 2, this.slots.size(), true)) {

@@ -11,14 +11,10 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.ability.AbilitySystemServer;
 
-import java.util.HashSet;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -44,9 +40,9 @@ public class AcademyCraftCommand {
     }
 
     private static int learnAllSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        UUID playerUuid = player.getUUID();
-        AbilityCategory currentCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
+        var player = context.getSource().getPlayerOrException();
+        var playerUuid = player.getUUID();
+        var currentCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
 
         if (currentCategory == null) {
             context.getSource().sendFailure(Component.literal("Could not retrieve current ability category."));
@@ -67,9 +63,9 @@ public class AcademyCraftCommand {
     }
 
     private static int listLearnedSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        UUID playerUuid = player.getUUID();
-        HashSet<String> learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
+        var player = context.getSource().getPlayerOrException();
+        var playerUuid = player.getUUID();
+        var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
 
         if (learnedSkills.isEmpty()) {
             context.getSource().sendSuccess(() -> Component.literal("You have not learned any skills yet."), false);
@@ -81,18 +77,18 @@ public class AcademyCraftCommand {
     }
 
     private static int learnSingleSkill(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        UUID playerUuid = player.getUUID();
-        String skillName = StringArgumentType.getString(context, "skill_name");
+        var player = context.getSource().getPlayerOrException();
+        var playerUuid = player.getUUID();
+        var skillName = StringArgumentType.getString(context, "skill_name");
 
-        Skill skillToLearn = AbilitySystem.SKILL_MAP.get(skillName);
+        var skillToLearn = AbilitySystem.SKILL_MAP.get(skillName);
 
         if (skillToLearn == null) {
             context.getSource().sendFailure(Component.literal("Skill '" + skillName + "' not found."));
             return 0;
         }
 
-        AbilityCategory playerCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
+        var playerCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
         if (playerCategory == null || !playerCategory.skillList.contains(skillToLearn)) {
             context.getSource().sendFailure(Component.literal("Skill '" + skillName + "' does not belong to your current ability category (" + (playerCategory != null ? playerCategory.name : "None") + ")."));
             return 0;
@@ -109,11 +105,11 @@ public class AcademyCraftCommand {
     }
 
     private static int setAbilityCategory(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        UUID playerUuid = player.getUUID();
-        String categoryName = StringArgumentType.getString(context, "category_name");
+        var player = context.getSource().getPlayerOrException();
+        var playerUuid = player.getUUID();
+        var categoryName = StringArgumentType.getString(context, "category_name");
 
-        AbilityCategory categoryToSet = AbilitySystem.ABILITY_CATEGORY_MAP.get(categoryName);
+        var categoryToSet = AbilitySystem.ABILITY_CATEGORY_MAP.get(categoryName);
 
         if (categoryToSet == null) {
             context.getSource().sendFailure(Component.literal("Ability category '" + categoryName + "' not found."));
@@ -129,10 +125,10 @@ public class AcademyCraftCommand {
 
     private static CompletableFuture<Suggestions> suggestLearnableSkills(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         try {
-            ServerPlayer player = context.getSource().getPlayerOrException();
-            UUID playerUuid = player.getUUID();
-            AbilityCategory currentCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
-            HashSet<String> learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
+            var player = context.getSource().getPlayerOrException();
+            var playerUuid = player.getUUID();
+            var currentCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
+            var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
 
             if (currentCategory != null) {
                 return SharedSuggestionProvider.suggest(

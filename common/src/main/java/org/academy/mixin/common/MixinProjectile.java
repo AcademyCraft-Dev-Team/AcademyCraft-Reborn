@@ -3,7 +3,6 @@ package org.academy.mixin.common;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.builtin.accelerator.skills.KineticEnergyApplied;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,7 +26,7 @@ public abstract class MixinProjectile {
             float inaccuracy,
             CallbackInfo ci
     ) {
-        Projectile projectile = (Projectile) (Object) this;
+        var projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide()) return;
         if (KineticEnergyApplied.Server.SKILL_STATS.containsKey(shooter.getUUID()) && KineticEnergyApplied.Server.SKILL_STATS.get(shooter.getUUID())) {
             velocity = KineticEnergyApplied.Server.onProjectileShoot(projectile,shooter, velocity);
@@ -38,7 +37,7 @@ public abstract class MixinProjectile {
 
             projectile.shoot(f, f1, f2, velocity, inaccuracy);
 
-            Vec3 vec3 = shooter.getDeltaMovement();
+            var vec3 = shooter.getDeltaMovement();
             projectile.setDeltaMovement(projectile.getDeltaMovement().add(vec3.x, shooter.onGround() ? 0.0D : vec3.y, vec3.z));
             ci.cancel();
         }

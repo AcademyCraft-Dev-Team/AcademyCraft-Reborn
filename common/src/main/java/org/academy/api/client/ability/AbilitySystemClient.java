@@ -40,7 +40,7 @@ public final class AbilitySystemClient {
 
     static {
         AcademyCraftConfig.registerConfigActions(CONFIG_KEY_ABILITY_SYSTEM, Config.Action.INSTANCE);
-        Config configData = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_ABILITY_SYSTEM);
+        var configData = AcademyCraftClient.CLIENT_CONFIG.<Config>getConfig(CONFIG_KEY_ABILITY_SYSTEM);
         ACTIVATE_HUD_KEY = configData.getKeyBinding(KEY_NAME_ACTIVATE_HUD,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
@@ -60,9 +60,9 @@ public final class AbilitySystemClient {
             if (ClientUtil.hasScreen()) return;
             setActiveHUD(!activeHUD);
         });
-        for (AbilityCategory abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
+        for (var abilityCategory : AbilitySystem.ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initClient();
-            for (Skill skill : abilityCategory.skillList) {
+            for (var skill : abilityCategory.skillList) {
                 skill.initClient();
             }
         }
@@ -70,9 +70,9 @@ public final class AbilitySystemClient {
 
     @SubscribePacket
     public static void handleExpSync(ExpSyncPacket packet) {
-        String name = packet.skillName;
+        var name = packet.skillName;
         float exp = packet.exp;
-        Skill skill = SKILL_MAP.get(name);
+        var skill = SKILL_MAP.get(name);
         if (skill != null) {
             setSkillExp(skill, exp);
         }
@@ -90,7 +90,7 @@ public final class AbilitySystemClient {
             setComputingPower(packet.currentComputingPower);
         }
         if (packet.abilityCategoryChanged) {
-            AbilityCategory newCategory = AbilitySystem.ABILITY_CATEGORY_MAP.get(packet.abilityCategory);
+            var newCategory = AbilitySystem.ABILITY_CATEGORY_MAP.get(packet.abilityCategory);
             if (newCategory != null) {
                 category = newCategory;
             } else {
@@ -101,8 +101,8 @@ public final class AbilitySystemClient {
         if (packet.skillsChanged) {
             LEARNED_SKILLS.clear();
             if (packet.skills != null) {
-                for (String skillName : packet.skills) {
-                    Skill skill = SKILL_MAP.get(skillName);
+                for (var skillName : packet.skills) {
+                    var skill = SKILL_MAP.get(skillName);
                     if (skill != null) {
                         LEARNED_SKILLS.add(skill);
                     } else {
