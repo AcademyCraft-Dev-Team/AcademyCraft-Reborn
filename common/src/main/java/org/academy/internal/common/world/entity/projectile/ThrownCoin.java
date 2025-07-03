@@ -39,15 +39,14 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
 
     @Override
     public void shoot(double x, double y, double z, float velocity, float inaccuracy) {
-
-        if (!this.level().isClientSide()) {
-            Vec3 initialDirection = new Vec3(x, y, z).normalize();
-            Vec3 finalVelocity = initialDirection.scale(velocity);
-            this.setDeltaMovement(finalVelocity);
-            this.setRot((float)(Math.toDegrees(Math.atan2(initialDirection.x, initialDirection.z))),
+        if (!level().isClientSide()) {
+            var initialDirection = new Vec3(x, y, z).normalize();
+            var finalVelocity = initialDirection.scale(velocity);
+            setDeltaMovement(finalVelocity);
+            setRot((float)(Math.toDegrees(Math.atan2(initialDirection.x, initialDirection.z))),
                     (float)(Math.toDegrees(Math.atan2(initialDirection.y, initialDirection.horizontalDistance()))));
-            this.yRotO = this.getYRot();
-            this.xRotO = this.getXRot();
+            yRotO = getYRot();
+            xRotO = getXRot();
         }
     }
 
@@ -56,36 +55,36 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
         angle++;
         super.tick();
 
-        if (!this.level().isClientSide() && getOwner() instanceof ServerPlayer ownerPlayer) {
-            Integer activeCoinId = Railgun.Server.ACTIVE_COIN_IDS.get(ownerPlayer.getUUID());
-            if (activeCoinId != null && activeCoinId == this.getId() && !this.onGround() && !this.isRemoved()) {
-                if (this.level().getGameTime() % 4 == 0) {
-                    Vec3 playerPos = ownerPlayer.position();
-                    float playerYaw = ownerPlayer.getYRot();
-                    float playerHeight = ownerPlayer.getBbHeight();
-                    float playerWidth = ownerPlayer.getBbWidth();
+        if (!level().isClientSide() && getOwner() instanceof ServerPlayer ownerPlayer) {
+            var activeCoinId = Railgun.Server.ACTIVE_COIN_IDS.get(ownerPlayer.getUUID());
+            if (activeCoinId != null && activeCoinId == getId() && !onGround() && !isRemoved()) {
+                if (level().getGameTime() % 4 == 0) {
+                    var playerPos = ownerPlayer.position();
+                    var playerYaw = ownerPlayer.getYRot();
+                    var playerHeight = ownerPlayer.getBbHeight();
+                    var playerWidth = ownerPlayer.getBbWidth();
 
-                    Vec3 lookVec = ownerPlayer.getLookAngle();
-                    Vec3 horizontalLook = new Vec3(lookVec.x, 0, lookVec.z).normalize();
-                    Vec3 left = horizontalLook.yRot(90);
-                    Vec3 right = horizontalLook.yRot(-90);
+                    var lookVec = ownerPlayer.getLookAngle();
+                    var horizontalLook = new Vec3(lookVec.x, 0, lookVec.z).normalize();
+                    var left = horizontalLook.yRot(90);
+                    var right = horizontalLook.yRot(-90);
 
-                    double sideOffset = playerWidth * 0.5 + 0.3 + 0.5; // ← 加了 0.5 格距离
+                    var sideOffset = playerWidth * 0.5 + 0.3 + 0.5; // ← 加了 0.5 格距离
 
                     // 左上
-                    Vec3 leftUp = playerPos.add(0, playerHeight * 0.85, 0).add(left.scale(sideOffset));
+                    var leftUp = playerPos.add(0, playerHeight * 0.85, 0).add(left.scale(sideOffset));
                     ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(leftUp.x, leftUp.y, leftUp.z, playerYaw + 90, -45)));
 
                     // 左下
-                    Vec3 leftDown = playerPos.add(0, playerHeight * 0.15, 0).add(left.scale(sideOffset));
+                    var leftDown = playerPos.add(0, playerHeight * 0.15, 0).add(left.scale(sideOffset));
                     ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(leftDown.x, leftDown.y, leftDown.z, playerYaw + 90, 45)));
 
                     // 右上
-                    Vec3 rightUp = playerPos.add(0, playerHeight * 0.85, 0).add(right.scale(sideOffset));
+                    var rightUp = playerPos.add(0, playerHeight * 0.85, 0).add(right.scale(sideOffset));
                     ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(rightUp.x, rightUp.y, rightUp.z, playerYaw - 90, -45)));
 
                     // 右下
-                    Vec3 rightDown = playerPos.add(0, playerHeight * 0.15, 0).add(right.scale(sideOffset));
+                    var rightDown = playerPos.add(0, playerHeight * 0.15, 0).add(right.scale(sideOffset));
                     ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(rightDown.x, rightDown.y, rightDown.z, playerYaw - 90, 45)));
                 }
             } else {

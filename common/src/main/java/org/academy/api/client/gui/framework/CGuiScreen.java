@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.framework;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.MouseHandler;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.Tickable;
@@ -29,7 +28,7 @@ public abstract class CGuiScreen extends Screen {
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics);
-        final MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
+        final var mouseHandler = Minecraft.getInstance().mouseHandler;
         guiGraphics.pose().pushPose();
         rootContainer.render(guiGraphics, mouseHandler.xpos(), mouseHandler.ypos(), partialTick);
         guiGraphics.pose().popPose();
@@ -37,7 +36,7 @@ public abstract class CGuiScreen extends Screen {
 
     @Override
     public void tick() {
-        for (Widget widget : rootContainer.getAllWidgets()){
+        for (var widget : rootContainer.getAllWidgets()){
             if (widget instanceof Tickable tickable){
                 tickable.tick();
             }

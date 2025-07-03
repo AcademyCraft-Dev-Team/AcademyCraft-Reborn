@@ -21,28 +21,28 @@ public final class WirelessPanelHelper {
     public static final String PANEL_WIRELESS_NAME = "panel_wireless";
 
     public static PanelWidget getWirelessPanel(float x, float y) {
-        PanelWidget wirelessPanel = new PanelWidget(x, y, PANEL_WIDTH, PANEL_HEIGHT);
+        var wirelessPanel = new PanelWidget(x, y, PANEL_WIDTH, PANEL_HEIGHT);
         {
-            BlendQuadWidget back = new BlendQuadWidget(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+            var back = new BlendQuadWidget(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
             back.red = 0;
             back.green = 0;
             back.blue = 0;
             back.alpha = 0.5f;
             wirelessPanel.addChild("back", back);
 
-            ImageWidget icon = new ImageWidget(10, 10, 16, 16, RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON);
+            var icon = new ImageWidget(10, 10, 16, 16, RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON);
             wirelessPanel.addChild("icon", icon);
 
-            LabelWidget connectedLabel = new LabelWidget("Connected", 12, 30);
+            var connectedLabel = new LabelWidget("Connected", 12, 30);
             wirelessPanel.addChild("connected_node_label", connectedLabel);
 
-            LabelWidget availableLabel = new LabelWidget("Available", 12, 54);
+            var availableLabel = new LabelWidget("Available", 12, 54);
             wirelessPanel.addChild("available_node_label", availableLabel);
 
-            ScrollPanelWidget nodeListPanel = new ScrollPanelWidget(10, 64, 160, 114);
+            var nodeListPanel = new ScrollPanelWidget(10, 64, 160, 114);
             wirelessPanel.addChild("node_list", nodeListPanel);
 
-            VerticalScrollBarWidget scrollBar = new VerticalScrollBarWidget(nodeListPanel, 160, 64, 5, 114);
+            var scrollBar = new VerticalScrollBarWidget(nodeListPanel, 160, 64, 5, 114);
             scrollBar.setZ(scrollBar.getZ() + 1);
             wirelessPanel.addChild("scroll_bar", scrollBar);
         }
@@ -61,7 +61,7 @@ public final class WirelessPanelHelper {
         BlockPos getPosition();
 
         default void requestAvailableNodes(ScrollPanelWidget listPanel) {
-            GetAvailableNodesPacket requestPayload = new GetAvailableNodesPacket(getPosition());
+            var requestPayload = new GetAvailableNodesPacket(getPosition());
             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
                     requestPayload,
                     (GetAvailableNodesPacket.Response response) -> {
@@ -69,8 +69,8 @@ public final class WirelessPanelHelper {
                             listPanel.clearChildren();
                             response.availableNodeNames.removeIf(s -> s.equals(getConnectedNodeName()));
                             for (int i = 0; i < response.availableNodeNames.size(); i++) {
-                                String name = response.availableNodeNames.get(i);
-                                PanelWidget nodeViewPanel = getNodeWidget(2, i * 18f, name, false, false);
+                                var name = response.availableNodeNames.get(i);
+                                var nodeViewPanel = getNodeWidget(2, i * 18f, name, false, false);
                                 listPanel.addChild("node_" + name, nodeViewPanel);
                             }
                         }
@@ -79,32 +79,32 @@ public final class WirelessPanelHelper {
         }
 
         default @NotNull PanelWidget getNodeWidget(float x, float y, String nodeName, boolean isConnected, boolean isNull) {
-            PanelWidget nodeViewPanel = new PanelWidget(x, y, 158, 16);
+            var nodeViewPanel = new PanelWidget(x, y, 158, 16);
             {
-                ImageWidget nodeBack = new ImageWidget(0, 0, 144, 16, RENDER_TYPE_ELEMENT_BACK_LIGHT);
+                var nodeBack = new ImageWidget(0, 0, 144, 16, RENDER_TYPE_ELEMENT_BACK_LIGHT);
                 nodeViewPanel.addChild("back", nodeBack);
-                ImageWidget nodeIcon = new ImageWidget(8, 1, 14, 14, RENDER_TYPE_ICON_NODE);
+                var nodeIcon = new ImageWidget(8, 1, 14, 14, RENDER_TYPE_ICON_NODE);
                 nodeViewPanel.addChild("icon", nodeIcon);
-                HoverLabelWidget nodeNameLabel = new HoverLabelWidget(nodeName, 24, 3.5f, 40);
+                var nodeNameLabel = new HoverLabelWidget(nodeName, 24, 3.5f, 40);
                 nodeViewPanel.addChild("node_name", nodeNameLabel);
                 if (!isConnected) {
                     Consumer<String> connect = password -> {
                         NetworkManagerClient.sendPacket(new C2SPacket(new ConnectNodePacket(getPosition(), nodeName, password)));
                         requestCurrentNodeStatus();
                     };
-                    TextBoxWidget inputBox = new TextBoxWidget(12, 70, 3, 46, 10);
+                    var inputBox = new TextBoxWidget(12, 70, 3, 46, 10);
                     inputBox.whenEnter = connect;
                     inputBox.showBackground = true;
                     nodeViewPanel.addChild("input", inputBox);
-                    ImageButtonWidget buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_UNCONNECTED, () -> {
-                        String password = inputBox.getText();
+                    var buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_UNCONNECTED, () -> {
+                        var password = inputBox.getText();
                         connect.accept(password);
                     });
                     buttonWidget.defaultHoverEffect = true;
                     nodeViewPanel.addChild("button", buttonWidget);
                 } else {
                     if (!isNull) {
-                        ImageButtonWidget buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_CONNECTED, () ->
+                        var buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_CONNECTED, () ->
                         {
                             NetworkManagerClient.sendPacket(new C2SPacket(new DisconnectNodePacket(getPosition())));
                             requestCurrentNodeStatus();
@@ -119,7 +119,7 @@ public final class WirelessPanelHelper {
         }
 
         default void requestCurrentNodeStatus() {
-            GetCurrentNodePacket requestPayload = new GetCurrentNodePacket(getPosition());
+            var requestPayload = new GetCurrentNodePacket(getPosition());
             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
                     requestPayload,
                     (GetCurrentNodePacket.Response response) -> {
@@ -134,11 +134,11 @@ public final class WirelessPanelHelper {
             boolean changed = !getConnectedNodeName().equals(nodeName);
             setConnectedNodeName(nodeName);
             getWirelessPanel().removeChild("connected_node");
-            PanelWidget connectedNodeWidgetRef = getNodeWidget(12, 38, nodeName, true, isNull);
+            var connectedNodeWidgetRef = getNodeWidget(12, 38, nodeName, true, isNull);
             getWirelessPanel().addChild("connected_node", connectedNodeWidgetRef);
             if (changed) {
                 if (getWirelessPanel().isVisible()) {
-                    ScrollPanelWidget nodeListPanel = getNodeList();
+                    var nodeListPanel = getNodeList();
                     requestAvailableNodes(nodeListPanel);
                 }
             }

@@ -54,7 +54,7 @@ public final class Payloads {
 
     @SuppressWarnings({"unchecked"})
     public static void registerAll(FutureManager futureManager) {
-        for (Map.Entry<Class<? extends IPayload>, Function<? extends PacketListener, ? extends IPayload>> entry : REGISTERED_PAYLOAD_FACTORIES.entrySet()) {
+        for (var entry : REGISTERED_PAYLOAD_FACTORIES.entrySet()) {
             futureManager.registerPayloadType((Class) entry.getKey(), (Function<PacketListener, IPayload>) entry.getValue());
         }
     }

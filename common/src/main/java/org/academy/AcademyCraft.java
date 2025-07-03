@@ -4,7 +4,6 @@ import net.neoforged.bus.api.BusBuilder;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.network.NetworkSystem;
-import org.academy.api.common.network.future.FutureManager;
 import org.academy.api.common.util.GameUtil;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.Packets;
@@ -26,10 +25,10 @@ public final class AcademyCraft {
 
     public static void init() {
         NetworkSystem.registerVanillaPacketsOnce();
-        ThreadType threadType = GameUtil.getThreadType();
-        NetworkSystem networkSystem = threadType == ThreadType.CLIENT ?
+        var threadType = GameUtil.getThreadType();
+        var networkSystem = threadType == ThreadType.CLIENT ?
                 AcademyCraftClient.NETWORK_SYSTEM : AcademyCraftServer.NETWORK_SYSTEM;
-        FutureManager futureManager = threadType == ThreadType.CLIENT ?
+        var futureManager = threadType == ThreadType.CLIENT ?
                 AcademyCraftClient.FUTURE_MANAGER : AcademyCraftServer.FUTURE_MANAGER;
         networkSystem.clear();
         Packets.registerAll(networkSystem);
@@ -46,7 +45,7 @@ public final class AcademyCraft {
                 return;
             }
 
-            File parentDir = file.getParentFile();
+            var parentDir = file.getParentFile();
             if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
                 errorMessage = "Failed to create directories: " + parentDir.getAbsolutePath();
             } else if (!file.createNewFile()) {

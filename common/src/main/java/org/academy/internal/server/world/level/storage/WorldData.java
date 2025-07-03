@@ -1,6 +1,5 @@
 package org.academy.internal.server.world.level.storage;
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
@@ -11,7 +10,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.storage.DimensionDataStorage;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
@@ -24,7 +22,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -34,7 +31,7 @@ public final class WorldData {
     private final Map<UUID, Player> players = new HashMap<>();
 
     private static boolean isValidFile(File file) {
-        final Gson gson = new GsonBuilder().create();
+        final var gson = new GsonBuilder().create();
 
         try (FileReader fileReader = new FileReader(file)) {
             final JsonObject jsonObject;
@@ -49,7 +46,7 @@ public final class WorldData {
                 return false;
             }
 
-            Field[] fields = WorldData.class.getDeclaredFields();
+            var fields = WorldData.class.getDeclaredFields();
 
             return GsonUtil.isValidField(jsonObject, fields);
         } catch (IOException e) {
@@ -58,11 +55,11 @@ public final class WorldData {
     }
 
     public static WorldData getWorldData(File file) {
-        final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        final var gson = new GsonBuilder().setPrettyPrinting().create();
         if (!isValidFile(file)) {
-            WorldData worldData = new WorldData();
+            var worldData = new WorldData();
             AcademyCraft.LOGGER.debug("Creating new world data file.");
-            try (FileWriter fileWriter = new FileWriter(file)) {
+            try (var fileWriter = new FileWriter(file)) {
                 gson.toJson(worldData, fileWriter);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to create world data file", e);
@@ -70,7 +67,7 @@ public final class WorldData {
             return worldData;
         }
 
-        try (FileReader reader = new FileReader(file)) {
+        try (var reader = new FileReader(file)) {
             return gson.fromJson(reader, WorldData.class);
         } catch (IOException e) {
             throw new RuntimeException("Failed to read world data file", e);
@@ -81,10 +78,10 @@ public final class WorldData {
         if (AcademyCraftServer.worldData == null) {
             return;
         }
-        final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        final File configFile = AcademyCraftServer.worldDataFile;
+        final var gson = new GsonBuilder().setPrettyPrinting().create();
+        final var configFile = AcademyCraftServer.worldDataFile;
 
-        try (FileWriter fileWriter = new FileWriter(configFile)) {
+        try (var fileWriter = new FileWriter(configFile)) {
             gson.toJson(AcademyCraftServer.worldData, fileWriter);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save world data", e);
@@ -175,7 +172,7 @@ public final class WorldData {
         public static final String DATA_NAME = "wireless_network_data";
 
         public static WirelessNetworkData get(ServerLevel level) {
-            DimensionDataStorage storage = level.getDataStorage();
+            var storage = level.getDataStorage();
             Supplier<WirelessNetworkData> creator = WirelessNetworkData::new;
             Function<CompoundTag, WirelessNetworkData> loader = WirelessNetworkData::load;
             return storage.computeIfAbsent(loader, creator, DATA_NAME);
@@ -186,7 +183,7 @@ public final class WorldData {
                 AcademyCraft.LOGGER.warn("Register failed: Node at {} or name '{}' already exists.", pos, name);
                 return false;
             }
-            NodeConfig config = new NodeConfig(name, password, radius, maxConnections);
+            var config = new NodeConfig(name, password, radius, maxConnections);
             nodeConfigurations.put(pos, config);
             nodeNameMap.put(name, pos);
             setDirty();
@@ -195,18 +192,18 @@ public final class WorldData {
         }
 
         public void unregisterNode(BlockPos pos, ServerLevel level) {
-            NodeConfig config = nodeConfigurations.get(pos);
+            var config = nodeConfigurations.get(pos);
             if (config != null) {
-                Set<BlockPos> usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
+                var usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
 
-                String nodeName = config.name;
+                var nodeName = config.name;
                 nodeNameMap.remove(nodeName);
                 nodeConfigurations.remove(pos);
                 setDirty();
 
                 AcademyCraft.LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", nodeName, pos);
 
-                for (BlockPos userPos : usersToDisconnect) {
+                for (var userPos : usersToDisconnect) {
                     WirelessManager.handleDisconnect(null, level, userPos);
                 }
             } else {
@@ -229,7 +226,7 @@ public final class WorldData {
         }
 
         public boolean connectUserToNode(BlockPos nodePos, BlockPos userPos) {
-            NodeConfig config = nodeConfigurations.get(nodePos);
+            var config = nodeConfigurations.get(nodePos);
             if (config != null) {
                 if (config.connectedUsers.size() < config.maxConnections) {
                     if (!config.connectedUsers.containsKey(userPos)) {
@@ -250,7 +247,7 @@ public final class WorldData {
         }
 
         public boolean disconnectUserFromNode(BlockPos nodePos, BlockPos userPos) {
-            NodeConfig config = nodeConfigurations.get(nodePos);
+            var config = nodeConfigurations.get(nodePos);
             if (config != null) {
                 config.connectedUsers.remove(userPos);
                 AcademyCraft.LOGGER.debug("Disconnected user {} from node '{}'", userPos, config.name);
@@ -261,17 +258,17 @@ public final class WorldData {
         }
 
         public static WirelessNetworkData load(CompoundTag tag) {
-            WirelessNetworkData data = new WirelessNetworkData();
+            var data = new WirelessNetworkData();
             AcademyCraft.LOGGER.debug("Loading WirelessNetworkData...");
             if (tag.contains("nodes", Tag.TAG_LIST)) {
-                ListTag nodesTag = tag.getList("nodes", Tag.TAG_COMPOUND);
+                var nodesTag = tag.getList("nodes", Tag.TAG_COMPOUND);
                 AcademyCraft.LOGGER.debug("Found {} nodes in NBT", nodesTag.size());
                 for (int i = 0; i < nodesTag.size(); ++i) {
-                    CompoundTag nodeEntryTag = nodesTag.getCompound(i);
+                    var nodeEntryTag = nodesTag.getCompound(i);
                     if (nodeEntryTag.contains("pos", Tag.TAG_LONG)) {
-                        BlockPos pos = BlockPos.of(nodeEntryTag.getLong("pos"));
+                        var pos = BlockPos.of(nodeEntryTag.getLong("pos"));
                         if (nodeEntryTag.contains("config", Tag.TAG_COMPOUND)) {
-                            NodeConfig config = NodeConfig.load(nodeEntryTag.getCompound("config"));
+                            var config = NodeConfig.load(nodeEntryTag.getCompound("config"));
                             if (config != null && config.name != null) {
                                 data.nodeConfigurations.put(pos, config);
                                 data.nodeNameMap.put(config.name, pos);
@@ -294,13 +291,13 @@ public final class WorldData {
 
         @Override
         public @NotNull CompoundTag save(@NotNull CompoundTag tag) {
-            ListTag nodesTag = new ListTag();
+            var nodesTag = new ListTag();
             AcademyCraft.LOGGER.debug("Saving {} node configurations...", nodeConfigurations.size());
-            for (Map.Entry<BlockPos, NodeConfig> entry : nodeConfigurations.entrySet()) {
-                BlockPos pos = entry.getKey();
-                NodeConfig config = entry.getValue();
+            for (var entry : nodeConfigurations.entrySet()) {
+                var pos = entry.getKey();
+                var config = entry.getValue();
                 if (pos != null && config != null) {
-                    CompoundTag nodeEntryTag = new CompoundTag();
+                    var nodeEntryTag = new CompoundTag();
                     nodeEntryTag.putLong("pos", pos.asLong());
                     nodeEntryTag.put("config", config.save(new CompoundTag()));
                     nodesTag.add(nodeEntryTag);
@@ -344,9 +341,9 @@ public final class WorldData {
                 tag.putInt("radius", radius);
                 tag.putInt("max_connections", maxConnections);
 
-                ListTag usersTag = new ListTag();
-                for (Map.Entry<BlockPos, UserConfig> entry : this.connectedUsers.entrySet()) {
-                    CompoundTag userTag = new CompoundTag();
+                var usersTag = new ListTag();
+                for (var entry : this.connectedUsers.entrySet()) {
+                    var userTag = new CompoundTag();
                     userTag.putLong("pos", entry.getKey().asLong());
                     userTag.putDouble("weight_receive", entry.getValue().getReceiveWeight());
                     userTag.putDouble("weight_send", entry.getValue().getSendWeight());
@@ -366,21 +363,21 @@ public final class WorldData {
                     return null;
                 }
 
-                String name = tag.getString("name");
-                String password = tag.getString("password");
+                var name = tag.getString("name");
+                var password = tag.getString("password");
                 int radius = tag.getInt("radius");
                 int maxConnections = tag.getInt("max_connections");
 
-                NodeConfig loaded = new NodeConfig(name, radius, maxConnections);
+                var loaded = new NodeConfig(name, radius, maxConnections);
                 loaded.password = password;
 
                 if (tag.contains("users", Tag.TAG_LIST)) {
-                    ListTag usersTag = tag.getList("users", Tag.TAG_COMPOUND);
-                    for (Tag baseTag : usersTag) {
+                    var usersTag = tag.getList("users", Tag.TAG_COMPOUND);
+                    for (var baseTag : usersTag) {
                         if (baseTag instanceof CompoundTag userTag) {
-                            BlockPos pos = BlockPos.of(userTag.getLong("pos"));
-                            double weightReceive = userTag.getDouble("weight_receive");
-                            double weightSend = userTag.getDouble("weight_send");
+                            var pos = BlockPos.of(userTag.getLong("pos"));
+                            var weightReceive = userTag.getDouble("weight_receive");
+                            var weightSend = userTag.getDouble("weight_send");
                             loaded.connectedUsers.put(pos, new UserConfig(weightReceive, weightSend));
                             AcademyCraft.LOGGER.warn("User tag missing required fields: {}", userTag);
                         }

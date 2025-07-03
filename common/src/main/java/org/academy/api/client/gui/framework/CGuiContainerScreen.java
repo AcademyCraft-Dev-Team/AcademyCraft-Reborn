@@ -35,7 +35,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         back.alpha = 0.5f;
         inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, 187,
                 RenderTypes.RENDER_TYPE_INVENTORY);
-        AnimationTopToBottom invAnim = new AnimationTopToBottom(inventory);
+        var invAnim = new AnimationTopToBottom(inventory);
         invAnim.currentHeight = inventory.height / 1.25f;
         inventory.animation = invAnim;
         back.animation = new AnimationTopToBottom(back);
@@ -75,7 +75,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     protected void containerTick() {
-        for (Widget widget : rootContainer.getAllWidgets()) {
+        for (var widget : rootContainer.getAllWidgets()) {
             if (widget instanceof Tickable tickable) {
                 tickable.tick();
             }

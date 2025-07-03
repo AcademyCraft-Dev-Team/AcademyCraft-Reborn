@@ -6,7 +6,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class RenderOnlyEntity extends Entity {
@@ -52,8 +51,8 @@ public abstract class RenderOnlyEntity extends Entity {
 
     @Override
     public @NotNull AABB getBoundingBoxForCulling() {
-        Vec3 pos = this.position();
-        double radius = getRenderRadius();
+        var pos = this.position();
+        var radius = getRenderRadius();
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 

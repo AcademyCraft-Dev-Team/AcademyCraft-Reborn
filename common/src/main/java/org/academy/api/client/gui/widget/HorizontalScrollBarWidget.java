@@ -1,10 +1,8 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
-import org.joml.Matrix4f;
 
 public class HorizontalScrollBarWidget extends DragBarWidget {
     public ScrollPanelWidget panel;
@@ -16,23 +14,23 @@ public class HorizontalScrollBarWidget extends DragBarWidget {
 
     @Override
     protected float getThumbSize() {
-        float max = panel.getMaxScroll();
+        var max = panel.getMaxScroll();
         if (max <= 0f) {
             return getWidth();
         }
-        float contentWidth = max + panel.getWidth();
-        float ratio = panel.getWidth() / contentWidth;
+        var contentWidth = max + panel.getWidth();
+        var ratio = panel.getWidth() / contentWidth;
         return MathUtil.clamp(ratio * getWidth(), 16f, getWidth());
     }
 
     @Override
     protected float getThumbPosition() {
-        float max = panel.getMaxScroll();
+        var max = panel.getMaxScroll();
         if (max <= 0f) {
             return getX();
         }
-        float track = getWidth() - getThumbSize();
-        float ratio = panel.scrollOffset / max;
+        var track = getWidth() - getThumbSize();
+        var ratio = panel.scrollOffset / max;
         return getX() + ratio * track;
     }
 
@@ -48,10 +46,10 @@ public class HorizontalScrollBarWidget extends DragBarWidget {
 
     @Override
     protected void updateTargetFromMouse(float mouse) {
-        float max = panel.getMaxScroll();
+        var max = panel.getMaxScroll();
         if (max <= 0f) return;
-        float track = getTrackSize() - getThumbSize();
-        float ratio = MathUtil.clamp((mouse - dragOffset) / track, 0f, 1f);
+        var track = getTrackSize() - getThumbSize();
+        var ratio = MathUtil.clamp((mouse - dragOffset) / track, 0f, 1f);
         panel.scrollTarget = ratio * max;
     }
 
@@ -59,15 +57,15 @@ public class HorizontalScrollBarWidget extends DragBarWidget {
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        Matrix4f matrix = graphics.pose().last().pose();
-        MultiBufferSource buffer = graphics.bufferSource();
+        var matrix = graphics.pose().last().pose();
+        var buffer = graphics.bufferSource();
 
         if (showBackground) {
             RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), getTrackColor(), buffer);
         }
 
-        float thumbLeft = getThumbPosition();
-        float thumbWidth = getThumbSize();
+        var thumbLeft = getThumbPosition();
+        var thumbWidth = getThumbSize();
         RenderUtil.fill(matrix, thumbLeft, getY(), thumbLeft + thumbWidth, getY() + getHeight(), getThumbColor(), buffer);
 
         graphics.flush();

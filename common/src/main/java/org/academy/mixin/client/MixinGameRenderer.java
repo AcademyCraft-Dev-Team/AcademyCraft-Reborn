@@ -18,7 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.Map;
-import java.util.function.Function;
 
 @Mixin(GameRenderer.class)
 public abstract class MixinGameRenderer {
@@ -27,7 +26,7 @@ public abstract class MixinGameRenderer {
 
     @Inject(method = "reloadShaders", at = @At("TAIL"))
     private void reloadShaders(ResourceProvider resourceProvider, CallbackInfo ci) {
-        for (Function<ResourceProvider, ShaderInstance> shader : Shaders.SHADERS) {
+        for (var shader : Shaders.SHADERS) {
             shaders.put(shader.toString(), shader.apply(resourceProvider));
         }
     }

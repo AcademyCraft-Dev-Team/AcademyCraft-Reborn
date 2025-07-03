@@ -87,7 +87,7 @@ public final class Packets {
 
     @SuppressWarnings({"unchecked"})
     public static void registerAll(NetworkSystem networkSystem) {
-        for (Map.Entry<Class<? extends IPacket<?>>, Function<? extends PacketListener, ? extends IPacket<?>>> entry : REGISTERED_FACTORIES.entrySet()) {
+        for (var entry : REGISTERED_FACTORIES.entrySet()) {
             networkSystem.registerPacketType((Class) entry.getKey(), (Function) entry.getValue());
         }
     }

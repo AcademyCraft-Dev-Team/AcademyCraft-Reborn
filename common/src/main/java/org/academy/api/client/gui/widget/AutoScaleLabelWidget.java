@@ -14,23 +14,23 @@ public class AutoScaleLabelWidget extends LabelWidget {
 
     public AutoScaleLabelWidget(String value, float x, float y, float renderAreaWidth, boolean centered) {
         super(value, x, y);
-        super.setWidth(renderAreaWidth);
+        setWidth(renderAreaWidth);
         this.centered = centered;
         updateScaleAndDimensions();
     }
 
     private void updateScaleAndDimensions() {
-        Font font = Minecraft.getInstance().font;
+        var font = Minecraft.getInstance().font;
         float newScale = 1.0f;
-        float componentWidth = this.getWidth();
+        float componentWidth = getWidth();
 
-        if (this.value == null || this.value.isEmpty()) {
-            this.scale = newScale;
-            this.height = font.lineHeight * this.scale;
+        if (value == null || value.isEmpty()) {
+            scale = newScale;
+            height = font.lineHeight * scale;
             return;
         }
 
-        float textOriginalWidth = font.width(FormattedText.of(this.value));
+        float textOriginalWidth = font.width(FormattedText.of(value));
 
         if (componentWidth > 0 && textOriginalWidth > 0) {
             if (textOriginalWidth * newScale > componentWidth) {
@@ -38,37 +38,37 @@ public class AutoScaleLabelWidget extends LabelWidget {
             }
         }
 
-        this.scale = Math.max(0.1f, newScale);
-        this.height = font.lineHeight * this.scale;
+        scale = Math.max(0.1f, newScale);
+        height = font.lineHeight * scale;
     }
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
-        if (!isVisible() || this.value == null || this.value.isEmpty()) return;
+        if (!isVisible() || value == null || value.isEmpty()) return;
 
         if (animation != null) {
             animation.beforeRender(graphics, mouseX, mouseY, partialTicks);
         }
 
         graphics.pose().pushPose();
-        Font font = Minecraft.getInstance().font;
+        var font = Minecraft.getInstance().font;
 
-        float finalScale = this.scale * globalScale;
-        float currentTextActualWidth = font.width(FormattedText.of(this.value)) * finalScale;
+        float finalScale = scale * globalScale;
+        float currentTextActualWidth = font.width(FormattedText.of(value)) * finalScale;
 
-        float renderX = this.getX();
-        if (this.centered && this.getWidth() > 0) {
-            renderX = this.getX() + (this.getWidth() - currentTextActualWidth) / 2.0f;
+        float renderX = getX();
+        if (centered && getWidth() > 0) {
+            renderX = getX() + (getWidth() - currentTextActualWidth) / 2.0f;
         }
 
         float textOriginalHeight = font.lineHeight;
         float scaledTextRenderHeight = textOriginalHeight * finalScale;
         float yDrawingOffset = (scaledTextRenderHeight - textOriginalHeight) / 2.0f;
 
-        graphics.pose().translate(renderX, this.getY() - yDrawingOffset, getZ());
+        graphics.pose().translate(renderX, getY() - yDrawingOffset, getZ());
         graphics.pose().scale(finalScale, finalScale, 1.0f);
 
-        font.drawInBatch(this.value, 0, 0, this.color, this.dropShadow,
+        font.drawInBatch(value, 0, 0, color, dropShadow,
                 graphics.pose().last().pose(),
                 graphics.bufferSource(),
                 Font.DisplayMode.NORMAL,
@@ -82,16 +82,16 @@ public class AutoScaleLabelWidget extends LabelWidget {
         }
     }
 
-    public void setCentered(boolean centered) {
-        this.centered = centered;
+    public void setCentered(boolean value) {
+        centered = value;
     }
 
     public boolean isCentered() {
-        return this.centered;
+        return centered;
     }
 
     public void setText(String text) {
-        this.value = text;
+        value = text;
         updateScaleAndDimensions();
     }
 

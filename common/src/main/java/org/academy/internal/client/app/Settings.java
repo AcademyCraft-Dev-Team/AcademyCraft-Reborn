@@ -161,10 +161,10 @@ public final class Settings implements DataTerminalHUD.App {
 
     private static LayeredPanelWidget createSliderWithLabel(float x, float y, float width, float height, float initialValue, float min, float max, Consumer<Float> onValueChanged) {
         LayeredPanelWidget container = new LayeredPanelWidget(x, y, width, height);
-        SliderWidget slider = new SliderWidget(0, 0, width - 50, height, min, max, initialValue);
+        var slider = new HorizontalSliderWidget(0, 0, width - 50, height, min, max, initialValue);
         container.addChild("slider", slider);
 
-        AutoScaleLabelWidget valueLabel = new AutoScaleLabelWidget(String.format("%.2f", initialValue), slider.getWidth() + 5, 0, 45, true);
+        var valueLabel = new AutoScaleLabelWidget(String.format("%.2f", initialValue), slider.getWidth() + 5, 0, 45, true);
         valueLabel.dropShadow = false;
         valueLabel.scale = 0.75f;
         valueLabel.setY((height - valueLabel.getHeight() * valueLabel.scale) / 2f);
@@ -178,9 +178,9 @@ public final class Settings implements DataTerminalHUD.App {
     }
 
     private static PanelWidget createToggleButton(float x, float y, float w, float h, Supplier<Boolean> stateSupplier, Runnable onPress) {
-        PanelWidget buttonPanel = new PanelWidget(x, y, w, h);
+        var buttonPanel = new PanelWidget(x, y, w, h);
 
-        AutoScaleLabelWidget text = new AutoScaleLabelWidget(stateSupplier.get() ? "On" : "Off", 0, 0, w, true);
+        var text = new AutoScaleLabelWidget(stateSupplier.get() ? "On" : "Off", 0, 0, w, true);
         Runnable toggleAction = () -> {
             onPress.run();
             text.setText(stateSupplier.get() ? "On" : "Off");

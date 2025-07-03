@@ -29,7 +29,7 @@ public class EntityTypes {
 
     public static <T extends Entity> EntityType<T> register(
             EntityType.EntityFactory<T> factory, MobCategory category, float width, float height, String name) {
-        EntityType<T> entityType = EntityType.Builder.of(factory, category).sized(width, height).build(name);
+        var entityType = EntityType.Builder.of(factory, category).sized(width, height).build(name);
         TYPE_LIST.add(new Type<>(entityType, name));
         return entityType;
     }

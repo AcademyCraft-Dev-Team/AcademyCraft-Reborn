@@ -18,7 +18,7 @@ public abstract class MixinParticleEngine {
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Inject(method = "registerProviders", at = @At("TAIL"))
     private void registerProviders(CallbackInfo ci) {
-        for (ParticleType<?> particleType : ParticleRenderTypes.PARTICLE_PROVIDERS.keySet()) {
+        for (var particleType : ParticleRenderTypes.PARTICLE_PROVIDERS.keySet()) {
             ParticleEngine.SpriteParticleRegistration particleMetaFactory = ParticleRenderTypes.PARTICLE_PROVIDERS.get(particleType);
             register(particleType, particleMetaFactory);
         }

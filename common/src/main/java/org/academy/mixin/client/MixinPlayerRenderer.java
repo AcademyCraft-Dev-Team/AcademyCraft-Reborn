@@ -9,7 +9,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.item.ItemStack;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.common.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
@@ -61,7 +60,7 @@ public abstract class MixinPlayerRenderer {
 
     @Inject(method = "getArmPose", at = @At("HEAD"), cancellable = true)
     private static void getArmPose(AbstractClientPlayer player, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
-        ItemStack itemstack = player.getItemInHand(hand);
+        var itemstack = player.getItemInHand(hand);
         if (itemstack.getItem() == Items.IMAG_PHASE_DOWSING_ROD) {
             cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
         }
