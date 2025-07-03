@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinItemRenderer {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     public void render(ItemStack itemStack, ItemDisplayContext displayContext, boolean leftHand, PoseStack poseStack, MultiBufferSource buffer, int combinedLight, int combinedOverlay, BakedModel model, CallbackInfo ci) {
-        ItemRenderEvent event = new ItemRenderEvent(itemStack, displayContext, leftHand, poseStack, buffer, combinedLight, combinedOverlay, model, ci);
+        var event = new ItemRenderEvent(itemStack, displayContext, leftHand, poseStack, buffer, combinedLight, combinedOverlay, model, ci);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
         itemStack = event.itemStack;

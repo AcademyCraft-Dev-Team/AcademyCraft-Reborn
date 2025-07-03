@@ -18,6 +18,6 @@ public abstract class KeyBindingConfig {
     }
 
     public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
-        this.keyBindings.put(name, keyBinding);
+        keyBindings.put(name, keyBinding);
     }
 }

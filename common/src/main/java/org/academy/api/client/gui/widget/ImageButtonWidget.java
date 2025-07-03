@@ -1,13 +1,11 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 
 public class ImageButtonWidget extends AbstractButtonWidget {
     public float u0 = 0;
@@ -41,10 +39,10 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         }
         if (!isVisible()) return;
         if (renderType == null) return;
-        VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(renderType);
+        var vertexConsumer = graphics.bufferSource().getBuffer(renderType);
 
         graphics.pose().pushPose();
-        Matrix4f matrix4f = graphics.pose().last().pose();
+        var matrix4f = graphics.pose().last().pose();
 
         float scaledWidth = getWidth() * widthScale;
         float scaledHeight = getHeight() * heightScale;
@@ -70,7 +68,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         super.mouseMoved(mouseX, mouseY);
-        ChangeHoverEffectEvent.Pre pre = new ChangeHoverEffectEvent.Pre(this);
+        var pre = new ChangeHoverEffectEvent.Pre(this);
         AcademyCraft.EVENT_BUS.post(pre);
         if (pre.isCanceled()) return;
 
@@ -88,7 +86,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
             }
         }
 
-        ChangeHoverEffectEvent.Post post = new ChangeHoverEffectEvent.Post(this);
+        var post = new ChangeHoverEffectEvent.Post(this);
         AcademyCraft.EVENT_BUS.post(post);
 
         this.previousHoveredState = isHovered();
