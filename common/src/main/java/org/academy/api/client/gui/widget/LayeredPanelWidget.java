@@ -10,7 +10,6 @@ public class LayeredPanelWidget extends PanelWidget {
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        beforeRender(graphics, mouseX, mouseY, partialTick);
         if (!isVisible()) return;
 
         graphics.pose().pushPose();
@@ -21,6 +20,5 @@ public class LayeredPanelWidget extends PanelWidget {
         }
 
         graphics.pose().popPose();
-        afterRender(graphics, mouseX, mouseY, partialTick);
     }
 }

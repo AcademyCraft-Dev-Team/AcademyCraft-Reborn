@@ -3,19 +3,12 @@ package org.academy.api.client.hud;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
-import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.MouseHandler;
-import net.minecraft.client.Options;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.PostChain;
-import net.minecraft.client.renderer.PostPass;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -101,18 +94,18 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     private static void updateParametersFromConfig() {
         INFO_BAR_HEIGHT = config.infoBarHeight;
-        float PADDING_GENERAL = config.paddingGeneral;
-        float PADDING_SMALL = config.paddingSmall;
+        var PADDING_GENERAL = config.paddingGeneral;
+        var PADDING_SMALL = config.paddingSmall;
         APP_ICON_SIZE = config.appIconSize;
-        float APP_TEXT_HEIGHT = config.appTextHeight;
-        float ICON_TEXT_SPACING = config.iconTextSpacing;
+        var APP_TEXT_HEIGHT = config.appTextHeight;
+        var ICON_TEXT_SPACING = config.iconTextSpacing;
         APP_WIDGET_HEIGHT = APP_ICON_SIZE + ICON_TEXT_SPACING + APP_TEXT_HEIGHT;
         APP_WIDGET_WIDTH = config.appWidgetWidth;
         APP_HORIZONTAL_SPACING = PADDING_SMALL;
         APP_VERTICAL_SPACING = PADDING_SMALL;
         APP_AREA_PADDING = PADDING_SMALL;
         APP_COLS = config.appCols;
-        int VISIBLE_APP_ROWS = config.visibleAppRows;
+        var VISIBLE_APP_ROWS = config.visibleAppRows;
         APP_AREA_WIDTH = (APP_WIDGET_WIDTH * APP_COLS) + (APP_HORIZONTAL_SPACING * (APP_COLS - 1)) + (APP_AREA_PADDING * 2);
         APP_AREA_HEIGHT = (APP_WIDGET_HEIGHT * VISIBLE_APP_ROWS) + (APP_VERTICAL_SPACING * (VISIBLE_APP_ROWS - 1)) + (APP_AREA_PADDING * 2);
         APP_AREA_X = PADDING_GENERAL;
@@ -136,23 +129,26 @@ public final class DataTerminalHUD implements HUDRenderer {
     public void render(GuiGraphics guiGraphics, float partialTick) {
         if (active) {
             if (config.enableBlur) {
-                for (PostPass pass : postChain.passes) {
-                    pass.getEffect().getUniform("Radius").set(config.blurRadius);
+                for (var pass : postChain.passes) {
+                    var uniform = pass.getEffect().getUniform("Radius");
+                    if (uniform != null) {
+                        uniform.set(config.blurRadius);
+                    }
                 }
             }
             guiGraphics.pose().pushPose();
             RenderSystem.backupProjectionMatrix();
             RenderSystem.disableDepthTest();
             RenderSystem.depthMask(false);
-            Minecraft mc = Minecraft.getInstance();
-            Window window = mc.getWindow();
+            var mc = Minecraft.getInstance();
+            var window = mc.getWindow();
             float winW = window.getWidth(), winH = window.getHeight();
             float guiW = window.getGuiScaledWidth(), guiH = window.getGuiScaledHeight();
             float aspect = winW / winH;
             float fov = 80;
             float fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspect);
             RenderSystem.setProjectionMatrix(new Matrix4f().perspective(fovY, aspect, 1, 1000), VertexSorting.DISTANCE_TO_ORIGIN);
-            PoseStack pose = RenderSystem.getModelViewStack();
+            var pose = RenderSystem.getModelViewStack();
             pose.pushPose();
             pose.setIdentity();
             float z = -2.5125f;
@@ -181,7 +177,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                     guiGraphics.pose().popPose();
                     if (rootContainer.getChildren().containsKey("area_app")) {
                         guiGraphics.pose().pushPose();
-                        Widget widget = rootContainer.getChildren().get("area_app");
+                        var widget = rootContainer.getChildren().get("area_app");
                         guiGraphics.pose().translate(widget.getAbsoluteX(), widget.getAbsoluteY(), 0);
                         RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, widget.getWidth(), widget.getHeight(), 0XFFFFFFFF, guiGraphics.bufferSource());
                         guiGraphics.pose().popPose();
@@ -211,7 +207,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         {
             var back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
             back.drawLine = false;
-            back.alpha = 0.25f;
+            back.setAlpha(0.25f);
             main.addChild("back", back);
             var root = new LayeredPanelWidget(0, 0, WIDTH, HEIGHT);
             var dynamicGeometricBack = new DynamicGeometricBackgroundWidget(
@@ -245,11 +241,11 @@ public final class DataTerminalHUD implements HUDRenderer {
                 var appArea = new ScrollPanelWidget(APP_AREA_X, APP_AREA_Y, APP_AREA_WIDTH, APP_AREA_HEIGHT);
                 root.addChild("area_app_list", appArea);
                 {
-                    List<App> apps = new ArrayList<>(APP_LIST);
+                    var apps = new ArrayList<>(APP_LIST);
                     int totalAppsToCreate = apps.size();
 
                     for (int i = 0; i < totalAppsToCreate; i++) {
-                        App app = apps.get(i);
+                        var app = apps.get(i);
                         int row = i / APP_COLS;
                         int col = i % APP_COLS;
                         float currentAppX = APP_AREA_PADDING + col * (APP_WIDGET_WIDTH + APP_HORIZONTAL_SPACING);
@@ -290,7 +286,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                 AbilitySystemClient.setActiveHUD(false);
             }
             isFirstMove = true;
-            MouseHandler m = Minecraft.getInstance().mouseHandler;
+            var m = Minecraft.getInstance().mouseHandler;
             xpos = m.xpos() * (double) window.getGuiScaledWidth() / (double) window.getScreenWidth();
             ypos = m.ypos() * (double) window.getGuiScaledHeight() / (double) window.getScreenHeight();
             initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
@@ -436,7 +432,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         if (active && Minecraft.getInstance().screen == null) {
             int key = event.key;
             int scanCode = event.scanCode;
-            Options options = Minecraft.getInstance().options;
+            var options = Minecraft.getInstance().options;
             var keyLeft = options.keyLeft;
             var keyRight = options.keyRight;
             var keyUp = options.keyUp;
@@ -444,7 +440,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             var keyJump = options.keyJump;
             var keyShift = options.keyShift;
             var keySprint = options.keySprint;
-            KeyMapping[] keyHotbarSlots = options.keyHotbarSlots;
+            var keyHotbarSlots = options.keyHotbarSlots;
 
             boolean keyHotbar = false;
 
@@ -493,7 +489,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             var player = Minecraft.getInstance().player;
             if (playerNameLabel != null && player != null) {
                 String name = player.getGameProfile().getName();
-                Font font = Minecraft.getInstance().font;
+                var font = Minecraft.getInstance().font;
                 playerNameLabel.setX(WIDTH - font.width(name) - INFO_BAR_PLAYER_NAME_PADDING_X);
                 playerNameLabel.value = name;
             }
@@ -565,7 +561,7 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     public static void setAppArea(Widget widget) {
         if (rootContainer.getChildren().containsKey("main")) {
-            Widget main = rootContainer.getChildren().get("main");
+            var main = rootContainer.getChildren().get("main");
             widget.setX(main.getX() - widget.getWidth());
             widget.setY(main.getY());
             rootContainer.addChild("area_app", widget);
@@ -582,18 +578,18 @@ public final class DataTerminalHUD implements HUDRenderer {
 
         @SuppressWarnings("SuspiciousNameCombination")
         @Override
-        public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+        public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
             widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale,
                     ClientUtil.animationFactor(1));
             heightScale = widthScale;
             var oringinRenderType = renderType;
             renderType = RenderTypes.RENDER_TYPE_APP_BACK;
-            super.render(graphics, mouseX, mouseY, partialTick);
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
             renderType = oringinRenderType;
-            graphics.pose().translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);
+            guiGraphics.pose().translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);
             width = APP_ICON_SIZE * 0.8F;
             height = APP_ICON_SIZE * 0.8F;
-            super.render(graphics, mouseX, mouseY, partialTick);
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
             width = APP_ICON_SIZE;
             height = APP_ICON_SIZE;
         }
@@ -601,7 +597,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         @Override
         public void mouseMoved(double mouseX, double mouseY) {
             targetScale = isHovered() ? 1.25f : 1;
-            if (isHovered() != this.previousHoveredState && isHovered()) {
+            if (isHovered() != previousHoveredState && isHovered()) {
                 ClientUtil.playDownSound();
             }
             super.mouseMoved(mouseX, mouseY);

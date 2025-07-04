@@ -15,7 +15,6 @@ public class ImageWidget extends AbstractWidget {
     public float red = 1f;
     public float green = 1f;
     public float blue = 1f;
-    public float alpha = 1f;
     public RenderType renderType;
     public float widthScale = 1.0f;
     public float heightScale = 1.0f;
@@ -28,9 +27,6 @@ public class ImageWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        if (animation != null) {
-            animation.beforeRender(graphics, mouseX, mouseY, partialTick);
-        }
         if (!isVisible()) return;
         if (renderType == null) return;
         VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(renderType);
@@ -48,14 +44,12 @@ public class ImageWidget extends AbstractWidget {
 
         matrix4f.scale(scaledWidth, scaledHeight, 1);
 
-        vertexConsumer.vertex(matrix4f, 0, 0, 0).color(red, green, blue, alpha).uv(u0, v0).endVertex();
-        vertexConsumer.vertex(matrix4f, 0, 1, 0).color(red, green, blue, alpha).uv(u0, v1).endVertex();
-        vertexConsumer.vertex(matrix4f, 1, 1, 0).color(red, green, blue, alpha).uv(u1, v1).endVertex();
-        vertexConsumer.vertex(matrix4f, 1, 0, 0).color(red, green, blue, alpha).uv(u1, v0).endVertex();
+        float finalAlpha = getAbsoluteAlpha();
+        vertexConsumer.vertex(matrix4f, 0, 0, 0).color(red, green, blue, finalAlpha).uv(u0, v0).endVertex();
+        vertexConsumer.vertex(matrix4f, 0, 1, 0).color(red, green, blue, finalAlpha).uv(u0, v1).endVertex();
+        vertexConsumer.vertex(matrix4f, 1, 1, 0).color(red, green, blue, finalAlpha).uv(u1, v1).endVertex();
+        vertexConsumer.vertex(matrix4f, 1, 0, 0).color(red, green, blue, finalAlpha).uv(u1, v0).endVertex();
 
         graphics.pose().popPose();
-        if (animation != null) {
-            animation.afterRender(graphics, mouseX, mouseY, partialTick);
-        }
     }
 }

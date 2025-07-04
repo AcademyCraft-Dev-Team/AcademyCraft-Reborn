@@ -67,13 +67,13 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
 
     public void updateVisualState() {
         if (!this.enabled) {
-            this.alpha = disabledAlpha;
+            setAlpha(disabledAlpha);
         } else if (this.hovered) {
-            this.alpha = hoverAlpha;
+            setAlpha(hoverAlpha);
         } else if (this.selected) {
-            this.alpha = selectedAlpha;
+            setAlpha(selectedAlpha);
         } else {
-            this.alpha = unselectedAlpha;
+            setAlpha(unselectedAlpha);
         }
     }
 }

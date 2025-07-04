@@ -27,7 +27,7 @@ public final class WirelessPanelHelper {
             back.red = 0;
             back.green = 0;
             back.blue = 0;
-            back.alpha = 0.5f;
+            back.setAlpha(0.5f);
             wirelessPanel.addChild("back", back);
 
             var icon = new ImageWidget(10, 10, 16, 16, RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON);

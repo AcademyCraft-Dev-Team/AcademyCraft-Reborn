@@ -28,12 +28,16 @@ public class ProgressBarWidget extends AbstractWidget {
             if (progress < 0.0f) progress = 0.0f;
             if (progress > 1.0f) progress = 1.0f;
 
+            float absoluteAlpha = getAbsoluteAlpha();
+            int finalBackgroundColor = (backgroundColor & 0x00FFFFFF) | ((int) (((backgroundColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+            int finalProgressBarColor = (progressBarColor & 0x00FFFFFF) | ((int) (((progressBarColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+
             if (backgroundVisible) {
                 RenderUtil.fill(
                         graphics.pose().last().pose(),
                         this.getX(), this.getY(),
                         this.getX() + this.getWidth(), this.getY() + this.getHeight(),
-                        backgroundColor, graphics.bufferSource()
+                        finalBackgroundColor, graphics.bufferSource()
                 );
             }
 
@@ -42,7 +46,7 @@ public class ProgressBarWidget extends AbstractWidget {
                     graphics.pose().last().pose(),
                     this.getX(), this.getY(),
                     this.getX() + progressWidth, this.getY() + this.getHeight(),
-                    progressBarColor,
+                    finalProgressBarColor,
                     graphics.bufferSource()
             );
         }
