@@ -40,11 +40,11 @@ public class FutureManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends IPayload> Function<PacketListener, T> getPayloadFactory(int payloadId) {
+    public <T extends IPayload, L extends PacketListener> Function<L, T> getPayloadFactory(int payloadId) {
         var payloadClass = getPayloadClass(payloadId);
         if (payloadClass == null) {
             return null;
         }
-        return (Function<PacketListener, T>) payloadFactories.get(payloadClass);
+        return (Function<L, T>) payloadFactories.get(payloadClass);
     }
 }
