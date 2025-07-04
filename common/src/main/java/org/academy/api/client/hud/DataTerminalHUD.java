@@ -143,28 +143,26 @@ public final class DataTerminalHUD implements HUDRenderer {
             RenderSystem.depthMask(false);
             var mc = Minecraft.getInstance();
             var window = mc.getWindow();
-            var winW = window.getWidth();
-            var winH = window.getHeight();
-            var guiW = window.getGuiScaledWidth();
-            var guiH = window.getGuiScaledHeight();
-            var aspect = winW / winH;
-            var fov = 80;
-            var fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspect);
+            float winW = window.getWidth(), winH = window.getHeight();
+            float guiW = window.getGuiScaledWidth(), guiH = window.getGuiScaledHeight();
+            float aspect = winW / winH;
+            float fov = 80;
+            float fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspect);
             RenderSystem.setProjectionMatrix(new Matrix4f().perspective(fovY, aspect, 1, 1000), VertexSorting.DISTANCE_TO_ORIGIN);
             var pose = RenderSystem.getModelViewStack();
             pose.pushPose();
             pose.setIdentity();
-            var z = -2.5125f;
-            var scale = (2f * Math.abs(z) * (float) Math.tan(fovY / 2f)) / guiH;
+            float z = -2.5125f;
+            float scale = (2f * Math.abs(z) * (float) Math.tan(fovY / 2f)) / guiH;
             pose.translate(0, 0, z);
             pose.scale(scale, -scale, scale);
-            var centerX = guiW - WIDTH / 2f;
-            var centerY = guiH / 2f;
-            var dx = (float) (xpos - centerX);
-            var dy = (float) (ypos - centerY);
-            pose.rotateAround(Axis.YP.rotationDegrees(dx * 0.035f - 5), (float) guiW / 2 - WIDTH * 1.25f + WIDTH / 2, 0, 0);
+            float centerX = guiW - WIDTH / 2f;
+            float centerY = guiH / 2f;
+            float dx = (float) (xpos - centerX);
+            float dy = (float) (ypos - centerY);
+            pose.rotateAround(Axis.YP.rotationDegrees(dx * 0.035f - 5), guiW / 2 - WIDTH * 1.25f + WIDTH / 2, 0, 0);
             pose.rotateAround(Axis.XP.rotationDegrees(-dy * 0.035f + 2), 0, 0, 0);
-            pose.translate((float) -guiW / 2, (float) -guiH / 2, 0);
+            pose.translate(-guiW / 2, -guiH / 2, 0);
             guiGraphics.pose().scale(1, 1, 0.01f);
             RenderSystem.applyModelViewMatrix();
             guiGraphics.pose().pushPose();
@@ -228,7 +226,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                     infoBar.addChild("icon", icon);
 
                     var player = Minecraft.getInstance().player;
-                    var playerName = "N/A";
+                    String playerName = "N/A";
                     if (player != null) {
                         playerName = player.getGameProfile().getName();
                     }
@@ -245,14 +243,14 @@ public final class DataTerminalHUD implements HUDRenderer {
                 root.addChild("area_app_list", appArea);
                 {
                     var apps = new ArrayList<>(APP_LIST);
-                    var totalAppsToCreate = apps.size();
+                    int totalAppsToCreate = apps.size();
 
-                    for (var i = 0; i < totalAppsToCreate; i++) {
+                    for (int i = 0; i < totalAppsToCreate; i++) {
                         var app = apps.get(i);
-                        var row = i / APP_COLS;
-                        var col = i % APP_COLS;
-                        var currentAppX = APP_AREA_PADDING + col * (APP_WIDGET_WIDTH + APP_HORIZONTAL_SPACING);
-                        var currentAppY = APP_AREA_PADDING + row * (APP_WIDGET_HEIGHT + APP_VERTICAL_SPACING);
+                        int row = i / APP_COLS;
+                        int col = i % APP_COLS;
+                        float currentAppX = APP_AREA_PADDING + col * (APP_WIDGET_WIDTH + APP_HORIZONTAL_SPACING);
+                        float currentAppY = APP_AREA_PADDING + row * (APP_WIDGET_HEIGHT + APP_VERTICAL_SPACING);
 
                         var appButton = getAppWidget(app);
                         appButton.setX(currentAppX);
@@ -267,8 +265,8 @@ public final class DataTerminalHUD implements HUDRenderer {
                 root.addChild("bar_area_app_list", appAreaBar);
             }
         }
-        var appAreaWidget = new LayeredPanelWidget(0, 0, 0, 0);
-        rootContainer.addChild("area_app", appAreaWidget);
+        var appArea = new LayeredPanelWidget(0, 0, 0, 0);
+        rootContainer.addChild("area_app", appArea);
 
         var cursorWidget = new CursorWidget(CURSOR_WIDGET_SIZE, CURSOR_WIDGET_SIZE);
         cursorWidget.setEnabled(false);
@@ -368,22 +366,22 @@ public final class DataTerminalHUD implements HUDRenderer {
                 isFirstMove = false;
             }
 
-            var deltaRawX = event.xpos - lastRawMouseX;
-            var deltaRawY = event.ypos - lastRawMouseY;
+            double deltaRawX = event.xpos - lastRawMouseX;
+            double deltaRawY = event.ypos - lastRawMouseY;
 
-            var guiScale = window.getGuiScale();
-            var deltaGuiX = deltaRawX * config.mouseSensitivity / guiScale;
-            var deltaGuiY = deltaRawY * config.mouseSensitivity / guiScale;
+            double guiScale = window.getGuiScale();
+            double deltaGuiX = deltaRawX * config.mouseSensitivity / guiScale;
+            double deltaGuiY = deltaRawY * config.mouseSensitivity / guiScale;
 
             xpos += deltaGuiX;
             ypos += deltaGuiY;
 
             var mainPanel = rootContainer.getChildren().get("main");
             if (mainPanel != null) {
-                var minX = mainPanel.getAbsoluteX();
-                var minY = mainPanel.getAbsoluteY();
-                var maxX = minX + mainPanel.getWidth();
-                var maxY = minY + mainPanel.getHeight();
+                float minX = mainPanel.getAbsoluteX();
+                float minY = mainPanel.getAbsoluteY();
+                float maxX = minX + mainPanel.getWidth();
+                float maxY = minY + mainPanel.getHeight();
 
                 var appAreaPanel = rootContainer.getChildren().get("area_app");
                 if (appAreaPanel != null && appAreaPanel.getWidth() > 0 && appAreaPanel.getHeight() > 0) {
@@ -403,8 +401,8 @@ public final class DataTerminalHUD implements HUDRenderer {
                 rootContainer.mouseDragged(xpos, ypos, InputSystem.currentMouseButton, deltaGuiX, deltaGuiY);
             }
 
-            var newRawMouseX = xpos * guiScale;
-            var newRawMouseY = ypos * guiScale;
+            double newRawMouseX = xpos * guiScale;
+            double newRawMouseY = ypos * guiScale;
 
             lastRawMouseX = newRawMouseX;
             lastRawMouseY = newRawMouseY;
@@ -420,11 +418,11 @@ public final class DataTerminalHUD implements HUDRenderer {
     @SubscribeEvent
     public static void onMouseScroll(MouseScrollEvent event) {
         if (active && Minecraft.getInstance().screen == null) {
-            var yOffset = event.yOffset;
+            double yOffset = event.yOffset;
             var options = Minecraft.getInstance().options;
-            var discreteMouseScroll = options.discreteMouseScroll().get();
-            var mouseWheelSensitivity = options.mouseWheelSensitivity().get();
-            var d0 = (discreteMouseScroll ? Math.signum(yOffset) : yOffset) * mouseWheelSensitivity;
+            boolean discreteMouseScroll = options.discreteMouseScroll().get();
+            double mouseWheelSensitivity = options.mouseWheelSensitivity().get();
+            double d0 = (discreteMouseScroll ? Math.signum(yOffset) : yOffset) * mouseWheelSensitivity;
             rootContainer.mouseScrolled(xpos, ypos, d0);
             event.setCanceled(true);
         }
@@ -433,8 +431,8 @@ public final class DataTerminalHUD implements HUDRenderer {
     @SubscribeEvent
     public static void onKey(KeyEvent event) {
         if (active && Minecraft.getInstance().screen == null) {
-            var key = event.key;
-            var scanCode = event.scanCode;
+            int key = event.key;
+            int scanCode = event.scanCode;
             var options = Minecraft.getInstance().options;
             var keyLeft = options.keyLeft;
             var keyRight = options.keyRight;
@@ -445,7 +443,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             var keySprint = options.keySprint;
             var keyHotbarSlots = options.keyHotbarSlots;
 
-            var keyHotbar = false;
+            boolean keyHotbar = false;
 
             for (var keyHotbarSlot : keyHotbarSlots) {
                 if (!keyHotbar) {
@@ -491,7 +489,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         if (active) {
             var player = Minecraft.getInstance().player;
             if (playerNameLabel != null && player != null) {
-                var name = player.getGameProfile().getName();
+                String name = player.getGameProfile().getName();
                 var font = Minecraft.getInstance().font;
                 playerNameLabel.setX(WIDTH - font.width(name) - INFO_BAR_PLAYER_NAME_PADDING_X);
                 playerNameLabel.value = name;
@@ -533,7 +531,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             }
 
             @Override
-            public @NotNull Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
+            public @NotNull DataTerminalHUD.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
                 return gson.fromJson(jsonElement, Config.class);
             }
 
@@ -543,7 +541,7 @@ public final class DataTerminalHUD implements HUDRenderer {
             }
 
             @Override
-            public @NotNull Config getDefaultConfig() {
+            public @NotNull DataTerminalHUD.Config getDefaultConfig() {
                 return new Config();
             }
 
@@ -585,10 +583,10 @@ public final class DataTerminalHUD implements HUDRenderer {
             widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale,
                     ClientUtil.animationFactor(1));
             heightScale = widthScale;
-            var originRenderType = renderType;
+            var oringinRenderType = renderType;
             renderType = RenderTypes.RENDER_TYPE_APP_BACK;
             super.render(guiGraphics, mouseX, mouseY, partialTick);
-            renderType = originRenderType;
+            renderType = oringinRenderType;
             guiGraphics.pose().translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);
             width = APP_ICON_SIZE * 0.8F;
             height = APP_ICON_SIZE * 0.8F;
