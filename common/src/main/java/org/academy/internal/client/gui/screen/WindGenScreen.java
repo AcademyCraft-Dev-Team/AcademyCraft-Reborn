@@ -15,7 +15,7 @@ import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 
-public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements WirelessPanelHelper.WirelessPanel {
+public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
     public final WindGenBaseBlockEntity windGenBaseBlockEntity;
     public ImageWidget topIcon;
@@ -30,10 +30,10 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
     private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
             37f / 255f, 247f / 255f, 1, 1);
 
-    private WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, WindGenBaseBlockEntity windGenBaseBlockEntity) {
+    public WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, WindGenBaseBlockEntity newWindGenBaseBlockEntity) {
         super(menu, playerInventory, title);
-        this.windGenBaseBlockEntity = windGenBaseBlockEntity;
-        this.mainPos = windGenBaseBlockEntity.getBlockPos();
+        mainPos = newWindGenBaseBlockEntity.getBlockPos();
+        windGenBaseBlockEntity = newWindGenBaseBlockEntity;
     }
 
     public static WindGenScreen create(WindGenMenu menu, Inventory playerInventory, Component title, BlockPos mainPos) {
@@ -46,17 +46,17 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
 
     @Override
     protected void onInit() {
-        float startYOffset = 20f;
-        long duration = 600;
-        long delay = 250;
-        long childDuration = duration - 100;
+        var startYOffset = 20f;
+        var duration = 600L;
+        var delay = 250L;
+        var childDuration = duration - 100;
 
         invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
         rootContainer.addChild("page_inv", invPage);
         {
-            ImageWidget ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.RENDER_TYPE_WIND_GEN_UI);
+            var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.RENDER_TYPE_WIND_GEN_UI);
             invPage.addChild("ui", ui);
-            PanelWidget statePanel = new PanelWidget(0, 0, imageWidth, 187);
+            var statePanel = new PanelWidget(0, 0, imageWidth, 187);
             statePanel.setHorizontalGravity(PanelWidget.HorizontalGravity.CENTER);
             invPage.addChild("panel_state", statePanel);
             {
@@ -79,10 +79,10 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         requestCurrentNodeStatus();
         requestAvailableNodes(nodeListPanel);
 
-        RadioGroupWidget radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
+        var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
-            boolean showInv = imageRadioButtonWidget.getId() == 0;
-            float panelY = getTopPos() - 22;
+            var showInv = imageRadioButtonWidget.getId() == 0;
+            var panelY = getTopPos() - 22;
             if (showInv) {
                 renderInventory = true;
                 ScreenAnimationUtil.show(this, invPage, panelY);
@@ -95,38 +95,38 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
-            ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
+            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
                     RenderTypes.RENDER_TYPE_ICON_INV, () -> {
             });
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
+            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
                     RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
             });
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);
         }
 
-        PanelWidget infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 22, 110, 105);
+        var infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 22, 110, 105);
         infoArea.setAlpha(0);
         rootContainer.addChild("area_info", infoArea);
         {
-            BlendQuadWidget back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());
+            var back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());
             back.red = 0;
             back.green = 0;
             back.blue = 0;
             back.setAlpha(0.5f);
             infoArea.addChild("back", back);
 
-            HistogramWidget histogramWidget = new HistogramWidget(0, 0, 84, 84);
+            var histogramWidget = new HistogramWidget(0, 0, 84, 84);
             histogramWidget.addValue(histogramValue);
             infoArea.addChild("histogram", histogramWidget);
 
-            FillWidget bufferIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25F7FF);
+            var bufferIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25F7FF);
             infoArea.addChild("icon_buffer", bufferIcon);
 
-            LabelWidget bufferLabel = new LabelWidget("BUFFER", 15, 72);
+            var bufferLabel = new LabelWidget("BUFFER", 15, 72);
             bufferLabel.scale = 0.75f;
             infoArea.addChild("label_buffer", bufferLabel);
 
@@ -134,30 +134,30 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
             bufferValueLabel.scale = 0.75f;
             infoArea.addChild("label_buffer_value", bufferValueLabel);
 
-            LabelWidget infoLabel = new LabelWidget("Information", 8, 82);
+            var infoLabel = new LabelWidget("Information", 8, 82);
             infoLabel.scale = 0.75f;
             infoArea.addChild("label_info", infoLabel);
 
-            LabelWidget altitudeLabel = new LabelWidget("Altitude", 10, 90);
+            var altitudeLabel = new LabelWidget("Altitude", 10, 90);
             altitudeLabel.scale = 0.75f;
             infoArea.addChild("label_altitude", altitudeLabel);
 
-            String altitudeValue = "N/A";
+            var altitudeValue = "N/A";
             if (windGenBaseBlockEntity != null) {
                 altitudeValue = windGenBaseBlockEntity.altitude + "";
             }
-            LabelWidget altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
+            var altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
             altitudeValueLabel.scale = 0.75f;
             infoArea.addChild("label_altitude_value", altitudeValueLabel);
         }
 
-        float radioFinalY = radioGroupWidget.getY();
+        var radioFinalY = radioGroupWidget.getY();
         radioGroupWidget.setY(radioFinalY + startYOffset);
         radioGroupWidget.setAlpha(0f);
         playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setY, radioGroupWidget.getY(), radioFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
         playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay));
 
-        float infoFinalY = infoArea.getY();
+        var infoFinalY = infoArea.getY();
         infoArea.setY(infoFinalY + startYOffset);
         playAnimation(ObjectAnimator.ofFloat(infoArea::setY, infoArea.getY(), infoFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
         playAnimation(ObjectAnimator.ofFloat(infoArea::setAlpha, 0, 1).setStartDelay(delay).setDuration(duration));
@@ -168,7 +168,7 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
         super.containerTick();
         if (baseIcon != null && pillarIcon != null && topIcon != null && bufferValueLabel != null) {
             bufferValueLabel.value = String.format(AF, windGenBaseBlockEntity.energyStored);
-            float progress = (float) windGenBaseBlockEntity.energyStored / (float) windGenBaseBlockEntity.getMaxEnergyStorage();
+            var progress = (float) windGenBaseBlockEntity.energyStored / (float) windGenBaseBlockEntity.getMaxEnergyStorage();
             if (Float.isNaN(progress)) {
                 progress = 0;
             }

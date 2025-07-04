@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.gui.GuiGraphics;
-import org.academy.api.client.gui.framework.Widget;
 
 public class LayeredPanelWidget extends PanelWidget {
     public LayeredPanelWidget(float x, float y, float width, float height) {
@@ -15,7 +14,7 @@ public class LayeredPanelWidget extends PanelWidget {
         graphics.pose().pushPose();
         graphics.pose().translate(getX(), getY(), getZ() + 1);
 
-        for (Widget child : getChildren().values()) {
+        for (var child : getChildren().values()) {
             child.render(graphics, mouseX, mouseY, partialTick);
         }
 

@@ -12,7 +12,6 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -21,24 +20,22 @@ import org.academy.internal.common.world.entity.EntityTypes;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 
 public class LevelUtil {
     @SuppressWarnings("resource")
     public static double getValidViewDistance(Entity entity, double targetDistance) {
-        Vec3 startPos = entity.position();
-        Vec3 direction = Vec3.directionFromRotation(entity.getXRot(), entity.getYRot()).scale(targetDistance);
-        Vec3 targetPos = startPos.add(direction);
+        var startPos = entity.position();
+        var direction = Vec3.directionFromRotation(entity.getXRot(), entity.getYRot()).scale(targetDistance);
+        var targetPos = startPos.add(direction);
 
-        HitResult hitResult = entity.level().clip(new ClipContext(startPos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
+        var hitResult = entity.level().clip(new ClipContext(startPos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
         return (hitResult.getType() != HitResult.Type.MISS) ? hitResult.getLocation().distanceTo(startPos) : targetDistance;
     }
 
     @SuppressWarnings("DataFlowIssue")
     public static boolean canBreakBlock(BlockState blockState, int miningLevel) {
-        if (miningLevel == -1|| blockState.getDestroySpeed(null,null) == -1) {
+        if (miningLevel == -1 || blockState.getDestroySpeed(null, null) == -1) {
             return false;
         }
 
@@ -58,24 +55,24 @@ public class LevelUtil {
                                                                int miningLevel, boolean dropBlock,
                                                                boolean spawnParticles, boolean canBlock,
                                                                boolean simulate) {
-        final BlockState air = Blocks.AIR.defaultBlockState();
-        Set<BlockPos> processedBlocks = new HashSet<>();
-        double pathLength = start.distanceTo(end);
+        final var air = Blocks.AIR.defaultBlockState();
+        var processedBlocks = new HashSet<BlockPos>();
+        var pathLength = start.distanceTo(end);
 
-        Vec3 direction = end.subtract(start).normalize();
-        int maxSteps = Mth.ceil(pathLength / 0.5);
-        BlockPos.MutableBlockPos currentBlockPos = new BlockPos.MutableBlockPos();
-        int searchBounds = Mth.ceil(radius);
+        var direction = end.subtract(start).normalize();
+        var maxSteps = Mth.ceil(pathLength / 0.5);
+        var currentBlockPos = new BlockPos.MutableBlockPos();
+        var searchBounds = Mth.ceil(radius);
 
-        for (int step = 0; step <= maxSteps; ++step) {
-            double distAlongPath = (step / (double) maxSteps) * pathLength;
+        for (var step = 0; step <= maxSteps; ++step) {
+            var distAlongPath = (step / (double) maxSteps) * pathLength;
             distAlongPath = Math.min(distAlongPath, pathLength);
-            Vec3 currentPoint = start.add(direction.scale(distAlongPath));
-            BlockPos centerBlock = BlockPos.containing(currentPoint);
+            var currentPoint = start.add(direction.scale(distAlongPath));
+            var centerBlock = BlockPos.containing(currentPoint);
 
-            for (int dx = -searchBounds; dx <= searchBounds; ++dx) {
-                for (int dy = -searchBounds; dy <= searchBounds; ++dy) {
-                    for (int dz = -searchBounds; dz <= searchBounds; ++dz) {
+            for (var dx = -searchBounds; dx <= searchBounds; ++dx) {
+                for (var dy = -searchBounds; dy <= searchBounds; ++dy) {
+                    for (var dz = -searchBounds; dz <= searchBounds; ++dz) {
                         currentBlockPos.set(centerBlock.getX() + dx, centerBlock.getY() + dy, centerBlock.getZ() + dz);
 
                         if (processedBlocks.contains(currentBlockPos)) {
@@ -83,14 +80,14 @@ public class LevelUtil {
                         }
 
                         if (isBlockIntersectingCylinder(currentBlockPos, start, end, radius)) {
-                            BlockState blockState = level.getBlockState(currentBlockPos);
+                            var blockState = level.getBlockState(currentBlockPos);
 
                             if (!blockState.isAir()) {
-                                boolean breakable = canBreakBlock(blockState, miningLevel);
+                                var breakable = canBreakBlock(blockState, miningLevel);
                                 if (breakable) {
                                     if (!simulate) {
                                         processedBlocks.add(currentBlockPos.immutable());
-                                        BlockEntity blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(currentBlockPos) : null;
+                                        var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(currentBlockPos) : null;
                                         if (dropBlock) {
                                             Block.dropResources(blockState, level, currentBlockPos, blockEntity, null, ItemStack.EMPTY);
                                         }
@@ -102,7 +99,7 @@ public class LevelUtil {
                                         processedBlocks.add(currentBlockPos.immutable());
                                     }
                                 } else if (canBlock) {
-                                    double blockedDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, currentBlockPos);
+                                    var blockedDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, currentBlockPos);
                                     return Pair.of(true, Math.min(blockedDistance, pathLength));
                                 }
                             }
@@ -112,9 +109,9 @@ public class LevelUtil {
             }
 
             if (canBlock && !processedBlocks.contains(centerBlock)) {
-                BlockState centerBlockState = level.getBlockState(centerBlock);
+                var centerBlockState = level.getBlockState(centerBlock);
                 if (!centerBlockState.isAir() && !canBreakBlock(centerBlockState, miningLevel) && isBlockIntersectingCylinder(centerBlock, start, end, radius)) {
-                    double blockDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, centerBlock);
+                    var blockDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, centerBlock);
                     return Pair.of(true, Math.min(blockDistance, pathLength));
                 }
             }
@@ -124,46 +121,46 @@ public class LevelUtil {
     }
 
     public static boolean isBlockIntersectingCylinder(BlockPos blockPos, Vec3 start, Vec3 end, float radius) {
-        Vec3 blockCenter = Vec3.atCenterOf(blockPos);
-        double distSq = distanceSqToLineSegment(blockCenter, start, end);
-        double checkRadius = radius + 0.8660254;
+        var blockCenter = Vec3.atCenterOf(blockPos);
+        var distSq = distanceSqToLineSegment(blockCenter, start, end);
+        var checkRadius = radius + 0.8660254;
         return distSq <= checkRadius * checkRadius;
     }
 
     public static double distanceSqToLineSegment(Vec3 point, Vec3 segStart, Vec3 segEnd) {
-        double segDx = segEnd.x - segStart.x;
-        double segDy = segEnd.y - segStart.y;
-        double segDz = segEnd.z - segStart.z;
+        var segDx = segEnd.x - segStart.x;
+        var segDy = segEnd.y - segStart.y;
+        var segDz = segEnd.z - segStart.z;
 
-        double segLengthSq = segDx * segDx + segDy * segDy + segDz * segDz;
+        var segLengthSq = segDx * segDx + segDy * segDy + segDz * segDz;
 
         if (segLengthSq < 1.0E-12) {
             return point.distanceToSqr(segStart);
         }
 
-        double pointToStartDx = point.x - segStart.x;
-        double pointToStartDy = point.y - segStart.y;
-        double pointToStartDz = point.z - segStart.z;
+        var pointToStartDx = point.x - segStart.x;
+        var pointToStartDy = point.y - segStart.y;
+        var pointToStartDz = point.z - segStart.z;
 
-        double dot = pointToStartDx * segDx + pointToStartDy * segDy + pointToStartDz * segDz;
-        double t = Math.max(0, Math.min(1, dot / segLengthSq));
+        var dot = pointToStartDx * segDx + pointToStartDy * segDy + pointToStartDz * segDz;
+        var t = Math.max(0, Math.min(1, dot / segLengthSq));
 
-        double closestX = segStart.x + t * segDx;
-        double closestY = segStart.y + t * segDy;
-        double closestZ = segStart.z + t * segDz;
+        var closestX = segStart.x + t * segDx;
+        var closestY = segStart.y + t * segDy;
+        var closestZ = segStart.z + t * segDz;
 
-        double finalDx = point.x - closestX;
-        double finalDy = point.y - closestY;
-        double finalDz = point.z - closestZ;
+        var finalDx = point.x - closestX;
+        var finalDy = point.y - closestY;
+        var finalDz = point.z - closestZ;
 
         return finalDx * finalDx + finalDy * finalDy + finalDz * finalDz;
     }
 
     public static double calculateDistanceToBlockIntersection(Vec3 start, Vec3 direction,
                                                               double totalPathLength, BlockPos blockPos) {
-        Vec3 blockCenter = Vec3.atCenterOf(blockPos);
-        Vec3 startToBlock = blockCenter.subtract(start);
-        double distanceAlongPath = startToBlock.dot(direction);
+        var blockCenter = Vec3.atCenterOf(blockPos);
+        var startToBlock = blockCenter.subtract(start);
+        var distanceAlongPath = startToBlock.dot(direction);
 
         return Mth.clamp(distanceAlongPath, 0.0, totalPathLength);
     }
@@ -176,31 +173,31 @@ public class LevelUtil {
                                                float damage) {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
-        Vec3 direction = end.subtract(start).normalize();
-        double totalDistance = start.distanceTo(end);
+        var direction = end.subtract(start).normalize();
+        var totalDistance = start.distanceTo(end);
 
-        int steps = (int) Math.ceil(totalDistance / (double) radius);
+        var steps = (int) Math.ceil(totalDistance / (double) radius);
 
-        AABB pathBB = new AABB(start, end).inflate(radius, radius, radius);
-        List<Entity> candidates = serverLevel.getEntities(
+        var pathBB = new AABB(start, end).inflate(radius, radius, radius);
+        var candidates = serverLevel.getEntities(
                 (Entity) null,
                 pathBB,
                 e -> e.isAlive()
                         && e.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE
         );
 
-        Set<Entity> hitSet = new HashSet<>();
+        var hitSet = new HashSet<Entity>();
 
-        for (int i = 0; i <= steps; i++) {
-            double distAlong = Math.min(i * (double) radius, totalDistance);
-            Vec3 samplePos = start.add(direction.scale(distAlong));
+        for (var i = 0; i <= steps; i++) {
+            var distAlong = Math.min(i * (double) radius, totalDistance);
+            var samplePos = start.add(direction.scale(distAlong));
 
-            AABB sliceBB = new AABB(
+            var sliceBB = new AABB(
                     samplePos.subtract(radius, radius, radius),
                     samplePos.add(radius, radius, radius)
             );
 
-            for (Entity e : candidates) {
+            for (var e : candidates) {
                 if (hitSet.contains(e)) continue;
 
                 if (e.getBoundingBox().intersects(sliceBB)) {

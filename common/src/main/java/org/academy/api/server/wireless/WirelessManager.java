@@ -3,8 +3,6 @@ package org.academy.api.server.wireless;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
@@ -16,7 +14,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 public class WirelessManager {
     public static void initServer() {
@@ -27,7 +24,7 @@ public class WirelessManager {
     @HandlePayload
     public static GetAvailableNodesPacket.Response onGetAvailableNodes(GetAvailableNodesPacket payload) {
         ServerPlayer player = null;
-        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        var supplier = payload.packetListenerSupplier;
         if (supplier != null) {
             player = supplier.get().player;
         }
@@ -35,15 +32,15 @@ public class WirelessManager {
             AcademyCraft.LOGGER.error("WirelessManager: Player context not found for GetAvailableNodesPacket.");
             return new GetAvailableNodesPacket.Response(Collections.emptyList());
         }
-        ServerLevel level = player.serverLevel();
-        BlockPos requesterPos = payload.requesterPos;
+        var level = player.serverLevel();
+        var requesterPos = payload.requesterPos;
         return new GetAvailableNodesPacket.Response(getAvailableNodes(level, requesterPos));
     }
 
     @HandlePayload
     public static GetCurrentNodePacket.Response onGetCurrentNode(GetCurrentNodePacket payload) {
         ServerPlayer player = null;
-        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        var supplier = payload.packetListenerSupplier;
         if (supplier != null) {
             player = supplier.get().player;
         }
@@ -51,45 +48,45 @@ public class WirelessManager {
             AcademyCraft.LOGGER.error("WirelessManager: Player context not found for GetCurrentNodePacket.");
             return new GetCurrentNodePacket.Response(true, "Error");
         }
-        ServerLevel level = player.serverLevel();
-        BlockPos userPos = payload.userPos;
-        Pair<Boolean, String> currentNode = getCurrentNode(level, userPos);
+        var level = player.serverLevel();
+        var userPos = payload.userPos;
+        var currentNode = getCurrentNode(level, userPos);
         return new GetCurrentNodePacket.Response(currentNode.getLeft(), currentNode.getRight());
     }
 
     @SubscribePacket
     public static void onConnectNode(ConnectNodePacket packet) {
-        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
-        ServerLevel level = player.serverLevel();
-        BlockPos userPos = packet.userPos;
-        String targetNodeName = packet.targetNodeName;
-        String passwordAttempt = packet.passwordAttempt;
+        var player = packet.packetListenerSupplier.get().getPlayer();
+        var level = player.serverLevel();
+        var userPos = packet.userPos;
+        var targetNodeName = packet.targetNodeName;
+        var passwordAttempt = packet.passwordAttempt;
         handleConnect(player, level, userPos, targetNodeName, passwordAttempt);
     }
 
     @SubscribePacket
     public static void onDisconnectNode(DisconnectNodePacket packet) {
-        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
-        ServerLevel level = player.serverLevel();
-        BlockPos userPos = packet.userPos;
+        var player = packet.packetListenerSupplier.get().getPlayer();
+        var level = player.serverLevel();
+        var userPos = packet.userPos;
         handleDisconnect(player, level, userPos);
     }
 
     @SubscribePacket
     public static void onSetNodeName(SetNodeNamePacket packet) {
-        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
-        ServerLevel level = player.serverLevel();
-        BlockPos nodePos = packet.nodePos;
-        String newName = packet.newName;
+        var player = packet.packetListenerSupplier.get().getPlayer();
+        var level = player.serverLevel();
+        var nodePos = packet.nodePos;
+        var newName = packet.newName;
         WirelessManager.setNodeName(player, level, nodePos, newName);
     }
 
     @SubscribePacket
     public static void onSetNodePass(SetNodePassPacket packet) {
-        ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
-        ServerLevel level = player.serverLevel();
-        BlockPos nodePos = packet.nodePos;
-        String newPass = packet.newPass;
+        var player = packet.packetListenerSupplier.get().getPlayer();
+        var level = player.serverLevel();
+        var nodePos = packet.nodePos;
+        var newPass = packet.newPass;
         WirelessManager.setNodePass(player, level, nodePos, newPass);
     }
 
@@ -100,23 +97,23 @@ public class WirelessManager {
         if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
             return;
         }
-        WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
+        var data = WorldData.WirelessNetworkData.get(level);
 
-        WorldData.WirelessNetworkData.NodeConfig oldCfg = data.getNodeConfig(nodePos);
+        var oldCfg = data.getNodeConfig(nodePos);
         if (oldCfg == null) {
             AcademyCraft.LOGGER.warn("Player {} tried to rename nonexistent node at {}",
                     player.getGameProfile().getName(), nodePos);
             return;
         }
 
-        BlockPos newNodePos = data.findNodePositionByName(newName);
+        var newNodePos = data.findNodePositionByName(newName);
         if (newNodePos != null && !newNodePos.equals(nodePos)) {
             AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken by node at {}",
                     player.getGameProfile().getName(), nodePos, newName, newNodePos);
             return;
         }
 
-        String oldNameForMap = oldCfg.name;
+        var oldNameForMap = oldCfg.name;
         oldCfg.name = newName;
         data.nodeNameMap.remove(oldNameForMap);
         data.nodeNameMap.put(newName, nodePos);
@@ -133,9 +130,9 @@ public class WirelessManager {
         if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
             return;
         }
-        WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
+        var data = WorldData.WirelessNetworkData.get(level);
 
-        WorldData.WirelessNetworkData.NodeConfig cfg = data.getNodeConfig(nodePos);
+        var cfg = data.getNodeConfig(nodePos);
         if (cfg == null) {
             AcademyCraft.LOGGER.warn("Player {} tried to change password of nonexistent node at {}",
                     player.getGameProfile().getName(), nodePos);
@@ -149,15 +146,15 @@ public class WirelessManager {
     }
 
     public static void handleConnect(ServerPlayer player, ServerLevel level, BlockPos userPos, String targetNodeName, String passwordAttempt) {
-        WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(level);
+        var networkData = WorldData.WirelessNetworkData.get(level);
 
-        BlockPos nodePos = networkData.findNodePositionByName(targetNodeName);
+        var nodePos = networkData.findNodePositionByName(targetNodeName);
         if (nodePos == null) {
             AcademyCraft.LOGGER.warn("Player {} failed connecting user at {}: Node '{}' not found.", player.getGameProfile().getName(), userPos, targetNodeName);
             return;
         }
 
-        WorldData.WirelessNetworkData.NodeConfig nodeConfig = networkData.getNodeConfig(nodePos);
+        var nodeConfig = networkData.getNodeConfig(nodePos);
 
         if (nodeConfig == null) {
             AcademyCraft.LOGGER.error("Node position {} found for '{}' but NodeConfig is missing!", nodePos, targetNodeName);
@@ -169,7 +166,7 @@ public class WirelessManager {
             return;
         }
 
-        BlockEntity userBE = level.getBlockEntity(userPos);
+        var userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
             AcademyCraft.LOGGER.warn("Player {} tried to connect invalid block at {} to node '{}'. Block is not a WirelessUser.", player.getGameProfile().getName(), userPos, targetNodeName);
             return;
@@ -194,18 +191,18 @@ public class WirelessManager {
     }
 
     public static void handleDisconnect(@Nullable ServerPlayer player, ServerLevel level, BlockPos userPos) {
-        BlockEntity userBE = level.getBlockEntity(userPos);
+        var userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
-            String playerName = (player != null) ? player.getGameProfile().getName() : "System";
+            var playerName = (player != null) ? player.getGameProfile().getName() : "System";
             AcademyCraft.LOGGER.warn("{} tried to disconnect invalid block at {}.", playerName, userPos);
             return;
         }
 
-        BlockPos connectedNodePosition = wirelessUser.getConnectedNodePosition();
+        var connectedNodePosition = wirelessUser.getConnectedNodePosition();
 
         if (connectedNodePosition != null) {
-            WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(level);
-            boolean removedFromData = networkData.disconnectUserFromNode(connectedNodePosition, userPos);
+            var networkData = WorldData.WirelessNetworkData.get(level);
+            var removedFromData = networkData.disconnectUserFromNode(connectedNodePosition, userPos);
             if (removedFromData) {
                 AcademyCraft.LOGGER.debug("Successfully removed user {} from node {}'s list in SavedData.", userPos, connectedNodePosition);
             } else {
@@ -220,11 +217,11 @@ public class WirelessManager {
     }
 
     public static List<String> getAvailableNodes(ServerLevel level, BlockPos requesterPos) {
-        WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
-        List<String> nodeNamesInRange = new ArrayList<>();
-        for (Map.Entry<BlockPos, WorldData.WirelessNetworkData.NodeConfig> entry : data.getNodeEntries().entrySet()) {
-            BlockPos nodePos = entry.getKey();
-            WorldData.WirelessNetworkData.NodeConfig config = entry.getValue();
+        var data = WorldData.WirelessNetworkData.get(level);
+        var nodeNamesInRange = new ArrayList<String>();
+        for (var entry : data.getNodeEntries().entrySet()) {
+            var nodePos = entry.getKey();
+            var config = entry.getValue();
             if (nodePos.distSqr(requesterPos) <= (double) config.radius * config.radius) {
                 nodeNamesInRange.add(config.name);
             }
@@ -234,12 +231,12 @@ public class WirelessManager {
 
     public static Pair<Boolean,String> getCurrentNode(ServerLevel level, BlockPos userPos) {
         String currentNodeName = null;
-        BlockEntity be = level.getBlockEntity(userPos);
+        var be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
-            BlockPos connectedNodePos = user.getConnectedNodePosition();
+            var connectedNodePos = user.getConnectedNodePosition();
             if (connectedNodePos != null) {
-                WorldData.WirelessNetworkData data = WorldData.WirelessNetworkData.get(level);
-                WorldData.WirelessNetworkData.NodeConfig nodeConfig = data.getNodeConfig(connectedNodePos);
+                var data = WorldData.WirelessNetworkData.get(level);
+                var nodeConfig = data.getNodeConfig(connectedNodePos);
                 if (nodeConfig != null) {
                     currentNodeName = nodeConfig.name;
                 }
@@ -259,30 +256,31 @@ public class WirelessManager {
     ) {
         if (userConfigMap.isEmpty()) return;
 
-        int transferRate = node.getEnergyTransferRate();
-        int energyStored = node.getEnergyStored();
-        int maxEnergy = node.getMaxEnergyStorage();
+        var transferRate = node.getEnergyTransferRate();
+        var energyStored = node.getEnergyStored();
+        var maxEnergy = node.getMaxEnergyStorage();
 
-        Map<WirelessUser, Integer> extractSources = new HashMap<>();
-        Map<WirelessUser, Integer> insertTargets = new HashMap<>();
-        double extractWeight = 0, insertWeight = 0;
+        var extractSources = new HashMap<WirelessUser, Integer>();
+        var insertTargets = new HashMap<WirelessUser, Integer>();
+        var extractWeight = 0.0;
+        var insertWeight = 0.0;
 
-        for (Map.Entry<WirelessUser, WorldData.WirelessNetworkData.UserConfig> entry : userConfigMap.entrySet()) {
-            WirelessUser user = entry.getKey();
+        for (var entry : userConfigMap.entrySet()) {
+            var user = entry.getKey();
             if (user == node) {
                 continue;
             }
-            WorldData.WirelessNetworkData.UserConfig cfg = entry.getValue();
-            double receiveWeight = cfg.getReceiveWeight();
-            double sendWeight = cfg.getSendWeight();
+            var cfg = entry.getValue();
+            var receiveWeight = cfg.getReceiveWeight();
+            var sendWeight = cfg.getSendWeight();
 
-            int canExtract = node.extractFromUser(user, transferRate, true);
+            var canExtract = node.extractFromUser(user, transferRate, true);
             if (canExtract > 0) {
                 extractSources.put(user, canExtract);
                 extractWeight += receiveWeight;
             }
 
-            int canInsert = node.insertIntoUser(user, transferRate, true);
+            var canInsert = node.insertIntoUser(user, transferRate, true);
             if (canInsert > 0) {
                 insertTargets.put(user, canInsert);
                 insertWeight += sendWeight;
@@ -291,20 +289,20 @@ public class WirelessManager {
 
         if (insertTargets.isEmpty() && extractSources.isEmpty()) return;
 
-        int remainingBandwidth = transferRate;
+        var remainingBandwidth = transferRate;
 
         if (!insertTargets.isEmpty() && energyStored > 0) {
-            for (Map.Entry<WirelessUser, Integer> entry : insertTargets.entrySet()) {
+            for (var entry : insertTargets.entrySet()) {
                 if (remainingBandwidth <= 0 || energyStored <= 0) break;
-                WirelessUser user = entry.getKey();
-                int capacity = entry.getValue();
-                double weight = userConfigMap.get(user).getSendWeight();
+                var user = entry.getKey();
+                var capacity = entry.getValue();
+                var weight = userConfigMap.get(user).getSendWeight();
 
-                int share = (insertWeight > 0) ? (int) Math.floor((weight / insertWeight) * transferRate) : 0;
-                int amount = Math.min(Math.min(share, capacity), Math.min(energyStored, remainingBandwidth));
+                var share = (insertWeight > 0) ? (int) Math.floor((weight / insertWeight) * transferRate) : 0;
+                var amount = Math.min(Math.min(share, capacity), Math.min(energyStored, remainingBandwidth));
                 if (amount <= 0) continue;
 
-                int moved = node.insertIntoUser(user, amount, false);
+                var moved = node.insertIntoUser(user, amount, false);
                 if (moved > 0) {
                     energyStored -= moved;
                     remainingBandwidth -= moved;
@@ -313,17 +311,17 @@ public class WirelessManager {
         }
 
         if (!extractSources.isEmpty() && remainingBandwidth > 0 && energyStored < maxEnergy) {
-            for (Map.Entry<WirelessUser, Integer> entry : extractSources.entrySet()) {
+            for (var entry : extractSources.entrySet()) {
                 if (remainingBandwidth <= 0 || energyStored >= maxEnergy) break;
-                WirelessUser user = entry.getKey();
-                int capacity = entry.getValue();
-                double weight = userConfigMap.get(user).getReceiveWeight();
+                var user = entry.getKey();
+                var capacity = entry.getValue();
+                var weight = userConfigMap.get(user).getReceiveWeight();
 
-                int share = (extractWeight > 0) ? (int) Math.floor((weight / extractWeight) * remainingBandwidth) : 0;
-                int amount = Math.min(Math.min(share, capacity), Math.min(maxEnergy - energyStored, remainingBandwidth));
+                var share = (extractWeight > 0) ? (int) Math.floor((weight / extractWeight) * remainingBandwidth) : 0;
+                var amount = Math.min(Math.min(share, capacity), Math.min(maxEnergy - energyStored, remainingBandwidth));
                 if (amount <= 0) continue;
 
-                int moved = node.extractFromUser(user, amount, false);
+                var moved = node.extractFromUser(user, amount, false);
                 if (moved > 0) {
                     energyStored += moved;
                     remainingBandwidth -= moved;

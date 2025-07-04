@@ -38,9 +38,6 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
     private static final float CORE_BASE_RADIUS = 16.0f; // 核心基础半径
     private static final float CORE_PULSATION_AMP = 1.0f; // 核心脉动幅度
     private static final float CORE_PULSATION_FREQ = 0.5f; // 核心脉动频率
-    private static final int CORE_SPHERE_FACES = 16; // 核心球体面数
-    private static final float[] CORE_COLOR_INNER = {0.8f, 0.1f, 1.0f, 0.85f}; // 核心内部颜色 (RGBA)
-    private static final float[] CORE_COLOR_GLOW = {0.5f, 0.0f, 0.8f, 0.4f}; // 核心辉光颜色 (RGBA)
     private static final int NUM_CORE_TENDRILS = 20; // 核心触须数量
     private static final float TENDRIL_LENGTH_MIN = 2.0f; // 触须最小长度
     private static final float TENDRIL_LENGTH_MAX = 4.0f; // 触须最大长度
@@ -215,7 +212,6 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
         poseStack.pushPose();
         poseStack.translate(0.0, CORE_Y_OFFSET, 0.0);
 
-        renderPurpleCore(poseStack, buffer, effectiveTime);
         renderCoreTendrils(poseStack, buffer, effectiveTime, entityId);
         renderCoreArcs(poseStack, buffer, effectiveTime, entityId);
         renderAtmosphericLayers(poseStack, buffer, effectiveTime, entityId, gatherFactor);
@@ -226,12 +222,6 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
         renderAtmosphericDust(poseStack, buffer, entity, partialTick);
         renderGroundDisturbance(poseStack, buffer, entity, partialTick);
         poseStack.popPose();
-    }
-
-    private void renderPurpleCore(PoseStack poseStack, MultiBufferSource buffer, float effectiveTime) {
-        float pulseFactor = 0.5f + 0.5f * (float) Math.sin(effectiveTime * CORE_PULSATION_FREQ * MathUtil.TWO_PI);
-        float currentRadius = MathUtil.lerpFactorStartEnd(pulseFactor, CORE_BASE_RADIUS - CORE_PULSATION_AMP, CORE_BASE_RADIUS + CORE_PULSATION_AMP);
-        float glowRadius = currentRadius * (1.0f + pulseFactor * 0.15f);
     }
 
     private void renderCoreTendrils(PoseStack poseStack, MultiBufferSource buffer, float effectiveTime, long entityId) {

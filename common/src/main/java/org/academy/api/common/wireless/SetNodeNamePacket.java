@@ -16,20 +16,20 @@ public class SetNodeNamePacket extends IPacket<ServerGamePacketListenerImpl> {
     public SetNodeNamePacket() {
     }
 
-    public SetNodeNamePacket(BlockPos nodePos, String newName) {
-        this.nodePos = nodePos;
-        this.newName = newName;
+    public SetNodeNamePacket(BlockPos newNodePos, String newNewName) {
+        nodePos = newNodePos;
+        newName = newNewName;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.nodePos = buf.readBlockPos();
-        this.newName = buf.readUtf();
+        nodePos = buf.readBlockPos();
+        newName = buf.readUtf();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.nodePos);
-        buf.writeUtf(this.newName);
+        buf.writeBlockPos(nodePos);
+        buf.writeUtf(newName);
     }
 }

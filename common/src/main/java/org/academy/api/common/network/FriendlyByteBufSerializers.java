@@ -39,13 +39,13 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ArrayList.class, (buffer, value) -> {
         if (!value.isEmpty()) {
             buffer.writeBoolean(true);
-            Object firstElement = value.get(0);
-            int elementTypeId = getSerializerId(firstElement.getClass());
+            var firstElement = value.get(0);
+            var elementTypeId = getSerializerId(firstElement.getClass());
             buffer.writeVarInt(elementTypeId);
 
             buffer.writeVarInt(value.size());
-            FriendlyByteBufSerializer elementSerializer = getRequiredSerializer(firstElement.getClass());
-            for (Object element : value) {
+            var elementSerializer = getRequiredSerializer(firstElement.getClass());
+            for (var element : value) {
                 elementSerializer.serialize(buffer, element);
             }
         } else {
@@ -56,14 +56,14 @@ public class FriendlyByteBufSerializers {
         buffer.writeVarInt(value.size());
         buffer.writeBoolean(value.isEmpty());
         if (!value.isEmpty()) {
-            Map.Entry firstEntry = (Map.Entry) value.entrySet().iterator().next();
-            int keyTypeId = getSerializerId(firstEntry.getKey().getClass());
-            int valueTypeId = getSerializerId(firstEntry.getValue().getClass());
+            var firstEntry = (Map.Entry) value.entrySet().iterator().next();
+            var keyTypeId = getSerializerId(firstEntry.getKey().getClass());
+            var valueTypeId = getSerializerId(firstEntry.getValue().getClass());
             buffer.writeVarInt(keyTypeId);
             buffer.writeVarInt(valueTypeId);
 
-            FriendlyByteBufSerializer keySerializer = getRequiredSerializer(firstEntry.getKey().getClass());
-            FriendlyByteBufSerializer valueSerializer = getRequiredSerializer(firstEntry.getValue().getClass());
+            var keySerializer = getRequiredSerializer(firstEntry.getKey().getClass());
+            var valueSerializer = getRequiredSerializer(firstEntry.getValue().getClass());
 
             value.forEach((k, v) -> {
                 keySerializer.serialize(buffer, k);
@@ -74,13 +74,13 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<HashSet> HASH_SET_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(HashSet.class, (buffer, value) -> {
         if (!value.isEmpty()) {
             buffer.writeBoolean(true);
-            Object firstElement = value.iterator().next();
-            int elementTypeId = getSerializerId(firstElement.getClass());
+            var firstElement = value.iterator().next();
+            var elementTypeId = getSerializerId(firstElement.getClass());
             buffer.writeVarInt(elementTypeId);
 
             buffer.writeVarInt(value.size());
-            FriendlyByteBufSerializer elementSerializer = getRequiredSerializer(firstElement.getClass());
-            for (Object element : value) {
+            var elementSerializer = getRequiredSerializer(firstElement.getClass());
+            for (var element : value) {
                 elementSerializer.serialize(buffer, element);
             }
         } else {
@@ -91,16 +91,16 @@ public class FriendlyByteBufSerializers {
     public static final FriendlyByteBufSerializer<Class> CLASS_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(Class.class, (buffer, value) -> buffer.writeUtf(value.getCanonicalName()));
     public static final FriendlyByteBufSerializer<ArrayList<Skill>> SKILL_ARRAY_LIST_FRIENDLY_BYTE_BUF_SERIALIZER = getCollectionFriendlyByteBufSerializer(Skill.class);
     public static final FriendlyByteBufSerializer<ImmutablePair> PAIR_FRIENDLY_BYTE_BUF_SERIALIZER = registerSerializer(ImmutablePair.class, (buffer, pair) -> {
-        Object left = pair.getLeft();
-        Object right = pair.getRight();
+        var left = pair.getLeft();
+        var right = pair.getRight();
 
-        int leftTypeId = getSerializerId(left.getClass());
-        int rightTypeId = getSerializerId(right.getClass());
+        var leftTypeId = getSerializerId(left.getClass());
+        var rightTypeId = getSerializerId(right.getClass());
         buffer.writeVarInt(leftTypeId);
         buffer.writeVarInt(rightTypeId);
 
-        FriendlyByteBufSerializer leftSerializer = getRequiredSerializer(left.getClass());
-        FriendlyByteBufSerializer rightSerializer = getRequiredSerializer(right.getClass());
+        var leftSerializer = getRequiredSerializer(left.getClass());
+        var rightSerializer = getRequiredSerializer(right.getClass());
 
         leftSerializer.serialize(buffer, left);
         rightSerializer.serialize(buffer, right);
@@ -113,8 +113,8 @@ public class FriendlyByteBufSerializers {
     public static <T, C extends Collection<T>> FriendlyByteBufSerializer<C> getCollectionFriendlyByteBufSerializer(Class<T> elementType) {
         return (buffer, collection) -> {
             buffer.writeVarInt(collection.size());
-            FriendlyByteBufSerializer<T> elementSerializer = getRequiredSerializer(elementType);
-            for (T element : collection) {
+            var elementSerializer = getRequiredSerializer(elementType);
+            for (var element : collection) {
                 elementSerializer.serialize(buffer, element);
             }
         };
@@ -147,16 +147,16 @@ public class FriendlyByteBufSerializers {
     }
 
     public static <T> FriendlyByteBufSerializer<T> getRequiredSerializer(Class<?> clazz) {
-        FriendlyByteBufSerializer<T> serializer = getSerializer(clazz);
+        var serializer = getSerializer(clazz);
         if (serializer == null) {
-            for (Map.Entry<Class<?>, FriendlyByteBufSerializer<?>> entry : SERIALIZER_MAP.entrySet()) {
+            for (var entry : SERIALIZER_MAP.entrySet()) {
                 if (entry.getKey().isAssignableFrom(clazz)) {
                     return (FriendlyByteBufSerializer<T>) entry.getValue();
                 }
             }
             throw new NullPointerException("Serializer for " + clazz.getCanonicalName() + " was null and no assignable serializer found.");
         } else {
-            return serializer;
+            return (FriendlyByteBufSerializer<T>) serializer;
         }
     }
 }

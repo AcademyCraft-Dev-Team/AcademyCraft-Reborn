@@ -11,20 +11,21 @@ import org.jetbrains.annotations.Nullable;
 public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListenerImpl, GetCurrentNodePacket.Response> {
     public BlockPos userPos;
 
-    public GetCurrentNodePacket() {}
+    public GetCurrentNodePacket() {
+    }
 
-    public GetCurrentNodePacket(BlockPos userPos) {
-        this.userPos = userPos;
+    public GetCurrentNodePacket(BlockPos newUserPos) {
+        userPos = newUserPos;
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.userPos);
+        buf.writeBlockPos(userPos);
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.userPos = buf.readBlockPos();
+        userPos = buf.readBlockPos();
     }
 
     @Nullable
@@ -40,9 +41,9 @@ public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListen
         public Response() {
         }
 
-        public Response(boolean isNull, String nodeName) {
-            this.isNull = isNull;
-            this.nodeName = nodeName;
+        public Response(boolean newIsNull, String newNodeName) {
+            isNull = newIsNull;
+            nodeName = newNodeName;
         }
 
         @Override
@@ -53,8 +54,8 @@ public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListen
 
         @Override
         public void read(@NotNull FriendlyByteBuf buf) {
-            this.isNull = buf.readBoolean();
-            this.nodeName = buf.readUtf();
+            isNull = buf.readBoolean();
+            nodeName = buf.readUtf();
         }
     }
 }

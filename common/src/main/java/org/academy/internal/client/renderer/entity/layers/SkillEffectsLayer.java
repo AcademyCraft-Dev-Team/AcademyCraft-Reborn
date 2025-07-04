@@ -20,7 +20,7 @@ public class SkillEffectsLayer extends RenderLayer<AbstractClientPlayer, PlayerM
 
     @Override
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, @NotNull AbstractClientPlayer livingEntity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        EffectRenderEvent event = new EffectRenderEvent(poseStack, buffer, packedLight, livingEntity, limbSwing, limbSwingAmount, partialTick, ageInTicks, netHeadYaw, headPitch);
+        var event = new EffectRenderEvent(poseStack, buffer, packedLight, livingEntity, limbSwing, limbSwingAmount, partialTick, ageInTicks, netHeadYaw, headPitch);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
         poseStack = event.poseStack;

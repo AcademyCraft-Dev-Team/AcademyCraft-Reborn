@@ -12,26 +12,26 @@ public class ParallaxImageWidget extends ImageWidget {
     public float scaleX = -1.0f;
     public float scaleY = -1.0f;
 
-    public ParallaxImageWidget(float x, float y, float width, float height, @NotNull RenderType renderType, float anchorX, float anchorY) {
+    public ParallaxImageWidget(float x, float y, float width, float height, @NotNull RenderType renderType, float newAnchorX, float newAnchorY) {
         super(x, y, width, height, renderType);
-        this.anchorX = anchorX;
-        this.anchorY = anchorY;
+        anchorX = newAnchorX;
+        anchorY = newAnchorY;
     }
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         graphics.pose().pushPose();
-        float dx = (float) (((mouseX - anchorX) / anchorX) * scaleX);
-        float dy = (float) (((mouseY - anchorY) / anchorY) * scaleY);
+        var dx = (float) (((mouseX - anchorX) / anchorX) * scaleX);
+        var dy = (float) (((mouseY - anchorY) / anchorY) * scaleY);
 
         dx = Math.max(-1f, Math.min(1f, dx));
         dy = Math.max(-1f, Math.min(1f, dy));
 
-        float maxUOffset = (1f - parallaxWidth);
-        float maxVOffset = (1f - parallaxHeight);
+        var maxUOffset = (1f - parallaxWidth);
+        var maxVOffset = (1f - parallaxHeight);
 
-        float offsetU = (dx + 1f) / 2f * maxUOffset;
-        float offsetV = (dy + 1f) / 2f * maxVOffset;
+        var offsetU = (dx + 1f) / 2f * maxUOffset;
+        var offsetV = (dy + 1f) / 2f * maxVOffset;
 
         u0 = offsetU;
         v0 = offsetV;

@@ -24,8 +24,8 @@ public abstract class Animator {
         running = false;
         AnimationManager.getInstance().remove(this);
         if (listeners != null) {
-            List<AnimatorListener> tempList = new ArrayList<>(listeners);
-            for (AnimatorListener listener : tempList) {
+            var tempList = new ArrayList<>(listeners);
+            for (var listener : tempList) {
                 listener.onAnimationCancel(this);
             }
         }
@@ -36,10 +36,20 @@ public abstract class Animator {
             running = false;
             AnimationManager.getInstance().remove(this);
             if (listeners != null) {
-                List<AnimatorListener> tempList = new ArrayList<>(listeners);
-                for (AnimatorListener listener : tempList) {
+                var tempList = new ArrayList<>(listeners);
+                for (var listener : tempList) {
                     listener.onAnimationEnd(this);
                 }
+            }
+        }
+    }
+
+    void onStartInternal() {
+        running = true;
+        if (listeners != null) {
+            var tempList = new ArrayList<>(listeners);
+            for (var listener : tempList) {
+                listener.onAnimationStart(this);
             }
         }
     }
@@ -87,16 +97,6 @@ public abstract class Animator {
 
     public long getStartDelay() {
         return startDelay;
-    }
-
-    void onStartInternal() {
-        running = true;
-        if (listeners != null) {
-            List<AnimatorListener> tempList = new ArrayList<>(listeners);
-            for (AnimatorListener listener : tempList) {
-                listener.onAnimationStart(this);
-            }
-        }
     }
 
     abstract boolean tick(long currentTime);

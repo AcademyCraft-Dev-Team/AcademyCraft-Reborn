@@ -13,7 +13,6 @@ import org.academy.api.common.network.packet.S2CPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,8 +26,8 @@ public class NetworkSystem {
     private static boolean vanillaPacketsRegistered = false;
 
     public NetworkSystem() {
-        this.classToId = HashBiMap.create();
-        this.packetFactories = new HashMap<>();
+        classToId = HashBiMap.create();
+        packetFactories = new HashMap<>();
     }
 
     public void clear() {
@@ -38,14 +37,14 @@ public class NetworkSystem {
     }
 
     public <T extends IPacket<?>, PL extends PacketListener> void registerPacketType(Class<T> packetClass, Function<PL, T> factory) {
-        this.packetFactories.put(packetClass, factory);
-        this.classToId.put(packetClass, this.classToId.size());
+        packetFactories.put(packetClass, factory);
+        classToId.put(packetClass, classToId.size());
     }
 
     @Nullable
     @SuppressWarnings("unchecked")
     public <T extends IPacket<?>, PL extends PacketListener> Function<PL, T> getPacketFactory(Class<T> packetClass) {
-        return (Function<PL, T>) this.packetFactories.get(packetClass);
+        return (Function<PL, T>) packetFactories.get(packetClass);
     }
 
     public static void registerVanillaPacketsOnce() {
@@ -57,10 +56,10 @@ public class NetworkSystem {
     }
 
     public <T extends IPacket<?>> int getPacketIdByType(Class<T> packetClass) {
-        if (this.classToId.containsKey(packetClass)) {
-            return this.classToId.get(packetClass);
+        if (classToId.containsKey(packetClass)) {
+            return classToId.get(packetClass);
         } else {
-            AcademyCraft.LOGGER.info(packetClass.getName() + " has no id registered");
+            AcademyCraft.LOGGER.info("{} has no id registered", packetClass.getName());
             return -1;
         }
     }
@@ -68,19 +67,19 @@ public class NetworkSystem {
     @SuppressWarnings("unchecked")
     @Nullable
     public <T extends IPacket<?>> Class<T> getClassById(int id) {
-        return (Class<T>) this.classToId.inverse().get(id);
+        return (Class<T>) classToId.inverse().get(id);
     }
 
     public static List<IPacketListener> findPacketListeners(@NotNull Class<?> clazz, @Nullable Object instance) {
-        List<IPacketListener> generatedHandlers = new ArrayList<>();
-        boolean foundAnnotation = false;
+        var generatedHandlers = new ArrayList<IPacketListener>();
+        var foundAnnotation = false;
 
         if (!Modifier.isPublic(clazz.getModifiers())) {
             AcademyCraft.LOGGER.warn("Skipping class {}: class is not public", clazz.getName());
             return generatedHandlers;
         }
 
-        for (Method method : clazz.getDeclaredMethods()) {
+        for (var method : clazz.getDeclaredMethods()) {
             if (!method.isAnnotationPresent(SubscribePacket.class)) continue;
             foundAnnotation = true;
 
@@ -99,7 +98,7 @@ public class NetworkSystem {
                 continue;
             }
 
-            IPacketListener handler = (instance == null)
+            var handler = (instance == null)
                     ? PacketListenerFactory.createStatic(method)
                     : PacketListenerFactory.createInstance(method, instance);
             generatedHandlers.add(handler);

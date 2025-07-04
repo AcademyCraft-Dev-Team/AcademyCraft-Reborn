@@ -8,9 +8,9 @@ public class MouseButtonEvent extends Event implements ICancellableEvent {
     public int action;
     public int modifiers;
 
-    public MouseButtonEvent(int button, int action, int modifiers) {
-        this.button = button;
-        this.action = action;
-        this.modifiers = modifiers;
+    public MouseButtonEvent(int newButton, int newAction, int newModifiers) {
+        button = newButton;
+        action = newAction;
+        modifiers = newModifiers;
     }
 }

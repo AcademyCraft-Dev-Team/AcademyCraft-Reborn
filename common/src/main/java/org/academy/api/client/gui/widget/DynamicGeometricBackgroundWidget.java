@@ -1,18 +1,15 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
-import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 
 public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     private static class Point {
@@ -42,37 +39,37 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
 
 
     public DynamicGeometricBackgroundWidget(float x, float y, float width, float height,
-                                            int numPoints, float pointSpeed, float connectionDistance,
-                                            int lineColor, boolean mouseInteraction, float mouseInteractionRadius) {
+                                            int newNumPoints, float newPointSpeed, float connectionDistance,
+                                            int newLineColor, boolean newMouseInteraction, float mouseInteractionRadius) {
         super(x, y, width, height);
-        this.numPoints = numPoints;
-        this.pointSpeed = pointSpeed;
-        this.connectionDistanceSq = connectionDistance * connectionDistance;
-        this.lineColor = lineColor;
-        this.mouseInteraction = mouseInteraction;
-        this.mouseInteractionRadiusSq = mouseInteractionRadius * mouseInteractionRadius;
-        this.points = new ArrayList<>(numPoints);
+        numPoints = newNumPoints;
+        pointSpeed = newPointSpeed;
+        connectionDistanceSq = connectionDistance * connectionDistance;
+        lineColor = newLineColor;
+        mouseInteraction = newMouseInteraction;
+        mouseInteractionRadiusSq = mouseInteractionRadius * mouseInteractionRadius;
+        points = new ArrayList<>(newNumPoints);
         initPoints();
     }
 
     private void initPoints() {
         points.clear();
-        for (int i = 0; i < numPoints; i++) {
-            Random random = MathUtil.RANDOM;
-            float px = random.nextFloat() * getWidth();
-            float py = random.nextFloat() * getHeight();
-            float angle = random.nextFloat() * 2 * (float) Math.PI;
-            float speed = this.pointSpeed * (0.7f + random.nextFloat() * 0.6f);
-            float pvx = (float) Math.cos(angle) * speed;
-            float pvy = (float) Math.sin(angle) * speed;
+        for (var i = 0; i < numPoints; i++) {
+            var random = MathUtil.RANDOM;
+            var px = random.nextFloat() * getWidth();
+            var py = random.nextFloat() * getHeight();
+            var angle = random.nextFloat() * 2 * (float) Math.PI;
+            var speed = pointSpeed * (0.7f + random.nextFloat() * 0.6f);
+            var pvx = (float) Math.cos(angle) * speed;
+            var pvy = (float) Math.sin(angle) * speed;
             points.add(new Point(px, py, pvx, pvy));
         }
     }
 
     private void updatePoints() {
-        float dt = ClientUtil.animationFactor(1);
+        var dt = ClientUtil.animationFactor(1);
 
-        for (Point p : points) {
+        for (var p : points) {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
 
@@ -92,13 +89,13 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
             }
 
             if (mouseInteraction && isInteracting && isHovered()) {
-                float dx = p.x - (float) relativeMouseX;
-                float dy = p.y - (float) relativeMouseY;
-                float distSq = dx * dx + dy * dy;
+                var dx = p.x - (float) relativeMouseX;
+                var dy = p.y - (float) relativeMouseY;
+                var distSq = dx * dx + dy * dy;
 
                 if (distSq < mouseInteractionRadiusSq && distSq > 0.001f) {
-                    float dist = (float) Math.sqrt(distSq);
-                    float forceMagnitude = (1f - dist / (float) Math.sqrt(mouseInteractionRadiusSq)) * pointSpeed * 0.5f;
+                    var dist = (float) Math.sqrt(distSq);
+                    var forceMagnitude = (1f - dist / (float) Math.sqrt(mouseInteractionRadiusSq)) * pointSpeed * 0.5f;
 
                     if (interactingButton == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
                         forceMagnitude *= -1;
@@ -107,10 +104,10 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
                     p.vx -= (dx / dist) * forceMagnitude * dt * 20;
                     p.vy -= (dy / dist) * forceMagnitude * dt * 20;
 
-                    float speedSq = p.vx * p.vx + p.vy * p.vy;
-                    float maxSpeed = pointSpeed * 2.0f;
+                    var speedSq = p.vx * p.vx + p.vy * p.vy;
+                    var maxSpeed = pointSpeed * 2.0f;
                     if (speedSq > maxSpeed * maxSpeed) {
-                        float actualSpeed = (float) Math.sqrt(speedSq);
+                        var actualSpeed = (float) Math.sqrt(speedSq);
                         p.vx = (p.vx / actualSpeed) * maxSpeed;
                         p.vy = (p.vy / actualSpeed) * maxSpeed;
                     }
@@ -120,33 +117,33 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mousePressed(double mouseX, double mouseY, int button) {
+    public boolean mousePressed(double newMouseX, double newMouseY, int button) {
         if (mouseInteraction && isHovered() && (button == GLFW.GLFW_MOUSE_BUTTON_LEFT || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
-            this.isInteracting = true;
-            this.interactingButton = button;
-            this.relativeMouseX = mouseX - getAbsoluteX();
-            this.relativeMouseY = mouseY - getAbsoluteY();
+            isInteracting = true;
+            interactingButton = button;
+            relativeMouseX = newMouseX - getAbsoluteX();
+            relativeMouseY = newMouseY - getAbsoluteY();
             return true;
         }
-        return super.mousePressed(mouseX, mouseY, button);
+        return super.mousePressed(newMouseX, newMouseY, button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (mouseInteraction && isInteracting && button == this.interactingButton) {
-            this.isInteracting = false;
-            this.interactingButton = -1;
+        if (mouseInteraction && isInteracting && button == interactingButton) {
+            isInteracting = false;
+            interactingButton = -1;
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
-    public void mouseMoved(double mouseX, double mouseY) {
-        super.mouseMoved(mouseX, mouseY);
+    public void mouseMoved(double newMouseX, double newMouseY) {
+        super.mouseMoved(newMouseX, newMouseY);
         if (isHovered()) {
-            this.relativeMouseX = mouseX - getAbsoluteX();
-            this.relativeMouseY = mouseY - getAbsoluteY();
+            relativeMouseX = newMouseX - getAbsoluteX();
+            relativeMouseY = newMouseY - getAbsoluteY();
         }
     }
 
@@ -156,38 +153,38 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
 
         updatePoints();
 
-        VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(RenderType.lines());
-        Matrix4f matrix = graphics.pose().last().pose();
+        var vertexConsumer = graphics.bufferSource().getBuffer(RenderType.lines());
+        var matrix = graphics.pose().last().pose();
 
-        float r = (float) (lineColor >> 16 & 255) / 255.0F;
-        float g = (float) (lineColor >> 8 & 255) / 255.0F;
-        float b = (float) (lineColor & 255) / 255.0F;
-        float a = (float) (lineColor >> 24 & 255) / 255.0F;
+        var r = (float) (lineColor >> 16 & 255) / 255.0F;
+        var g = (float) (lineColor >> 8 & 255) / 255.0F;
+        var b = (float) (lineColor & 255) / 255.0F;
+        var a = (float) (lineColor >> 24 & 255) / 255.0F;
         if (a == 0 && (r != 0 || g != 0 || b != 0)) a = 1.0f;
         if (r == 0 && g == 0 && b == 0 && a == 0) {
             r = g = b = a = 1.0f;
         }
-        float finalBaseAlpha = a * getAbsoluteAlpha();
+        var finalBaseAlpha = a * getAbsoluteAlpha();
 
         points.sort(Comparator.comparingDouble(p -> p.x));
-        float connectionDistance = (float) Math.sqrt(connectionDistanceSq);
+        var connectionDistance = (float) Math.sqrt(connectionDistanceSq);
 
-        for (int i = 0; i < points.size(); i++) {
-            Point p1 = points.get(i);
-            for (int j = i + 1; j < points.size(); j++) {
-                Point p2 = points.get(j);
+        for (var i = 0; i < points.size(); i++) {
+            var p1 = points.get(i);
+            for (var j = i + 1; j < points.size(); j++) {
+                var p2 = points.get(j);
 
                 if (p2.x - p1.x > connectionDistance) {
                     break;
                 }
 
-                float dx = p1.x - p2.x;
-                float dy = p1.y - p2.y;
-                float distanceSq = dx * dx + dy * dy;
+                var dx = p1.x - p2.x;
+                var dy = p1.y - p2.y;
+                var distanceSq = dx * dx + dy * dy;
 
                 if (distanceSq < connectionDistanceSq) {
-                    float dist = (float) Math.sqrt(distanceSq);
-                    float lineAlpha = finalBaseAlpha * (1f - dist / connectionDistance);
+                    var dist = (float) Math.sqrt(distanceSq);
+                    var lineAlpha = finalBaseAlpha * (1f - dist / connectionDistance);
                     lineAlpha = Math.max(0, Math.min(lineAlpha, 1.0f));
 
 

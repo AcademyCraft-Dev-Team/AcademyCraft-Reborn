@@ -7,7 +7,7 @@ public class ObjectAnimator extends ValueAnimator {
     }
 
     public static ObjectAnimator ofFloat(Consumer<Float> target, float startValue, float endValue) {
-        ObjectAnimator anim = new ObjectAnimator();
+        var anim = new ObjectAnimator();
         anim.setFloatValues(startValue, endValue);
         anim.addUpdateListener(animation -> target.accept(animation.getAnimatedValue()));
         return anim;

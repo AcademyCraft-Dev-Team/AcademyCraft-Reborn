@@ -20,17 +20,17 @@ public class PacketListenerFactory {
     private static final String CLASS_DESCRIPTOR = Type.getDescriptor(Class.class);
 
     public static StaticPacketListener createStatic(Method method) {
-        Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
+        var specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
+            var className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
                     + method.getDeclaringClass().getName().replace('.', '_') + "$"
                     + method.getName() + "$"
                     + specificPacketParameterType.getName().replace('.', '_');
 
-            byte[] classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, true);
+            var classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, true);
 
-            MethodHandles.Lookup hiddenClassLookup = LOOKUP.defineHiddenClass(
+            var hiddenClassLookup = LOOKUP.defineHiddenClass(
                     classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE
             );
             return (StaticPacketListener) hiddenClassLookup
@@ -42,17 +42,17 @@ public class PacketListenerFactory {
     }
 
     public static InstancePacketListener createInstance(Method method, Object targetInstance) {
-        Class<? extends IPacket<?>> specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
+        var specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
 
         try {
-            String className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
+            var className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
                     + targetInstance.getClass().getSimpleName() + "$"
                     + Integer.toHexString(System.identityHashCode(targetInstance)) + "$"
                     + method.getName();
 
-            byte[] classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, false);
+            var classBytes = makeHandlerClassBytecode(className, method, specificPacketParameterType, false);
 
-            MethodHandles.Lookup hiddenClassLookup = LOOKUP.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE);
+            var hiddenClassLookup = LOOKUP.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE);
             return (InstancePacketListener) hiddenClassLookup
                     .findConstructor(hiddenClassLookup.lookupClass(), MethodType.methodType(void.class, Object.class))
                     .invoke(targetInstance);
@@ -63,16 +63,16 @@ public class PacketListenerFactory {
 
     private static byte[] makeHandlerClassBytecode(String classNameInternal, Method targetMethod,
                                                    Class<? extends IPacket<?>> specificPacketParameterType, boolean isStatic) {
-        ClassWriter cv = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        String parentInternalName = isStatic ? STATIC_HANDLER_PARENT_INTERNAL_NAME : INSTANCE_HANDLER_PARENT_INTERNAL_NAME;
-        String targetClassInternalName = Type.getInternalName(targetMethod.getDeclaringClass());
-        String specificPacketParameterTypeInternalName = Type.getInternalName(specificPacketParameterType);
-        String targetMethodDescriptor = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(specificPacketParameterType));
+        var cv = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        var parentInternalName = isStatic ? STATIC_HANDLER_PARENT_INTERNAL_NAME : INSTANCE_HANDLER_PARENT_INTERNAL_NAME;
+        var targetClassInternalName = Type.getInternalName(targetMethod.getDeclaringClass());
+        var specificPacketParameterTypeInternalName = Type.getInternalName(specificPacketParameterType);
+        var targetMethodDescriptor = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(specificPacketParameterType));
 
         cv.visit(Opcodes.V17, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL | Opcodes.ACC_SUPER, classNameInternal, null, parentInternalName, new String[]{Type.getInternalName(IPacketListener.class)});
 
         MethodVisitor constructor;
-        String constructorDescriptor = isStatic ? "()V" : "(" + OBJECT_DESCRIPTOR + ")V";
+        var constructorDescriptor = isStatic ? "()V" : "(" + OBJECT_DESCRIPTOR + ")V";
         constructor = cv.visitMethod(Opcodes.ACC_PUBLIC, "<init>", constructorDescriptor, null, null);
         constructor.visitCode();
         constructor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -87,7 +87,7 @@ public class PacketListenerFactory {
         constructor.visitInsn(Opcodes.RETURN);
         constructor.visitEnd();
 
-        MethodVisitor mvHandle = cv.visitMethod(Opcodes.ACC_PUBLIC, "handlePacket", "(" + IPACKET_DESCRIPTOR + ")V", null, null);
+        var mvHandle = cv.visitMethod(Opcodes.ACC_PUBLIC, "handlePacket", "(" + IPACKET_DESCRIPTOR + ")V", null, null);
         mvHandle.visitCode();
         if (isStatic) {
             mvHandle.visitVarInsn(Opcodes.ALOAD, 1);
@@ -107,7 +107,7 @@ public class PacketListenerFactory {
         mvHandle.visitInsn(Opcodes.RETURN);
         mvHandle.visitEnd();
 
-        MethodVisitor mvGetType = cv.visitMethod(Opcodes.ACC_PUBLIC, "getPacketType", "()" + CLASS_DESCRIPTOR, "()<Ljava/lang/Class<+L" + Type.getInternalName(IPacket.class) + ";>;>;", null);
+        var mvGetType = cv.visitMethod(Opcodes.ACC_PUBLIC, "getPacketType", "()" + CLASS_DESCRIPTOR, "()<Ljava/lang/Class<+L" + Type.getInternalName(IPacket.class) + ";>;>;", null);
         mvGetType.visitCode();
         mvGetType.visitLdcInsn(Type.getType(specificPacketParameterType));
         mvGetType.visitInsn(Opcodes.ARETURN);

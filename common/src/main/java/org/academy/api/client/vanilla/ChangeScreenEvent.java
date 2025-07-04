@@ -8,9 +8,9 @@ public abstract class ChangeScreenEvent extends Event {
     public final Screen currentScreen;
     public Screen newScreen;
 
-    public ChangeScreenEvent(Screen currentScreen, Screen newScreen) {
-        this.currentScreen = currentScreen;
-        this.newScreen = newScreen;
+    public ChangeScreenEvent(Screen pCurrentScreen, Screen pScreen) {
+        currentScreen = pCurrentScreen;
+        newScreen = pScreen;
     }
 
     public static final class Pre extends ChangeScreenEvent implements ICancellableEvent {

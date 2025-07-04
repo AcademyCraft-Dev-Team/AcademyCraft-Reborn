@@ -1,12 +1,10 @@
 package org.academy.internal.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
@@ -24,32 +22,32 @@ public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<
     }
 
     @Override
-    public void render(@NotNull AbilityDeveloperBlockEntity blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
-        if (blockEntity.isMain()) {
-            poseStack.pushPose();
-            Direction facing = blockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
-            float yRot = facing.getOpposite().toYRot();
+    public void render(@NotNull AbilityDeveloperBlockEntity newBlockEntity, float partialTick, @NotNull PoseStack newPoseStack, @NotNull MultiBufferSource newBuffer, int packedLight, int packedOverlay) {
+        if (newBlockEntity.isMain()) {
+            newPoseStack.pushPose();
+            var facing = newBlockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
+            var yRot = facing.getOpposite().toYRot();
 
-            poseStack.translate(0, 1.5f, 1);
-            poseStack.mulPose(Axis.XP.rotationDegrees(180));
-            poseStack.rotateAround(Axis.YP.rotationDegrees(yRot), 0.5f, 0, 0.5f);
-            poseStack.translate(0.5f, 0, 0);
+            newPoseStack.translate(0, 1.5f, 1);
+            newPoseStack.mulPose(Axis.XP.rotationDegrees(180));
+            newPoseStack.rotateAround(Axis.YP.rotationDegrees(yRot), 0.5f, 0, 0.5f);
+            newPoseStack.translate(0.5f, 0, 0);
 
-            MODEL.setupAnim(blockEntity, partialTick);
-            VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(TEXTURE));
-            MODEL.setupAnim(blockEntity, partialTick);
-            MODEL.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay, 1f, 1f, 1f, 1f);
-            poseStack.popPose();
+            MODEL.setupAnim(newBlockEntity, partialTick);
+            var vertexConsumer = newBuffer.getBuffer(RenderType.entityTranslucent(TEXTURE));
+            MODEL.setupAnim(newBlockEntity, partialTick);
+            MODEL.renderToBuffer(newPoseStack, vertexConsumer, packedLight, packedOverlay, 1f, 1f, 1f, 1f);
+            newPoseStack.popPose();
         }
     }
 
     @Override
-    public boolean shouldRenderOffScreen(@NotNull AbilityDeveloperBlockEntity blockEntity) {
+    public boolean shouldRenderOffScreen(@NotNull AbilityDeveloperBlockEntity newBlockEntity) {
         return true;
     }
 
     @Override
-    public boolean shouldRender(@NotNull AbilityDeveloperBlockEntity blockEntity, @NotNull Vec3 cameraPos) {
+    public boolean shouldRender(@NotNull AbilityDeveloperBlockEntity newBlockEntity, @NotNull Vec3 newCameraPos) {
         return true;
     }
 }

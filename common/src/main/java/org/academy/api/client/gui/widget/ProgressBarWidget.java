@@ -12,40 +12,40 @@ public class ProgressBarWidget extends AbstractWidget {
     public int backgroundColor = 0x20000000;
     public int progressBarColor = 0xFFfcd932;
 
-    public ProgressBarWidget(float x, float y, float width, float height, Supplier<Float> progressSupplier) {
+    public ProgressBarWidget(float x, float y, float width, float height, Supplier<Float> newProgressSupplier) {
         super(x, y, width, height);
-        this.progressSupplier = progressSupplier;
+        progressSupplier = newProgressSupplier;
     }
 
-    public void setProgressSupplier(Supplier<Float> progressSupplier) {
-        this.progressSupplier = progressSupplier;
+    public void setProgressSupplier(Supplier<Float> newProgressSupplier) {
+        progressSupplier = newProgressSupplier;
     }
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (progressSupplier != null) {
-            float progress = progressSupplier.get();
+            var progress = progressSupplier.get();
             if (progress < 0.0f) progress = 0.0f;
             if (progress > 1.0f) progress = 1.0f;
 
-            float absoluteAlpha = getAbsoluteAlpha();
-            int finalBackgroundColor = (backgroundColor & 0x00FFFFFF) | ((int) (((backgroundColor >> 24) & 0xFF) * absoluteAlpha) << 24);
-            int finalProgressBarColor = (progressBarColor & 0x00FFFFFF) | ((int) (((progressBarColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+            var absoluteAlpha = getAbsoluteAlpha();
+            var finalBackgroundColor = (backgroundColor & 0x00FFFFFF) | ((int) (((backgroundColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+            var finalProgressBarColor = (progressBarColor & 0x00FFFFFF) | ((int) (((progressBarColor >> 24) & 0xFF) * absoluteAlpha) << 24);
 
             if (backgroundVisible) {
                 RenderUtil.fill(
                         graphics.pose().last().pose(),
-                        this.getX(), this.getY(),
-                        this.getX() + this.getWidth(), this.getY() + this.getHeight(),
+                        getX(), getY(),
+                        getX() + getWidth(), getY() + getHeight(),
                         finalBackgroundColor, graphics.bufferSource()
                 );
             }
 
-            float progressWidth = this.getWidth() * progress;
+            var progressWidth = getWidth() * progress;
             RenderUtil.fill(
                     graphics.pose().last().pose(),
-                    this.getX(), this.getY(),
-                    this.getX() + progressWidth, this.getY() + this.getHeight(),
+                    getX(), getY(),
+                    getX() + progressWidth, getY() + getHeight(),
                     finalProgressBarColor,
                     graphics.bufferSource()
             );
