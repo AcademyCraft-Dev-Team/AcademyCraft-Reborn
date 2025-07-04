@@ -17,7 +17,7 @@ public final class RenderTypes {
      */
     public static final BiFunction<String, ResourceLocation, RenderType> RENDER_TYPE_SKILL_ICON =
             (string, resourceLocation) ->
-                    RenderUtil.getPositionColorTexRenderType(string, resourceLocation, false);
+                    RenderUtil.getPositionColorTexRenderTypeFull(string, resourceLocation, false);
     public static final RenderType GLOW_CIRCLE = new RenderType.CompositeRenderType(
             "glow_circle",
             DefaultVertexFormat.POSITION_TEX,
@@ -32,17 +32,17 @@ public final class RenderTypes {
                     .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
-    public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_TOP = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_TOP = RenderUtil.getPositionColorTexRenderTypeFull(
             "panel_left_back_top", TextureResources.TEXTURE_PANEL_LEFT_BACK_TOP, false);
-    public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE = RenderUtil.getPositionColorTexRenderTypeFull(
             "panel_left_back_middle", TextureResources.TEXTURE_PANEL_LEFT_BACK_MIDDLE, false);
     public static final RenderType RENDER_TYPE_SKILL_PANEL_BACK = RenderUtil.getPositionTexRenderType(
             "skill_panel_back", TextureResources.TEXTURE_PANEL_RIGHT_SKILL_BACK, true);
     public static final RenderType RENDER_TYPE_SKILL_PANEL_INFO = RenderUtil.getPositionTexRenderType(
             "skill_panel_info", TextureResources.TEXTURE_PANEL_RIGHT_INFO, false);
-    public static final RenderType RENDER_TYPE_PANEL_RIGHT_BACK = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_PANEL_RIGHT_BACK = RenderUtil.getPositionColorTexRenderTypeFull(
             "panel_right_back", TextureResources.TEXTURE_PANEL_RIGHT_BACK, false);
-    public static final RenderType RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK = RenderUtil.getPositionColorTexRenderTypeFull(
             "panel_right_skill_icon_back", TextureResources.TEXTURE_PANEL_RIGHT_SKILL_ICON_BACK, true);
     /**
      * WindGen
@@ -62,7 +62,7 @@ public final class RenderTypes {
     /**
      * Wireless Node
      */
-    public static final RenderType RENDER_TYPE_WIRELESS_NODE_UI = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_WIRELESS_NODE_UI = RenderUtil.getPositionColorTexRenderTypeFull(
             "wireless_node_ui", TextureResources.TEXTURE_WIRELESS_NODE_UI, false
     );
     public static final RenderType RENDER_TYPE_WIRELESS_NODE_STATE = RenderUtil.getPositionTexRenderType(
@@ -71,26 +71,26 @@ public final class RenderTypes {
     /**
      * Common
      */
-    public static final RenderType RENDER_TYPE_INVENTORY = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_INVENTORY = RenderUtil.getPositionColorTexRenderTypeFull(
             "inventory", TextureResources.TEXTURE_INVENTORY, false
     );
-    public static final RenderType RENDER_TYPE_ELEMENT_LINE = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ELEMENT_LINE = RenderUtil.getPositionColorTexRenderTypeFull(
             "element_line", TextureResources.TEXTURE_ELEMENT_LINE, true);
-    public static final RenderType RENDER_TYPE_ELEMENT_BACK_LIGHT = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ELEMENT_BACK_LIGHT = RenderUtil.getPositionColorTexRenderTypeFull(
             "element_back_light", TextureResources.TEXTURE_ELEMENT_BACK_LIGHT, false);
-    public static final RenderType RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON = RenderUtil.getPositionColorTexRenderTypeFull(
             "wireless_panel_view_icon", TextureResources.TEXTURE_WIRELESS_PANEL_VIEW_ICON, false);
-    public static final RenderType RENDER_TYPE_ICON_NODE = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ICON_NODE = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_node", TextureResources.TEXTURE_ICON_NODE, false);
-    public static final RenderType RENDER_TYPE_ICON_CONNECTED = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ICON_CONNECTED = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_connected", TextureResources.TEXTURE_ICON_CONNECTED, false);
-    public static final RenderType RENDER_TYPE_ICON_UNCONNECTED = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ICON_UNCONNECTED = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_unconnected", TextureResources.TEXTURE_ICON_UNCONNECTED, false);
-    public static final RenderType RENDER_TYPE_ICON_INV = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ICON_INV = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_inv", TextureResources.TEXTURE_ICON_INV, false);
-    public static final RenderType RENDER_TYPE_ICON_WIRELESS = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ICON_WIRELESS = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_wireless", TextureResources.TEXTURE_ICON_WIRELESS, false);
-    public static final RenderType RENDER_TYPE_HISTOGRAM = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_HISTOGRAM = RenderUtil.getPositionColorTexRenderTypeFull(
             "histogram", TextureResources.TEXTURE_HISTOGRAM, false
     );
     public static final RenderType RENDER_TYPE_SDF_SHARP_QUAD = new RenderType.CompositeRenderType(
@@ -100,31 +100,31 @@ public final class RenderTypes {
                     .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
-    public static final RenderType RENDER_TYPE_BUTTON = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_BUTTON = RenderUtil.getPositionColorTexRenderTypeFull(
             "button", TextureResources.TEXTURE_BUTTON, false
     );
     public static final RenderType RENDER_TYPE_ICON_BOX = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_box", TextureResources.TEXTURE_ICON_BOX, false
     );
-    public static final RenderType RENDER_TYPE_CURSOR = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_CURSOR = RenderUtil.getPositionColorTexRenderTypeFull(
             "cursor", TextureResources.TEXTURE_CURSOR, true
     );
     /**
      * Data Terminal
      */
-    public static final RenderType RENDER_TYPE_ICON_DATA_TERMINAL = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_ICON_DATA_TERMINAL = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_data_terminal", TextureResources.TEXTURE_ICON_DATA_TERMINAL, false
     );
-    public static final RenderType RENDER_TYPE_APP_BACK = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_APP_BACK = RenderUtil.getPositionColorTexRenderTypeFull(
             "app_back", TextureResources.TEXTURE_APP_BACK, false
     );
-    public static final RenderType RENDER_TYPE_APP_MEDIA_PLAYER = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_APP_MEDIA_PLAYER = RenderUtil.getPositionColorTexRenderTypeFull(
             "app_media_player", TextureResources.TEXTURE_APP_MEDIA_PLAYER, false
     );
-    public static final RenderType RENDER_TYPE_APP_MISAKA_CLOUD = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_APP_MISAKA_CLOUD = RenderUtil.getPositionColorTexRenderTypeFull(
             "app_misaka_cloud", TextureResources.TEXTURE_APP_MISAKA_CLOUD, false
     );
-    public static final RenderType RENDER_TYPE_APP_SETTINGS = RenderUtil.getPositionColorTexRenderType(
+    public static final RenderType RENDER_TYPE_APP_SETTINGS = RenderUtil.getPositionColorTexRenderTypeFull(
             "app_settings", TextureResources.TEXTURE_APP_SETTINGS, false
     );
     public static final RenderType RENDER_TYPE_CIRCLE_GLOW = new RenderType.CompositeRenderType(

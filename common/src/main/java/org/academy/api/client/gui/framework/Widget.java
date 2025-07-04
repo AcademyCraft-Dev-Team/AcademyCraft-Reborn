@@ -27,7 +27,7 @@ public interface Widget {
 
     void setVisible(boolean visible);
 
-    boolean isEnabled(); // Can the widget be interacted with?
+    boolean isEnabled();
 
     boolean isAbsoluteEnabled();
 
@@ -42,6 +42,12 @@ public interface Widget {
     void setParent(WidgetContainer parent);
 
     void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick);
+
+    float getAlpha();
+
+    void setAlpha(float alpha);
+
+    float getAbsoluteAlpha();
 
     default void mouseMoved(double mouseX, double mouseY) {
     }
