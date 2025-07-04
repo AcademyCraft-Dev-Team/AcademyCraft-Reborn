@@ -28,12 +28,12 @@ public class HistogramWidget extends AbstractWidget {
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
+
+        float finalAlpha = getAbsoluteAlpha();
+
         if (renderBack) {
+            back.setAlpha(finalAlpha);
             back.render(graphics, mouseX - getX(), mouseY - getY(), partialTick);
-        }
-        
-        if (animation != null) {
-            animation.beforeRender(graphics, mouseX, mouseY, partialTick);
         }
 
         graphics.pose().pushPose();
@@ -51,7 +51,7 @@ public class HistogramWidget extends AbstractWidget {
             int r = Math.min(255, Math.max(0, (int) (value.red * 255.0f)));
             int g = Math.min(255, Math.max(0, (int) (value.green * 255.0f)));
             int b = Math.min(255, Math.max(0, (int) (value.blue * 255.0f)));
-            int a = Math.min(255, Math.max(0, (int) (value.alpha * 255.0f)));
+            int a = Math.min(255, Math.max(0, (int) (value.alpha * finalAlpha * 255.0f)));
             int packedColor = (a << 24) | (r << 16) | (g << 8) | b;
 
             RenderUtil.fill(
@@ -64,10 +64,6 @@ public class HistogramWidget extends AbstractWidget {
         }
 
         graphics.pose().popPose();
-
-        if (animation != null) {
-            animation.afterRender(graphics, mouseX, mouseY, partialTick);
-        }
     }
 
     public void setValues(List<Value> newValues) {
@@ -90,7 +86,7 @@ public class HistogramWidget extends AbstractWidget {
     public List<Value> getValues() {
         return values;
     }
-    
+
     public static class Value {
         public float x;
         public float width;
@@ -109,7 +105,7 @@ public class HistogramWidget extends AbstractWidget {
             this.blue = blue;
             this.alpha = alpha;
         }
-        
+
         public Value(float x, float width, float height) {
             this(x, width, height, 1.0f, 1.0f, 1.0f, 1.0f);
         }

@@ -12,6 +12,10 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.WirelessPanelHelper;
+import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.animation.AnimatorListener;
+import org.academy.api.client.gui.animation.EasingFunctions;
+import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.framework.Widget;
@@ -84,6 +88,46 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             abilityDeveloperBlockEntity.setOpen(false);
         }
     }
+
+    private void animateWirelessPanel(boolean show) {
+        long duration = 300;
+        float yOffset = 15f;
+        float finalY = wirelessPanel.getY();
+        var background = screenWirelessPanel.<BlendQuadWidget>getChildUnSafe("screen_back");
+
+        if (show) {
+            screenWirelessPanel.setAlpha(0f);
+            screenWirelessPanel.setVisible(true);
+            screenWirelessPanel.setEnabled(true);
+            playAnimation(ObjectAnimator.ofFloat(background::setAlpha, 0f, 0.5f).setDuration(duration));
+
+            wirelessPanel.setY(finalY + yOffset);
+            wirelessPanel.setAlpha(0f);
+            playAnimation(ObjectAnimator.ofFloat(wirelessPanel::setY, wirelessPanel.getY(), finalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
+            playAnimation(ObjectAnimator.ofFloat(wirelessPanel::setAlpha, 0f, 1f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR));
+        } else {
+            var bgAnim = ObjectAnimator.ofFloat(background::setAlpha, background.getAlpha(), 0f).setDuration(duration);
+            bgAnim.addListener(new AnimatorListener() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    screenWirelessPanel.setVisible(false);
+                    screenWirelessPanel.setEnabled(false);
+                }
+            });
+            playAnimation(bgAnim);
+
+            var panelAnim = ObjectAnimator.ofFloat(wirelessPanel::setAlpha, wirelessPanel.getAlpha(), 0f).setDuration(duration);
+            panelAnim.addListener(new AnimatorListener() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    wirelessPanel.setY(finalY);
+                }
+            });
+            playAnimation(panelAnim);
+            playAnimation(ObjectAnimator.ofFloat(wirelessPanel::setY, finalY, finalY + yOffset).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
+        }
+    }
+
 
     @Override
     protected void onInit() {
@@ -212,10 +256,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         rootContainer.addChild("panel_screen_wireless", screenWirelessPanel);
         {
             BackgroundWidget backgroundWidget = new BackgroundWidget(this);
-            backgroundWidget.runnable = () -> {
-                screenWirelessPanel.setVisible(false);
-                screenWirelessPanel.setEnabled(false);
-            };
+            backgroundWidget.runnable = () -> animateWirelessPanel(false);
             screenWirelessPanel.addChild("screen_back", backgroundWidget);
 
             PanelWidget localWirelessPanel = WirelessPanelHelper.getWirelessPanel((width - WirelessPanelHelper.PANEL_WIDTH) / 2, (height - WirelessPanelHelper.PANEL_HEIGHT) / 2);
@@ -255,7 +296,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
             leftPanelBack.red = 0;
             leftPanelBack.green = 0;
             leftPanelBack.blue = 0;
-            leftPanelBack.alpha = 0.5f;
+            leftPanelBack.setAlpha(0.5f);
             localLeftPanel.addChild("left_panel_back", leftPanelBack);
             ImageWidget leftPanelBackBottom = new ImageWidget(4.25f, 0, 100, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE);
             localLeftPanel.addChild("left_panel_back_bottom", leftPanelBackBottom);
@@ -301,9 +342,7 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
                 var button = new ImageButtonWidget(0, 0,
                         wirelessButtonPanel.getWidth(), wirelessButtonPanel.getHeight(),
                         null, () -> {
-                    var wirelessRoot = screenWirelessPanel;
-                    wirelessRoot.setVisible(true);
-                    wirelessRoot.setEnabled(true);
+                    animateWirelessPanel(true);
                     requestCurrentNodeStatus();
                     requestAvailableNodes(getNodeList());
                 });
@@ -369,12 +408,12 @@ public class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelH
         if (lacked) {
             var x = 0;
             var labelWidget = new LabelWidget("Dep.", x, 3.5f);
-            x += labelWidget.getWidth();
+            x += (int) labelWidget.getWidth();
             skillInfoPanel.depPanel.addChild("label_name", labelWidget);
             if (skill.dependencies().isEmpty()) {
                 var empty = new LabelWidget("Empty", x, 3.5f);
                 skillInfoPanel.depPanel.addChild("label_empty", empty);
-                x += empty.getWidth();
+                x += (int) empty.getWidth();
             }
             for (AbilitySystemClient.SkillInfo dependency : skill.dependencies()) {
                 var name = "dep_skill_icon_" + skill.skill().name;

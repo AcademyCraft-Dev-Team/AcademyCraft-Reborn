@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.util.FastColor;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.util.RenderUtil;
 
@@ -15,15 +16,12 @@ public class FillWidget extends AbstractWidget {
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
-        if (animation != null) {
-            animation.beforeRender(graphics, mouseX, mouseY, partialTick);
-        }
+
+        int baseAlpha = FastColor.ARGB32.alpha(color);
+        int finalAlpha = (int)(baseAlpha * getAbsoluteAlpha());
+        int finalColor = (color & 0x00FFFFFF) | (finalAlpha << 24);
 
         RenderUtil.fill(graphics.pose().last().pose(), getX(), getY(),
-                getX() + getWidth(), getY() + getHeight(), color, graphics.bufferSource());
-
-        if (animation != null) {
-            animation.afterRender(graphics, mouseX, mouseY, partialTick);
-        }
+                getX() + getWidth(), getY() + getHeight(), finalColor, graphics.bufferSource());
     }
 }

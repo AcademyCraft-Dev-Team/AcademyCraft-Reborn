@@ -167,6 +167,7 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
         if (r == 0 && g == 0 && b == 0 && a == 0) {
             r = g = b = a = 1.0f;
         }
+        float finalBaseAlpha = a * getAbsoluteAlpha();
 
         points.sort(Comparator.comparingDouble(p -> p.x));
         float connectionDistance = (float) Math.sqrt(connectionDistanceSq);
@@ -186,7 +187,7 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
 
                 if (distanceSq < connectionDistanceSq) {
                     float dist = (float) Math.sqrt(distanceSq);
-                    float lineAlpha = a * (1f - dist / connectionDistance);
+                    float lineAlpha = finalBaseAlpha * (1f - dist / connectionDistance);
                     lineAlpha = Math.max(0, Math.min(lineAlpha, 1.0f));
 
 

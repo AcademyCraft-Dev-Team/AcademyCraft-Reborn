@@ -72,14 +72,18 @@ public class VerticalScrollBarWidget extends DragBarWidget {
         float h = getHeight();
         matrix.translate(0, 0, z);
 
+        float absoluteAlpha = getAbsoluteAlpha();
+        int finalTrackColor = (getTrackColor() & 0x00FFFFFF) | ((int) (((getTrackColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
+        int finalThumbColor = (getThumbColor() & 0x00FFFFFF) | ((int) (((getThumbColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
+
         if (showBackground) {
-            RenderUtil.fill(matrix, x, y, x + w, y + h, getTrackColor(), buffer);
+            RenderUtil.fill(matrix, x, y, x + w, y + h, finalTrackColor, buffer);
         }
 
         float thumbTop = getThumbPosition();
         float thumbHeight = getThumbSize();
         matrix.translate(0, 0, 1);
-        RenderUtil.fill(matrix, x, thumbTop, x + w, thumbTop + thumbHeight, getThumbColor(), buffer);
+        RenderUtil.fill(matrix, x, thumbTop, x + w, thumbTop + thumbHeight, finalThumbColor, buffer);
 
         poseStack.popPose();
     }

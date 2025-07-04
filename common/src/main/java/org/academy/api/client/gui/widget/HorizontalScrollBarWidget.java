@@ -60,13 +60,17 @@ public class HorizontalScrollBarWidget extends DragBarWidget {
         var matrix = graphics.pose().last().pose();
         var buffer = graphics.bufferSource();
 
+        float absoluteAlpha = getAbsoluteAlpha();
+        int finalTrackColor = (getTrackColor() & 0x00FFFFFF) | ((int) (((getTrackColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
+        int finalThumbColor = (getThumbColor() & 0x00FFFFFF) | ((int) (((getThumbColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
+
         if (showBackground) {
-            RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), getTrackColor(), buffer);
+            RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), finalTrackColor, buffer);
         }
 
         var thumbLeft = getThumbPosition();
         var thumbWidth = getThumbSize();
-        RenderUtil.fill(matrix, thumbLeft, getY(), thumbLeft + thumbWidth, getY() + getHeight(), getThumbColor(), buffer);
+        RenderUtil.fill(matrix, thumbLeft, getY(), thumbLeft + thumbWidth, getY() + getHeight(), finalThumbColor, buffer);
 
         graphics.flush();
     }

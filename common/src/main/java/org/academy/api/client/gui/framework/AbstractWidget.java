@@ -1,36 +1,19 @@
 package org.academy.api.client.gui.framework;
 
-import net.minecraft.client.gui.GuiGraphics;
-import org.academy.api.client.gui.animation.Animation;
-
-public abstract class AbstractWidget implements Widget,Animation {
+public abstract class AbstractWidget implements Widget {
     protected float x, y, z, width, height;
     protected boolean visible = true;
     protected boolean enabled = true;
     protected WidgetContainer parent = null;
     protected boolean hovered = false;
     protected boolean focused = false;
-    public Animation animation;
+    protected float alpha = 1.0f;
 
     public AbstractWidget(float x, float y, float width, float height) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
-    }
-
-    @Override
-    public void afterRender(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
-        if (animation != null) {
-            animation.afterRender(guiGraphics, mouseX, mouseY, partialTick);
-        }
-    }
-
-    @Override
-    public void beforeRender(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
-        if (animation != null) {
-            animation.beforeRender(guiGraphics, mouseX, mouseY, partialTick);
-        }
     }
 
     @Override
@@ -151,5 +134,23 @@ public abstract class AbstractWidget implements Widget,Animation {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public float getAlpha() {
+        return alpha;
+    }
+
+    @Override
+    public void setAlpha(float alpha) {
+        this.alpha = alpha;
+    }
+
+    @Override
+    public float getAbsoluteAlpha() {
+        if (getParent() != null) {
+            return getAlpha() * getParent().getAbsoluteAlpha();
+        }
+        return getAlpha();
     }
 }

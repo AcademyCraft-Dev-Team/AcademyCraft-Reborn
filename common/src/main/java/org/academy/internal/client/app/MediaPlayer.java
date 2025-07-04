@@ -219,7 +219,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
             var modeBack = new BlendQuadWidget(0, 0, (float) 20.0, (float) 20.0);
             modeBack.drawLine = false;
-            modeBack.alpha = 0.4f;
+            modeBack.setAlpha(0.4f);
             modeButton.addChild("back", modeBack);
 
             var layered = new LayeredPanelWidget(0, 0, (float) 20.0, (float) 20.0);
@@ -358,7 +358,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         {
             var back = new BlendQuadWidget(0, 0, width, height);
             back.drawLine = false;
-            back.alpha = 0.25f;
+            back.setAlpha(0.25f);
             rootPanel.addChild("back", back);
 
             var main = new LayeredPanelWidget(0, 0, width, height);
@@ -393,7 +393,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 {
                     var dockBarBack = new BlendQuadWidget(0, 0, width, dockBarHeight);
                     dockBarBack.drawLine = false;
-                    dockBarBack.alpha = 0.25f;
+                    dockBarBack.setAlpha(0.25f);
                     dockBar.addChild("back", dockBarBack);
 
                     var layered = new LayeredPanelWidget(dockBarPadding, dockBarPadding, width - dockBarPadding * 2, dockBarHeight - dockBarPadding * 2);
@@ -487,7 +487,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
             var back = new BlendQuadWidget(0, 0, root.getWidth(), root.getHeight());
             back.drawLine = false;
-            back.alpha = 0.25f;
+            back.setAlpha(0.25f);
             root.addChild("back", back);
 
             var main = new LayeredPanelWidget(0, 0, root.getWidth(), root.getHeight());

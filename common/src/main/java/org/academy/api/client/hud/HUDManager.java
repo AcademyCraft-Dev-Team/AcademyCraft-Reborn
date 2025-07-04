@@ -10,10 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.gui.widget.AutoScaleLabelWidget;
-import org.academy.api.client.gui.widget.ColorFillWidget;
-import org.academy.api.client.gui.widget.ImageWidget;
-import org.academy.api.client.gui.widget.PanelWidget;
+import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RenderTypes;
 import org.academy.api.client.resource.TextureResources;
@@ -357,7 +354,7 @@ public final class HUDManager {
 
     public static final class SkillWidget extends PanelWidget {
         private final Skill skill;
-        private final ColorFillWidget back;
+        private final FillWidget back;
         private final AutoScaleLabelWidget label;
         private final ImageWidget icon;
 
@@ -394,7 +391,7 @@ public final class HUDManager {
             this.icon.widthScale = 0.8f;
             this.icon.heightScale = 0.8f;
 
-            this.back = new ColorFillWidget(0, 0, width, height, 0x60000000);
+            this.back = new FillWidget(0, 0, width, height, 0x60000000);
 
             addChild("back", this.back);
             addChild("label", this.label);
@@ -431,7 +428,7 @@ public final class HUDManager {
 
             int finalLabelAlpha = (int) (0xFF * this.currentWidgetAlpha);
             this.label.color = (this.label.color & 0x00FFFFFF) | (finalLabelAlpha << 24);
-            this.icon.alpha = this.currentWidgetAlpha;
+            this.icon.setAlpha(currentWidgetAlpha);
 
             this.back.setWidth(this.getWidth());
             this.back.setHeight(this.getHeight());

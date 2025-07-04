@@ -45,7 +45,7 @@ public final class Settings implements DataTerminalHUD.App {
 
         BlendQuadWidget back = new BlendQuadWidget(0, 0, appArea.getWidth(), appArea.getHeight());
         back.drawLine = false;
-        back.alpha = 0.25f;
+        back.setAlpha(0.25f);
         appArea.addChild("back", back);
 
         LayeredPanelWidget main = new LayeredPanelWidget(0, 0, appArea.getWidth(), appArea.getHeight());
@@ -75,8 +75,8 @@ public final class Settings implements DataTerminalHUD.App {
             generalPanel.setEnabled(true);
             keybindingsPanel.setVisible(false);
             keybindingsPanel.setEnabled(false);
-            generalButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.6f;
-            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.3f;
+            generalButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.6f);
+            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.3f);
         };
 
         Runnable showKeybindings = () -> {
@@ -84,8 +84,8 @@ public final class Settings implements DataTerminalHUD.App {
             generalPanel.setEnabled(false);
             keybindingsPanel.setVisible(true);
             keybindingsPanel.setEnabled(true);
-            generalButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.3f;
-            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").alpha = 0.6f;
+            generalButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.3f);
+            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.6f);
         };
 
         generalButton.<ImageButtonWidget>getChildUnSafe("button_logic").onPress = showGeneral;
@@ -191,7 +191,7 @@ public final class Settings implements DataTerminalHUD.App {
 
         BlendQuadWidget back = new BlendQuadWidget(0, 0, w, h);
         back.drawLine = false;
-        back.alpha = 0.3f;
+        back.setAlpha(0.3f);
         buttonPanel.addChild("back", back);
 
         LayeredPanelWidget layered = new LayeredPanelWidget(0, 0, w, h);
@@ -231,11 +231,11 @@ public final class Settings implements DataTerminalHUD.App {
         if (btn == null) return;
         BlendQuadWidget back = btn.getChildUnSafe("back");
         if (selected) {
-            back.alpha = 0.8f;
+            back.setAlpha(0.8f);
             back.red = 0.7f;
             back.green = 0.9f;
         } else {
-            back.alpha = 0.5f;
+            back.setAlpha(0.5f);
             back.red = 1.0f;
             back.green = 1.0f;
         }
@@ -277,7 +277,7 @@ public final class Settings implements DataTerminalHUD.App {
         parent.addChild("key_selection_panel", keySelectionPanel);
         {
             BlendQuadWidget back = new BlendQuadWidget(0, 0, keySelectionPanel.getWidth(), keySelectionPanel.getHeight());
-            back.alpha = 0.4f;
+            back.setAlpha(0.4f);
             back.drawLine = false;
             keySelectionPanel.addChild("back", back);
 
@@ -306,7 +306,7 @@ public final class Settings implements DataTerminalHUD.App {
 
             BlendQuadWidget closeBack = new BlendQuadWidget(0, 0, 20, 15);
             closeBack.drawLine = false;
-            closeBack.alpha = 0.5f;
+            closeBack.setAlpha(0.5f);
             closeButtonPanel.addChild("back", closeBack);
             keySelectionPanel.addChild("close_btn", closeButtonPanel);
 
@@ -330,7 +330,7 @@ public final class Settings implements DataTerminalHUD.App {
             ImageButtonWidget listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
             listenBtnPanel.addChild("button_logic", listenButtonLogic);
             BlendQuadWidget listenBtnBack = new BlendQuadWidget(0, 0, 170, 20);
-            listenBtnBack.alpha = 0.5f;
+            listenBtnBack.setAlpha(0.5f);
             listenBtnBack.drawLine = false;
             listenBtnPanel.addChild("back", listenBtnBack);
             var listenLabel = new AutoScaleLabelWidget("Listen for Input", 0, 6, listenBtnPanel.getWidth(), true);
@@ -372,7 +372,7 @@ public final class Settings implements DataTerminalHUD.App {
 
         var keyboardPanel = new LayeredPanelWidget(0, currentY, container.getWidth() - 10, 0);
         var keyboardBack = new BlendQuadWidget(0, 0, keyboardPanel.getWidth(), 0);
-        keyboardBack.alpha = 0.2f;
+        keyboardBack.setAlpha(0.2f);
         keyboardBack.drawLine = false;
         keyboardPanel.addChild("back", keyboardBack);
         container.addChild("keyboard_panel", keyboardPanel);
@@ -468,7 +468,7 @@ public final class Settings implements DataTerminalHUD.App {
 
         var mousePanel = new LayeredPanelWidget(5, currentY, container.getWidth() - 15, 0);
         var mouseBack = new BlendQuadWidget(0, 0, mousePanel.getWidth(), 0);
-        mouseBack.alpha = 0.2f;
+        mouseBack.setAlpha(0.2f);
         mouseBack.drawLine = false;
         mousePanel.setZ(mousePanel.getZ() + 1);
         mousePanel.addChild("back", mouseBack);
@@ -501,7 +501,7 @@ public final class Settings implements DataTerminalHUD.App {
         controlPanel.setEnabled(false);
 
         BlendQuadWidget controlBack = new BlendQuadWidget(0, 0, 180, 85);
-        controlBack.alpha = 0.2f;
+        controlBack.setAlpha(0.2f);
         controlBack.drawLine = false;
         controlPanel.addChild("back", controlBack);
 
@@ -535,7 +535,7 @@ public final class Settings implements DataTerminalHUD.App {
 
         var keyboardBtnBack = new BlendQuadWidget(0, 0, 60, 15);
         keyboardBtnBack.drawLine = false;
-        keyboardBtnBack.alpha = 0.4f;
+        keyboardBtnBack.setAlpha(0.4f);
         keyboardBtn.addChild("back", keyboardBtnBack);
 
         var keyboardBtnLayered = new LayeredPanelWidget(0, 0, 60, 15);
@@ -560,7 +560,7 @@ public final class Settings implements DataTerminalHUD.App {
 
         var mouseBtnBack = new BlendQuadWidget(0, 0, 60, 15);
         mouseBtnBack.drawLine = false;
-        mouseBtnBack.alpha = 0.4f;
+        mouseBtnBack.setAlpha(0.4f);
         mouseBtn.addChild("back", mouseBtnBack);
 
         var mouseBtnLayered = new LayeredPanelWidget(0, 0, 60, 15);
@@ -587,7 +587,7 @@ public final class Settings implements DataTerminalHUD.App {
             keySelectionButton.addChild("button_logic", keySelectionLogic);
 
             var keySelectionButtonBack = new BlendQuadWidget(0, 0, 125, 20);
-            keySelectionButtonBack.alpha = 0.3f;
+            keySelectionButtonBack.setAlpha(0.3f);
             keySelectionButtonBack.drawLine = false;
             keySelectionButton.addChild("back", keySelectionButtonBack);
 
@@ -715,7 +715,7 @@ public final class Settings implements DataTerminalHUD.App {
 
     private static void updateModifierButtonState(PanelWidget button, boolean active) {
         BlendQuadWidget back = button.getChildUnSafe("back");
-        back.alpha = active ? 0.6f : 0.3f;
+        back.setAlpha(active ? 0.6f : 0.3f);
         if (active) {
             back.red = 0.8f;
             back.green = 0.8f;
@@ -731,12 +731,12 @@ public final class Settings implements DataTerminalHUD.App {
         InputSystem.KeyBinding binding = InputSystem.KEY_BINDINGS.get(activeKeyName);
         if (binding == null) return;
 
-        binding.inputPair.inputType = keyboardBtn.<BlendQuadWidget>getChildUnSafe("back").alpha == 0.6f ? InputSystem.InputType.KEYBOARD : InputSystem.InputType.MOUSE;
+        binding.inputPair.inputType = keyboardBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f ? InputSystem.InputType.KEYBOARD : InputSystem.InputType.MOUSE;
 
         LinkedHashSet<Integer> newMods = new LinkedHashSet<>();
-        if (shiftModBtn.<BlendQuadWidget>getChildUnSafe("back").alpha == 0.6f) newMods.add(GLFW.GLFW_MOD_SHIFT);
-        if (ctrlModBtn.<BlendQuadWidget>getChildUnSafe("back").alpha == 0.6f) newMods.add(GLFW.GLFW_MOD_CONTROL);
-        if (altModBtn.<BlendQuadWidget>getChildUnSafe("back").alpha == 0.6f) newMods.add(GLFW.GLFW_MOD_ALT);
+        if (shiftModBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_SHIFT);
+        if (ctrlModBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_CONTROL);
+        if (altModBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_ALT);
         binding.inputPair.keyInfo.modifiers = newMods;
 
         if (keyShouldBeReset) {
@@ -761,7 +761,7 @@ public final class Settings implements DataTerminalHUD.App {
         panel.addChild("button", buttonPanel);
 
         BlendQuadWidget buttonBack = new BlendQuadWidget(0, 0, buttonPanel.getWidth(), buttonPanel.getHeight());
-        buttonBack.alpha = 0.3f;
+        buttonBack.setAlpha(0.3f);
         buttonBack.drawLine = false;
         buttonPanel.addChild("back", buttonBack);
 
@@ -898,7 +898,7 @@ public final class Settings implements DataTerminalHUD.App {
 
     private static void updateModifierButton(PanelWidget button, boolean active) {
         BlendQuadWidget back = button.getChildUnSafe("back");
-        back.alpha = active ? 0.6f : 0.3f;
+        back.setAlpha(active ? 0.6f : 0.3f);
         if (active) {
             back.red = 0.8f;
             back.green = 0.8f;
@@ -911,8 +911,8 @@ public final class Settings implements DataTerminalHUD.App {
 
     private static void toggleModifierButton(PanelWidget button) {
         BlendQuadWidget back = button.getChildUnSafe("back");
-        boolean nowSelected = back.alpha != 0.6f;
-        back.alpha = nowSelected ? 0.6f : 0.3f;
+        boolean nowSelected = back.getAlpha() != 0.6f;
+        back.setAlpha(nowSelected ? 0.6f : 0.3f);
         if (nowSelected) {
             back.red = 0.8f;
             back.green = 0.8f;
@@ -930,7 +930,7 @@ public final class Settings implements DataTerminalHUD.App {
 
         BlendQuadWidget back = new BlendQuadWidget(0, 0, w, h);
         back.drawLine = false;
-        back.alpha = 0.5f;
+        back.setAlpha(0.5f);
         panel.addChild("back", back);
 
         LayeredPanelWidget layered = new LayeredPanelWidget(0, 0, w, h);

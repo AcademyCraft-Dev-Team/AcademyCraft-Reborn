@@ -5,14 +5,53 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.Tickable;
 import net.minecraft.network.chat.Component;
+import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.widget.PanelWidget;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public abstract class CGuiScreen extends Screen {
     public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
+    private final List<Animator> screenAnimations = new ArrayList<>();
+    private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
 
     protected CGuiScreen(Component title) {
         super(title);
+    }
+
+    protected void playAnimation(Animator animator) {
+        screenAnimations.add(animator);
+        animator.start();
+    }
+
+    public void playTrackedAnimation(Widget widget, Animator animator) {
+        playAnimation(animator);
+        trackedAnimations.computeIfAbsent(widget, k -> new ArrayList<>()).add(animator);
+    }
+
+    public void cancelAnimations(Widget widget) {
+        if (trackedAnimations.containsKey(widget)) {
+            List<Animator> animators = new ArrayList<>(trackedAnimations.get(widget));
+            for (Animator anim : animators) {
+                anim.cancel();
+                screenAnimations.remove(anim);
+            }
+            trackedAnimations.get(widget).clear();
+        }
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        for (Animator anim : screenAnimations) {
+            anim.cancel();
+        }
+        screenAnimations.clear();
+        trackedAnimations.clear();
     }
 
     @Override

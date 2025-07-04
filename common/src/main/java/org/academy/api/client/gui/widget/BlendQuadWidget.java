@@ -18,7 +18,6 @@ public class BlendQuadWidget extends AbstractWidget {
     public float red = 1.0f;
     public float green = 1.0f;
     public float blue = 1.0f;
-    public float alpha = 0.75f;
 
     public final ImageWidget lineWidget;
 
@@ -29,7 +28,6 @@ public class BlendQuadWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        if (animation != null) animation.beforeRender(graphics, mouseX, mouseY, partialTick);
         if (!isVisible()) return;
 
         graphics.pose().pushPose();
@@ -38,12 +36,13 @@ public class BlendQuadWidget extends AbstractWidget {
         matrix.translate(getX(), getY(), getZ());
 
         float w = getWidth(), h = getHeight();
+        float finalAlpha = getAbsoluteAlpha();
 
         ShaderInstance shader = Shaders.sdfSharpQuadWithMarginShader;
         if (shader != null) {
             shader.safeGetUniform("u_size").set(w, h);
             shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
-            shader.safeGetUniform("u_fillColor").set(this.red, this.green, this.blue, this.alpha);
+            shader.safeGetUniform("u_fillColor").set(this.red, this.green, this.blue, finalAlpha);
 
             VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
             vertexConsumer.vertex(matrix, 0, 0, 0).uv(0, 0).endVertex();
@@ -54,13 +53,12 @@ public class BlendQuadWidget extends AbstractWidget {
         }
 
         if (drawLine) {
+            lineWidget.setAlpha(finalAlpha);
             lineWidget.render(graphics, mouseX, mouseY, partialTick);
             graphics.pose().translate(0, getHeight() - marginTop / 2, 0);
             lineWidget.render(graphics, mouseX, mouseY, partialTick);
         }
 
         graphics.pose().popPose();
-
-        if (animation != null) animation.afterRender(graphics, mouseX, mouseY, partialTick);
     }
 }

@@ -46,10 +46,6 @@ public class AutoScaleLabelWidget extends LabelWidget {
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         if (!isVisible() || value == null || value.isEmpty()) return;
 
-        if (animation != null) {
-            animation.beforeRender(graphics, mouseX, mouseY, partialTicks);
-        }
-
         graphics.pose().pushPose();
         var font = Minecraft.getInstance().font;
 
@@ -76,10 +72,6 @@ public class AutoScaleLabelWidget extends LabelWidget {
                 15728880
         );
         graphics.pose().popPose();
-
-        if (animation != null) {
-            animation.afterRender(graphics, mouseX, mouseY, partialTicks);
-        }
     }
 
     public void setCentered(boolean value) {

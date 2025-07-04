@@ -21,9 +21,13 @@ public class LabelWidget extends AbstractWidget {
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         if (!isVisible()) return;
-        if (animation != null) {
-            animation.beforeRender(graphics, mouseX, mouseY, partialTicks);
-        }
+
+        int baseAlpha = (color >> 24) & 0xFF;
+        int finalAlpha = (int) (baseAlpha * getAbsoluteAlpha());
+        // In Font.adjustColor, alpha <= 3 is forced to 255
+        if (finalAlpha <= 3) finalAlpha = 4;
+        int finalColor = (color & 0x00FFFFFF) | (finalAlpha << 24);
+
         graphics.pose().pushPose();
         Font font = Minecraft.getInstance().font;
         float finalScale = scale * globalScale;
@@ -32,7 +36,7 @@ public class LabelWidget extends AbstractWidget {
         float offsetY = (scaledHeight - textHeight) / 2;
         graphics.pose().translate(x, y - offsetY, 0);
         graphics.pose().scale(finalScale, finalScale, 1.0f);
-        Minecraft.getInstance().font.drawInBatch(value, 0, 0, color, dropShadow,
+        Minecraft.getInstance().font.drawInBatch(value, 0, 0, finalColor, dropShadow,
                 graphics.pose().last().pose(),
                 graphics.bufferSource(),
                 Font.DisplayMode.NORMAL,
@@ -40,9 +44,6 @@ public class LabelWidget extends AbstractWidget {
                 15728880
         );
         graphics.pose().popPose();
-        if (animation != null) {
-            animation.afterRender(graphics, mouseX, mouseY, partialTicks);
-        }
     }
 
     @Override

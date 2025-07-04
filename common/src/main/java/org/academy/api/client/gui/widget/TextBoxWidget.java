@@ -137,10 +137,19 @@ public class TextBoxWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+        float absoluteAlpha = getAbsoluteAlpha();
+
         if (showBackground) {
-            RenderUtil.fill(graphics.pose().last().pose(), x, y, x + width, y + height, borderColor, graphics.bufferSource());
-            RenderUtil.fill(graphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, bgColor, graphics.bufferSource());
+            int finalBorderColor = (borderColor & 0x00FFFFFF) | ((int) (((borderColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+            int finalBgColor = (bgColor & 0x00FFFFFF) | ((int) (((bgColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+
+            RenderUtil.fill(graphics.pose().last().pose(), x, y, x + width, y + height, finalBorderColor, graphics.bufferSource());
+            RenderUtil.fill(graphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, finalBgColor, graphics.bufferSource());
         }
+        int finalAlpha = (int) (((textColor >> 24) & 0xFF) * absoluteAlpha);
+        // In Font.adjustColor, alpha <= 3 is forced to 255
+        if (finalAlpha <= 3) finalAlpha = 4;
+        int finalTextColor = (textColor & 0x00FFFFFF) | (finalAlpha << 24);
 
         Font font = Minecraft.getInstance().font;
         float finalScale = scale * LabelWidget.globalScale;
@@ -160,7 +169,7 @@ public class TextBoxWidget extends AbstractWidget {
         graphics.pose().translate(x + 1, y + (height - scaledHeight) / 4 - offsetY, 0);
         graphics.pose().scale(finalScale, finalScale, 1.0f);
 
-        graphics.drawString(font, text.toString(), 0, 0, textColor, false);
+        graphics.drawString(font, text.toString(), 0, 0, finalTextColor, false);
 
         if (isFocused()) {
             long now = System.currentTimeMillis();
@@ -177,7 +186,7 @@ public class TextBoxWidget extends AbstractWidget {
                 RenderUtil.fill(
                         graphics.pose().last().pose(),
                         caretX, textHeight - 0.5f, caretX + 4, textHeight,
-                        textColor,
+                        finalTextColor,
                         graphics.bufferSource()
                 );
             }

@@ -37,15 +37,19 @@ public class HorizontalSliderWidget extends AbstractSliderWidget {
         Matrix4f matrix = graphics.pose().last().pose();
         MultiBufferSource.BufferSource buffer = graphics.bufferSource();
 
+        float absoluteAlpha = getAbsoluteAlpha();
+        int finalTrackColor = (getTrackColor() & 0x00FFFFFF) | ((int) (((getTrackColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
+        int finalThumbColor = (getThumbColor() & 0x00FFFFFF) | ((int) (((getThumbColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
+
         if (showBackground) {
-            RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), getTrackColor(), buffer);
+            RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), finalTrackColor, buffer);
         }
 
         float thumbLeft = getThumbPosition();
         float thumbWidth = getThumbSize();
         graphics.pose().translate(0, 0, 1);
 
-        RenderUtil.fill(matrix, thumbLeft, getY(), thumbLeft + thumbWidth, getY() + getHeight(), getThumbColor(), buffer);
+        RenderUtil.fill(matrix, thumbLeft, getY(), thumbLeft + thumbWidth, getY() + getHeight(), finalThumbColor, buffer);
 
         graphics.pose().popPose();
     }

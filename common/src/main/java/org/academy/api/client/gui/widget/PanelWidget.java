@@ -63,8 +63,6 @@ public class PanelWidget extends AbstractContainerWidget {
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        beforeRender(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
-        afterRender(graphics, mouseX, mouseY, partialTick);
     }
 }

@@ -6,10 +6,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.api.client.gui.WirelessPanelHelper;
-import org.academy.api.client.gui.animation.AnimationTopToBottom;
+import org.academy.api.client.gui.animation.EasingFunctions;
+import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 
@@ -22,6 +24,7 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
     public static final String AF = "%d AF";
     private String connectedNodeName = "None";
     private PanelWidget wirelessPanel;
+    private PanelWidget invPage;
     private ScrollPanelWidget nodeListPanel;
     private LabelWidget bufferValueLabel;
     private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
@@ -43,33 +46,31 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
 
     @Override
     protected void onInit() {
-        rootContainer.setWidth(width);
-        rootContainer.setHeight(height);
-        PanelWidget invPage = new PanelWidget(0, 0, width, height);
-        invPage.animation = new AnimationTopToBottom(invPage);
+        float startYOffset = 20f;
+        long duration = 600;
+        long delay = 250;
+        long childDuration = duration - 100;
+
+        invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
         rootContainer.addChild("page_inv", invPage);
         {
-            ImageWidget ui = new ImageWidget(leftPos, topPos - 22, imageWidth, 187, RenderTypes.RENDER_TYPE_WIND_GEN_UI);
+            ImageWidget ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.RENDER_TYPE_WIND_GEN_UI);
             invPage.addChild("ui", ui);
-            ui.animation = new AnimationTopToBottom(ui);
-            PanelWidget statePanel = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
+            PanelWidget statePanel = new PanelWidget(0, 0, imageWidth, 187);
             statePanel.setHorizontalGravity(PanelWidget.HorizontalGravity.CENTER);
-            statePanel.animation = new AnimationTopToBottom(statePanel);
             invPage.addChild("panel_state", statePanel);
             {
                 topIcon = new ImageWidget(0, 13, 24, 24, RenderTypes.RENDER_TYPE_ICON_WIND_GEN_TOP);
-                topIcon.animation = new AnimationTopToBottom(topIcon);
                 statePanel.addChild("icon_top", topIcon);
                 pillarIcon = new ImageWidget(0, 31, 24, 24, RenderTypes.RENDER_TYPE_ICON_WIND_GEN_PILLAR);
-                pillarIcon.animation = new AnimationTopToBottom(pillarIcon);
                 statePanel.addChild("icon_pillar", pillarIcon);
                 baseIcon = new ImageWidget(0, 49, 24, 24, RenderTypes.RENDER_TYPE_ICON_WIND_GEN_BASE);
-                baseIcon.animation = new AnimationTopToBottom(baseIcon);
                 statePanel.addChild("icon_base", baseIcon);
             }
         }
+        invPage.setY(getTopPos() - 22);
 
-        wirelessPanel = WirelessPanelHelper.getWirelessPanel(leftPos,topPos - 22);
+        wirelessPanel = WirelessPanelHelper.getWirelessPanel(leftPos, topPos - 22);
         nodeListPanel = wirelessPanel.getChildUnSafe("node_list");
         wirelessPanel.setZ(100);
         wirelessPanel.setVisible(false);
@@ -80,19 +81,16 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
 
         RadioGroupWidget radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
-            switch (imageRadioButtonWidget.getId()) {
-                case 0:
-                    renderInventory = true;
-                    invPage.setVisible(true);
-                    wirelessPanel.setVisible(false);
-                    wirelessPanel.setEnabled(false);
-                    break;
-                case 1:
-                    renderInventory = false;
-                    invPage.setVisible(false);
-                    wirelessPanel.setVisible(true);
-                    wirelessPanel.setEnabled(true);
-                    break;
+            boolean showInv = imageRadioButtonWidget.getId() == 0;
+            float panelY = getTopPos() - 22;
+            if (showInv) {
+                renderInventory = true;
+                ScreenAnimationUtil.show(this, invPage, panelY);
+                ScreenAnimationUtil.hide(this, wirelessPanel, panelY);
+            } else {
+                renderInventory = false;
+                ScreenAnimationUtil.show(this, wirelessPanel, panelY);
+                ScreenAnimationUtil.hide(this, invPage, panelY);
             }
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
@@ -100,71 +98,48 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
             ImageRadioButtonWidget inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
                     RenderTypes.RENDER_TYPE_ICON_INV, () -> {
             });
-            inv.animation = new AnimationTopToBottom(inv);
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
             ImageRadioButtonWidget wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
                     RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
             });
-            wireless.animation = new AnimationTopToBottom(wireless);
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);
         }
 
         PanelWidget infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 22, 110, 105);
+        infoArea.setAlpha(0);
         rootContainer.addChild("area_info", infoArea);
         {
             BlendQuadWidget back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());
             back.red = 0;
             back.green = 0;
             back.blue = 0;
-            back.alpha = 0.5f;
-            back.animation = new AnimationTopToBottom(back);
+            back.setAlpha(0.5f);
             infoArea.addChild("back", back);
 
             HistogramWidget histogramWidget = new HistogramWidget(0, 0, 84, 84);
             histogramWidget.addValue(histogramValue);
-            AnimationTopToBottom animationHistogramWidget = new AnimationTopToBottom(histogramWidget);
-            animationHistogramWidget.animationTime = 0.75f;
-            histogramWidget.animation = animationHistogramWidget;
-            AnimationTopToBottom animationHistogramWidgetBack = new AnimationTopToBottom(histogramWidget.back);
-            animationHistogramWidgetBack.animationTime = 0.75f;
-            histogramWidget.back.animation = animationHistogramWidgetBack;
             infoArea.addChild("histogram", histogramWidget);
 
             FillWidget bufferIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25F7FF);
-            AnimationTopToBottom animationBufferIcon = new AnimationTopToBottom(bufferIcon);
-            animationBufferIcon.animationTime = 0.75f;
-            bufferIcon.animation = animationBufferIcon;
             infoArea.addChild("icon_buffer", bufferIcon);
 
             LabelWidget bufferLabel = new LabelWidget("BUFFER", 15, 72);
-            AnimationTopToBottom animationBufferLabel = new AnimationTopToBottom(bufferLabel);
-            animationBufferLabel.animationTime = 0.75f;
             bufferLabel.scale = 0.75f;
-            bufferLabel.animation = animationBufferLabel;
             infoArea.addChild("label_buffer", bufferLabel);
 
             bufferValueLabel = new LabelWidget(AF, 50, 72);
-            AnimationTopToBottom animationBufferValueLabel = new AnimationTopToBottom(bufferValueLabel);
-            animationBufferValueLabel.animationTime = 0.75f;
             bufferValueLabel.scale = 0.75f;
-            bufferValueLabel.animation = animationBufferValueLabel;
             infoArea.addChild("label_buffer_value", bufferValueLabel);
 
             LabelWidget infoLabel = new LabelWidget("Information", 8, 82);
-            AnimationTopToBottom animationInfoLabel = new AnimationTopToBottom(infoLabel);
-            animationInfoLabel.animationTime = 0.75f;
             infoLabel.scale = 0.75f;
-            infoLabel.animation = animationInfoLabel;
             infoArea.addChild("label_info", infoLabel);
 
             LabelWidget altitudeLabel = new LabelWidget("Altitude", 10, 90);
-            AnimationTopToBottom animationAltitudeLabel = new AnimationTopToBottom(altitudeLabel);
-            animationAltitudeLabel.animationTime = 0.75f;
             altitudeLabel.scale = 0.75f;
-            altitudeLabel.animation = animationAltitudeLabel;
             infoArea.addChild("label_altitude", altitudeLabel);
 
             String altitudeValue = "N/A";
@@ -172,12 +147,20 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
                 altitudeValue = windGenBaseBlockEntity.altitude + "";
             }
             LabelWidget altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
-            AnimationTopToBottom animationAltitudeValueLabel = new AnimationTopToBottom(altitudeValueLabel);
-            animationAltitudeValueLabel.animationTime = 0.75f;
             altitudeValueLabel.scale = 0.75f;
-            altitudeValueLabel.animation = animationAltitudeValueLabel;
             infoArea.addChild("label_altitude_value", altitudeValueLabel);
         }
+
+        float radioFinalY = radioGroupWidget.getY();
+        radioGroupWidget.setY(radioFinalY + startYOffset);
+        radioGroupWidget.setAlpha(0f);
+        playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setY, radioGroupWidget.getY(), radioFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
+        playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay));
+
+        float infoFinalY = infoArea.getY();
+        infoArea.setY(infoFinalY + startYOffset);
+        playAnimation(ObjectAnimator.ofFloat(infoArea::setY, infoArea.getY(), infoFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
+        playAnimation(ObjectAnimator.ofFloat(infoArea::setAlpha, 0, 1).setStartDelay(delay).setDuration(duration));
     }
 
     @Override
@@ -193,24 +176,24 @@ public class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements W
 
             switch (windGenBaseBlockEntity.completeness) {
                 case NO_TOP -> {
-                    baseIcon.alpha = 1f;
-                    pillarIcon.alpha = 1f;
-                    topIcon.alpha = 0.2f;
+                    baseIcon.setAlpha(1f);
+                    pillarIcon.setAlpha(1f);
+                    topIcon.setAlpha(0.2f);
                 }
                 case BASE_ONLY -> {
-                    baseIcon.alpha = 1f;
-                    pillarIcon.alpha = 0.2f;
-                    topIcon.alpha = 0.2f;
+                    baseIcon.setAlpha(1f);
+                    pillarIcon.setAlpha(0.2f);
+                    topIcon.setAlpha(0.2f);
                 }
                 case COMPLETE -> {
-                    baseIcon.alpha = 1f;
-                    pillarIcon.alpha = 1f;
-                    topIcon.alpha = 1f;
+                    baseIcon.setAlpha(1f);
+                    pillarIcon.setAlpha(1f);
+                    topIcon.setAlpha(1f);
                 }
                 case COMPLETE_NOT_WORKING -> {
-                    baseIcon.alpha = 1f;
-                    pillarIcon.alpha = 1f;
-                    topIcon.alpha = 0.6f;
+                    baseIcon.setAlpha(1f);
+                    pillarIcon.setAlpha(1f);
+                    topIcon.setAlpha(0.6f);
                 }
             }
         }
