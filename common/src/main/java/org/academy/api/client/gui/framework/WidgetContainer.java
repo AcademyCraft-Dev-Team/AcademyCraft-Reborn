@@ -31,7 +31,7 @@ public interface WidgetContainer extends Widget {
         graphics.pose().pushPose();
         graphics.pose().translate(getX(), getY(), getZ());
 
-        for (Widget child : getChildren().values()) {
+        for (var child : getChildren().values()) {
             child.render(graphics, mouseX, mouseY, partialTick);
         }
 

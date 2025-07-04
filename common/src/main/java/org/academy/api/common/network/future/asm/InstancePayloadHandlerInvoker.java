@@ -4,10 +4,10 @@ package org.academy.api.common.network.future.asm;
 public abstract class InstancePayloadHandlerInvoker implements IPayloadHandlerInvoker {
     protected final Object instance;
 
-    protected InstancePayloadHandlerInvoker(Object instance) {
-        if (instance == null) {
+    protected InstancePayloadHandlerInvoker(Object newInstance) {
+        if (newInstance == null) {
             throw new IllegalArgumentException("Instance cannot be null for InstancePayloadHandlerInvoker");
         }
-        this.instance = instance;
+        instance = newInstance;
     }
 }

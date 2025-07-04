@@ -6,7 +6,7 @@ import net.neoforged.bus.api.ICancellableEvent;
 public class S2CPacketEvent extends Event implements ICancellableEvent {
     public S2CPacket packet;
 
-    public S2CPacketEvent(S2CPacket packet) {
-        this.packet = packet;
+    public S2CPacketEvent(S2CPacket newPacket) {
+        packet = newPacket;
     }
 }

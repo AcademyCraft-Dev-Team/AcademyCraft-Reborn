@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.gui.framework.Orientation;
 
 public abstract class DragBarWidget extends AbstractWidget {
     public boolean showBackground = true;
@@ -8,18 +9,24 @@ public abstract class DragBarWidget extends AbstractWidget {
     public float dragOffset = 0f;
     protected int thumbColor = 0xFFAAAAAA;
     protected int trackColor = 0xFF202020;
+    protected final Orientation orientation;
 
-    public DragBarWidget(float x, float y, float width, float height) {
+    public DragBarWidget(float x, float y, float width, float height, Orientation newOrientation) {
         super(x, y, width, height);
+        orientation = newOrientation;
     }
 
     protected abstract float getThumbSize();
 
     protected abstract float getThumbPosition();
 
-    protected abstract float getTrackSize();
+    protected float getTrackSize() {
+        return orientation == Orientation.HORIZONTAL ? getWidth() : getHeight();
+    }
 
-    protected abstract float getMouseRelative(float mouseX, float mouseY);
+    protected float getMouseRelative(float mouseX, float mouseY) {
+        return orientation == Orientation.HORIZONTAL ? (mouseX - getAbsoluteX()) : (mouseY - getAbsoluteY());
+    }
 
     protected abstract void updateTargetFromMouse(float mouse);
 
@@ -49,16 +56,16 @@ public abstract class DragBarWidget extends AbstractWidget {
         return false;
     }
 
-    public void setThumbColor(int color) {
-        this.thumbColor = color;
+    public void setThumbColor(int newColor) {
+        thumbColor = newColor;
+    }
+
+    public void setTrackColor(int newColor) {
+        trackColor = newColor;
     }
 
     public int getThumbColor() {
         return thumbColor;
-    }
-
-    public void setTrackColor(int color) {
-        this.trackColor = color;
     }
 
     public int getTrackColor() {

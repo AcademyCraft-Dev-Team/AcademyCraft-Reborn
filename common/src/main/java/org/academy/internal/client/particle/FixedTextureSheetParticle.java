@@ -15,33 +15,33 @@ public abstract class FixedTextureSheetParticle extends FixedSingleQuadParticle{
         super(level, x, y, z, xSpeed, ySpeed, zSpeed, yaw, pitch);
     }
 
-    protected void setSprite(TextureAtlasSprite sprite) {
-        this.sprite = sprite;
+    protected void setSprite(TextureAtlasSprite newSprite) {
+        sprite = newSprite;
     }
 
     protected float getU0() {
-        return this.sprite.getU0();
+        return sprite.getU0();
     }
 
     protected float getU1() {
-        return this.sprite.getU1();
+        return sprite.getU1();
     }
 
     protected float getV0() {
-        return this.sprite.getV0();
+        return sprite.getV0();
     }
 
     protected float getV1() {
-        return this.sprite.getV1();
+        return sprite.getV1();
     }
 
-    public void pickSprite(SpriteSet sprite) {
-        this.setSprite(sprite.get(this.random));
+    public void pickSprite(SpriteSet newSprite) {
+        setSprite(newSprite.get(random));
     }
 
-    public void setSpriteFromAge(SpriteSet sprite) {
-        if (!this.removed) {
-            this.setSprite(sprite.get(this.age, this.lifetime));
+    public void setSpriteFromAge(SpriteSet newSprite) {
+        if (!removed) {
+            setSprite(newSprite.get(age, lifetime));
         }
     }
 }

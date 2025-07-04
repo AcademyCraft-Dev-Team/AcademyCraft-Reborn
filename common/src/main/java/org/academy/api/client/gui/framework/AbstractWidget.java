@@ -9,11 +9,11 @@ public abstract class AbstractWidget implements Widget {
     protected boolean focused = false;
     protected float alpha = 1.0f;
 
-    public AbstractWidget(float x, float y, float width, float height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+    public AbstractWidget(float newX, float newY, float newWidth, float newHeight) {
+        x = newX;
+        y = newY;
+        width = newWidth;
+        height = newHeight;
     }
 
     @Override
@@ -42,28 +42,33 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void setX(float x) {
-        this.x = x;
+    public Widget setX(float newX) {
+        x = newX;
+        return this;
     }
 
     @Override
-    public void setY(float y) {
-        this.y = y;
+    public Widget setY(float newY) {
+        y = newY;
+        return this;
     }
 
     @Override
-    public void setZ(float z) {
-        this.z = z;
+    public Widget setZ(float newZ) {
+        z = newZ;
+        return this;
     }
 
     @Override
-    public void setWidth(float width) {
-        this.width = width;
+    public Widget setWidth(float newWidth) {
+        width = newWidth;
+        return this;
     }
 
     @Override
-    public void setHeight(float height) {
-        this.height = height;
+    public Widget setHeight(float newHeight) {
+        height = newHeight;
+        return this;
     }
 
     @Override
@@ -72,8 +77,9 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void setVisible(boolean visible) {
-        this.visible = visible;
+    public Widget setVisible(boolean newVisible) {
+        visible = newVisible;
+        return this;
     }
 
     @Override
@@ -82,8 +88,9 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+    public Widget setEnabled(boolean newEnabled) {
+        enabled = newEnabled;
+        return this;
     }
 
     @Override
@@ -92,8 +99,9 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void setParent(WidgetContainer parent) {
-        this.parent = parent;
+    public Widget setParent(WidgetContainer newParent) {
+        parent = newParent;
+        return this;
     }
 
     @Override
@@ -102,15 +110,16 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void setFocused(boolean focused) {
-        if (this.focused != focused && canFocus()) {
-            this.focused = focused;
-            if (focused) {
+    public Widget setFocused(boolean newFocused) {
+        if (focused != newFocused && canFocus()) {
+            focused = newFocused;
+            if (newFocused) {
                 onFocusGained();
             } else {
                 onFocusLost();
             }
         }
+        return this;
     }
 
     @Override
@@ -119,13 +128,14 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void setHovered(boolean hovered) {
-        this.hovered = hovered;
+    public Widget setHovered(boolean newHovered) {
+        hovered = newHovered;
+        return this;
     }
 
     @Override
     public boolean isAbsoluteEnabled() {
-        if (isEnabled()){
+        if (isEnabled()) {
             if (parent != null) {
                 return parent.isAbsoluteEnabled();
             } else {
@@ -142,8 +152,9 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void setAlpha(float alpha) {
-        this.alpha = alpha;
+    public Widget setAlpha(float newAlpha) {
+        alpha = newAlpha;
+        return this;
     }
 
     @Override

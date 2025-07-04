@@ -8,9 +8,9 @@ public class MouseScrollEvent extends Event implements ICancellableEvent {
     public double xOffset;
     public double yOffset;
 
-    public MouseScrollEvent(long windowPointer, double xOffset, double yOffset) {
-        this.windowPointer = windowPointer;
-        this.xOffset = xOffset;
-        this.yOffset = yOffset;
+    public MouseScrollEvent(long newWindowPointer, double newXOffset, double newYOffset) {
+        windowPointer = newWindowPointer;
+        xOffset = newXOffset;
+        yOffset = newYOffset;
     }
 }

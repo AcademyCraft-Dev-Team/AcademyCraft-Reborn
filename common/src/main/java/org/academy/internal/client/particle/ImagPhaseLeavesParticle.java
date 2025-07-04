@@ -12,21 +12,21 @@ public class ImagPhaseLeavesParticle extends TextureSheetParticle {
     private boolean hasStartedFalling = false;
     private final int hangingTicks = 40;
 
-    public ImagPhaseLeavesParticle(ClientLevel level, double x, double y, double z, SpriteSet spriteSet) {
+    public ImagPhaseLeavesParticle(ClientLevel level, double x, double y, double z, SpriteSet newSpriteSet) {
         super(level, x, y, z);
-        this.sprites = spriteSet;
-        this.setSize(0.1F, 0.1F);
+        sprites = newSpriteSet;
+        setSize(0.1F, 0.1F);
         quadSize = 0.3f;
-        int totalFallingStateDuration = 40;
-        this.lifetime = this.hangingTicks + totalFallingStateDuration;
+        var totalFallingStateDuration = 40;
+        lifetime = hangingTicks + totalFallingStateDuration;
 
-        pickSprite(spriteSet);
-        this.setSprite(this.sprites.get(0, 6));
+        pickSprite(newSpriteSet);
+        setSprite(sprites.get(0, 6));
     }
 
     @Override
     public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_OPAQUE;
+        return ParticleRenderTypes.IMAG_PHASE;
     }
 
     @Override
@@ -36,36 +36,36 @@ public class ImagPhaseLeavesParticle extends TextureSheetParticle {
 
     @Override
     public void tick() {
-        this.xo = this.x;
-        this.yo = this.y;
-        this.zo = this.z;
+        xo = x;
+        yo = y;
+        zo = z;
 
-        if (!this.hasStartedFalling) {
-            if (this.age >= this.hangingTicks) {
-                this.hasStartedFalling = true;
-                this.gravity = 0.0015F + random.nextFloat() * 0.015F;
+        if (!hasStartedFalling) {
+            if (age >= hangingTicks) {
+                hasStartedFalling = true;
+                gravity = 0.0015F + random.nextFloat() * 0.015F;
             } else {
-                this.move(this.xd, this.yd, this.zd);
-                this.xd *= 0.98D;
-                this.yd *= 0.98D;
-                this.zd *= 0.98D;
+                move(xd, yd, zd);
+                xd *= 0.98D;
+                yd *= 0.98D;
+                zd *= 0.98D;
             }
         }
 
-        if (this.hasStartedFalling) {
-            this.yd -= this.gravity;
-            this.move(this.xd, this.yd, this.zd);
+        if (hasStartedFalling) {
+            yd -= gravity;
+            move(xd, yd, zd);
 
-            this.xd *= 0.98D;
-            this.zd *= 0.98D;
+            xd *= 0.98D;
+            zd *= 0.98D;
 
-            if (!this.removed && this.sprites != null) {
-                    this.setSprite(this.sprites.get(age % 7, 6));
+            if (!removed && sprites != null) {
+                setSprite(sprites.get(age % 7, 6));
             }
         }
 
-        if (this.age++ >= this.lifetime) {
-            this.remove();
+        if (age++ >= lifetime) {
+            remove();
         }
     }
 }

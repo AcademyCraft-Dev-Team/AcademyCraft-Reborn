@@ -25,14 +25,14 @@ public class FutureManagerClient extends AbstractFutureManager {
 
     public <T_RESP extends IResponsePayload, T_REQ_LISTENER extends PacketListener, REQUEST extends IRequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToServer(
             REQUEST requestPayload, Consumer<T_RESP> callback, long timeoutMillis) {
-        int futureId = createPendingFuture(requestPayload.getExpectedResponseType(), callback, timeoutMillis);
+        var futureId = createPendingFuture(requestPayload.getExpectedResponseType(), callback, timeoutMillis);
         if (futureId == -1) return;
 
-        int requestTypeId = futureManager.getPayloadId(requestPayload.getClass());
-        FriendlyByteBuf payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        var requestTypeId = futureManager.getPayloadId(requestPayload.getClass());
+        var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
         requestPayload.write(payloadBuffer);
 
-        FutureRequestPacket<ServerGamePacketListenerImpl> packet = new FutureRequestPacket<>(futureId, requestTypeId, payloadBuffer);
+        var packet = new FutureRequestPacket<ServerGamePacketListenerImpl>(futureId, requestTypeId, payloadBuffer);
         NetworkManagerClient.sendPacket(new C2SPacket(packet));
     }
 
@@ -44,10 +44,10 @@ public class FutureManagerClient extends AbstractFutureManager {
     @SubscribePacket
     public void handleFutureRequestFromServer(FutureRequestPacket<ClientPacketListener> requestPacket) {
         handleRequest(requestPacket, requestPacket.packetListenerSupplier, response -> {
-            int responseTypeId = futureManager.getPayloadId(response.getClass());
-            FriendlyByteBuf responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
+            var responseTypeId = futureManager.getPayloadId(response.getClass());
+            var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
             response.write(responseBuffer);
-            FutureResponsePacket<ServerGamePacketListenerImpl> responsePkt = new FutureResponsePacket<>(requestPacket.futureId, responseTypeId, responseBuffer);
+            var responsePkt = new FutureResponsePacket<ServerGamePacketListenerImpl>(requestPacket.futureId, responseTypeId, responseBuffer);
             NetworkManagerClient.sendPacket(new C2SPacket(responsePkt));
         });
     }

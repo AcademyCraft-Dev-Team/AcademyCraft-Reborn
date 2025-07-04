@@ -13,33 +13,33 @@ public class OpenScreenPacket extends IPacket<ClientPacketListener> {
     private FriendlyByteBuf dataPayload;
 
     public OpenScreenPacket() {
-        this.dataPayload = new FriendlyByteBuf(Unpooled.buffer());
+        dataPayload = new FriendlyByteBuf(Unpooled.buffer());
     }
 
-    public OpenScreenPacket(@NotNull String screenName, @NotNull FriendlyByteBuf payload) {
-        this.screenName = screenName;
-        this.dataPayload = new FriendlyByteBuf(Unpooled.buffer(payload.readableBytes()));
-        payload.readBytes(this.dataPayload, payload.readableBytes());
+    public OpenScreenPacket(@NotNull String newScreenName, @NotNull FriendlyByteBuf payload) {
+        screenName = newScreenName;
+        dataPayload = new FriendlyByteBuf(Unpooled.buffer(payload.readableBytes()));
+        payload.readBytes(dataPayload, payload.readableBytes());
     }
 
     @SuppressWarnings("unused")
-    public OpenScreenPacket(@NotNull String screenName) {
-        this.screenName = screenName;
-        this.dataPayload = new FriendlyByteBuf(Unpooled.buffer());
+    public OpenScreenPacket(@NotNull String newScreenName) {
+        screenName = newScreenName;
+        dataPayload = new FriendlyByteBuf(Unpooled.buffer());
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.screenName = buf.readUtf();
-        int readableBytes = buf.readableBytes();
-        this.dataPayload = new FriendlyByteBuf(buf.readBytes(readableBytes));
+        screenName = buf.readUtf();
+        var readableBytes = buf.readableBytes();
+        dataPayload = new FriendlyByteBuf(buf.readBytes(readableBytes));
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeUtf(this.screenName);
-        if (this.dataPayload != null && this.dataPayload.readableBytes() > 0) {
-            buf.writeBytes(this.dataPayload.copy());
+        buf.writeUtf(screenName);
+        if (dataPayload != null && dataPayload.readableBytes() > 0) {
+            buf.writeBytes(dataPayload.copy());
         }
     }
 

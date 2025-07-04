@@ -12,23 +12,24 @@ public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerIm
     public String skillName;
     public BlockPos userPos;
 
-    public LearnSkillPacket() {}
+    public LearnSkillPacket() {
+    }
 
-    public LearnSkillPacket(String skillName, BlockPos userPos) {
-        this.skillName = skillName;
-        this.userPos = userPos;
+    public LearnSkillPacket(String newSkillName, BlockPos newUserPos) {
+        skillName = newSkillName;
+        userPos = newUserPos;
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeUtf(this.skillName);
-        buf.writeBlockPos(this.userPos);
+        buf.writeUtf(skillName);
+        buf.writeBlockPos(userPos);
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.skillName = buf.readUtf();
-        this.userPos = buf.readBlockPos();
+        skillName = buf.readUtf();
+        userPos = buf.readBlockPos();
     }
 
     @Nullable
@@ -43,8 +44,8 @@ public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerIm
         public Response() {
         }
 
-        public Response(boolean success) {
-            this.success = success;
+        public Response(boolean newSuccess) {
+            success = newSuccess;
         }
 
         @Override
@@ -54,7 +55,7 @@ public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerIm
 
         @Override
         public void read(@NotNull FriendlyByteBuf buf) {
-            this.success = buf.readBoolean();
+            success = buf.readBoolean();
         }
     }
 }

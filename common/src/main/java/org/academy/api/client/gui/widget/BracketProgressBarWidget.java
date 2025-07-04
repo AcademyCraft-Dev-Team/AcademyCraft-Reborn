@@ -1,9 +1,8 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.texture.Tickable;
 
-public class BracketProgressBarWidget extends LabelWidget implements Tickable {
+public class BracketProgressBarWidget extends LabelWidget {
     private final char fillChar;
     private final int totalSlots;
     public float currentStep = 0.0f;
@@ -32,7 +31,7 @@ public class BracketProgressBarWidget extends LabelWidget implements Tickable {
         if (isAnimating) {
             currentStep += progressSpeed * (partialTicks / 20.0f);
 
-            int step = Math.min((int) Math.floor(currentStep), totalSlots + 2);
+            var step = Math.min((int) Math.floor(currentStep), totalSlots + 2);
 
             if (step >= totalSlots + 2) {
                 isAnimating = false;
@@ -44,7 +43,7 @@ public class BracketProgressBarWidget extends LabelWidget implements Tickable {
             } else if (step == 1) {
                 value = "[";
             } else {
-                int hashes = step - 2;
+                var hashes = step - 2;
                 if (hashes < 0) hashes = 0;
                 if (hashes > totalSlots) hashes = totalSlots;
                 value = '[' +
@@ -54,9 +53,5 @@ public class BracketProgressBarWidget extends LabelWidget implements Tickable {
         }
 
         super.render(graphics, mouseX, mouseY, partialTicks);
-    }
-
-    @Override
-    public void tick() {
     }
 }

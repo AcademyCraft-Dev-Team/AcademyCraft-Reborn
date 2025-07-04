@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
+import org.academy.api.client.gui.framework.Widget;
 
 public class AutoScaleLabelWidget extends LabelWidget {
     private boolean centered;
@@ -12,17 +13,17 @@ public class AutoScaleLabelWidget extends LabelWidget {
         this(value, x, y, renderAreaWidth, false);
     }
 
-    public AutoScaleLabelWidget(String value, float x, float y, float renderAreaWidth, boolean centered) {
+    public AutoScaleLabelWidget(String value, float x, float y, float renderAreaWidth, boolean newCentered) {
         super(value, x, y);
         setWidth(renderAreaWidth);
-        this.centered = centered;
+        centered = newCentered;
         updateScaleAndDimensions();
     }
 
     private void updateScaleAndDimensions() {
         var font = Minecraft.getInstance().font;
-        float newScale = 1.0f;
-        float componentWidth = getWidth();
+        var newScale = 1.0f;
+        var componentWidth = getWidth();
 
         if (value == null || value.isEmpty()) {
             scale = newScale;
@@ -30,7 +31,7 @@ public class AutoScaleLabelWidget extends LabelWidget {
             return;
         }
 
-        float textOriginalWidth = font.width(FormattedText.of(value));
+        var textOriginalWidth = font.width(FormattedText.of(value));
 
         if (componentWidth > 0 && textOriginalWidth > 0) {
             if (textOriginalWidth * newScale > componentWidth) {
@@ -49,17 +50,17 @@ public class AutoScaleLabelWidget extends LabelWidget {
         graphics.pose().pushPose();
         var font = Minecraft.getInstance().font;
 
-        float finalScale = scale * globalScale;
-        float currentTextActualWidth = font.width(FormattedText.of(value)) * finalScale;
+        var finalScale = scale * globalScale;
+        var currentTextActualWidth = font.width(FormattedText.of(value)) * finalScale;
 
-        float renderX = getX();
+        var renderX = getX();
         if (centered && getWidth() > 0) {
             renderX = getX() + (getWidth() - currentTextActualWidth) / 2.0f;
         }
 
-        float textOriginalHeight = font.lineHeight;
-        float scaledTextRenderHeight = textOriginalHeight * finalScale;
-        float yDrawingOffset = (scaledTextRenderHeight - textOriginalHeight) / 2.0f;
+        var textOriginalHeight = font.lineHeight;
+        var scaledTextRenderHeight = textOriginalHeight * finalScale;
+        var yDrawingOffset = (scaledTextRenderHeight - textOriginalHeight) / 2.0f;
 
         graphics.pose().translate(renderX, getY() - yDrawingOffset, getZ());
         graphics.pose().scale(finalScale, finalScale, 1.0f);
@@ -74,22 +75,23 @@ public class AutoScaleLabelWidget extends LabelWidget {
         graphics.pose().popPose();
     }
 
-    public void setCentered(boolean value) {
-        centered = value;
+    public void setCentered(boolean newCentered) {
+        centered = newCentered;
     }
 
     public boolean isCentered() {
         return centered;
     }
 
-    public void setText(String text) {
-        value = text;
+    public void setText(String newText) {
+        value = newText;
         updateScaleAndDimensions();
     }
 
     @Override
-    public void setWidth(float newRenderAreaWidth) {
+    public Widget setWidth(float newRenderAreaWidth) {
         super.setWidth(newRenderAreaWidth);
         updateScaleAndDimensions();
+        return this;
     }
 }

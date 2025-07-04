@@ -23,9 +23,9 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     public boolean previousHoveredState = false;
 
     public ImageButtonWidget(float x, float y, float width, float height,
-                             @Nullable RenderType renderType, Runnable onPress) {
+                             @Nullable RenderType newRenderType, Runnable onPress) {
         super(x, y, width, height, onPress);
-        this.renderType = renderType;
+        renderType = newRenderType;
         red = 0.75F;
         green = 0.75F;
         blue = 0.75F;
@@ -40,8 +40,8 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         graphics.pose().pushPose();
         var matrix4f = graphics.pose().last().pose();
 
-        float scaledWidth = getWidth() * widthScale;
-        float scaledHeight = getHeight() * heightScale;
+        var scaledWidth = getWidth() * widthScale;
+        var scaledHeight = getHeight() * heightScale;
 
         matrix4f.translate(getX(), getY(), getZ());
         if (centerScale) {
@@ -50,7 +50,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
 
         matrix4f.scale(scaledWidth, scaledHeight, 1);
 
-        float finalAlpha = getAbsoluteAlpha();
+        var finalAlpha = getAbsoluteAlpha();
         vertexConsumer.vertex(matrix4f, 0, 0, 0).color(red, green, blue, finalAlpha).uv(u0, v0).endVertex();
         vertexConsumer.vertex(matrix4f, 0, 1, 0).color(red, green, blue, finalAlpha).uv(u0, v1).endVertex();
         vertexConsumer.vertex(matrix4f, 1, 1, 0).color(red, green, blue, finalAlpha).uv(u1, v1).endVertex();
@@ -66,7 +66,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         AcademyCraft.EVENT_BUS.post(pre);
         if (pre.isCanceled()) return;
 
-        if (isHovered() != this.previousHoveredState) {
+        if (isHovered() != previousHoveredState) {
             if (defaultHoverEffect) {
                 if (isHovered()) {
                     red = 1.0F;
@@ -83,14 +83,14 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         var post = new ChangeHoverEffectEvent.Post(this);
         AcademyCraft.EVENT_BUS.post(post);
 
-        this.previousHoveredState = isHovered();
+        previousHoveredState = isHovered();
     }
 
     public static abstract class ChangeHoverEffectEvent extends Event implements ICancellableEvent {
         public final ImageButtonWidget button;
 
-        public ChangeHoverEffectEvent(ImageButtonWidget button) {
-            this.button = button;
+        public ChangeHoverEffectEvent(ImageButtonWidget newButton) {
+            button = newButton;
         }
 
         public static final class Pre extends ChangeHoverEffectEvent {

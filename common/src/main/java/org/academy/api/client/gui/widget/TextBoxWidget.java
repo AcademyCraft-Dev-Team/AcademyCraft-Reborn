@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
@@ -30,19 +29,19 @@ public class TextBoxWidget extends AbstractWidget {
     public float scale = 1.0f;
     public Predicate<String> inputValidator = null;
 
-    public TextBoxWidget(int maxLength, float x, float y, float width, float height) {
+    public TextBoxWidget(int newMaxLength, float x, float y, float width, float height) {
         super(x, y, width, height);
-        this.maxLength = maxLength;
+        maxLength = newMaxLength;
     }
 
     public String getText() {
         return text.toString();
     }
 
-    public void setText(String t) {
+    public void setText(String newText) {
         text.setLength(0);
-        if (t != null) {
-            text.append(t, 0, Math.min(t.length(), maxLength));
+        if (newText != null) {
+            text.append(newText, 0, Math.min(newText.length(), maxLength));
         }
         caretPos = text.length();
     }
@@ -63,7 +62,7 @@ public class TextBoxWidget extends AbstractWidget {
             return false;
         }
 
-        String potentialText = new StringBuilder(text).insert(caretPos, codePoint).toString();
+        var potentialText = new StringBuilder(text).insert(caretPos, codePoint).toString();
 
         if (inputValidator == null || inputValidator.test(potentialText)) {
             text.insert(caretPos++, codePoint);
@@ -97,11 +96,11 @@ public class TextBoxWidget extends AbstractWidget {
                 if (caretPos > 0) caretPos--;
                 yield true;
             }
-            case GLFW.GLFW_KEY_KP_ENTER ,GLFW.GLFW_KEY_ENTER-> {
-                if (whenEnter != null){
+            case GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_ENTER -> {
+                if (whenEnter != null) {
                     whenEnter.accept(getText());
                 }
-                if (clearWhenEnter){
+                if (clearWhenEnter) {
                     text.setLength(0);
                 }
                 caretPos = 0;
@@ -117,7 +116,7 @@ public class TextBoxWidget extends AbstractWidget {
 
     @Override
     public void onFocusGained() {
-        FocusGainedEvent event = new FocusGainedEvent(this);
+        var event = new FocusGainedEvent(this);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
         showCaret = true;
@@ -126,7 +125,7 @@ public class TextBoxWidget extends AbstractWidget {
 
     @Override
     public void onFocusLost() {
-        FocusLostEvent event = new FocusLostEvent(this);
+        var event = new FocusLostEvent(this);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
         showCaret = false;
@@ -137,34 +136,33 @@ public class TextBoxWidget extends AbstractWidget {
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
-        float absoluteAlpha = getAbsoluteAlpha();
+        var absoluteAlpha = getAbsoluteAlpha();
 
         if (showBackground) {
-            int finalBorderColor = (borderColor & 0x00FFFFFF) | ((int) (((borderColor >> 24) & 0xFF) * absoluteAlpha) << 24);
-            int finalBgColor = (bgColor & 0x00FFFFFF) | ((int) (((bgColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+            var finalBorderColor = (borderColor & 0x00FFFFFF) | ((int) (((borderColor >> 24) & 0xFF) * absoluteAlpha) << 24);
+            var finalBgColor = (bgColor & 0x00FFFFFF) | ((int) (((bgColor >> 24) & 0xFF) * absoluteAlpha) << 24);
 
             RenderUtil.fill(graphics.pose().last().pose(), x, y, x + width, y + height, finalBorderColor, graphics.bufferSource());
             RenderUtil.fill(graphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, finalBgColor, graphics.bufferSource());
         }
-        int finalAlpha = (int) (((textColor >> 24) & 0xFF) * absoluteAlpha);
-        // In Font.adjustColor, alpha <= 3 is forced to 255
+        var finalAlpha = (int) (((textColor >> 24) & 0xFF) * absoluteAlpha);
         if (finalAlpha <= 3) finalAlpha = 4;
-        int finalTextColor = (textColor & 0x00FFFFFF) | (finalAlpha << 24);
+        var finalTextColor = (textColor & 0x00FFFFFF) | (finalAlpha << 24);
 
-        Font font = Minecraft.getInstance().font;
-        float finalScale = scale * LabelWidget.globalScale;
+        var font = Minecraft.getInstance().font;
+        var finalScale = scale * LabelWidget.globalScale;
 
         graphics.pose().pushPose();
 
-        float textWidth = font.width(text.toString()) + 6;
+        var textWidth = font.width(text.toString()) + 6;
         if (textWidth > width) {
             if (!forceScale) {
                 scale = width / textWidth;
             }
         }
-        float textHeight = font.lineHeight;
-        float scaledHeight = textHeight * finalScale;
-        float offsetY = (scaledHeight - textHeight) / 2;
+        var textHeight = font.lineHeight;
+        var scaledHeight = textHeight * finalScale;
+        var offsetY = (scaledHeight - textHeight) / 2;
 
         graphics.pose().translate(x + 1, y + (height - scaledHeight) / 4 - offsetY, 0);
         graphics.pose().scale(finalScale, finalScale, 1.0f);
@@ -172,15 +170,15 @@ public class TextBoxWidget extends AbstractWidget {
         graphics.drawString(font, text.toString(), 0, 0, finalTextColor, false);
 
         if (isFocused()) {
-            long now = System.currentTimeMillis();
+            var now = System.currentTimeMillis();
             if (now - lastBlinkTime >= 500) {
                 showCaret = !showCaret;
                 lastBlinkTime = now;
             }
             if (showCaret) {
-                float caretX = 0;
+                var caretX = 0f;
                 if (!text.isEmpty() && caretPos > 0) {
-                    String beforeCaret = text.substring(0, caretPos);
+                    var beforeCaret = text.substring(0, caretPos);
                     caretX += font.width(beforeCaret);
                 }
                 RenderUtil.fill(
@@ -199,7 +197,7 @@ public class TextBoxWidget extends AbstractWidget {
         public final TextBoxWidget textBoxWidget;
 
         public FocusGainedEvent(TextBoxWidget widget) {
-            this.textBoxWidget = widget;
+            textBoxWidget = widget;
         }
     }
 
@@ -207,7 +205,7 @@ public class TextBoxWidget extends AbstractWidget {
         public final TextBoxWidget textBoxWidget;
 
         public FocusLostEvent(TextBoxWidget widget) {
-            this.textBoxWidget = widget;
+            textBoxWidget = widget;
         }
     }
 }

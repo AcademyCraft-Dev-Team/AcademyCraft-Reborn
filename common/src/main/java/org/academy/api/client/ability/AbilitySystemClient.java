@@ -71,7 +71,7 @@ public final class AbilitySystemClient {
     @SubscribePacket
     public static void handleExpSync(ExpSyncPacket packet) {
         var name = packet.skillName;
-        float exp = packet.exp;
+        var exp = packet.exp;
         var skill = SKILL_MAP.get(name);
         if (skill != null) {
             setSkillExp(skill, exp);

@@ -19,16 +19,16 @@ public class EffectRenderEvent extends Event implements ICancellableEvent {
     public float netHeadYaw;
     public float headPitch;
 
-    public EffectRenderEvent(@NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, @NotNull AbstractClientPlayer livingEntity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        this.poseStack = poseStack;
-        this.buffer = buffer;
-        this.packedLight = packedLight;
-        this.livingEntity = livingEntity;
-        this.limbSwing = limbSwing;
-        this.limbSwingAmount = limbSwingAmount;
-        this.partialTick = partialTick;
-        this.ageInTicks = ageInTicks;
-        this.netHeadYaw = netHeadYaw;
-        this.headPitch = headPitch;
+    public EffectRenderEvent(@NotNull PoseStack newPoseStack, @NotNull MultiBufferSource newBuffer, int newPackedLight, @NotNull AbstractClientPlayer newLivingEntity, float newLimbSwing, float newLimbSwingAmount, float newPartialTick, float newAgeInTicks, float newNetHeadYaw, float newHeadPitch) {
+        poseStack = newPoseStack;
+        buffer = newBuffer;
+        packedLight = newPackedLight;
+        livingEntity = newLivingEntity;
+        limbSwing = newLimbSwing;
+        limbSwingAmount = newLimbSwingAmount;
+        partialTick = newPartialTick;
+        ageInTicks = newAgeInTicks;
+        netHeadYaw = newNetHeadYaw;
+        headPitch = newHeadPitch;
     }
 }

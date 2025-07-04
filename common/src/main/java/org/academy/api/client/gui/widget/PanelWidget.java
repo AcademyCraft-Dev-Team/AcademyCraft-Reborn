@@ -20,14 +20,6 @@ public class PanelWidget extends AbstractContainerWidget {
         super(x, y, width, height);
     }
 
-    public void setHorizontalGravity(HorizontalGravity horizontalGravity) {
-        this.horizontalGravity = horizontalGravity;
-    }
-
-    public void setVerticalGravity(VerticalGravity verticalGravity) {
-        this.verticalGravity = verticalGravity;
-    }
-
     public HorizontalGravity getHorizontalGravity() {
         return horizontalGravity;
     }
@@ -36,25 +28,33 @@ public class PanelWidget extends AbstractContainerWidget {
         return verticalGravity;
     }
 
+    public void setHorizontalGravity(HorizontalGravity newHorizontalGravity) {
+        horizontalGravity = newHorizontalGravity;
+    }
+
+    public void setVerticalGravity(VerticalGravity newVerticalGravity) {
+        verticalGravity = newVerticalGravity;
+    }
+
     @Override
     public void addChild(String name, Widget child) {
         super.addChild(name, child);
 
-        float panelCenterX = this.getWidth() / 2;
-        float panelCenterY = this.getHeight() / 2;
+        var panelCenterX = getWidth() / 2;
+        var panelCenterY = getHeight() / 2;
 
         float childX, childY;
 
         childX = switch (horizontalGravity) {
             case LEFT -> child.getX();
             case CENTER -> child.getX() + panelCenterX - child.getWidth() / 2;
-            case RIGHT -> child.getX() + this.getWidth() - child.getWidth();
+            case RIGHT -> child.getX() + getWidth() - child.getWidth();
         };
 
         childY = switch (verticalGravity) {
             case TOP -> child.getY();
             case CENTER -> child.getY() + panelCenterY - child.getHeight() / 2;
-            case BOTTOM -> child.getY() + this.getHeight() - child.getHeight();
+            case BOTTOM -> child.getY() + getHeight() - child.getHeight();
         };
 
         child.setX(childX);

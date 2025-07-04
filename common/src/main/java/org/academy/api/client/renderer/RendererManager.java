@@ -47,23 +47,23 @@ public final class RendererManager {
     }
 
     public static boolean handleItemRender(ItemStack itemStack, ItemDisplayContext displayContext, boolean leftHand, PoseStack poseStack, MultiBufferSource buffer, int combinedLight, int combinedOverlay, BakedModel model) {
-        final Item item = itemStack.getItem();
-        if (RendererManager.ITEM_RENDERER_MAP.containsKey(item)) {
-            RendererManager.ITEM_RENDERER_MAP.get(item).render(itemStack, displayContext, leftHand, poseStack, buffer, combinedLight, combinedOverlay, model);
+        var item = itemStack.getItem();
+        if (ITEM_RENDERER_MAP.containsKey(item)) {
+            ITEM_RENDERER_MAP.get(item).render(itemStack, displayContext, leftHand, poseStack, buffer, combinedLight, combinedOverlay, model);
             return true;
         } else {
             return false;
         }
     }
 
-    public static void renderEffect(@NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, @NotNull AbstractClientPlayer livingEntity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch){
-        for (EffectRenderer renderer : RendererManager.EFFECT_RENDERERS) {
+    public static void renderEffect(@NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, @NotNull AbstractClientPlayer livingEntity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
+        for (var renderer : EFFECT_RENDERERS) {
             renderer.render(poseStack, buffer, packedLight, livingEntity, limbSwing, limbSwingAmount, partialTick, ageInTicks, netHeadYaw, headPitch);
         }
     }
 
     public static void renderCamera(PoseStack poseStack, float partialTick, long finishNanoTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f projectionMatrix) {
-        for (CameraRenderer cameraRenderer : RendererManager.CAMERA_RENDERERS) {
+        for (var cameraRenderer : CAMERA_RENDERERS) {
             cameraRenderer.render(poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix);
         }
     }

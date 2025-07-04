@@ -17,23 +17,23 @@ public class ConnectNodePacket extends IPacket<ServerGamePacketListenerImpl> {
     public ConnectNodePacket() {
     }
 
-    public ConnectNodePacket(BlockPos userPos, String targetNodeName, String passwordAttempt) {
-        this.userPos = userPos;
-        this.targetNodeName = targetNodeName;
-        this.passwordAttempt = passwordAttempt;
+    public ConnectNodePacket(BlockPos newUserPos, String newTargetNodeName, String newPasswordAttempt) {
+        userPos = newUserPos;
+        targetNodeName = newTargetNodeName;
+        passwordAttempt = newPasswordAttempt;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.userPos = buf.readBlockPos();
-        this.targetNodeName = buf.readUtf();
-        this.passwordAttempt = buf.readUtf();
+        userPos = buf.readBlockPos();
+        targetNodeName = buf.readUtf();
+        passwordAttempt = buf.readUtf();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.userPos);
-        buf.writeUtf(this.targetNodeName);
-        buf.writeUtf(this.passwordAttempt);
+        buf.writeBlockPos(userPos);
+        buf.writeUtf(targetNodeName);
+        buf.writeUtf(passwordAttempt);
     }
 }

@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
 
@@ -10,27 +9,27 @@ public class HoverLabelWidget extends LabelWidget {
     public float maxWidth;
     public String originalValue;
 
-    public HoverLabelWidget(String value, float x, float y, float maxWidth) {
+    public HoverLabelWidget(String value, float x, float y, float newMaxWidth) {
         super(value, x, y);
-        this.originalValue = value;
-        this.maxWidth = maxWidth;
+        originalValue = value;
+        maxWidth = newMaxWidth;
     }
 
     private void updateText() {
-        Font font = Minecraft.getInstance().font;
+        var font = Minecraft.getInstance().font;
         if (isHovered()) {
-            float scale = 1.0f;
-            while (font.width(FormattedText.of(originalValue)) * scale > maxWidth && scale > 0.1f) scale -= 0.1f;
-            scale = Math.max(scale, 0.1f);
-            this.scale = scale;
-            this.value = originalValue;
+            var newScale = 1.0f;
+            while (font.width(FormattedText.of(originalValue)) * newScale > maxWidth && newScale > 0.1f) newScale -= 0.1f;
+            newScale = Math.max(newScale, 0.1f);
+            scale = newScale;
+            value = originalValue;
         } else {
-            String trimmedText = originalValue;
+            var trimmedText = originalValue;
             while (font.width(FormattedText.of(trimmedText + ELLIPSIS)) > maxWidth && !trimmedText.isEmpty()) {
                 trimmedText = trimmedText.substring(0, trimmedText.length() - 1);
             }
-            this.value = trimmedText + ELLIPSIS;
-            this.scale = 1f;
+            value = trimmedText + ELLIPSIS;
+            scale = 1f;
         }
     }
 

@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -18,13 +17,13 @@ public class WindGenPillarBlockEntityRenderer implements BlockEntityRenderer<Win
     }
 
     @Override
-    public void render(@NotNull WindGenPillarBlockEntity windGenPillarBlockEntity, float v, @NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int i, int i1) {
-        poseStack.pushPose();
-        Minecraft minecraft = Minecraft.getInstance();
-        BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());
-        RandomSource randomSource = RandomSource.create();
+    public void render(@NotNull WindGenPillarBlockEntity newWindGenPillarBlockEntity, float v, @NotNull PoseStack newPoseStack, @NotNull MultiBufferSource newMultiBufferSource, int i, int i1) {
+        newPoseStack.pushPose();
+        var minecraft = Minecraft.getInstance();
+        var bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());
+        var randomSource = RandomSource.create();
         randomSource.setSeed(42L);
-        RenderUtil.BakedModelRenderer.render(poseStack, bakedModel, multiBufferSource, randomSource, false, i, i1);
-        poseStack.popPose();
+        RenderUtil.BakedModelRenderer.render(newPoseStack, bakedModel, newMultiBufferSource, randomSource, false, i, i1);
+        newPoseStack.popPose();
     }
 }

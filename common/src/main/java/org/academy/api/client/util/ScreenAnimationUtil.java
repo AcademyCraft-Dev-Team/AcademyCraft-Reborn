@@ -14,8 +14,8 @@ public final class ScreenAnimationUtil {
 
     public static void show(CGuiContainerScreen<?> screen, PanelWidget panel, float finalY) {
         screen.cancelAnimations(panel);
-        long duration = 350;
-        float yOffset = 20f;
+        var duration = 350L;
+        var yOffset = 20f;
 
         panel.setY(finalY + yOffset);
         panel.setAlpha(0f);
@@ -28,8 +28,8 @@ public final class ScreenAnimationUtil {
 
     public static void show(CGuiScreen screen, PanelWidget panel, float finalY) {
         screen.cancelAnimations(panel);
-        long duration = 350;
-        float yOffset = 20f;
+        var duration = 350L;
+        var yOffset = 20f;
 
         panel.setY(finalY + yOffset);
         panel.setAlpha(0f);
@@ -42,10 +42,10 @@ public final class ScreenAnimationUtil {
 
     public static void hide(CGuiContainerScreen<?> screen, PanelWidget panel, float startY) {
         screen.cancelAnimations(panel);
-        long duration = 300;
-        float yOffset = 20f;
+        var duration = 300L;
+        var yOffset = 20f;
 
-        AnimatorListener listener = new AnimatorListener() {
+        var listener = new AnimatorListener() {
             @Override
             public void onAnimationEnd(Animator animation) {
                 panel.setVisible(false);
@@ -65,10 +65,10 @@ public final class ScreenAnimationUtil {
 
     public static void hide(CGuiScreen screen, PanelWidget panel, float startY) {
         screen.cancelAnimations(panel);
-        long duration = 300;
-        float yOffset = 20f;
+        var duration = 300L;
+        var yOffset = 20f;
 
-        AnimatorListener listener = new AnimatorListener() {
+        var listener = new AnimatorListener() {
             @Override
             public void onAnimationEnd(Animator animation) {
                 panel.setVisible(false);

@@ -1,12 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.ShaderInstance;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.renderer.RenderTypes;
 import org.academy.internal.client.renderer.Shaders;
-import org.joml.Matrix4f;
 
 public class BlendQuadWidget extends AbstractWidget {
     public float marginTop = 4f;
@@ -32,19 +29,20 @@ public class BlendQuadWidget extends AbstractWidget {
 
         graphics.pose().pushPose();
 
-        Matrix4f matrix = graphics.pose().last().pose();
+        var matrix = graphics.pose().last().pose();
         matrix.translate(getX(), getY(), getZ());
 
-        float w = getWidth(), h = getHeight();
-        float finalAlpha = getAbsoluteAlpha();
+        var w = getWidth();
+        var h = getHeight();
+        var finalAlpha = getAbsoluteAlpha();
 
-        ShaderInstance shader = Shaders.sdfSharpQuadWithMarginShader;
+        var shader = Shaders.sdfSharpQuadWithMarginShader;
         if (shader != null) {
             shader.safeGetUniform("u_size").set(w, h);
             shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
-            shader.safeGetUniform("u_fillColor").set(this.red, this.green, this.blue, finalAlpha);
+            shader.safeGetUniform("u_fillColor").set(red, green, blue, finalAlpha);
 
-            VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
+            var vertexConsumer = graphics.bufferSource().getBuffer(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
             vertexConsumer.vertex(matrix, 0, 0, 0).uv(0, 0).endVertex();
             vertexConsumer.vertex(matrix, 0, h, 0).uv(0, 1).endVertex();
             vertexConsumer.vertex(matrix, w, h, 0).uv(1, 1).endVertex();

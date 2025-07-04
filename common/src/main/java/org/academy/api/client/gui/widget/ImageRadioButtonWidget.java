@@ -19,17 +19,31 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
         updateVisualState();
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public int getId() {
         return id;
     }
 
+    public boolean isSelected() {
+        return selected;
+    }
+
+    @Override
+    public ImageRadioButtonWidget setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        updateVisualState();
+        return this;
+    }
+
+    @Override
+    public ImageRadioButtonWidget setHovered(boolean hovered) {
+        super.setHovered(hovered);
+        updateVisualState();
+        return this;
+    }
+
     @Override
     public boolean mousePressed(double mouseX, double mouseY, int button) {
-        boolean result = super.mousePressed(mouseX, mouseY, button);
+        var result = super.mousePressed(mouseX, mouseY, button);
         if (result) {
             if (radioGroup != null) {
                 radioGroup.selectButton(this);
@@ -38,39 +52,30 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
         return result;
     }
 
-    protected void setRadioGroup(RadioGroupWidget group) {
-        this.radioGroup = group;
+    public ImageRadioButtonWidget setId(int newId) {
+        id = newId;
+        return this;
     }
 
-    public boolean isSelected() {
-        return selected;
+    protected ImageRadioButtonWidget setRadioGroup(RadioGroupWidget newRadioGroup) {
+        radioGroup = newRadioGroup;
+        return this;
     }
 
-    public void setSelected(boolean selected) {
-        if (this.selected != selected) {
-            this.selected = selected;
+    public ImageRadioButtonWidget setSelected(boolean newSelected) {
+        if (selected != newSelected) {
+            selected = newSelected;
             updateVisualState();
         }
-    }
-
-    @Override
-    public void setEnabled(boolean enabled) {
-        super.setEnabled(enabled);
-        updateVisualState();
-    }
-
-    @Override
-    public void setHovered(boolean hovered) {
-        super.setHovered(hovered);
-        updateVisualState();
+        return this;
     }
 
     public void updateVisualState() {
-        if (!this.enabled) {
+        if (!enabled) {
             setAlpha(disabledAlpha);
-        } else if (this.hovered) {
+        } else if (hovered) {
             setAlpha(hoverAlpha);
-        } else if (this.selected) {
+        } else if (selected) {
             setAlpha(selectedAlpha);
         } else {
             setAlpha(unselectedAlpha);

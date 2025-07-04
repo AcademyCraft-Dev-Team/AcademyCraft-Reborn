@@ -19,7 +19,7 @@ public class ArcRenderer extends EntityRenderer<Arc> {
     @Override
     public void render(@NotNull Arc entity, float f, float g, @NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int i) {
         poseStack.pushPose();
-        Matrix4f matrix4f = new Matrix4f();
+        var matrix4f = new Matrix4f();
         matrix4f.rotateY((float) Math.toRadians(-entity.getYRot() - 90));
         matrix4f.rotateZ((float) Math.toRadians(-entity.getXRot() - 90));
         poseStack.mulPoseMatrix(matrix4f);

@@ -13,21 +13,21 @@ public abstract class FuturePacket<T extends PacketListener> extends IPacket<T> 
     public FuturePacket() {
     }
 
-    protected FuturePacket(int futureId, int payloadTypeId, FriendlyByteBuf payloadData) {
-        this.futureId = futureId;
-        this.payloadTypeId = payloadTypeId;
-        this.payloadData = payloadData;
+    protected FuturePacket(int newFutureId, int newPayloadTypeId, FriendlyByteBuf newPayloadData) {
+        futureId = newFutureId;
+        payloadTypeId = newPayloadTypeId;
+        payloadData = newPayloadData;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.futureId = buf.readVarInt();
-        this.payloadTypeId = buf.readVarInt();
-        int readableBytes = buf.readableBytes();
+        futureId = buf.readVarInt();
+        payloadTypeId = buf.readVarInt();
+        var readableBytes = buf.readableBytes();
         if (readableBytes > 0) {
-            this.payloadData = new FriendlyByteBuf(buf.readBytes(readableBytes));
+            payloadData = new FriendlyByteBuf(buf.readBytes(readableBytes));
         } else {
-            this.payloadData = new FriendlyByteBuf(Unpooled.buffer(0));
+            payloadData = new FriendlyByteBuf(Unpooled.buffer(0));
         }
     }
 
@@ -35,7 +35,7 @@ public abstract class FuturePacket<T extends PacketListener> extends IPacket<T> 
     public void write(@NotNull FriendlyByteBuf buf) {
         buf.writeVarInt(futureId);
         buf.writeVarInt(payloadTypeId);
-        if (this.payloadData != null && this.payloadData.readableBytes() > 0) {
+        if (payloadData != null && payloadData.readableBytes() > 0) {
             buf.writeBytes(payloadData.copy());
         }
     }

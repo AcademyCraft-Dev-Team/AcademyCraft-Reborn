@@ -20,15 +20,15 @@ public class ItemRenderEvent extends Event implements ICancellableEvent {
     public BakedModel model;
     public CallbackInfo ci;
 
-    public ItemRenderEvent(ItemStack itemStack, ItemDisplayContext displayContext, boolean leftHand, PoseStack poseStack, MultiBufferSource buffer, int combinedLight, int combinedOverlay, BakedModel model, CallbackInfo ci) {
-        this.itemStack = itemStack;
-        this.displayContext = displayContext;
-        this.leftHand = leftHand;
-        this.poseStack = poseStack;
-        this.buffer = buffer;
-        this.combinedLight = combinedLight;
-        this.combinedOverlay = combinedOverlay;
-        this.model = model;
-        this.ci = ci;
+    public ItemRenderEvent(ItemStack newItemStack, ItemDisplayContext newDisplayContext, boolean newLeftHand, PoseStack newPoseStack, MultiBufferSource newBuffer, int newCombinedLight, int newCombinedOverlay, BakedModel newModel, CallbackInfo newCi) {
+        itemStack = newItemStack;
+        displayContext = newDisplayContext;
+        leftHand = newLeftHand;
+        poseStack = newPoseStack;
+        buffer = newBuffer;
+        combinedLight = newCombinedLight;
+        combinedOverlay = newCombinedOverlay;
+        model = newModel;
+        ci = newCi;
     }
 }

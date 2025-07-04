@@ -16,35 +16,35 @@ public class FutureManager {
     private final AtomicInteger nextPayloadId;
 
     public FutureManager() {
-        this.payloadClassToId = HashBiMap.create();
-        this.idToPayloadClass = new ConcurrentHashMap<>();
-        this.payloadFactories = new ConcurrentHashMap<>();
-        this.nextPayloadId = new AtomicInteger(0);
+        payloadClassToId = HashBiMap.create();
+        idToPayloadClass = new ConcurrentHashMap<>();
+        payloadFactories = new ConcurrentHashMap<>();
+        nextPayloadId = new AtomicInteger(0);
     }
 
     public <T extends IPayload> void registerPayloadType(Class<T> payloadClass, Function<? extends PacketListener, T> factory) {
-        if (!this.payloadClassToId.containsKey(payloadClass)) {
-            int id = this.nextPayloadId.getAndIncrement();
-            this.payloadClassToId.put(payloadClass, id);
-            this.idToPayloadClass.put(id, payloadClass);
-            this.payloadFactories.put(payloadClass, factory);
+        if (!payloadClassToId.containsKey(payloadClass)) {
+            var id = nextPayloadId.getAndIncrement();
+            payloadClassToId.put(payloadClass, id);
+            idToPayloadClass.put(id, payloadClass);
+            payloadFactories.put(payloadClass, factory);
         }
     }
 
     public int getPayloadId(Class<? extends IPayload> payloadClass) {
-        return this.payloadClassToId.get(payloadClass);
+        return payloadClassToId.get(payloadClass);
     }
 
     public Class<? extends IPayload> getPayloadClass(int id) {
-        return this.idToPayloadClass.get(id);
+        return idToPayloadClass.get(id);
     }
 
     @SuppressWarnings("unchecked")
     public <T extends IPayload> Function<PacketListener, T> getPayloadFactory(int payloadId) {
-        Class<? extends IPayload> payloadClass = getPayloadClass(payloadId);
+        var payloadClass = getPayloadClass(payloadId);
         if (payloadClass == null) {
             return null;
         }
-        return (Function<PacketListener, T>) this.payloadFactories.get(payloadClass);
+        return (Function<PacketListener, T>) payloadFactories.get(payloadClass);
     }
 }

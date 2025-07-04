@@ -14,24 +14,22 @@ import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Function;
-
 public class S2CPacket implements Packet<ClientPacketListener> {
     public final int id;
     public final FriendlyByteBuf friendlyByteBuf;
 
     @SuppressWarnings("unchecked")
     public <T extends IPacket<ClientPacketListener>> S2CPacket(T packet) {
-        Class<T> clazz = (Class<T>) packet.getClass();
+        var clazz = (Class<T>) packet.getClass();
         id = AcademyCraftServer.NETWORK_SYSTEM.getPacketIdByType(clazz);
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
     }
 
     @ApiStatus.Internal
-    public S2CPacket(@NotNull FriendlyByteBuf friendlyByteBuf) {
-        id = friendlyByteBuf.readVarInt();
-        this.friendlyByteBuf = new FriendlyByteBuf(friendlyByteBuf.readBytes(friendlyByteBuf.readableBytes()));
+    public S2CPacket(@NotNull FriendlyByteBuf newFriendlyByteBuf) {
+        id = newFriendlyByteBuf.readVarInt();
+        friendlyByteBuf = new FriendlyByteBuf(newFriendlyByteBuf.readBytes(newFriendlyByteBuf.readableBytes()));
     }
 
     @Override
@@ -43,24 +41,24 @@ public class S2CPacket implements Packet<ClientPacketListener> {
     @Override
     public void handle(@NotNull ClientPacketListener handler) {
         Minecraft.getInstance().execute(() -> {
-            S2CPacketEvent event = new S2CPacketEvent(this);
+            var event = new S2CPacketEvent(this);
             AcademyCraft.EVENT_BUS.post(event);
             if (event.isCanceled()) return;
 
-            Class<IPacket<ClientGamePacketListener>> packetClass = AcademyCraftClient.NETWORK_SYSTEM.getClassById(id);
+            var packetClass = AcademyCraftClient.NETWORK_SYSTEM.<IPacket<ClientGamePacketListener>>getClassById(id);
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {
-                    ThreadType targetType = packetClass.getAnnotation(PacketTarget.class).value();
+                    var targetType = packetClass.getAnnotation(PacketTarget.class).value();
                     if (targetType != ThreadType.CLIENT) return;
                 }
                 try {
-                    Function<ClientGamePacketListener, IPacket<ClientGamePacketListener>> factory =
-                            AcademyCraftClient.NETWORK_SYSTEM.getPacketFactory(packetClass);
+                    var factory =
+                            AcademyCraftClient.NETWORK_SYSTEM.<IPacket<ClientGamePacketListener>, ClientGamePacketListener>getPacketFactory(packetClass);
                     if (factory == null) {
                         AcademyCraft.LOGGER.error("No factory found for S2C packet class: {}", packetClass.getName());
                         return;
                     }
-                    IPacket<ClientGamePacketListener> instance = factory.apply(handler);
+                    var instance = factory.apply(handler);
                     instance.packetListenerSupplier = () -> handler;
                     instance.read(friendlyByteBuf);
                     AcademyCraftClient.CLIENT_NETWORK_MANAGER.dispatchPacket(instance);

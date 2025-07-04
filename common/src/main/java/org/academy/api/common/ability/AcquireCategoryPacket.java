@@ -19,18 +19,18 @@ public class AcquireCategoryPacket extends IRequestPayload<ServerGamePacketListe
     public AcquireCategoryPacket() {
     }
 
-    public AcquireCategoryPacket(BlockPos userPos) {
-        this.userPos = userPos;
+    public AcquireCategoryPacket(BlockPos newUserPos) {
+        userPos = newUserPos;
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.userPos);
+        buf.writeBlockPos(userPos);
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.userPos = buf.readBlockPos();
+        userPos = buf.readBlockPos();
     }
 
     @Nullable

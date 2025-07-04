@@ -6,8 +6,8 @@ public class ResizeDisplayEvent extends Event {
     public int width;
     public int height;
 
-    public ResizeDisplayEvent(int width, int height) {
-        this.width = width;
-        this.height = height;
+    public ResizeDisplayEvent(int newWidth, int newHeight) {
+        width = newWidth;
+        height = newHeight;
     }
 }

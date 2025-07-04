@@ -21,20 +21,20 @@ public abstract class AbstractNetworkManager {
     protected final Map<Object, List<IPacketListener>> listenersByTarget;
     protected final ReadWriteLock lock;
 
-    protected AbstractNetworkManager(NetworkSystem networkSystem) {
-        this.networkSystem = networkSystem;
-        this.typedListeners = new ConcurrentHashMap<>();
-        this.listenersByTarget = new MapMaker().weakKeys().makeMap();
-        this.lock = new ReentrantReadWriteLock();
+    protected AbstractNetworkManager(NetworkSystem newNetworkSystem) {
+        networkSystem = newNetworkSystem;
+        typedListeners = new ConcurrentHashMap<>();
+        listenersByTarget = new MapMaker().weakKeys().makeMap();
+        lock = new ReentrantReadWriteLock();
     }
 
     public void clear() {
-        this.lock.writeLock().lock();
+        lock.writeLock().lock();
         try {
-            this.typedListeners.clear();
-            this.listenersByTarget.clear();
+            typedListeners.clear();
+            listenersByTarget.clear();
         } finally {
-            this.lock.writeLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -47,29 +47,29 @@ public abstract class AbstractNetworkManager {
     }
 
     public void registerPacketListener(@NotNull IPacketListener iPacketListener) {
-        this.lock.writeLock().lock();
+        lock.writeLock().lock();
         try {
-            this.listenersByTarget.computeIfAbsent(iPacketListener.getPacketType(), o -> new ArrayList<>()).add(iPacketListener);
-            this.typedListeners.computeIfAbsent(iPacketListener.getPacketType(), k -> new ArrayList<>()).add(iPacketListener);
+            listenersByTarget.computeIfAbsent(iPacketListener.getPacketType(), o -> new ArrayList<>()).add(iPacketListener);
+            typedListeners.computeIfAbsent(iPacketListener.getPacketType(), k -> new ArrayList<>()).add(iPacketListener);
         } finally {
-            this.lock.writeLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 
     private void registerPacketListenerInternal(@NotNull Class<?> clazz, @Nullable Object instance) {
-        List<IPacketListener> generatedHandlers = NetworkSystem.findPacketListeners(clazz, instance);
+        var generatedHandlers = NetworkSystem.findPacketListeners(clazz, instance);
 
         if (!generatedHandlers.isEmpty()) {
-            this.lock.writeLock().lock();
+            lock.writeLock().lock();
             try {
-                Object key = (instance == null) ? clazz : instance;
-                this.listenersByTarget.put(key, List.copyOf(generatedHandlers));
+                var key = (instance == null) ? clazz : instance;
+                listenersByTarget.put(key, List.copyOf(generatedHandlers));
 
-                for (IPacketListener handler : generatedHandlers) {
-                    this.typedListeners.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
+                for (var handler : generatedHandlers) {
+                    typedListeners.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
                 }
             } finally {
-                this.lock.writeLock().unlock();
+                lock.writeLock().unlock();
             }
         }
     }
@@ -83,39 +83,39 @@ public abstract class AbstractNetworkManager {
     }
 
     private void unregisterPacketListenerInternal(@NotNull Object keyToRemove) {
-        this.lock.writeLock().lock();
+        lock.writeLock().lock();
         try {
-            List<IPacketListener> handlersToRemove = this.listenersByTarget.remove(keyToRemove);
+            var handlersToRemove = listenersByTarget.remove(keyToRemove);
             if (handlersToRemove != null) {
-                for (IPacketListener handler : handlersToRemove) {
-                    List<IPacketListener> typedList = this.typedListeners.get(handler.getPacketType());
+                for (var handler : handlersToRemove) {
+                    var typedList = typedListeners.get(handler.getPacketType());
                     if (typedList != null) {
                         typedList.remove(handler);
                         if (typedList.isEmpty()) {
-                            this.typedListeners.remove(handler.getPacketType());
+                            typedListeners.remove(handler.getPacketType());
                         }
                     }
                 }
             }
         } finally {
-            this.lock.writeLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public <T extends IPacket<?>> void dispatchPacket(T packet) {
         List<IPacketListener> handlers = null;
-        this.lock.readLock().lock();
+        lock.readLock().lock();
         try {
-            List<IPacketListener> typedList = this.typedListeners.get(packet.getClass());
+            var typedList = typedListeners.get(packet.getClass());
             if (typedList != null && !typedList.isEmpty()) {
                 handlers = Lists.newArrayList(typedList);
             }
         } finally {
-            this.lock.readLock().unlock();
+            lock.readLock().unlock();
         }
 
         if (handlers != null) {
-            for (IPacketListener handler : handlers) {
+            for (var handler : handlers) {
                 try {
                     handler.handlePacket(packet);
                 } catch (Throwable e) {

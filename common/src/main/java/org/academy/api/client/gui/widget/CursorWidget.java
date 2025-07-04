@@ -1,12 +1,8 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.ShaderInstance;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.internal.client.renderer.Shaders;
-import org.joml.Matrix4f;
 
 import static org.academy.api.client.renderer.RenderTypes.RENDER_TYPE_CIRCLE_GLOW;
 
@@ -29,29 +25,29 @@ public class CursorWidget extends AbstractWidget {
     }
 
     private void renderSDFGlowAndShadow(GuiGraphics guiGraphics) {
-        RenderType renderType = RENDER_TYPE_CIRCLE_GLOW;
-        ShaderInstance sdfShader = Shaders.sdfCircleGlowShader;
+        var renderType = RENDER_TYPE_CIRCLE_GLOW;
+        var sdfShader = Shaders.sdfCircleGlowShader;
         if (sdfShader == null) return;
 
-        sdfShader.safeGetUniform("Radius").set(this.radius);
-        sdfShader.safeGetUniform("Softness").set(this.softness);
+        sdfShader.safeGetUniform("Radius").set(radius);
+        sdfShader.safeGetUniform("Softness").set(softness);
 
-        float x = getX();
-        float y = getY();
-        float w = getWidth();
-        float h = getHeight();
-        float z = getZ();
-        Matrix4f matrix4f = guiGraphics.pose().last().pose();
+        var x = getX();
+        var y = getY();
+        var w = getWidth();
+        var h = getHeight();
+        var z = getZ();
+        var matrix4f = guiGraphics.pose().last().pose();
 
         sdfShader.safeGetUniform("Color").set(0.0f, 0.0f, 0.0f, 0.6f);
-        VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(renderType);
+        var vertexConsumer = guiGraphics.bufferSource().getBuffer(renderType);
         vertexConsumer.vertex(matrix4f, x, y + h, z).uv(0, 1).endVertex();
         vertexConsumer.vertex(matrix4f, x + w, y + h, z).uv(1, 1).endVertex();
         vertexConsumer.vertex(matrix4f, x + w, y, z).uv(1, 0).endVertex();
         vertexConsumer.vertex(matrix4f, x, y, z).uv(0, 0).endVertex();
         guiGraphics.bufferSource().endBatch(renderType);
 
-        Matrix4f glowMatrix = guiGraphics.pose().last().pose();
+        var glowMatrix = guiGraphics.pose().last().pose();
         sdfShader.safeGetUniform("Color").set(1.0f, 1.0f, 1.0f, 1.0f);
         vertexConsumer = guiGraphics.bufferSource().getBuffer(renderType);
         vertexConsumer.vertex(glowMatrix, x, y + h, z).uv(0, 1).endVertex();

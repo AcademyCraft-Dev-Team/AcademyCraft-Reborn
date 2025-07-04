@@ -8,9 +8,9 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
     public Runnable onPress;
     public MouseButtonState state = MouseButtonState.PRESSED;
 
-    public AbstractButtonWidget(float x, float y, float width, float height, Runnable onPress) {
+    public AbstractButtonWidget(float x, float y, float width, float height, Runnable newOnPress) {
         super(x, y, width, height);
-        this.onPress = onPress;
+        onPress = newOnPress;
     }
 
     @Override
@@ -39,6 +39,6 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
 
     @Override
     public boolean canFocus() {
-        return this.enabled;
+        return enabled;
     }
 }

@@ -15,7 +15,7 @@ public class ValueAnimator extends Animator {
     }
 
     public static ValueAnimator ofFloat(float startValue, float endValue) {
-        ValueAnimator anim = new ValueAnimator();
+        var anim = new ValueAnimator();
         anim.setFloatValues(startValue, endValue);
         return anim;
     }
@@ -23,7 +23,7 @@ public class ValueAnimator extends Animator {
     public void setFloatValues(float startValue, float endValue) {
         this.startValue = startValue;
         this.endValue = endValue;
-        this.animatedValue = startValue;
+        animatedValue = startValue;
     }
 
     public float getAnimatedValue() {
@@ -65,32 +65,26 @@ public class ValueAnimator extends Animator {
 
     @Override
     boolean tick(long currentTime) {
-        if (startTime == -1) {
-            return true;
-        }
+        if (startTime == -1) return true;
 
-        if (currentTime < startTime) {
-            return false;
-        }
+        if (currentTime < startTime) return false;
 
-        long elapsedTime = currentTime - startTime;
-        float fraction = duration > 0 ? (float) elapsedTime / duration : 1.0f;
+        var elapsedTime = currentTime - startTime;
+        var fraction = duration > 0 ? (float) elapsedTime / duration : 1.0f;
 
-        boolean finished = fraction >= 1.0f;
+        var finished = fraction >= 1.0f;
         fraction = Math.min(fraction, 1.0f);
 
-        float interpolatedFraction = interpolator.getInterpolation(fraction);
+        var interpolatedFraction = interpolator.getInterpolation(fraction);
         animatedValue = startValue + interpolatedFraction * (endValue - startValue);
 
         if (updateListeners != null) {
-            for (Consumer<ValueAnimator> listener : updateListeners) {
+            for (var listener : updateListeners) {
                 listener.accept(this);
             }
         }
 
-        if (finished) {
-            end();
-        }
+        if (finished) end();
 
         return finished;
     }

@@ -55,22 +55,22 @@ public class MathUtil {
                 Matrix4fc worldTransform,
                 Vector3f intersectionPointWorld
         ) {
-            Matrix4f invTransform = new Matrix4f();
+            var invTransform = new Matrix4f();
             worldTransform.invert(invTransform);
 
-            Vector3f rayOriginLocal = new Vector3f();
+            var rayOriginLocal = new Vector3f();
             invTransform.transformPosition(rayOriginWorld, rayOriginLocal);
 
-            Vector3f rayEndLocal = new Vector3f();
+            var rayEndLocal = new Vector3f();
             invTransform.transformPosition(rayEndWorld, rayEndLocal);
 
-            Vector3f rayDirLocal = new Vector3f();
+            var rayDirLocal = new Vector3f();
             rayEndLocal.sub(rayOriginLocal, rayDirLocal);
 
-            float lengthSq = rayDirLocal.lengthSquared();
+            var lengthSq = rayDirLocal.lengthSquared();
 
-            Vector3f localAabbMinJoml = new Vector3f((float)aabbLocal.minX, (float)aabbLocal.minY, (float)aabbLocal.minZ);
-            Vector3f localAabbMaxJoml = new Vector3f((float)aabbLocal.maxX, (float)aabbLocal.maxY, (float)aabbLocal.maxZ);
+            var localAabbMinJoml = new Vector3f((float) aabbLocal.minX, (float) aabbLocal.minY, (float) aabbLocal.minZ);
+            var localAabbMaxJoml = new Vector3f((float) aabbLocal.maxX, (float) aabbLocal.maxY, (float) aabbLocal.maxZ);
 
             if (lengthSq < 1.0E-12f) {
                 if (rayOriginLocal.x >= localAabbMinJoml.x() && rayOriginLocal.x <= localAabbMaxJoml.x() &&
@@ -82,11 +82,11 @@ public class MathUtil {
                 return false;
             }
 
-            float rayLengthLocal = (float) Math.sqrt(lengthSq);
+            var rayLengthLocal = (float) Math.sqrt(lengthSq);
             rayDirLocal.div(rayLengthLocal);
 
-            Vector2f nearFar = new Vector2f();
-            boolean intersects = Intersectionf.intersectRayAab(
+            var nearFar = new Vector2f();
+            var intersects = Intersectionf.intersectRayAab(
                     rayOriginLocal,
                     rayDirLocal,
                     localAabbMinJoml,
@@ -98,17 +98,17 @@ public class MathUtil {
                 return false;
             }
 
-            float tNear = nearFar.x;
-            float tFar = nearFar.y;
+            var tNear = nearFar.x;
+            var tFar = nearFar.y;
 
-            float effectiveNear = Math.max(0.0f, tNear);
-            float effectiveFar = Math.min(rayLengthLocal, tFar);
+            var effectiveNear = Math.max(0.0f, tNear);
+            var effectiveFar = Math.min(rayLengthLocal, tFar);
 
             if (effectiveNear > effectiveFar) {
                 return false;
             }
 
-            Vector3f intersectionPointLocal = new Vector3f();
+            var intersectionPointLocal = new Vector3f();
             rayDirLocal.mul(effectiveNear, intersectionPointLocal);
             intersectionPointLocal.add(rayOriginLocal);
 
@@ -130,8 +130,8 @@ public class MathUtil {
 
         public T getRandomItem() {
             if (totalWeight <= 0) return null;
-            double r = RANDOM.nextDouble() * totalWeight;
-            NavigableMap.Entry<Double, T> entry = map.ceilingEntry(r);
+            var r = RANDOM.nextDouble() * totalWeight;
+            var entry = map.ceilingEntry(r);
             return entry != null ? entry.getValue() : map.firstEntry().getValue();
         }
     }

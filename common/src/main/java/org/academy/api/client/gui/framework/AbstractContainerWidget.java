@@ -243,11 +243,12 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     }
 
     @Override
-    public void setFocused(boolean focused) {
+    public Widget setFocused(boolean focused) {
         super.setFocused(focused);
         if (!focused && focusedChild != null) {
             setFocusedChild(null);
         }
+        return this;
     }
 
     public static class ContainerSetFocusedChildEvent extends Event implements ICancellableEvent {

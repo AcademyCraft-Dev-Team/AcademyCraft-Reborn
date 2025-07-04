@@ -16,20 +16,20 @@ public class SetNodePassPacket extends IPacket<ServerGamePacketListenerImpl> {
     public SetNodePassPacket() {
     }
 
-    public SetNodePassPacket(BlockPos nodePos, String newPass) {
-        this.nodePos = nodePos;
-        this.newPass = newPass;
+    public SetNodePassPacket(BlockPos newNodePos, String newNewPass) {
+        nodePos = newNodePos;
+        newPass = newNewPass;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.nodePos = buf.readBlockPos();
-        this.newPass = buf.readUtf();
+        nodePos = buf.readBlockPos();
+        newPass = buf.readUtf();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.nodePos);
-        buf.writeUtf(this.newPass);
+        buf.writeBlockPos(nodePos);
+        buf.writeUtf(newPass);
     }
 }

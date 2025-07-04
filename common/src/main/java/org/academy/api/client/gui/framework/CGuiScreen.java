@@ -35,8 +35,8 @@ public abstract class CGuiScreen extends Screen {
 
     public void cancelAnimations(Widget widget) {
         if (trackedAnimations.containsKey(widget)) {
-            List<Animator> animators = new ArrayList<>(trackedAnimations.get(widget));
-            for (Animator anim : animators) {
+            var animators = new ArrayList<>(trackedAnimations.get(widget));
+            for (var anim : animators) {
                 anim.cancel();
                 screenAnimations.remove(anim);
             }
@@ -47,7 +47,7 @@ public abstract class CGuiScreen extends Screen {
     @Override
     public void removed() {
         super.removed();
-        for (Animator anim : screenAnimations) {
+        for (var anim : screenAnimations) {
             anim.cancel();
         }
         screenAnimations.clear();

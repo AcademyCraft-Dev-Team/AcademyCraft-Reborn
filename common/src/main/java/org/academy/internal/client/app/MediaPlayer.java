@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.renderer.RenderTypes;
@@ -61,7 +62,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
     private static volatile boolean isProgrammaticallyUpdatingProgressBar = false;
 
-    private static HorizontalSliderWidget progressBar;
+    private static SliderWidget progressBar;
     private static LabelWidget timeLabel;
     private static PanelWidget rootPanel;
     private static GeometricButtonWidget playPauseButton;
@@ -170,7 +171,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static void generateShuffledPlaylist() {
         shuffledPlaylist.clear();
         if (PLAYLIST.isEmpty()) return;
-        for (int i = 0; i < PLAYLIST.size(); i++) {
+        for (var i = 0; i < PLAYLIST.size(); i++) {
             shuffledPlaylist.add(i);
         }
         Collections.shuffle(shuffledPlaylist, new Random());
@@ -223,6 +224,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             modeButton.addChild("back", modeBack);
 
             var layered = new LayeredPanelWidget(0, 0, (float) 20.0, (float) 20.0);
+            layered.setEnabled(false);
             modeButton.addChild("layered", layered);
             {
                 var modeLabel = new AutoScaleLabelWidget("", 0, 0, (float) 20.0, true);
@@ -331,7 +333,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
     private static void forward(int bufferId) {
         var samplesRead = 0;
-        final var maxSamples = clientBuffer.capacity();
+        var maxSamples = clientBuffer.capacity();
 
         while (samplesRead < maxSamples) {
             clientBuffer.position(samplesRead);
@@ -370,24 +372,25 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 var mediaList = new ScrollPanelWidget(0, 0, width, height - dockBarHeight);
                 main.addChild("list_media", mediaList);
                 {
-                    for (int i = 0; i < PLAYLIST.size(); i++) {
+                    for (var i = 0; i < PLAYLIST.size(); i++) {
                         var info = PLAYLIST.get(i);
-                        final var trackIndex = i;
+                        var trackIndex = i;
                         var mediaWidget = createMediaWidget(info, i * (MEDIA_HEIGHT + margin), () -> play(trackIndex));
                         mediaList.addChild("media_" + i, mediaWidget);
                     }
                 }
 
-                var mediaListScrollBar = new VerticalScrollBarWidget(
+                var mediaListScrollBar = new ScrollBarWidget(
                         mediaList,
                         mediaList.getWidth() - mediaListScrollBarWidth - margin, 0,
-                        mediaListScrollBarWidth, mediaList.getHeight()
+                        mediaListScrollBarWidth, mediaList.getHeight(),
+                        Orientation.VERTICAL
                 );
                 mediaListScrollBar.setThumbColor(0x20AAAAAA);
                 mediaListScrollBar.setTrackColor(0x10202020);
                 main.addChild("bar_list_media", mediaListScrollBar);
 
-                final var dockBarPadding = 5f;
+                var dockBarPadding = 5f;
                 var dockBar = new PanelWidget(0, height - dockBarHeight, width, dockBarHeight);
                 main.addChild("bar_dock", dockBar);
                 {
@@ -399,29 +402,29 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                     var layered = new LayeredPanelWidget(dockBarPadding, dockBarPadding, width - dockBarPadding * 2, dockBarHeight - dockBarPadding * 2);
                     dockBar.addChild("layered", layered);
                     {
-                        final var progressBarHeight = 5f;
-                        progressBar = new HorizontalSliderWidget(0, 0, layered.getWidth(), progressBarHeight, 0f, 1f, 0f);
+                        var progressBarHeight = 5f;
+                        progressBar = new SliderWidget(0, 0, layered.getWidth(), progressBarHeight, Orientation.HORIZONTAL, 0f, 1f, 0f);
                         progressBar.onValueChanged = MediaPlayer::seek;
                         layered.addChild("progress_bar", progressBar);
 
-                        final var timeLabelY = progressBar.getY() + progressBar.getHeight() + 2f;
+                        var timeLabelY = progressBar.getY() + progressBar.getHeight() + 2f;
                         timeLabel = new AutoScaleLabelWidget("00:00 / 00:00", 0, timeLabelY, layered.getWidth(), true);
                         timeLabel.scale = 0.7f;
                         timeLabel.dropShadow = false;
                         layered.addChild("time_label", timeLabel);
 
-                        final var controlsY = timeLabel.getY() + timeLabel.getHeight() + 5f;
-                        final var btnSize = 20f;
-                        final var sliderWidth = 3f;
-                        final var smallGap = 5f;
-                        final var bigGap = 15f;
-                        final var controlPanel = new PanelWidget(0, controlsY, layered.getWidth(), btnSize);
+                        var controlsY = timeLabel.getY() + timeLabel.getHeight() + 5f;
+                        var btnSize = 20f;
+                        var sliderWidth = 3f;
+                        var smallGap = 5f;
+                        var bigGap = 15f;
+                        var controlPanel = new PanelWidget(0, controlsY, layered.getWidth(), btnSize);
                         layered.addChild("control_panel", controlPanel);
                         {
-                            final var totalControlsWidth = btnSize * 4 + sliderWidth + smallGap * 2 + bigGap * 2;
+                            var totalControlsWidth = btnSize * 4 + sliderWidth + smallGap * 2 + bigGap * 2;
                             var currentX = (controlPanel.getWidth() - totalControlsWidth) / 2;
 
-                            final var prevButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, ButtonShape.PREV, MediaPlayer::playPrevious);
+                            var prevButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, ButtonShape.PREV, MediaPlayer::playPrevious);
                             controlPanel.addChild("prev", prevButton);
                             currentX += btnSize + smallGap;
 
@@ -437,7 +440,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             controlPanel.addChild("mode_button", modeButton);
                             currentX += btnSize + bigGap;
 
-                            var volumeSlider = new VerticalSliderWidget(currentX, 0, sliderWidth, btnSize, 0f, 1f, volume) {
+                            var volumeSlider = new SliderWidget(currentX, 0, sliderWidth, btnSize, Orientation.VERTICAL, 0f, 1f, volume) {
                                 @Override
                                 protected float getThumbSize() {
                                     return 3f;
@@ -565,7 +568,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             var totalSamples = STBVorbis.stb_vorbis_stream_length_in_samples(vorbisHandle);
             totalDuration = (float) totalSamples / sampleRate;
 
-            final var targetSamples = sampleRate * channels / 2;
+            var targetSamples = sampleRate * channels / 2;
             clientBuffer = MemoryUtil.memAllocShort(targetSamples);
             baseSampleOffset = 0;
 
@@ -608,7 +611,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         do {
             wasPaused = isPaused.get();
         } while (!isPaused.compareAndSet(wasPaused, !wasPaused));
-        final var isNowPaused = !wasPaused;
+        var isNowPaused = !wasPaused;
 
         updatePlayPauseButton();
 
@@ -641,9 +644,9 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         public ButtonShape shape;
         public int color = 0xFFFFFFFF;
 
-        public GeometricButtonWidget(float x, float y, float width, float height, ButtonShape shape, Runnable onPress) {
+        public GeometricButtonWidget(float x, float y, float width, float height, ButtonShape newShape, Runnable onPress) {
             super(x, y, width, height, onPress);
-            this.shape = shape;
+            shape = newShape;
         }
 
         private void drawTriangle(VertexConsumer buffer, Matrix4f matrix, float x1, float y1, float x2, float y2, float x3, float y3, float r, float g, float b, float a) {

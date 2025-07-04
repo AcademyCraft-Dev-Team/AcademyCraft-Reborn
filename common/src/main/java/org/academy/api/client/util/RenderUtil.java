@@ -145,7 +145,7 @@ public final class RenderUtil {
         var f = (float) FastColor.ARGB32.red(color) / 255.0F;
         var f1 = (float) FastColor.ARGB32.green(color) / 255.0F;
         var f2 = (float) FastColor.ARGB32.blue(color) / 255.0F;
-        VertexConsumer vertexconsumer = buffer.getBuffer(RenderType.gui());
+        var vertexconsumer = buffer.getBuffer(RenderType.gui());
         vertexconsumer.vertex(matrix4f, minX, minY, 0).color(f, f1, f2, f3).endVertex();
         vertexconsumer.vertex(matrix4f, minX, maxY, 0).color(f, f1, f2, f3).endVertex();
         vertexconsumer.vertex(matrix4f, maxX, maxY, 0).color(f, f1, f2, f3).endVertex();
@@ -173,10 +173,10 @@ public final class RenderUtil {
         public static void renderRing(Matrix4f matrix, VertexConsumer vertexConsumer,
                                       int segments, float[][][] vertexBuffer) {
             for (var i = 0; i < segments; i++) {
-                float[] v0 = vertexBuffer[i][0];
-                float[] v1 = vertexBuffer[i][1];
-                float[] v2 = vertexBuffer[i][2];
-                float[] v3 = vertexBuffer[i][3];
+                var v0 = vertexBuffer[i][0];
+                var v1 = vertexBuffer[i][1];
+                var v2 = vertexBuffer[i][2];
+                var v3 = vertexBuffer[i][3];
 
                 vertexConsumer.vertex(matrix, v0[0], v0[1], v0[2]).uv(v0[3], 0).endVertex();
                 vertexConsumer.vertex(matrix, v1[0], v1[1], v1[2]).uv(v1[3], 0).endVertex();
@@ -378,7 +378,7 @@ public final class RenderUtil {
 
                 if (side.lengthSqr() < EPSILON * EPSILON) {
                     if (direction.lengthSqr() > EPSILON * EPSILON) {
-                        Vec3 arbitraryNonParallel = Math.abs(direction.x()) < 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+                        var arbitraryNonParallel = Math.abs(direction.x()) < 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
                         side = direction.cross(arbitraryNonParallel);
                         if (side.lengthSqr() < EPSILON * EPSILON) return;
                     } else {
@@ -391,9 +391,9 @@ public final class RenderUtil {
 
             var prevL = start;
             var prevR = start;
-            float baseHalfThickness = thickness * 0.5f;
+            var baseHalfThickness = thickness * 0.5f;
 
-            for (int i = 1; i <= segments; ++i) {
+            for (var i = 1; i <= segments; ++i) {
                 var t = (float) i / segments;
                 var currentMidpoint = start.add(delta.scale(t));
 

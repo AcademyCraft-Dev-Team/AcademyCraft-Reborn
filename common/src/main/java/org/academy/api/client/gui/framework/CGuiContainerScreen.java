@@ -46,8 +46,8 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     public void cancelAnimations(Widget widget) {
         if (trackedAnimations.containsKey(widget)) {
-            List<Animator> animators = new ArrayList<>(trackedAnimations.get(widget));
-            for (Animator anim : animators) {
+            var animators = new ArrayList<>(trackedAnimations.get(widget));
+            for (var anim : animators) {
                 anim.cancel();
                 screenAnimations.remove(anim);
             }
@@ -58,7 +58,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     @Override
     public void removed() {
         super.removed();
-        for (Animator anim : screenAnimations) {
+        for (var anim : screenAnimations) {
             anim.cancel();
         }
         screenAnimations.clear();
@@ -71,7 +71,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         rootContainer.setWidth(width);
         rootContainer.setHeight(height);
 
-        float finalHeight = 187f;
+        var finalHeight = 187f;
 
         back = new BlendQuadWidget(leftPos, topPos - 22, imageWidth, finalHeight);
         back.red = 0;
@@ -85,7 +85,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         inventory.setHeight(0);
         inventory.setAlpha(0f);
 
-        long duration = 600;
+        var duration = 600L;
         playAnimation(ObjectAnimator.ofFloat(back::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
         playAnimation(ObjectAnimator.ofFloat(inventory::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
         playAnimation(ObjectAnimator.ofFloat(back::setAlpha, 0, 0.5f).setDuration(duration - 200).setInterpolator(EasingFunctions.LINEAR).setStartDelay(150));
@@ -105,14 +105,14 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         }
         rootContainer.render(guiGraphics, mouseX, mouseY, partialTick);
         if (shouldRenderInventory()) {
-            float originHeight = 187f;
-            float currentHeight = inventory.getHeight();
+            var originHeight = 187f;
+            var currentHeight = inventory.getHeight();
             if (currentHeight > 1e-6f) {
-                float scaleY = currentHeight / originHeight;
+                var scaleY = currentHeight / originHeight;
                 guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(0, this.topPos, 0);
+                guiGraphics.pose().translate(0, topPos, 0);
                 guiGraphics.pose().scale(1, scaleY, 1);
-                guiGraphics.pose().translate(0, -this.topPos, 0);
+                guiGraphics.pose().translate(0, -topPos, 0);
 
                 super.render(guiGraphics, mouseX, mouseY, partialTick);
                 guiGraphics.pose().popPose();
@@ -146,11 +146,11 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         org.academy.AcademyCraft.LOGGER.debug("CGuiContainerScreen mouseClicked at ({}, {})", mouseX, mouseY);
-        boolean rootResult = rootContainer.mousePressed(mouseX, mouseY, button);
+        var rootResult = rootContainer.mousePressed(mouseX, mouseY, button);
         if (rootResult) {
             org.academy.AcademyCraft.LOGGER.debug("rootContainer consumed the click.");
         }
-        boolean superResult = shouldHandleContainer() && super.mouseClicked(mouseX, mouseY, button);
+        var superResult = shouldHandleContainer() && super.mouseClicked(mouseX, mouseY, button);
         if (superResult) {
             org.academy.AcademyCraft.LOGGER.debug("super (vanilla container) consumed the click.");
         }
@@ -159,22 +159,22 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        boolean rootResult = rootContainer.mouseReleased(mouseX, mouseY, button);
-        boolean superResult = shouldHandleContainer() && super.mouseReleased(mouseX, mouseY, button);
+        var rootResult = rootContainer.mouseReleased(mouseX, mouseY, button);
+        var superResult = shouldHandleContainer() && super.mouseReleased(mouseX, mouseY, button);
         return superResult || rootResult;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        boolean rootResult = rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-        boolean superResult = shouldHandleContainer() && super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        var rootResult = rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        var superResult = shouldHandleContainer() && super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         return superResult || rootResult;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        boolean rootResult = rootContainer.mouseScrolled(mouseX, mouseY, delta);
-        boolean superResult = shouldHandleContainer() && super.mouseScrolled(mouseX, mouseY, delta);
+        var rootResult = rootContainer.mouseScrolled(mouseX, mouseY, delta);
+        var superResult = shouldHandleContainer() && super.mouseScrolled(mouseX, mouseY, delta);
         return superResult || rootResult;
     }
 
@@ -183,8 +183,8 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         if (rootContainer.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE && this.shouldCloseOnEsc()) {
-            this.onClose();
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE && shouldCloseOnEsc()) {
+            onClose();
             return true;
         }
         return shouldHandleContainer() && super.keyPressed(keyCode, scanCode, modifiers);
@@ -208,7 +208,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int mouseButton) {
-        return mouseX < (double) guiLeft || mouseY < (double) guiTop - 22 || mouseX >= (double) (guiLeft + this.imageWidth) || mouseY >= (double) (guiTop + this.imageHeight);
+        return mouseX < (double) guiLeft || mouseY < (double) guiTop - 22 || mouseX >= (double) (guiLeft + imageWidth) || mouseY >= (double) (guiTop + imageHeight);
     }
 
     public int getLeftPos() {
