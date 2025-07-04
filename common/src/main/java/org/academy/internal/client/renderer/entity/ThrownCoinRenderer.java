@@ -8,9 +8,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.ItemStack;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
@@ -26,19 +24,18 @@ public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
     @Override
     public void render(ThrownCoin entity, float entityYaw, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
-        ItemStack itemStack = entity.getItem();
-        Minecraft minecraft = Minecraft.getInstance();
-        BakedModel bakedModel = minecraft.getItemRenderer().getItemModelShaper().getItemModel(itemStack);
-        RandomSource randomSource = RandomSource.create();
+        var itemStack = entity.getItem();
+        var minecraft = Minecraft.getInstance();
+        var bakedModel = minecraft.getItemRenderer().getItemModelShaper().getItemModel(itemStack);
+        var randomSource = RandomSource.create();
         entity.renderAngle = MathUtil.lerpStartEndFactor(entity.renderAngle, entity.angle, ClientUtil.animationFactor(1));
         bakedModel.getTransforms().ground.apply(false, poseStack);
         poseStack.mulPose(Axis.YP.rotationDegrees(entityYaw));
-        Matrix4f matrix4f = new Matrix4f();
+        var matrix4f = new Matrix4f();
 
-        float x, y, z;
-        x = -0.5f;
-        y = -0.5f;
-        z = -0.5f;
+        var x = 0.0f;
+        var y = 0.0f;
+        var z = 0.0f;
 
         matrix4f.translate(-0.5f, -0.5f, -0.5f);
         matrix4f.translate(-x, -y, -z);

@@ -9,10 +9,9 @@ import org.jetbrains.annotations.NotNull;
 public class MediumArcParticle extends FixedTextureSheetParticle {
     private final SpriteSet sprites;
 
-    protected MediumArcParticle(ClientLevel level, double x, double y, double z, float yaw, float pitch, SpriteSet spriteSet) {
-        super(level, x, y, z, yaw, pitch);
-        this.sprites = spriteSet;
-        pickSprite(spriteSet);
+    protected MediumArcParticle(ClientLevel level, double x, double y, double z, float newYaw, float newPitch, SpriteSet newSpriteSet) {
+        super(level, x, y, z, newYaw, newPitch);
+        sprites = newSpriteSet;
         hasPhysics = false;
         quadSize *= 10;
     }

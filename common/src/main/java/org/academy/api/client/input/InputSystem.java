@@ -24,7 +24,7 @@ public final class InputSystem {
     public static int currentKeyAction = -1;
 
     public static void handleMouseMove(double xpos, double ypos, CallbackInfo ci) {
-        MouseMoveEvent event = new MouseMoveEvent(xpos, ypos);
+        var event = new MouseMoveEvent(xpos, ypos);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) {
             ci.cancel();
@@ -32,7 +32,7 @@ public final class InputSystem {
         }
         xpos = event.xpos;
         ypos = event.ypos;
-        for (BiConsumer<Double, Double> consumer : MOUSE_MOVE_HANDLERS.values()) {
+        for (var consumer : MOUSE_MOVE_HANDLERS.values()) {
             consumer.accept(xpos, ypos);
         }
     }
@@ -42,7 +42,7 @@ public final class InputSystem {
         currentKeyAction = action;
         KEYBOARD_STATE.put(key, action);
 
-        KeyEvent event = new KeyEvent(key, scanCode, action, modifiers);
+        var event = new KeyEvent(key, scanCode, action, modifiers);
         AcademyCraft.EVENT_BUS.post(event);
 
         if (event.isCanceled()) {
@@ -62,7 +62,7 @@ public final class InputSystem {
         currentMouseModifier = modifiers;
         MOUSE_STATE.put(button, action);
 
-        MouseButtonEvent event = new MouseButtonEvent(button, action, modifiers);
+        var event = new MouseButtonEvent(button, action, modifiers);
         AcademyCraft.EVENT_BUS.post(event);
 
         if (event.isCanceled()) {
@@ -82,20 +82,20 @@ public final class InputSystem {
                 return;
             }
 
-            KeyInfo keyInfo = binding.inputPair.keyInfo;
-            LinkedHashSet<Integer> requiredKeys = keyInfo.inputs;
-            LinkedHashSet<Integer> requiredModifiers = keyInfo.modifiers;
-            int requiredAction = keyInfo.action;
+            var keyInfo = binding.inputPair.keyInfo;
+            var requiredKeys = keyInfo.inputs;
+            var requiredModifiers = keyInfo.modifiers;
+            var requiredAction = keyInfo.action;
 
             if (requiredKeys.isEmpty()) return;
 
-            int requiredMask = requiredModifiers.stream().reduce(0, (a, b) -> a | b);
-            boolean modSuccess = keyInfo.modifiers.isEmpty() || modifiers == requiredMask;
+            var requiredMask = requiredModifiers.stream().reduce(0, (a, b) -> a | b);
+            var modSuccess = keyInfo.modifiers.isEmpty() || modifiers == requiredMask;
 
             boolean keySuccess;
             if (requiredAction == GLFW.GLFW_RELEASE) {
-                int lastKey = -1;
-                for (Integer key : requiredKeys) lastKey = key;
+                var lastKey = -1;
+                for (var key : requiredKeys) lastKey = key;
                 keySuccess = input == lastKey && requiredKeys.stream().allMatch(state::containsKey)
                         && requiredKeys.stream().allMatch(requiredKey -> state.get(requiredKey) == requiredAction);
             } else {
@@ -109,7 +109,7 @@ public final class InputSystem {
     }
 
     public static void handleMouseScroll(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
-        MouseScrollEvent event = new MouseScrollEvent(windowPointer, xOffset, yOffset);
+        var event = new MouseScrollEvent(windowPointer, xOffset, yOffset);
         AcademyCraft.EVENT_BUS.post(event);
         if (event.isCanceled()) {
             ci.cancel();
@@ -119,13 +119,13 @@ public final class InputSystem {
         xOffset = event.xOffset;
         yOffset = event.yOffset;
         if (yOffset != 0 && !scrollListeners.isEmpty()) {
-            double finalYOffset = yOffset;
+            var finalYOffset = yOffset;
             scrollListeners.values().forEach(listener -> listener.accept((int) finalYOffset));
         }
     }
 
     public static void addKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputPair pair, @NotNull Runnable runnable) {
-        KeyBinding binding = new KeyBinding(pair, runnable);
+        var binding = new KeyBinding(pair, runnable);
         KEY_BINDINGS.put(keyName, binding);
     }
 
@@ -143,10 +143,10 @@ public final class InputSystem {
         public int action;
         public LinkedHashSet<Integer> modifiers;
 
-        public KeyInfo(LinkedHashSet<Integer> inputs, int action, LinkedHashSet<Integer> modifiers) {
-            this.inputs = inputs;
-            this.action = action;
-            this.modifiers = modifiers;
+        public KeyInfo(LinkedHashSet<Integer> newInputs, int newAction, LinkedHashSet<Integer> newModifiers) {
+            inputs = newInputs;
+            action = newAction;
+            modifiers = newModifiers;
         }
     }
 
@@ -154,9 +154,9 @@ public final class InputSystem {
         public InputPair inputPair;
         public Runnable runnable;
 
-        public KeyBinding(InputPair inputPair, Runnable runnable) {
-            this.inputPair = inputPair;
-            this.runnable = runnable;
+        public KeyBinding(InputPair newInputPair, Runnable newRunnable) {
+            inputPair = newInputPair;
+            runnable = newRunnable;
         }
     }
 
@@ -164,9 +164,9 @@ public final class InputSystem {
         public InputType inputType;
         public KeyInfo keyInfo;
 
-        public InputPair(InputType inputType, KeyInfo keyInfo) {
-            this.inputType = inputType;
-            this.keyInfo = keyInfo;
+        public InputPair(InputType newInputType, KeyInfo newKeyInfo) {
+            inputType = newInputType;
+            keyInfo = newKeyInfo;
         }
     }
 }

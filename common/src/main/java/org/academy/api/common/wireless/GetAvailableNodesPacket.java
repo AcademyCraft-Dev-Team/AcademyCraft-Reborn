@@ -19,18 +19,18 @@ public class GetAvailableNodesPacket extends IRequestPayload<ServerGamePacketLis
     public GetAvailableNodesPacket() {
     }
 
-    public GetAvailableNodesPacket(BlockPos requesterPos) {
-        this.requesterPos = requesterPos;
+    public GetAvailableNodesPacket(BlockPos newRequesterPos) {
+        requesterPos = newRequesterPos;
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.requesterPos);
+        buf.writeBlockPos(requesterPos);
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.requesterPos = buf.readBlockPos();
+        requesterPos = buf.readBlockPos();
     }
 
     @Nullable
@@ -45,8 +45,8 @@ public class GetAvailableNodesPacket extends IRequestPayload<ServerGamePacketLis
         public Response() {
         }
 
-        public Response(List<String> names) {
-            this.availableNodeNames = new ArrayList<>(names);
+        public Response(List<String> newNames) {
+            availableNodeNames = new ArrayList<>(newNames);
         }
 
         @Override
@@ -56,7 +56,7 @@ public class GetAvailableNodesPacket extends IRequestPayload<ServerGamePacketLis
 
         @Override
         public void read(@NotNull FriendlyByteBuf buf) {
-            this.availableNodeNames = FriendlyByteBufDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, ArrayList::new).deserialize(buf);
+            availableNodeNames = FriendlyByteBufDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, ArrayList::new).deserialize(buf);
         }
     }
 }

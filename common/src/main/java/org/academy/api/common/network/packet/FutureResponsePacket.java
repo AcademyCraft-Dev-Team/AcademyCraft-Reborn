@@ -5,7 +5,6 @@ import net.minecraft.network.PacketListener;
 
 public class FutureResponsePacket<T extends PacketListener> extends FuturePacket<T> {
     public FutureResponsePacket() {
-        super();
     }
 
     public FutureResponsePacket(int futureId, int responsePayloadTypeId, FriendlyByteBuf payloadData) {

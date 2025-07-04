@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.common.util.MathUtil;
 
 import java.util.function.Consumer;
@@ -10,11 +11,12 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
     private float currentValue;
     public Consumer<Float> onValueChanged;
 
-    public AbstractSliderWidget(float x, float y, float width, float height, float minValue, float maxValue, float initialValue) {
-        super(x, y, width, height);
-        this.minValue = minValue;
-        this.maxValue = maxValue;
-        this.currentValue = MathUtil.clamp(initialValue, minValue, maxValue);
+    public AbstractSliderWidget(float x, float y, float width, float height, Orientation orientation,
+                                float newMinValue, float newMaxValue, float initialValue) {
+        super(x, y, width, height, orientation);
+        minValue = newMinValue;
+        maxValue = newMaxValue;
+        currentValue = MathUtil.clamp(initialValue, newMinValue, newMaxValue);
     }
 
     public float getValue() {
@@ -34,13 +36,5 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
     @Override
     protected float getThumbSize() {
         return 8f;
-    }
-
-    @Override
-    protected void updateTargetFromMouse(float mouse) {
-        var track = getTrackSize() - getThumbSize();
-        if (track <= 0) return;
-        var ratio = MathUtil.clamp((mouse - dragOffset) / track, 0f, 1f);
-        setValue(minValue + ratio * (maxValue - minValue));
     }
 }

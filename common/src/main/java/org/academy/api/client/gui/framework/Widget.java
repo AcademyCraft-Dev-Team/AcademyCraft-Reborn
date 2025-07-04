@@ -13,39 +13,39 @@ public interface Widget {
 
     float getHeight();
 
-    void setX(float x);
+    Widget setX(float x);
 
-    void setY(float y);
+    Widget setY(float y);
 
-    void setZ(float z);
+    Widget setZ(float z);
 
-    void setWidth(float width);
+    Widget setWidth(float width);
 
-    void setHeight(float height);
+    Widget setHeight(float height);
 
     boolean isVisible();
 
-    void setVisible(boolean visible);
+    Widget setVisible(boolean visible);
 
     boolean isEnabled();
 
     boolean isAbsoluteEnabled();
 
-    void setEnabled(boolean enabled);
+    Widget setEnabled(boolean enabled);
 
     boolean isHovered();
 
-    void setHovered(boolean hovered);
+    Widget setHovered(boolean hovered);
 
     WidgetContainer getParent();
 
-    void setParent(WidgetContainer parent);
+    Widget setParent(WidgetContainer parent);
 
     void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick);
 
     float getAlpha();
 
-    void setAlpha(float alpha);
+    Widget setAlpha(float alpha);
 
     float getAbsoluteAlpha();
 
@@ -84,7 +84,8 @@ public interface Widget {
         return false;
     }
 
-    default void setFocused(boolean focused) {
+    default Widget setFocused(boolean focused) {
+        return this;
     }
 
     default void onFocusGained() {
@@ -94,17 +95,17 @@ public interface Widget {
     }
 
     default boolean isMouseOver(double checkX, double checkY) {
-        float absX = getAbsoluteX();
-        float absY = getAbsoluteY();
+        var absX = getAbsoluteX();
+        var absY = getAbsoluteY();
         return checkX >= absX && checkY >= absY && checkX < absX + getWidth() && checkY < absY + getHeight();
     }
 
     default boolean isAbsoluteMouseOver(double mouseX, double mouseY) {
-        boolean parentMouseOver = true;
+        var parentMouseOver = true;
         if (getParent() != null) {
             parentMouseOver = getParent().isAbsoluteMouseOver(mouseX, mouseY);
         }
-        boolean mouseOver = isMouseOver(mouseX, mouseY);
+        var mouseOver = isMouseOver(mouseX, mouseY);
         return parentMouseOver && mouseOver;
     }
 

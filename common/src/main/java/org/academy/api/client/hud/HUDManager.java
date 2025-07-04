@@ -1,8 +1,6 @@
 package org.academy.api.client.hud;
 
-import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
@@ -10,7 +8,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.gui.widget.*;
+import org.academy.api.client.gui.widget.AutoScaleLabelWidget;
+import org.academy.api.client.gui.widget.FillWidget;
+import org.academy.api.client.gui.widget.ImageWidget;
+import org.academy.api.client.gui.widget.PanelWidget;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RenderTypes;
 import org.academy.api.client.resource.TextureResources;
@@ -99,12 +100,12 @@ public final class HUDManager {
     }
 
     private static void updateSkillWidgetsList() {
-        Set<Skill> learnedSkills = AbilitySystemClient.LEARNED_SKILLS;
+        var learnedSkills = AbilitySystemClient.LEARNED_SKILLS;
         if (skillWidgets.size() == learnedSkills.size()) {
-            boolean match = true;
-            List<Skill> tempList = new ArrayList<>(learnedSkills);
+            var match = true;
+            var tempList = new ArrayList<>(learnedSkills);
             tempList.sort(Comparator.comparing(skill -> skill.name));
-            for (int i = 0; i < skillWidgets.size(); i++) {
+            for (var i = 0; i < skillWidgets.size(); i++) {
                 if (!skillWidgets.get(i).skill.equals(tempList.get(i))) {
                     match = false;
                     break;
@@ -118,12 +119,12 @@ public final class HUDManager {
     private static void populateSkillWidgets() {
         skillWidgets.clear();
 
-        List<Skill> sortedSkills = new ArrayList<>(AbilitySystemClient.LEARNED_SKILLS);
+        var sortedSkills = new ArrayList<>(AbilitySystemClient.LEARNED_SKILLS);
         sortedSkills.sort(Comparator.comparing(skill -> skill.name));
 
-        for (Skill skill : sortedSkills) {
-            Window window = Minecraft.getInstance().getWindow();
-            SkillWidget widget = new SkillWidget(window.getGuiScaledWidth(), window.getGuiScaledHeight() / 2f, DEFAULT_SKILL_WIDGET_WIDTH, DEFAULT_SKILL_WIDGET_HEIGHT, skill);
+        for (var skill : sortedSkills) {
+            var window = Minecraft.getInstance().getWindow();
+            var widget = new SkillWidget(window.getGuiScaledWidth(), window.getGuiScaledHeight() / 2f, DEFAULT_SKILL_WIDGET_WIDTH, DEFAULT_SKILL_WIDGET_HEIGHT, skill);
             skillWidgets.add(widget);
         }
 
@@ -138,8 +139,8 @@ public final class HUDManager {
 
     public static void selectNextSkill() {
         if (skillWidgets.isEmpty() || !AbilitySystemClient.isActiveHUD()) return;
-        float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        float baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
+        var screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        var baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
         skillWidgets.get(selectedSkillIndex).setSelected(false, baseSkillWidgetX);
         selectedSkillIndex = (selectedSkillIndex + 1) % skillWidgets.size();
         skillWidgets.get(selectedSkillIndex).setSelected(true, baseSkillWidgetX);
@@ -148,8 +149,8 @@ public final class HUDManager {
 
     public static void selectPreviousSkill() {
         if (skillWidgets.isEmpty() || !AbilitySystemClient.isActiveHUD()) return;
-        float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        float baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
+        var screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        var baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
         skillWidgets.get(selectedSkillIndex).setSelected(false, baseSkillWidgetX);
         selectedSkillIndex = (selectedSkillIndex - 1 + skillWidgets.size()) % skillWidgets.size();
         skillWidgets.get(selectedSkillIndex).setSelected(true, baseSkillWidgetX);
@@ -168,12 +169,12 @@ public final class HUDManager {
     public static void render(GuiGraphics guiGraphics, float partialTick) {
         targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
 
-        float animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
+        var animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
         currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, animFactor);
 
-        float[] originColor = RenderSystem.getShaderColor().clone();
+        var originColor = RenderSystem.getShaderColor().clone();
 
-        for (HUDRenderer renderer : HUD_RENDERERS) {
+        for (var renderer : HUD_RENDERERS) {
             renderer.render(guiGraphics, partialTick);
         }
 
@@ -182,17 +183,17 @@ public final class HUDManager {
         HUDManager.renderComputingPowerBarBackground(guiGraphics);
         guiGraphics.bufferSource().endBatch(CP_BAR_BACKGROUND);
 
-        float targetR = 1.0f;
-        float targetG = 174 / 255.0f;
-        float targetB = 68 / 255.0f;
+        var targetR = 1.0f;
+        var targetG = 174 / 255.0f;
+        var targetB = 68 / 255.0f;
 
-        float finalR = targetR + currentAlpha * (originColor[0] - targetR);
-        float finalG = targetG + currentAlpha * (originColor[1] - targetG);
-        float finalB = targetB + currentAlpha * (originColor[2] - targetB);
-        float finalA = currentAlpha * originColor[3];
+        var finalR = targetR + currentAlpha * (originColor[0] - targetR);
+        var finalG = targetG + currentAlpha * (originColor[1] - targetG);
+        var finalB = targetB + currentAlpha * (originColor[2] - targetB);
+        var finalA = currentAlpha * originColor[3];
 
         RenderSystem.setShaderColor(finalR, finalG, finalB, finalA);
-        HUDManager.renderComputingPowerBar(guiGraphics, partialTick);
+        HUDManager.renderComputingPowerBar(guiGraphics);
         guiGraphics.bufferSource().endBatch(CP_BAR);
 
         RenderSystem.setShaderColor(originColor[0], originColor[1], originColor[2], currentAlpha * originColor[3]);
@@ -202,29 +203,29 @@ public final class HUDManager {
         }
 
         if (!skillWidgets.isEmpty()) {
-            float screenWidth = guiGraphics.guiWidth();
-            float screenHeight = guiGraphics.guiHeight();
-            float baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
+            var screenWidth = guiGraphics.guiWidth();
+            var screenHeight = guiGraphics.guiHeight();
+            var baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
 
-            for (int i = 0; i < skillWidgets.size(); i++) {
+            for (var i = 0; i < skillWidgets.size(); i++) {
                 skillWidgets.get(i).setSelected(i == selectedSkillIndex, baseSkillWidgetX);
             }
 
-            float totalListTargetHeight = 0;
-            for (int i = 0; i < skillWidgets.size(); i++) {
-                SkillWidget widget = skillWidgets.get(i);
+            var totalListTargetHeight = 0f;
+            for (var i = 0; i < skillWidgets.size(); i++) {
+                var widget = skillWidgets.get(i);
                 totalListTargetHeight += widget.targetHeight;
                 if (i < skillWidgets.size() - 1) {
                     totalListTargetHeight += SKILL_WIDGET_SPACING;
                 }
             }
 
-            float currentLayoutY = (screenHeight - totalListTargetHeight) / 2f;
+            var currentLayoutY = (screenHeight - totalListTargetHeight) / 2f;
 
-            for (int i = 0; i < skillWidgets.size(); i++) {
-                SkillWidget widget = skillWidgets.get(i);
+            for (var i = 0; i < skillWidgets.size(); i++) {
+                var widget = skillWidgets.get(i);
 
-                boolean selected = i == selectedSkillIndex;
+                var selected = i == selectedSkillIndex;
                 widget.originalY = currentLayoutY;
                 widget.setSelected(selected, baseSkillWidgetX);
 
@@ -240,31 +241,31 @@ public final class HUDManager {
 
     @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
     public static void renderAbilityIcon(GuiGraphics guiGraphics) {
-        final AbilityCategory abilityCategory = AbilitySystemClient.getCategory();
+        final var abilityCategory = AbilitySystemClient.getCategory();
         currentIconRenderType = ABILITY_ICON.apply(abilityCategory);
         if (currentIconRenderType == null) return;
 
-        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(currentIconRenderType);
-        final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
+        final var vertexConsumer = guiGraphics.bufferSource().getBuffer(currentIconRenderType);
+        final var scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
-        final float width = ABILITY_ICON_WIDTH * scale;
-        final float height = ABILITY_ICON_HEIGHT * scale;
-        final float rightSafeZone = (CP_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
-        final float topSafeZone = (CP_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
+        final var width = ABILITY_ICON_WIDTH * scale;
+        final var height = ABILITY_ICON_HEIGHT * scale;
+        final var rightSafeZone = (CP_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
+        final var topSafeZone = (CP_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
 
-        final float z = 0;
+        final var z = 0;
 
-        final float rightTopX = guiGraphics.guiWidth() - rightSafeZone;
-        final float rightTopY = topSafeZone;
+        final var rightTopX = guiGraphics.guiWidth() - rightSafeZone;
+        final var rightTopY = topSafeZone;
 
-        final float rightBottomX = rightTopX;
-        final float rightBottomY = rightTopY + height;
+        final var rightBottomX = rightTopX;
+        final var rightBottomY = rightTopY + height;
 
-        final float leftTopX = rightTopX - width;
-        final float leftTopY = rightTopY;
+        final var leftTopX = rightTopX - width;
+        final var leftTopY = rightTopY;
 
-        final float leftBottomX = rightBottomX - width;
-        final float leftBottomY = rightBottomY;
+        final var leftBottomX = rightBottomX - width;
+        final var leftBottomY = rightBottomY;
         vertexConsumer.vertex(leftTopX, leftTopY, z).uv(0, 0).endVertex();
         vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(0, 1).endVertex();
         vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
@@ -272,48 +273,44 @@ public final class HUDManager {
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
-    public static void renderComputingPowerBar(GuiGraphics guiGraphics, float partialTick) {
-        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(CP_BAR);
-        final float computingPower = AbilitySystemClient.getComputingPower();
-        final float maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
-        final float progress;
-        if (computingPower != 0 && maximumComputingPower != 0) {
-            progress = computingPower / maximumComputingPower;
-        } else {
-            progress = 0;
-        }
+    public static void renderComputingPowerBar(GuiGraphics guiGraphics) {
+        final var vertexConsumer = guiGraphics.bufferSource().getBuffer(CP_BAR);
+        final var computingPower = AbilitySystemClient.getComputingPower();
+        final var maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
+        final var progress = (computingPower != 0 && maximumComputingPower != 0) ? (computingPower / maximumComputingPower) : 0;
+
         smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, ClientUtil.animationFactor(MathUtil.PI / 2));
         if (Float.isNaN(smoothProgress)) {
             smoothProgress = 0f;
         }
-        final float scale = DEFAULT_SCALA * SCALE_FACTOR.get();
+        final var scale = DEFAULT_SCALA * SCALE_FACTOR.get();
 
-        final float width = CP_BAR_WIDTH * scale;
-        final float height = CP_BAR_HEIGHT * scale;
-        final float leftSafeZoneWidth = (CP_BAR_LEFT_SAFE_ZONE - (CP_BAR_TOP_SAFE_ZONE / CP_BAR_TANGENT)) * scale;
-        final float barLength = CP_BAR_CONSUMABLE_WIDTH * scale;
+        final var width = CP_BAR_WIDTH * scale;
+        final var height = CP_BAR_HEIGHT * scale;
+        final var leftSafeZoneWidth = (CP_BAR_LEFT_SAFE_ZONE - (CP_BAR_TOP_SAFE_ZONE / CP_BAR_TANGENT)) * scale;
+        final var barLength = CP_BAR_CONSUMABLE_WIDTH * scale;
 
-        final float barWidthOffset = barLength * (1.0f - smoothProgress);
-        final float leftTopOffset = barWidthOffset + leftSafeZoneWidth;
-        final float leftBottomOffset = leftTopOffset + (height / CP_BAR_TANGENT);
+        final var barWidthOffset = barLength * (1.0f - smoothProgress);
+        final var leftTopOffset = barWidthOffset + leftSafeZoneWidth;
+        final var leftBottomOffset = leftTopOffset + (height / CP_BAR_TANGENT);
 
-        final float z = 0;
+        final var z = 0;
 
-        final float rightTopX = guiGraphics.guiWidth();
-        final float rightTopY = 0;
+        final var rightTopX = guiGraphics.guiWidth();
+        final var rightTopY = 0;
 
-        final float rightBottomX = guiGraphics.guiWidth();
-        final float rightBottomY = height;
+        final var rightBottomX = guiGraphics.guiWidth();
+        final var rightBottomY = height;
 
-        final float leftTopX = rightTopX - width + leftTopOffset;
-        final float leftTopY = 0;
+        final var leftTopX = rightTopX - width + leftTopOffset;
+        final var leftTopY = 0;
 
-        final float leftBottomX = rightTopX - width + leftBottomOffset;
+        final var leftBottomX = rightTopX - width + leftBottomOffset;
 
-        final float leftBottomY = height;
+        final var leftBottomY = height;
 
-        final float leftTopUv = 1 - ((width - leftTopOffset) / width);
-        final float leftBottomUv = 1 - ((width - leftBottomOffset) / width);
+        final var leftTopUv = 1 - ((width - leftTopOffset) / width);
+        final var leftBottomUv = 1 - ((width - leftBottomOffset) / width);
 
         vertexConsumer.vertex(leftTopX, leftTopY, z).uv(leftTopUv, 0).endVertex();
         vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(leftBottomUv, 1).endVertex();
@@ -323,29 +320,29 @@ public final class HUDManager {
 
     @SuppressWarnings({"UnnecessaryLocalVariable", "DuplicatedCode"})
     public static void renderComputingPowerBarBackground(GuiGraphics guiGraphics) {
-        final VertexConsumer vertexConsumer = guiGraphics.bufferSource().getBuffer(CP_BAR_BACKGROUND);
-        final int imageWidth = 946;
-        final int imageHeight = 147;
+        final var vertexConsumer = guiGraphics.bufferSource().getBuffer(CP_BAR_BACKGROUND);
+        final var imageWidth = 946;
+        final var imageHeight = 147;
 
-        final float userScale = SCALE_FACTOR.get();
-        final float scale = DEFAULT_SCALA * userScale;
+        final var userScale = SCALE_FACTOR.get();
+        final var scale = DEFAULT_SCALA * userScale;
 
-        final float width = imageWidth * scale;
-        final float height = imageHeight * scale;
+        final var width = imageWidth * scale;
+        final var height = imageHeight * scale;
 
-        final float z = 0;
+        final var z = 0;
 
-        final float rightTopX = guiGraphics.guiWidth();
-        final float rightTopY = 0;
+        final var rightTopX = guiGraphics.guiWidth();
+        final var rightTopY = 0;
 
-        final float rightBottomX = guiGraphics.guiWidth();
-        final float rightBottomY = height;
+        final var rightBottomX = guiGraphics.guiWidth();
+        final var rightBottomY = height;
 
-        final float leftTopX = rightTopX - width;
-        final float leftTopY = 0;
+        final var leftTopX = rightTopX - width;
+        final var leftTopY = 0;
 
-        final float leftBottomX = rightBottomX - width;
-        final float leftBottomY = height;
+        final var leftBottomX = rightBottomX - width;
+        final var leftBottomY = height;
         vertexConsumer.vertex(leftTopX, leftTopY, z).uv(0, 0).endVertex();
         vertexConsumer.vertex(leftBottomX, leftBottomY, z).uv(0, 1).endVertex();
         vertexConsumer.vertex(rightBottomX, rightBottomY, z).uv(1, 1).endVertex();
@@ -365,42 +362,41 @@ public final class HUDManager {
         public float targetWidth;
         public float targetHeight;
         private float currentWidgetAlpha = 0.0f;
-        private float targetWidgetAlpha = 0.0f;
 
-        public SkillWidget(float initialXOffset, float initialYOffset, float width, float height, Skill skill) {
+        public SkillWidget(float initialXOffset, float initialYOffset, float width, float height, Skill newSkill) {
             super(initialXOffset, initialYOffset, width, height);
-            this.skill = skill;
-            this.originalX = 0;
-            this.originalY = initialYOffset;
-            this.targetY = initialYOffset;
-            this.originalWidth = width;
-            this.originalHeight = height;
+            skill = newSkill;
+            originalX = 0;
+            originalY = initialYOffset;
+            targetY = initialYOffset;
+            originalWidth = width;
+            originalHeight = height;
 
-            this.targetX = 0;
-            this.targetWidth = width;
-            this.targetHeight = height;
+            targetX = 0;
+            targetWidth = width;
+            targetHeight = height;
 
-            float padding = 2f;
-            float iconSize = height - padding * 2;
+            var padding = 2f;
+            var iconSize = height - padding * 2;
 
-            this.label = new AutoScaleLabelWidget(skill.name, padding, 0, width - iconSize - padding * 3, false);
-            this.label.scale = 0.7f;
-            this.label.setCentered(false);
+            label = new AutoScaleLabelWidget(skill.name, padding, 0, width - iconSize - padding * 3, false);
+            label.scale = 0.7f;
+            label.setCentered(false);
 
-            this.icon = new ImageWidget(width - padding - iconSize, padding, iconSize, iconSize, getSkillIconRenderType(skill));
-            this.icon.widthScale = 0.8f;
-            this.icon.heightScale = 0.8f;
+            icon = new ImageWidget(width - padding - iconSize, padding, iconSize, iconSize, getSkillIconRenderType(skill));
+            icon.widthScale = 0.8f;
+            icon.heightScale = 0.8f;
 
-            this.back = new FillWidget(0, 0, width, height, 0x60000000);
+            back = new FillWidget(0, 0, width, height, 0x60000000);
 
-            addChild("back", this.back);
-            addChild("label", this.label);
-            addChild("icon", this.icon);
+            addChild("back", back);
+            addChild("label", label);
+            addChild("icon", icon);
         }
 
         private RenderType getSkillIconRenderType(Skill skillInstance) {
-            for (List<AbilitySystemClient.SkillInfo> infos : AbilitySystemClient.SKILL_INFOS.values()) {
-                for (AbilitySystemClient.SkillInfo info : infos) {
+            for (var infos : AbilitySystemClient.SKILL_INFOS.values()) {
+                for (var info : infos) {
                     if (info.skill().equals(skillInstance)) {
                         return RenderUtil.getPositionColorTexRenderTypeFull("skill_icon_hud_" + skillInstance.name.toLowerCase().replace(" ", "_"), info.texture(), false);
                     }
@@ -409,51 +405,47 @@ public final class HUDManager {
             return RenderTypes.RENDER_TYPE_ICON_BOX;
         }
 
-        public void setAlpha(float globalAlpha) {
-            this.targetWidgetAlpha = globalAlpha;
-        }
-
         @Override
         public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-            float animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
-            this.currentWidgetAlpha = MathUtil.lerpStartEndFactor(this.currentWidgetAlpha, this.targetWidgetAlpha, animFactor);
+            var animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
+            currentWidgetAlpha = MathUtil.lerpStartEndFactor(currentWidgetAlpha, getAbsoluteAlpha(), animFactor);
 
-            this.setX(MathUtil.lerpStartEndFactor(this.getX(), targetX, animFactor));
-            this.setY(MathUtil.lerpStartEndFactor(this.getY(), targetY, animFactor));
-            this.setWidth(MathUtil.lerpStartEndFactor(this.getWidth(), targetWidth, animFactor));
-            this.setHeight(MathUtil.lerpStartEndFactor(this.getHeight(), targetHeight, animFactor));
+            setX(MathUtil.lerpStartEndFactor(getX(), targetX, animFactor));
+            setY(MathUtil.lerpStartEndFactor(getY(), targetY, animFactor));
+            setWidth(MathUtil.lerpStartEndFactor(getWidth(), targetWidth, animFactor));
+            setHeight(MathUtil.lerpStartEndFactor(getHeight(), targetHeight, animFactor));
 
-            int finalBackAlpha = (int) (0x70 * this.currentWidgetAlpha);
-            this.back.color = (this.back.color & 0x00FFFFFF) | (finalBackAlpha << 24);
+            var finalBackAlpha = (int) (0x70 * currentWidgetAlpha);
+            back.color = (back.color & 0x00FFFFFF) | (finalBackAlpha << 24);
 
-            int finalLabelAlpha = (int) (0xFF * this.currentWidgetAlpha);
-            this.label.color = (this.label.color & 0x00FFFFFF) | (finalLabelAlpha << 24);
-            this.icon.setAlpha(currentWidgetAlpha);
+            var finalLabelAlpha = (int) (0xFF * currentWidgetAlpha);
+            label.color = (label.color & 0x00FFFFFF) | (finalLabelAlpha << 24);
+            icon.setAlpha(currentWidgetAlpha);
 
-            this.back.setWidth(this.getWidth());
-            this.back.setHeight(this.getHeight());
+            back.setWidth(getWidth());
+            back.setHeight(getHeight());
 
-            float currentHeightRatio = this.getHeight() / originalHeight;
-            float padding = 2f * currentHeightRatio;
-            float iconSize = this.getHeight() - padding * 2;
+            var currentHeightRatio = getHeight() / originalHeight;
+            var padding = 2f * currentHeightRatio;
+            var iconSize = getHeight() - padding * 2;
 
-            this.label.setX(padding);
-            this.label.setWidth(this.getWidth() - iconSize - padding * 3);
-            this.label.setY((this.getHeight() - (this.label.getHeight() * this.label.scale * currentHeightRatio)) / 2f);
+            label.setX(padding);
+            label.setWidth(getWidth() - iconSize - padding * 3);
+            label.setY((getHeight() - (label.getHeight() * label.scale * currentHeightRatio)) / 2f);
 
-            this.icon.setX(this.getWidth() - padding - iconSize);
-            this.icon.setY(padding);
-            this.icon.setWidth(iconSize);
-            this.icon.setHeight(iconSize);
+            icon.setX(getWidth() - padding - iconSize);
+            icon.setY(padding);
+            icon.setWidth(iconSize);
+            icon.setHeight(iconSize);
 
             super.render(graphics, mouseX, mouseY, partialTick);
         }
 
         public void setSelected(boolean selected, float currentFrameBaseX) {
-            this.originalX = currentFrameBaseX;
+            originalX = currentFrameBaseX;
 
-            boolean selectionChanged = (this.isSelected != selected);
-            this.isSelected = selected;
+            var selectionChanged = (isSelected != selected);
+            isSelected = selected;
 
             float newTargetWidth;
             float newTargetHeight;
@@ -463,24 +455,24 @@ public final class HUDManager {
             if (selected) {
                 newTargetWidth = originalWidth * SELECTED_SKILL_WIDTH_MULTIPLIER;
                 newTargetHeight = originalHeight * SELECTED_SKILL_HEIGHT_MULTIPLIER;
-                newTargetX = this.originalX - (newTargetWidth - originalWidth);
+                newTargetX = originalX - (newTargetWidth - originalWidth);
             } else {
                 newTargetWidth = originalWidth;
                 newTargetHeight = originalHeight;
-                newTargetX = this.originalX;
+                newTargetX = originalX;
             }
-            newTargetY = this.originalY;
+            newTargetY = originalY;
 
             if (selectionChanged ||
-                    Math.abs(this.targetX - newTargetX) > 0.001f ||
-                    Math.abs(this.targetY - newTargetY) > 0.001f ||
-                    Math.abs(this.targetWidth - newTargetWidth) > 0.001f ||
-                    Math.abs(this.targetHeight - newTargetHeight) > 0.001f) {
+                    Math.abs(targetX - newTargetX) > 0.001f ||
+                    Math.abs(targetY - newTargetY) > 0.001f ||
+                    Math.abs(targetWidth - newTargetWidth) > 0.001f ||
+                    Math.abs(targetHeight - newTargetHeight) > 0.001f) {
 
-                this.targetX = newTargetX;
-                this.targetY = newTargetY;
-                this.targetWidth = newTargetWidth;
-                this.targetHeight = newTargetHeight;
+                targetX = newTargetX;
+                targetY = newTargetY;
+                targetWidth = newTargetWidth;
+                targetHeight = newTargetHeight;
             }
         }
     }

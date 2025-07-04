@@ -15,20 +15,20 @@ public class ExpSyncPacket extends IPacket<ClientPacketListener> {
     public ExpSyncPacket() {
     }
 
-    public ExpSyncPacket(String skillName, float exp) {
-        this.skillName = skillName;
-        this.exp = exp;
+    public ExpSyncPacket(String newSkillName, float newExp) {
+        skillName = newSkillName;
+        exp = newExp;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.skillName = buf.readUtf();
-        this.exp = buf.readFloat();
+        skillName = buf.readUtf();
+        exp = buf.readFloat();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeUtf(this.skillName);
-        buf.writeFloat(this.exp);
+        buf.writeUtf(skillName);
+        buf.writeFloat(exp);
     }
 }

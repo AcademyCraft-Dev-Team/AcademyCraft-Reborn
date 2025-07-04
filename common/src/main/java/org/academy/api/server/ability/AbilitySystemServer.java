@@ -1,14 +1,9 @@
 package org.academy.api.server.ability;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.Connection;
-import net.minecraft.network.PacketListener;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
@@ -24,7 +19,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.academy.api.common.ability.AbilitySystem.ABILITY_CATEGORY_MAP;
@@ -43,9 +37,9 @@ public class AbilitySystemServer {
         AcademyCraftServer.SERVER_FUTURE_MANAGER.registerPayloadHandler(AbilitySystemServer.class);
         minecraftServer = server;
         playerMap = AcademyCraftServer.worldData.getPlayers();
-        for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
+        for (var abilityCategory : ABILITY_CATEGORY_MAP.values()) {
             abilityCategory.initServer(server);
-            for (Skill skill : abilityCategory.skillList) {
+            for (var skill : abilityCategory.skillList) {
                 skill.initServer(server);
             }
         }
@@ -64,12 +58,9 @@ public class AbilitySystemServer {
     @HandlePayload
     public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
         ServerPlayer player = null;
-        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        var supplier = payload.packetListenerSupplier;
         if (supplier != null) {
-            PacketListener listener = supplier.get();
-            if (listener instanceof ServerGamePacketListenerImpl gameListener) {
-                player = gameListener.player;
-            }
+            player = supplier.get().player;
         }
 
         if (player == null) {
@@ -77,25 +68,25 @@ public class AbilitySystemServer {
             return new AcquireCategoryPacket.Response(Collections.singletonList("Error: Player context not found."));
         }
 
-        BlockPos userPos = payload.userPos;
+        var userPos = payload.userPos;
         if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
             return new AcquireCategoryPacket.Response(Collections.singletonList("Error: You are too far away."));
         }
 
-        ServerLevel level = player.serverLevel();
-        BlockEntity be = level.getBlockEntity(userPos);
+        var level = player.serverLevel();
+        var be = level.getBlockEntity(userPos);
         if (be instanceof AbilityDeveloperBlockEntity blockEntity) {
-            List<String> outputList = new ArrayList<>();
-            int energyStored = blockEntity.getEnergyStored();
+            var outputList = new ArrayList<String>();
+            var energyStored = blockEntity.getEnergyStored();
             if (energyStored > 10_000) {
                 blockEntity.setEnergyStored(energyStored - 10_000);
-                MathUtil.WeightedRandom<AbilityCategory> weightedRandom = new MathUtil.WeightedRandom<>();
-                for (AbilityCategory abilityCategory : ABILITY_CATEGORY_MAP.values()) {
+                var weightedRandom = new MathUtil.WeightedRandom<AbilityCategory>();
+                for (var abilityCategory : ABILITY_CATEGORY_MAP.values()) {
                     if (abilityCategory != Level0.INSTANCE) {
                         weightedRandom.addItem(abilityCategory, abilityCategory.probability);
                     }
                 }
-                AbilityCategory abilityCategory = weightedRandom.getRandomItem();
+                var abilityCategory = weightedRandom.getRandomItem();
                 if (abilityCategory != null) {
                     setPlayerAbilityCategory(player.getUUID(), abilityCategory);
                     outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
@@ -115,12 +106,9 @@ public class AbilitySystemServer {
     @SuppressWarnings("resource")
     public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
         ServerPlayer player = null;
-        Supplier<ServerGamePacketListenerImpl> supplier = payload.packetListenerSupplier;
+        var supplier = payload.packetListenerSupplier;
         if (supplier != null) {
-            PacketListener listener = supplier.get();
-            if (listener instanceof ServerGamePacketListenerImpl gameListener) {
-                player = gameListener.player;
-            }
+            player = supplier.get().player;
         }
 
         if (player == null) {
@@ -128,27 +116,27 @@ public class AbilitySystemServer {
             return new LearnSkillPacket.Response(false);
         }
 
-        BlockPos userPos = payload.userPos;
+        var userPos = payload.userPos;
         if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
             return new LearnSkillPacket.Response(false);
         }
 
-        ServerLevel level = player.serverLevel();
-        String skillName = payload.skillName;
-        BlockEntity be = level.getBlockEntity(userPos);
+        var level = player.serverLevel();
+        var skillName = payload.skillName;
+        var be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
             if (SKILL_MAP.containsKey(skillName)) {
-                Skill skill = SKILL_MAP.get(skillName);
-                int energy = skill.energy;
-                boolean depLearned = true;
-                for (Skill dep : skill.dependencies) {
+                var skill = SKILL_MAP.get(skillName);
+                var energy = skill.energy;
+                var depLearned = true;
+                for (var dep : skill.dependencies) {
                     if (!getPlayerSkills(player.getUUID()).contains(dep.name)) {
                         depLearned = false;
                         break;
                     }
                 }
-                boolean learned = playerMap.get(player.getUUID()).getSkills().contains(skillName);
-                boolean can = user.getEnergyStored() > energy && depLearned && !learned;
+                var learned = playerMap.get(player.getUUID()).getSkills().contains(skillName);
+                var can = user.getEnergyStored() > energy && depLearned && !learned;
                 if (can) {
                     user.extractEnergy(energy, false);
                     addPlayerSkill(player.getUUID(), skillName);
@@ -160,8 +148,8 @@ public class AbilitySystemServer {
     }
 
     public static void scheduleFullPlayerSync(final UUID uuid) {
-        SyncType[] syncType = SyncType.values();
-        for (SyncType type : syncType) {
+        var syncType = SyncType.values();
+        for (var type : syncType) {
             schedulePlayerSync(uuid, type);
         }
     }
@@ -181,7 +169,7 @@ public class AbilitySystemServer {
 
     public static void addPlayerSkill(UUID uuid, String skill) {
         playerMap.get(uuid).getSkills().add(skill);
-        Skill skillI = SKILL_MAP.get(skill);
+        var skillI = SKILL_MAP.get(skill);
         if (skillI != null) {
             addPlayerSkillData(uuid, skill, skillI.getDefaultSkillData());
         }
@@ -209,7 +197,7 @@ public class AbilitySystemServer {
     }
 
     public static float getPlayerSkillExp(UUID uuid, String skill) {
-        WorldData.Player.SkillData skillData = playerMap.get(uuid).getSkillData().get(skill);
+        var skillData = playerMap.get(uuid).getSkillData().get(skill);
         if (skillData == null) {
             return 0;
         } else {
@@ -218,10 +206,10 @@ public class AbilitySystemServer {
     }
 
     public static void setPlayerSkillExp(UUID uuid, String skill, float exp) {
-        WorldData.Player.SkillData skillData = playerMap.get(uuid).getSkillData().get(skill);
+        var skillData = playerMap.get(uuid).getSkillData().get(skill);
         if (skillData != null) {
             skillData.exp = exp;
-            Player player = LIVE_PLAYER_MAP.get(uuid);
+            var player = LIVE_PLAYER_MAP.get(uuid);
             if (player != null) {
                 player.connection.send(new S2CPacket(new ExpSyncPacket(skill, skillData.exp)));
             }
@@ -262,7 +250,7 @@ public class AbilitySystemServer {
         if (!playerMap.containsKey(uuid)) {
             return -1;
         } else {
-            Player livePlayer = LIVE_PLAYER_MAP.get(uuid);
+            var livePlayer = LIVE_PLAYER_MAP.get(uuid);
             return livePlayer != null ? livePlayer.additionalComputingPower : 0;
         }
     }
@@ -270,7 +258,7 @@ public class AbilitySystemServer {
 
     public static void setPlayerAdditionalComputingPower(UUID uuid, float power) {
         if (playerMap.containsKey(uuid)) {
-            Player livePlayer = LIVE_PLAYER_MAP.get(uuid);
+            var livePlayer = LIVE_PLAYER_MAP.get(uuid);
             if (livePlayer != null) {
                 livePlayer.additionalComputingPower = power;
             }
@@ -303,25 +291,25 @@ public class AbilitySystemServer {
     public static final class AbilitySystemTicker {
         public static void tick() {
             if (paused) return;
-            for (Runnable runnable : pendingTasks) {
+            for (var runnable : pendingTasks) {
                 runnable.run();
                 pendingTasks.remove(runnable);
             }
-            for (Player player : LIVE_PLAYER_MAP.values()) {
+            for (var player : LIVE_PLAYER_MAP.values()) {
                 tickPlayer(player);
             }
         }
 
         public static void tickPlayer(Player player) {
-            final Connection connection = player.connection;
-            final UUID uuid = player.uuid;
-            ConcurrentLinkedQueue<SyncType> syncQueue = player.syncQueue;
-            boolean levelChanged = syncQueue.contains(SyncType.LEVEL);
-            boolean currentComputingPowerChanged = syncQueue.contains(SyncType.COMPUTING_POWER);
-            boolean maxComputingPowerChanged = syncQueue.contains(SyncType.MAX_COMPUTING_POWER);
-            boolean abilityCategoryChanged = syncQueue.contains(SyncType.ABILITY_CATEGORY);
-            boolean skillsChanged = syncQueue.contains(SyncType.SKILLS);
-            PlayerSyncPacket packet = new PlayerSyncPacket(
+            final var connection = player.connection;
+            final var uuid = player.uuid;
+            var syncQueue = player.syncQueue;
+            var levelChanged = syncQueue.contains(SyncType.LEVEL);
+            var currentComputingPowerChanged = syncQueue.contains(SyncType.COMPUTING_POWER);
+            var maxComputingPowerChanged = syncQueue.contains(SyncType.MAX_COMPUTING_POWER);
+            var abilityCategoryChanged = syncQueue.contains(SyncType.ABILITY_CATEGORY);
+            var skillsChanged = syncQueue.contains(SyncType.SKILLS);
+            var packet = new PlayerSyncPacket(
                     levelChanged, getPlayerLevel(uuid),
                     currentComputingPowerChanged, getPlayerComputingPower(uuid),
                     maxComputingPowerChanged, getPlayerMaxComputingPower(uuid),
@@ -331,16 +319,16 @@ public class AbilitySystemServer {
             connection.send(new S2CPacket(packet));
             player.syncQueue.clear();
 
-            final float currentComputingPower = getPlayerComputingPower(uuid);
-            final float maxComputingPower = getPlayerMaxComputingPower(uuid);
-            final float computingPowerRecoverySpeed = getPlayerComputingPowerRecoverySpeed(uuid);
+            final var currentComputingPower = getPlayerComputingPower(uuid);
+            final var maxComputingPower = getPlayerMaxComputingPower(uuid);
+            final var computingPowerRecoverySpeed = getPlayerComputingPowerRecoverySpeed(uuid);
             if (currentComputingPower < maxComputingPower) {
                 setPlayerComputingPower(uuid, currentComputingPower + computingPowerRecoverySpeed);
             }
 
-            AbilityCategory abilityCategory = getPlayerAbilityCategory(uuid);
-            int learned = getPlayerSkills(uuid).size();
-            int all = abilityCategory.skillList.size();
+            var abilityCategory = getPlayerAbilityCategory(uuid);
+            var learned = getPlayerSkills(uuid).size();
+            var all = abilityCategory.skillList.size();
             float progress;
             if (all == 0) progress = 100.0f;
             else progress = (float) learned / all;
@@ -353,7 +341,7 @@ public class AbilitySystemServer {
                 return;
             }
             if (!playerMap.containsKey(player.getUUID())) {
-                WorldData.Player data = new WorldData.Player();
+                var data = new WorldData.Player();
                 playerMap.put(player.getUUID(), data);
                 setPlayerLevel(player.getUUID(), 0);
                 setPlayerAbilityCategory(player.getUUID(), Level0.INSTANCE);
@@ -365,7 +353,7 @@ public class AbilitySystemServer {
 
         public static void tickMinecraftServerThread(final MinecraftServer server) {
             server.getPlayerList().getPlayers().forEach(serverPlayer -> {
-                final UUID uuid = serverPlayer.getUUID();
+                final var uuid = serverPlayer.getUUID();
                 if (!LIVE_PLAYER_MAP.containsKey(uuid)) {
                     LIVE_PLAYER_MAP.put(uuid, new Player(
                                     uuid, playerMap.get(uuid), serverPlayer.connection.connection
@@ -374,7 +362,7 @@ public class AbilitySystemServer {
                     scheduleFullPlayerSync(uuid);
                 }
             });
-            Set<UUID> onlinePlayerUUIDs = server.getPlayerList().getPlayers().stream()
+            var onlinePlayerUUIDs = server.getPlayerList().getPlayers().stream()
                     .map(Entity::getUUID)
                     .collect(Collectors.toSet());
 
@@ -389,10 +377,10 @@ public class AbilitySystemServer {
         private final Connection connection;
         public float additionalComputingPower;
 
-        public Player(final UUID uuid, final WorldData.Player data, final Connection connection) {
-            this.uuid = uuid;
-            this.data = data;
-            this.connection = connection;
+        public Player(final UUID newUuid, final WorldData.Player newData, final Connection newConnection) {
+            uuid = newUuid;
+            data = newData;
+            connection = newConnection;
         }
     }
 

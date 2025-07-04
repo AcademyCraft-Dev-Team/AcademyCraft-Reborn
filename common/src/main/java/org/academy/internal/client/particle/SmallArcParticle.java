@@ -8,9 +8,9 @@ import net.minecraft.client.renderer.LightTexture;
 public class SmallArcParticle extends SuspendedParticle {
     private final SpriteSet sprites;
 
-    public SmallArcParticle(ClientLevel level, SpriteSet sprites, double x, double y, double z) {
-        super(level, sprites, x, y, z);
-        this.sprites = sprites;
+    public SmallArcParticle(ClientLevel level, SpriteSet newSprites, double x, double y, double z) {
+        super(level, newSprites, x, y, z);
+        sprites = newSprites;
         quadSize *= 2;
         lifetime /= 4;
     }

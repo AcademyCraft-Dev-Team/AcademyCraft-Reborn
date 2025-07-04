@@ -2,7 +2,9 @@ package org.academy.api.common.ability;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
-import org.academy.api.common.network.*;
+import org.academy.api.common.network.FriendlyByteBufDeserializers;
+import org.academy.api.common.network.FriendlyByteBufSerializers;
+import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.NotNull;
@@ -25,26 +27,26 @@ public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
     public PlayerSyncPacket() {
     }
 
-    public PlayerSyncPacket(boolean levelChanged,
-                            int level,
-                            boolean currentComputingPowerChanged,
-                            float currentComputingPower,
-                            boolean maxComputingPowerChanged,
-                            float maxComputingPower,
-                            boolean abilityCategoryChanged,
-                            String abilityCategory,
-                            boolean skillsChanged,
-                            HashSet<String> skills) {
-        this.levelChanged = levelChanged;
-        this.level = level;
-        this.currentComputingPowerChanged = currentComputingPowerChanged;
-        this.currentComputingPower = currentComputingPower;
-        this.maxComputingPowerChanged = maxComputingPowerChanged;
-        this.maxComputingPower = maxComputingPower;
-        this.abilityCategoryChanged = abilityCategoryChanged;
-        this.abilityCategory = abilityCategory;
-        this.skillsChanged = skillsChanged;
-        this.skills = skills;
+    public PlayerSyncPacket(boolean newLevelChanged,
+                            int newLevel,
+                            boolean newCurrentComputingPowerChanged,
+                            float newCurrentComputingPower,
+                            boolean newMaxComputingPowerChanged,
+                            float newMaxComputingPower,
+                            boolean newAbilityCategoryChanged,
+                            String newAbilityCategory,
+                            boolean newSkillsChanged,
+                            HashSet<String> newSkills) {
+        levelChanged = newLevelChanged;
+        level = newLevel;
+        currentComputingPowerChanged = newCurrentComputingPowerChanged;
+        currentComputingPower = newCurrentComputingPower;
+        maxComputingPowerChanged = newMaxComputingPowerChanged;
+        maxComputingPower = newMaxComputingPower;
+        abilityCategoryChanged = newAbilityCategoryChanged;
+        abilityCategory = newAbilityCategory;
+        skillsChanged = newSkillsChanged;
+        skills = newSkills;
     }
 
     @Override
@@ -67,7 +69,7 @@ public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
         }
         skillsChanged = buf.readBoolean();
         if (skillsChanged) {
-            FriendlyByteBufDeserializer<HashSet<String>> setFriendlyByteBufDeserializer =
+            var setFriendlyByteBufDeserializer =
                     FriendlyByteBufDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, HashSet::new);
             skills = setFriendlyByteBufDeserializer.deserialize(buf);
         }
@@ -93,7 +95,7 @@ public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
         }
         buf.writeBoolean(skillsChanged);
         if (skillsChanged) {
-            FriendlyByteBufSerializer<HashSet<String>> setFriendlyByteBufSerializer =
+            var setFriendlyByteBufSerializer =
                     FriendlyByteBufSerializers.getCollectionFriendlyByteBufSerializer(String.class);
             setFriendlyByteBufSerializer.serialize(buf, skills);
         }

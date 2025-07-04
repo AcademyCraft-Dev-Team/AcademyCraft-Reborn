@@ -14,14 +14,14 @@ public abstract class AbilityCategory {
     public final float probability;
     public final List<Skill> skillList = new ArrayList<>();
 
-    protected AbilityCategory(final String name) {
-        this.name = name;
-        this.probability = 1.0F;
+    protected AbilityCategory(final String newName) {
+        name = newName;
+        probability = 1.0F;
     }
 
-    protected AbilityCategory(final String name, final float probability) {
-        this.name = name;
-        this.probability = probability;
+    protected AbilityCategory(final String newName, final float newProbability) {
+        name = newName;
+        probability = newProbability;
     }
 
     public void initClient() {

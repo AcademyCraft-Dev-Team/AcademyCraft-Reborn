@@ -9,10 +9,10 @@ public class KeyEvent extends Event implements ICancellableEvent {
     public int action;
     public int modifiers;
 
-    public KeyEvent(int key, int scanCode, int action, int modifiers) {
-        this.key = key;
-        this.scanCode = scanCode;
-        this.action = action;
-        this.modifiers = modifiers;
+    public KeyEvent(int newKey, int newScanCode, int newAction, int newModifiers) {
+        key = newKey;
+        scanCode = newScanCode;
+        action = newAction;
+        modifiers = newModifiers;
     }
 }

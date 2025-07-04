@@ -26,9 +26,9 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
     public void render(@NotNull HighSpeedElectronBeam entity, float entityYaw, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
         entity.smoothProgress = MathUtil.lerpStartEndFactor(entity.smoothProgress, entity.progress, partialTick);
 
-        float ballRadius = entity.smoothProgress * 0.185f;
+        var ballRadius = entity.smoothProgress * 0.185f;
 
-        Matrix4f commonInitialOrientation = new Matrix4f()
+        var commonInitialOrientation = new Matrix4f()
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()));
 
@@ -42,7 +42,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         RenderUtil.BoxRenderer.renderFilledBox(poseStack, buffer, HEAD, 1, 1, 1, 1f);
         poseStack.popPose();
 
-        float rayVisualProgress = entity.isCharging() ? 0f : entity.smoothProgress;
+        var rayVisualProgress = entity.isCharging() ? 0f : entity.smoothProgress;
 
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(rayVisualProgress * 0.25f,  entity.length, rayVisualProgress * 0.25f));

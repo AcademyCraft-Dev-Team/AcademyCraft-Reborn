@@ -2,6 +2,7 @@ package org.academy.api.client.gui;
 
 import net.minecraft.core.BlockPos;
 import org.academy.AcademyCraftClient;
+import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -42,7 +43,7 @@ public final class WirelessPanelHelper {
             var nodeListPanel = new ScrollPanelWidget(10, 64, 160, 114);
             wirelessPanel.addChild("node_list", nodeListPanel);
 
-            var scrollBar = new VerticalScrollBarWidget(nodeListPanel, 160, 64, 5, 114);
+            var scrollBar = new ScrollBarWidget(nodeListPanel, 160, 64, 5, 114, Orientation.VERTICAL);
             scrollBar.setZ(scrollBar.getZ() + 1);
             wirelessPanel.addChild("scroll_bar", scrollBar);
         }

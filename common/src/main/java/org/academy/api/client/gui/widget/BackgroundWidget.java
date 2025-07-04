@@ -9,9 +9,9 @@ public class BackgroundWidget extends AbstractWidget {
     private final Screen screen;
     public Runnable runnable;
 
-    public BackgroundWidget(@NotNull Screen screen) {
-        super(0, 0, screen.width, screen.height);
-        this.screen = screen;
+    public BackgroundWidget(@NotNull Screen newScreen) {
+        super(0, 0, newScreen.width, newScreen.height);
+        screen = newScreen;
     }
 
     @Override

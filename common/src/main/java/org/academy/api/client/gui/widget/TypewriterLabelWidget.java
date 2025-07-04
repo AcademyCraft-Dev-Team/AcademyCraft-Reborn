@@ -1,9 +1,8 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.texture.Tickable;
 
-public class TypewriterLabelWidget extends LabelWidget implements Tickable {
+public class TypewriterLabelWidget extends LabelWidget {
     public final String fullText;
     public String displayedText = "";
     public float currentStep = 0.0f;
@@ -11,9 +10,9 @@ public class TypewriterLabelWidget extends LabelWidget implements Tickable {
     public boolean isAnimating = false;
     public Runnable afterFinished;
 
-    public TypewriterLabelWidget(String fullText, float x, float y) {
+    public TypewriterLabelWidget(String newFullText, float x, float y) {
         super("", x, y);
-        this.fullText = fullText;
+        fullText = newFullText;
     }
 
     public void start() {
@@ -30,7 +29,7 @@ public class TypewriterLabelWidget extends LabelWidget implements Tickable {
         if (isAnimating) {
             currentStep += displaySpeed * (partialTicks / 20.0f);
 
-            int currentLength = Math.min((int) Math.floor(currentStep), fullText.length());
+            var currentLength = Math.min((int) Math.floor(currentStep), fullText.length());
             displayedText = fullText.substring(0, currentLength);
 
             if (currentLength >= fullText.length()) {
@@ -43,9 +42,5 @@ public class TypewriterLabelWidget extends LabelWidget implements Tickable {
         value = displayedText;
 
         super.render(graphics, mouseX, mouseY, partialTicks);
-    }
-
-    @Override
-    public void tick() {
     }
 }

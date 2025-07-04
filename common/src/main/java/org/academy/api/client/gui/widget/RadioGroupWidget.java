@@ -3,7 +3,6 @@ package org.academy.api.client.gui.widget;
 import org.academy.api.client.gui.framework.Widget;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -17,22 +16,12 @@ public class RadioGroupWidget extends PanelWidget {
         super(x, y, width, height);
     }
 
-    /**
-     * Sets a callback to be executed when the selected radio button changes.
-     * The callback receives the newly selected button (or null if deselected, though typical radio groups don't deselect all).
-     * @param onSelectionChanged Consumer accepting the selected ImageRadioButtonWidget.
-     */
-    public void setOnSelectionChanged(Consumer<ImageRadioButtonWidget> onSelectionChanged) {
-        this.onSelectionChanged = onSelectionChanged;
+    public void setOnSelectionChanged(Consumer<ImageRadioButtonWidget> newOnSelectionChanged) {
+        onSelectionChanged = newOnSelectionChanged;
     }
 
-    /**
-     * Sets whether clicking the already selected button should trigger the
-     * onSelectionChanged callback again. Default is false.
-     * @param allowReselect True to allow re-triggering the callback.
-     */
-    public void setAllowReselect(boolean allowReselect) {
-        this.allowReselect = allowReselect;
+    public void setAllowReselect(boolean newAllowReselect) {
+        allowReselect = newAllowReselect;
     }
 
     @Override
@@ -45,41 +34,27 @@ public class RadioGroupWidget extends PanelWidget {
         }
     }
 
-    /**
-     * Programmatically selects a radio button within this group.
-     * @param buttonToSelect The radio button to select. Must be a child of this group.
-     */
     public void selectButton(@Nullable ImageRadioButtonWidget buttonToSelect) {
-        if (!allowReselect && Objects.equals(buttonToSelect, this.selectedButton)) {
+        if (!allowReselect && Objects.equals(buttonToSelect, selectedButton)) {
             return;
         }
 
         internalSelect(buttonToSelect, true);
     }
 
-    /**
-     * Selects a radio button within the group by its name.
-     * @param name The name of the radio button widget to select.
-     */
     public void selectButtonByName(String name) {
-        Widget widget = getChildren().get(name);
+        var widget = getChildren().get(name);
         if (widget instanceof ImageRadioButtonWidget radioButton) {
             selectButton(radioButton);
         }
     }
 
-
-    /**
-     * Internal selection logic.
-     * @param buttonToSelect The button to select.
-     * @param triggerCallback If true, triggers the onSelectionChanged callback.
-     */
     private void internalSelect(@Nullable ImageRadioButtonWidget buttonToSelect, boolean triggerCallback) {
         if (buttonToSelect != null && !buttonToSelect.isEnabled()) {
             return;
         }
 
-        boolean selectionChanged = !Objects.equals(selectedButton, buttonToSelect);
+        var selectionChanged = !Objects.equals(selectedButton, buttonToSelect);
 
         if (selectedButton != null) {
             selectedButton.setSelected(false);
@@ -95,7 +70,6 @@ public class RadioGroupWidget extends PanelWidget {
         }
     }
 
-
     @Nullable
     public ImageRadioButtonWidget getSelectedButton() {
         return selectedButton;
@@ -106,7 +80,7 @@ public class RadioGroupWidget extends PanelWidget {
         if (selectedButton == null) {
             return null;
         }
-        for (Map.Entry<String, Widget> entry : getChildren().entrySet()) {
+        for (var entry : getChildren().entrySet()) {
             if (entry.getValue() == selectedButton) {
                 return entry.getKey();
             }
@@ -116,7 +90,7 @@ public class RadioGroupWidget extends PanelWidget {
 
     @Override
     public void removeChild(String name) {
-        Widget removed = children.get(name);
+        var removed = children.get(name);
         super.removeChild(name);
         if (removed == selectedButton) {
             internalSelect(null, true);
@@ -128,7 +102,7 @@ public class RadioGroupWidget extends PanelWidget {
 
     @Override
     public void clearChildren() {
-        for (Widget child : getChildren().values()) {
+        for (var child : getChildren().values()) {
             if (child instanceof ImageRadioButtonWidget radioButton) {
                 radioButton.setRadioGroup(null);
             }

@@ -36,13 +36,13 @@ public class FriendlyByteBufDeserializers {
     public static final FriendlyByteBufDeserializer<Vector3f> VECTOR_3_F_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Vector3f.class, FriendlyByteBuf::readVector3f);
     public static final FriendlyByteBufDeserializer<Tag> COMPOUND_TAG_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(Tag.class, FriendlyByteBuf::readNbt);
     public static final FriendlyByteBufDeserializer<ArrayList> ARRAY_LIST_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(ArrayList.class, buffer -> {
-        boolean nonEmpty = buffer.readBoolean();
+        var nonEmpty = buffer.readBoolean();
         if (nonEmpty) {
-            int elementTypeId = buffer.readVarInt();
-            FriendlyByteBufDeserializer<?> elementDeserializer = getRequiredDeserializer(elementTypeId);
-            int size = buffer.readVarInt();
-            ArrayList list = new ArrayList(size);
-            for (int i = 0; i < size; i++) {
+            var elementTypeId = buffer.readVarInt();
+            var elementDeserializer = getRequiredDeserializer(elementTypeId);
+            var size = buffer.readVarInt();
+            var list = new ArrayList(size);
+            for (var i = 0; i < size; i++) {
                 list.add(elementDeserializer.deserialize(buffer));
             }
             return list;
@@ -51,31 +51,31 @@ public class FriendlyByteBufDeserializers {
         }
     });
     public static final FriendlyByteBufDeserializer<HashMap> MAP_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(HashMap.class, buffer -> {
-        int size = buffer.readVarInt();
-        boolean isEmpty = buffer.readBoolean();
-        HashMap<Object, Object> map = new HashMap<>(size);
+        var size = buffer.readVarInt();
+        var isEmpty = buffer.readBoolean();
+        var map = new HashMap<>(size);
         if (!isEmpty) {
-            int keyTypeId = buffer.readVarInt();
-            int valueTypeId = buffer.readVarInt();
-            FriendlyByteBufDeserializer<?> keyDeserializer = getRequiredDeserializer(keyTypeId);
-            FriendlyByteBufDeserializer<?> valueDeserializer = getRequiredDeserializer(valueTypeId);
+            var keyTypeId = buffer.readVarInt();
+            var valueTypeId = buffer.readVarInt();
+            var keyDeserializer = getRequiredDeserializer(keyTypeId);
+            var valueDeserializer = getRequiredDeserializer(valueTypeId);
 
-            for (int i = 0; i < size; i++) {
-                Object key = keyDeserializer.deserialize(buffer);
-                Object value = valueDeserializer.deserialize(buffer);
+            for (var i = 0; i < size; i++) {
+                var key = keyDeserializer.deserialize(buffer);
+                var value = valueDeserializer.deserialize(buffer);
                 map.put(key, value);
             }
         }
         return map;
     });
     public static final FriendlyByteBufDeserializer<HashSet> HASH_SET_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(HashSet.class, buffer -> {
-        boolean nonEmpty = buffer.readBoolean();
+        var nonEmpty = buffer.readBoolean();
         if (nonEmpty) {
-            int elementTypeId = buffer.readVarInt();
-            FriendlyByteBufDeserializer<?> elementDeserializer = getRequiredDeserializer(elementTypeId);
-            int size = buffer.readVarInt();
-            HashSet set = new HashSet(size);
-            for (int i = 0; i < size; i++) {
+            var elementTypeId = buffer.readVarInt();
+            var elementDeserializer = getRequiredDeserializer(elementTypeId);
+            var size = buffer.readVarInt();
+            var set = new HashSet(size);
+            for (var i = 0; i < size; i++) {
                 set.add(elementDeserializer.deserialize(buffer));
             }
             return set;
@@ -91,23 +91,23 @@ public class FriendlyByteBufDeserializers {
         }
     });
     public static final FriendlyByteBufDeserializer<ImmutablePair> PAIR_FRIENDLY_BYTE_BUF_DESERIALIZER = registerDeserializer(ImmutablePair.class, buffer -> {
-        int leftTypeId = buffer.readVarInt();
-        int rightTypeId = buffer.readVarInt();
-        FriendlyByteBufDeserializer<?> leftDeserializer = getRequiredDeserializer(leftTypeId);
-        FriendlyByteBufDeserializer<?> rightDeserializer = getRequiredDeserializer(rightTypeId);
+        var leftTypeId = buffer.readVarInt();
+        var rightTypeId = buffer.readVarInt();
+        var leftDeserializer = getRequiredDeserializer(leftTypeId);
+        var rightDeserializer = getRequiredDeserializer(rightTypeId);
 
-        Object left = leftDeserializer.deserialize(buffer);
-        Object right = rightDeserializer.deserialize(buffer);
+        var left = leftDeserializer.deserialize(buffer);
+        var right = rightDeserializer.deserialize(buffer);
 
         return new ImmutablePair<>(left, right);
     });
 
     public static <T, C extends Collection<T>> FriendlyByteBufDeserializer<C> getCollectionFriendlyByteBufDeserializer(Class<T> elementType, Supplier<C> collectionFactory) {
         return buffer -> {
-            C collection = collectionFactory.get();
-            int size = buffer.readVarInt();
-            FriendlyByteBufDeserializer<T> elementDeserializer = getRequiredDeserializer(elementType);
-            for (int i = 0; i < size; i++) {
+            var collection = collectionFactory.get();
+            var size = buffer.readVarInt();
+            var elementDeserializer = (FriendlyByteBufDeserializer<T>) getRequiredDeserializer(elementType);
+            for (var i = 0; i < size; i++) {
                 collection.add(elementDeserializer.deserialize(buffer));
             }
             return collection;
@@ -136,11 +136,11 @@ public class FriendlyByteBufDeserializers {
     }
 
     public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(int id) {
-        FriendlyByteBufDeserializer<T> deserializer = getDeserializer(id);
+        var deserializer = getDeserializer(id);
         if (deserializer == null) {
             throw new RuntimeException("No deserializer found for id " + id);
         } else {
-            return deserializer;
+            return (FriendlyByteBufDeserializer<T>) deserializer;
         }
     }
 
@@ -150,16 +150,16 @@ public class FriendlyByteBufDeserializers {
     }
 
     public static <T> FriendlyByteBufDeserializer<T> getRequiredDeserializer(Class<?> clazz) {
-        FriendlyByteBufDeserializer<T> deserializer = getDeserializer(clazz);
+        var deserializer = getDeserializer(clazz);
         if (deserializer == null) {
-            for (Map.Entry<Class<?>, FriendlyByteBufDeserializer<?>> entry : DESERIALIZER_MAP.entrySet()) {
+            for (var entry : DESERIALIZER_MAP.entrySet()) {
                 if (entry.getKey().isAssignableFrom(clazz)) {
                     return (FriendlyByteBufDeserializer<T>) entry.getValue();
                 }
             }
             throw new NullPointerException("Deserializer for " + clazz.getCanonicalName() + " was null and no assignable deserializer found.");
         } else {
-            return deserializer;
+            return (FriendlyByteBufDeserializer<T>) deserializer;
         }
     }
 }

@@ -7,8 +7,8 @@ public class MouseMoveEvent extends Event implements ICancellableEvent {
     public double xpos;
     public double ypos;
 
-    public MouseMoveEvent(double xpos, double ypos) {
-        this.xpos = xpos;
-        this.ypos = ypos;
+    public MouseMoveEvent(double newXpos, double newYpos) {
+        xpos = newXpos;
+        ypos = newYpos;
     }
 }

@@ -29,10 +29,10 @@ public class AnimationManager {
     }
 
     public void onFrameUpdate() {
-        long currentTime = getCurrentTime();
+        var currentTime = getCurrentTime();
 
         if (!pendingAdditions.isEmpty()) {
-            for (Animator anim : pendingAdditions) {
+            for (var anim : pendingAdditions) {
                 anim.startTime = currentTime + anim.getStartDelay();
                 anim.onStartInternal();
             }
@@ -44,8 +44,8 @@ public class AnimationManager {
             return;
         }
 
-        List<Animator> toRemove = new ArrayList<>();
-        for (Animator anim : runningAnimations) {
+        var toRemove = new ArrayList<Animator>();
+        for (var anim : runningAnimations) {
             if (anim.tick(currentTime)) {
                 toRemove.add(anim);
             }

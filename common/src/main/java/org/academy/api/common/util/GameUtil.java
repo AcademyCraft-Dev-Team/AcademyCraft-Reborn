@@ -19,8 +19,8 @@ public class GameUtil {
     }
 
     public static ThreadType getThreadType() {
-        Thread thread = Thread.currentThread();
-        String threadName = thread.getName();
+        var thread = Thread.currentThread();
+        var threadName = thread.getName();
         return switch (threadName) {
             case "Server thread" -> ThreadType.SERVER;
             case "Render thread" -> ThreadType.CLIENT;

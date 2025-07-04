@@ -1,11 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 
 public class ImageWidget extends AbstractWidget {
     public float u0 = 0;
@@ -20,22 +18,22 @@ public class ImageWidget extends AbstractWidget {
     public float heightScale = 1.0f;
     public boolean centerScale = true;
 
-    public ImageWidget(float x, float y, float width, float height, @Nullable RenderType renderType) {
+    public ImageWidget(float x, float y, float width, float height, @Nullable RenderType newRenderType) {
         super(x, y, width, height);
-        this.renderType = renderType;
+        renderType = newRenderType;
     }
 
     @Override
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
         if (renderType == null) return;
-        VertexConsumer vertexConsumer = graphics.bufferSource().getBuffer(renderType);
+        var vertexConsumer = graphics.bufferSource().getBuffer(renderType);
 
         graphics.pose().pushPose();
-        Matrix4f matrix4f = graphics.pose().last().pose();
+        var matrix4f = graphics.pose().last().pose();
 
-        float scaledWidth = getWidth() * widthScale;
-        float scaledHeight = getHeight() * heightScale;
+        var scaledWidth = getWidth() * widthScale;
+        var scaledHeight = getHeight() * heightScale;
 
         matrix4f.translate(getX(), getY(), getZ());
         if (centerScale) {
@@ -44,7 +42,7 @@ public class ImageWidget extends AbstractWidget {
 
         matrix4f.scale(scaledWidth, scaledHeight, 1);
 
-        float finalAlpha = getAbsoluteAlpha();
+        var finalAlpha = getAbsoluteAlpha();
         vertexConsumer.vertex(matrix4f, 0, 0, 0).color(red, green, blue, finalAlpha).uv(u0, v0).endVertex();
         vertexConsumer.vertex(matrix4f, 0, 1, 0).color(red, green, blue, finalAlpha).uv(u0, v1).endVertex();
         vertexConsumer.vertex(matrix4f, 1, 1, 0).color(red, green, blue, finalAlpha).uv(u1, v1).endVertex();

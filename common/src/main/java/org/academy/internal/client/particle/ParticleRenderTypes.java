@@ -1,6 +1,5 @@
 package org.academy.internal.client.particle;
 
-import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -23,7 +22,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 public class ParticleRenderTypes {
     public static final Map<ParticleType<?>, ParticleEngine.SpriteParticleRegistration<?>> PARTICLE_PROVIDERS = new HashMap<>();
@@ -40,23 +38,23 @@ public class ParticleRenderTypes {
                     public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level,
                                                             double x, double y, double z,
                                                             double xSpeed, double ySpeed, double zSpeed) {
-                        ImagPhaseFluidParticle particle = new ImagPhaseFluidParticle(level, spriteSet, x, y, z);
-                        Random random = MathUtil.RANDOM;
+                        var particle = new ImagPhaseFluidParticle(level, spriteSet, x, y, z);
+                        var random = MathUtil.RANDOM;
                         particle.scale(random.nextFloat(0.5f, 0.75f));
 
-                        String baseHexColor = IMAG_PHASE_HEX_COLORS.get(random.nextInt(IMAG_PHASE_HEX_COLORS.size()));
+                        var baseHexColor = IMAG_PHASE_HEX_COLORS.get(random.nextInt(IMAG_PHASE_HEX_COLORS.size()));
 
-                        int baseR = Integer.parseInt(baseHexColor.substring(0, 2), 16);
-                        int baseG = Integer.parseInt(baseHexColor.substring(2, 4), 16);
-                        int baseB = Integer.parseInt(baseHexColor.substring(4, 6), 16);
+                        var baseR = Integer.parseInt(baseHexColor.substring(0, 2), 16);
+                        var baseG = Integer.parseInt(baseHexColor.substring(2, 4), 16);
+                        var baseB = Integer.parseInt(baseHexColor.substring(4, 6), 16);
 
-                        int rOffset = random.nextInt(-20, 20);
-                        int gOffset = random.nextInt(-20, 20);
-                        int bOffset = random.nextInt(-20, 20);
+                        var rOffset = random.nextInt(-20, 20);
+                        var gOffset = random.nextInt(-20, 20);
+                        var bOffset = random.nextInt(-20, 20);
 
-                        float finalR = MathUtil.clamp(baseR + rOffset, 0, 255) / 255.0f;
-                        float finalG = MathUtil.clamp(baseG + gOffset, 0, 255) / 255.0f;
-                        float finalB = MathUtil.clamp(baseB + bOffset, 0, 255) / 255.0f;
+                        var finalR = MathUtil.clamp(baseR + rOffset, 0, 255) / 255.0f;
+                        var finalG = MathUtil.clamp(baseG + gOffset, 0, 255) / 255.0f;
+                        var finalB = MathUtil.clamp(baseB + bOffset, 0, 255) / 255.0f;
 
                         particle.setColor(finalR, finalG, finalB);
                         return particle;
@@ -72,23 +70,23 @@ public class ParticleRenderTypes {
                     public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level,
                                                             double x, double y, double z,
                                                             double xSpeed, double ySpeed, double zSpeed) {
-                        ImagPhaseLeavesParticle particle = new ImagPhaseLeavesParticle(level, x, y, z, spriteSet);
-                        Random random = MathUtil.RANDOM;
+                        var particle = new ImagPhaseLeavesParticle(level, x, y, z, spriteSet);
+                        var random = MathUtil.RANDOM;
                         particle.scale(random.nextFloat(0.5f, 0.75f));
 
-                        String baseHexColor = IMAG_PHASE_HEX_COLORS.get(random.nextInt(IMAG_PHASE_HEX_COLORS.size()));
+                        var baseHexColor = IMAG_PHASE_HEX_COLORS.get(random.nextInt(IMAG_PHASE_HEX_COLORS.size()));
 
-                        int baseR = Integer.parseInt(baseHexColor.substring(0, 2), 16);
-                        int baseG = Integer.parseInt(baseHexColor.substring(2, 4), 16);
-                        int baseB = Integer.parseInt(baseHexColor.substring(4, 6), 16);
+                        var baseR = Integer.parseInt(baseHexColor.substring(0, 2), 16);
+                        var baseG = Integer.parseInt(baseHexColor.substring(2, 4), 16);
+                        var baseB = Integer.parseInt(baseHexColor.substring(4, 6), 16);
 
-                        int rOffset = random.nextInt(-20, 20);
-                        int gOffset = random.nextInt(-20, 20);
-                        int bOffset = random.nextInt(-20, 20);
+                        var rOffset = random.nextInt(-20, 20);
+                        var gOffset = random.nextInt(-20, 20);
+                        var bOffset = random.nextInt(-20, 20);
 
-                        float finalR = MathUtil.clamp(baseR + rOffset, 0, 255) / 255.0f;
-                        float finalG = MathUtil.clamp(baseG + gOffset, 0, 255) / 255.0f;
-                        float finalB = MathUtil.clamp(baseB + bOffset, 0, 255) / 255.0f;
+                        var finalR = MathUtil.clamp(baseR + rOffset, 0, 255) / 255.0f;
+                        var finalG = MathUtil.clamp(baseG + gOffset, 0, 255) / 255.0f;
+                        var finalB = MathUtil.clamp(baseB + bOffset, 0, 255) / 255.0f;
 
                         particle.setColor(finalR, finalG, finalB);
                         return particle;
@@ -126,7 +124,7 @@ public class ParticleRenderTypes {
         @SuppressWarnings("deprecation")
         @Override
         public void begin(@NotNull BufferBuilder builder, @NotNull TextureManager textureManager) {
-            RenderTarget renderTarget = Minecraft.getInstance().levelRenderer.getTranslucentTarget();
+            var renderTarget = Minecraft.getInstance().levelRenderer.getTranslucentTarget();
             if (renderTarget != null) {
                 renderTarget.bindWrite(false);
             }
@@ -149,7 +147,7 @@ public class ParticleRenderTypes {
 
     @SubscribePacket
     public static void handleSpawnArcMediumParticle(SpawnArcMediumParticlePacket packet) {
-        ClientLevel level = Minecraft.getInstance().level;
+        var level = Minecraft.getInstance().level;
         if (level != null) {
             level.addParticle(ParticleTypes.ARC_MEDIUM, packet.getX(), packet.getY(), packet.getZ(), packet.getYaw(), packet.getPitch(), 0.0D);
         }

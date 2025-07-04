@@ -2,7 +2,9 @@ package org.academy.api.common.network.future.asm;
 
 import org.academy.api.common.network.future.IRequestPayload;
 import org.academy.api.common.network.future.IResponsePayload;
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -13,11 +15,11 @@ public class PayloadHandlerInvokerFactory {
     }
 
     public static StaticPayloadHandlerInvoker createStaticInvoker(Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType) {
-        String generatedClassName = generateClassName(targetMethod, requestType, true);
-        byte[] classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, true);
+        var generatedClassName = generateClassName(targetMethod, requestType, true);
+        var classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, true);
         try {
-            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(PayloadHandlerInvokerFactory.class, MethodHandles.lookup());
-            Class<?> invokerClass = lookup.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE).lookupClass();
+            var lookup = MethodHandles.privateLookupIn(PayloadHandlerInvokerFactory.class, MethodHandles.lookup());
+            var invokerClass = lookup.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE).lookupClass();
             return (StaticPayloadHandlerInvoker) invokerClass.getDeclaredConstructor().newInstance();
         } catch (Throwable e) {
             throw new RuntimeException("Failed to create StaticPayloadHandlerInvoker for " + targetMethod, e);
@@ -25,11 +27,11 @@ public class PayloadHandlerInvokerFactory {
     }
 
     public static InstancePayloadHandlerInvoker createInstanceInvoker(Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType, Object targetInstance) {
-        String generatedClassName = generateClassName(targetMethod, requestType, false);
-        byte[] classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, false);
+        var generatedClassName = generateClassName(targetMethod, requestType, false);
+        var classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, false);
         try {
-            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(PayloadHandlerInvokerFactory.class, MethodHandles.lookup());
-            Class<?> invokerClass = lookup.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE).lookupClass();
+            var lookup = MethodHandles.privateLookupIn(PayloadHandlerInvokerFactory.class, MethodHandles.lookup());
+            var invokerClass = lookup.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE).lookupClass();
             return (InstancePayloadHandlerInvoker) invokerClass.getDeclaredConstructor(Object.class).newInstance(targetInstance);
         } catch (Throwable e) {
             throw new RuntimeException("Failed to create InstancePayloadHandlerInvoker for " + targetMethod, e);
@@ -37,8 +39,8 @@ public class PayloadHandlerInvokerFactory {
     }
 
     private static String generateClassName(Method targetMethod, Class<?> requestType, boolean isStatic) {
-        String prefix = isStatic ? StaticPayloadHandlerInvoker.class.getSimpleName() : InstancePayloadHandlerInvoker.class.getSimpleName();
-        return PayloadHandlerInvokerFactory.class.getName() .replace('.', '/') + "$"
+        var prefix = isStatic ? StaticPayloadHandlerInvoker.class.getSimpleName() : InstancePayloadHandlerInvoker.class.getSimpleName();
+        return PayloadHandlerInvokerFactory.class.getName().replace('.', '/') + "$"
                 + prefix + "Impl" + "$"
                 + targetMethod.getDeclaringClass().getSimpleName() + "$"
                 + targetMethod.getName() + "$"
@@ -46,23 +48,23 @@ public class PayloadHandlerInvokerFactory {
     }
 
     private static byte[] generateInvokerBytecode(String generatedClassNameInternal, Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType, boolean isStatic) {
-        String handlerClassNameInternal = Type.getInternalName(targetMethod.getDeclaringClass());
-        String requestTypeInternalName = Type.getInternalName(requestType);
-        String iRequestPayloadInternalName = Type.getInternalName(IRequestPayload.class);
-        String iResponsePayloadInternalName = Type.getInternalName(IResponsePayload.class);
-        String parentInvokerName = isStatic ? Type.getInternalName(StaticPayloadHandlerInvoker.class) : Type.getInternalName(InstancePayloadHandlerInvoker.class);
-        String objectDescriptor = Type.getDescriptor(Object.class);
+        var handlerClassNameInternal = Type.getInternalName(targetMethod.getDeclaringClass());
+        var requestTypeInternalName = Type.getInternalName(requestType);
+        var iRequestPayloadInternalName = Type.getInternalName(IRequestPayload.class);
+        var iResponsePayloadInternalName = Type.getInternalName(IResponsePayload.class);
+        var parentInvokerName = isStatic ? Type.getInternalName(StaticPayloadHandlerInvoker.class) : Type.getInternalName(InstancePayloadHandlerInvoker.class);
+        var objectDescriptor = Type.getDescriptor(Object.class);
 
-        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        var cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, generatedClassNameInternal, null, parentInvokerName, new String[]{Type.getInternalName(IPayloadHandlerInvoker.class)});
 
         if (!isStatic) {
-            FieldVisitor fv = cw.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL, "instance", objectDescriptor, null, null);
+            var fv = cw.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL, "instance", objectDescriptor, null, null);
             fv.visitEnd();
         }
 
-        String constructorDesc = isStatic ? "()V" : "(" + objectDescriptor + ")V";
-        MethodVisitor constructor = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", constructorDesc, null, null);
+        var constructorDesc = isStatic ? "()V" : "(" + objectDescriptor + ")V";
+        var constructor = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", constructorDesc, null, null);
         constructor.visitCode();
         constructor.visitVarInsn(Opcodes.ALOAD, 0);
         if (!isStatic) {
@@ -78,12 +80,12 @@ public class PayloadHandlerInvokerFactory {
         constructor.visitMaxs(isStatic ? 1 : 2, isStatic ? 1 : 2);
         constructor.visitEnd();
 
-        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "invoke",
+        var mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "invoke",
                 "(L" + iRequestPayloadInternalName + ";)L" + iResponsePayloadInternalName + ";",
                 null, null);
         mv.visitCode();
 
-        int targetMethodInvokeOpcode = Modifier.isStatic(targetMethod.getModifiers()) ? Opcodes.INVOKESTATIC :
+        var targetMethodInvokeOpcode = Modifier.isStatic(targetMethod.getModifiers()) ? Opcodes.INVOKESTATIC :
                 (targetMethod.getDeclaringClass().isInterface() ? Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL);
 
         if (!isStatic) {

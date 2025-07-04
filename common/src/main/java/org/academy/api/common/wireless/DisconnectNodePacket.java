@@ -15,17 +15,17 @@ public class DisconnectNodePacket extends IPacket<ServerGamePacketListenerImpl> 
     public DisconnectNodePacket() {
     }
 
-    public DisconnectNodePacket(BlockPos userPos) {
-        this.userPos = userPos;
+    public DisconnectNodePacket(BlockPos newUserPos) {
+        userPos = newUserPos;
     }
 
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
-        this.userPos = buf.readBlockPos();
+        userPos = buf.readBlockPos();
     }
 
     @Override
     public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(this.userPos);
+        buf.writeBlockPos(userPos);
     }
 }

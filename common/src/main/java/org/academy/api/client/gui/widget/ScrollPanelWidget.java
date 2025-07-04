@@ -83,8 +83,8 @@ public class ScrollPanelWidget extends AbstractContainerWidget {
 
     @Override
     public boolean isMouseOver(double checkX, double checkY) {
-        float absX = super.getAbsoluteX();
-        float absY = super.getAbsoluteY();
+        var absX = super.getAbsoluteX();
+        var absY = super.getAbsoluteY();
         return checkX >= absX && checkY >= absY && checkX < absX + getWidth() && checkY < absY + getHeight();
     }
 
