@@ -51,6 +51,12 @@ public class BlockEntityTypes {
             ),
             "omni_crafting_table"
     );
+    public static final BlockEntityType<CatEngineBlockEntity> CAT_ENGINE = register(
+            BlockEntityType.Builder.of(
+                    CatEngineBlockEntity::new, Blocks.CAT_ENGINE
+            ),
+            "cat_engine"
+    );
 
     public static <T extends BlockEntity> BlockEntityType<T> register(BlockEntityType.Builder<T> builder, String choiceName) {
         BlockEntityType<T> result = builder.build(Util.fetchChoiceType(References.BLOCK_ENTITY, choiceName));
