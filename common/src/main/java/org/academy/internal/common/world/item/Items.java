@@ -32,6 +32,7 @@ public class Items {
     public static final Item IMAG_PHASE_LOG = register("imag_phase_log", new BlockItem(Blocks.IMAG_PHASE_LOG, new Item.Properties()));
     public static final Item IMAG_PHASE_LICHEN = register("imag_phase_lichen", new BlockItem(Blocks.IMAG_PHASE_LICHEN, new Item.Properties()));
     public static final Item OMNI_CRAFTING_TABLE = register("omni_crafting_table", new BlockItem(Blocks.OMNI_CRAFTING_TABLE, new Item.Properties()));
+    public static final Item CAT_ENGINE = register("cat_engine", new BlockItem(Blocks.CAT_ENGINE, new Item.Properties()));
 
     public static <T extends Item> T register(String name, T item) {
         ITEMS.put(name, item);
