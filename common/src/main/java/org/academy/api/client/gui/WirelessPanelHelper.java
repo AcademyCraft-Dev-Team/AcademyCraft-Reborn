@@ -25,9 +25,6 @@ public final class WirelessPanelHelper {
         var wirelessPanel = new PanelWidget(x, y, PANEL_WIDTH, PANEL_HEIGHT);
         {
             var back = new BlendQuadWidget(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
-            back.red = 0;
-            back.green = 0;
-            back.blue = 0;
             back.setAlpha(0.5f);
             wirelessPanel.addChild("back", back);
 
@@ -51,14 +48,18 @@ public final class WirelessPanelHelper {
     }
 
     public interface WirelessPanel {
+        @NotNull
         ScrollPanelWidget getNodeList();
 
+        @NotNull
         PanelWidget getWirelessPanel();
 
+        @NotNull
         String getConnectedNodeName();
 
-        void setConnectedNodeName(String connectedNodeName);
+        void setConnectedNodeName(String newConnectedNodeName);
 
+        @NotNull
         BlockPos getPosition();
 
         default void requestAvailableNodes(ScrollPanelWidget listPanel) {

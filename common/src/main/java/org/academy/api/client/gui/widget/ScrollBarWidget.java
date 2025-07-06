@@ -24,8 +24,11 @@ public class ScrollBarWidget extends DragBarWidget {
         var finalTrackColor = (getTrackColor() & 0x00FFFFFF) | ((int) (((getTrackColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
         var finalThumbColor = (getThumbColor() & 0x00FFFFFF) | ((int) (((getThumbColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
 
+        matrix.translate(0, 0, getZ());
+
         if (showBackground) {
             RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), finalTrackColor, buffer);
+            matrix.translate(0, 0, 1);
         }
 
         var thumbStart = getThumbPosition();

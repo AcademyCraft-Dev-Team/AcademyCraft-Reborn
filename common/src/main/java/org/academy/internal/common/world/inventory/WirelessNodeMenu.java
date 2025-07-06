@@ -10,26 +10,26 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-public class WirelessNodeMenu extends AbstractContainerMenu {
+public final class WirelessNodeMenu extends AbstractContainerMenu {
     public final ContainerLevelAccess access;
     public final Container container;
 
-    public WirelessNodeMenu(int containerId, Inventory playerInventory, ContainerLevelAccess access, Container container) {
+    public WirelessNodeMenu(int containerId, Inventory playerInventory, ContainerLevelAccess levelAccess, Container nodeContainer) {
         super(MenuTypes.NODE_MENU, containerId);
-        this.access = access;
-        this.container = container;
+        access = levelAccess;
+        container = nodeContainer;
 
-        addSlot(new Slot(container, 0, 44, -11));
-        addSlot(new Slot(container, 1, 44, 59));
+        addSlot(new Slot(nodeContainer, 0, 44, -11));
+        addSlot(new Slot(nodeContainer, 1, 44, 59));
 
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 9; ++j) {
+        for (var i = 0; i < 3; ++i) {
+            for (var j = 0; j < 9; ++j) {
                 addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
             }
         }
 
-        for (int k = 0; k < 9; ++k) {
-            this.addSlot(new Slot(playerInventory, k, 8 + k * 18, 142));
+        for (var k = 0; k < 9; ++k) {
+            addSlot(new Slot(playerInventory, k, 8 + k * 18, 142));
         }
     }
 
@@ -37,21 +37,21 @@ public class WirelessNodeMenu extends AbstractContainerMenu {
         this(id, playerInventory, ContainerLevelAccess.NULL, new SimpleContainer(2));
     }
 
-    public @NotNull ItemStack quickMoveStack(@NotNull Player pPlayer, int pIndex) {
+    public @NotNull ItemStack quickMoveStack(@NotNull Player pPlayer, int index) {
         var itemstack = ItemStack.EMPTY;
-        var slot = this.slots.get(pIndex);
+        var slot = slots.get(index);
         if (slot.hasItem()) {
-            var itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (pIndex < 2) {
-                if (!this.moveItemStackTo(itemstack1, 2, this.slots.size(), true)) {
+            var itemStack = slot.getItem();
+            itemstack = itemStack.copy();
+            if (index < 2) {
+                if (!moveItemStackTo(itemStack, 2, slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 0, 2, false)) {
+            } else if (!moveItemStackTo(itemStack, 0, 2, false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (itemStack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
