@@ -17,6 +17,7 @@ public class BlockEntityRenderers {
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.WIND_GEN_PILLAR, WindGenPillarBlockEntityRenderer.INSTANCE);
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.ADVANCED_WIRELESS_NODE, WirelessNodeBlockEntityRenderer.INSTANCE);
         BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.OMNI_CRAFTING_TABLE, OmniCraftingTableBlockEntityRenderer.INSTANCE);
+        BLOCK_ENTITY_RENDERERS.put(BlockEntityTypes.CAT_ENGINE, CatEngineBlockEntityRenderer.INSTANCE);
     }
 
     private BlockEntityRenderers() {

@@ -42,6 +42,7 @@ public class Blocks {
     );
     public static final Block IMAG_PHASE_LICHEN = register("imag_phase_lichen", new ImagPhaseLichenBlock());
     public static final Block OMNI_CRAFTING_TABLE = register("omni_crafting_table", new OmniCraftingTableBlock());
+    public static final Block CAT_ENGINE = register("cat_engine", new CatEngineBlock());
 
     public static <T extends Block> T register(String name, T block) {
         BLOCKS.put(name, block);
