@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 @JeiPlugin
-public class JEIPlugin implements IModPlugin {
+public final class JEIPlugin implements IModPlugin {
     @Override
     public @NotNull ResourceLocation getPluginUid() {
         return new ResourceLocation(AcademyCraft.MOD_ID, "jei_plugin");
@@ -25,13 +25,13 @@ public class JEIPlugin implements IModPlugin {
         registration.addGuiContainerHandler(WindGenScreen.class, new IGuiContainerHandler<>() {
             @Override
             public @NotNull List<Rect2i> getGuiExtraAreas(@NotNull WindGenScreen containerScreen) {
-                return List.of(new Rect2i(containerScreen.getLeftPos() + containerScreen.getImageWidth() + 3, containerScreen.getTopPos() - 22, 110, 105));
+                return List.of(new Rect2i(0, 0, containerScreen.width, containerScreen.height));
             }
         });
         registration.addGuiContainerHandler(WirelessNodeScreen.class, new IGuiContainerHandler<>() {
             @Override
             public @NotNull List<Rect2i> getGuiExtraAreas(@NotNull WirelessNodeScreen containerScreen) {
-                return List.of(new Rect2i(containerScreen.getLeftPos() + containerScreen.getImageWidth() + 3, containerScreen.getTopPos() - 22, 110, 140));
+                return List.of(new Rect2i(0, 0, containerScreen.width, containerScreen.height));
             }
         });
     }

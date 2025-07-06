@@ -4,85 +4,103 @@ import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.framework.CGuiContainerScreen;
-import org.academy.api.client.gui.framework.CGuiScreen;
+import org.academy.api.client.gui.framework.IAnimationScreen;
+import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
 
 public final class ScreenAnimationUtil {
+    public static final long DURATION = 350L;
+    private static final float Y_OFFSET = 20f;
+    private static final float X_OFFSET = 20f;
+    private static final float SCALE_START = 0.5f;
+
     private ScreenAnimationUtil() {
     }
 
-    public static void show(CGuiContainerScreen<?> screen, PanelWidget panel, float finalY) {
-        screen.cancelAnimations(panel);
-        var duration = 350L;
-        var yOffset = 20f;
+    public static void alphaShow(IAnimationScreen screen, Widget widget) {
+        screen.playTrackedAnimation(widget, ObjectAnimator.ofFloat(widget::setAlpha, 0f, 1f).setDuration(DURATION).setInterpolator(EasingFunctions.LINEAR));
+    }
 
-        panel.setY(finalY + yOffset);
+    public static void alphaHide(IAnimationScreen screen, Widget widget, Runnable onEndCallback) {
+        var listener = new AnimatorListener() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                widget.setVisible(false);
+                widget.setEnabled(false);
+                if (onEndCallback != null) {
+                    onEndCallback.run();
+                }
+            }
+        };
+
+        var alphaAnim = ObjectAnimator.ofFloat(widget::setAlpha, widget.getAlpha(), 0f).setDuration(DURATION).setInterpolator(EasingFunctions.LINEAR);
+        alphaAnim.addListener(listener);
+        screen.playTrackedAnimation(widget, alphaAnim);
+    }
+
+    public static void moveYShow(IAnimationScreen screen, Widget widget, float finalY) {
+        widget.setY(finalY + Y_OFFSET);
+        screen.playTrackedAnimation(widget, ObjectAnimator.ofFloat(widget::setY, widget.getY(), finalY).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_OUT_BACK));
+    }
+
+    public static void moveYHide(IAnimationScreen screen, Widget widget, float startY) {
+        screen.playTrackedAnimation(widget, ObjectAnimator.ofFloat(widget::setY, startY, startY + Y_OFFSET).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_IN_CUBIC));
+    }
+
+    public static void moveXShow(IAnimationScreen screen, Widget widget, float finalX) {
+        widget.setX(finalX - X_OFFSET);
+        screen.playTrackedAnimation(widget, ObjectAnimator.ofFloat(widget::setX, widget.getX(), finalX).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_OUT_BACK));
+    }
+
+    public static void moveXHide(IAnimationScreen screen, Widget widget, float startX) {
+        screen.playTrackedAnimation(widget, ObjectAnimator.ofFloat(widget::setX, startX, startX - X_OFFSET).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_IN_CUBIC));
+    }
+
+    public static void scaleShow(IAnimationScreen screen, ImageWidget widget) {
+        widget.widthScale = SCALE_START;
+        widget.heightScale = SCALE_START;
+        screen.playTrackedAnimation(widget, ObjectAnimator.ofFloat(val -> {
+            widget.widthScale = val;
+            widget.heightScale = val;
+        }, SCALE_START, 1.0f).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_OUT_BACK));
+    }
+
+    public static void scaleHide(IAnimationScreen screen, ImageWidget widget, Runnable onEndCallback) {
+        var listener = new AnimatorListener() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                widget.setVisible(false);
+                widget.setEnabled(false);
+                if (onEndCallback != null) {
+                    onEndCallback.run();
+                }
+            }
+        };
+
+        var anim = ObjectAnimator.ofFloat(val -> {
+            widget.widthScale = val;
+            widget.heightScale = val;
+        }, 1.0f, SCALE_START).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_IN_BACK);
+        anim.addListener(listener);
+        screen.playTrackedAnimation(widget, anim);
+    }
+
+    public static void show(IAnimationScreen screen, PanelWidget panel, float finalY) {
+        screen.cancelAnimations(panel);
+
         panel.setAlpha(0f);
         panel.setVisible(true);
         panel.setEnabled(true);
 
-        screen.playTrackedAnimation(panel, ObjectAnimator.ofFloat(panel::setY, panel.getY(), finalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_BACK));
-        screen.playTrackedAnimation(panel, ObjectAnimator.ofFloat(panel::setAlpha, 0f, 1f).setDuration(duration / 2).setInterpolator(EasingFunctions.LINEAR));
+        moveYShow(screen, panel, finalY);
+        alphaShow(screen, panel);
     }
 
-    public static void show(CGuiScreen screen, PanelWidget panel, float finalY) {
+    public static void hide(IAnimationScreen screen, PanelWidget panel, float startY) {
         screen.cancelAnimations(panel);
-        var duration = 350L;
-        var yOffset = 20f;
 
-        panel.setY(finalY + yOffset);
-        panel.setAlpha(0f);
-        panel.setVisible(true);
-        panel.setEnabled(true);
-
-        screen.playTrackedAnimation(panel, ObjectAnimator.ofFloat(panel::setY, panel.getY(), finalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_BACK));
-        screen.playTrackedAnimation(panel, ObjectAnimator.ofFloat(panel::setAlpha, 0f, 1f).setDuration(duration / 2).setInterpolator(EasingFunctions.LINEAR));
-    }
-
-    public static void hide(CGuiContainerScreen<?> screen, PanelWidget panel, float startY) {
-        screen.cancelAnimations(panel);
-        var duration = 300L;
-        var yOffset = 20f;
-
-        var listener = new AnimatorListener() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                panel.setVisible(false);
-                panel.setEnabled(false);
-                panel.setY(startY);
-            }
-        };
-
-        var alphaAnim = ObjectAnimator.ofFloat(panel::setAlpha, panel.getAlpha(), 0f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR);
-        alphaAnim.addListener(listener);
-
-        var yAnim = ObjectAnimator.ofFloat(panel::setY, startY, startY + yOffset).setDuration(duration).setInterpolator(EasingFunctions.EASE_IN_CUBIC);
-
-        screen.playTrackedAnimation(panel, alphaAnim);
-        screen.playTrackedAnimation(panel, yAnim);
-    }
-
-    public static void hide(CGuiScreen screen, PanelWidget panel, float startY) {
-        screen.cancelAnimations(panel);
-        var duration = 300L;
-        var yOffset = 20f;
-
-        var listener = new AnimatorListener() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                panel.setVisible(false);
-                panel.setEnabled(false);
-                panel.setY(startY);
-            }
-        };
-
-        var alphaAnim = ObjectAnimator.ofFloat(panel::setAlpha, panel.getAlpha(), 0f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR);
-        alphaAnim.addListener(listener);
-
-        var yAnim = ObjectAnimator.ofFloat(panel::setY, startY, startY + yOffset).setDuration(duration).setInterpolator(EasingFunctions.EASE_IN_CUBIC);
-
-        screen.playTrackedAnimation(panel, alphaAnim);
-        screen.playTrackedAnimation(panel, yAnim);
+        moveYHide(screen, panel, startY);
+        alphaHide(screen, panel, () -> panel.setY(startY));
     }
 }

@@ -3,11 +3,13 @@ package org.academy.internal.client.gui.screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.player.Inventory;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
+import org.academy.internal.common.world.level.block.OmniCraftingTableBlock;
 import org.academy.internal.common.world.level.block.WindGenBaseBlock;
 import org.academy.internal.common.world.level.block.WirelessNodeBlock;
 
@@ -46,11 +48,24 @@ public final class Screens {
                     var containerId = buf.readVarInt();
                     var title = buf.readComponent();
                     var pos = buf.readBlockPos();
-                    assert Minecraft.getInstance().player != null;
-                    var inventory = Minecraft.getInstance().player.getInventory();
-                    var menu = MenuTypes.NODE_MENU.create(containerId, inventory);
-                    Minecraft.getInstance().player.containerMenu = menu;
-                    Minecraft.getInstance().setScreen(new WirelessNodeScreen(menu, inventory, title, pos));
+                    if (Minecraft.getInstance().player != null) {
+                        Inventory inventory = Minecraft.getInstance().player.getInventory();
+                        var menu = MenuTypes.NODE_MENU.create(containerId, inventory);
+                        Minecraft.getInstance().player.containerMenu = menu;
+                        Minecraft.getInstance().setScreen(new WirelessNodeScreen(menu, inventory, title, pos));
+                    }
+                });
+        SCREEN_HANDLERS.put(OmniCraftingTableBlock.OMNI_CRAFTING_TABLE_SCREEN,
+                (clientPacketListener, buf) -> {
+                    var containerId = buf.readVarInt();
+                    var title = buf.readComponent();
+                    var pos = buf.readBlockPos();
+                    if (Minecraft.getInstance().player != null) {
+                        Inventory inventory = Minecraft.getInstance().player.getInventory();
+                        var menu = MenuTypes.OMNI_CRAFTING_TABLE_MENU.create(containerId, inventory);
+                        Minecraft.getInstance().player.containerMenu = menu;
+                        Minecraft.getInstance().setScreen(new OmniCraftingTableScreen(menu, inventory, title, pos));
+                    }
                 });
     }
 
