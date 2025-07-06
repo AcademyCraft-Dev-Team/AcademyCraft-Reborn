@@ -11,7 +11,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.model.AbilityDeveloperBlockEntityModel;
@@ -100,19 +99,15 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         int energyStoredDouble = getEnergyStored();
         int maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
         int energyToReceive = Math.min(maxReceive, maxCanReceive);
-        if (energyToReceive <= 0) {
-            return 0;
-        }
-        if (!simulate) {
-            setEnergyStored(getEnergyStored() + energyToReceive);
-        }
+        if (energyToReceive <= 0) return 0;
+        if (!simulate) setEnergyStored(getEnergyStored() + energyToReceive);
         return energyToReceive;
     }
 
     public void setEnergyStored(int newEnergy) {
         int clamped = Math.max(0, Math.min(newEnergy, getMaxEnergyStorage()));
-        if (clamped != this.energyStored) {
-            this.energyStored = clamped;
+        if (clamped != energyStored) {
+            energyStored = clamped;
             setChanged();
             if (level != null && !level.isClientSide) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
@@ -136,8 +131,8 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         if (isMain()) {
             tag.putInt("energy_stored", energyStored);
             tag.putBoolean("is_open", isOpen);
-            if (this.connectedNodePos != null) {
-                tag.put("connected_node_pos", NbtUtils.writeBlockPos(this.connectedNodePos));
+            if (connectedNodePos != null) {
+                tag.put("connected_node_pos", NbtUtils.writeBlockPos(connectedNodePos));
             }
         }
     }
@@ -148,19 +143,19 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         if (isMain()) {
             energyStored = tag.getInt("energy_stored");
             if (tag.contains("connected_node_pos", Tag.TAG_COMPOUND)) {
-                this.connectedNodePos = NbtUtils.readBlockPos(tag.getCompound("connected_node_pos"));
+                connectedNodePos = NbtUtils.readBlockPos(tag.getCompound("connected_node_pos"));
             } else {
-                this.connectedNodePos = null;
+                connectedNodePos = null;
             }
-            this.isOpen = tag.getBoolean("is_open");
+            isOpen = tag.getBoolean("is_open");
         } else {
-            this.connectedNodePos = null;
+            connectedNodePos = null;
             if (level != null && mainPos != null && level.isClientSide) {
                 BlockEntity mainBE = level.getBlockEntity(mainPos);
                 if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
-                    this.isOpen = mainDevBE.isOpen;
-                    this.energyStored = mainDevBE.getEnergyStored();
-                    this.connectedNodePos = mainDevBE.connectedNodePos;
+                    isOpen = mainDevBE.isOpen;
+                    energyStored = mainDevBE.getEnergyStored();
+                    connectedNodePos = mainDevBE.connectedNodePos;
                 }
             }
         }
@@ -185,8 +180,8 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     // For Forge
     @SuppressWarnings("unused")
     public AABB getRenderBoundingBox() {
-        Vec3 pos = this.getBlockPos().getCenter();
-        double radius = 5.0;
+        var pos = this.getBlockPos().getCenter();
+        var radius = 5d;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }

@@ -11,8 +11,12 @@ import java.util.Map;
 public class MenuTypes {
     public static final Map<String, MenuType<?>> MENU_TYPES = new HashMap<>();
 
-    public static final MenuType<WindGenMenu> WIND_GEN_MENU = register("wind_gen", WindGenMenu::new, FeatureFlags.VANILLA_SET);
-    public static final MenuType<WirelessNodeMenu> NODE_MENU = register("node", WirelessNodeMenu::new, FeatureFlags.VANILLA_SET);
+    public static final MenuType<WindGenMenu> WIND_GEN_MENU =
+            register("wind_gen", WindGenMenu::new, FeatureFlags.VANILLA_SET);
+    public static final MenuType<WirelessNodeMenu> NODE_MENU =
+            register("node", WirelessNodeMenu::new, FeatureFlags.VANILLA_SET);
+    public static final MenuType<OmniCraftingMenu> OMNI_CRAFTING_TABLE_MENU =
+            register("omni_crafting", OmniCraftingMenu::new, FeatureFlags.VANILLA_SET);
 
     public static <T extends AbstractContainerMenu> MenuType<T> register(String name, MenuType.MenuSupplier<T> constructor, FeatureFlagSet requiredFeatures) {
         var menuType = new MenuType<>(constructor, requiredFeatures);

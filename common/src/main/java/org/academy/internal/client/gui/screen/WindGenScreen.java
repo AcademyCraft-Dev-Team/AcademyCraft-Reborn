@@ -14,6 +14,7 @@ import org.academy.api.client.renderer.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
+import org.jetbrains.annotations.NotNull;
 
 public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
@@ -24,7 +25,6 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implem
     public static final String AF = "%d AF";
     private String connectedNodeName = "None";
     private PanelWidget wirelessPanel;
-    private PanelWidget invPage;
     private ScrollPanelWidget nodeListPanel;
     private LabelWidget bufferValueLabel;
     private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
@@ -51,7 +51,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implem
         var delay = 250L;
         var childDuration = duration - 100;
 
-        invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
+        var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
         rootContainer.addChild("page_inv", invPage);
         {
             var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.RENDER_TYPE_WIND_GEN_UI);
@@ -113,9 +113,6 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implem
         rootContainer.addChild("area_info", infoArea);
         {
             var back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());
-            back.red = 0;
-            back.green = 0;
-            back.blue = 0;
             back.setAlpha(0.5f);
             infoArea.addChild("back", back);
 
@@ -210,17 +207,17 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implem
     }
 
     @Override
-    public ScrollPanelWidget getNodeList() {
+    public @NotNull ScrollPanelWidget getNodeList() {
         return nodeListPanel;
     }
 
     @Override
-    public PanelWidget getWirelessPanel() {
+    public @NotNull PanelWidget getWirelessPanel() {
         return wirelessPanel;
     }
 
     @Override
-    public String getConnectedNodeName() {
+    public @NotNull String getConnectedNodeName() {
         return connectedNodeName;
     }
 
@@ -230,7 +227,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implem
     }
 
     @Override
-    public BlockPos getPosition() {
+    public @NotNull BlockPos getPosition() {
         return mainPos;
     }
 }

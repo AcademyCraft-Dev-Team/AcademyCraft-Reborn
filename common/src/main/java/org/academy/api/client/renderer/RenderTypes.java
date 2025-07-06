@@ -69,6 +69,12 @@ public final class RenderTypes {
             "wireless_node_state", TextureResources.TEXTURE_WIRELESS_NODE_STATE, false
     );
     /**
+     * Omni Crafting Table
+     */
+    public static final RenderType RENDER_TYPE_OMNI_CRAFTING_UI = RenderUtil.getPositionColorTexRenderTypeFull(
+            "omni_crafting_ui", TextureResources.TEXTURE_OMNI_CRAFTING_UI, false
+    );
+    /**
      * Common
      */
     public static final RenderType RENDER_TYPE_INVENTORY = RenderUtil.getPositionColorTexRenderTypeFull(

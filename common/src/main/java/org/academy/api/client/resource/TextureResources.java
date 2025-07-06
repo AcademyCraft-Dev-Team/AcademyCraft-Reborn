@@ -22,7 +22,7 @@ public final class TextureResources {
      * Wind Gen
      */
     public static final ResourceLocation TEXTURE_WIND_GEN_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wind_gen.png");
-    public static final ResourceLocation TEXTURE_WIND_GEN_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/windgen/ui_windgen.png");
+    public static final ResourceLocation TEXTURE_WIND_GEN_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/wind_gen/ui_windgen.png");
     public static final ResourceLocation TEXTURE_ICON_WIND_GEN_BASE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_base.png");
     public static final ResourceLocation TEXTURE_ICON_WIND_GEN_PILLAR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_pillar.png");
     public static final ResourceLocation TEXTURE_ICON_WIND_GEN_TOP = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_top.png");
@@ -32,6 +32,10 @@ public final class TextureResources {
     public static final ResourceLocation TEXTURE_WIRELESS_NODE_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wireless_node.png");
     public static final ResourceLocation TEXTURE_WIRELESS_NODE_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/node/ui_node.png");
     public static final ResourceLocation TEXTURE_WIRELESS_NODE_STATE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/node/state_node.png");
+    /**
+     * Omni Crafting Table
+     */
+    public static final ResourceLocation TEXTURE_OMNI_CRAFTING_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/omni_crafting/ui_omni_crafting.png");
     /**
      * Common
      */

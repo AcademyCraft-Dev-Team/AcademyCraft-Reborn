@@ -213,21 +213,20 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     }
 
     private PanelWidget createModeCycleButton(float x) {
-        var modeButton = new PanelWidget(x, (float) 0, (float) 20.0, (float) 20.0);
+        var modeButton = new PanelWidget(x, (float) 0, 20f, 20f);
         {
-            var button = new ImageButtonWidget(0, 0, (float) 20.0, (float) 20.0, null, MediaPlayer::cyclePlaybackMode);
+            var button = new ImageButtonWidget(0, 0, 20f, 20f, null, MediaPlayer::cyclePlaybackMode);
             modeButton.addChild("button", button);
 
-            var modeBack = new BlendQuadWidget(0, 0, (float) 20.0, (float) 20.0);
-            modeBack.drawLine = false;
+            var modeBack = new FillWidget(0, 0, 20f, 20f, 0xFF000000);
             modeBack.setAlpha(0.4f);
             modeButton.addChild("back", modeBack);
 
-            var layered = new LayeredPanelWidget(0, 0, (float) 20.0, (float) 20.0);
+            var layered = new LayeredPanelWidget(0, 0, 20f, 20f);
             layered.setEnabled(false);
             modeButton.addChild("layered", layered);
             {
-                var modeLabel = new AutoScaleLabelWidget("", 0, 0, (float) 20.0, true);
+                var modeLabel = new AutoScaleLabelWidget("", 0, 0, 20f, true);
                 modeLabel.dropShadow = false;
                 modeLabel.setY(((float) 20.0 - modeLabel.getHeight()) / 2f);
                 layered.addChild("label", modeLabel);
@@ -358,8 +357,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         var width = 150f;
         var height = 200f;
         {
-            var back = new BlendQuadWidget(0, 0, width, height);
-            back.drawLine = false;
+            var back = new FillWidget(0, 0, width, height, 0xFF000000);
             back.setAlpha(0.25f);
             rootPanel.addChild("back", back);
 
@@ -368,21 +366,20 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             {
                 var dockBarHeight = 60f;
                 var mediaListScrollBarWidth = 4f;
-                var margin = 2f;
                 var mediaList = new ScrollPanelWidget(0, 0, width, height - dockBarHeight);
                 main.addChild("list_media", mediaList);
                 {
                     for (var i = 0; i < PLAYLIST.size(); i++) {
                         var info = PLAYLIST.get(i);
                         var trackIndex = i;
-                        var mediaWidget = createMediaWidget(info, i * (MEDIA_HEIGHT + margin), () -> play(trackIndex));
+                        var mediaWidget = createMediaWidget(info, i * (MEDIA_HEIGHT), () -> play(trackIndex));
                         mediaList.addChild("media_" + i, mediaWidget);
                     }
                 }
 
                 var mediaListScrollBar = new ScrollBarWidget(
                         mediaList,
-                        mediaList.getWidth() - mediaListScrollBarWidth - margin, 0,
+                        mediaList.getWidth() - mediaListScrollBarWidth, 0,
                         mediaListScrollBarWidth, mediaList.getHeight(),
                         Orientation.VERTICAL
                 );
@@ -394,8 +391,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 var dockBar = new PanelWidget(0, height - dockBarHeight, width, dockBarHeight);
                 main.addChild("bar_dock", dockBar);
                 {
-                    var dockBarBack = new BlendQuadWidget(0, 0, width, dockBarHeight);
-                    dockBarBack.drawLine = false;
+                    var dockBarBack = new FillWidget(0, 0, width, dockBarHeight, 0xFF000000);
                     dockBarBack.setAlpha(0.25f);
                     dockBar.addChild("back", dockBarBack);
 
@@ -488,8 +484,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             var button = new ImageButtonWidget(0, 0, root.getWidth(), root.getHeight(), null, onClick);
             root.addChild("button", button);
 
-            var back = new BlendQuadWidget(0, 0, root.getWidth(), root.getHeight());
-            back.drawLine = false;
+            var back = new FillWidget(0, 0, root.getWidth(), root.getHeight(), 0xFF000000);
             back.setAlpha(0.25f);
             root.addChild("back", back);
 

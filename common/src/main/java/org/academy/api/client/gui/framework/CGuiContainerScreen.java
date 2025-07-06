@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
+public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IAnimationScreen {
     public BlendQuadWidget back;
     public ImageWidget inventory;
     public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
@@ -34,35 +34,20 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         super(menu, playerInventory, title);
     }
 
-    protected void playAnimation(Animator animator) {
-        screenAnimations.add(animator);
-        animator.start();
+    @Override
+    public List<Animator> getScreenAnimations() {
+        return screenAnimations;
     }
 
-    public void playTrackedAnimation(Widget widget, Animator animator) {
-        playAnimation(animator);
-        trackedAnimations.computeIfAbsent(widget, k -> new ArrayList<>()).add(animator);
-    }
-
-    public void cancelAnimations(Widget widget) {
-        if (trackedAnimations.containsKey(widget)) {
-            var animators = new ArrayList<>(trackedAnimations.get(widget));
-            for (var anim : animators) {
-                anim.cancel();
-                screenAnimations.remove(anim);
-            }
-            trackedAnimations.get(widget).clear();
-        }
+    @Override
+    public Map<Widget, List<Animator>> getTrackedAnimations() {
+        return trackedAnimations;
     }
 
     @Override
     public void removed() {
         super.removed();
-        for (var anim : screenAnimations) {
-            anim.cancel();
-        }
-        screenAnimations.clear();
-        trackedAnimations.clear();
+        cancelAllAnimations();
     }
 
     @Override
@@ -74,9 +59,6 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         var finalHeight = 187f;
 
         back = new BlendQuadWidget(leftPos, topPos - 22, imageWidth, finalHeight);
-        back.red = 0;
-        back.green = 0;
-        back.blue = 0;
         back.setHeight(0);
         back.setAlpha(0f);
 
@@ -88,8 +70,8 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         var duration = 600L;
         playAnimation(ObjectAnimator.ofFloat(back::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
         playAnimation(ObjectAnimator.ofFloat(inventory::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
-        playAnimation(ObjectAnimator.ofFloat(back::setAlpha, 0, 0.5f).setDuration(duration - 200).setInterpolator(EasingFunctions.LINEAR).setStartDelay(150));
-        playAnimation(ObjectAnimator.ofFloat(inventory::setAlpha, 0, 1.0f).setDuration(duration - 200).setInterpolator(EasingFunctions.LINEAR).setStartDelay(150));
+        playAnimation(ObjectAnimator.ofFloat(back::setAlpha, 0, 0.5f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR));
+        playAnimation(ObjectAnimator.ofFloat(inventory::setAlpha, 0, 1.0f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR));
 
         onInit();
     }
@@ -211,19 +193,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         return mouseX < (double) guiLeft || mouseY < (double) guiTop - 22 || mouseX >= (double) (guiLeft + imageWidth) || mouseY >= (double) (guiTop + imageHeight);
     }
 
-    public int getLeftPos() {
-        return leftPos;
-    }
-
     public int getTopPos() {
         return topPos;
-    }
-
-    public int getImageWidth() {
-        return imageWidth;
-    }
-
-    public int getImageHeight() {
-        return imageHeight;
     }
 }
