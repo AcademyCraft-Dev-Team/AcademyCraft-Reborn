@@ -144,4 +144,8 @@ public final class RenderTypes {
                     .setWriteMaskState(RenderStateUtil.COLOR_WRITE)
                     .createCompositeState(false)
     );
+    /**
+     * Cat Engine
+     */
+    public static final RenderType RENDER_TYPE_CAT_ENGINE = RenderType.entityTranslucent(TextureResources.TEXTURE_CAT_ENGINE);
 }
