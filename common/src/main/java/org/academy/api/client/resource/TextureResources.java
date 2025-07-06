@@ -81,4 +81,8 @@ public final class TextureResources {
      * Omni Crafting Table
      */
     public static final ResourceLocation TEXTURE_OMNI_CRAFTING_TABLE_MODEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/omni_crafting_table.png");
+    /**
+     * Cat Engine
+     */
+    public static final ResourceLocation TEXTURE_CAT_ENGINE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/block/cat_engine.png");
 }
