@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class CGuiScreen extends Screen {
+public abstract class CGuiScreen extends Screen implements IAnimationScreen {
     public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
     private final List<Animator> screenAnimations = new ArrayList<>();
     private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
@@ -23,35 +23,20 @@ public abstract class CGuiScreen extends Screen {
         super(title);
     }
 
-    protected void playAnimation(Animator animator) {
-        screenAnimations.add(animator);
-        animator.start();
+    @Override
+    public List<Animator> getScreenAnimations() {
+        return screenAnimations;
     }
 
-    public void playTrackedAnimation(Widget widget, Animator animator) {
-        playAnimation(animator);
-        trackedAnimations.computeIfAbsent(widget, k -> new ArrayList<>()).add(animator);
-    }
-
-    public void cancelAnimations(Widget widget) {
-        if (trackedAnimations.containsKey(widget)) {
-            var animators = new ArrayList<>(trackedAnimations.get(widget));
-            for (var anim : animators) {
-                anim.cancel();
-                screenAnimations.remove(anim);
-            }
-            trackedAnimations.get(widget).clear();
-        }
+    @Override
+    public Map<Widget, List<Animator>> getTrackedAnimations() {
+        return trackedAnimations;
     }
 
     @Override
     public void removed() {
         super.removed();
-        for (var anim : screenAnimations) {
-            anim.cancel();
-        }
-        screenAnimations.clear();
-        trackedAnimations.clear();
+        cancelAllAnimations();
     }
 
     @Override
@@ -75,8 +60,8 @@ public abstract class CGuiScreen extends Screen {
 
     @Override
     public void tick() {
-        for (var widget : rootContainer.getAllWidgets()){
-            if (widget instanceof Tickable tickable){
+        for (var widget : rootContainer.getAllWidgets()) {
+            if (widget instanceof Tickable tickable) {
                 tickable.tick();
             }
         }

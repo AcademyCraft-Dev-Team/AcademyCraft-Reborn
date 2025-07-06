@@ -12,6 +12,7 @@ public class MediumArcParticle extends FixedTextureSheetParticle {
     protected MediumArcParticle(ClientLevel level, double x, double y, double z, float newYaw, float newPitch, SpriteSet newSpriteSet) {
         super(level, x, y, z, newYaw, newPitch);
         sprites = newSpriteSet;
+        pickSprite(sprites);
         hasPhysics = false;
         quadSize *= 10;
     }
