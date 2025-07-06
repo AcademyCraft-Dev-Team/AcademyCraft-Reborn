@@ -12,15 +12,15 @@ public class BlendQuadWidget extends AbstractWidget {
     public float marginRight = 4f;
     public boolean drawLine = true;
 
-    public float red = 1.0f;
-    public float green = 1.0f;
-    public float blue = 1.0f;
+    public float red;
+    public float green;
+    public float blue;
 
     public final ImageWidget lineWidget;
 
     public BlendQuadWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
-        lineWidget = new ImageWidget(0, 0, width, 4, RenderTypes.RENDER_TYPE_ELEMENT_LINE);
+        lineWidget = new ImageWidget(1, 0, width - 2, 4, RenderTypes.RENDER_TYPE_ELEMENT_LINE);
     }
 
     @Override
