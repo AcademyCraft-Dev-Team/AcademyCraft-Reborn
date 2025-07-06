@@ -11,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FastColor;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -206,8 +207,7 @@ public final class DataTerminalHUD implements HUDRenderer {
         var main = new LayeredPanelWidget(width - WIDTH * 1.25f, (height - HEIGHT) / 2, WIDTH, HEIGHT);
         rootContainer.addChild("main", main);
         {
-            var back = new BlendQuadWidget(0, 0, WIDTH, HEIGHT);
-            back.drawLine = false;
+            var back = new FillWidget(0, 0, WIDTH, HEIGHT, 0xFF000000);
             back.setAlpha(0.25f);
             main.addChild("back", back);
             var root = new LayeredPanelWidget(0, 0, WIDTH, HEIGHT);

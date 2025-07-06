@@ -44,8 +44,7 @@ public final class Settings implements DataTerminalHUD.App {
     private static PanelWidget createSettingsPanel() {
         var appArea = new PanelWidget(0, 0, 200, 225);
 
-        var back = new BlendQuadWidget(0, 0, appArea.getWidth(), appArea.getHeight());
-        back.drawLine = false;
+        var back = new FillWidget(0, 0, appArea.getWidth(), appArea.getHeight(), 0xFF000000);
         back.setAlpha(0.25f);
         appArea.addChild("back", back);
 
@@ -76,8 +75,8 @@ public final class Settings implements DataTerminalHUD.App {
             generalPanel.setEnabled(true);
             keybindingsPanel.setVisible(false);
             keybindingsPanel.setEnabled(false);
-            generalButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.6f);
-            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.3f);
+            generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
+            keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
         };
 
         Runnable showKeybindings = () -> {
@@ -85,8 +84,8 @@ public final class Settings implements DataTerminalHUD.App {
             generalPanel.setEnabled(false);
             keybindingsPanel.setVisible(true);
             keybindingsPanel.setEnabled(true);
-            generalButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.3f);
-            keybindingsButton.<BlendQuadWidget>getChildUnSafe("back").setAlpha(0.6f);
+            generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
+            keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
         };
 
         generalButton.<ImageButtonWidget>getChildUnSafe("button_logic").onPress = showGeneral;
@@ -104,8 +103,8 @@ public final class Settings implements DataTerminalHUD.App {
             panel.addChild("button_logic", new ImageButtonWidget(0, 0, width, 20, null, () -> {
             }));
 
-            var back = new BlendQuadWidget(0, 0, width, 20);
-            back.drawLine = false;
+            var back = new FillWidget(0, 0, width, 20, 0xFF000000);
+            back.setAlpha(0.25f);
             panel.addChild("back", back);
 
             var layered = new LayeredPanelWidget(0, 0, width, 20);
@@ -187,15 +186,14 @@ public final class Settings implements DataTerminalHUD.App {
             text.setText(stateSupplier.get() ? "On" : "Off");
         };
 
-        var logic = new ImageButtonWidget(0, 0, (float) 180, (float) 20, null, toggleAction);
+        var logic = new ImageButtonWidget(0, 0, 180f, 20f, null, toggleAction);
         buttonPanel.addChild("button_logic", logic);
 
-        var back = new BlendQuadWidget(0, 0, (float) 180, (float) 20);
-        back.drawLine = false;
+        var back = new FillWidget(0, 0, 180f, 20f, 0xFF000000);
         back.setAlpha(0.3f);
         buttonPanel.addChild("back", back);
 
-        var layered = new LayeredPanelWidget(0, 0, (float) 180, (float) 20);
+        var layered = new LayeredPanelWidget(0, 0, 180f, 20f);
         layered.setEnabled(false);
         buttonPanel.addChild("layered", layered);
         {
@@ -230,17 +228,12 @@ public final class Settings implements DataTerminalHUD.App {
 
     private static void setKeyButtonSelected(PanelWidget btn, boolean selected) {
         if (btn == null) return;
-        var back = btn.<BlendQuadWidget>getChildUnSafe("back");
+        var back = btn.<FillWidget>getChildUnSafe("back");
         if (selected) {
             back.setAlpha(0.8f);
-            back.red = 0.7f;
-            back.green = 0.9f;
         } else {
             back.setAlpha(0.5f);
-            back.red = 1.0f;
-            back.green = 1.0f;
         }
-        back.blue = 1.0f;
     }
 
     private static void updateKeySelectionHighlights() {
@@ -277,9 +270,8 @@ public final class Settings implements DataTerminalHUD.App {
         keySelectionPanel.setEnabled(false);
         parent.addChild("key_selection_panel", keySelectionPanel);
         {
-            var back = new BlendQuadWidget(0, 0, keySelectionPanel.getWidth(), keySelectionPanel.getHeight());
+            var back = new FillWidget(0, 0, keySelectionPanel.getWidth(), keySelectionPanel.getHeight(), 0xFF000000);
             back.setAlpha(0.4f);
-            back.drawLine = false;
             keySelectionPanel.addChild("back", back);
 
             var layered = new LayeredPanelWidget(0, 0, keySelectionPanel.getWidth(), keySelectionPanel.getHeight());
@@ -305,8 +297,7 @@ public final class Settings implements DataTerminalHUD.App {
             closeButtonPanel.addChild("button_logic", closeButtonLogic);
 
 
-            var closeBack = new BlendQuadWidget(0, 0, 20, 15);
-            closeBack.drawLine = false;
+            var closeBack = new FillWidget(0, 0, 20, 15, 0xFF000000);
             closeBack.setAlpha(0.5f);
             closeButtonPanel.addChild("back", closeBack);
             keySelectionPanel.addChild("close_btn", closeButtonPanel);
@@ -330,9 +321,8 @@ public final class Settings implements DataTerminalHUD.App {
             };
             var listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
             listenBtnPanel.addChild("button_logic", listenButtonLogic);
-            var listenBtnBack = new BlendQuadWidget(0, 0, 170, 20);
+            var listenBtnBack = new FillWidget(0, 0, 170, 20, 0xFF000000);
             listenBtnBack.setAlpha(0.5f);
-            listenBtnBack.drawLine = false;
             listenBtnPanel.addChild("back", listenBtnBack);
             var listenLabel = new AutoScaleLabelWidget("Listen for Input", 0, 6, listenBtnPanel.getWidth(), true);
             listenLabel.dropShadow = false;
@@ -371,9 +361,8 @@ public final class Settings implements DataTerminalHUD.App {
         currentY += 15;
 
         var keyboardPanel = new LayeredPanelWidget(0, currentY, container.getWidth() - 10, 0);
-        var keyboardBack = new BlendQuadWidget(0, 0, keyboardPanel.getWidth(), 0);
+        var keyboardBack = new FillWidget(0, 0, keyboardPanel.getWidth(), 0, 0xFF000000);
         keyboardBack.setAlpha(0.2f);
-        keyboardBack.drawLine = false;
         keyboardPanel.addChild("back", keyboardBack);
         container.addChild("keyboard_panel", keyboardPanel);
 
@@ -434,16 +423,16 @@ public final class Settings implements DataTerminalHUD.App {
 
         mainKeysPanel.setHeight(mainKeysY);
 
-        var sideKeysPanel = new LayeredPanelWidget(5, mainKeysY + 10, keyboardPanel.getWidth() - 10, 0);
+        var sideKeysPanel = new LayeredPanelWidget(5, mainKeysY + 20, keyboardPanel.getWidth() - 10, 0);
         keyboardPanel.addChild("side_keys_panel", sideKeysPanel);
         float sideKeysY = 0;
 
-        var arrowsStartX = sideKeysPanel.getWidth() - (3 * KEY_WIDTH_UNIT + 2 * H_SPACING);
-        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "UP", GLFW.GLFW_KEY_UP, arrowsStartX + KEY_WIDTH_UNIT + H_SPACING, sideKeysY - KEY_HEIGHT - V_SPACING, KEY_WIDTH_UNIT);
-        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "LEFT", GLFW.GLFW_KEY_LEFT, arrowsStartX, sideKeysY, KEY_WIDTH_UNIT);
-        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "DOWN", GLFW.GLFW_KEY_DOWN, arrowsStartX + KEY_WIDTH_UNIT + H_SPACING, sideKeysY, KEY_WIDTH_UNIT);
-        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "RIGHT", GLFW.GLFW_KEY_RIGHT, arrowsStartX + 2 * (KEY_WIDTH_UNIT + H_SPACING), sideKeysY, KEY_WIDTH_UNIT);
-        sideKeysY += KEY_HEIGHT + 5f;
+        final var KEY_WIDTH_SIDE = 20f;
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "UP", GLFW.GLFW_KEY_UP, KEY_WIDTH_SIDE + H_SPACING, sideKeysY - KEY_HEIGHT - V_SPACING, KEY_WIDTH_SIDE);
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "LEFT", GLFW.GLFW_KEY_LEFT, 0, sideKeysY, KEY_WIDTH_SIDE);
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "DOWN", GLFW.GLFW_KEY_DOWN, KEY_WIDTH_SIDE + H_SPACING, sideKeysY, KEY_WIDTH_SIDE);
+        addKey(sideKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "RIGHT", GLFW.GLFW_KEY_RIGHT, 2 * (KEY_WIDTH_SIDE + H_SPACING), sideKeysY, KEY_WIDTH_SIDE);
+        sideKeysY += KEY_HEIGHT + 20f;
 
         sideKeysPanel.setHeight(sideKeysY);
 
@@ -459,9 +448,8 @@ public final class Settings implements DataTerminalHUD.App {
         currentY += 15;
 
         var mousePanel = new LayeredPanelWidget(5, currentY, container.getWidth() - 15, 0);
-        var mouseBack = new BlendQuadWidget(0, 0, mousePanel.getWidth(), 0);
+        var mouseBack = new FillWidget(0, 0, mousePanel.getWidth(), 0, 0xFF000000);
         mouseBack.setAlpha(0.2f);
-        mouseBack.drawLine = false;
         mousePanel.setZ(mousePanel.getZ() + 1);
         mousePanel.addChild("back", mouseBack);
         container.addChild("mouse_panel", mousePanel);
@@ -492,9 +480,8 @@ public final class Settings implements DataTerminalHUD.App {
         controlPanel.setVisible(false);
         controlPanel.setEnabled(false);
 
-        var controlBack = new BlendQuadWidget(0, 0, 180, 85);
+        var controlBack = new FillWidget(0, 0, 180, 85, 0xFF000000);
         controlBack.setAlpha(0.2f);
-        controlBack.drawLine = false;
         controlPanel.addChild("back", controlBack);
 
         var controlPanelLayered = new LayeredPanelWidget(0, 0, 180, 85);
@@ -525,8 +512,7 @@ public final class Settings implements DataTerminalHUD.App {
         var keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, null, keyboardAction);
         keyboardBtn.addChild("button_logic", keyboardLogic);
 
-        var keyboardBtnBack = new BlendQuadWidget(0, 0, 60, 15);
-        keyboardBtnBack.drawLine = false;
+        var keyboardBtnBack = new FillWidget(0, 0, 60, 15, 0xFF000000);
         keyboardBtnBack.setAlpha(0.4f);
         keyboardBtn.addChild("back", keyboardBtnBack);
 
@@ -550,8 +536,7 @@ public final class Settings implements DataTerminalHUD.App {
         var mouseLogic = new ImageButtonWidget(0, 0, 60, 15, null, mouseAction);
         mouseBtn.addChild("button_logic", mouseLogic);
 
-        var mouseBtnBack = new BlendQuadWidget(0, 0, 60, 15);
-        mouseBtnBack.drawLine = false;
+        var mouseBtnBack = new FillWidget(0, 0, 60, 15, 0xFF000000);
         mouseBtnBack.setAlpha(0.4f);
         mouseBtn.addChild("back", mouseBtnBack);
 
@@ -578,9 +563,8 @@ public final class Settings implements DataTerminalHUD.App {
             var keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, null, keySelectAction);
             keySelectionButton.addChild("button_logic", keySelectionLogic);
 
-            var keySelectionButtonBack = new BlendQuadWidget(0, 0, 125, 20);
+            var keySelectionButtonBack = new FillWidget(0, 0, 125, 20, 0xFF000000);
             keySelectionButtonBack.setAlpha(0.3f);
-            keySelectionButtonBack.drawLine = false;
             keySelectionButton.addChild("back", keySelectionButtonBack);
 
             var keySelectionButtonLayered = new LayeredPanelWidget(0, 0, 125, 20);
@@ -623,8 +607,7 @@ public final class Settings implements DataTerminalHUD.App {
             var buttonLogic = new ImageButtonWidget(0, 0, 35, 15, null, onPress);
             panel.addChild("button_logic", buttonLogic);
 
-            var back = new BlendQuadWidget(0, 0, 35, 15);
-            back.drawLine = false;
+            var back = new FillWidget(0, 0, 35, 15, 0xFF000000);
             panel.addChild("back", back);
 
             var layered = new LayeredPanelWidget(0, 0, 35, 15);
@@ -706,16 +689,8 @@ public final class Settings implements DataTerminalHUD.App {
     }
 
     private static void updateModifierButtonState(PanelWidget button, boolean active) {
-        var back = button.<BlendQuadWidget>getChildUnSafe("back");
+        var back = button.<FillWidget>getChildUnSafe("back");
         back.setAlpha(active ? 0.6f : 0.3f);
-        if (active) {
-            back.red = 0.8f;
-            back.green = 0.8f;
-        } else {
-            back.red = 1.0f;
-            back.green = 1.0f;
-        }
-        back.blue = 1.0f;
     }
 
     private static void updateBindingFromControls(boolean keyShouldBeReset) {
@@ -723,12 +698,12 @@ public final class Settings implements DataTerminalHUD.App {
         var binding = InputSystem.KEY_BINDINGS.get(activeKeyName);
         if (binding == null) return;
 
-        binding.inputPair.inputType = keyboardBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f ? InputSystem.InputType.KEYBOARD : InputSystem.InputType.MOUSE;
+        binding.inputPair.inputType = keyboardBtn.<FillWidget>getChildUnSafe("back").getAlpha() == 0.6f ? InputSystem.InputType.KEYBOARD : InputSystem.InputType.MOUSE;
 
         var newMods = new LinkedHashSet<Integer>();
-        if (shiftModBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_SHIFT);
-        if (ctrlModBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_CONTROL);
-        if (altModBtn.<BlendQuadWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_ALT);
+        if (shiftModBtn.<FillWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_SHIFT);
+        if (ctrlModBtn.<FillWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_CONTROL);
+        if (altModBtn.<FillWidget>getChildUnSafe("back").getAlpha() == 0.6f) newMods.add(GLFW.GLFW_MOD_ALT);
         binding.inputPair.keyInfo.modifiers = newMods;
 
         if (keyShouldBeReset) {
@@ -752,9 +727,8 @@ public final class Settings implements DataTerminalHUD.App {
         buttonPanel.addChild("button_logic", buttonLogic);
         panel.addChild("button", buttonPanel);
 
-        var buttonBack = new BlendQuadWidget(0, 0, buttonPanel.getWidth(), buttonPanel.getHeight());
+        var buttonBack = new FillWidget(0, 0, buttonPanel.getWidth(), buttonPanel.getHeight(), 0xFF000000);
         buttonBack.setAlpha(0.3f);
-        buttonBack.drawLine = false;
         buttonPanel.addChild("back", buttonBack);
 
         var binding = getKeyBindingFromInputSystem(keyName);
@@ -889,50 +863,33 @@ public final class Settings implements DataTerminalHUD.App {
     }
 
     private static void updateModifierButton(PanelWidget button, boolean active) {
-        var back = button.<BlendQuadWidget>getChildUnSafe("back");
+        var back = button.<FillWidget>getChildUnSafe("back");
         back.setAlpha(active ? 0.6f : 0.3f);
-        if (active) {
-            back.red = 0.8f;
-            back.green = 0.8f;
-        } else {
-            back.red = 1.0f;
-            back.green = 1.0f;
-        }
-        back.blue = 1.0f;
     }
 
     private static void toggleModifierButton(PanelWidget button) {
-        var back = button.<BlendQuadWidget>getChildUnSafe("back");
+        var back = button.<FillWidget>getChildUnSafe("back");
         var nowSelected = back.getAlpha() != 0.6f;
         back.setAlpha(nowSelected ? 0.6f : 0.3f);
-        if (nowSelected) {
-            back.red = 0.8f;
-            back.green = 0.8f;
-        } else {
-            back.red = 1.0f;
-            back.green = 1.0f;
-        }
-        back.blue = 1.0f;
     }
 
     private static LayeredPanelWidget createSmallKeyButton(String text, float x, float y, float w, Runnable onPress) {
-        var panel = new LayeredPanelWidget(x, y, w, (float) 15.0);
-        var buttonLogic = new ImageButtonWidget(0, 0, w, (float) 15.0, null, onPress);
+        var panel = new LayeredPanelWidget(x, y, w, 15);
+        var buttonLogic = new ImageButtonWidget(0, 0, w, 15, null, onPress);
         panel.addChild("button_logic", buttonLogic);
 
-        var back = new BlendQuadWidget(0, 0, w, (float) 15.0);
-        back.drawLine = false;
+        var back = new FillWidget(0, 0, w, 15, 0xFF000000);
         back.setAlpha(0.5f);
         panel.addChild("back", back);
 
-        var layered = new LayeredPanelWidget(0, 0, w, (float) 15.0);
+        var layered = new LayeredPanelWidget(0, 0, w, 15);
         layered.setEnabled(false);
         panel.addChild("layered", layered);
         {
-            var label = new AutoScaleLabelWidget(text, 0, 0, w, true);
+            var label = new AutoScaleLabelWidget(text, 0, 0, w * 0.5f, true);
             label.dropShadow = false;
-            label.scale = 0.75f;
-            label.setY(((float) 15.0 - label.getHeight() * label.scale) / 2f);
+            label.setY((15f - label.getHeight() / label.scale) / 2f);
+            label.setX((w - label.getWidth()) / 2f);
             layered.addChild("label", label);
         }
         return panel;

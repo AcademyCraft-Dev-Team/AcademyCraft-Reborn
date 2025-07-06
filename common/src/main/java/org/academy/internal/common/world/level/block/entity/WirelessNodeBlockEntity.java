@@ -166,12 +166,8 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         int energyStoredDouble = getEnergyStored();
         int maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
         int energyToReceive = Math.min(maxReceive, maxCanReceive);
-        if (energyToReceive <= 0) {
-            return 0;
-        }
-        if (!simulate) {
-            setEnergyStored(getEnergyStored() + energyToReceive);
-        }
+        if (energyToReceive <= 0) return 0;
+        if (!simulate) setEnergyStored(getEnergyStored() + energyToReceive);
         return energyToReceive;
     }
 
@@ -215,25 +211,20 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
     @Override
     public @NotNull ItemStack removeItem(int slot, int amount) {
         ItemStack itemstack = ContainerHelper.removeItem(items, slot, amount);
-        if (!itemstack.isEmpty()) {
-            this.setChanged();
-        }
-
+        if (!itemstack.isEmpty()) setChanged();
         return itemstack;
     }
 
     @Override
     public @NotNull ItemStack removeItemNoUpdate(int slot) {
-        return ContainerHelper.takeItem(this.items, slot);
+        return ContainerHelper.takeItem(items, slot);
     }
 
     @Override
     public void setItem(int slot, @NotNull ItemStack stack) {
-        this.items.set(slot, stack);
-        if (stack.getCount() > this.getMaxStackSize()) {
-            stack.setCount(this.getMaxStackSize());
-        }
-        this.setChanged();
+        items.set(slot, stack);
+        if (stack.getCount() > getMaxStackSize()) stack.setCount(getMaxStackSize());
+        setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }

@@ -33,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("deprecation")
-public class WirelessNodeBlock extends BaseEntityBlock {
+public final class WirelessNodeBlock extends BaseEntityBlock {
     public static final String WIRELESS_NODE_SCREEN = "wireless_node_screen";
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
     private static final IntegerProperty ENERGY = IntegerProperty.create("energy", 0, 4);
@@ -93,12 +93,12 @@ public class WirelessNodeBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos blockPos, @NotNull BlockState blockState) {
+    public @NotNull BlockEntity newBlockEntity(@NotNull BlockPos blockPos, @NotNull BlockState blockState) {
         return new WirelessNodeBlockEntity(blockPos, blockState);
     }
 
     @Override
-    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
+    public <T extends BlockEntity> @NotNull BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
                 wirelessNodeBlockEntity.ticks++;
@@ -112,7 +112,8 @@ public class WirelessNodeBlock extends BaseEntityBlock {
     @Override
     public @Nullable MenuProvider getMenuProvider(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
-            return new SimpleMenuProvider((containerId, playerInventory, player) -> new WirelessNodeMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), wirelessNodeBlockEntity), Component.empty());
+            return new SimpleMenuProvider((containerId, playerInventory, player) ->
+                    new WirelessNodeMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), wirelessNodeBlockEntity), Component.empty());
         }
         return null;
     }
