@@ -1,5 +1,25 @@
 {
   "item.academy.portable_developer": "Portable Developer",
   "item.academy.data_terminal": "Data Terminal",
-  "block.academy.cat_engine": "Toast and Cat"
+  "block.academy.cat_engine": "Toast and Cat",
+  "item.academy.coin": "Coin",
+  "item.academy.wireless_node": "Wireless Imag Node",
+  "item.academy.wind_gen_base": "Wind Generator Pillar Base",
+  "item.academy.wind_gen_top": "Wind Generator",
+  "item.academy.wind_gen_pillar": "Wind Generator Pillar",
+  "item.academy.wind_gen_fan": "Wind Generator Fan",
+  "item.academy.imag_phase_ingot": "Imag Silicon Ingot",
+  "item.academy.empty_unit": "Empty Unit",
+  "item.academy.imag_phase_unit": "Imag Phase Liquid Unit",
+  "item.academy.wind_gen_base_screen": "Wind Generator GUI",
+  "item.academy.imag_phase_circuit": "*",
+  "item.academy.imag_phase_polymer": "*",
+  "item.academy.imag_phase_plate": "*",
+  "item.academy.imag_phase_dowsing_rod": "*",
+  "block.academy.ability_developer": "Ability Developer",
+  "block.academy.imag_phase_vegetation": "*",
+  "block.academy.imag_phase_leaves": "*",
+  "block.academy.imag_phase_log": "*",
+  "block.academy.imag_phase_lichen": "*",
+  "block.academy.omni_crafting_table": "Omni Crafting Table"
 }
