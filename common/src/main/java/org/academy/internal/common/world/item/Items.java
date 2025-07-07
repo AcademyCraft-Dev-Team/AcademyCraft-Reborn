@@ -1,8 +1,10 @@
 package org.academy.internal.common.world.item;
 
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import org.academy.internal.common.world.level.block.Blocks;
+import org.academy.internal.common.world.level.material.Fluids;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +33,7 @@ public class Items {
     public static final Item IMAG_PHASE_LEAVES = register("imag_phase_leaves", new BlockItem(Blocks.IMAG_PHASE_LEAVES, new Item.Properties()));
     public static final Item IMAG_PHASE_LOG = register("imag_phase_log", new BlockItem(Blocks.IMAG_PHASE_LOG, new Item.Properties()));
     public static final Item IMAG_PHASE_LICHEN = register("imag_phase_lichen", new BlockItem(Blocks.IMAG_PHASE_LICHEN, new Item.Properties()));
+    public static final Item IMAG_PHASE_BUCKET = register("imag_phase_bucket", new BucketItem(Fluids.IMAG_PHASE, (new Item.Properties()).craftRemainder(net.minecraft.world.item.Items.BUCKET).stacksTo(1)));
     public static final Item OMNI_CRAFTING_TABLE = register("omni_crafting_table", new BlockItem(Blocks.OMNI_CRAFTING_TABLE, new Item.Properties()));
     public static final Item CAT_ENGINE = register("cat_engine", new BlockItem(Blocks.CAT_ENGINE, new Item.Properties()));
 
