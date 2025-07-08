@@ -785,7 +785,7 @@ public final class Settings implements DataTerminalHUD.App {
 
     @Override
     public RenderType getIcon() {
-        return RenderTypes.RENDER_TYPE_APP_SETTINGS;
+        return RenderTypes.APP_SETTINGS;
     }
 
     @Override

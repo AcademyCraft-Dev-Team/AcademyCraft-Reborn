@@ -3,7 +3,6 @@ package org.academy.api.client.gui.framework;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.texture.Tickable;
 import net.minecraft.network.chat.Component;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.widget.PanelWidget;
@@ -60,11 +59,7 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public void tick() {
-        for (var widget : rootContainer.getAllWidgets()) {
-            if (widget instanceof Tickable tickable) {
-                tickable.tick();
-            }
-        }
+        rootContainer.tick();
     }
 
     @Override

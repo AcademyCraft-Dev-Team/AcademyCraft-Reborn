@@ -60,12 +60,12 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
         rootContainer.addChild("page_inv", invPage);
         {
-            var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.RENDER_TYPE_WIRELESS_NODE_UI);
+            var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.WIRELESS_NODE_UI);
             invPage.addChild("ui", ui);
 
             state = new SpriteSheetWidget(
                     42, 33.5f, 186 / 2f, 75 / 2f,
-                    RenderTypes.RENDER_TYPE_WIRELESS_NODE_STATE,
+                    RenderTypes.WIRELESS_NODE_STATE,
                     Orientation.VERTICAL,
                     186, 750, 186, 75, 10);
             invPage.addChild("state", state);
@@ -97,12 +97,12 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
-            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, RenderTypes.RENDER_TYPE_ICON_INV, () -> {
+            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, RenderTypes.ICON_INV, () -> {
             });
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, RenderTypes.RENDER_TYPE_ICON_WIRELESS, () -> {
+            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, RenderTypes.ICON_WIRELESS, () -> {
             });
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);

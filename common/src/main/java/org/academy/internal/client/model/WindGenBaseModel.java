@@ -203,7 +203,7 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
     }
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        all.render(poseStack, bufferSource.getBuffer(renderType(TextureResources.TEXTURE_WIND_GEN_MODEL)), packedLight, packedOverlay);
+        all.render(poseStack, bufferSource.getBuffer(renderType(TextureResources.WIND_GEN)), packedLight, packedOverlay);
         poseStack.pushPose();
         Minecraft minecraft = Minecraft.getInstance();
         BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());

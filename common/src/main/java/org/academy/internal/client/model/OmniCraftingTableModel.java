@@ -591,7 +591,7 @@ public class OmniCraftingTableModel extends HierarchicalModel<Entity> {
     }
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType.apply(TextureResources.TEXTURE_OMNI_CRAFTING_TABLE_MODEL));
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType.apply(TextureResources.OMNI_CRAFTING_TABLE));
         main.render(poseStack, vertexConsumer, packedLight, packedOverlay);
         VertexConsumer effectVC;
         if (!RenderUtil.IS_SHADER_PACK_IN_USE.get()) {

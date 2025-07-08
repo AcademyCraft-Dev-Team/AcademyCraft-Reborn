@@ -19,7 +19,7 @@ public class PlasmaGeneration extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
-                        TextureResources.TEXTURE_DIR_STRIKE_ICON, 100, 110);
+                        TextureResources.DIR_STRIKE_ICON, 100, 110);
     }
 
     public static final class Server {

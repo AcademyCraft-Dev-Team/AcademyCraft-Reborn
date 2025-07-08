@@ -88,8 +88,8 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static boolean isStoppingAfterFadeOut = false;
 
     static {
-        PLAYLIST.add(new MediaInfo(TextureResources.TEXTURE_ICON_NODE, new ResourceLocation("minecraft:sounds/music/game/creative/creative1.ogg"), "Creative 1", "C418"));
-        PLAYLIST.add(new MediaInfo(TextureResources.TEXTURE_ICON_NODE, new ResourceLocation("minecraft:sounds/music/game/calm1.ogg"), "Calm 1", "C418"));
+        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, new ResourceLocation("minecraft:sounds/music/game/creative/creative1.ogg"), "Creative 1", "C418"));
+        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, new ResourceLocation("minecraft:sounds/music/game/calm1.ogg"), "Calm 1", "C418"));
     }
 
     private static void initializeAudio() {
@@ -523,7 +523,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
     @Override
     public RenderType getIcon() {
-        return RenderTypes.RENDER_TYPE_APP_MEDIA_PLAYER;
+        return RenderTypes.APP_MEDIA_PLAYER;
     }
 
     @Override

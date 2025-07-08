@@ -34,9 +34,9 @@ public class WirelessNodeModel extends HierarchicalModel<Entity> {
     public WirelessNodeModel(ModelPart root) {
         super(RenderType::entityTranslucent);
         this.all = root.getChild("all");
-        this.core_li = all.getChild("core_li");
-        this.base2 = all.getChild("base2");
-        this.innner_ef = all.getChild("innner_ef");
+        this.core_li = this.all.getChild("core_li");
+        this.base2 = this.all.getChild("base2");
+        this.innner_ef = this.all.getChild("innner_ef");
     }
 
     @Override
@@ -114,9 +114,9 @@ public class WirelessNodeModel extends HierarchicalModel<Entity> {
 
         PartDefinition core_li = all.addOrReplaceChild("core_li", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        core_li.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(0, 32).addBox(-3.0F, -3.0F, -3.0F, 6.0F, 6.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -8.0F, 0.0F, -0.4656F, 0.422F, 0.6799F));
+        PartDefinition cube_r1 = core_li.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(0, 32).addBox(-3.0F, -3.0F, -3.0F, 6.0F, 6.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -8.0F, 0.0F, -0.4656F, 0.422F, 0.6799F));
 
-        all.addOrReplaceChild("base2", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition base2 = all.addOrReplaceChild("base2", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
 
         PartDefinition innner_ef = all.addOrReplaceChild("innner_ef", CubeListBuilder.create().texOffs(2, 60).addBox(-10.0F, -9.0F, 7.9F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(2, 60).addBox(-11.0F, -10.0F, 7.9F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
@@ -162,20 +162,31 @@ public class WirelessNodeModel extends HierarchicalModel<Entity> {
                 .texOffs(-3, 61).addBox(-11.0F, -15.9F, 5.0F, 8.0F, 0.0F, 3.0F, new CubeDeformation(0.0F))
                 .texOffs(-16, 48).addBox(-15.0F, -0.1F, -8.0F, 16.0F, 0.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(7.0F, 0.0F, 0.0F));
 
-        for (int i = 2; i < 4; i++) {
-            innner_ef.addOrReplaceChild("cube_r" + i, CubeListBuilder.create().texOffs(2, 60).addBox(3.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(0, 60).addBox(-8.0F, -8.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(0, 60).addBox(-8.0F, 4.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(1, 56).addBox(-2.0F, 3.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(2, 56).addBox(-1.0F, 2.0F, 0.0F, 2.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(1, 56).addBox(-2.0F, -4.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(2, 56).addBox(-1.0F, -3.0F, 0.0F, 2.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(2, 60).addBox(2.0F, -1.0F, 0.0F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(2, 56).addBox(4.0F, -4.0F, 0.0F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(0, 56).addBox(-8.0F, -4.0F, 0.0F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(2, 60).addBox(-4.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
-                    .texOffs(2, 60).addBox(-3.0F, -1.0F, 0.0F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.9F, -8.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
-        }
+        PartDefinition cube_r2 = innner_ef.addOrReplaceChild("cube_r2", CubeListBuilder.create().texOffs(2, 60).addBox(3.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(0, 60).addBox(-8.0F, -8.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(0, 60).addBox(-8.0F, 4.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(1, 56).addBox(-2.0F, 3.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 56).addBox(-1.0F, 2.0F, 0.0F, 2.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(1, 56).addBox(-2.0F, -4.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 56).addBox(-1.0F, -3.0F, 0.0F, 2.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 60).addBox(2.0F, -1.0F, 0.0F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 56).addBox(4.0F, -4.0F, 0.0F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(0, 56).addBox(-8.0F, -4.0F, 0.0F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 60).addBox(-4.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 60).addBox(-3.0F, -1.0F, 0.0F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.9F, -8.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
+
+        PartDefinition cube_r3 = innner_ef.addOrReplaceChild("cube_r3", CubeListBuilder.create().texOffs(2, 60).addBox(3.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(0, 60).addBox(-8.0F, -8.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(0, 60).addBox(-8.0F, 4.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(1, 56).addBox(-2.0F, 3.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 56).addBox(-1.0F, 2.0F, 0.0F, 2.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(1, 56).addBox(-2.0F, -4.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 56).addBox(-1.0F, -3.0F, 0.0F, 2.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 60).addBox(2.0F, -1.0F, 0.0F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 56).addBox(4.0F, -4.0F, 0.0F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(0, 56).addBox(-8.0F, -4.0F, 0.0F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 60).addBox(-4.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+                .texOffs(2, 60).addBox(-3.0F, -1.0F, 0.0F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-14.9F, -8.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
 
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
@@ -215,7 +226,7 @@ public class WirelessNodeModel extends HierarchicalModel<Entity> {
     }
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType.apply(TextureResources.TEXTURE_WIRELESS_NODE_MODEL));
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType(TextureResources.WIRELESS_NODE_MODEL));
         base2.render(poseStack, vertexConsumer, packedLight, packedOverlay);
         core_li.render(poseStack, vertexConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         VertexConsumer effect;

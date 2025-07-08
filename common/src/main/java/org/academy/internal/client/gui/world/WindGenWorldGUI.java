@@ -19,9 +19,9 @@ public class WindGenWorldGUI {
     }
 
     public void onInit() {
-        var back = new ImageWidget(0, 0, WIDTH, HEIGHT, RenderTypes.RENDER_TYPE_SKILL_PANEL_INFO);
+        var back = new ImageWidget(0, 0, WIDTH, HEIGHT, RenderTypes.SKILL_PANEL_INFO);
         rootContainer.addChild("back", back);
-        var buttonWidget = new ImageButtonWidget(320 - 25, 200 - 25, 50, 50, RenderTypes.RENDER_TYPE_CURSOR, () -> {
+        var buttonWidget = new ImageButtonWidget(320 - 25, 200 - 25, 50, 50, RenderTypes.CURSOR, () -> {
 
         });
         rootContainer.addChild("button", buttonWidget);

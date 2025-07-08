@@ -80,7 +80,7 @@ public class Railgun extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(),
-                        TextureResources.TEXTURE_RAILGUN_ICON, 200, 70.25f);
+                        TextureResources.RAILGUN_ICON, 200, 70.25f);
         public static final String KEY_NAME_SHOOT = SkillNames.RAILGUN + "_shoot";
         public static Config CLIENT_CONFIG = new Config();
 
@@ -166,7 +166,7 @@ public class Railgun extends Skill {
             if (computingPower < 100) {
                 return;
             }
-            EntityType<?> targetEntity = EntityTypes.THROWN_COIN_ENTITY_TYPE;
+            EntityType<?> targetEntity = EntityTypes.THROWN_COIN;
 
             Vec3 playerCenter = player.position().add(0, player.getBbHeight() / 2.0, 0);
             AABB detectionBox = new AABB(playerCenter.subtract(1.5, 1.5, 1.5),
@@ -182,7 +182,7 @@ public class Railgun extends Skill {
                 }
 
                 ThrownCoin coin = (ThrownCoin) entities.get(0);
-                RailgunRay railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY_ENTITY_TYPE, player.level());
+                RailgunRay railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY, player.level());
                 coin.kill();
 
                 float length = 50;

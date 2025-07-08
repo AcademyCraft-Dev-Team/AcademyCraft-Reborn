@@ -75,7 +75,7 @@ public class BloodflowReverse extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
-                        TextureResources.TEXTURE_BLOODFLOW_REVERSE_ICON, 90, 50);
+                        TextureResources.BLOODFLOW_REVERSE_ICON, 90, 50);
         public static final String KEY_NAME = SkillNames.BLOODFLOW_REVERSE + "_use";
         public static Config CONFIG = new Config();
 

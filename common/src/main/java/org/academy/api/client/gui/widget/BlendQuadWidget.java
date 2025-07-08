@@ -20,7 +20,7 @@ public class BlendQuadWidget extends AbstractWidget {
 
     public BlendQuadWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
-        lineWidget = new ImageWidget(1, 0, width - 2, 4, RenderTypes.RENDER_TYPE_ELEMENT_LINE);
+        lineWidget = new ImageWidget(1, 0, width - 2, 4, RenderTypes.ELEMENT_LINE);
     }
 
     @Override
@@ -42,12 +42,12 @@ public class BlendQuadWidget extends AbstractWidget {
             shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
             shader.safeGetUniform("u_fillColor").set(red, green, blue, finalAlpha);
 
-            var vertexConsumer = graphics.bufferSource().getBuffer(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
+            var vertexConsumer = graphics.bufferSource().getBuffer(RenderTypes.SDF_SHARP_QUAD);
             vertexConsumer.vertex(matrix, 0, 0, 0).uv(0, 0).endVertex();
             vertexConsumer.vertex(matrix, 0, h, 0).uv(0, 1).endVertex();
             vertexConsumer.vertex(matrix, w, h, 0).uv(1, 1).endVertex();
             vertexConsumer.vertex(matrix, w, 0, 0).uv(1, 0).endVertex();
-            graphics.bufferSource().endBatch(RenderTypes.RENDER_TYPE_SDF_SHARP_QUAD);
+            graphics.bufferSource().endBatch(RenderTypes.SDF_SHARP_QUAD);
         }
 
         if (drawLine) {

@@ -18,7 +18,7 @@ public class WirelessNodeBlockEntityRenderer implements BlockEntityRenderer<Wire
     @Override
     public void render(@NotNull WirelessNodeBlockEntity wirelessNodeBlockEntity, float partialTick, PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
         poseStack.pushPose();
-        poseStack.translate(0.5, 0, 0.5);
+        poseStack.translate(0.5f, 0, 0.5f);
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
         WIRELESS_NODE_MODEL.setupAnim(wirelessNodeBlockEntity, partialTick);
         WIRELESS_NODE_MODEL.render(poseStack, buffer, packedLight, packedOverlay);

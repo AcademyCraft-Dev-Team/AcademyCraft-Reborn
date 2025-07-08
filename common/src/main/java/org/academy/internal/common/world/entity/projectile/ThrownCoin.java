@@ -28,7 +28,7 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     }
 
     public ThrownCoin(Level level, LivingEntity shooter) {
-        super(EntityTypes.THROWN_COIN_ENTITY_TYPE, shooter, level);
+        super(EntityTypes.THROWN_COIN, shooter, level);
     }
 
 

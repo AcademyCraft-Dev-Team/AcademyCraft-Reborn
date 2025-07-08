@@ -72,7 +72,7 @@ public class ArcGenerate extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Electromaster.INSTANCE, INSTANCE, List.of(Railgun.Client.SKILL_INFO),
-                        TextureResources.TEXTURE_ARC_GENERATE_ICON, 20, 70.25f);
+                        TextureResources.ARC_GENERATE_ICON, 20, 70.25f);
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
@@ -133,7 +133,7 @@ public class ArcGenerate extends Skill {
             level.addFreshEntity(arc);
             arc.playSound(AcademyCraftSoundEvents.ARC_WEAK);
 
-            float radius = 0.125f;
+            float radius = 0.25f;
             float damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
             DamageSource src = player.damageSources().playerAttack(player);
             LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, damage);

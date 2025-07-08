@@ -86,7 +86,7 @@ public class StormWing extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(VectorReflection.Client.SKILL_INFO),
-                        TextureResources.TEXTURE_STORM_WING_ICON, 150, 70.25f);
+                        TextureResources.STORM_WING_ICON, 150, 70.25f);
         public static final String KEY_NAME_TOGGLE = SkillNames.STORM_WING + "_toggle";
         public static Config CONFIG = new Config();
 
