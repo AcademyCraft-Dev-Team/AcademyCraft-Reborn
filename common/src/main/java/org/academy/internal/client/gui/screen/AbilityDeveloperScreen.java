@@ -5,12 +5,15 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.WirelessPanelHelper;
+import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.animation.AnimatorListener;
+import org.academy.api.client.gui.animation.EasingFunctions;
+import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.widget.*;
@@ -46,7 +49,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
     public static final float PANEL_RIGHT_SKILL_BACK_HEIGHT = 139.5f;
     public static final float PANEL_RIGHT_SKILL_SIZE = 32f;
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
-            RenderUtil.getPositionTexRenderType("ability_icon_glow", new ResourceLocation(AcademyCraft.MOD_ID,
+            RenderUtil.getPositionColorTexRenderType("ability_icon_glow", new ResourceLocation(AcademyCraft.MOD_ID,
                     "textures/ability/" + abilityCategory.name + "/icon_glow.png"
             ), false);
     private String currentlyConnectedNodeName = "None";
@@ -85,7 +88,16 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
 
     @Override
     protected void onInit() {
+        var startYOffset = 20f;
+        var duration = 600L;
+        var delay = 250L;
+        var childDuration = duration - 100;
+
         var mainPanel = new PanelWidget(width / 2f - PANEL_MAIN_WIDTH / 2f, height / 2f - PANEL_MAIN_HEIGHT / 2f, PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT);
+        var finalY = mainPanel.getY();
+        mainPanel.setY(finalY + startYOffset);
+        mainPanel.setAlpha(0f);
+        TypewriterLabelWidget welcome;
         rootContainer.addChild("panel_main", mainPanel);
         {
             leftPanel = getLeftPanel();
@@ -93,9 +105,9 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
             var rightPanel = new PanelWidget(PANEL_LEFT_WIDTH, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT);
             mainPanel.addChild("panel_right", rightPanel);
             {
-                var rightPanelBack = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_RIGHT_BACK);
+                var rightPanelBack = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, PANEL_RIGHT_BACK);
                 rightPanel.addChild("panel_right_back", rightPanelBack);
-                var rightPanelInfo = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, RENDER_TYPE_SKILL_PANEL_INFO);
+                var rightPanelInfo = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, SKILL_PANEL_INFO);
                 rightPanel.addChild("panel_right_info", rightPanelInfo);
                 var bootFailed = AbilitySystemClient.getCategory() == Level0.INSTANCE;
                 var outputList = new ScrollPanelWidget(
@@ -104,7 +116,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                 outputList.setVisible(bootFailed);
                 rightPanel.addChild("output_list", outputList);
                 {
-                    var welcome = new TypewriterLabelWidget("Welcome to Academy OS, Ver 0.0.1", 0, 0);
+                    welcome = new TypewriterLabelWidget("Welcome to Academy OS, Ver 0.0.1", 0, 0);
                     addOutput("welcome", welcome, outputList);
                     String userName = "None";
                     if (Minecraft.getInstance().player != null) {
@@ -143,12 +155,12 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                             if ("learn".equals(s)) {
                                 if (!learned) {
                                     if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
-                                        AcquireCategoryPacket request = new AcquireCategoryPacket(mainPos);
+                                        var request = new AcquireCategoryPacket(mainPos);
                                         AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
                                                 (var response) -> {
                                                     if (response != null && response.messages != null) {
                                                         var lastWidget = outputCommand;
-                                                        for (String string : response.messages) {
+                                                        for (var string : response.messages) {
                                                             var newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
                                                             addOutput("output_info_" + string + newOutput.hashCode(), newOutput, outputList);
                                                             os.setY(newOutput.getY() + newOutput.getHeight());
@@ -182,14 +194,13 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                         outputList.addChild("text_box", textBox);
                         rootContainer.setFocusedChild(textBox);
                     };
-                    welcome.start();
                 }
                 var skillPanel = new PanelWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT);
                 skillPanel.setEnabled(!bootFailed);
                 skillPanel.setVisible(!bootFailed);
                 rightPanel.addChild("panel_skill", skillPanel);
                 {
-                    var parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, RENDER_TYPE_SKILL_PANEL_BACK, width, height);
+                    var parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, SKILL_PANEL_BACK, width, height);
                     skillPanel.addChild("skill_area_back", parallaxImageWidget);
                     var abilityCategory = AbilitySystemClient.getCategory();
                     var skillInfos = AbilitySystemClient.SKILL_INFOS.get(abilityCategory);
@@ -202,6 +213,17 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                 }
             }
         }
+
+        var alphaAnimation = ObjectAnimator.ofFloat(mainPanel::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay);
+        playAnimation(ObjectAnimator.ofFloat(mainPanel::setY, mainPanel.getY(), finalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
+        playAnimation(alphaAnimation);
+        playAnimation(ObjectAnimator.ofFloat(skillInfoPanel::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR));
+        alphaAnimation.addListener(new AnimatorListener() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                welcome.start();
+            }
+        });
 
         screenWirelessPanel = new PanelWidget(0, 0, width, height);
         screenWirelessPanel.setZ(100);
@@ -252,14 +274,14 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
             var leftPanelBack = new BlendQuadWidget(0, 70, PANEL_LEFT_WIDTH, 115);
             leftPanelBack.setAlpha(0.5f);
             localLeftPanel.addChild("left_panel_back", leftPanelBack);
-            var leftPanelBackBottom = new ImageWidget(4.25f, 0, 100, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_MIDDLE);
+            var leftPanelBackBottom = new ImageWidget(4.25f, 0, 100, PANEL_MAIN_HEIGHT, PANEL_LEFT_BACK_MIDDLE);
             localLeftPanel.addChild("left_panel_back_bottom", leftPanelBackBottom);
-            var leftPanelBackTop = new ImageWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT, RENDER_TYPE_PANEL_LEFT_BACK_TOP);
+            var leftPanelBackTop = new ImageWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT, PANEL_LEFT_BACK_TOP);
             localLeftPanel.addChild("left_panel_back_top", leftPanelBackTop);
             var leftPanelInfoPanel = new PanelWidget(0, 70, PANEL_LEFT_WIDTH, 32);
             localLeftPanel.addChild("left_panel_info", leftPanelInfoPanel);
             {
-                var iconBack = new ImageWidget(0, 0, leftPanelInfoPanel.getHeight(), leftPanelInfoPanel.getHeight(), RENDER_TYPE_ICON_BOX);
+                var iconBack = new ImageWidget(0, 0, leftPanelInfoPanel.getHeight(), leftPanelInfoPanel.getHeight(), ICON_BOX);
                 leftPanelInfoPanel.addChild("icon_back", iconBack);
                 var abilityCategory = AbilitySystemClient.getCategory();
                 var icon = new ImageWidget(0, 0, iconBack.getHeight(), iconBack.getHeight(),
@@ -267,8 +289,8 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                 icon.widthScale = 0.65f;
                 icon.heightScale = 0.65f;
                 leftPanelInfoPanel.addChild("icon", icon);
-                var name = new LabelWidget(abilityCategory.name, leftPanelInfoPanel.getHeight(), 5);
-                name.scale = 1.25f;
+                var name = new AutoScaleLabelWidget(abilityCategory.name, leftPanelInfoPanel.getHeight(), 5,
+                        leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4);
                 leftPanelInfoPanel.addChild("name", name);
                 var learnProgress = new ProgressBarWidget(leftPanelInfoPanel.getHeight(), 16,
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4, 2,
@@ -280,15 +302,15 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                         });
                 learnProgress.progressBarColor = Color.WHITE.hashCode();
                 leftPanelInfoPanel.addChild("learn_progress", learnProgress);
-                var progress = new LabelWidget("LEARNED " + 100 + "%", leftPanelInfoPanel.getHeight(), 18);
-                progress.scale = 0.75f;
+                var progress = new AutoScaleLabelWidget("LEARNED " + 100 + "%", leftPanelInfoPanel.getHeight(), 18,
+                        learnProgress.getWidth() * 0.5f);
                 leftPanelInfoPanel.addChild("progress", progress);
                 var levelLabel = new AutoScaleLabelWidget(abilityCategory.name, 0, 18, 24);
                 levelLabel.setX(leftPanelInfoPanel.getWidth() - levelLabel.getWidth() - 4);
                 levelLabel.color = 0xFF1177D6;
                 leftPanelInfoPanel.addChild("label_level", levelLabel);
             }
-            var wirelessLabel = new LabelWidget("Current Node:", 8, 110);
+            var wirelessLabel = new AutoScaleLabelWidget("Current Node:", 8, 110, 90);
             localLeftPanel.addChild("label_wireless", wirelessLabel);
             var wirelessButtonPanel = new PanelWidget(8, 120, 90, 16);
             localLeftPanel.addChild("button_wireless", wirelessButtonPanel);
@@ -304,14 +326,15 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                 });
                 wirelessButtonPanel.addChild("button", button);
 
-                var back = new ImageWidget(0, 0, 90, 14, RENDER_TYPE_ELEMENT_BACK_LIGHT);
+                var back = new ImageWidget(0, 0, 90, 14, ELEMENT_BACK_LIGHT);
                 wirelessButtonPanel.addChild("back", back);
-                var icon = new ImageWidget(6, 1, 12, 12, RENDER_TYPE_ICON_NODE);
+                var icon = new ImageWidget(6, 1, 12, 12, ICON_NODE);
                 wirelessButtonPanel.addChild("icon", icon);
-                var nameLabel = new LabelWidget(this.currentlyConnectedNodeName, 24, 3);
+                var nameLabel = new AutoScaleLabelWidget(this.currentlyConnectedNodeName, 24, 3,
+                        wirelessButtonPanel.getWidth() - 24 - 4);
                 wirelessButtonPanel.addChild("label_name", nameLabel);
             }
-            var powerLabel = new LabelWidget("Current Power:", 8, 142.5f);
+            var powerLabel = new AutoScaleLabelWidget("Current Power:", 8, 142.5f, 90);
             localLeftPanel.addChild("power_label", powerLabel);
             var progressBarWidget = new ProgressBarWidget(9.25f, 157f, 90f, 9, () -> (float) abilityDeveloperBlockEntity.getEnergyStored() / abilityDeveloperBlockEntity.getMaxEnergyStorage());
             localLeftPanel.addChild("progress_bar", progressBarWidget);
@@ -322,8 +345,8 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
     @Override
     public void updateConnectedNodeDisplay(boolean isNull, String nodeName) {
         WirelessPanelHelper.WirelessPanel.super.updateConnectedNodeDisplay(isNull, nodeName);
-        if (leftPanel != null && leftPanel.<PanelWidget>getChildUnSafe("button_wireless").getChildren().get("label_name") instanceof LabelWidget labelWidget) {
-            labelWidget.value = getConnectedNodeName();
+        if (leftPanel != null && leftPanel.<PanelWidget>getChildUnSafe("button_wireless").getChildren().get("label_name") instanceof AutoScaleLabelWidget labelWidget) {
+            labelWidget.setText(getConnectedNodeName());
         }
     }
 
@@ -344,15 +367,13 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
         skillInfoPanel.iconBack.setY(((float) AbilityDeveloperScreen.this.height / 2 - skillInfoPanel.iconBack.getHeight() / 2) - 25);
         skillInfoPanel.icon.renderType = RenderUtil.getPositionColorTexRenderTypeFull("skill_icon", skill.texture(), false);
 
-        skillInfoPanel.nameLabel.value = "Skill: %s".formatted(skill.skill().name);
-        skillInfoPanel.nameLabel.setWidth(Minecraft.getInstance().font.width(FormattedText.of(skillInfoPanel.nameLabel.value)));
+        skillInfoPanel.nameLabel.setText("Skill: %s".formatted(skill.skill().name));
         skillInfoPanel.nameLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.nameLabel.getWidth() / 2);
         skillInfoPanel.nameLabel.setY(skillInfoPanel.icon.getY() + 50);
 
         var lacked = ClientUtil.lacksSkill(skill.skill());
-        skillInfoPanel.stateLabel.value = lacked ? "Skill not learned" : "Skill learned";
+        skillInfoPanel.stateLabel.setText(lacked ? "Skill not learned" : "Skill learned");
         skillInfoPanel.stateLabel.color = lacked ? 0XFFFF0000 : 0xFFFFFFFF;
-        skillInfoPanel.stateLabel.setWidth(Minecraft.getInstance().font.width(skillInfoPanel.stateLabel.value));
         skillInfoPanel.stateLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.stateLabel.getWidth() / 2);
         skillInfoPanel.stateLabel.setY(skillInfoPanel.nameLabel.getY() + 12);
 
@@ -384,9 +405,8 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
         skillInfoPanel.learnButton.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.learnButton.getWidth() / 2);
         skillInfoPanel.learnButton.setY(skillInfoPanel.depPanel.getY() + 18);
 
-        skillInfoPanel.energyLabel.value = !lacked ? "" : "%d AF".formatted(skill.skill().energy);
-        skillInfoPanel.energyLabel.setWidth(Minecraft.getInstance().font.width(skillInfoPanel.energyLabel.value));
-        skillInfoPanel.energyLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.energyLabel.getWidth() * skillInfoPanel.energyLabel.scale / 2);
+        skillInfoPanel.energyLabel.setText(!lacked ? "" : "%d AF".formatted(skill.skill().energy));
+        skillInfoPanel.energyLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.energyLabel.getWidth() / 2);
         skillInfoPanel.energyLabel.setY(skillInfoPanel.learnButton.getY() + 18);
     }
 
@@ -418,12 +438,12 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
     final class SkillInfoPanel extends PanelWidget {
         AbilitySystemClient.SkillInfo skillInfo;
         final BackgroundWidget background = new BackgroundWidget(AbilityDeveloperScreen.this);
-        final ImageWidget iconBack = new ImageWidget(0, 0, 65, 65, RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK);
+        final ImageWidget iconBack = new ImageWidget(0, 0, 65, 65, PANEL_RIGHT_SKILL_ICON_BACK);
         final ImageWidget icon = new ImageWidget(0, 0, 32.5f, 32.5f, null);
-        final LabelWidget nameLabel = new LabelWidget("", 0, 0);
-        final LabelWidget stateLabel = new LabelWidget("", 0, 0);
+        final AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget("", 0, 0, 200, true);
+        final AutoScaleLabelWidget stateLabel = new AutoScaleLabelWidget("", 0, 0, 200, true);
         final PanelWidget depPanel = new PanelWidget(0, 0, 0, 16);
-        final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, RENDER_TYPE_BUTTON, () -> {
+        final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, BUTTON, () -> {
             if (skillInfo == null) return;
             LearnSkillPacket request = new LearnSkillPacket(skillInfo.skill().name, mainPos);
             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
@@ -433,7 +453,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                         }
                     });
         });
-        final LabelWidget energyLabel = new LabelWidget("", 0, 0);
+        final AutoScaleLabelWidget energyLabel = new AutoScaleLabelWidget("", 0, 0, 100, true);
 
         public SkillInfoPanel() {
             super(0, 0, 0, 0);
@@ -445,7 +465,6 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
             addChild("panel_dep", depPanel);
             addChild("learn_button", learnButton);
             addChild("energy_label", energyLabel);
-            energyLabel.scale = 0.75f;
             background.runnable = () -> {
                 setEnabled(false);
                 setVisible(false);
@@ -465,7 +484,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
         @SuppressWarnings("SuspiciousNameCombination")
         SkillWidget(AbilitySystemClient.SkillInfo skillInfo) {
             super(skillInfo.x(), skillInfo.y(), PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE,
-                    RENDER_TYPE_SKILL_ICON.apply(skillInfo.skill().name, skillInfo.texture()),
+                    SKILL_ICON.apply(skillInfo.skill().name, skillInfo.texture()),
                     () -> AbilityDeveloperScreen.this.openSkillViewPanel(skillInfo));
             dependencies.addAll(skillInfo.dependencies());
             targetProgress = AbilitySystemClient.getSkillExp(skillInfo.skill()) / 100f;
@@ -483,7 +502,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
             widthScale = currentScale;
             heightScale = currentScale;
             var oldType = renderType;
-            renderType = RENDER_TYPE_ELEMENT_LINE;
+            renderType = ELEMENT_LINE;
             var buf = graphics.bufferSource().getBuffer(renderType);
             final var thickness = 5f;
             final var cX = x + PANEL_RIGHT_SKILL_SIZE / 2f;
@@ -507,7 +526,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                 buf.vertex(m, 1f, 0f, 0f).color(1, 1, 1, 1f).uv(1f, 0f).endVertex();
                 graphics.pose().popPose();
             }
-            renderType = RENDER_TYPE_PANEL_RIGHT_SKILL_ICON_BACK;
+            renderType = PANEL_RIGHT_SKILL_ICON_BACK;
             super.render(graphics, mouseX, mouseY, partialTick);
             var oRed = red;
             var oGreen = green;

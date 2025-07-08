@@ -28,7 +28,7 @@ public final class WirelessPanelHelper {
             back.setAlpha(0.5f);
             wirelessPanel.addChild("back", back);
 
-            var icon = new ImageWidget(10, 10, 16, 16, RENDER_TYPE_WIRELESS_PANEL_VIEW_ICON);
+            var icon = new ImageWidget(10, 10, 16, 16, WIRELESS_PANEL_VIEW_ICON);
             wirelessPanel.addChild("icon", icon);
 
             var connectedLabel = new LabelWidget("Connected", 12, 30);
@@ -83,9 +83,9 @@ public final class WirelessPanelHelper {
         default @NotNull PanelWidget getNodeWidget(float x, float y, String nodeName, boolean isConnected, boolean isNull) {
             var nodeViewPanel = new PanelWidget(x, y, 158, 16);
             {
-                var nodeBack = new ImageWidget(0, 0, 144, 16, RENDER_TYPE_ELEMENT_BACK_LIGHT);
+                var nodeBack = new ImageWidget(0, 0, 144, 16, ELEMENT_BACK_LIGHT);
                 nodeViewPanel.addChild("back", nodeBack);
-                var nodeIcon = new ImageWidget(8, 1, 14, 14, RENDER_TYPE_ICON_NODE);
+                var nodeIcon = new ImageWidget(8, 1, 14, 14, ICON_NODE);
                 nodeViewPanel.addChild("icon", nodeIcon);
                 var nodeNameLabel = new HoverLabelWidget(nodeName, 24, 3.5f, 40);
                 nodeViewPanel.addChild("node_name", nodeNameLabel);
@@ -98,7 +98,7 @@ public final class WirelessPanelHelper {
                     inputBox.whenEnter = connect;
                     inputBox.showBackground = true;
                     nodeViewPanel.addChild("input", inputBox);
-                    var buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_UNCONNECTED, () -> {
+                    var buttonWidget = new ImageButtonWidget(118, 1, 14, 14, ICON_UNCONNECTED, () -> {
                         var password = inputBox.getText();
                         connect.accept(password);
                     });
@@ -106,7 +106,7 @@ public final class WirelessPanelHelper {
                     nodeViewPanel.addChild("button", buttonWidget);
                 } else {
                     if (!isNull) {
-                        var buttonWidget = new ImageButtonWidget(118, 1, 14, 14, RENDER_TYPE_ICON_CONNECTED, () ->
+                        var buttonWidget = new ImageButtonWidget(118, 1, 14, 14, ICON_CONNECTED, () ->
                         {
                             NetworkManagerClient.sendPacket(new C2SPacket(new DisconnectNodePacket(getPosition())));
                             requestCurrentNodeStatus();

@@ -2,10 +2,10 @@ package org.academy.api.client.gui.framework;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.renderer.texture.Tickable;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import org.academy.AcademyCraft;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
@@ -63,7 +63,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         back.setAlpha(0f);
 
         inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, finalHeight,
-                RenderTypes.RENDER_TYPE_INVENTORY);
+                RenderTypes.INVENTORY);
         inventory.setHeight(0);
         inventory.setAlpha(0f);
 
@@ -113,11 +113,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     protected void containerTick() {
-        for (var widget : rootContainer.getAllWidgets()) {
-            if (widget instanceof Tickable tickable) {
-                tickable.tick();
-            }
-        }
+        rootContainer.tick();
     }
 
     @Override
@@ -127,14 +123,14 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        org.academy.AcademyCraft.LOGGER.debug("CGuiContainerScreen mouseClicked at ({}, {})", mouseX, mouseY);
+        AcademyCraft.LOGGER.debug("CGuiContainerScreen mouseClicked at ({}, {})", mouseX, mouseY);
         var rootResult = rootContainer.mousePressed(mouseX, mouseY, button);
         if (rootResult) {
-            org.academy.AcademyCraft.LOGGER.debug("rootContainer consumed the click.");
+            AcademyCraft.LOGGER.debug("rootContainer consumed the click.");
         }
         var superResult = shouldHandleContainer() && super.mouseClicked(mouseX, mouseY, button);
         if (superResult) {
-            org.academy.AcademyCraft.LOGGER.debug("super (vanilla container) consumed the click.");
+            AcademyCraft.LOGGER.debug("super (vanilla container) consumed the click.");
         }
         return rootResult || superResult;
     }

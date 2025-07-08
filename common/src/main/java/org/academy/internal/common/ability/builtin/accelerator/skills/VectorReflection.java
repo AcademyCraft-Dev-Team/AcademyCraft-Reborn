@@ -76,7 +76,7 @@ public class VectorReflection extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilityDeveloperScreen.registerSkillInfo(Accelerator.INSTANCE, INSTANCE, List.of(),
-                        TextureResources.TEXTURE_VECTOR_REFLECTION_ICON, 20, 70.25f);
+                        TextureResources.VECTOR_REFLECTION_ICON, 20, 70.25f);
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
         public static Config CONFIG = new Config();
 
@@ -188,7 +188,7 @@ public class VectorReflection extends Skill {
                     ? directEntity.position()
                     : player.getPosition(1.0F).add(vec3.x, vec3.y + 1.5, vec3.z);
 
-            GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, player.level());
+            GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE, player.level());
             glowCircle.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
 
             Vec3 dir = sourceEntity.position().subtract(player.getPosition(1)).normalize();

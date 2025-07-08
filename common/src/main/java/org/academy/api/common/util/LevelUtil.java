@@ -19,7 +19,10 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 
 public class LevelUtil {
@@ -55,70 +58,81 @@ public class LevelUtil {
                                                                int miningLevel, boolean dropBlock,
                                                                boolean spawnParticles, boolean canBlock,
                                                                boolean simulate) {
+        final var direction = end.subtract(start).normalize();
+        final var pathLength = start.distanceTo(end);
+
+        Pair<List<BlockPos>, List<BlockPos>> collectedBlocks = collectBlocksInCylinder(level, start, end, radius, miningLevel, canBlock);
+        List<BlockPos> breakableBlocks = collectedBlocks.getLeft();
+        List<BlockPos> unbreakableBlocks = collectedBlocks.getRight();
+
+        double minBlockedDist = calculateMinBlockedDistance(unbreakableBlocks, start, direction, pathLength, canBlock);
+
+        if (!simulate) {
+            destroyBreakableBlocks(level, breakableBlocks, start, direction, pathLength, minBlockedDist, dropBlock, spawnParticles);
+        }
+
+        return Pair.of(minBlockedDist < pathLength, minBlockedDist);
+    }
+
+    private static Pair<List<BlockPos>, List<BlockPos>> collectBlocksInCylinder(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock) {
+        List<BlockPos> breakable = new ArrayList<>();
+        List<BlockPos> unbreakable = new ArrayList<>();
+
+        final var overallAABB = new AABB(start, end).inflate(radius + 1.0);
+
+        for (BlockPos blockPos : BlockPos.betweenClosed(
+                Mth.floor(overallAABB.minX), Mth.floor(overallAABB.minY), Mth.floor(overallAABB.minZ),
+                Mth.floor(overallAABB.maxX), Mth.floor(overallAABB.maxY), Mth.floor(overallAABB.maxZ)
+        )) {
+            processBlockForDestruction(level, blockPos, start, end, radius, miningLevel, canBlock, breakable, unbreakable);
+        }
+
+        return Pair.of(breakable, unbreakable);
+    }
+
+    private static double calculateMinBlockedDistance(List<BlockPos> unbreakableBlocks, Vec3 start, Vec3 direction, double pathLength, boolean canBlock) {
+        if (!canBlock || unbreakableBlocks.isEmpty()) {
+            return pathLength;
+        }
+
+        double minBlockedDist = pathLength;
+        for (BlockPos pos : unbreakableBlocks) {
+            minBlockedDist = Math.min(minBlockedDist, calculateDistanceToBlockIntersection(start, direction, pathLength, pos));
+        }
+        return minBlockedDist;
+    }
+
+    private static void destroyBreakableBlocks(Level level, List<BlockPos> breakableBlocks, Vec3 start, Vec3 direction, double pathLength, double minBlockedDist, boolean dropBlock, boolean spawnParticles) {
         final var air = Blocks.AIR.defaultBlockState();
-        var processedBlocks = new HashSet<BlockPos>();
-        var pathLength = start.distanceTo(end);
-
-        var direction = end.subtract(start).normalize();
-        var maxSteps = Mth.ceil(pathLength / 0.5);
-        var currentBlockPos = new BlockPos.MutableBlockPos();
-        var searchBounds = Mth.ceil(radius);
-
-        for (var step = 0; step <= maxSteps; ++step) {
-            var distAlongPath = (step / (double) maxSteps) * pathLength;
-            distAlongPath = Math.min(distAlongPath, pathLength);
-            var currentPoint = start.add(direction.scale(distAlongPath));
-            var centerBlock = BlockPos.containing(currentPoint);
-
-            for (var dx = -searchBounds; dx <= searchBounds; ++dx) {
-                for (var dy = -searchBounds; dy <= searchBounds; ++dy) {
-                    for (var dz = -searchBounds; dz <= searchBounds; ++dz) {
-                        currentBlockPos.set(centerBlock.getX() + dx, centerBlock.getY() + dy, centerBlock.getZ() + dz);
-
-                        if (processedBlocks.contains(currentBlockPos)) {
-                            continue;
-                        }
-
-                        if (isBlockIntersectingCylinder(currentBlockPos, start, end, radius)) {
-                            var blockState = level.getBlockState(currentBlockPos);
-
-                            if (!blockState.isAir()) {
-                                var breakable = canBreakBlock(blockState, miningLevel);
-                                if (breakable) {
-                                    if (!simulate) {
-                                        processedBlocks.add(currentBlockPos.immutable());
-                                        var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(currentBlockPos) : null;
-                                        if (dropBlock) {
-                                            Block.dropResources(blockState, level, currentBlockPos, blockEntity, null, ItemStack.EMPTY);
-                                        }
-                                        level.setBlock(currentBlockPos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
-                                        if (spawnParticles) {
-                                            level.levelEvent(2001, currentBlockPos, Block.getId(blockState));
-                                        }
-                                    } else {
-                                        processedBlocks.add(currentBlockPos.immutable());
-                                    }
-                                } else if (canBlock) {
-                                    var blockedDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, currentBlockPos);
-                                    return Pair.of(true, Math.min(blockedDistance, pathLength));
-                                }
-                            }
-                        }
-                    }
+        for (BlockPos pos : breakableBlocks) {
+            if (calculateDistanceToBlockIntersection(start, direction, pathLength, pos) < minBlockedDist) {
+                var blockState = level.getBlockState(pos);
+                var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
+                if (dropBlock) {
+                    Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
                 }
-            }
-
-            if (canBlock && !processedBlocks.contains(centerBlock)) {
-                var centerBlockState = level.getBlockState(centerBlock);
-                if (!centerBlockState.isAir() && !canBreakBlock(centerBlockState, miningLevel) && isBlockIntersectingCylinder(centerBlock, start, end, radius)) {
-                    var blockDistance = calculateDistanceToBlockIntersection(start, direction, pathLength, centerBlock);
-                    return Pair.of(true, Math.min(blockDistance, pathLength));
+                level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                if (spawnParticles) {
+                    level.levelEvent(2001, pos, Block.getId(blockState));
                 }
             }
         }
-
-        return Pair.of(false, pathLength);
     }
+
+    private static void processBlockForDestruction(Level level, BlockPos currentPos, Vec3 start, Vec3 end, float radius,
+                                                   int miningLevel, boolean canBlock, List<BlockPos> breakableBlocks, List<BlockPos> unbreakableBlocks) {
+        if (isBlockIntersectingCylinder(currentPos, start, end, radius)) {
+            BlockState blockState = level.getBlockState(currentPos);
+            if (!blockState.isAir()) {
+                if (canBreakBlock(blockState, miningLevel)) {
+                    breakableBlocks.add(currentPos.immutable());
+                } else if (canBlock) {
+                    unbreakableBlocks.add(currentPos.immutable());
+                }
+            }
+        }
+    }
+
 
     public static boolean isBlockIntersectingCylinder(BlockPos blockPos, Vec3 start, Vec3 end, float radius) {
         var blockCenter = Vec3.atCenterOf(blockPos);
@@ -173,42 +187,37 @@ public class LevelUtil {
                                                float damage) {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
-        var direction = end.subtract(start).normalize();
-        var totalDistance = start.distanceTo(end);
-
-        var steps = (int) Math.ceil(totalDistance / (double) radius);
-
         var pathBB = new AABB(start, end).inflate(radius, radius, radius);
         var candidates = serverLevel.getEntities(
                 (Entity) null,
                 pathBB,
                 e -> e.isAlive()
-                        && e.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE
+                        && e.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM
         );
 
         var hitSet = new HashSet<Entity>();
 
-        for (var i = 0; i <= steps; i++) {
-            var distAlong = Math.min(i * (double) radius, totalDistance);
-            var samplePos = start.add(direction.scale(distAlong));
+        for (var entity : candidates) {
+            processEntityForAttack(entity, start, end, radius, damageSource, damage, hitSet);
+        }
+    }
 
-            var sliceBB = new AABB(
-                    samplePos.subtract(radius, radius, radius),
-                    samplePos.add(radius, radius, radius)
-            );
+    private static void processEntityForAttack(Entity entity, Vec3 start, Vec3 end, float radius,
+                                               DamageSource damageSource, float damage, Set<Entity> hitSet) {
+        if (hitSet.contains(entity)) return;
 
-            for (var e : candidates) {
-                if (hitSet.contains(e)) continue;
+        var entityBox = entity.getBoundingBox();
+        var entityCenter = entityBox.getCenter();
+        var distSq = distanceSqToLineSegment(entityCenter, start, end);
+        var effectiveRadius = radius + entity.getBbWidth() / 2.0;
 
-                if (e.getBoundingBox().intersects(sliceBB)) {
-                    if (e instanceof EnderDragon) {
-                        ((EnderDragon) e).reallyHurt(damageSource, damage);
-                    } else {
-                        e.hurt(damageSource, damage);
-                    }
-                    hitSet.add(e);
-                }
+        if (distSq <= effectiveRadius * effectiveRadius) {
+            if (entity instanceof EnderDragon) {
+                ((EnderDragon) entity).reallyHurt(damageSource, damage);
+            } else {
+                entity.hurt(damageSource, damage);
             }
+            hitSet.add(entity);
         }
     }
 }

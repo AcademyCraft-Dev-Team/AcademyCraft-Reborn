@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.internal.client.renderer.Shaders;
 
-import static org.academy.api.client.renderer.RenderTypes.RENDER_TYPE_CIRCLE_GLOW;
+import static org.academy.api.client.renderer.RenderTypes.CIRCLE_GLOW;
 
 public class CursorWidget extends AbstractWidget {
     public float radius = 0.25f;
@@ -25,7 +25,7 @@ public class CursorWidget extends AbstractWidget {
     }
 
     private void renderSDFGlowAndShadow(GuiGraphics guiGraphics) {
-        var renderType = RENDER_TYPE_CIRCLE_GLOW;
+        var renderType = CIRCLE_GLOW;
         var sdfShader = Shaders.sdfCircleGlowShader;
         if (sdfShader == null) return;
 

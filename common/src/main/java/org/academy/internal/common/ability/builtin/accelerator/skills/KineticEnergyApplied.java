@@ -115,7 +115,7 @@ public class KineticEnergyApplied extends Skill {
 
         @SuppressWarnings("resource")
         public static float onProjectileShoot(Projectile projectile, Entity shooter, float velocity) {
-            GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE_ENTITY_TYPE, shooter.level());
+            GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE, shooter.level());
             Vec3 vec3 = shooter.getLookAngle().scale(1);
             glowCircle.setPos(projectile.getX() + vec3.x, projectile.getY() + vec3.y, projectile.getZ() + vec3.z);
             glowCircle.setYRot(shooter.getYRot());
