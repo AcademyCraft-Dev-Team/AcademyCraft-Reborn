@@ -18,7 +18,7 @@ public class HistogramWidget extends AbstractWidget {
 
     public HistogramWidget(float x, float y, float width, float height, List<Value> newInitialValues) {
         super(x, y, width, height);
-        back = new ImageWidget(x + 5, y - 15, width, height, RenderTypes.RENDER_TYPE_HISTOGRAM);
+        back = new ImageWidget(x + 5, y - 15, width, height, RenderTypes.HISTOGRAM);
         values = new ArrayList<>(Objects.requireNonNullElse(newInitialValues, Collections.emptyList()));
     }
 

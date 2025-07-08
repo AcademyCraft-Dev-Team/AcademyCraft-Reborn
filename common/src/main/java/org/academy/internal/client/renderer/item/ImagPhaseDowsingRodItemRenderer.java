@@ -87,7 +87,7 @@ public class ImagPhaseDowsingRodItemRenderer implements ItemRenderer {
             poseStack.translate(0, 0, 1);
         }
 
-        MODEL.renderToBuffer(poseStack, buffer.getBuffer(MODEL.renderType(TextureResources.TEXTURE_IMAG_PHASE_DOWSING_ROD_MODEL)), combinedLight, combinedOverlay, 1, 1, 1, 1);
+        MODEL.renderToBuffer(poseStack, buffer.getBuffer(MODEL.renderType(TextureResources.IMAG_PHASE_DOWSING_ROD)), combinedLight, combinedOverlay, 1, 1, 1, 1);
 
         if (!ImagPhaseDowsingRodItem.RENDER_TARGET_POSITIONS.isEmpty()
                 && displayContext != ItemDisplayContext.GUI

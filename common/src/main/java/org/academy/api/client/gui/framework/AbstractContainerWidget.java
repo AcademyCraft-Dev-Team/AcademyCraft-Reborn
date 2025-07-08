@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.framework;
 
+import net.minecraft.client.renderer.texture.Tickable;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
@@ -7,13 +8,21 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public abstract class AbstractContainerWidget extends AbstractWidget implements WidgetContainer {
+public abstract class AbstractContainerWidget extends AbstractWidget implements WidgetContainer, Tickable {
     protected final Map<String, Widget> children = new LinkedHashMap<>();
+    protected final List<Tickable> tickableChildren = new ArrayList<>();
     protected Widget focusedChild = null;
     private Widget hoveredWidget = null;
 
     public AbstractContainerWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
+    }
+
+    @Override
+    public void tick() {
+        for (Tickable tickable : tickableChildren) {
+            tickable.tick();
+        }
     }
 
     @Override
@@ -53,6 +62,9 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
         child.setParent(this);
         children.put(name, child);
+        if (child instanceof Tickable tickable) {
+            tickableChildren.add(tickable);
+        }
     }
 
     @Override
@@ -66,6 +78,9 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             if (hoveredWidget == widget) {
                 hoveredWidget = null;
             }
+            if (widget instanceof Tickable tickable) {
+                tickableChildren.remove(tickable);
+            }
             children.remove(name);
         }
     }
@@ -73,6 +88,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     @Override
     public void clearChildren() {
         children.clear();
+        tickableChildren.clear();
         focusedChild = null;
         hoveredWidget = null;
     }
@@ -105,23 +121,6 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         return bestCandidate;
     }
 
-    public List<Widget> getAllWidgets() {
-        var result = new ArrayList<Widget>();
-        var stack = new Stack<Widget>();
-        stack.addAll(getChildren().values());
-
-        while (!stack.isEmpty()) {
-            var widget = stack.pop();
-            if (widget instanceof AbstractContainerWidget container) {
-                stack.addAll(container.getChildren().values());
-            } else {
-                result.add(widget);
-            }
-        }
-
-        return result;
-    }
-
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         if (!isVisible() || !isEnabled()) return;
@@ -151,9 +150,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
 
         var childrenList = new ArrayList<>(children.values());
-        Collections.reverse(childrenList);
-
-        for (var child : childrenList) {
+        for (int i = childrenList.size() - 1; i >= 0; i--) {
+            var child = childrenList.get(i);
             if (child.mousePressed(mouseX, mouseY, button)) {
                 if (button == 0) {
                     setFocusedChild(child.canFocus() ? child : null);
@@ -199,8 +197,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             return false;
         }
         var childrenList = new ArrayList<>(children.values());
-        Collections.reverse(childrenList);
-        for (var child : childrenList) {
+        for (int i = childrenList.size() - 1; i >= 0; i--) {
+            var child = childrenList.get(i);
             if (child.mouseReleased(mouseX, mouseY, button)) {
                 return true;
             }
@@ -214,8 +212,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             return false;
         }
         var childrenList = new ArrayList<>(children.values());
-        Collections.reverse(childrenList);
-        for (var child : childrenList) {
+        for (int i = childrenList.size() - 1; i >= 0; i--) {
+            var child = childrenList.get(i);
             if (child.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
                 return true;
             }
@@ -230,9 +228,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
         if (isAbsoluteMouseOver(mouseX, mouseY)) {
             var childrenList = new ArrayList<>(children.values());
-            Collections.reverse(childrenList);
-
-            for (var child : childrenList) {
+            for (int i = childrenList.size() - 1; i >= 0; i--) {
+                var child = childrenList.get(i);
                 if (child.mouseScrolled(mouseX, mouseY, delta)) {
                     return true;
                 }

@@ -19,7 +19,7 @@ public class CatEngineBlockEntityRenderer implements BlockEntityRenderer<CatEngi
     @Override
     public void render(@NotNull CatEngineBlockEntity blockEntity, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, int packedOverlay) {
         poseStack.pushPose();
-        var vertexConsumer = buffer.getBuffer(RenderTypes.RENDER_TYPE_CAT_ENGINE);
+        var vertexConsumer = buffer.getBuffer(RenderTypes.CAT_ENGINE);
         var sizeHalf = 0.5f;
         var f1 = blockEntity.rot - blockEntity.oRot;
 

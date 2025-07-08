@@ -25,7 +25,7 @@ public class Arc extends Entity {
     }
 
     public Arc(Level level, Vec3 handPos, Vec3 targetPos) {
-        super(EntityTypes.ARC_ENTITY_TYPE, level);
+        super(EntityTypes.ARC, level);
 
         this.setPos(handPos);
 

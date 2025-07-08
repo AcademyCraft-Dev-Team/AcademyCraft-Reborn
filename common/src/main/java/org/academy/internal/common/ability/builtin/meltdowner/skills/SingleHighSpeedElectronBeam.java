@@ -107,7 +107,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
         public static void handle(ShootPacket packet) {
             ServerPlayer player = packet.packetListenerSupplier.get().getPlayer();
             final Level level = player.level();
-            final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM_ENTITY_TYPE, level);
+            final HighSpeedElectronBeam highSpeedElectronBeam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM, level);
 
             final Vec3 eyePos = player.getEyePosition().add(0, -0.5, 0);
 

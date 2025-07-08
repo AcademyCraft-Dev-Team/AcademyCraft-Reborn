@@ -11,7 +11,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -222,7 +221,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                 root.addChild("info_bar", infoBar);
                 {
                     var icon = new ImageWidget(ICON_X_Y_PADDING_INFO_BAR, ICON_X_Y_PADDING_INFO_BAR, ICON_SIZE_INFO_BAR, ICON_SIZE_INFO_BAR,
-                            RenderTypes.RENDER_TYPE_ICON_DATA_TERMINAL);
+                            RenderTypes.ICON_DATA_TERMINAL);
                     infoBar.addChild("icon", icon);
 
                     var player = Minecraft.getInstance().player;
@@ -584,7 +583,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                     ClientUtil.animationFactor(1));
             heightScale = widthScale;
             var oringinRenderType = renderType;
-            renderType = RenderTypes.RENDER_TYPE_APP_BACK;
+            renderType = RenderTypes.APP_BACK;
             super.render(guiGraphics, mouseX, mouseY, partialTick);
             renderType = oringinRenderType;
             guiGraphics.pose().translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);

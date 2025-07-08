@@ -47,6 +47,12 @@ public class AutoScaleLabelWidget extends LabelWidget {
     public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
         if (!isVisible() || value == null || value.isEmpty()) return;
 
+        var baseAlpha = (color >> 24) & 0xFF;
+        var finalAlpha = (int) (baseAlpha * getAbsoluteAlpha());
+        // In Font.adjustColor, alpha <= 3 is forced to 255
+        if (finalAlpha <= 3) finalAlpha = 4;
+        var finalColor = (color & 0x00FFFFFF) | (finalAlpha << 24);
+
         graphics.pose().pushPose();
         var font = Minecraft.getInstance().font;
 
@@ -65,7 +71,7 @@ public class AutoScaleLabelWidget extends LabelWidget {
         graphics.pose().translate(renderX, getY() - yDrawingOffset, getZ());
         graphics.pose().scale(finalScale, finalScale, 1.0f);
 
-        font.drawInBatch(value, 0, 0, color, dropShadow,
+        font.drawInBatch(value, 0, 0, finalColor, dropShadow,
                 graphics.pose().last().pose(),
                 graphics.bufferSource(),
                 Font.DisplayMode.NORMAL,
