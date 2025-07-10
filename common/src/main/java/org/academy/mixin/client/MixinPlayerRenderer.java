@@ -61,7 +61,7 @@ public abstract class MixinPlayerRenderer {
     @Inject(method = "getArmPose", at = @At("HEAD"), cancellable = true)
     private static void getArmPose(AbstractClientPlayer player, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
         var itemstack = player.getItemInHand(hand);
-        if (itemstack.getItem() == Items.IMAG_PHASE_DOWSING_ROD) {
+        if (itemstack.getItem() == Items.IMAGIPHASE_DOWSING_ROD) {
             cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
         }
     }

@@ -19,20 +19,23 @@ public class Items {
     public static final Item WIND_GEN_PILLAR = register("wind_gen_pillar", new BlockItem(Blocks.WIND_GEN_PILLAR, new Item.Properties()));
     public static final Item ABILITY_DEVELOPER = register("ability_developer", new MultiBlockItem(Blocks.ABILITY_DEVELOPER, new Item.Properties()));
     public static final Item WIND_GEN_FAN_ITEM = register("wind_gen_fan", new Item(new Item.Properties().stacksTo(16)));
-    public static final Item IMAG_PHASE_INGOT = register("imag_phase_ingot", new Item(new Item.Properties()));
+    public static final Item IMAGIPHASE_METAL = register("imagiphase_metal", new Item(new Item.Properties()));
+    public static final Item IMAGIPHASE_METAL_BLOCK = register("imagiphase_metal_block", new BlockItem(Blocks.IMAGIPHASE_METAL_BLOCK, new Item.Properties()));
     public static final Item EMPTY_UNIT = register("empty_unit", new EmptyUnitItem());
-    public static final Item IMAG_PHASE_UNIT = register("imag_phase_unit", new ImagPhaseUnitItem());
+    public static final Item IMAGIPHASE_UNIT = register("imagiphase_unit", new ImagiphaseUnitItem());
     public static final Item WIND_GEN_BASE_SCREEN = register("wind_gen_base_screen", new Item(new Item.Properties()));
-    public static final Item IMAG_PHASE_CIRCUIT = register("imag_phase_circuit", new Item(new Item.Properties()));
-    public static final Item IMAG_PHASE_POLYMER = register("imag_phase_polymer", new Item(new Item.Properties()));
-    public static final Item IMAG_PHASE_PLATE = register("imag_phase_plate", new Item(new Item.Properties()));
-    public static final Item IMAG_PHASE_DOWSING_ROD = register("imag_phase_dowsing_rod", new ImagPhaseDowsingRodItem());
-    public static final Item IMAG_PHASE_VEGETATION = register("imag_phase_vegetation", new BlockItem(Blocks.IMAG_PHASE_VEGETATION, new Item.Properties()));
-    public static final Item IMAG_PHASE_LEAVES = register("imag_phase_leaves", new BlockItem(Blocks.IMAG_PHASE_LEAVES, new Item.Properties()));
-    public static final Item IMAG_PHASE_LOG = register("imag_phase_log", new BlockItem(Blocks.IMAG_PHASE_LOG, new Item.Properties()));
-    public static final Item IMAG_PHASE_LICHEN = register("imag_phase_lichen", new BlockItem(Blocks.IMAG_PHASE_LICHEN, new Item.Properties()));
+    public static final Item IMAGIPHASE_CIRCUIT = register("imagiphase_circuit", new Item(new Item.Properties()));
+    public static final Item IMAGIPHASE_POLYMER = register("imagiphase_polymer", new Item(new Item.Properties()));
+    public static final Item IMAGIPHASE_PLATE = register("imagiphase_plate", new Item(new Item.Properties()));
+    public static final Item IMAGIPHASE_DOWSING_ROD = register("imagiphase_dowsing_rod", new ImagiphaseDowsingRodItem());
+    public static final Item IMAGIPHASE_VEGETATION = register("imagiphase_vegetation", new BlockItem(Blocks.IMAGIPHASE_VEGETATION, new Item.Properties()));
+    public static final Item IMAGIPHASE_LEAVES = register("imagiphase_leaves", new BlockItem(Blocks.IMAGIPHASE_LEAVES, new Item.Properties()));
+    public static final Item IMAGIPHASE_LOG = register("imagiphase_log", new BlockItem(Blocks.IMAGIPHASE_LOG, new Item.Properties()));
+    public static final Item IMAGIPHASE_LICHEN = register("imagiphase_lichen", new BlockItem(Blocks.IMAGIPHASE_LICHEN, new Item.Properties()));
     public static final Item OMNI_CRAFTING_TABLE = register("omni_crafting_table", new BlockItem(Blocks.OMNI_CRAFTING_TABLE, new Item.Properties()));
     public static final Item CAT_ENGINE = register("cat_engine", new BlockItem(Blocks.CAT_ENGINE, new Item.Properties()));
+    public static final Item IMAGIPHASE_AMETHYST = register("imagiphase_amethyst", new Item(new Item.Properties()));
+    public static final Item IMAGIPHASE_AMETHYST_BLOCK = register("imagiphase_amethyst_block", new BlockItem(Blocks.IMAGIPHASE_AMETHYST_BLOCK, new Item.Properties()));
 
     public static <T extends Item> T register(String name, T item) {
         ITEMS.put(name, item);

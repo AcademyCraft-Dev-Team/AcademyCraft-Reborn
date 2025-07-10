@@ -38,7 +38,7 @@ public class ParticleRenderTypes {
                     public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level,
                                                             double x, double y, double z,
                                                             double xSpeed, double ySpeed, double zSpeed) {
-                        var particle = new ImagPhaseFluidParticle(level, spriteSet, x, y, z);
+                        var particle = new ImagiphaseFluidParticle(level, spriteSet, x, y, z);
                         var random = MathUtil.RANDOM;
                         particle.scale(random.nextFloat(0.5f, 0.75f));
 
@@ -70,7 +70,7 @@ public class ParticleRenderTypes {
                     public @NotNull Particle createParticle(@NotNull ParticleOptions type, @NotNull ClientLevel level,
                                                             double x, double y, double z,
                                                             double xSpeed, double ySpeed, double zSpeed) {
-                        var particle = new ImagPhaseLeavesParticle(level, x, y, z, spriteSet);
+                        var particle = new ImagiphaseLeavesParticle(level, x, y, z, spriteSet);
                         var random = MathUtil.RANDOM;
                         particle.scale(random.nextFloat(0.5f, 0.75f));
 

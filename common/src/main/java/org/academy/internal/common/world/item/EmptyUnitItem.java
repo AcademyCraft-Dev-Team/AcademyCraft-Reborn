@@ -36,11 +36,11 @@ public class EmptyUnitItem extends Item {
             Direction direction = blockhitresult.getDirection();
 
             if (level.mayInteract(player, targetedPos) && player.mayUseItemAt(targetedPos, direction, itemstack)) {
-                if (level.getBlockState(targetedPos).getBlock() == Blocks.IMAG_PHASE) {
+                if (level.getBlockState(targetedPos).getBlock() == Blocks.IMAGIPHASE_PLASMA) {
                     level.setBlock(targetedPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 11);
                     level.gameEvent(player, GameEvent.FLUID_PICKUP, targetedPos);
 
-                    ItemStack result = new ItemStack(Items.IMAG_PHASE_UNIT);
+                    ItemStack result = new ItemStack(Items.EMPTY_UNIT);
 
                     if (!player.getAbilities().instabuild) {
                         itemstack.shrink(1);

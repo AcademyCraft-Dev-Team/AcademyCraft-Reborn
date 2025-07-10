@@ -10,7 +10,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.NetworkManagerServer;
 import org.academy.api.server.network.future.FutureManagerServer;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.common.world.item.ImagPhaseDowsingRodItem;
+import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.WorldData;
@@ -34,7 +34,7 @@ public final class AcademyCraftServer {
         SERVER_NETWORK_MANAGER.clear();
         SERVER_FUTURE_MANAGER.clear();
         SERVER_NETWORK_MANAGER.registerPacketListener(SERVER_FUTURE_MANAGER);
-        SERVER_FUTURE_MANAGER.registerPayloadHandler(ImagPhaseDowsingRodItem.class);
+        SERVER_FUTURE_MANAGER.registerPayloadHandler(ImagiphaseDowsingRodItem.class);
         serverConfigFile = new File(server.getServerDirectory(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
         worldDataFile = server.getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);

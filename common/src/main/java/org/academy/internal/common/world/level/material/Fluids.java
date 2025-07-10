@@ -8,8 +8,8 @@ import java.util.Map;
 
 public class Fluids {
     public static final Map<String, Fluid> FLUIDS = new HashMap<>();
-    public static final FlowingFluid FLOWING_IMAG_PHASE = register("flowing_imag_phase", new ImagPhaseFluid.Flowing());
-    public static final FlowingFluid IMAG_PHASE = register("imag_phase", new ImagPhaseFluid.Source());
+    public static final FlowingFluid FLOWING_IMAGIPHASE_PLASMA = register("flowing_imagiphase_plasma", new ImagiphasePlasma.Flowing());
+    public static final FlowingFluid IMAGIPHASE_PLASMA = register("imagiphase_plasma", new ImagiphasePlasma.Source());
 
     public static <T extends Fluid> T register(String key, T fluid) {
         FLUIDS.put(key, fluid);
