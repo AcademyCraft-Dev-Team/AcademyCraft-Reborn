@@ -19,6 +19,6 @@ public abstract class MixinItemBlockRenderTypes {
 
     @Inject(method = "<clinit>",at = @At("TAIL"))
     private static void onClinit(CallbackInfo ci) {
-        TYPE_BY_BLOCK.put(Blocks.IMAG_PHASE_LICHEN, RenderType.cutout());
+        TYPE_BY_BLOCK.put(Blocks.IMAGIPHASE_LICHEN, RenderType.cutout());
     }
 }

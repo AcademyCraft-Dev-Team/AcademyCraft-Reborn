@@ -20,7 +20,7 @@ public class Blocks {
     public static final MultiBlock WIND_GEN_TOP = register("wind_gen_top", new WindGenTopBlock());
     public static final Block WIND_GEN_PILLAR = register("wind_gen_pillar", new WindGenPillarBlock());
     public static final MultiBlock ABILITY_DEVELOPER = register("ability_developer", new AbilityDeveloperBlock());
-    public static final Block IMAG_PHASE = register("imag_phase", new LiquidBlock(Fluids.IMAG_PHASE,
+    public static final Block IMAGIPHASE_PLASMA = register("imagiphase_plasma", new LiquidBlock(Fluids.IMAGIPHASE_PLASMA,
             BlockBehaviour.Properties.of()
                     .replaceable()
                     .noCollission()
@@ -30,9 +30,9 @@ public class Blocks {
                     .noLootTable()
                     .liquid()
                     .sound(SoundType.EMPTY)));
-    public static final Block IMAG_PHASE_VEGETATION = register("imag_phase_vegetation", new Block(BlockBehaviour.Properties.of()));
-    public static final Block IMAG_PHASE_LEAVES = register("imag_phase_leaves", new ImagPhaseLeavesBlock());
-    public static final Block IMAG_PHASE_LOG = register("imag_phase_log", new RotatedPillarBlock(
+    public static final Block IMAGIPHASE_VEGETATION = register("imagiphase_vegetation", new Block(BlockBehaviour.Properties.of()));
+    public static final Block IMAGIPHASE_LEAVES = register("imagiphase_leaves", new ImagiphaseLeavesBlock());
+    public static final Block IMAGIPHASE_LOG = register("imagiphase_log", new RotatedPillarBlock(
                     BlockBehaviour.Properties.of()
                             .instrument(NoteBlockInstrument.BASS)
                             .strength(3, 6)
@@ -40,9 +40,11 @@ public class Blocks {
                             .ignitedByLava()
             )
     );
-    public static final Block IMAG_PHASE_LICHEN = register("imag_phase_lichen", new ImagPhaseLichenBlock());
+    public static final Block IMAGIPHASE_LICHEN = register("imagiphase_lichen", new ImagiphaseLichenBlock());
     public static final Block OMNI_CRAFTING_TABLE = register("omni_crafting_table", new OmniCraftingTableBlock());
     public static final Block CAT_ENGINE = register("cat_engine", new CatEngineBlock());
+    public static final Block IMAGIPHASE_AMETHYST_BLOCK = register("imagiphase_amethyst_block", new Block(BlockBehaviour.Properties.of()));
+    public static final Block IMAGIPHASE_METAL_BLOCK = register("imagiphase_metal_block", new Block(BlockBehaviour.Properties.of().noOcclusion()));
 
     public static <T extends Block> T register(String name, T block) {
         BLOCKS.put(name, block);

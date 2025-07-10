@@ -8,7 +8,7 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public class Features {
     public static final Map<String, Feature<?>> FEATURES = new HashMap<>();
-    public static final Feature<ImagPhaseLakeFeature.Configuration> IMAG_PHASE_LAKE = register("imag_phase_lake", new ImagPhaseLakeFeature(ImagPhaseLakeFeature.Configuration.CODEC));
+    public static final Feature<ImagiphaseLakeFeature.Configuration> IMAG_PHASE_LAKE = register("imag_phase_lake", new ImagiphaseLakeFeature(ImagiphaseLakeFeature.Configuration.CODEC));
 
     public static <T extends Feature<?>> T register(String key, T feature) {
         FEATURES.put(key, feature);
