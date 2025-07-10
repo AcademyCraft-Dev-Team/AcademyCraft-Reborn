@@ -152,7 +152,7 @@ public class AcademyCraftRegisterForge {
     private static void registerFluidType(RegisterEvent event) {
         ResourceLocation imagTexture = new ResourceLocation(AcademyCraft.MOD_ID, "block/black");
         event.register(ForgeRegistries.Keys.FLUID_TYPES, fluidTypeRegisterHelper -> {
-            Fluids.IMAG_PHASE.forgeFluidType = Fluids.FLOWING_IMAG_PHASE.forgeFluidType =
+            Fluids.IMAGIPHASE_PLASMA.forgeFluidType = Fluids.FLOWING_IMAGIPHASE_PLASMA.forgeFluidType =
                     new FluidType(FluidType.Properties.create()
                             .motionScale(0)
                             .canPushEntity(false)
@@ -181,7 +181,7 @@ public class AcademyCraftRegisterForge {
                         }
                     };
             fluidTypeRegisterHelper.register(new ResourceLocation(AcademyCraft.MOD_ID, "imag_phase_type"),
-                    Fluids.IMAG_PHASE.forgeFluidType);
+                    Fluids.IMAGIPHASE_PLASMA.forgeFluidType);
         });
     }
 

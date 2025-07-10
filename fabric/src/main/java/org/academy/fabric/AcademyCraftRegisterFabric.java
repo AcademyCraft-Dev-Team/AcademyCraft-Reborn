@@ -137,9 +137,9 @@ public class AcademyCraftRegisterFabric {
             Registry.register(BuiltInRegistries.FLUID, resourceLocation, Fluids.FLUIDS.get(key));
         }
         ResourceLocation imagTexture = new ResourceLocation(AcademyCraft.MOD_ID, "block/black");
-        FluidRenderHandlerRegistry.INSTANCE.register(Fluids.IMAG_PHASE, Fluids.FLOWING_IMAG_PHASE,
+        FluidRenderHandlerRegistry.INSTANCE.register(Fluids.IMAGIPHASE_PLASMA, Fluids.FLOWING_IMAGIPHASE_PLASMA,
                 new SimpleFluidRenderHandler(imagTexture, imagTexture));
-        BlockRenderLayerMap.INSTANCE.putFluids(RenderType.translucent(), Fluids.IMAG_PHASE, Fluids.FLOWING_IMAG_PHASE);
+        BlockRenderLayerMap.INSTANCE.putFluids(RenderType.translucent(), Fluids.IMAGIPHASE_PLASMA, Fluids.FLOWING_IMAGIPHASE_PLASMA);
     }
 
     private static void registerParticleType() {

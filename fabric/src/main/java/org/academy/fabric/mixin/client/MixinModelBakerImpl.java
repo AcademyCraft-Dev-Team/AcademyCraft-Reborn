@@ -4,7 +4,6 @@ import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.*;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.AcademyCraft;
 import org.academy.api.client.renderer.model.CoinModelGenerator;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,8 +27,7 @@ public abstract class MixinModelBakerImpl {
     private void bake(ResourceLocation location, ModelState transform, CallbackInfoReturnable<BakedModel> cir) {
         if (getModel(location) instanceof BlockModel blockModel) {
             if (blockModel.getRootModel() == CoinModelGenerator.COIN) {
-                AcademyCraft.LOGGER.info(location.toString());
-                cir.setReturnValue(CoinModelGenerator.INSTANCE.generateBlockModel(modelTextureGetter, blockModel).bake((ModelBaker) this, blockModel, this.modelTextureGetter, transform, location, false));
+                cir.setReturnValue(CoinModelGenerator.INSTANCE.generateBlockModel(modelTextureGetter, blockModel).bake((ModelBaker) this, blockModel, modelTextureGetter, transform, location, false));
             }
         }
     }
