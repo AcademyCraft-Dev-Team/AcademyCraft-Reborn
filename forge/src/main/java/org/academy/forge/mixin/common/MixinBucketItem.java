@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 public class MixinBucketItem {
     @Inject(method = "use", locals = LocalCapture.CAPTURE_FAILSOFT, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/BucketPickup;pickupBlock(Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/item/ItemStack;"), cancellable = true)
     private void use(Level level, Player player, InteractionHand usedHand, CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir, ItemStack itemStack, BlockHitResult blockHitResult, InteractionResultHolder<ItemStack> ret, BlockPos blockPos, Direction direction, BlockPos blockPos1, BlockState blockState, BucketPickup bucketPickup) {
-        if (bucketPickup == Blocks.IMAG_PHASE) {
+        if (bucketPickup == Blocks.IMAGIPHASE_PLASMA) {
             cir.setReturnValue(InteractionResultHolder.pass(itemStack));
         }
     }
