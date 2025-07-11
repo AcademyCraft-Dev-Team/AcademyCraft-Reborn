@@ -2,11 +2,15 @@
   "schemaVersion": 1,
   "id": "academy",
   "version": "${version}",
-  "name": "academy",
+  "name": "${mod_name}",
   "description": "${description}",
-  "authors": [],
-  "contact": {},
-  "license": "GPL-3.0",
+  "authors": [
+    "AcademyCraft-Dev-Team"
+  ],
+  "contact": {
+    "sources": "https://github.com/AcademyCraft-Dev-Team/AcademyCraft-Reborn"
+  },
+  "license": "${license}",
   "icon": "assets/academy/textures/item/icon.png",
   "environment": "*",
   "entrypoints": {
