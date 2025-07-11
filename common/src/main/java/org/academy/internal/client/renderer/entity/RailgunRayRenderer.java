@@ -27,8 +27,8 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay> {
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()))
         );
-        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, 50, entity.renderProgress * 0.125f, 8);
-        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 0.25f, 0, 50, entity.renderProgress * 0.15f, 8);
+        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, 50, entity.renderProgress * 0.1f, 8);
+        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 0.25f, 0, 50, entity.renderProgress * 0.125f, 8);
         poseStack.popPose();
     }
 

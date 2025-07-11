@@ -13,7 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.NotNull;
@@ -352,78 +351,160 @@ public final class RenderUtil {
         public static void renderArc(PoseStack ps, MultiBufferSource mbs, long seed,
                                      float sx, float sy, float sz, float ex, float ey, float ez,
                                      float thickness, int segments) {
-            var vc = mbs.getBuffer(ARC_RENDER_TYPE);
-            var matrix = ps.last().pose();
             var rnd = new Random(seed);
+            renderArcRecursive(ps, mbs, rnd, sx, sy, sz, ex, ey, ez, thickness, segments, 0.15f, 0);
+        }
 
-            var start = new Vec3(sx, sy, sz);
-            var end = new Vec3(ex, ey, ez);
-            var delta = end.subtract(start);
-
-            if (delta.lengthSqr() < EPSILON * EPSILON) {
+        private static void renderArcRecursive(PoseStack ps, MultiBufferSource mbs, Random rnd,
+                                               float startX, float startY, float startZ,
+                                               float endX, float endY, float endZ,
+                                               float thickness, int segments,
+                                               float branchChance, int depth) {
+            var distSq = (endX - startX) * (endX - startX) + (endY - startY) * (endY - startY) + (endZ - startZ) * (endZ - startZ);
+            if (depth > 1 || distSq < EPSILON * EPSILON) {
                 return;
             }
 
-            var direction = delta.normalize();
+            var vc = mbs.getBuffer(ARC_RENDER_TYPE);
+            var matrix = ps.last().pose();
 
-            var up = new Vec3(0, 1, 0);
-            if (Math.abs(direction.y()) > 1.0 - EPSILON) {
-                up = new Vec3(1, 0, 0);
-            }
+            var deltaX = endX - startX;
+            var deltaY = endY - startY;
+            var deltaZ = endZ - startZ;
 
-            var side = direction.cross(up);
-            if (side.lengthSqr() < EPSILON * EPSILON) {
-                up = new Vec3(0, 0, 1);
-                side = direction.cross(up);
-
-                if (side.lengthSqr() < EPSILON * EPSILON) {
-                    if (direction.lengthSqr() > EPSILON * EPSILON) {
-                        var arbitraryNonParallel = Math.abs(direction.x()) < 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
-                        side = direction.cross(arbitraryNonParallel);
-                        if (side.lengthSqr() < EPSILON * EPSILON) return;
-                    } else {
-                        return;
-                    }
-                }
-            }
-            side = side.normalize();
-            var renderUp = side.cross(direction).normalize();
-
-            var prevL = start;
-            var prevR = start;
+            var prevPosX = startX;
+            var prevPosY = startY;
+            var prevPosZ = startZ;
+            float prevLX = 0, prevLY = 0, prevLZ = 0, prevRX = 0, prevRY = 0, prevRZ = 0;
             var baseHalfThickness = thickness * 0.5f;
 
             for (var i = 1; i <= segments; ++i) {
                 var t = (float) i / segments;
-                var currentMidpoint = start.add(delta.scale(t));
+                var currentMidpointX = startX + deltaX * t;
+                var currentMidpointY = startY + deltaY * t;
+                var currentMidpointZ = startZ + deltaZ * t;
 
-                var displacementMagnitude = baseHalfThickness * MathUtil.TWO_PI;
+                float displacementDirX, displacementDirY, displacementDirZ;
+                var deltaLenSq = deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ;
+                if (deltaLenSq > EPSILON) {
+                    var invDeltaLen = 1.0f / (float) Math.sqrt(deltaLenSq);
+                    var dirX = deltaX * invDeltaLen;
+                    var dirY = deltaY * invDeltaLen;
+                    var dirZ = deltaZ * invDeltaLen;
+
+                    var upX = 0.0f;
+                    var upY = 1.0f;
+                    if (Math.abs(dirY) > 1.0f - EPSILON) {
+                        upX = 1.0f;
+                        upY = 0.0f;
+                    }
+
+                    var sideX = dirY * 0 - dirZ * upY;
+                    var sideY = dirZ * upX - dirX * 0;
+                    var sideZ = dirX * upY - dirY * upX;
+                    var invSideLen = 1.0f / (float) Math.sqrt(sideX * sideX + sideY * sideY + sideZ * sideZ);
+                    sideX *= invSideLen;
+                    sideY *= invSideLen;
+                    sideZ *= invSideLen;
+
+                    var renderUpX = sideY * dirZ - sideZ * dirY;
+                    var renderUpY = sideZ * dirX - sideX * dirZ;
+                    var renderUpZ = sideX * dirY - sideY * dirX;
+
+                    var angle = rnd.nextFloat() * MathUtil.TWO_PI;
+                    var cosAngle = (float) Math.cos(angle);
+                    var sinAngle = (float) Math.sin(angle);
+                    displacementDirX = sideX * cosAngle + renderUpX * sinAngle;
+                    displacementDirY = sideY * cosAngle + renderUpY * sinAngle;
+                    displacementDirZ = sideZ * cosAngle + renderUpZ * sinAngle;
+                } else {
+                    displacementDirX = rnd.nextFloat() - 0.5f;
+                    displacementDirY = rnd.nextFloat() - 0.5f;
+                    displacementDirZ = rnd.nextFloat() - 0.5f;
+                }
+
                 var falloff = 1.0f - (float) Math.pow(2.0 * t - 1.0, 2);
-                displacementMagnitude *= falloff;
-                displacementMagnitude *= (rnd.nextFloat() * 2.0f - 1.0f);
+                var displacementMagnitude = baseHalfThickness * 5.0f * falloff * (rnd.nextFloat() * 0.8f + 0.2f);
+                var currentPosX = currentMidpointX + displacementDirX * displacementMagnitude;
+                var currentPosY = currentMidpointY + displacementDirY * displacementMagnitude;
+                var currentPosZ = currentMidpointZ + displacementDirZ * displacementMagnitude;
 
-                var angle = rnd.nextDouble() * MathUtil.TWO_PI;
-                var displacementDir = side.scale(Math.cos(angle)).add(renderUp.scale(Math.sin(angle)));
+                var segDeltaX = currentPosX - prevPosX;
+                var segDeltaY = currentPosY - prevPosY;
+                var segDeltaZ = currentPosZ - prevPosZ;
 
-                var currentPos = currentMidpoint.add(displacementDir.scale(displacementMagnitude));
+                var invSegLen = 1.0f / (float) Math.sqrt(segDeltaX * segDeltaX + segDeltaY * segDeltaY + segDeltaZ * segDeltaZ);
+                var segDirX = segDeltaX * invSegLen;
+                var segDirY = segDeltaY * invSegLen;
+                var segDirZ = segDeltaZ * invSegLen;
 
-                var currentHalfThickness = baseHalfThickness;
-                currentHalfThickness *= (1.0f + THICKNESS_VARIATION * (rnd.nextFloat() * 2.0f - 1.0f));
+                var segUpX = 0.0f;
+                var segUpY = 1.0f;
+                if (Math.abs(segDirY) > 1.0f - EPSILON) {
+                    segUpX = 1.0f;
+                    segUpY = 0.0f;
+                }
+
+                var segSideX = segDirY * 0 - segDirZ * segUpY;
+                var segSideY = segDirZ * segUpX - segDirX * 0;
+                var segSideZ = segDirX * segUpY - segDirY * segUpX;
+                var invSegSideLen = 1.0f / (float) Math.sqrt(segSideX * segSideX + segSideY * segSideY + segSideZ * segSideZ);
+                segSideX *= invSegSideLen;
+                segSideY *= invSegSideLen;
+                segSideZ *= invSegSideLen;
+
+                var currentHalfThickness = baseHalfThickness * (1.0f + THICKNESS_VARIATION * (rnd.nextFloat() * 2.0f - 1.0f));
                 currentHalfThickness = Math.max(baseHalfThickness * MIN_THICKNESS_FACTOR, currentHalfThickness);
 
-                var currentL = currentPos.subtract(side.scale(currentHalfThickness));
-                var currentR = currentPos.add(side.scale(currentHalfThickness));
+                var currentLX = currentPosX - segSideX * currentHalfThickness;
+                var currentLY = currentPosY - segSideY * currentHalfThickness;
+                var currentLZ = currentPosZ - segSideZ * currentHalfThickness;
+                var currentRX = currentPosX + segSideX * currentHalfThickness;
+                var currentRY = currentPosY + segSideY * currentHalfThickness;
+                var currentRZ = currentPosZ + segSideZ * currentHalfThickness;
+
+                if (i == 1) {
+                    prevLX = prevPosX - segSideX * currentHalfThickness;
+                    prevLY = prevPosY - segSideY * currentHalfThickness;
+                    prevLZ = prevPosZ - segSideZ * currentHalfThickness;
+                    prevRX = prevPosX + segSideX * currentHalfThickness;
+                    prevRY = prevPosY + segSideY * currentHalfThickness;
+                    prevRZ = prevPosZ + segSideZ * currentHalfThickness;
+                }
 
                 var u0 = (float) (i - 1) / segments;
                 var u1 = (float) i / segments;
 
-                vc.vertex(matrix, (float) prevL.x(), (float) prevL.y(), (float) prevL.z()).uv(u0, 0).endVertex();
-                vc.vertex(matrix, (float) prevR.x(), (float) prevR.y(), (float) prevR.z()).uv(u0, 1).endVertex();
-                vc.vertex(matrix, (float) currentR.x(), (float) currentR.y(), (float) currentR.z()).uv(u1, 1).endVertex();
-                vc.vertex(matrix, (float) currentL.x(), (float) currentL.y(), (float) currentL.z()).uv(u1, 0).endVertex();
+                vc.vertex(matrix, prevLX, prevLY, prevLZ).uv(u0, 0).endVertex();
+                vc.vertex(matrix, prevRX, prevRY, prevRZ).uv(u0, 1).endVertex();
+                vc.vertex(matrix, currentRX, currentRY, currentRZ).uv(u1, 1).endVertex();
+                vc.vertex(matrix, currentLX, currentLY, currentLZ).uv(u1, 0).endVertex();
 
-                prevL = currentL;
-                prevR = currentR;
+                if (depth == 0 && i > 1 && i < segments - 1 && rnd.nextFloat() < branchChance) {
+                    var branchLength = (float) Math.sqrt((endX - currentPosX) * (endX - currentPosX) + (endY - currentPosY) * (endY - currentPosY) + (endZ - currentPosZ) * (endZ - currentPosZ)) * (0.3f + rnd.nextFloat() * 0.4f);
+                    var angleOffset = (rnd.nextFloat() - 0.5f) * Math.PI * 1.2f;
+
+                    var cosY = (float) Math.cos(angleOffset);
+                    var sinY = (float) Math.sin(angleOffset);
+                    var branchDirX = segDirX * cosY - segDirZ * sinY;
+                    var branchDirZ = segDirX * sinY + segDirZ * cosY;
+
+                    var branchEndX = currentPosX + branchDirX * branchLength;
+                    var branchEndY = currentPosY + segDirY * branchLength;
+                    var branchEndZ = currentPosZ + branchDirZ * branchLength;
+
+                    renderArcRecursive(ps, mbs, rnd, currentPosX, currentPosY, currentPosZ, branchEndX, branchEndY, branchEndZ, thickness * 0.6f, (int) (segments * 0.6f), 0, depth + 1);
+                }
+
+                prevPosX = currentPosX;
+                prevPosY = currentPosY;
+                prevPosZ = currentPosZ;
+                prevLX = currentLX;
+                prevLY = currentLY;
+                prevLZ = currentLZ;
+                prevRX = currentRX;
+                prevRY = currentRY;
+                prevRZ = currentRZ;
             }
         }
     }
