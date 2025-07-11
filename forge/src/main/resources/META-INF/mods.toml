@@ -6,8 +6,8 @@ license = "GPL-3.0"
 [[mods]]
 modId = "academy"
 version = "${version}"
-displayName = "AcademyCraft"
-authors = "LovelyCane"
+displayName = "${mod_name}"
+authors = "${mod_author}"
 description = '''
 A Minecraft mod about Academy City.
 '''

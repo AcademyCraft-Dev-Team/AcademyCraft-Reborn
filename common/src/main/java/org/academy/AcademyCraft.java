@@ -19,7 +19,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class AcademyCraft {
     public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     public static final String MOD_ID = "academy";
-    public static final String MOD_NAME = "AcademyCraft";
+    public static final String MOD_NAME = "AcademyCraft-Reborn";
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
     public static final IEventBus EVENT_BUS = BusBuilder.builder().build();
 
