@@ -1,4 +1,4 @@
-# AcademyCraft
+# AcademyCraft-Reborn
 
 A Minecraft mod about Academy City, for Fabric & Forge 1.20.1.
 
