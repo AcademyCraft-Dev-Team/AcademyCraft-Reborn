@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import org.academy.api.client.render.MatrixStack;
 
 public class BracketProgressBarWidget extends LabelWidget {
     private final char fillChar;
@@ -27,9 +28,9 @@ public class BracketProgressBarWidget extends LabelWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (isAnimating) {
-            currentStep += progressSpeed * (partialTicks / 20.0f);
+            currentStep += progressSpeed * (partialTick / 20.0f);
 
             var step = Math.min((int) Math.floor(currentStep), totalSlots + 2);
 
@@ -52,6 +53,6 @@ public class BracketProgressBarWidget extends LabelWidget {
             }
         }
 
-        super.render(graphics, mouseX, mouseY, partialTicks);
+        super.render(stack, bufferSource, mouseX, mouseY, partialTick);
     }
 }

@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
-import org.academy.internal.client.model.AbilityDeveloperBlockEntityModel;
+import org.academy.internal.client.model.AbilityDeveloperModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +42,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         this.closingState.animateWhen(!this.isOpen, this.ticks);
         AnimationState currentAnimationState = previousIsOpen ? openState : closingState;
         AnimationState targetAnimationState = open ? openState : closingState;
-        AnimationDefinition targetAnimationDefinition = open ? AbilityDeveloperBlockEntityModel.open : AbilityDeveloperBlockEntityModel.close;
+        AnimationDefinition targetAnimationDefinition = open ? AbilityDeveloperModel.open : AbilityDeveloperModel.close;
         long elapsedMillis = currentAnimationState.getAccumulatedTime();
         currentAnimationState.stop();
         if (elapsedMillis > 0) {

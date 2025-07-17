@@ -8,12 +8,12 @@ public final class TextureResources {
      * Ability Developer
      */
     public static final ResourceLocation ABILITY_DEVELOPER = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/ability_developer.png");
-    public static final ResourceLocation PANEL_LEFT_BACK_TOP = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerleft.png");
+    public static final ResourceLocation UI_DEVELOPER_PANEL_LEFT = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerleft.png");
     public static final ResourceLocation PANEL_LEFT_BACK_MIDDLE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/parent_background_developermachine.png");
     public static final ResourceLocation PANEL_RIGHT_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/parent_background_developerright.png");
-    public static final ResourceLocation PANEL_RIGHT_INFO = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerright.png");
-    public static final ResourceLocation PANEL_RIGHT_SKILL_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_panel_back.png");
-    public static final ResourceLocation PANEL_RIGHT_SKILL_ICON_BACK = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_back.png");
+    public static final ResourceLocation UI_DEVELOPER_PANEL_RIGHT = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/ui_developerright.png");
+    public static final ResourceLocation UI_DEVELOPER_SKILL_AREA_BG = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_panel_back.png");
+    public static final ResourceLocation UI_DEVELOPER_SKILL_ICON_BG = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/developer/skill_back.png");
     /**
      * HUD
      */
@@ -23,7 +23,7 @@ public final class TextureResources {
     /**
      * Wind Gen
      */
-    public static final ResourceLocation WIND_GEN = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wind_gen.png");
+    public static final ResourceLocation UI_WIND_GEN = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/wind_gen.png");
     public static final ResourceLocation WIND_GEN_UI = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/wind_gen/ui_windgen.png");
     public static final ResourceLocation ICON_WIND_GEN_BASE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_base.png");
     public static final ResourceLocation ICON_WIND_GEN_PILLAR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wind_pillar.png");
@@ -42,17 +42,17 @@ public final class TextureResources {
      * Common
      */
     public static final ResourceLocation INVENTORY = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/ui_inventory.png");
-    public static final ResourceLocation ELEMENT_LINE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/line.png");
-    public static final ResourceLocation ELEMENT_BACK_LIGHT = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/element_background_light.png");
-    public static final ResourceLocation WIRELESS_PANEL_VIEW_ICON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_tonode.png");
+    public static final ResourceLocation UI_LINE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/line.png");
+    public static final ResourceLocation UI_BACKGROUND_LIGHT = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/element_background_light.png");
+    public static final ResourceLocation ICON_OPEN_WIRELESS_PANEL = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_tonode.png");
     public static final ResourceLocation ICON_NODE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_node.png");
     public static final ResourceLocation ICON_CONNECTED = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_connected.png");
     public static final ResourceLocation ICON_UNCONNECTED = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_unconnected.png");
     public static final ResourceLocation ICON_INV = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_inv.png");
     public static final ResourceLocation ICON_WIRELESS = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_wireless.png");
     public static final ResourceLocation HISTOGRAM = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/histogram.png");
-    public static final ResourceLocation BUTTON = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/button.png");
-    public static final ResourceLocation ICON_BOX = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_box.png");
+    public static final ResourceLocation UI_BUTTON_LEARN = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/button.png");
+    public static final ResourceLocation HUD_SKILL_FRAME = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_box.png");
     public static final ResourceLocation CURSOR = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/element/cursor.png");
     /**
      * Data Terminal
@@ -91,4 +91,15 @@ public final class TextureResources {
      * Cleaning Robot
      */
     public static final ResourceLocation CLEANING_ROBOT = new ResourceLocation(AcademyCraft.MOD_ID, "textures/model/cleaning_robot.png");
+    /**
+     * Media Player
+     */
+    public static final ResourceLocation ICON_MEDIA_PLAYER = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_media_player.png");
+    public static final ResourceLocation ICON_CYCLE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_cycle.png");
+    public static final ResourceLocation ICON_RANDOM = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_random.png");
+    public static final ResourceLocation ICON_SINGLE_CYCLE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_single_cycle.png");
+    /**
+     * Settings
+     */
+    public static final ResourceLocation ICON_SETTINGS = new ResourceLocation(AcademyCraft.MOD_ID, "textures/gui/icon/icon_settings.png");
 }

@@ -1,7 +1,7 @@
 package org.academy.api.client.hud;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -9,7 +9,8 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
@@ -179,21 +180,21 @@ public final class HUDManager {
         }
     }
 
-    public static void render(GuiGraphics guiGraphics, float partialTick) {
+    public static void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, float partialTick) {
         targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
 
         var animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
         currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, animFactor);
 
         for (var renderer : HUD_RENDERERS) {
-            renderer.render(guiGraphics, partialTick);
+            renderer.render(stack, bufferSource, partialTick);
         }
 
-        var screenWidth = guiGraphics.guiWidth();
+        var screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
         cpBarBackgroundWidget.setX(screenWidth - cpBarBackgroundWidget.getWidth());
         cpBarBackgroundWidget.setY(0);
         cpBarBackgroundWidget.setAlpha(currentAlpha);
-        cpBarBackgroundWidget.render(guiGraphics, 0, 0, partialTick);
+        cpBarBackgroundWidget.render(stack, bufferSource, 0, 0, partialTick);
 
         var targetR = 1.0f;
         var targetG = 174 / 255.0f;
@@ -201,7 +202,7 @@ public final class HUDManager {
 
         var finalR = MathUtil.lerpFactorStartEnd(targetR, 1.0f, currentAlpha);
         var finalG = MathUtil.lerpStartEndFactor(targetG, 1.0f, currentAlpha);
-        var finalB = MathUtil.lerpStartEndFactor(targetB, 1.0f, currentAlpha);
+        var finalB = MathUtil.lerpFactorStartEnd(targetB, 1.0f, currentAlpha);
 
         cpBarWidget.setX(screenWidth - cpBarWidget.getWidth());
         cpBarWidget.setY(0);
@@ -209,7 +210,7 @@ public final class HUDManager {
         cpBarWidget.green = finalG;
         cpBarWidget.blue = finalB;
         cpBarWidget.setAlpha(currentAlpha);
-        cpBarWidget.render(guiGraphics, 0, 0, partialTick);
+        cpBarWidget.render(stack, bufferSource, 0, 0, partialTick);
 
         final var computingPower = AbilitySystemClient.getComputingPower();
         final var maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
@@ -227,7 +228,7 @@ public final class HUDManager {
         final var barWidthOffset = barLength * (1.0f - smoothProgress);
         final var leftTopOffset = barWidthOffset + leftSafeZoneWidth;
         final var leftBottomOffset = leftTopOffset + (height / CP_BAR_TANGENT);
-        final var rightTopX = guiGraphics.guiWidth();
+        final var rightTopX = (float) screenWidth;
         final var leftTopX = rightTopX - width + leftTopOffset;
         final var leftBottomX = rightTopX - width + leftBottomOffset;
         final var leftTopUv = 1 - ((width - leftTopOffset) / width);
@@ -241,7 +242,7 @@ public final class HUDManager {
         cpBarValueWidget.green = finalG;
         cpBarValueWidget.blue = finalB;
         cpBarValueWidget.setAlpha(currentAlpha);
-        cpBarValueWidget.render(guiGraphics, 0, 0, partialTick);
+        cpBarValueWidget.render(stack, bufferSource, 0, 0, partialTick);
 
         final var rightSafeZone = (CP_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
         final var topSafeZone = (CP_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
@@ -251,11 +252,11 @@ public final class HUDManager {
             abilityIconWidget.setX(screenWidth - rightSafeZone - abilityIconWidget.getWidth());
             abilityIconWidget.setY(topSafeZone);
             abilityIconWidget.setAlpha(currentAlpha);
-            abilityIconWidget.render(guiGraphics, 0, 0, partialTick);
+            abilityIconWidget.render(stack, bufferSource, 0, 0, partialTick);
         }
 
         if (!skillWidgets.isEmpty()) {
-            var screenHeight = guiGraphics.guiHeight();
+            var screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
             var baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
 
             for (var i = 0; i < skillWidgets.size(); i++) {
@@ -279,7 +280,7 @@ public final class HUDManager {
                 widget.originalY = currentLayoutY;
                 widget.setSelected(selected, baseSkillWidgetX);
                 widget.setAlpha((selected ? 1 : 0.65f) * currentAlpha);
-                widget.render(guiGraphics, 0, 0, partialTick);
+                widget.render(stack, bufferSource, 0, 0, partialTick);
                 currentLayoutY += widget.targetHeight + SKILL_WIDGET_SPACING;
             }
         }
@@ -341,7 +342,7 @@ public final class HUDManager {
         }
 
         @Override
-        public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+        public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
             var animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
             currentWidgetAlpha = MathUtil.lerpStartEndFactor(currentWidgetAlpha, getAbsoluteAlpha(), animFactor);
 
@@ -373,7 +374,7 @@ public final class HUDManager {
             icon.setWidth(iconSize);
             icon.setHeight(iconSize);
 
-            super.render(graphics, mouseX, mouseY, partialTick);
+            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
         }
 
         public void setSelected(boolean selected, float currentFrameBaseX) {

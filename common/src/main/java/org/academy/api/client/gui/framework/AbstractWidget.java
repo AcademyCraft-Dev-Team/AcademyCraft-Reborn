@@ -8,12 +8,24 @@ public abstract class AbstractWidget implements Widget {
     protected boolean hovered = false;
     protected boolean focused = false;
     protected float alpha = 1.0f;
+    protected String name = "";
 
     public AbstractWidget(float newX, float newY, float newWidth, float newHeight) {
         x = newX;
         y = newY;
         width = newWidth;
         height = newHeight;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public Widget setName(String newName) {
+        name = newName;
+        return this;
     }
 
     @Override

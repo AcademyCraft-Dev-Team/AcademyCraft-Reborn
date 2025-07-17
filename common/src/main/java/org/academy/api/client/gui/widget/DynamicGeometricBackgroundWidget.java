@@ -1,8 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
 import org.lwjgl.glfw.GLFW;
@@ -148,13 +149,13 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         updatePoints();
 
-        var vertexConsumer = graphics.bufferSource().getBuffer(RenderType.lines());
-        var matrix = graphics.pose().last().pose();
+        var vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+        var matrix = stack.lastMatrix();
 
         var r = (float) (lineColor >> 16 & 255) / 255.0F;
         var g = (float) (lineColor >> 8 & 255) / 255.0F;

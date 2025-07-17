@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.util.RandomSource;
-import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.renderer.BakedModelRenderer;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.WindGenPillarBlockEntity;
 import org.jetbrains.annotations.NotNull;
@@ -23,7 +23,7 @@ public class WindGenPillarBlockEntityRenderer implements BlockEntityRenderer<Win
         var bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());
         var randomSource = RandomSource.create();
         randomSource.setSeed(42L);
-        RenderUtil.BakedModelRenderer.render(newPoseStack, bakedModel, newMultiBufferSource, randomSource, false, i, i1);
+        BakedModelRenderer.render(newPoseStack, bakedModel, newMultiBufferSource, randomSource, false, i, i1);
         newPoseStack.popPose();
     }
 }

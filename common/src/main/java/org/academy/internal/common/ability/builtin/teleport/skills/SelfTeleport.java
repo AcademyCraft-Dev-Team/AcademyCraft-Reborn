@@ -28,8 +28,8 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.renderer.CameraRenderEvent;
+import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.network.PacketTarget;
@@ -232,7 +232,7 @@ public final class SelfTeleport extends Skill {
 
                 poseStack.pushPose();
                 AABB boxToRenderInCameraSpace = this.previewBoxWorld.move(camPos.reverse());
-                RenderUtil.LineBoxRenderer.renderWireframeBox(poseStack, bufferSource, boxToRenderInCameraSpace, 1f, 1f, 1f, 1f);
+                LineBoxRenderer.renderWireframeBox(poseStack, bufferSource, boxToRenderInCameraSpace, 1f, 1f, 1f, 1f);
                 poseStack.popPose();
             }
 

@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.Widget;
 
@@ -59,10 +58,5 @@ public class PanelWidget extends AbstractContainerWidget {
 
         child.setX(childX);
         child.setY(childY);
-    }
-
-    @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 }

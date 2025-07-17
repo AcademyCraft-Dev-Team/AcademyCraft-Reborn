@@ -1,11 +1,12 @@
 package org.academy.internal.client.gui.world;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.widget.ImageButtonWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
 import org.jetbrains.annotations.NotNull;
 
 public class WindGenWorldGUI {
@@ -14,8 +15,8 @@ public class WindGenWorldGUI {
     public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, WIDTH, HEIGHT);
     public double mouseX, mouseY;
 
-    public void render(@NotNull GuiGraphics guiGraphics, float partialTicks) {
-        rootContainer.render(guiGraphics, mouseX, mouseY, partialTicks);
+    public void render(@NotNull MatrixStack stack, @NotNull MultiBufferSource.BufferSource bufferSource, float partialTicks) {
+        rootContainer.render(stack, bufferSource, mouseX, mouseY, partialTicks);
     }
 
     public void onInit() {

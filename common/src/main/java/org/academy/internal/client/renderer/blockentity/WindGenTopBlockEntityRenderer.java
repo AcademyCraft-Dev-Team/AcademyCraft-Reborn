@@ -44,8 +44,8 @@ public class WindGenTopBlockEntityRenderer implements BlockEntityRenderer<WindGe
 
                 newPoseStack.mulPose(Axis.ZP.rotationDegrees((newBlockEntity.ticks + partialTick) * 5));
                 var windGenTurbineModel = new WindGenTurbineModel(WindGenTurbineModel.createBodyLayer().bakeRoot());
-                windGenTurbineModel.main.render(newPoseStack, newBuffer.getBuffer(windGenTurbineModel.renderType(TextureResources.WIND_GEN)), packedLight, packedOverlay);
-                windGenTurbineModel.tip_li.render(newPoseStack, newBuffer.getBuffer(windGenTurbineModel.renderType(TextureResources.WIND_GEN)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                windGenTurbineModel.main.render(newPoseStack, newBuffer.getBuffer(windGenTurbineModel.renderType(TextureResources.UI_WIND_GEN)), packedLight, packedOverlay);
+                windGenTurbineModel.tip_li.render(newPoseStack, newBuffer.getBuffer(windGenTurbineModel.renderType(TextureResources.UI_WIND_GEN)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
                 newPoseStack.popPose();
             }
             newPoseStack.popPose();

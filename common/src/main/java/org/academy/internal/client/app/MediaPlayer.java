@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -12,7 +12,8 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.DataTerminalHUD;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.util.RenderStateUtil;
 import org.academy.api.client.util.RenderUtil;
@@ -66,17 +67,17 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static LabelWidget timeLabel;
     private static PanelWidget rootPanel;
     private static GeometricButtonWidget playPauseButton;
+    private static ImageButtonWidget modeButton;
 
     public enum PlaybackMode {
         REPEAT_LIST,
         REPEAT_ONE,
-        SHUFFLE,
-        NORMAL
+        SHUFFLE
     }
 
     public enum ButtonShape {PLAY, PAUSE, NEXT, PREV}
 
-    private static PlaybackMode playbackMode = PlaybackMode.REPEAT_LIST;
+    private static PlaybackMode PLAYBACK_MODE = PlaybackMode.REPEAT_LIST;
     private static final List<Integer> shuffledPlaylist = new ArrayList<>();
     private static int shuffleIndex = -1;
 
@@ -212,33 +213,10 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         updatePlayPauseButton();
     }
 
-    private PanelWidget createModeCycleButton(float x) {
-        var modeButton = new PanelWidget(x, (float) 0, 20f, 20f);
-        {
-            var button = new ImageButtonWidget(0, 0, 20f, 20f, null, MediaPlayer::cyclePlaybackMode);
-            modeButton.addChild("button", button);
-
-            var modeBack = new FillWidget(0, 0, 20f, 20f, 0xFF000000);
-            modeBack.setAlpha(0.4f);
-            modeButton.addChild("back", modeBack);
-
-            var layered = new LayeredPanelWidget(0, 0, 20f, 20f);
-            layered.setEnabled(false);
-            modeButton.addChild("layered", layered);
-            {
-                var modeLabel = new AutoScaleLabelWidget("", 0, 0, 20f, true);
-                modeLabel.dropShadow = false;
-                modeLabel.setY(((float) 20.0 - modeLabel.getHeight()) / 2f);
-                layered.addChild("label", modeLabel);
-            }
-        }
-        return modeButton;
-    }
-
     private static void playNext() {
         if (PLAYLIST.isEmpty()) return;
 
-        var nextIndex = switch (playbackMode) {
+        var nextIndex = switch (PLAYBACK_MODE) {
             case REPEAT_ONE -> currentTrackIndex;
             case SHUFFLE -> {
                 if (shuffledPlaylist.isEmpty() || ++shuffleIndex >= shuffledPlaylist.size()) {
@@ -247,7 +225,6 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 yield shuffledPlaylist.isEmpty() ? -1 : shuffledPlaylist.get(shuffleIndex);
             }
             case REPEAT_LIST -> (currentTrackIndex + 1) % PLAYLIST.size();
-            case NORMAL -> (currentTrackIndex < PLAYLIST.size() - 1) ? currentTrackIndex + 1 : -1;
         };
 
         if (nextIndex != -1) {
@@ -260,7 +237,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static void playPrevious() {
         if (PLAYLIST.isEmpty()) return;
 
-        var prevIndex = switch (playbackMode) {
+        var prevIndex = switch (PLAYBACK_MODE) {
             case REPEAT_ONE -> currentTrackIndex;
             case SHUFFLE -> {
                 if (shuffledPlaylist.isEmpty()) {
@@ -275,7 +252,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 }
                 yield shuffledPlaylist.get(shuffleIndex);
             }
-            case REPEAT_LIST, NORMAL -> (currentTrackIndex - 1 + PLAYLIST.size()) % PLAYLIST.size();
+            case REPEAT_LIST -> (currentTrackIndex - 1 + PLAYLIST.size()) % PLAYLIST.size();
         };
 
         if (prevIndex != -1) {
@@ -432,7 +409,8 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             controlPanel.addChild("next", nextButton);
                             currentX += btnSize + bigGap;
 
-                            var modeButton = createModeCycleButton(currentX);
+                            modeButton = new ImageButtonWidget(currentX, 0, btnSize, btnSize, null, MediaPlayer::cyclePlaybackMode);
+                            modeButton.defaultHoverEffect = true;
                             controlPanel.addChild("mode_button", modeButton);
                             currentX += btnSize + bigGap;
 
@@ -449,33 +427,26 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 }
             }
         }
-        updateModeButtonLabel();
+        updateModeButtonIcon();
         return rootPanel;
     }
 
     private static void cyclePlaybackMode() {
-        playbackMode = PlaybackMode.values()[(playbackMode.ordinal() + 1) % PlaybackMode.values().length];
-        if (playbackMode == PlaybackMode.SHUFFLE && shuffledPlaylist.isEmpty()) {
+        PLAYBACK_MODE = PlaybackMode.values()[(PLAYBACK_MODE.ordinal() + 1) % PlaybackMode.values().length];
+        if (PLAYBACK_MODE == PlaybackMode.SHUFFLE && shuffledPlaylist.isEmpty()) {
             generateShuffledPlaylist();
         }
-        updateModeButtonLabel();
+        updateModeButtonIcon();
     }
 
-    private static void updateModeButtonLabel() {
-        if (rootPanel == null) return;
-        var layered = rootPanel.<PanelWidget>getChildUnSafe("main")
-                .<PanelWidget>getChildUnSafe("bar_dock")
-                .<PanelWidget>getChildUnSafe("layered")
-                .<PanelWidget>getChildUnSafe("control_panel")
-                .<PanelWidget>getChildUnSafe("mode_button")
-                .<LayeredPanelWidget>getChildUnSafe("layered");
-        var label = layered.<AutoScaleLabelWidget>getChildUnSafe("label");
-        label.setText(switch (playbackMode) {
-            case NORMAL -> "N";
-            case REPEAT_LIST -> "RL";
-            case REPEAT_ONE -> "R1";
-            case SHUFFLE -> "S";
-        });
+    private static void updateModeButtonIcon() {
+        if (modeButton == null) return;
+        modeButton.setAlpha(1.0f);
+        switch (PLAYBACK_MODE) {
+            case REPEAT_LIST -> modeButton.renderType = RenderTypes.ICON_CYCLE;
+            case REPEAT_ONE -> modeButton.renderType = RenderTypes.ICON_SINGLE_CYCLE;
+            case SHUFFLE -> modeButton.renderType = RenderTypes.ICON_RANDOM;
+        }
     }
 
     private PanelWidget createMediaWidget(MediaInfo mediaInfo, float y, Runnable onClick) {
@@ -523,7 +494,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
     @Override
     public RenderType getIcon() {
-        return RenderTypes.APP_MEDIA_PLAYER;
+        return RenderTypes.ICON_MEDIA_PLAYER;
     }
 
     @Override
@@ -662,13 +633,13 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         }
 
         @Override
-        public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+        public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
             if (!isVisible()) return;
 
-            graphics.pose().pushPose();
-            graphics.pose().translate(getX(), getY(), getZ());
-            var matrix = graphics.pose().last().pose();
-            var buffer = graphics.bufferSource().getBuffer(new RenderType.CompositeRenderType(
+            stack.pushPose();
+            stack.translate(getX(), getY(), getZ());
+            var matrix = stack.lastMatrix();
+            var buffer = bufferSource.getBuffer(new RenderType.CompositeRenderType(
                     "geometric_button",
                     DefaultVertexFormat.POSITION_COLOR,
                     VertexFormat.Mode.TRIANGLES,
@@ -727,7 +698,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 }
             }
 
-            graphics.pose().popPose();
+            stack.popPose();
         }
     }
 }

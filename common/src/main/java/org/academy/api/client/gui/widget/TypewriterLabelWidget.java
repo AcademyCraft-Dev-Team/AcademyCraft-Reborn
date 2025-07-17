@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import org.academy.api.client.render.MatrixStack;
 
 public class TypewriterLabelWidget extends LabelWidget {
     public final String fullText;
@@ -25,9 +26,9 @@ public class TypewriterLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (isAnimating) {
-            currentStep += displaySpeed * (partialTicks / 20.0f);
+            currentStep += displaySpeed * (partialTick / 20.0f);
 
             var currentLength = Math.min((int) Math.floor(currentStep), fullText.length());
             displayedText = fullText.substring(0, currentLength);
@@ -41,6 +42,6 @@ public class TypewriterLabelWidget extends LabelWidget {
         }
         value = displayedText;
 
-        super.render(graphics, mouseX, mouseY, partialTicks);
+        super.render(stack, bufferSource, mouseX, mouseY, partialTick);
     }
 }

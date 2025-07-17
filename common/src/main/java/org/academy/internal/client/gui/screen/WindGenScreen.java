@@ -10,7 +10,7 @@ import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;

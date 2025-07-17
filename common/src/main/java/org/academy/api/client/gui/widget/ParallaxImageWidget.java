@@ -1,7 +1,8 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.NotNull;
 
 public class ParallaxImageWidget extends ImageWidget {
@@ -19,8 +20,8 @@ public class ParallaxImageWidget extends ImageWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
-        graphics.pose().pushPose();
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        stack.pushPose();
         var dx = (float) (((mouseX - anchorX) / anchorX) * scaleX);
         var dy = (float) (((mouseY - anchorY) / anchorY) * scaleY);
 
@@ -37,7 +38,7 @@ public class ParallaxImageWidget extends ImageWidget {
         v0 = offsetV;
         u1 = u0 + parallaxWidth;
         v1 = v0 + parallaxHeight;
-        super.render(graphics, mouseX, mouseY, partialTicks);
-        graphics.pose().popPose();
+        super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+        stack.popPose();
     }
 }

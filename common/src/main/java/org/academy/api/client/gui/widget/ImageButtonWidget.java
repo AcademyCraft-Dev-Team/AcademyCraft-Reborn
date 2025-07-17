@@ -1,10 +1,11 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.Nullable;
 
 public class ImageButtonWidget extends AbstractButtonWidget {
@@ -32,23 +33,23 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
         if (renderType == null) return;
-        var vertexConsumer = graphics.bufferSource().getBuffer(renderType);
+        var vertexConsumer = bufferSource.getBuffer(renderType);
 
-        graphics.pose().pushPose();
-        var matrix4f = graphics.pose().last().pose();
+        stack.pushPose();
+        var matrix4f = stack.lastMatrix();
 
         var scaledWidth = getWidth() * widthScale;
         var scaledHeight = getHeight() * heightScale;
 
-        matrix4f.translate(getX(), getY(), getZ());
+        stack.translate(getX(), getY(), getZ());
         if (centerScale) {
-            matrix4f.translate((getWidth() - scaledWidth) / 2f, (getHeight() - scaledHeight) / 2f, 0);
+            stack.translate((getWidth() - scaledWidth) / 2f, (getHeight() - scaledHeight) / 2f, 0);
         }
 
-        matrix4f.scale(scaledWidth, scaledHeight, 1);
+        stack.scale(scaledWidth, scaledHeight, 1);
 
         var finalAlpha = getAbsoluteAlpha();
         vertexConsumer.vertex(matrix4f, 0, 0, 0).color(red, green, blue, finalAlpha).uv(u0, v0).endVertex();
@@ -56,7 +57,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         vertexConsumer.vertex(matrix4f, 1, 1, 0).color(red, green, blue, finalAlpha).uv(u1, v1).endVertex();
         vertexConsumer.vertex(matrix4f, 1, 0, 0).color(red, green, blue, finalAlpha).uv(u1, v0).endVertex();
 
-        graphics.pose().popPose();
+        stack.popPose();
     }
 
     @Override
