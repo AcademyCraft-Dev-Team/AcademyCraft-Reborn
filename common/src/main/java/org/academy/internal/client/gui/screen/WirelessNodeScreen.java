@@ -13,7 +13,7 @@ import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.network.NetworkManagerClient;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.SetNodeNamePacket;

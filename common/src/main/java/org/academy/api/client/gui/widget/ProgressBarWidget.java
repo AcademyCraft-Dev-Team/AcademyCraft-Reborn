@@ -1,7 +1,8 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.util.RenderUtil;
 
 import java.util.function.Supplier;
@@ -22,7 +23,7 @@ public class ProgressBarWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (progressSupplier != null) {
             var progress = progressSupplier.get();
             if (progress < 0.0f) progress = 0.0f;
@@ -34,20 +35,21 @@ public class ProgressBarWidget extends AbstractWidget {
 
             if (backgroundVisible) {
                 RenderUtil.fill(
-                        graphics.pose().last().pose(),
+                        stack,
+                        bufferSource,
                         getX(), getY(),
                         getX() + getWidth(), getY() + getHeight(),
-                        finalBackgroundColor, graphics.bufferSource()
+                        finalBackgroundColor
                 );
             }
 
             var progressWidth = getWidth() * progress;
             RenderUtil.fill(
-                    graphics.pose().last().pose(),
+                    stack,
+                    bufferSource,
                     getX(), getY(),
                     getX() + progressWidth, getY() + getHeight(),
-                    finalProgressBarColor,
-                    graphics.bufferSource()
+                    finalProgressBarColor
             );
         }
     }

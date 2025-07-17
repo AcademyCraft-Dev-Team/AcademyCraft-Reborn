@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.phys.AABB;
-import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.renderer.BoxRenderer;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.jetbrains.annotations.NotNull;
@@ -37,18 +37,18 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
 
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(ballRadius));
-        RenderUtil.BoxRenderer.renderFilledBox(poseStack, buffer, HEAD, 0, 1, 0, 0.125f);
+        BoxRenderer.renderFilledBox(poseStack, buffer, HEAD, 0, 1, 0, 0.125f);
         poseStack.scale(0.5f, 0.5f, 0.5f);
-        RenderUtil.BoxRenderer.renderFilledBox(poseStack, buffer, HEAD, 1, 1, 1, 1f);
+        BoxRenderer.renderFilledBox(poseStack, buffer, HEAD, 1, 1, 1, 1f);
         poseStack.popPose();
 
         var rayVisualProgress = entity.isCharging() ? 0f : entity.smoothProgress;
 
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(rayVisualProgress * 0.25f,  entity.length, rayVisualProgress * 0.25f));
-        RenderUtil.BoxRenderer.renderFilledBox(poseStack, buffer, RAY, 0, 1, 0, 0.125f);
+        BoxRenderer.renderFilledBox(poseStack, buffer, RAY, 0, 1, 0, 0.125f);
         poseStack.scale(0.75f, 1, 0.75f);
-        RenderUtil.BoxRenderer.renderFilledBox(poseStack, buffer, RAY, 1, 1, 1, 1f);
+        BoxRenderer.renderFilledBox(poseStack, buffer, RAY, 1, 1, 1, 1f);
         poseStack.popPose();
 
         poseStack.popPose();

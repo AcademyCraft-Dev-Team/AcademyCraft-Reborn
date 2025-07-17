@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import org.academy.AcademyCraft;
 import org.academy.api.client.renderer.EffectRenderer;
-import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.renderer.RingRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.util.MathUtil;
@@ -26,7 +26,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
     public static final int RING_SEGMENTS = 4;
     private static final RandomSource RAND = RandomSource.create();
     private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0);
-    private static final RenderType RENDER_TYPE = RenderUtil.RingRenderer.RING_RENDER_TYPE.apply(TEXTURE);
+    private static final RenderType RENDER_TYPE = RingRenderer.RING_RENDER_TYPE.apply(TEXTURE);
     private static final int NUM_RINGS = 24;
     private static final float HEIGHT = 3.5f;
     private static final float SIZE = 1.0f;
@@ -177,7 +177,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
 
             poseStack.pushPose();
             poseStack.scale(finalRadiusMain, ringWidth, finalRadiusMain);
-            RenderUtil.RingRenderer.renderRing(
+            RingRenderer.renderRing(
                     poseStack.last().pose(),
                     vertexConsumer,
                     RING_SEGMENTS,
@@ -193,7 +193,7 @@ public class StormWingEffectRenderer implements EffectRenderer {
 
                 poseStack.pushPose();
                 poseStack.scale(finalRadiusNested, nestedWidth, finalRadiusNested);
-                RenderUtil.RingRenderer.renderRing(
+                RingRenderer.renderRing(
                         poseStack.last().pose(), vertexConsumer,
                         RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER
                 );

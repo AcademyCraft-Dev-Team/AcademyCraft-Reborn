@@ -25,32 +25,32 @@ configurations {
 }
 
 dependencies {
-    implementation project(":common")
-    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation(project(":common"))
+    minecraft("com.mojang:minecraft:${minecraft_version}")
     mappings loom.layered {
         officialMojangMappings()
         parchment("org.parchmentmc.data:parchment-${parchment_minecraft}:${parchment_version}@zip")
     }
-/*
-    modApi "icyllis.modernui:ModernUI-Core:3.11.1"
-    modApi "icyllis.modernui:ModernUI-Markdown:3.11.1"
-    modImplementation "icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6"
-*/
+    modApi("icyllis.modernui:ModernUI-Core:3.11.1")
+    modApi("icyllis.modernui:ModernUI-Markdown:3.11.1")
+    modImplementation("icyllis.modernui:ModernUI-Fabric:${minecraft_version}-3.11.1.6")
 
-    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.1"
+    modApi("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.1")
     include(modApi("dev.felnull:special-model-loader:1.2.0"))
     include(modApi('teamreborn:energy:3.0.0'))
-    modImplementation "maven.modrinth:jade:11.12.3+fabric"
-    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
-    implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.1'
+    modImplementation("maven.modrinth:jade:11.12.3+fabric")
+    modImplementation("net.fabricmc:fabric-loader:${fabric_loader_version}")
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${fabric_version}")
+    implementation(group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.1')
 
     include(implementation("net.neoforged:bus:${bus_version}"))
 
     modCompileOnlyApi("mezz.jei:jei-${minecraft_version}-fabric-api:${jei_version}")
     modRuntimeOnly("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}")
 
-    hotswapAgent "org.hotswapagent:hotswap-agent-core:2.0.2"
+    include(modImplementation("dev.kosmx.player-anim:player-animation-lib-fabric:${player_anim}"))
+
+    hotswapAgent("org.hotswapagent:hotswap-agent-core:2.0.2")
 }
 
 loom {

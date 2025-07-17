@@ -88,7 +88,7 @@ public class WindGenTopModel extends HierarchicalModel<Entity> {
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         poseStack.pushPose();
         all.translateAndRotate(poseStack);
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(TextureResources.WIND_GEN));
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(TextureResources.UI_WIND_GEN));
         main.render(poseStack, vertexConsumer, packedLight, packedOverlay);
         shell.render(poseStack, vertexConsumer, packedLight, packedOverlay);
         li.render(poseStack, vertexConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);

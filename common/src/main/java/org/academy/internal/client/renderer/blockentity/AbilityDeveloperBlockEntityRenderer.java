@@ -5,15 +5,15 @@ import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.renderer.RenderTypes;
-import org.academy.internal.client.model.AbilityDeveloperBlockEntityModel;
+import org.academy.api.client.render.RenderTypes;
+import org.academy.internal.client.model.AbilityDeveloperModel;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 
 public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntity> {
     public static final BlockEntityRenderer<AbilityDeveloperBlockEntity> INSTANCE = new AbilityDeveloperBlockEntityRenderer();
-    public static final AbilityDeveloperBlockEntityModel MODEL = new AbilityDeveloperBlockEntityModel(AbilityDeveloperBlockEntityModel.createBodyLayer().bakeRoot());
+    public static final AbilityDeveloperModel MODEL = new AbilityDeveloperModel(AbilityDeveloperModel.createBodyLayer().bakeRoot());
 
     private AbilityDeveloperBlockEntityRenderer() {
     }

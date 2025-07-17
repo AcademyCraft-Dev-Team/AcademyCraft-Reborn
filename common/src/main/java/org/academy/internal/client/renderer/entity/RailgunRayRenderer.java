@@ -6,8 +6,8 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
+import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.jetbrains.annotations.NotNull;
@@ -27,8 +27,8 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay> {
                 .rotateY((float) Math.toRadians(90 - entity.getYRot()))
                 .rotateZ((float) Math.toRadians(90 + entity.getXRot()))
         );
-        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, 50, entity.renderProgress * 0.1f, 8);
-        RenderUtil.CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 0.25f, 0, 50, entity.renderProgress * 0.125f, 8);
+        CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 1f, 0, 50, entity.renderProgress * 0.1f, 8);
+        CylinderRenderer.renderCylinder(poseStack, buffer, 0.906f, 0.827f, 0.694f, 0.25f, 0, 50, entity.renderProgress * 0.125f, 8);
         poseStack.popPose();
     }
 

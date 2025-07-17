@@ -1,9 +1,13 @@
 package org.academy.api.client.gui.framework;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.Tickable;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.util.RenderUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -16,6 +20,80 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     public AbstractContainerWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
+    }
+
+    private static void drawInfo(Widget widget, MatrixStack stack, MultiBufferSource.BufferSource bufferSource) {
+        stack.pushPose();
+        var font = Minecraft.getInstance().font;
+
+        String namePart = widget.getName();
+        if (namePart == null || namePart.isEmpty()) {
+            namePart = "";
+        } else {
+            namePart = "'" + namePart + "'";
+        }
+
+        String infoText = String.format(
+                "[%s] %s\nPos: (%.1f, %.1f) Size: (%.1f, %.1f) Alpha: %.2f",
+                widget.getClass().getSimpleName(),
+                namePart,
+                widget.getX(), widget.getY(),
+                widget.getWidth(), widget.getHeight(),
+                widget.getAbsoluteAlpha()
+        );
+
+        float textScale = 0.8f;
+        int textColor = 0xA0FFFFFF;
+
+        stack.pushPose();
+        stack.translate(5, 5, 500);
+        stack.scale(textScale, textScale, 1.0f);
+
+        RenderUtil.drawString(stack, bufferSource, font, infoText, 0, 0, textColor, true);
+
+        stack.popPose();
+        stack.popPose();
+    }
+
+    private void renderChildDebugInfo(Widget child, MatrixStack stack, MultiBufferSource.BufferSource bufferSource) {
+        stack.pushPose();
+        stack.translate(child.getX(), child.getY(), 200);
+
+        int outlineColor = 0xFFFF0000;
+        if (child.isFocused()) {
+            outlineColor = 0xFF00FF00;
+        } else if (child.isHovered()) {
+            outlineColor = 0xFF0000FF;
+        }
+        RenderUtil.drawOutline(stack, bufferSource, 0, 0, child.getWidth(), child.getHeight(), outlineColor, 1.0f);
+
+        stack.popPose();
+    }
+
+    @Override
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible()) return;
+
+        stack.pushPose();
+        stack.translate(getX(), getY(), getZ());
+
+        if (AcademyCraft.DEBUG_UI) {
+            var color = isFocused() ? 0xFF00FF00 : 0xFFFF0000;
+            RenderUtil.drawOutline(stack, bufferSource, 0, 0, getWidth(), getHeight(), color, 1.0f);
+
+            if (isHovered()) {
+                drawInfo(this, stack, bufferSource);
+            }
+        }
+
+        for (var child : getChildren().values()) {
+            child.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            if (AcademyCraft.DEBUG_UI) {
+                renderChildDebugInfo(child, stack, bufferSource);
+            }
+        }
+
+        stack.popPose();
     }
 
     @Override
@@ -61,6 +139,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             child.getParent().removeChild(name);
         }
         child.setParent(this);
+        child.setName(name);
         children.put(name, child);
         if (child instanceof Tickable tickable) {
             tickableChildren.add(tickable);
@@ -150,7 +229,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
 
         var childrenList = new ArrayList<>(children.values());
-        for (int i = childrenList.size() - 1; i >= 0; i--) {
+        for (var i = childrenList.size() - 1; i >= 0; i--) {
             var child = childrenList.get(i);
             if (child.mousePressed(mouseX, mouseY, button)) {
                 if (button == 0) {
@@ -197,7 +276,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             return false;
         }
         var childrenList = new ArrayList<>(children.values());
-        for (int i = childrenList.size() - 1; i >= 0; i--) {
+        for (var i = childrenList.size() - 1; i >= 0; i--) {
             var child = childrenList.get(i);
             if (child.mouseReleased(mouseX, mouseY, button)) {
                 return true;
@@ -212,7 +291,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             return false;
         }
         var childrenList = new ArrayList<>(children.values());
-        for (int i = childrenList.size() - 1; i >= 0; i--) {
+        for (var i = childrenList.size() - 1; i >= 0; i--) {
             var child = childrenList.get(i);
             if (child.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
                 return true;
@@ -228,7 +307,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
         if (isAbsoluteMouseOver(mouseX, mouseY)) {
             var childrenList = new ArrayList<>(children.values());
-            for (int i = childrenList.size() - 1; i >= 0; i--) {
+            for (var i = childrenList.size() - 1; i >= 0; i--) {
                 var child = childrenList.get(i);
                 if (child.mouseScrolled(mouseX, mouseY, delta)) {
                     return true;

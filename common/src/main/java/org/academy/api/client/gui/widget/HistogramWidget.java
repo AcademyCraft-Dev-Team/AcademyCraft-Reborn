@@ -1,9 +1,10 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.Widget;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.RenderUtil;
 
 import java.util.ArrayList;
@@ -27,18 +28,18 @@ public class HistogramWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         var finalAlpha = getAbsoluteAlpha();
 
         if (renderBack) {
             back.setAlpha(finalAlpha);
-            back.render(graphics, mouseX - getX(), mouseY - getY(), partialTick);
+            back.render(stack, bufferSource, mouseX - getX(), mouseY - getY(), partialTick);
         }
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(getX(), getY(), getZ());
+        stack.pushPose();
+        stack.translate(getX(), getY(), getZ());
 
         for (var value : values) {
             var left = value.x;
@@ -56,15 +57,15 @@ public class HistogramWidget extends AbstractWidget {
             var packedColor = (a << 24) | (r << 16) | (g << 8) | b;
 
             RenderUtil.fill(
-                    graphics.pose().last().pose(),
+                    stack,
+                    bufferSource,
                     left, top,
                     right, bottom,
-                    packedColor,
-                    graphics.bufferSource()
+                    packedColor
             );
         }
 
-        graphics.pose().popPose();
+        stack.popPose();
     }
 
     public void setValues(List<Value> newValues) {

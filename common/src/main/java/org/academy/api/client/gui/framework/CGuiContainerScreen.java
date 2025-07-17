@@ -12,7 +12,8 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.widget.BlendQuadWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -24,7 +25,7 @@ import java.util.Map;
 public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IAnimationScreen {
     public BlendQuadWidget back;
     public ImageWidget inventory;
-    public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
+    public final PanelWidget rootContainer = new PanelWidget(0, 0, 0, 0);
     public boolean handleContainer = true;
     public boolean renderInventory = true;
     private final List<Animator> screenAnimations = new ArrayList<>();
@@ -81,11 +82,15 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics);
+        var stack = new MatrixStack();
+        var bufferSource = guiGraphics.bufferSource();
+
         if (renderInventory) {
-            back.render(guiGraphics, mouseX, mouseY, partialTick);
-            inventory.render(guiGraphics, mouseX, mouseY, partialTick);
+            back.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            inventory.render(stack, bufferSource, mouseX, mouseY, partialTick);
         }
-        rootContainer.render(guiGraphics, mouseX, mouseY, partialTick);
+        rootContainer.render(stack, bufferSource, mouseX, mouseY, partialTick);
+
         if (shouldRenderInventory()) {
             var originHeight = 187f;
             var currentHeight = inventory.getHeight();
@@ -158,6 +163,10 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_F12) {
+            AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
+            return true;
+        }
         if (rootContainer.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }

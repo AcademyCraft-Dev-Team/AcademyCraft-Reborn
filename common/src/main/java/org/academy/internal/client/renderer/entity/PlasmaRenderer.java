@@ -12,8 +12,9 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import org.academy.AcademyCraft;
+import org.academy.api.client.renderer.ArcRenderer;
+import org.academy.api.client.renderer.RingRenderer;
 import org.academy.api.client.util.RenderStateUtil;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.util.MathUtil;
@@ -91,7 +92,7 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
     private static final float ATM_ARC_FLICKER_TIME_MULT = 1.2f; // 大气电弧闪烁时间乘数
     private static final float TENDRIL_FLICKER_TIME_MULT = 2.0f; // 触须闪烁时间乘数
     private static final RenderType ATMOSPHERE_RING_RENDER_TYPE =
-            RenderUtil.RingRenderer.RING_RENDER_TYPE.apply(ATMOSPHERE_TEXTURE);
+            RingRenderer.RING_RENDER_TYPE.apply(ATMOSPHERE_TEXTURE);
     private static final RenderType PARTICLE_RENDER_TYPE = new RenderType.CompositeRenderType(
             AcademyCraft.MOD_ID + ":plasma_particle_additive_" + PLASMA_PARTICLE_TEXTURE.toString().replace(':', '_').replace('/', '_'),
             DefaultVertexFormat.POSITION_TEX,
@@ -256,7 +257,7 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
 
             float width = MathUtil.lerpFactorStartEnd(RAND.nextFloat(), TENDRIL_WIDTH_MIN, TENDRIL_WIDTH_MAX);
 
-            RenderUtil.ArcRenderer.renderArc(poseStack, buffer, tendrilSeed,
+            ArcRenderer.renderArc(poseStack, buffer, tendrilSeed,
                     tempVec2[0], tempVec2[1], tempVec2[2],
                     tempVec3[0], tempVec3[1], tempVec3[2],
                     width, TENDRIL_SEGMENTS);
@@ -298,7 +299,7 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
                 add(tempVec1, tempVec3, tempVec2);
             }
 
-            RenderUtil.ArcRenderer.renderArc(poseStack, buffer, arcSeed,
+            ArcRenderer.renderArc(poseStack, buffer, arcSeed,
                     tempVec1[0], tempVec1[1], tempVec1[2],
                     tempVec2[0], tempVec2[1], tempVec2[2],
                     ARC_THICKNESS_CORE, ARC_SEGMENTS_CORE);
@@ -357,7 +358,7 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
             poseStack.mulPose(tempQuat2);
             poseStack.scale(finalRadius, layerWidth, finalRadius);
 
-            RenderUtil.RingRenderer.renderRing(poseStack.last().pose(), atmosphereConsumer, LAYER_SEGMENTS, cachedLayerVertexBuffer);
+            RingRenderer.renderRing(poseStack.last().pose(), atmosphereConsumer, LAYER_SEGMENTS, cachedLayerVertexBuffer);
 
             poseStack.popPose();
 
@@ -406,7 +407,7 @@ public class PlasmaRenderer extends EntityRenderer<Plasma> {
             float thickness = MathUtil.lerpFactorStartEnd(RAND.nextFloat(), ARC_THICKNESS_MIN_ATMOSPHERE, ARC_THICKNESS_MAX_ATMOSPHERE);
             int segments = RAND.nextInt(ARC_SEGMENTS_ATMOSPHERE_MIN, ARC_SEGMENTS_ATMOSPHERE_MAX + 1);
 
-            RenderUtil.ArcRenderer.renderArc(poseStack, buffer, arcSeed,
+            ArcRenderer.renderArc(poseStack, buffer, arcSeed,
                     tempVec1[0], tempVec1[1], tempVec1[2],
                     tempVec2[0], tempVec2[1], tempVec2[2],
                     thickness, segments);

@@ -18,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * @author 这里没有Badd
  */
-public class AbilityDeveloperBlockEntityModel extends HierarchicalModel<Entity> {
+public class AbilityDeveloperModel extends HierarchicalModel<Entity> {
     private final ModelPart all;
     private final ModelPart up;
     private final ModelPart rside;
@@ -28,7 +28,7 @@ public class AbilityDeveloperBlockEntityModel extends HierarchicalModel<Entity> 
     private final ModelPart m2;
     private final ModelPart m3;
 
-    public AbilityDeveloperBlockEntityModel(ModelPart root) {
+    public AbilityDeveloperModel(ModelPart root) {
         super(RenderType::entityTranslucent);
         this.all = root.getChild("all");
         this.up = this.all.getChild("up");

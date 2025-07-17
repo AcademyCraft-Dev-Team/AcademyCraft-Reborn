@@ -2,9 +2,10 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.FormattedText;
 import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.render.MatrixStack;
 
 public class AutoScaleLabelWidget extends LabelWidget {
     private boolean centered;
@@ -44,16 +45,15 @@ public class AutoScaleLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible() || value == null || value.isEmpty()) return;
 
         var baseAlpha = (color >> 24) & 0xFF;
         var finalAlpha = (int) (baseAlpha * getAbsoluteAlpha());
-        // In Font.adjustColor, alpha <= 3 is forced to 255
         if (finalAlpha <= 3) finalAlpha = 4;
         var finalColor = (color & 0x00FFFFFF) | (finalAlpha << 24);
 
-        graphics.pose().pushPose();
+        stack.pushPose();
         var font = Minecraft.getInstance().font;
 
         var finalScale = scale * globalScale;
@@ -68,17 +68,17 @@ public class AutoScaleLabelWidget extends LabelWidget {
         var scaledTextRenderHeight = textOriginalHeight * finalScale;
         var yDrawingOffset = (scaledTextRenderHeight - textOriginalHeight) / 2.0f;
 
-        graphics.pose().translate(renderX, getY() - yDrawingOffset, getZ());
-        graphics.pose().scale(finalScale, finalScale, 1.0f);
+        stack.translate(renderX, getY() - yDrawingOffset, getZ());
+        stack.scale(finalScale, finalScale, 1.0f);
 
         font.drawInBatch(value, 0, 0, finalColor, dropShadow,
-                graphics.pose().last().pose(),
-                graphics.bufferSource(),
+                stack.lastMatrix(),
+                bufferSource,
                 Font.DisplayMode.NORMAL,
                 0,
                 15728880
         );
-        graphics.pose().popPose();
+        stack.popPose();
     }
 
     public void setCentered(boolean newCentered) {
