@@ -1,9 +1,10 @@
 package org.academy.api.client.gui.widget;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
@@ -44,14 +45,14 @@ public class ScrollPanelWidget extends AbstractContainerWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         RenderSystem.clear(GL30.GL_STENCIL_BUFFER_BIT, false);
         scrollOffset = MathUtil.lerpStartEndFactor(scrollOffset, scrollTarget, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
 
-        graphics.pose().pushPose();
-        graphics.flush();
+        stack.pushPose();
+        bufferSource.endBatch();
 
         GL30.glEnable(GL30.GL_STENCIL_TEST);
 
@@ -60,20 +61,20 @@ public class ScrollPanelWidget extends AbstractContainerWidget {
         RenderSystem.stencilFunc(GL_ALWAYS, 1, 0xFF);
         RenderSystem.stencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
-        RenderUtil.fill(graphics.pose().last().pose(), getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFFFFFFF, graphics.bufferSource());
-        graphics.flush();
+        RenderUtil.fill(stack, bufferSource, getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFFFFFFF);
+        bufferSource.endBatch();
 
         RenderSystem.colorMask(true, true, true, true);
         RenderSystem.depthMask(true);
         RenderSystem.stencilFunc(GL_EQUAL, 1, 0xFF);
         RenderSystem.stencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-        graphics.pose().translate(0, -scrollOffset, 0);
-        super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.flush();
+        stack.translate(0, -scrollOffset, 0);
+        super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+        bufferSource.endBatch();
 
         GL30.glDisable(GL30.GL_STENCIL_TEST);
-        graphics.pose().popPose();
+        stack.popPose();
     }
 
     @Override

@@ -1,8 +1,13 @@
 package org.academy.api.client.gui.framework;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import org.academy.api.client.render.MatrixStack;
 
 public interface Widget {
+    String getName();
+
+    Widget setName(String name);
+
     float getX();
 
     float getY();
@@ -41,7 +46,7 @@ public interface Widget {
 
     Widget setParent(WidgetContainer parent);
 
-    void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick);
+    void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick);
 
     float getAlpha();
 

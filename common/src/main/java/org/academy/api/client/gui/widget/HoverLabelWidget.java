@@ -1,8 +1,9 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.FormattedText;
+import org.academy.api.client.render.MatrixStack;
 
 public class HoverLabelWidget extends LabelWidget {
     private static final String ELLIPSIS = "...";
@@ -34,8 +35,8 @@ public class HoverLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         updateText();
-        super.render(graphics, mouseX, mouseY, partialTicks);
+        super.render(stack, bufferSource, mouseX, mouseY, partialTick);
     }
 }

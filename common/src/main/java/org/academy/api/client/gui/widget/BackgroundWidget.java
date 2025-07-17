@@ -1,8 +1,11 @@
 package org.academy.api.client.gui.widget;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.NotNull;
 
 public class BackgroundWidget extends AbstractWidget {
@@ -15,7 +18,9 @@ public class BackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        var graphics = new GuiGraphics(Minecraft.getInstance(), bufferSource);
+        graphics.pose().last().pose().mul(stack.lastMatrix());
         screen.renderBackground(graphics);
     }
 

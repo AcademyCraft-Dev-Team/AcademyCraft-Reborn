@@ -1,8 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.internal.client.renderer.Shaders;
 
 public class BlendQuadWidget extends AbstractWidget {
@@ -24,13 +25,13 @@ public class BlendQuadWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        graphics.pose().pushPose();
+        stack.pushPose();
 
-        var matrix = graphics.pose().last().pose();
-        matrix.translate(getX(), getY(), getZ());
+        var matrix = stack.lastMatrix();
+        stack.translate(getX(), getY(), getZ());
 
         var w = getWidth();
         var h = getHeight();
@@ -42,21 +43,21 @@ public class BlendQuadWidget extends AbstractWidget {
             shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
             shader.safeGetUniform("u_fillColor").set(red, green, blue, finalAlpha);
 
-            var vertexConsumer = graphics.bufferSource().getBuffer(RenderTypes.SDF_SHARP_QUAD);
+            var vertexConsumer = bufferSource.getBuffer(RenderTypes.SDF_SHARP_QUAD);
             vertexConsumer.vertex(matrix, 0, 0, 0).uv(0, 0).endVertex();
             vertexConsumer.vertex(matrix, 0, h, 0).uv(0, 1).endVertex();
             vertexConsumer.vertex(matrix, w, h, 0).uv(1, 1).endVertex();
             vertexConsumer.vertex(matrix, w, 0, 0).uv(1, 0).endVertex();
-            graphics.bufferSource().endBatch(RenderTypes.SDF_SHARP_QUAD);
+            bufferSource.endBatch(RenderTypes.SDF_SHARP_QUAD);
         }
 
         if (drawLine) {
             lineWidget.setAlpha(finalAlpha);
-            lineWidget.render(graphics, mouseX, mouseY, partialTick);
-            graphics.pose().translate(0, getHeight() - marginTop / 2, 0);
-            lineWidget.render(graphics, mouseX, mouseY, partialTick);
+            lineWidget.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            stack.translate(0, getHeight() - marginTop / 2, 0);
+            lineWidget.render(stack, bufferSource, mouseX, mouseY, partialTick);
         }
 
-        graphics.pose().popPose();
+        stack.popPose();
     }
 }

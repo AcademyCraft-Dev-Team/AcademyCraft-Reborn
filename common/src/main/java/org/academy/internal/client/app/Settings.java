@@ -12,7 +12,7 @@ import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.KeyEvent;
 import org.academy.api.client.input.MouseButtonEvent;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ClientUtil;
 import org.lwjgl.glfw.GLFW;
 
@@ -785,7 +785,7 @@ public final class Settings implements DataTerminalHUD.App {
 
     @Override
     public RenderType getIcon() {
-        return RenderTypes.APP_SETTINGS;
+        return RenderTypes.ICON_SETTINGS;
     }
 
     @Override

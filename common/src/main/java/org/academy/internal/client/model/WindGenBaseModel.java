@@ -16,8 +16,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
+import org.academy.api.client.renderer.BakedModelRenderer;
 import org.academy.api.client.resource.TextureResources;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
@@ -203,7 +203,7 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
     }
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        all.render(poseStack, bufferSource.getBuffer(renderType(TextureResources.WIND_GEN)), packedLight, packedOverlay);
+        all.render(poseStack, bufferSource.getBuffer(renderType(TextureResources.UI_WIND_GEN)), packedLight, packedOverlay);
         poseStack.pushPose();
         Minecraft minecraft = Minecraft.getInstance();
         BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());
@@ -214,7 +214,7 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
         matrix4f.translate(-0.5f, 0.505f, -0.5f);
         matrix4f.scale(1,0.9f,1);
         poseStack.mulPoseMatrix(matrix4f);
-        RenderUtil.BakedModelRenderer.render(poseStack, bakedModel, bufferSource, randomSource, false, packedLight, packedOverlay);
+        BakedModelRenderer.render(poseStack, bakedModel, bufferSource, randomSource, false, packedLight, packedOverlay);
         poseStack.popPose();
     }
 

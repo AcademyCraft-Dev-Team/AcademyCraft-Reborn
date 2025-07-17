@@ -1,7 +1,8 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.Orientation;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 
@@ -14,29 +15,28 @@ public class ScrollBarWidget extends DragBarWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        var matrix = graphics.pose().last().pose();
-        var buffer = graphics.bufferSource();
+        var matrix = stack.lastMatrix();
 
         var absoluteAlpha = getAbsoluteAlpha();
         var finalTrackColor = (getTrackColor() & 0x00FFFFFF) | ((int) (((getTrackColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
         var finalThumbColor = (getThumbColor() & 0x00FFFFFF) | ((int) (((getThumbColor() >> 24) & 0xFF) * absoluteAlpha) << 24);
 
-        matrix.translate(0, 0, getZ());
+        stack.translate(0, 0, getZ());
 
         if (showBackground) {
-            RenderUtil.fill(matrix, getX(), getY(), getX() + getWidth(), getY() + getHeight(), finalTrackColor, buffer);
-            matrix.translate(0, 0, 1);
+            RenderUtil.fill(stack, bufferSource, getX(), getY(), getX() + getWidth(), getY() + getHeight(), finalTrackColor);
+            stack.translate(0, 0, 1);
         }
 
         var thumbStart = getThumbPosition();
         var thumbSize = getThumbSize();
         if (orientation == Orientation.HORIZONTAL) {
-            RenderUtil.fill(matrix, thumbStart, getY(), thumbStart + thumbSize, getY() + getHeight(), finalThumbColor, buffer);
+            RenderUtil.fill(stack, bufferSource, thumbStart, getY(), thumbStart + thumbSize, getY() + getHeight(), finalThumbColor);
         } else {
-            RenderUtil.fill(matrix, getX(), thumbStart, getX() + getWidth(), thumbStart + thumbSize, finalThumbColor, buffer);
+            RenderUtil.fill(stack, bufferSource, getX(), thumbStart, getX() + getWidth(), thumbStart + thumbSize, finalThumbColor);
         }
     }
 

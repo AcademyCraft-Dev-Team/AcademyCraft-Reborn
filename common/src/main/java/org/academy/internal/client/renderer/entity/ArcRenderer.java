@@ -6,7 +6,6 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.internal.common.world.entity.skill.Arc;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
@@ -23,7 +22,7 @@ public class ArcRenderer extends EntityRenderer<Arc> {
         matrix4f.rotateY((float) Math.toRadians(-entity.getYRot() - 90));
         matrix4f.rotateZ((float) Math.toRadians(-entity.getXRot() - 90));
         poseStack.mulPoseMatrix(matrix4f);
-        RenderUtil.ArcRenderer.renderArc(poseStack, multiBufferSource, entity.random,
+        org.academy.api.client.renderer.ArcRenderer.renderArc(poseStack, multiBufferSource, entity.random,
                 0, 0, 0, 0, entity.getLength(), 0,
                 0.1f, 16);
         poseStack.popPose();

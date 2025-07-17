@@ -9,8 +9,8 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.RandomSource;
+import org.academy.api.client.renderer.BakedModelRenderer;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.jetbrains.annotations.NotNull;
@@ -42,7 +42,7 @@ public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
         matrix4f.rotateX(entity.renderAngle);
         matrix4f.translate(x, y, z);
         poseStack.mulPoseMatrix(matrix4f);
-        RenderUtil.BakedModelRenderer.render(poseStack, bakedModel, buffer, randomSource, false, packedLight, OverlayTexture.NO_OVERLAY);
+        BakedModelRenderer.render(poseStack, bakedModel, buffer, randomSource, false, packedLight, OverlayTexture.NO_OVERLAY);
         poseStack.popPose();
     }
 

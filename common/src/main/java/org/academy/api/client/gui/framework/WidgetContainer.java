@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.framework;
 
-import net.minecraft.client.gui.GuiGraphics;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -22,19 +21,5 @@ public interface WidgetContainer extends Widget {
             throw new NoSuchElementException("No such child: " + name);
         }
         return (T) getChildren().get(name);
-    }
-
-    @Override
-    default void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible()) return;
-
-        graphics.pose().pushPose();
-        graphics.pose().translate(getX(), getY(), getZ());
-
-        for (var child : getChildren().values()) {
-            child.render(graphics, mouseX, mouseY, partialTick);
-        }
-
-        graphics.pose().popPose();
     }
 }

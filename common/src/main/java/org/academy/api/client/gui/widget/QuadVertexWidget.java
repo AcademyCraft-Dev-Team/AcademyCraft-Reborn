@@ -1,8 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.Nullable;
 
 public class QuadVertexWidget extends AbstractWidget {
@@ -28,11 +29,11 @@ public class QuadVertexWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible() || renderType == null) return;
 
-        var vertexConsumer = graphics.bufferSource().getBuffer(renderType);
-        var matrix = graphics.pose().last().pose();
+        var vertexConsumer = bufferSource.getBuffer(renderType);
+        var matrix = stack.lastMatrix();
 
         var finalAlpha = getAbsoluteAlpha();
 

@@ -1,5 +1,6 @@
 package org.academy;
 
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.BusBuilder;
 import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.ability.AbilitySystem;
@@ -19,9 +20,10 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class AcademyCraft {
     public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     public static final String MOD_ID = "academy";
-    public static final String MOD_NAME = "AcademyCraft-Reborn";
+    public static final String MOD_NAME = "AcademyCraft";
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
     public static final IEventBus EVENT_BUS = BusBuilder.builder().build();
+    public static boolean DEBUG_UI = false;
 
     public static void init() {
         NetworkSystem.registerVanillaPacketsOnce();
@@ -60,5 +62,13 @@ public final class AcademyCraft {
         if (errorMessage != null) {
             throw new RuntimeException(errorMessage);
         }
+    }
+
+    public static ResourceLocation getResourceLocation(String path) {
+        return new ResourceLocation(MOD_ID, path);
+    }
+
+    public static ResourceLocation getResourceLocation(String namespace, String path) {
+        return new ResourceLocation(namespace, path);
     }
 }

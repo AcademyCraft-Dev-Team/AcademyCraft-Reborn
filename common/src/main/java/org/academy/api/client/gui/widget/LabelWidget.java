@@ -2,9 +2,10 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.FormattedText;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.render.MatrixStack;
 
 public class LabelWidget extends AbstractWidget {
     public String value;
@@ -19,31 +20,30 @@ public class LabelWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         var baseAlpha = (color >> 24) & 0xFF;
         var finalAlpha = (int) (baseAlpha * getAbsoluteAlpha());
-        // In Font.adjustColor, alpha <= 3 is forced to 255
         if (finalAlpha <= 3) finalAlpha = 4;
         var finalColor = (color & 0x00FFFFFF) | (finalAlpha << 24);
 
-        graphics.pose().pushPose();
+        stack.pushPose();
         var font = Minecraft.getInstance().font;
         var finalScale = scale * globalScale;
         var textHeight = font.lineHeight;
         var scaledHeight = textHeight * finalScale;
         var offsetY = (scaledHeight - textHeight) / 2;
-        graphics.pose().translate(x, y - offsetY, 0);
-        graphics.pose().scale(finalScale, finalScale, 1.0f);
+        stack.translate(x, y - offsetY, 0);
+        stack.scale(finalScale, finalScale, 1.0f);
         Minecraft.getInstance().font.drawInBatch(value, 0, 0, finalColor, dropShadow,
-                graphics.pose().last().pose(),
-                graphics.bufferSource(),
+                stack.lastMatrix(),
+                bufferSource,
                 Font.DisplayMode.NORMAL,
                 0,
                 15728880
         );
-        graphics.pose().popPose();
+        stack.popPose();
     }
 
     @Override

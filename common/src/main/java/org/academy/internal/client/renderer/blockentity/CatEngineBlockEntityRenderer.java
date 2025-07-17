@@ -5,7 +5,7 @@ import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.level.block.entity.CatEngineBlockEntity;
 import org.jetbrains.annotations.NotNull;

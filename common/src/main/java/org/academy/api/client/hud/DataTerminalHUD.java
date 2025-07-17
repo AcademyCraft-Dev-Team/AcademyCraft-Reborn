@@ -7,7 +7,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
@@ -22,7 +22,8 @@ import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.vanilla.ChangeScreenEvent;
@@ -127,7 +128,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, float partialTick) {
         if (active) {
             if (config.enableBlur) {
                 for (var pass : postChain.passes) {
@@ -137,7 +138,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                     }
                 }
             }
-            guiGraphics.pose().pushPose();
+            stack.pushPose();
             RenderSystem.backupProjectionMatrix();
             RenderSystem.disableDepthTest();
             RenderSystem.depthMask(false);
@@ -163,38 +164,41 @@ public final class DataTerminalHUD implements HUDRenderer {
             pose.rotateAround(Axis.YP.rotationDegrees(dx * 0.035f - 5), guiW / 2 - WIDTH * 1.25f + WIDTH / 2, 0, 0);
             pose.rotateAround(Axis.XP.rotationDegrees(-dy * 0.035f + 2), 0, 0, 0);
             pose.translate(-guiW / 2, -guiH / 2, 0);
-            guiGraphics.pose().scale(1, 1, 0.01f);
+            stack.scale(1, 1, 0.01f);
             RenderSystem.applyModelViewMatrix();
-            guiGraphics.pose().pushPose();
+            stack.pushPose();
             {
                 if (config.enableBlur) {
-                    guiGraphics.bufferSource().endBatch(RenderType.gui());
+                    bufferSource.endBatch(RenderType.gui());
                     var maskInput = postChain.getTempTarget("maskInput");
                     maskInput.clear(false);
                     maskInput.bindWrite(false);
-                    guiGraphics.pose().pushPose();
-                    guiGraphics.pose().translate(guiW - WIDTH * 1.25f, (guiH - HEIGHT) / 2, 0);
-                    RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF, guiGraphics.bufferSource());
-                    guiGraphics.pose().popPose();
+                    stack.pushPose();
+                    stack.translate(guiW - WIDTH * 1.25f, (guiH - HEIGHT) / 2, 0);
+                    RenderUtil.fill(stack, bufferSource, 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF);
+                    stack.popPose();
                     if (rootContainer.getChildren().containsKey("area_app")) {
-                        guiGraphics.pose().pushPose();
+                        stack.pushPose();
                         var widget = rootContainer.getChildren().get("area_app");
-                        guiGraphics.pose().translate(widget.getAbsoluteX(), widget.getAbsoluteY(), 0);
-                        RenderUtil.fill(guiGraphics.pose().last().pose(), 0, 0, widget.getWidth(), widget.getHeight(), 0XFFFFFFFF, guiGraphics.bufferSource());
-                        guiGraphics.pose().popPose();
+                        stack.translate(widget.getAbsoluteX(), widget.getAbsoluteY(), 0);
+                        RenderUtil.fill(stack, bufferSource, 0, 0, widget.getWidth(), widget.getHeight(), 0XFFFFFFFF);
+                        stack.popPose();
                     }
-                    guiGraphics.bufferSource().endBatch(RenderType.gui());
+                    bufferSource.endBatch(RenderType.gui());
                     postChain.process(partialTick);
                     Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
                 }
             }
-            rootContainer.render(guiGraphics, xpos, ypos, partialTick);
-            guiGraphics.pose().popPose();
-            guiGraphics.flush();
+            rootContainer.render(stack, bufferSource, xpos, ypos, partialTick);
+            stack.popPose();
             pose.popPose();
+
+            RenderSystem.disableDepthTest();
+            bufferSource.endBatch();
+            RenderSystem.enableDepthTest();
+
             RenderSystem.applyModelViewMatrix();
             RenderSystem.restoreProjectionMatrix();
-            guiGraphics.pose().popPose();
         }
     }
 
@@ -578,18 +582,18 @@ public final class DataTerminalHUD implements HUDRenderer {
 
         @SuppressWarnings("SuspiciousNameCombination")
         @Override
-        public void render(GuiGraphics guiGraphics, double mouseX, double mouseY, float partialTick) {
+        public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
             widthScale = MathUtil.lerpStartEndFactor(widthScale, targetScale,
                     ClientUtil.animationFactor(1));
             heightScale = widthScale;
             var oringinRenderType = renderType;
             renderType = RenderTypes.APP_BACK;
-            super.render(guiGraphics, mouseX, mouseY, partialTick);
+            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
             renderType = oringinRenderType;
-            guiGraphics.pose().translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);
+            stack.translate(APP_WIDGET_ICON_TRANSLATE_X, APP_WIDGET_ICON_TRANSLATE_Y, 1);
             width = APP_ICON_SIZE * 0.8F;
             height = APP_ICON_SIZE * 0.8F;
-            super.render(guiGraphics, mouseX, mouseY, partialTick);
+            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
             width = APP_ICON_SIZE;
             height = APP_ICON_SIZE;
         }

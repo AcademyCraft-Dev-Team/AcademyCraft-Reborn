@@ -1,4 +1,4 @@
-package org.academy.api.client.renderer;
+package org.academy.api.client.render;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -34,17 +34,17 @@ public final class RenderTypes {
                     .createCompositeState(false)
     );
     public static final RenderType PANEL_LEFT_BACK_TOP = RenderUtil.getPositionColorTexRenderTypeFull(
-            "panel_left_back_top", TextureResources.PANEL_LEFT_BACK_TOP, false);
+            "panel_left_back_top", TextureResources.UI_DEVELOPER_PANEL_LEFT, false);
     public static final RenderType PANEL_LEFT_BACK_MIDDLE = RenderUtil.getPositionColorTexRenderTypeFull(
             "panel_left_back_middle", TextureResources.PANEL_LEFT_BACK_MIDDLE, false);
-    public static final RenderType SKILL_PANEL_BACK = RenderUtil.getPositionColorTexRenderType(
-            "skill_panel_back", TextureResources.PANEL_RIGHT_SKILL_BACK, true);
-    public static final RenderType SKILL_PANEL_INFO = RenderUtil.getPositionColorTexRenderType(
-            "skill_panel_info", TextureResources.PANEL_RIGHT_INFO, false);
+    public static final RenderType SKILL_PANEL_BACK = RenderUtil.getPositionColorTexRenderTypeFull(
+            "skill_panel_back", TextureResources.UI_DEVELOPER_SKILL_AREA_BG, true);
+    public static final RenderType SKILL_PANEL_INFO = RenderUtil.getPositionColorTexRenderTypeFull(
+            "skill_panel_info", TextureResources.UI_DEVELOPER_PANEL_RIGHT, false);
     public static final RenderType PANEL_RIGHT_BACK = RenderUtil.getPositionColorTexRenderTypeFull(
             "panel_right_back", TextureResources.PANEL_RIGHT_BACK, false);
     public static final RenderType PANEL_RIGHT_SKILL_ICON_BACK = RenderUtil.getPositionColorTexRenderTypeFull(
-            "panel_right_skill_icon_back", TextureResources.PANEL_RIGHT_SKILL_ICON_BACK, true);
+            "panel_right_skill_icon_back", TextureResources.UI_DEVELOPER_SKILL_ICON_BG, true);
     /**
      * WindGen
      */
@@ -82,11 +82,11 @@ public final class RenderTypes {
             "inventory", TextureResources.INVENTORY, false
     );
     public static final RenderType ELEMENT_LINE = RenderUtil.getPositionColorTexRenderTypeFull(
-            "element_line", TextureResources.ELEMENT_LINE, true);
+            "element_line", TextureResources.UI_LINE, true);
     public static final RenderType ELEMENT_BACK_LIGHT = RenderUtil.getPositionColorTexRenderTypeFull(
-            "element_back_light", TextureResources.ELEMENT_BACK_LIGHT, false);
+            "element_back_light", TextureResources.UI_BACKGROUND_LIGHT, false);
     public static final RenderType WIRELESS_PANEL_VIEW_ICON = RenderUtil.getPositionColorTexRenderTypeFull(
-            "wireless_panel_view_icon", TextureResources.WIRELESS_PANEL_VIEW_ICON, false);
+            "wireless_panel_view_icon", TextureResources.ICON_OPEN_WIRELESS_PANEL, false);
     public static final RenderType ICON_NODE = RenderUtil.getPositionColorTexRenderTypeFull(
             "icon_node", TextureResources.ICON_NODE, false);
     public static final RenderType ICON_CONNECTED = RenderUtil.getPositionColorTexRenderTypeFull(
@@ -108,10 +108,10 @@ public final class RenderTypes {
                     .createCompositeState(false)
     );
     public static final RenderType BUTTON = RenderUtil.getPositionColorTexRenderTypeFull(
-            "button", TextureResources.BUTTON, false
+            "button", TextureResources.UI_BUTTON_LEARN, false
     );
     public static final RenderType ICON_BOX = RenderUtil.getPositionColorTexRenderTypeFull(
-            "icon_box", TextureResources.ICON_BOX, false
+            "icon_box", TextureResources.HUD_SKILL_FRAME, false
     );
     public static final RenderType CURSOR = RenderUtil.getPositionColorTexRenderTypeFull(
             "cursor", TextureResources.CURSOR, true
@@ -125,14 +125,8 @@ public final class RenderTypes {
     public static final RenderType APP_BACK = RenderUtil.getPositionColorTexRenderTypeFull(
             "app_back", TextureResources.APP_BACK, false
     );
-    public static final RenderType APP_MEDIA_PLAYER = RenderUtil.getPositionColorTexRenderTypeFull(
-            "app_media_player", TextureResources.APP_MEDIA_PLAYER, false
-    );
     public static final RenderType APP_MISAKA_CLOUD = RenderUtil.getPositionColorTexRenderTypeFull(
             "app_misaka_cloud", TextureResources.APP_MISAKA_CLOUD, false
-    );
-    public static final RenderType APP_SETTINGS = RenderUtil.getPositionColorTexRenderTypeFull(
-            "app_settings", TextureResources.APP_SETTINGS, false
     );
     public static final RenderType CIRCLE_GLOW = new RenderType.CompositeRenderType(
             "sdf_circle_glow",
@@ -153,4 +147,25 @@ public final class RenderTypes {
      * Cleaning Robot
      */
     public static final RenderType CLEANING_ROBOT = RenderType.entityTranslucent(TextureResources.CLEANING_ROBOT);
+    /**
+     * Media Player
+     */
+    public static final RenderType ICON_MEDIA_PLAYER = RenderUtil.getPositionColorTexRenderTypeFull(
+            "icon_media_player", TextureResources.ICON_MEDIA_PLAYER, false
+    );
+    public static final RenderType ICON_CYCLE = RenderUtil.getPositionColorTexRenderTypeFull(
+            "icon_cycle", TextureResources.ICON_CYCLE, false
+    );
+    public static final RenderType ICON_RANDOM = RenderUtil.getPositionColorTexRenderTypeFull(
+            "icon_random", TextureResources.ICON_RANDOM, false
+    );
+    public static final RenderType ICON_SINGLE_CYCLE = RenderUtil.getPositionColorTexRenderTypeFull(
+            "icon_single_cycle", TextureResources.ICON_SINGLE_CYCLE, false
+    );
+    /**
+     * Settings
+     */
+    public static final RenderType ICON_SETTINGS = RenderUtil.getPositionColorTexRenderTypeFull(
+            "icon_settings", TextureResources.ICON_SETTINGS, false
+    );
 }

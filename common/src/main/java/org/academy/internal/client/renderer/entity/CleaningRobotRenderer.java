@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
-import org.academy.api.client.renderer.RenderTypes;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.internal.client.model.CleaningRobotModel;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 import org.jetbrains.annotations.NotNull;

@@ -1,7 +1,8 @@
 package org.academy.internal.client.gui.screen;
 
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -17,6 +18,7 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.widget.*;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
@@ -34,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import static org.academy.api.client.renderer.RenderTypes.*;
+import static org.academy.api.client.render.RenderTypes.*;
 
 public final class AbilityDeveloperScreen extends CGuiScreen implements WirelessPanelHelper.WirelessPanel {
     public final BlockPos mainPos;
@@ -49,7 +51,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
     public static final float PANEL_RIGHT_SKILL_BACK_HEIGHT = 139.5f;
     public static final float PANEL_RIGHT_SKILL_SIZE = 32f;
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
-            RenderUtil.getPositionColorTexRenderType("ability_icon_glow", new ResourceLocation(AcademyCraft.MOD_ID,
+            RenderUtil.getPositionColorTexRenderTypeFull("ability_icon_glow", new ResourceLocation(AcademyCraft.MOD_ID,
                     "textures/ability/" + abilityCategory.name + "/icon_glow.png"
             ), false);
     private String currentlyConnectedNodeName = "None";
@@ -88,169 +90,193 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
 
     @Override
     protected void onInit() {
-        var startYOffset = 20f;
-        var duration = 600L;
-        var delay = 250L;
-        var childDuration = duration - 100;
+        final float startYOffset = 20f;
+        final long duration = 300L;
+        final long delay = 150L;
+        final long childDuration = duration - 100;
 
-        var mainPanel = new PanelWidget(width / 2f - PANEL_MAIN_WIDTH / 2f, height / 2f - PANEL_MAIN_HEIGHT / 2f, PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT);
-        var finalY = mainPanel.getY();
-        mainPanel.setY(finalY + startYOffset);
-        mainPanel.setAlpha(0f);
-        TypewriterLabelWidget welcome;
-        rootContainer.addChild("panel_main", mainPanel);
-        {
-            leftPanel = getLeftPanel();
-            mainPanel.addChild("panel_left", leftPanel);
-            var rightPanel = new PanelWidget(PANEL_LEFT_WIDTH, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT);
-            mainPanel.addChild("panel_right", rightPanel);
-            {
-                var rightPanelBack = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, PANEL_RIGHT_BACK);
-                rightPanel.addChild("panel_right_back", rightPanelBack);
-                var rightPanelInfo = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, SKILL_PANEL_INFO);
-                rightPanel.addChild("panel_right_info", rightPanelInfo);
-                var bootFailed = AbilitySystemClient.getCategory() == Level0.INSTANCE;
-                var outputList = new ScrollPanelWidget(
-                        PANEL_RIGHT_SKILL_BACK_X + 5, PANEL_RIGHT_SKILL_BACK_Y + 5, PANEL_RIGHT_WIDTH - 32, 132);
-                outputList.setEnabled(bootFailed);
-                outputList.setVisible(bootFailed);
-                rightPanel.addChild("output_list", outputList);
-                {
-                    welcome = new TypewriterLabelWidget("Welcome to Academy OS, Ver 0.0.1", 0, 0);
-                    addOutput("welcome", welcome, outputList);
-                    String userName = "None";
-                    if (Minecraft.getInstance().player != null) {
-                        userName = Minecraft.getInstance().player.getName().getString();
-                    }
-                    var copyright = new TypewriterLabelWidget("Copyright (C) 2025 Academy Tech - GPL v3", welcome.getX(), welcome.getY() + welcome.getHeight());
-                    addOutput("copyright", copyright, outputList);
-                    var userDetected = new TypewriterLabelWidget(String.format("User %s detected, System booting...", userName), copyright.getX(), copyright.getY() + copyright.getHeight());
-                    addOutput("user_detected", userDetected, outputList);
-                    var loadingBar = new BracketProgressBarWidget('#', 50, userDetected.getX(), userDetected.getY() + userDetected.getHeight());
-                    addOutput("loading_bar", loadingBar, outputList);
-                    var invalid = new TypewriterLabelWidget("FATAL: User's ability category is invalid, booting aborted.", loadingBar.getX(), loadingBar.getY() + loadingBar.getHeight());
-                    addOutput("invalid", invalid, outputList);
-                    var hint = new TypewriterLabelWidget("Type 'learn' to acquire new category.", invalid.getX(), invalid.getY() + invalid.getHeight());
-                    addOutput("hint", hint, outputList);
-                    welcome.afterFinished = copyright::start;
-                    copyright.afterFinished = userDetected::start;
-                    userDetected.afterFinished = loadingBar::start;
-                    loadingBar.afterFinished = invalid::start;
-                    invalid.afterFinished = hint::start;
-                    hint.afterFinished = () -> {
-                        var os = new LabelWidget("OS >", hint.getX(), hint.getY() + hint.getHeight());
-                        addOutput("os", os, outputList);
+        final float mainPanelX = width / 2f - PANEL_MAIN_WIDTH / 2f;
+        final float mainPanelY = height / 2f - PANEL_MAIN_HEIGHT / 2f;
 
-                        var textBox = new TextBoxWidget(32, os.getX() + os.getWidth(), os.getY(), PANEL_RIGHT_WIDTH - 24, hint.getHeight());
-                        textBox.scale = 0.75f;
+        // Left Panel
+        leftPanel = getLeftPanel();
+        leftPanel.setX(mainPanelX);
+        leftPanel.setY(mainPanelY + startYOffset);
+        leftPanel.setAlpha(0f);
+        rootContainer.addChild("panel_left", leftPanel);
 
-                        textBox.whenEnter = s -> {
-                            var learned = AbilitySystemClient.getCategory() != Level0.INSTANCE;
-                            var outputCommand = new LabelWidget("OS >" + s, 0, textBox.getY());
-                            addOutput("output_command_" + s + outputCommand.hashCode(), outputCommand, outputList);
+        // Right Panel
+        var rightPanel = new PanelWidget(mainPanelX + PANEL_LEFT_WIDTH, mainPanelY + startYOffset, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT);
+        rightPanel.setAlpha(0f);
+        rootContainer.addChild("panel_right", rightPanel);
 
-                            final var outputStartY = outputCommand.getY() + outputCommand.getHeight();
-                            String singleLineOutput;
+        var rightPanelBack = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, PANEL_RIGHT_BACK);
+        rightPanel.addChild("panel_right_back", rightPanelBack);
+        var rightPanelInfo = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, SKILL_PANEL_INFO);
+        rightPanel.addChild("panel_right_info", rightPanelInfo);
 
-                            if ("learn".equals(s)) {
-                                if (!learned) {
-                                    if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
-                                        var request = new AcquireCategoryPacket(mainPos);
-                                        AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
-                                                (var response) -> {
-                                                    if (response != null && response.messages != null) {
-                                                        var lastWidget = outputCommand;
-                                                        for (var string : response.messages) {
-                                                            var newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
-                                                            addOutput("output_info_" + string + newOutput.hashCode(), newOutput, outputList);
-                                                            os.setY(newOutput.getY() + newOutput.getHeight());
-                                                            textBox.setY(newOutput.getY() + newOutput.getHeight());
-                                                            outputList.scrollToBottom();
-                                                            lastWidget = newOutput;
-                                                        }
-                                                    }
-                                                });
-                                        return;
-                                    } else {
-                                        singleLineOutput = "Insufficient energy available.";
-                                    }
-                                } else {
-                                    singleLineOutput = "You are learned,you can't learn again.";
-                                }
-                            } else if ("exit".equals(s)) {
-                                onClose();
-                                return;
-                            } else {
-                                singleLineOutput = "Invalid command.";
-                            }
+        var bootFailed = AbilitySystemClient.getCategory() == Level0.INSTANCE;
 
-                            var outputInfo = new LabelWidget(singleLineOutput, 0, outputStartY);
-                            addOutput("output_info_" + singleLineOutput + outputInfo.hashCode(), outputInfo, outputList);
-                            os.setY(outputInfo.getY() + outputInfo.getHeight());
-                            textBox.setY(outputInfo.getY() + outputInfo.getHeight());
-                            outputList.scrollToBottom();
-                        };
+        // Level 0 Terminal
+        var outputList = new ScrollPanelWidget(
+                PANEL_RIGHT_SKILL_BACK_X + 5, PANEL_RIGHT_SKILL_BACK_Y + 5, PANEL_RIGHT_WIDTH - 32, 132);
+        outputList.setEnabled(bootFailed);
+        outputList.setVisible(bootFailed);
+        rightPanel.addChild("output_list", outputList);
+        TypewriterLabelWidget welcome = setupTerminal(outputList);
 
-                        outputList.addChild("text_box", textBox);
-                        rootContainer.setFocusedChild(textBox);
-                    };
-                }
-                var skillPanel = new PanelWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT);
-                skillPanel.setEnabled(!bootFailed);
-                skillPanel.setVisible(!bootFailed);
-                rightPanel.addChild("panel_skill", skillPanel);
-                {
-                    var parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, SKILL_PANEL_BACK, width, height);
-                    skillPanel.addChild("skill_area_back", parallaxImageWidget);
-                    var abilityCategory = AbilitySystemClient.getCategory();
-                    var skillInfos = AbilitySystemClient.SKILL_INFOS.get(abilityCategory);
-                    if (skillInfos != null) {
-                        for (var skillInfo : skillInfos) {
-                            var skillWidget = new SkillWidget(skillInfo);
-                            skillPanel.addChild(skillInfo.skill().name, skillWidget);
-                        }
-                    }
-                }
-            }
-        }
+        // Skill Display Area
+        setupSkillArea(rightPanel, !bootFailed);
 
-        var alphaAnimation = ObjectAnimator.ofFloat(mainPanel::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay);
-        playAnimation(ObjectAnimator.ofFloat(mainPanel::setY, mainPanel.getY(), finalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
-        playAnimation(alphaAnimation);
+        // Animations
+        playAnimation(ObjectAnimator.ofFloat(leftPanel::setY, leftPanel.getY(), mainPanelY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
+        playAnimation(ObjectAnimator.ofFloat(leftPanel::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay));
+
+        var rightPanelAnimation = ObjectAnimator.ofFloat(rightPanel::setY, rightPanel.getY(), mainPanelY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay);
+        playAnimation(rightPanelAnimation);
+        playAnimation(ObjectAnimator.ofFloat(rightPanel::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay));
+
         playAnimation(ObjectAnimator.ofFloat(skillInfoPanel::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR));
-        alphaAnimation.addListener(new AnimatorListener() {
+        rightPanelAnimation.addListener(new AnimatorListener() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                welcome.start();
+                if(welcome != null) welcome.start();
             }
         });
 
+        setupWirelessPanel();
+        setupSkillInfoPanel();
+
+        requestCurrentNodeStatus();
+        requestAvailableNodes(getNodeList());
+    }
+
+    private TypewriterLabelWidget setupTerminal(ScrollPanelWidget outputList) {
+        TypewriterLabelWidget welcome = new TypewriterLabelWidget("Welcome to Academy OS, Ver 0.0.1", 0, 0);
+        addOutput("welcome", welcome, outputList);
+        String userName = "None";
+        if (Minecraft.getInstance().player != null) {
+            userName = Minecraft.getInstance().player.getName().getString();
+        }
+        var copyright = new TypewriterLabelWidget("Copyright (C) 2025 Academy Tech - GPL v3", welcome.getX(), welcome.getY() + welcome.getHeight());
+        addOutput("copyright", copyright, outputList);
+        var userDetected = new TypewriterLabelWidget(String.format("User %s detected, System booting...", userName), copyright.getX(), copyright.getY() + copyright.getHeight());
+        addOutput("user_detected", userDetected, outputList);
+        var loadingBar = new BracketProgressBarWidget('#', 50, userDetected.getX(), userDetected.getY() + userDetected.getHeight());
+        addOutput("loading_bar", loadingBar, outputList);
+        var invalid = new TypewriterLabelWidget("FATAL: User's ability category is invalid, booting aborted.", loadingBar.getX(), loadingBar.getY() + loadingBar.getHeight());
+        addOutput("invalid", invalid, outputList);
+        var hint = new TypewriterLabelWidget("Type 'learn' to acquire new category.", invalid.getX(), invalid.getY() + invalid.getHeight());
+        addOutput("hint", hint, outputList);
+        welcome.afterFinished = copyright::start;
+        copyright.afterFinished = userDetected::start;
+        userDetected.afterFinished = loadingBar::start;
+        loadingBar.afterFinished = invalid::start;
+        invalid.afterFinished = hint::start;
+        hint.afterFinished = () -> {
+            var os = new LabelWidget("OS >", hint.getX(), hint.getY() + hint.getHeight());
+            addOutput("os", os, outputList);
+
+            var textBox = new TextBoxWidget(32, os.getX() + os.getWidth(), os.getY(), PANEL_RIGHT_WIDTH - 24, hint.getHeight());
+            textBox.scale = 0.75f;
+
+            textBox.whenEnter = s -> {
+                var learned = AbilitySystemClient.getCategory() != Level0.INSTANCE;
+                var outputCommand = new LabelWidget("OS >" + s, 0, textBox.getY());
+                addOutput("output_command_" + s + outputCommand.hashCode(), outputCommand, outputList);
+
+                final var outputStartY = outputCommand.getY() + outputCommand.getHeight();
+                String singleLineOutput;
+
+                if ("learn".equals(s)) {
+                    if (!learned) {
+                        if (abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
+                            var request = new AcquireCategoryPacket(mainPos);
+                            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
+                                    (var response) -> {
+                                        if (response != null && response.messages != null) {
+                                            var lastWidget = outputCommand;
+                                            for (var string : response.messages) {
+                                                var newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
+                                                addOutput("output_info_" + string + newOutput.hashCode(), newOutput, outputList);
+                                                os.setY(newOutput.getY() + newOutput.getHeight());
+                                                textBox.setY(newOutput.getY() + newOutput.getHeight());
+                                                outputList.scrollToBottom();
+                                                lastWidget = newOutput;
+                                            }
+                                        }
+                                    });
+                            return;
+                        } else {
+                            singleLineOutput = "Insufficient energy available.";
+                        }
+                    } else {
+                        singleLineOutput = "You are learned,you can't learn again.";
+                    }
+                } else if ("exit".equals(s)) {
+                    onClose();
+                    return;
+                } else {
+                    singleLineOutput = "Invalid command.";
+                }
+
+                var outputInfo = new LabelWidget(singleLineOutput, 0, outputStartY);
+                addOutput("output_info_" + singleLineOutput + outputInfo.hashCode(), outputInfo, outputList);
+                os.setY(outputInfo.getY() + outputInfo.getHeight());
+                textBox.setY(outputInfo.getY() + outputInfo.getHeight());
+                outputList.scrollToBottom();
+            };
+
+            outputList.addChild("text_box", textBox);
+            rootContainer.setFocusedChild(textBox);
+        };
+        return welcome;
+    }
+
+    private void setupSkillArea(PanelWidget parent, boolean visible) {
+        var parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, SKILL_PANEL_BACK, width, height);
+        parallaxImageWidget.setVisible(visible);
+        parallaxImageWidget.setEnabled(visible);
+        parent.addChild("skill_area_back", parallaxImageWidget);
+
+        var abilityCategory = AbilitySystemClient.getCategory();
+        var skillInfos = AbilitySystemClient.SKILL_INFOS.get(abilityCategory);
+        if (skillInfos != null) {
+            for (var skillInfo : skillInfos) {
+                var skillWidget = new SkillWidget(skillInfo);
+                skillWidget.setVisible(visible);
+                skillWidget.setEnabled(visible);
+                skillWidget.setZ(1);
+                parent.addChild(skillInfo.skill().name, skillWidget);
+            }
+        }
+    }
+
+    private void setupWirelessPanel() {
         screenWirelessPanel = new PanelWidget(0, 0, width, height);
         screenWirelessPanel.setZ(100);
         screenWirelessPanel.setVisible(false);
         screenWirelessPanel.setEnabled(false);
         rootContainer.addChild("panel_screen_wireless", screenWirelessPanel);
-        {
-            var backgroundWidget = new BackgroundWidget(this);
-            backgroundWidget.runnable = () -> {
-                screenWirelessPanel.setVisible(false);
-                screenWirelessPanel.setEnabled(false);
-            };
-            screenWirelessPanel.addChild("screen_back", backgroundWidget);
 
-            var localWirelessPanel = WirelessPanelHelper.getWirelessPanel((width - WirelessPanelHelper.PANEL_WIDTH) / 2, (height - WirelessPanelHelper.PANEL_HEIGHT) / 2);
-            wirelessPanel = localWirelessPanel;
-            screenWirelessPanel.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, localWirelessPanel);
-            {
-                nodeList = localWirelessPanel.getChildUnSafe("node_list");
-            }
-        }
+        var backgroundWidget = new BackgroundWidget(this);
+        backgroundWidget.runnable = () -> {
+            screenWirelessPanel.setVisible(false);
+            screenWirelessPanel.setEnabled(false);
+        };
+        screenWirelessPanel.addChild("screen_back", backgroundWidget);
+
+        var localWirelessPanel = WirelessPanelHelper.getWirelessPanel((width - WirelessPanelHelper.PANEL_WIDTH) / 2, (height - WirelessPanelHelper.PANEL_HEIGHT) / 2);
+        wirelessPanel = localWirelessPanel;
+        screenWirelessPanel.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, localWirelessPanel);
+        nodeList = localWirelessPanel.getChildUnSafe("node_list");
+    }
+
+    private void setupSkillInfoPanel() {
         rootContainer.addChild("panel_skill_info", skillInfoPanel);
         skillInfoPanel.setZ(150);
         skillInfoPanel.setEnabled(false);
         skillInfoPanel.setVisible(false);
-        requestCurrentNodeStatus();
-        requestAvailableNodes(getNodeList());
     }
 
     public static AbilitySystemClient.SkillInfo registerSkillInfo(AbilityCategory abilityCategory, Skill skill, List<AbilitySystemClient.SkillInfo> dependencies, ResourceLocation icon, float x, float y) {
@@ -305,7 +331,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
                 var progress = new AutoScaleLabelWidget("LEARNED " + 100 + "%", leftPanelInfoPanel.getHeight(), 18,
                         learnProgress.getWidth() * 0.5f);
                 leftPanelInfoPanel.addChild("progress", progress);
-                var levelLabel = new AutoScaleLabelWidget(abilityCategory.name, 0, 18, 24);
+                var levelLabel = new AutoScaleLabelWidget(abilityCategory.name, progress.getX() + learnProgress.getWidth() * 0.5f, 18, learnProgress.getWidth() * 0.5f - 4);
                 levelLabel.setX(leftPanelInfoPanel.getWidth() - levelLabel.getWidth() - 4);
                 levelLabel.color = 0xFF1177D6;
                 leftPanelInfoPanel.addChild("label_level", levelLabel);
@@ -491,76 +517,91 @@ public final class AbilityDeveloperScreen extends CGuiScreen implements Wireless
         }
 
         @Override
-        public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-            graphics.pose().pushPose();
-            xOffset = -(dynamicFollow ? ((float) mouseX / AbilityDeveloperScreen.this.width) : 0f);
-            yOffset = -(dynamicFollow ? ((float) mouseY / AbilityDeveloperScreen.this.height) : 0f);
-            var root = graphics.pose().last().pose();
-            root.translate(xOffset, yOffset, 0f);
+        public void mouseMoved(double mouseX, double mouseY) {
+            super.mouseMoved(mouseX, mouseY);
+            this.xOffset = -(dynamicFollow ? ((float) mouseX / AbilityDeveloperScreen.this.width) : 0f);
+            this.yOffset = -(dynamicFollow ? ((float) mouseY / AbilityDeveloperScreen.this.height) : 0f);
+        }
+
+        @Override
+        public boolean isMouseOver(double checkX, double checkY) {
+            var absX = getAbsoluteX();
+            var absY = getAbsoluteY();
+            var scaledWidth = getWidth() * currentScale;
+            var scaledHeight = getHeight() * currentScale;
+            var cornerX = absX + (getWidth() - scaledWidth) / 2f;
+            var cornerY = absY + (getHeight() - scaledHeight) / 2f;
+            return checkX >= cornerX && checkY >= cornerY && checkX < cornerX + scaledWidth && checkY < cornerY + scaledHeight;
+        }
+
+        @Override
+        public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+            if (!isVisible()) return;
+
+            stack.pushPose();
+            stack.translate(xOffset, yOffset, 0f);
+
             targetScale = isHovered() ? 1.25f : 1.0f;
             currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
             widthScale = currentScale;
             heightScale = currentScale;
-            var oldType = renderType;
-            renderType = ELEMENT_LINE;
-            var buf = graphics.bufferSource().getBuffer(renderType);
-            final var thickness = 5f;
+
             final var cX = x + PANEL_RIGHT_SKILL_SIZE / 2f;
             final var cY = y + PANEL_RIGHT_SKILL_SIZE / 2f;
+
+            var lineBuf = bufferSource.getBuffer(ELEMENT_LINE);
+            final var thickness = 5f;
             for (var dep : dependencies) {
-                graphics.pose().pushPose();
-                var m = graphics.pose().last().pose();
+                stack.pushPose();
+                var m = stack.lastMatrix();
                 var dX = dep.x() + PANEL_RIGHT_SKILL_SIZE / 2f;
                 var dY = dep.y() + PANEL_RIGHT_SKILL_SIZE / 2f;
                 float dx = dX - cX, dy = dY - cY;
                 var rawLen = (float) Math.hypot(dx, dy);
                 var length = rawLen - PANEL_RIGHT_SKILL_SIZE + thickness;
                 var angle = (float) Math.atan2(dy, dx);
-                m.translate(cX, cY, getZ());
-                m.rotateZ(angle);
-                m.translate(PANEL_RIGHT_SKILL_SIZE / 2f - thickness / 2, -thickness / 2f, 0f);
-                m.scale(length, thickness, 1f);
-                buf.vertex(m, 0f, 0f, 0f).color(1, 1, 1, 1f).uv(0f, 0f).endVertex();
-                buf.vertex(m, 0f, 1f, 0f).color(1, 1, 1, 1f).uv(0f, 1f).endVertex();
-                buf.vertex(m, 1f, 1f, 0f).color(1, 1, 1, 1f).uv(1f, 1f).endVertex();
-                buf.vertex(m, 1f, 0f, 0f).color(1, 1, 1, 1f).uv(1f, 0f).endVertex();
-                graphics.pose().popPose();
+                stack.translate(cX, cY, getZ());
+                stack.mulPose(Axis.ZP.rotation(angle));
+                stack.translate(PANEL_RIGHT_SKILL_SIZE / 2f - thickness / 2, -thickness / 2f, 0f);
+                stack.scale(length, thickness, 1f);
+                lineBuf.vertex(m, 0f, 0f, 0f).color(1, 1, 1, 1f).uv(0f, 0f).endVertex();
+                lineBuf.vertex(m, 0f, 1f, 0f).color(1, 1, 1, 1f).uv(0f, 1f).endVertex();
+                lineBuf.vertex(m, 1f, 1f, 0f).color(1, 1, 1, 1f).uv(1f, 1f).endVertex();
+                lineBuf.vertex(m, 1f, 0f, 0f).color(1, 1, 1, 1f).uv(1f, 0f).endVertex();
+                stack.popPose();
             }
+
+            var oldType = renderType;
             renderType = PANEL_RIGHT_SKILL_ICON_BACK;
-            super.render(graphics, mouseX, mouseY, partialTick);
+            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+
             var oRed = red;
             var oGreen = green;
             var oBlue = blue;
             red = 1f;
             green = 1f;
             blue = 1f;
+
             renderType = oldType;
             widthScale *= 0.5f;
             heightScale *= 0.5f;
-            super.render(graphics, mouseX, mouseY, partialTick);
+            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+
             red = oRed;
             green = oGreen;
             blue = oBlue;
             widthScale /= 0.5f;
             heightScale /= 0.5f;
+
             renderType = GLOW_CIRCLE;
             progress = MathUtil.lerpStartEndFactor(progress, targetProgress,
                     ClientUtil.animationFactor(MathUtil.PI / 2));
             Shaders.glowCircle.getUniform("progress").set(progress);
-            super.render(graphics, mouseX, mouseY, partialTick);
-            graphics.bufferSource().endBatch(GLOW_CIRCLE);
+            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            bufferSource.endBatch(GLOW_CIRCLE);
+
             renderType = oldType;
-            graphics.pose().popPose();
-        }
-
-        @Override
-        public float getAbsoluteY() {
-            return super.getAbsoluteY() + yOffset;
-        }
-
-        @Override
-        public float getAbsoluteX() {
-            return super.getAbsoluteX() + xOffset;
+            stack.popPose();
         }
     }
 }

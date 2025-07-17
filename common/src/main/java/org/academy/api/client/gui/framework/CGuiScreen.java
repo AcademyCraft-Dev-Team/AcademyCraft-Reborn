@@ -4,9 +4,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import org.academy.AcademyCraft;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.widget.PanelWidget;
+import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,9 +55,11 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics);
         final var mouseHandler = Minecraft.getInstance().mouseHandler;
-        guiGraphics.pose().pushPose();
-        rootContainer.render(guiGraphics, mouseHandler.xpos(), mouseHandler.ypos(), partialTick);
-        guiGraphics.pose().popPose();
+        var stack = new MatrixStack();
+        var bufferSource = guiGraphics.bufferSource();
+        stack.pushPose();
+        rootContainer.render(stack, bufferSource, mouseHandler.xpos(), mouseHandler.ypos(), partialTick);
+        stack.popPose();
     }
 
     @Override
@@ -89,6 +94,10 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_F12) {
+            AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
+            return true;
+        }
         if (rootContainer.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }

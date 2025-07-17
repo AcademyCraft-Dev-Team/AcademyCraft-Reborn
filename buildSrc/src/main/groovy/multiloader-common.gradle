@@ -63,6 +63,13 @@ repositories {
             includeGroup "maven.modrinth"
         }
     }
+    maven {
+        name = "KosmX's maven"
+        url = "https://maven.kosmx.dev/"
+        content {
+            includeGroup "dev.kosmx.player-anim"
+        }
+    }
 }
 
 ['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->

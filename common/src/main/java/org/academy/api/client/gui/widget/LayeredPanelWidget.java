@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import org.academy.api.client.render.MatrixStack;
 
 public class LayeredPanelWidget extends PanelWidget {
     public LayeredPanelWidget(float x, float y, float width, float height) {
@@ -8,16 +9,16 @@ public class LayeredPanelWidget extends PanelWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(getX(), getY(), getZ() + 1);
+        stack.pushPose();
+        stack.translate(getX(), getY(), getZ() + 1);
 
         for (var child : getChildren().values()) {
-            child.render(graphics, mouseX, mouseY, partialTick);
+            child.render(stack, bufferSource, mouseX, mouseY, partialTick);
         }
 
-        graphics.pose().popPose();
+        stack.popPose();
     }
 }

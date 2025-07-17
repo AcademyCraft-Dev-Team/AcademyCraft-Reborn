@@ -1,11 +1,12 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.util.RenderUtil;
 import org.lwjgl.glfw.GLFW;
 
@@ -135,15 +136,15 @@ public class TextBoxWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, double mouseX, double mouseY, float partialTicks) {
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         var absoluteAlpha = getAbsoluteAlpha();
 
         if (showBackground) {
             var finalBorderColor = (borderColor & 0x00FFFFFF) | ((int) (((borderColor >> 24) & 0xFF) * absoluteAlpha) << 24);
             var finalBgColor = (bgColor & 0x00FFFFFF) | ((int) (((bgColor >> 24) & 0xFF) * absoluteAlpha) << 24);
 
-            RenderUtil.fill(graphics.pose().last().pose(), x, y, x + width, y + height, finalBorderColor, graphics.bufferSource());
-            RenderUtil.fill(graphics.pose().last().pose(), x + 1, y + 1, x + width - 1, y + height - 1, finalBgColor, graphics.bufferSource());
+            RenderUtil.fill(stack, bufferSource, x, y, x + width, y + height, finalBorderColor);
+            RenderUtil.fill(stack, bufferSource, x + 1, y + 1, x + width - 1, y + height - 1, finalBgColor);
         }
         var finalAlpha = (int) (((textColor >> 24) & 0xFF) * absoluteAlpha);
         if (finalAlpha <= 3) finalAlpha = 4;
@@ -152,7 +153,7 @@ public class TextBoxWidget extends AbstractWidget {
         var font = Minecraft.getInstance().font;
         var finalScale = scale * LabelWidget.globalScale;
 
-        graphics.pose().pushPose();
+        stack.pushPose();
 
         var textWidth = font.width(text.toString()) + 6;
         if (textWidth > width) {
@@ -164,10 +165,10 @@ public class TextBoxWidget extends AbstractWidget {
         var scaledHeight = textHeight * finalScale;
         var offsetY = (scaledHeight - textHeight) / 2;
 
-        graphics.pose().translate(x + 1, y + (height - scaledHeight) / 4 - offsetY, 0);
-        graphics.pose().scale(finalScale, finalScale, 1.0f);
+        stack.translate(x + 1, y + (height - scaledHeight) / 4 - offsetY, 0);
+        stack.scale(finalScale, finalScale, 1.0f);
 
-        graphics.drawString(font, text.toString(), 0, 0, finalTextColor, false);
+        RenderUtil.drawString(stack, bufferSource, font, text.toString(), 0, 0, finalTextColor, false);
 
         if (isFocused()) {
             var now = System.currentTimeMillis();
@@ -182,15 +183,15 @@ public class TextBoxWidget extends AbstractWidget {
                     caretX += font.width(beforeCaret);
                 }
                 RenderUtil.fill(
-                        graphics.pose().last().pose(),
+                        stack,
+                        bufferSource,
                         caretX, textHeight - 0.5f, caretX + 4, textHeight,
-                        finalTextColor,
-                        graphics.bufferSource()
+                        finalTextColor
                 );
             }
         }
 
-        graphics.pose().popPose();
+        stack.popPose();
     }
 
     public static final class FocusGainedEvent extends Event implements ICancellableEvent {

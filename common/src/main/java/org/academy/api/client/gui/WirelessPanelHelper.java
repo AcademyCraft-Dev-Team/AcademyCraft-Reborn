@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
 
-import static org.academy.api.client.renderer.RenderTypes.*;
+import static org.academy.api.client.render.RenderTypes.*;
 
 public final class WirelessPanelHelper {
     public static final float PANEL_WIDTH = 176f;

@@ -5,10 +5,12 @@ import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.hud.HUDManager;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.internal.client.renderer.Shaders;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -35,6 +37,8 @@ public abstract class MixinGameRenderer {
     @Inject(method = "render", locals = LocalCapture.CAPTURE_FAILSOFT, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;render(Lnet/minecraft/client/gui/GuiGraphics;F)V"))
     public void gui(float partialTicks, long nanoTime, boolean renderLevel, CallbackInfo ci, int i, int j, Window window, Matrix4f matrix4f, PoseStack posestack, GuiGraphics guigraphics) {
         AnimationManager.getInstance().onFrameUpdate();
-        HUDManager.render(guigraphics, partialTicks);
+        var stack = new MatrixStack();
+        stack.setFrom(guigraphics.pose().last());
+        HUDManager.render(stack, guigraphics.bufferSource(), partialTicks);
     }
 }
