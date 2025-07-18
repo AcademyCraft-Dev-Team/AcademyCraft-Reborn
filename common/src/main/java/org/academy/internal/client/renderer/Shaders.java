@@ -4,12 +4,13 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceProvider;
-import org.academy.AcademyCraft;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+
+import static org.academy.AcademyCraft.getResourceLocation;
 
 public class Shaders {
     public static final List<Function<ResourceProvider, ShaderInstance>> SHADERS = new ArrayList<>();
@@ -23,7 +24,7 @@ public class Shaders {
             @Override
             public ShaderInstance apply(ResourceProvider resourceProvider) {
                 try {
-                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "glow_circle");
+                    ResourceLocation resourceLocation = getResourceLocation("glow_circle");
                     ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
                     glowCircle = shaderInstance;
                     return shaderInstance;
@@ -36,7 +37,7 @@ public class Shaders {
             @Override
             public ShaderInstance apply(ResourceProvider resourceProvider) {
                 try {
-                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "position_color_tex");
+                    ResourceLocation resourceLocation = getResourceLocation("position_color_tex");
                     ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_COLOR_TEX);
                     positionColorShader = shaderInstance;
                     return shaderInstance;
@@ -49,7 +50,7 @@ public class Shaders {
             @Override
             public ShaderInstance apply(ResourceProvider resourceProvider) {
                 try {
-                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "sdf_circle_glow");
+                    ResourceLocation resourceLocation = getResourceLocation("sdf_circle_glow");
                     ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
                     sdfCircleGlowShader = shaderInstance;
                     return shaderInstance;
@@ -62,7 +63,7 @@ public class Shaders {
             @Override
             public ShaderInstance apply(ResourceProvider resourceProvider) {
                 try {
-                    ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, "sdf_sharp_quad_with_margin");
+                    ResourceLocation resourceLocation = getResourceLocation("sdf_sharp_quad_with_margin");
                     ShaderInstance shaderInstance = new ShaderInstance(resourceProvider, resourceLocation.toString(), DefaultVertexFormat.POSITION_TEX);
                     sdfSharpQuadWithMarginShader = shaderInstance;
                     return shaderInstance;

@@ -20,7 +20,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.levelgen.GenerationStep;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.api.common.util.GameUtil;
@@ -39,6 +38,9 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.levelgen.feature.Features;
 import org.academy.internal.common.world.level.material.Fluids;
+
+import static org.academy.AcademyCraft.MOD_NAME;
+import static org.academy.AcademyCraft.getResourceLocation;
 
 public class AcademyCraftRegisterFabric {
     private AcademyCraftRegisterFabric() {
@@ -68,7 +70,7 @@ public class AcademyCraftRegisterFabric {
     private static void registerItem() {
         AcademyCraftItemsFabric.init();
         for (String key : Items.ITEMS.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            ResourceLocation resourceLocation = getResourceLocation(key);
             Registry.register(BuiltInRegistries.ITEM, resourceLocation, Items.ITEMS.get(key));
         }
     }
@@ -76,7 +78,7 @@ public class AcademyCraftRegisterFabric {
     private static void registerBlock() {
         AcademyCraftBlocksFabric.init();
         for (String key : Blocks.BLOCKS.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            ResourceLocation resourceLocation = getResourceLocation(key);
             Registry.register(BuiltInRegistries.BLOCK, resourceLocation, Blocks.BLOCKS.get(key));
         }
     }
@@ -96,19 +98,19 @@ public class AcademyCraftRegisterFabric {
     }
 
     private static void registerCreativeModeTab() {
-        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(AcademyCraft.MOD_ID, "item_group"), CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0).icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, getResourceLocation("item_group"), CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0).icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {
             for (String key : Items.ITEMS.keySet()) {
                 Item item = Items.ITEMS.get(key);
                 if (!(item == Items.ICON)) {
                     output.accept(item);
                 }
             }
-        }).title(Component.literal(AcademyCraft.MOD_NAME)).build());
+        }).title(Component.literal(MOD_NAME)).build());
     }
 
     private static void registerEntityType() {
         for (EntityTypes.Type<?> type : EntityTypes.TYPE_LIST) {
-            Registry.register(BuiltInRegistries.ENTITY_TYPE, new ResourceLocation(AcademyCraft.MOD_ID, type.name()), type.entityType());
+            Registry.register(BuiltInRegistries.ENTITY_TYPE, getResourceLocation(type.name()), type.entityType());
         }
     }
 
@@ -127,16 +129,16 @@ public class AcademyCraftRegisterFabric {
     private static void registerMenuType() {
         for (String name : MenuTypes.MENU_TYPES.keySet()) {
             MenuType<?> menuType = MenuTypes.MENU_TYPES.get(name);
-            Registry.register(BuiltInRegistries.MENU, new ResourceLocation(AcademyCraft.MOD_ID, name), menuType);
+            Registry.register(BuiltInRegistries.MENU, getResourceLocation(name), menuType);
         }
     }
 
     private static void registerFluid() {
         for (String key : Fluids.FLUIDS.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            ResourceLocation resourceLocation = getResourceLocation(key);
             Registry.register(BuiltInRegistries.FLUID, resourceLocation, Fluids.FLUIDS.get(key));
         }
-        ResourceLocation imagTexture = new ResourceLocation(AcademyCraft.MOD_ID, "block/black");
+        ResourceLocation imagTexture = getResourceLocation("block/black");
         FluidRenderHandlerRegistry.INSTANCE.register(Fluids.IMAGIPHASE_PLASMA, Fluids.FLOWING_IMAGIPHASE_PLASMA,
                 new SimpleFluidRenderHandler(imagTexture, imagTexture));
         BlockRenderLayerMap.INSTANCE.putFluids(RenderType.translucent(), Fluids.IMAGIPHASE_PLASMA, Fluids.FLOWING_IMAGIPHASE_PLASMA);
@@ -144,18 +146,18 @@ public class AcademyCraftRegisterFabric {
 
     private static void registerParticleType() {
         for (String key : ParticleTypes.PARTICLE_TYPES.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            ResourceLocation resourceLocation = getResourceLocation(key);
             Registry.register(BuiltInRegistries.PARTICLE_TYPE, resourceLocation, ParticleTypes.PARTICLE_TYPES.get(key));
         }
     }
 
     private static void registerFeature() {
         for (String key : Features.FEATURES.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+            ResourceLocation resourceLocation = getResourceLocation(key);
             Registry.register(BuiltInRegistries.FEATURE, resourceLocation, Features.FEATURES.get(key));
         }
         BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.LAKES,
                 ResourceKey.create(Registries.PLACED_FEATURE,
-                        new ResourceLocation(AcademyCraft.MOD_ID, "lake_imag_phase_placed")));
+                        getResourceLocation("lake_imag_phase_placed")));
     }
 }

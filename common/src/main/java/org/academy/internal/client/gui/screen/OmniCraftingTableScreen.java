@@ -3,7 +3,6 @@ package org.academy.internal.client.gui.screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
@@ -11,13 +10,9 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.OmniCraftingMenu;
-import org.jetbrains.annotations.NotNull;
 
-public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraftingMenu> implements WirelessPanelHelper.WirelessPanel {
+public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraftingMenu> {
     private final BlockPos mainPos;
-    private String connectedNodeName = "None";
-    private PanelWidget wirelessPanel;
-    private ScrollPanelWidget nodeList;
 
     public OmniCraftingTableScreen(OmniCraftingMenu menu, Inventory playerInventory, Component title, BlockPos blockPos) {
         super(menu, playerInventory, title);
@@ -39,14 +34,11 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
         }
         invPage.setY(getTopPos() - 22);
 
-        wirelessPanel = WirelessPanelHelper.getWirelessPanel(leftPos, topPos - 22);
-        nodeList = wirelessPanel.getChildUnSafe("node_list");
+        var wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos);
         wirelessPanel.setZ(100);
         wirelessPanel.setVisible(false);
         wirelessPanel.setEnabled(false);
-        rootContainer.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, wirelessPanel);
-        requestCurrentNodeStatus();
-        requestAvailableNodes(nodeList);
+        rootContainer.addChild("panel_wireless", wirelessPanel);
 
         var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
@@ -84,30 +76,5 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
         radioGroupWidget.setAlpha(0f);
         playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setY, radioGroupWidget.getY(), radioFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
         playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay));
-    }
-
-    @Override
-    public @NotNull ScrollPanelWidget getNodeList() {
-        return nodeList;
-    }
-
-    @Override
-    public @NotNull PanelWidget getWirelessPanel() {
-        return wirelessPanel;
-    }
-
-    @Override
-    public @NotNull String getConnectedNodeName() {
-        return connectedNodeName;
-    }
-
-    @Override
-    public void setConnectedNodeName(String newConnectedNodeName) {
-        connectedNodeName = newConnectedNodeName;
-    }
-
-    @Override
-    public @NotNull BlockPos getPosition() {
-        return mainPos;
     }
 }

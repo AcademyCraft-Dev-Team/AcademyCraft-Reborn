@@ -65,7 +65,7 @@ public final class AcademyCraft {
     }
 
     public static ResourceLocation getResourceLocation(String path) {
-        return new ResourceLocation(MOD_ID, path);
+        return getResourceLocation(MOD_ID, path);
     }
 
     public static ResourceLocation getResourceLocation(String namespace, String path) {

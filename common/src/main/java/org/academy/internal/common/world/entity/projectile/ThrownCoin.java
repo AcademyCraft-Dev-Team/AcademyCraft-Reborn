@@ -59,33 +59,14 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
             var activeCoinId = Railgun.Server.ACTIVE_COIN_IDS.get(ownerPlayer.getUUID());
             if (activeCoinId != null && activeCoinId == getId() && !onGround() && !isRemoved()) {
                 if (level().getGameTime() % 4 == 0) {
-                    var playerPos = ownerPlayer.position();
-                    var playerYaw = ownerPlayer.getYRot();
-                    var playerHeight = ownerPlayer.getBbHeight();
-                    var playerWidth = ownerPlayer.getBbWidth();
-
                     var lookVec = ownerPlayer.getLookAngle();
                     var horizontalLook = new Vec3(lookVec.x, 0, lookVec.z).normalize();
-                    var left = horizontalLook.yRot(90);
-                    var right = horizontalLook.yRot(-90);
+                    var particlePos = ownerPlayer.position().add(horizontalLook.scale(1.0)).add(0, ownerPlayer.getBbHeight() / 2, 0);
 
-                    var sideOffset = playerWidth * 0.5 + 0.3 + 0.5; // ← 加了 0.5 格距离
+                    var particleYaw = ownerPlayer.getYRot() + 90;
+                    var particlePitch = 0.0f;
 
-                    // 左上
-                    var leftUp = playerPos.add(0, playerHeight * 0.85, 0).add(left.scale(sideOffset));
-                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(leftUp.x, leftUp.y, leftUp.z, playerYaw + 90, -45)));
-
-                    // 左下
-                    var leftDown = playerPos.add(0, playerHeight * 0.15, 0).add(left.scale(sideOffset));
-                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(leftDown.x, leftDown.y, leftDown.z, playerYaw + 90, 45)));
-
-                    // 右上
-                    var rightUp = playerPos.add(0, playerHeight * 0.85, 0).add(right.scale(sideOffset));
-                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(rightUp.x, rightUp.y, rightUp.z, playerYaw - 90, -45)));
-
-                    // 右下
-                    var rightDown = playerPos.add(0, playerHeight * 0.15, 0).add(right.scale(sideOffset));
-                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(rightDown.x, rightDown.y, rightDown.z, playerYaw - 90, 45)));
+                    ownerPlayer.connection.send(new S2CPacket(new SpawnArcMediumParticlePacket(particlePos.x, particlePos.y, particlePos.z, particleYaw, particlePitch)));
                 }
             } else {
                 if (activeCoinId != null && activeCoinId == this.getId()) {

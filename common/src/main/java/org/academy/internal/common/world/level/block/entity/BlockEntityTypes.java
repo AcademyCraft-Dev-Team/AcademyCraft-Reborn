@@ -11,6 +11,8 @@ import org.academy.internal.common.world.level.block.Blocks;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.academy.AcademyCraft.getResourceLocation;
+
 @SuppressWarnings("DataFlowIssue")
 public class BlockEntityTypes {
     public static final Map<ResourceLocation, BlockEntityType<?>> BLOCK_ENTITY_TYPES = new HashMap<>();
@@ -58,9 +60,9 @@ public class BlockEntityTypes {
             "cat_engine"
     );
 
-    public static <T extends BlockEntity> BlockEntityType<T> register(BlockEntityType.Builder<T> builder, String choiceName) {
-        BlockEntityType<T> result = builder.build(Util.fetchChoiceType(References.BLOCK_ENTITY, choiceName));
-        BLOCK_ENTITY_TYPES.put(new ResourceLocation(AcademyCraft.MOD_ID, choiceName), result);
+    public static <T extends BlockEntity> BlockEntityType<T> register(BlockEntityType.Builder<T> builder, String name) {
+        BlockEntityType<T> result = builder.build(Util.fetchChoiceType(References.BLOCK_ENTITY, name));
+        BLOCK_ENTITY_TYPES.put(getResourceLocation(name), result);
         return result;
     }
 

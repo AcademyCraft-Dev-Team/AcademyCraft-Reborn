@@ -3,7 +3,6 @@ package org.academy.api.client.hud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -24,6 +23,8 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static org.academy.AcademyCraft.getResourceLocation;
+
 public final class HUDManager {
     private static boolean initialized = false;
     private static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
@@ -43,7 +44,7 @@ public final class HUDManager {
                     TextureResources.CP_BAR_BACKGROUND,
                     false);
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
-            RenderUtil.getPositionColorTexRenderTypeFull("ability_icon", new ResourceLocation(AcademyCraft.MOD_ID,
+            RenderUtil.getPositionColorTexRenderTypeFull("ability_icon", getResourceLocation(
                     "textures/ability/" + abilityCategory.name + "/icon_overlay.png"
             ), false);
     public static final Supplier<Float> SCALE_FACTOR = () -> 1.0f;

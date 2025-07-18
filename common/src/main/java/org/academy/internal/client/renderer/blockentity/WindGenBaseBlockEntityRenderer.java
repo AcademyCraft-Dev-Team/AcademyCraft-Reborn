@@ -25,52 +25,52 @@ public class WindGenBaseBlockEntityRenderer implements BlockEntityRenderer<WindG
     }
 
     @Override
-    public void render(@NotNull WindGenBaseBlockEntity newBlockEntity, float partialTick, @NotNull PoseStack newPoseStack, @NotNull MultiBufferSource newBuffer, int packedLight, int packedOverlay) {
-        newPoseStack.pushPose();
+    public void render(@NotNull WindGenBaseBlockEntity newBlockEntity, float partialTick, @NotNull PoseStack ps, @NotNull MultiBufferSource newBuffer, int packedLight, int packedOverlay) {
+        ps.pushPose();
         if (newBlockEntity.isMain()) {
             var facing = newBlockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
             var yRot = facing.getOpposite().toYRot();
 
-            newPoseStack.pushPose();
-            newPoseStack.translate(0.5f, 1.5f, 0.5f);
-            newPoseStack.mulPose(Axis.XP.rotationDegrees(180));
-            newPoseStack.mulPose(Axis.YP.rotationDegrees(yRot));
+            ps.pushPose();
+            ps.translate(0.5f, 1.5f, 0.5f);
+            ps.mulPose(Axis.XP.rotationDegrees(180));
+            ps.mulPose(Axis.YP.rotationDegrees(yRot));
 
             MODEL.setupAnim(newBlockEntity, partialTick);
-            MODEL.render(newPoseStack, newBuffer, packedLight, packedOverlay);
+            MODEL.render(ps, newBuffer, packedLight, packedOverlay);
 
             if (newBlockEntity.windGenWorldGUI != null && newBlockEntity.isDisplayActive) {
                 var width = 1f;
                 var scale = width / WindGenWorldGUI.WIDTH;
 
-                newPoseStack.pushPose();
-                newPoseStack.translate(0, 0.3075, 0.625);
-                newPoseStack.mulPose(Axis.XP.rotationDegrees(17.5f));
+                ps.pushPose();
+                ps.translate(0, 0.3075, 0.625);
+                ps.mulPose(Axis.XP.rotationDegrees(17.5f));
 
                 var aabb = new AABB(-0.5, -5.0 / 16.0, -0.05, 0.5, 5.0 / 16.0, 0.05);
-                LineBoxRenderer.renderWireframeBox(newPoseStack, newBuffer, aabb, 1f, 1f, 1f, 1f);
+                LineBoxRenderer.renderWireframeBox(new MatrixStack().setFrom(ps.last()), newBuffer, aabb, 1f, 1f, 1f, 1f);
 
-                newPoseStack.mulPose(Axis.XP.rotationDegrees(180));
-                newPoseStack.translate(0,0,-0.0575f);
-                newPoseStack.scale(-scale, -scale, scale);
-                newPoseStack.translate(-WindGenWorldGUI.WIDTH / 2, -WindGenWorldGUI.HEIGHT / 2, 0);
+                ps.mulPose(Axis.XP.rotationDegrees(180));
+                ps.translate(0,0,-0.0575f);
+                ps.scale(-scale, -scale, scale);
+                ps.translate(-WindGenWorldGUI.WIDTH / 2, -WindGenWorldGUI.HEIGHT / 2, 0);
 
                 var matrixStack = new MatrixStack();
-                matrixStack.setFrom(newPoseStack.last());
+                matrixStack.setFrom(ps.last());
 
                 newBlockEntity.windGenWorldGUI.render(matrixStack, (MultiBufferSource.BufferSource) newBuffer, partialTick);
 
-                newPoseStack.popPose();
+                ps.popPose();
             }
-            newPoseStack.popPose();
+            ps.popPose();
 
         } else {
             var minecraft = Minecraft.getInstance();
             var bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.defaultBlockState());
             var randomSource = RandomSource.create();
             randomSource.setSeed(42L);
-            BakedModelRenderer.render(newPoseStack, bakedModel, newBuffer, randomSource, false, packedLight, packedOverlay);
+            BakedModelRenderer.render(ps, bakedModel, newBuffer, randomSource, false, packedLight, packedOverlay);
         }
-        newPoseStack.popPose();
+        ps.popPose();
     }
 }

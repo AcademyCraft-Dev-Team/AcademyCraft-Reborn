@@ -5,7 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
-import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
@@ -14,18 +13,15 @@ import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
-import org.jetbrains.annotations.NotNull;
 
-public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implements WirelessPanelHelper.WirelessPanel {
+public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
     public final BlockPos mainPos;
     public final WindGenBaseBlockEntity windGenBaseBlockEntity;
     public ImageWidget topIcon;
     public ImageWidget pillarIcon;
     public ImageWidget baseIcon;
     public static final String AF = "%d AF";
-    private String connectedNodeName = "None";
     private PanelWidget wirelessPanel;
-    private ScrollPanelWidget nodeListPanel;
     private LabelWidget bufferValueLabel;
     private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
             37f / 255f, 247f / 255f, 1, 1);
@@ -70,14 +66,11 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implem
         }
         invPage.setY(getTopPos() - 22);
 
-        wirelessPanel = WirelessPanelHelper.getWirelessPanel(leftPos, topPos - 22);
-        nodeListPanel = wirelessPanel.getChildUnSafe("node_list");
+        wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos);
         wirelessPanel.setZ(100);
         wirelessPanel.setVisible(false);
         wirelessPanel.setEnabled(false);
-        rootContainer.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, wirelessPanel);
-        requestCurrentNodeStatus();
-        requestAvailableNodes(nodeListPanel);
+        rootContainer.addChild("panel_wireless", wirelessPanel);
 
         var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
@@ -204,30 +197,5 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> implem
     @SubscribeEvent
     public void onFocusLostEvent(TextBoxWidget.FocusLostEvent event) {
         handleContainer = true;
-    }
-
-    @Override
-    public @NotNull ScrollPanelWidget getNodeList() {
-        return nodeListPanel;
-    }
-
-    @Override
-    public @NotNull PanelWidget getWirelessPanel() {
-        return wirelessPanel;
-    }
-
-    @Override
-    public @NotNull String getConnectedNodeName() {
-        return connectedNodeName;
-    }
-
-    @Override
-    public void setConnectedNodeName(String connectedNodeName) {
-        this.connectedNodeName = connectedNodeName;
-    }
-
-    @Override
-    public @NotNull BlockPos getPosition() {
-        return mainPos;
     }
 }
