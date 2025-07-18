@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.builtin.teleport.skills;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -27,7 +26,8 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.network.NetworkManagerClient;
-import org.academy.api.client.renderer.CameraRenderEvent;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.renderer.LevelRenderEvent;
 import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
@@ -173,15 +173,15 @@ public final class SelfTeleport extends Skill {
             }
 
             @SubscribeEvent
-            public void onCameraRender(CameraRenderEvent event) {
-                if (SelfTeleport.Client.currentContext != this || player.isRemoved()) {
+            public void onLevelRender(LevelRenderEvent event) {
+                if (player.isRemoved()) {
                     cleanup();
                     return;
                 }
 
                 Level level = player.level();
-                Vec3 eyePos = player.getEyePosition(event.partialTick);
-                Vec3 lookVec = player.getViewVector(event.partialTick);
+                Vec3 eyePos = player.getEyePosition(event.getPartialTick());
+                Vec3 lookVec = player.getViewVector(event.getPartialTick());
 
                 Vec3 logicalTargetPos = this.currentRenderPos;
                 boolean foundSafeSpotThisFrame = false;
@@ -222,18 +222,17 @@ public final class SelfTeleport extends Skill {
                 double factor = ClientUtil.animationFactor(1.25);
                 this.currentRenderPos = logicalTargetPos;
                 this.visualRenderPos = this.visualRenderPos.lerp(this.currentRenderPos, factor);
-
                 this.previewBoxWorld = calculateAABBFromCenter(this.visualRenderPos);
 
-                PoseStack poseStack = event.poseStack;
-                Camera camera = event.camera;
+                MatrixStack matrixStack = event.getMatrixStack();
+                Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
                 MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
                 Vec3 camPos = camera.getPosition();
 
-                poseStack.pushPose();
-                AABB boxToRenderInCameraSpace = this.previewBoxWorld.move(camPos.reverse());
-                LineBoxRenderer.renderWireframeBox(poseStack, bufferSource, boxToRenderInCameraSpace, 1f, 1f, 1f, 1f);
-                poseStack.popPose();
+                matrixStack.pushPose();
+                matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
+                LineBoxRenderer.renderWireframeBox(matrixStack, bufferSource, this.previewBoxWorld, 1f, 1f, 1f, 1f);
+                matrixStack.popPose();
             }
 
             public void cleanup() {

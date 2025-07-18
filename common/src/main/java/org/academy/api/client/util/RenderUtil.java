@@ -1,9 +1,9 @@
 package org.academy.api.client.util;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
@@ -86,27 +86,42 @@ public final class RenderUtil {
         fill(stack, bufferSource, x2 - lineWidth, y + lineWidth, x2, y2 - lineWidth, color);
     }
 
-    public static void blit(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, RenderType renderType, float x, float y, float width, float height) {
-        blit(stack, bufferSource, renderType, x, y, width, height, 0, 0, 1, 1, 0xFFFFFFFF);
-    }
-
-    public static void blit(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, RenderType renderType, float x, float y, float width, float height, float u0, float v0, float u1, float v1) {
-        blit(stack, bufferSource, renderType, x, y, width, height, u0, v0, u1, v1, 0xFFFFFFFF);
-    }
-
-    public static void blit(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, RenderType renderType, float x, float y, float width, float height, float u0, float v0, float u1, float v1, int color) {
+    public static void blitWithRenderType(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, RenderType renderType, float x, float y, float width, float height, float u0, float v0, float u1, float v1, float r, float g, float b, float a) {
         Matrix4f matrix = stack.lastMatrix();
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
 
-        float r = FastColor.ARGB32.red(color) / 255.0F;
-        float g = FastColor.ARGB32.green(color) / 255.0F;
-        float b = FastColor.ARGB32.blue(color) / 255.0F;
-        float a = FastColor.ARGB32.alpha(color) / 255.0F;
+        float x2 = x + width;
+        float y2 = y + height;
 
         vertexConsumer.vertex(matrix, x, y, 0).color(r, g, b, a).uv(u0, v0).endVertex();
-        vertexConsumer.vertex(matrix, x, y + height, 0).color(r, g, b, a).uv(u0, v1).endVertex();
-        vertexConsumer.vertex(matrix, x + width, y + height, 0).color(r, g, b, a).uv(u1, v1).endVertex();
-        vertexConsumer.vertex(matrix, x + width, y, 0).color(r, g, b, a).uv(u1, v0).endVertex();
+        vertexConsumer.vertex(matrix, x, y2, 0).color(r, g, b, a).uv(u0, v1).endVertex();
+        vertexConsumer.vertex(matrix, x2, y2, 0).color(r, g, b, a).uv(u1, v1).endVertex();
+        vertexConsumer.vertex(matrix, x2, y, 0).color(r, g, b, a).uv(u1, v0).endVertex();
+    }
+
+    public static void blit(MatrixStack stack, ResourceLocation atlasLocation, float x, float y, float width, float height, float u0, float v0, float u1, float v1) {
+        blit(stack, atlasLocation, x, y, width, height, u0, v0, u1, v1, 1.0f, 1.0f, 1.0f, 1.0f);
+    }
+
+    public static void blit(MatrixStack stack, ResourceLocation atlasLocation, float x, float y, float width, float height, float u0, float v0, float u1, float v1, float r, float g, float b, float a) {
+        innerBlit(stack, atlasLocation, x, x + width, y, y + height, 0, u0, u1, v0, v1, r, g, b, a);
+    }
+
+    private static void innerBlit(MatrixStack stack, ResourceLocation atlasLocation, float x1, float x2, float y1, float y2, int blitOffset, float minU, float maxU, float minV, float maxV, float r, float g, float b, float a) {
+        RenderSystem.setShaderTexture(0, atlasLocation);
+        RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
+        RenderSystem.enableBlend();
+        Matrix4f matrix = stack.lastMatrix();
+        BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
+        bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
+
+        bufferBuilder.vertex(matrix, x1, y1, blitOffset).color(r, g, b, a).uv(minU, minV).endVertex();
+        bufferBuilder.vertex(matrix, x1, y2, blitOffset).color(r, g, b, a).uv(minU, maxV).endVertex();
+        bufferBuilder.vertex(matrix, x2, y2, blitOffset).color(r, g, b, a).uv(maxU, maxV).endVertex();
+        bufferBuilder.vertex(matrix, x2, y1, blitOffset).color(r, g, b, a).uv(maxU, minV).endVertex();
+
+        BufferUploader.drawWithShader(bufferBuilder.end());
+        RenderSystem.disableBlend();
     }
 
     public static int drawString(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, Font font, String text, float x, float y, int color, boolean hasShadow) {

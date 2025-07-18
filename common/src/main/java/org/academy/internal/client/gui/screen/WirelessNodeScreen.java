@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.client.gui.WirelessPanelHelper;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
@@ -20,14 +19,11 @@ import org.academy.api.common.wireless.SetNodeNamePacket;
 import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
-import org.jetbrains.annotations.NotNull;
 
-public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> implements WirelessPanelHelper.WirelessPanel {
+public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
     private final BlockPos mainPos;
     private WirelessNodeBlockEntity wirelessNodeBlockEntity;
-    private String connectedNodeName = "None";
     private PanelWidget wirelessPanel;
-    private ScrollPanelWidget nodeList;
     private SpriteSheetWidget state;
     private int ticks;
     private final HistogramWidget.Value histogramEnergyValue = new HistogramWidget.Value(25, 5, 0,
@@ -44,7 +40,6 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         assert Minecraft.getInstance().level != null;
         if (Minecraft.getInstance().level.getBlockEntity(newMainPos) instanceof WirelessNodeBlockEntity blockEntity) {
             wirelessNodeBlockEntity = blockEntity;
-            AcademyCraft.EVENT_BUS.register(this);
         } else {
             onClose();
         }
@@ -52,6 +47,8 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
 
     @Override
     protected void onInit() {
+        AcademyCraft.EVENT_BUS.unregister(this);
+
         var startYOffset = 20f;
         var duration = 600L;
         var delay = 250L;
@@ -72,14 +69,11 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         }
         invPage.setY(getTopPos() - 22);
 
-        wirelessPanel = WirelessPanelHelper.getWirelessPanel(leftPos, topPos - 22);
-        nodeList = wirelessPanel.getChildUnSafe("node_list");
+        wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos);
         wirelessPanel.setZ(100);
         wirelessPanel.setVisible(false);
         wirelessPanel.setEnabled(false);
-        rootContainer.addChild(WirelessPanelHelper.PANEL_WIRELESS_NAME, wirelessPanel);
-        requestCurrentNodeStatus();
-        requestAvailableNodes(nodeList);
+        rootContainer.addChild("panel_wireless", wirelessPanel);
 
         var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
@@ -208,6 +202,8 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         infoArea.setY(infoFinalY + startYOffset);
         playAnimation(ObjectAnimator.ofFloat(infoArea::setY, infoArea.getY(), infoFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
         playAnimation(ObjectAnimator.ofFloat(infoArea::setAlpha, 0, 1).setStartDelay(delay).setDuration(duration));
+
+        AcademyCraft.EVENT_BUS.register(this);
     }
 
     @Override
@@ -255,31 +251,6 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
 
             state.setFrameIndex(index);
         }
-    }
-
-    @Override
-    public @NotNull ScrollPanelWidget getNodeList() {
-        return nodeList;
-    }
-
-    @Override
-    public @NotNull PanelWidget getWirelessPanel() {
-        return wirelessPanel;
-    }
-
-    @Override
-    public @NotNull String getConnectedNodeName() {
-        return connectedNodeName;
-    }
-
-    @Override
-    public void setConnectedNodeName(String newConnectedNodeName) {
-        connectedNodeName = newConnectedNodeName;
-    }
-
-    @Override
-    public @NotNull BlockPos getPosition() {
-        return mainPos;
     }
 
     @SubscribeEvent

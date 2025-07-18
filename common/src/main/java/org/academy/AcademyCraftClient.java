@@ -1,8 +1,6 @@
 package org.academy;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.bus.api.BusBuilder;
-import net.neoforged.bus.api.IEventBus;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.hud.HUDManager;
@@ -21,7 +19,6 @@ import java.io.File;
 public final class AcademyCraftClient {
     public static final File CLIENT_CONFIG_FILE;
     public static final AcademyCraftConfig CLIENT_CONFIG;
-    public static final IEventBus EVENT_BUS = BusBuilder.builder().build();
     public static final NetworkSystem NETWORK_SYSTEM = new NetworkSystem();
     public static final FutureManager FUTURE_MANAGER = new FutureManager();
     public static final NetworkManagerClient CLIENT_NETWORK_MANAGER = new NetworkManagerClient(NETWORK_SYSTEM);

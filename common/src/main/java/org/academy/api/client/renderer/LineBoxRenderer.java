@@ -1,42 +1,73 @@
 package org.academy.api.client.renderer;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
+import org.academy.api.client.render.MatrixStack;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
+import java.util.Map;
+
 public final class LineBoxRenderer {
-    public static void renderWireframeBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
+    private static final int[][] EDGES = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
+
+    private static final Map<Direction, int[]> FACE_EDGES = Map.of(
+            Direction.DOWN, new int[]{0, 1, 2, 3},
+            Direction.UP, new int[]{4, 5, 6, 7},
+            Direction.NORTH, new int[]{0, 1, 5, 4},
+            Direction.SOUTH, new int[]{3, 2, 6, 7},
+            Direction.WEST, new int[]{0, 3, 7, 4},
+            Direction.EAST, new int[]{1, 2, 6, 5}
+    );
+
+    private static float[][] getVertices(AABB box) {
+        return new float[][]{
+                {(float) box.minX, (float) box.minY, (float) box.minZ},
+                {(float) box.maxX, (float) box.minY, (float) box.minZ},
+                {(float) box.maxX, (float) box.minY, (float) box.maxZ},
+                {(float) box.minX, (float) box.minY, (float) box.maxZ},
+                {(float) box.minX, (float) box.maxY, (float) box.minZ},
+                {(float) box.maxX, (float) box.maxY, (float) box.minZ},
+                {(float) box.maxX, (float) box.maxY, (float) box.maxZ},
+                {(float) box.minX, (float) box.maxY, (float) box.maxZ}
+        };
+    }
+
+    public static void renderWireframeBox(MatrixStack poseStack, MultiBufferSource bufferSource, AABB box,
                                           float r, float g, float b, float a) {
-        final var vertexConsumer = bufferSource.getBuffer(RenderType.lines());
-        final var pose = poseStack.last();
-        final var matrix4f = pose.pose();
-        final var matrix3f = pose.normal();
+        var vertices = getVertices(box);
+        var vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+        var matrix4f = poseStack.lastMatrix();
+        var matrix3f = poseStack.lastNormal();
 
-        var minX = (float) box.minX;
-        var minY = (float) box.minY;
-        var minZ = (float) box.minZ;
-        var maxX = (float) box.maxX;
-        var maxY = (float) box.maxY;
-        var maxZ = (float) box.maxZ;
+        for (var edge : EDGES) {
+            var v1 = vertices[edge[0]];
+            var v2 = vertices[edge[1]];
+            drawLine(vertexConsumer, matrix4f, matrix3f, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], r, g, b, a);
+        }
+    }
 
-        drawLine(vertexConsumer, matrix4f, matrix3f, minX, minY, minZ, maxX, minY, minZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, maxX, minY, minZ, maxX, minY, maxZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, maxX, minY, maxZ, minX, minY, maxZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, minX, minY, maxZ, minX, minY, minZ, r, g, b, a);
+    public static void renderFace(MatrixStack poseStack, MultiBufferSource bufferSource, AABB box, Direction face,
+                                  float r, float g, float b, float a) {
+        var vertices = getVertices(box);
+        var faceIndices = FACE_EDGES.get(face);
+        if (faceIndices == null) return;
 
-        drawLine(vertexConsumer, matrix4f, matrix3f, minX, maxY, minZ, maxX, maxY, minZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, maxX, maxY, minZ, maxX, maxY, maxZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, maxX, maxY, maxZ, minX, maxY, maxZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, minX, maxY, maxZ, minX, maxY, minZ, r, g, b, a);
+        var vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+        var matrix4f = poseStack.lastMatrix();
+        var matrix3f = poseStack.lastNormal();
 
-        drawLine(vertexConsumer, matrix4f, matrix3f, minX, minY, minZ, minX, maxY, minZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, maxX, minY, minZ, maxX, maxY, minZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, maxX, minY, maxZ, maxX, maxY, maxZ, r, g, b, a);
-        drawLine(vertexConsumer, matrix4f, matrix3f, minX, minY, maxZ, minX, maxY, maxZ, r, g, b, a);
+        for (int i = 0; i < faceIndices.length; i++) {
+            var v1 = vertices[faceIndices[i]];
+            var v2 = vertices[faceIndices[(i + 1) % faceIndices.length]];
+            drawLine(vertexConsumer, matrix4f, matrix3f, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], r, g, b, a);
+        }
     }
 
     private static void drawLine(VertexConsumer vc, Matrix4f mat, Matrix3f normMat,

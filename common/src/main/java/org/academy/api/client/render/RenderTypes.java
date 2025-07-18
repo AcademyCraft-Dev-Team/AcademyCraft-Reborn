@@ -15,7 +15,7 @@ public final class RenderTypes {
     /**
      * Ability Developer
      */
-    public static final RenderType ABILITY_DEVELOPER = RenderType.entityTranslucent(TextureResources.ABILITY_DEVELOPER);
+    public static final RenderType ABILITY_DEVELOPER = RenderType.entityTranslucent(TextureResources.MODEL_ABILITY_DEVELOPER);
     public static final BiFunction<String, ResourceLocation, RenderType> SKILL_ICON =
             (string, resourceLocation) ->
                     RenderUtil.getPositionColorTexRenderTypeFull(string, resourceLocation, false);

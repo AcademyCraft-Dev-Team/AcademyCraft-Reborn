@@ -89,8 +89,8 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public Widget setVisible(boolean newVisible) {
-        visible = newVisible;
+    public Widget setVisible(boolean visible) {
+        this.visible = visible;
         return this;
     }
 
