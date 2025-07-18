@@ -13,10 +13,11 @@ import org.academy.api.common.util.MathUtil;
 import java.util.Random;
 
 import static net.minecraft.client.renderer.RenderStateShard.ITEM_ENTITY_TARGET;
+import static org.academy.AcademyCraft.getResourceLocation;
 import static org.academy.api.client.util.RenderStateUtil.*;
 
 public final class ArcRenderer {
-    public static final ResourceLocation ARC_TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID,
+    public static final ResourceLocation ARC_TEXTURE = getResourceLocation(
             "textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
     public static final RenderType ARC_RENDER_TYPE = new RenderType.CompositeRenderType(
             "arc_render_type",

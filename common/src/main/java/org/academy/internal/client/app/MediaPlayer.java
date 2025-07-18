@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.academy.AcademyCraft.getResourceLocation;
+
 public final class MediaPlayer implements DataTerminalHUD.App {
     private static final float MEDIA_ICON_SIZE = 20f;
     private static final float MEDIA_HEIGHT = 30f;
@@ -89,8 +91,8 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static boolean isStoppingAfterFadeOut = false;
 
     static {
-        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, new ResourceLocation("minecraft:sounds/music/game/creative/creative1.ogg"), "Creative 1", "C418"));
-        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, new ResourceLocation("minecraft:sounds/music/game/calm1.ogg"), "Calm 1", "C418"));
+        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, getResourceLocation("minecraft", "sounds/music/game/creative/creative1.ogg"), "Creative 1", "C418"));
+        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, getResourceLocation("minecraft", "sounds/music/game/calm1.ogg"), "Calm 1", "C418"));
     }
 
     private static void initializeAudio() {

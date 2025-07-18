@@ -6,7 +6,9 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import org.academy.AcademyCraft;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.renderer.CameraRenderEvent;
+import org.academy.api.client.renderer.LevelRenderEvent;
 import org.academy.api.client.renderer.RendererManager;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,5 +32,13 @@ public abstract class MixinLevelRenderer {
         lightTexture = event.lightTexture;
         projectionMatrix = event.projectionMatrix;
         RendererManager.renderCamera(poseStack, partialTick, finishNanoTime, renderBlockOutline, camera, gameRenderer, lightTexture, projectionMatrix);
+    }
+
+    @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;endLastBatch()V", shift = At.Shift.AFTER, ordinal = 0))
+    private void onPostRenderEntities(PoseStack poseStack, float partialTick, long finishNanoTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f projectionMatrix, CallbackInfo ci) {
+        var stack = new MatrixStack();
+        stack.setFrom(poseStack.last());
+        var event = new LevelRenderEvent(partialTick, stack);
+        AcademyCraft.EVENT_BUS.post(event);
     }
 }

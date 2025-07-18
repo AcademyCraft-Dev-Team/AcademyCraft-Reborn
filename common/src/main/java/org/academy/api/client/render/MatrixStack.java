@@ -18,9 +18,10 @@ public final class MatrixStack {
         normalStack.add(new Matrix3f());
     }
 
-    public void setFrom(PoseStack.Pose pose) {
+    public MatrixStack setFrom(PoseStack.Pose pose) {
         this.matrixStack.getLast().set(pose.pose());
         this.normalStack.getLast().set(pose.normal());
+        return this;
     }
 
     @NotNull
@@ -33,35 +34,40 @@ public final class MatrixStack {
         return normalStack.getLast();
     }
 
-    public void pushPose() {
+    public MatrixStack pushPose() {
         matrixStack.addLast(new Matrix4f(lastMatrix()));
         normalStack.addLast(new Matrix3f(lastNormal()));
+        return this;
     }
 
-    public void popPose() {
+    public MatrixStack popPose() {
         if (matrixStack.size() > 1 && normalStack.size() > 1) {
             matrixStack.removeLast();
             normalStack.removeLast();
         }
+        return this;
     }
 
-    public void translate(float x, float y, float z) {
+    public MatrixStack translate(float x, float y, float z) {
         lastMatrix().translate(x, y, z);
+        return this;
     }
 
-    public void scale(float x, float y, float z) {
+    public MatrixStack scale(float x, float y, float z) {
         lastMatrix().scale(x, y, z);
         if (x == y && y == z) {
-            return;
+            return this;
         }
         float invX = 1.0f / x;
         float invY = 1.0f / y;
         float invZ = 1.0f / z;
         lastNormal().scale(invX, invY, invZ);
+        return this;
     }
 
-    public void mulPose(@NotNull Quaternionf quaternion) {
+    public MatrixStack mulPose(@NotNull Quaternionf quaternion) {
         lastMatrix().rotate(quaternion);
         lastNormal().rotate(quaternion);
+        return this;
     }
 }

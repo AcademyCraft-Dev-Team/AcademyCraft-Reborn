@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
-import org.academy.AcademyCraft;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.renderer.RingRenderer;
 import org.academy.api.client.util.VertexUtil;
@@ -19,10 +18,12 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
+import static org.academy.AcademyCraft.getResourceLocation;
+
 @SuppressWarnings("SuspiciousNameCombination")
 public class StormWingEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new StormWingEffectRenderer();
-    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
+    public static final ResourceLocation TEXTURE = getResourceLocation("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
     public static final int RING_SEGMENTS = 4;
     private static final RandomSource RAND = RandomSource.create();
     private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0);
@@ -51,12 +52,12 @@ public class StormWingEffectRenderer implements EffectRenderer {
     private static final double TIME_GAP = 0.09 * TIME_SCALE_GLOBAL;
     private static final double TIME_RAD_BASE = 0.11 * TIME_SCALE_GLOBAL;
     private static final double TIME_RAD_EXTRA = 0.22 * TIME_SCALE_GLOBAL;
+    private static final double TIME_JITTER = 0.85 * TIME_SCALE_GLOBAL;
     private static final double TIME_ROT_BASE = 0.55 * TIME_SCALE_GLOBAL;
     private static final double TIME_ROT_MOD = 0.16 * TIME_SCALE_GLOBAL;
     private static final double TIME_WIDTH_BASE = 0.15 * TIME_SCALE_GLOBAL;
     private static final double TIME_WIDTH_DETAIL = 0.55 * TIME_SCALE_GLOBAL;
     private static final double TIME_TILT = 0.18 * TIME_SCALE_GLOBAL;
-    private static final double TIME_JITTER = 0.85 * TIME_SCALE_GLOBAL;
     private static final float NESTED_RING_PROBABILITY = 0.40f;
     private static final float NESTED_RADIUS_FACTOR = 0.50f;
     private static final float NESTED_WIDTH_FACTOR = 0.75f;

@@ -4,12 +4,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -20,8 +18,6 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegisterEvent;
 import net.minecraftforge.registries.RegistryObject;
-import org.academy.AcademyCraft;
-import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilitySystem;
 import org.academy.forge.internal.client.renderer.blockentity.forge.AcademyCraftBlockEntityRenderersForge;
 import org.academy.forge.internal.common.world.item.forge.AcademyCraftItemsForge;
@@ -41,18 +37,20 @@ import org.academy.internal.common.world.level.material.Fluids;
 
 import java.util.function.Consumer;
 
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+import static org.academy.AcademyCraft.*;
+
+@Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class AcademyCraftRegisterForge {
-    private static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TAB_DEFERRED_REGISTER = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, AcademyCraft.MOD_ID);
+    private static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TAB_DEFERRED_REGISTER = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MOD_ID);
     @SuppressWarnings("unused")
     public static final RegistryObject<CreativeModeTab> BASE_CREATIVE_TAB = CREATIVE_MODE_TAB_DEFERRED_REGISTER.register("all", () -> CreativeModeTab.builder().icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {
-        for (String key : Items.ITEMS.keySet()) {
+        for (var key : Items.ITEMS.keySet()) {
             Item item = Items.ITEMS.get(key);
             if (!(item == Items.ICON)) {
                 output.accept(item);
             }
         }
-    }).title(Component.literal(AcademyCraft.MOD_NAME)).build());
+    }).title(Component.literal(MOD_NAME)).build());
 
     public static void init(IEventBus bus) {
         CREATIVE_MODE_TAB_DEFERRED_REGISTER.register(bus);
@@ -85,23 +83,23 @@ public class AcademyCraftRegisterForge {
 
     private static void registerItem(RegisterEvent event) {
         AcademyCraftItemsForge.init();
-        for (String key : Items.ITEMS.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+        for (var key : Items.ITEMS.keySet()) {
+            ResourceLocation resourceLocation = getResourceLocation(key);
             event.register(ForgeRegistries.Keys.ITEMS, resourceLocation, () -> Items.ITEMS.get(key));
         }
     }
 
     private static void registerBlock(RegisterEvent event) {
         AcademyCraftBlocksForge.init();
-        for (String key : Blocks.BLOCKS.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+        for (var key : Blocks.BLOCKS.keySet()) {
+            var resourceLocation = getResourceLocation(key);
             event.register(ForgeRegistries.Keys.BLOCKS, resourceLocation, () -> Blocks.BLOCKS.get(key));
         }
     }
 
     private static void registerBlockEntityType(RegisterEvent event) {
         AcademyCraftBlockEntityTypesForge.init();
-        for (ResourceLocation resourceLocation : BlockEntityTypes.BLOCK_ENTITY_TYPES.keySet()) {
+        for (var resourceLocation : BlockEntityTypes.BLOCK_ENTITY_TYPES.keySet()) {
             event.register(ForgeRegistries.Keys.BLOCK_ENTITY_TYPES, resourceLocation, () -> BlockEntityTypes.BLOCK_ENTITY_TYPES.get(resourceLocation));
         }
     }
@@ -109,48 +107,48 @@ public class AcademyCraftRegisterForge {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void registerBlockEntityRenderer() {
         AcademyCraftBlockEntityRenderersForge.init();
-        for (BlockEntityType<?> blockEntityType : BlockEntityRenderers.BLOCK_ENTITY_RENDERERS.keySet()) {
+        for (var blockEntityType : BlockEntityRenderers.BLOCK_ENTITY_RENDERERS.keySet()) {
             net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(blockEntityType, context -> (BlockEntityRenderer) BlockEntityRenderers.BLOCK_ENTITY_RENDERERS.get(blockEntityType));
         }
     }
 
     private static void registerEntityType(RegisterEvent event) {
-        for (EntityTypes.Type<?> type : EntityTypes.TYPE_LIST) {
-            event.register(ForgeRegistries.Keys.ENTITY_TYPES, new ResourceLocation(AcademyCraft.MOD_ID, type.name()), type::entityType);
+        for (var type : EntityTypes.TYPE_LIST) {
+            event.register(ForgeRegistries.Keys.ENTITY_TYPES, getResourceLocation(type.name()), type::entityType);
         }
     }
 
     private static void registerSoundEvent(RegisterEvent event) {
-        for (SoundEvent soundEvent : AcademyCraftSoundEvents.SOUND_EVENT_LIST) {
+        for (var soundEvent : AcademyCraftSoundEvents.SOUND_EVENT_LIST) {
             event.register(ForgeRegistries.Keys.SOUND_EVENTS,
                     soundEvent.getLocation(), () -> soundEvent);
         }
     }
 
     private static void registerAbilityCategory() {
-        for (AbilityCategory abilityCategory : AbilityCategories.ABILITY_CATEGORY_LIST) {
+        for (var abilityCategory : AbilityCategories.ABILITY_CATEGORY_LIST) {
             AbilitySystem.registerAbilityCategory(abilityCategory);
         }
     }
 
     private static void registerMenuType(RegisterEvent event) {
-        for (String name : MenuTypes.MENU_TYPES.keySet()) {
+        for (var name : MenuTypes.MENU_TYPES.keySet()) {
             MenuType<?> menuType = MenuTypes.MENU_TYPES.get(name);
             event.register(ForgeRegistries.Keys.MENU_TYPES,
-                    new ResourceLocation(AcademyCraft.MOD_ID, name), () -> menuType);
+                    getResourceLocation(name), () -> menuType);
         }
     }
 
     // Fuck forge
     private static void registerFluid(RegisterEvent event) {
-        for (String key : Fluids.FLUIDS.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+        for (var key : Fluids.FLUIDS.keySet()) {
+            ResourceLocation resourceLocation = getResourceLocation(key);
             event.register(ForgeRegistries.Keys.FLUIDS, resourceLocation, () -> Fluids.FLUIDS.get(key));
         }
     }
 
     private static void registerFluidType(RegisterEvent event) {
-        ResourceLocation imagTexture = new ResourceLocation(AcademyCraft.MOD_ID, "block/black");
+        ResourceLocation imagTexture = getResourceLocation("block/black");
         event.register(ForgeRegistries.Keys.FLUID_TYPES, fluidTypeRegisterHelper -> {
             Fluids.IMAGIPHASE_PLASMA.forgeFluidType = Fluids.FLOWING_IMAGIPHASE_PLASMA.forgeFluidType =
                     new FluidType(FluidType.Properties.create()
@@ -180,22 +178,22 @@ public class AcademyCraftRegisterForge {
                             });
                         }
                     };
-            fluidTypeRegisterHelper.register(new ResourceLocation(AcademyCraft.MOD_ID, "imag_phase_type"),
+            fluidTypeRegisterHelper.register(getResourceLocation("imag_phase_type"),
                     Fluids.IMAGIPHASE_PLASMA.forgeFluidType);
         });
     }
 
     private static void registerParticleType(RegisterEvent event) {
-        for (String key : ParticleTypes.PARTICLE_TYPES.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+        for (var key : ParticleTypes.PARTICLE_TYPES.keySet()) {
+            ResourceLocation resourceLocation = getResourceLocation(key);
             event.register(ForgeRegistries.Keys.PARTICLE_TYPES, resourceLocation,
                     () -> ParticleTypes.PARTICLE_TYPES.get(key));
         }
     }
 
     private static void registerFeature(RegisterEvent event) {
-        for (String key : Features.FEATURES.keySet()) {
-            ResourceLocation resourceLocation = new ResourceLocation(AcademyCraft.MOD_ID, key);
+        for (var key : Features.FEATURES.keySet()) {
+            ResourceLocation resourceLocation = getResourceLocation(key);
             event.register(ForgeRegistries.Keys.FEATURES, resourceLocation, () -> Features.FEATURES.get(key));
         }
     }

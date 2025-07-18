@@ -8,15 +8,16 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.AcademyCraft;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.jetbrains.annotations.NotNull;
 
+import static org.academy.AcademyCraft.getResourceLocation;
+
 public class GlowCircleRenderer extends EntityRenderer<GlowCircle> {
-    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraft.MOD_ID, "textures/ability/generic/effect/glow_circle.png");
+    public static final ResourceLocation TEXTURE = getResourceLocation("textures/ability/generic/effect/glow_circle.png");
 
     public GlowCircleRenderer(EntityRendererProvider.Context context) {
         super(context);

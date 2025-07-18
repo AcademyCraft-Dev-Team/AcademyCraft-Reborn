@@ -87,7 +87,7 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     static {
         try {
-            postChain = new PostChain(Minecraft.getInstance().getTextureManager(), Minecraft.getInstance().getResourceManager(), Minecraft.getInstance().getMainRenderTarget(), new ResourceLocation("shaders/post/blur_mask.json"));
+            postChain = new PostChain(Minecraft.getInstance().getTextureManager(), Minecraft.getInstance().getResourceManager(), Minecraft.getInstance().getMainRenderTarget(), AcademyCraft.getResourceLocation("minecraft", "shaders/post/blur_mask.json"));
             postChain.resize(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight());
         } catch (IOException e) {
             throw new RuntimeException(e);

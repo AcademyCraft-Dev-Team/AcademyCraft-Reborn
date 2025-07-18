@@ -2,8 +2,6 @@ package org.academy;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
-import net.neoforged.bus.api.BusBuilder;
-import net.neoforged.bus.api.IEventBus;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.FutureManager;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -24,7 +22,6 @@ public final class AcademyCraftServer {
     public static GenericConfig genericConfig;
     public static File serverConfigFile;
     public static File worldDataFile;
-    public static final IEventBus EVENT_BUS = BusBuilder.builder().build();
     public static final NetworkSystem NETWORK_SYSTEM = new NetworkSystem();
     public static final FutureManager FUTURE_MANAGER = new FutureManager();
     public static final NetworkManagerServer SERVER_NETWORK_MANAGER = new NetworkManagerServer(NETWORK_SYSTEM);
