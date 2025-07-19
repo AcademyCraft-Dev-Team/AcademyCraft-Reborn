@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import org.academy.AcademyCraft;
-import org.academy.api.client.renderer.EffectRenderEvent;
+import org.academy.api.client.render.EffectRenderEvent;
 import org.academy.api.client.renderer.RendererManager;
 import org.jetbrains.annotations.NotNull;
 

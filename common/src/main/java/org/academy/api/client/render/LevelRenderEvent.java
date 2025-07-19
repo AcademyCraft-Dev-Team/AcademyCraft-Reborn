@@ -1,7 +1,6 @@
-package org.academy.api.client.renderer;
+package org.academy.api.client.render;
 
 import net.neoforged.bus.api.Event;
-import org.academy.api.client.render.MatrixStack;
 
 public class LevelRenderEvent extends Event {
     /**
