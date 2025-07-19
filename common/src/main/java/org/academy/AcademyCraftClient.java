@@ -11,6 +11,7 @@ import org.academy.api.common.network.future.FutureManager;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.particle.ParticleRenderTypes;
+import org.academy.api.client.renderer.BlurRenderer;
 import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.internal.client.renderer.item.ItemRenderers;
 
@@ -42,5 +43,6 @@ public final class AcademyCraftClient {
         Apps.register();
         EntityRenderers.init();
         ParticleRenderTypes.init();
+        BlurRenderer.init();
     }
 }
