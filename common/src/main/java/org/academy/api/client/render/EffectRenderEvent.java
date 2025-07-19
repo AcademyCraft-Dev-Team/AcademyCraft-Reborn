@@ -1,4 +1,4 @@
-package org.academy.api.client.renderer;
+package org.academy.api.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.player.AbstractClientPlayer;

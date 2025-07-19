@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
 
 import java.util.Random;
@@ -35,7 +34,7 @@ public final class ArcRenderer {
                     .setShaderState(POSITION_TEX_SHADER)
                     .setCullState(NO_CULL)
                     .setOutputState(ITEM_ENTITY_TARGET)
-                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
 

@@ -7,7 +7,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.academy.AcademyCraft;
-import org.academy.api.client.renderer.ItemRenderEvent;
+import org.academy.api.client.render.ItemRenderEvent;
 import org.academy.api.client.renderer.RendererManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

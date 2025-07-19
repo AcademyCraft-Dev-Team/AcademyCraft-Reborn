@@ -13,11 +13,12 @@
     "common.MixinProjectile"
   ],
   "client": [
-    "client.MixinItemModelGenerators",
     "client.MixinClientPacketListener",
+    "client.MixinEffectInstance",
     "client.MixinGameRenderer",
     "client.MixinIntegratedServer",
     "client.MixinItemBlockRenderTypes",
+    "client.MixinItemModelGenerators",
     "client.MixinItemRenderer",
     "client.MixinKeyboardHandler",
     "client.MixinLevelRenderer",

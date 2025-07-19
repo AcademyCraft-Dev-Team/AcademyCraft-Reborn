@@ -5,7 +5,7 @@
     "dstrgb": "1-srcalpha"
   },
   "vertex": "sobel",
-  "fragment": "blur_mask",
+  "fragment": "academy:blur_mask",
   "attributes": [
     "Position"
   ],

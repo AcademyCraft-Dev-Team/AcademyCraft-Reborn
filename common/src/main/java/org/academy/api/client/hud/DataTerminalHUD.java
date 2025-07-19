@@ -10,7 +10,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -31,6 +30,7 @@ import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.client.renderer.BlurRenderer;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
@@ -87,7 +87,7 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     static {
         try {
-            postChain = new PostChain(Minecraft.getInstance().getTextureManager(), Minecraft.getInstance().getResourceManager(), Minecraft.getInstance().getMainRenderTarget(), AcademyCraft.getResourceLocation("minecraft", "shaders/post/blur_mask.json"));
+            postChain = new PostChain(Minecraft.getInstance().getTextureManager(), Minecraft.getInstance().getResourceManager(), Minecraft.getInstance().getMainRenderTarget(), AcademyCraft.getResourceLocation("shaders/post/blur_mask.json"));
             postChain.resize(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -130,14 +130,6 @@ public final class DataTerminalHUD implements HUDRenderer {
     @Override
     public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, float partialTick) {
         if (active) {
-            if (config.enableBlur) {
-                for (var pass : postChain.passes) {
-                    var uniform = pass.getEffect().getUniform("Radius");
-                    if (uniform != null) {
-                        uniform.set(config.blurRadius);
-                    }
-                }
-            }
             stack.pushPose();
             RenderSystem.backupProjectionMatrix();
             RenderSystem.disableDepthTest();
@@ -169,10 +161,9 @@ public final class DataTerminalHUD implements HUDRenderer {
             stack.pushPose();
             {
                 if (config.enableBlur) {
-                    bufferSource.endBatch(RenderType.gui());
-                    var maskInput = postChain.getTempTarget("maskInput");
-                    maskInput.clear(false);
-                    maskInput.bindWrite(false);
+                    var blurMaskRenderType = RenderType.gui();
+                    BlurRenderer.setBlurRadius(config.blurRadius);
+                    BlurRenderer.start(bufferSource, blurMaskRenderType);
                     stack.pushPose();
                     stack.translate(guiW - WIDTH * 1.25f, (guiH - HEIGHT) / 2, 0);
                     RenderUtil.fill(stack, bufferSource, 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF);
@@ -184,9 +175,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                         RenderUtil.fill(stack, bufferSource, 0, 0, widget.getWidth(), widget.getHeight(), 0XFFFFFFFF);
                         stack.popPose();
                     }
-                    bufferSource.endBatch(RenderType.gui());
-                    postChain.process(partialTick);
-                    Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
+                    BlurRenderer.stop(bufferSource, blurMaskRenderType);
                 }
             }
             rootContainer.render(stack, bufferSource, xpos, ypos, partialTick);

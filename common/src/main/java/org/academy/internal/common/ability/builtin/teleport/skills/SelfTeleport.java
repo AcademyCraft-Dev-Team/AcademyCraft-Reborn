@@ -27,7 +27,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.renderer.LevelRenderEvent;
+import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;

@@ -11,7 +11,7 @@ import org.joml.Vector3f;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ArcEffectRenderer implements EffectRenderer {
+public final class ArcEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new ArcEffectRenderer();
     public static final Map<String, Arc> ARCS = new HashMap<>();
 

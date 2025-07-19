@@ -8,7 +8,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.util.VertexUtil;
 
-import static net.minecraft.client.renderer.RenderStateShard.ITEM_ENTITY_TARGET;
 import static org.academy.api.client.util.RenderStateUtil.*;
 
 public final class BoxRenderer {
@@ -22,9 +21,6 @@ public final class BoxRenderer {
             RenderType.CompositeState.builder()
                     .setShaderState(POSITION_COLOR_SHADER)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                    .setCullState(NO_CULL)
-                    .setWriteMaskState(COLOR_WRITE)
-                    .setOutputState(ITEM_ENTITY_TARGET)
                     .createCompositeState(false)
     );
 

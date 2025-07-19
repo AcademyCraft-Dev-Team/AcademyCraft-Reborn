@@ -21,7 +21,7 @@ import org.joml.Quaternionf;
 import static org.academy.AcademyCraft.getResourceLocation;
 
 @SuppressWarnings("SuspiciousNameCombination")
-public class StormWingEffectRenderer implements EffectRenderer {
+public final class StormWingEffectRenderer implements EffectRenderer {
     public static final EffectRenderer INSTANCE = new StormWingEffectRenderer();
     public static final ResourceLocation TEXTURE = getResourceLocation("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
     public static final int RING_SEGMENTS = 4;
