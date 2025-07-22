@@ -1,4 +1,4 @@
-package org.academy.mixin.client;
+package org.academy.fabric.mixin.client;
 
 import net.minecraft.client.renderer.EffectInstance;
 import org.academy.AcademyCraft;
