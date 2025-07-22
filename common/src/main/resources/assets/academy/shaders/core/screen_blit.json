@@ -1,0 +1,12 @@
+{
+  "vertex": "academy:screen_blit",
+  "fragment": "academy:screen_blit",
+  "attributes": [
+    "Position"
+  ],
+  "samplers": [
+    {
+      "name": "DiffuseSampler"
+    }
+  ]
+}

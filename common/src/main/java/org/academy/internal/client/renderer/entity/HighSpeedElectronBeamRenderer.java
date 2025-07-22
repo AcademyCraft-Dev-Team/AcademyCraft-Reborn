@@ -37,18 +37,18 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
 
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(ballRadius));
-        BoxRenderer.renderFilledBox(poseStack, buffer, HEAD, 0, 1, 0, 0.125f);
+        BoxRenderer.renderFilledBox(poseStack, HEAD, 0, 1, 0, 0.125f);
         poseStack.scale(0.5f, 0.5f, 0.5f);
-        BoxRenderer.renderFilledBox(poseStack, buffer, HEAD, 1, 1, 1, 1f);
+        BoxRenderer.renderFilledBox(poseStack, HEAD, 1, 1, 1, 1f);
         poseStack.popPose();
 
         var rayVisualProgress = entity.isCharging() ? 0f : entity.smoothProgress;
 
         poseStack.pushPose();
         poseStack.mulPoseMatrix(new Matrix4f().scale(rayVisualProgress * 0.25f,  entity.length, rayVisualProgress * 0.25f));
-        BoxRenderer.renderFilledBox(poseStack, buffer, RAY, 0, 1, 0, 0.125f);
+        BoxRenderer.renderFilledBox(poseStack, RAY, 0, 1, 0, 0.125f);
         poseStack.scale(0.75f, 1, 0.75f);
-        BoxRenderer.renderFilledBox(poseStack, buffer, RAY, 1, 1, 1, 1f);
+        BoxRenderer.renderFilledBox(poseStack, RAY, 1, 1, 1, 1f);
         poseStack.popPose();
 
         poseStack.popPose();

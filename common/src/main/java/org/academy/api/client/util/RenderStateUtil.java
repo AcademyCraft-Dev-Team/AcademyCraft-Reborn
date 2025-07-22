@@ -2,8 +2,10 @@ package org.academy.api.client.util;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderStateShard;
+import org.academy.api.client.render.post.BloomEffect;
 import org.academy.internal.client.renderer.Shaders;
 
 @SuppressWarnings("unused")
@@ -12,11 +14,11 @@ public class RenderStateUtil {
     public static final RenderStateShard.ShaderStateShard POSITION_COLOR_LIGHTMAP_SHADER = new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorLightmapShader);
     public static final RenderStateShard.ShaderStateShard POSITION_SHADER = new RenderStateShard.ShaderStateShard(GameRenderer::getPositionShader);
     public static final RenderStateShard.ShaderStateShard POSITION_COLOR_TEX_SHADER = new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorTexShader);
-    public static final RenderStateShard.ShaderStateShard POSITION_COLOR_TEX_SHADER_FULL = new RenderStateShard.ShaderStateShard(() -> Shaders.positionColorShader);
+    public static final RenderStateShard.ShaderStateShard POSITION_COLOR_TEX_SHADER_FULL = new RenderStateShard.ShaderStateShard(() -> Shaders.POSITION_COLOR_TEX);
     public static final RenderStateShard.ShaderStateShard POSITION_TEX_SHADER = new RenderStateShard.ShaderStateShard(GameRenderer::getPositionTexShader);
     public static final RenderStateShard.ShaderStateShard POSITION_COLOR_TEX_LIGHTMAP_SHADER = new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorTexLightmapShader);
     public static final RenderStateShard.ShaderStateShard POSITION_COLOR_SHADER = new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorShader);
-    public static final RenderStateShard.ShaderStateShard GLOW_CIRCLE = new RenderStateShard.ShaderStateShard(() -> Shaders.glowCircle);
+    public static final RenderStateShard.ShaderStateShard GLOW_CIRCLE = new RenderStateShard.ShaderStateShard(() -> Shaders.GLOW_CIRCLE);
     public static final RenderStateShard.TransparencyStateShard TRANSLUCENT_TRANSPARENCY = new RenderStateShard.TransparencyStateShard("translucent_transparency", () -> {
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
@@ -42,4 +44,9 @@ public class RenderStateUtil {
     public static final RenderStateShard.DepthTestStateShard EQUAL_DEPTH_TEST = new RenderStateShard.DepthTestStateShard("==", 514);
     public static final RenderStateShard.DepthTestStateShard LEQUAL_DEPTH_TEST = new RenderStateShard.DepthTestStateShard("<=", 515);
     public static final RenderStateShard.DepthTestStateShard GREATER_DEPTH_TEST = new RenderStateShard.DepthTestStateShard(">", 516);
+    public static final RenderStateShard.OutputStateShard BLOOM_TARGET = new RenderStateShard.OutputStateShard(
+            "bloom_target",
+            () -> BloomEffect.getInput().bindWrite(false),
+            () -> Minecraft.getInstance().getMainRenderTarget().bindWrite(false)
+    );
 }

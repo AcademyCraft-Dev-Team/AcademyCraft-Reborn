@@ -37,19 +37,17 @@ public class BlendQuadWidget extends AbstractWidget {
         var h = getHeight();
         var finalAlpha = getAbsoluteAlpha();
 
-        var shader = Shaders.sdfSharpQuadWithMarginShader;
-        if (shader != null) {
-            shader.safeGetUniform("u_size").set(w, h);
-            shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
-            shader.safeGetUniform("u_fillColor").set(red, green, blue, finalAlpha);
+        var shader = Shaders.SDF_SHARP_QUAD_WITH_MARGIN;
+        shader.safeGetUniform("u_size").set(w, h);
+        shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
+        shader.safeGetUniform("u_fillColor").set(red, green, blue, finalAlpha);
 
-            var vertexConsumer = bufferSource.getBuffer(RenderTypes.SDF_SHARP_QUAD);
-            vertexConsumer.vertex(matrix, 0, 0, 0).uv(0, 0).endVertex();
-            vertexConsumer.vertex(matrix, 0, h, 0).uv(0, 1).endVertex();
-            vertexConsumer.vertex(matrix, w, h, 0).uv(1, 1).endVertex();
-            vertexConsumer.vertex(matrix, w, 0, 0).uv(1, 0).endVertex();
-            bufferSource.endBatch(RenderTypes.SDF_SHARP_QUAD);
-        }
+        var vertexConsumer = bufferSource.getBuffer(RenderTypes.SDF_SHARP_QUAD);
+        vertexConsumer.vertex(matrix, 0, 0, 0).uv(0, 0).endVertex();
+        vertexConsumer.vertex(matrix, 0, h, 0).uv(0, 1).endVertex();
+        vertexConsumer.vertex(matrix, w, h, 0).uv(1, 1).endVertex();
+        vertexConsumer.vertex(matrix, w, 0, 0).uv(1, 0).endVertex();
+        bufferSource.endBatch(RenderTypes.SDF_SHARP_QUAD);
 
         if (drawLine) {
             lineWidget.setAlpha(finalAlpha);

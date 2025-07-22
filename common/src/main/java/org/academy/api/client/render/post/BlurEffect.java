@@ -1,7 +1,6 @@
-package org.academy.api.client.renderer;
+package org.academy.api.client.render.post;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.shaders.Uniform;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -19,8 +18,7 @@ import java.util.List;
 
 import static org.academy.AcademyCraft.getResourceLocation;
 
-public final class BlurRenderer {
-    private static Window window;
+public final class BlurEffect {
     private static float blurRadius = 20f;
     private static PostChain blurPostChain;
     private static RenderTarget mainRenderTarget;
@@ -28,15 +26,15 @@ public final class BlurRenderer {
     private static final List<Uniform> blurRadiusUniforms = new ArrayList<>();
 
     public static void init() {
-        AcademyCraft.EVENT_BUS.register(BlurRenderer.class);
+        AcademyCraft.EVENT_BUS.register(BlurEffect.class);
         var mc = Minecraft.getInstance();
-        window = mc.getWindow();
+        var window = mc.getWindow();
         try {
             blurPostChain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(),
-                    getResourceLocation("shaders/post/blur_mask.json")) {
+                    getResourceLocation("shaders/post/masked_blur.json")) {
                 @Override
                 public @NotNull PostPass addPass(@NotNull String programName, @NotNull RenderTarget framebuffer, @NotNull RenderTarget framebufferOut) throws IOException {
-                    if (programName.equals("academy:blur_mask")) {
+                    if (programName.equals("academy:masked_blur")) {
                         var blurMaskPostPass = super.addPass(programName, framebuffer, framebufferOut);
                         var uniform = blurMaskPostPass.getEffect().getUniform("Radius");
                         if (uniform != null) {
@@ -74,7 +72,7 @@ public final class BlurRenderer {
     }
 
     public static void setBlurRadius(float blurRadius) {
-        BlurRenderer.blurRadius = blurRadius;
+        BlurEffect.blurRadius = blurRadius;
         for (var uniform : blurRadiusUniforms) {
             uniform.set(blurRadius);
         }
@@ -82,9 +80,10 @@ public final class BlurRenderer {
 
     @SubscribeEvent
     public static void onResizeDisplay(ResizeDisplayEvent event) {
+        var window = event.getWindow();
         blurPostChain.resize(window.getWidth(), window.getHeight());
     }
 
-    private BlurRenderer() {
+    private BlurEffect() {
     }
 }

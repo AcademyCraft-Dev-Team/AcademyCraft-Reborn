@@ -1,12 +1,11 @@
 package org.academy.api.client.util;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
@@ -236,5 +235,19 @@ public final class RenderUtil {
         vertexconsumer.vertex(matrix4f, minX, maxY, 0).color(f, f1, f2, f3).endVertex();
         vertexconsumer.vertex(matrix4f, maxX, maxY, 0).color(f, f1, f2, f3).endVertex();
         vertexconsumer.vertex(matrix4f, maxX, minY, 0).color(f, f1, f2, f3).endVertex();
+    }
+
+    public static void blitScreen(ShaderInstance shaderInstance, RenderTarget dist) {
+        dist.clear(Minecraft.ON_OSX);
+        dist.bindWrite(false);
+        shaderInstance.apply();
+        var builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        builder.vertex(-1, 1, 0).endVertex();
+        builder.vertex(-1, -1, 0).endVertex();
+        builder.vertex(1, -1, 0).endVertex();
+        builder.vertex(1, 1, 0).endVertex();
+        BufferUploader.draw(builder.end());
+        shaderInstance.clear();
     }
 }

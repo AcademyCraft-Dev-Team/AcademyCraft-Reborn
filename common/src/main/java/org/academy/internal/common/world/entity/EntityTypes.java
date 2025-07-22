@@ -21,8 +21,6 @@ public class EntityTypes {
             Arc::new, MobCategory.MISC, 0, 0, "arc");
     public static final EntityType<HighSpeedElectronBeam> HIGH_SPEED_ELECTRON_BEAM = register(
             HighSpeedElectronBeam::new, MobCategory.MISC, 0, 0, "high_speed_electron_beam");
-    public static final EntityType<Plasma> PLASMA = register(
-            Plasma::new, MobCategory.MISC, 0, 0, "plasma");
     public static final EntityType<GlowCircle> GLOW_CIRCLE = register(
             GlowCircle::new, MobCategory.MISC, 0, 0, "glow_circle");
     public static final EntityType<Smoke> SMOKE = register(

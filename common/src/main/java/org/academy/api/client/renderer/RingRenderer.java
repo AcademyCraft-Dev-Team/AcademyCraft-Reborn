@@ -10,7 +10,6 @@ import org.joml.Matrix4f;
 
 import java.util.function.Function;
 
-import static net.minecraft.client.renderer.RenderStateShard.ITEM_ENTITY_TARGET;
 import static org.academy.api.client.util.RenderStateUtil.*;
 
 public final class RingRenderer {
@@ -20,13 +19,13 @@ public final class RingRenderer {
             DefaultVertexFormat.POSITION_TEX,
             VertexFormat.Mode.QUADS,
             512,
-            true,
-            true,
+            false,
+            false,
             RenderType.CompositeState.builder()
                     .setTextureState(new RenderStateShard.TextureStateShard(resourceLocation, false, false))
                     .setShaderState(POSITION_TEX_SHADER)
                     .setCullState(NO_CULL)
-                    .setOutputState(ITEM_ENTITY_TARGET)
+                    .setOutputState(BLOOM_TARGET)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );

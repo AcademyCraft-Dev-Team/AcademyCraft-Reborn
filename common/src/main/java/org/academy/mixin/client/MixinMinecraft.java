@@ -38,7 +38,7 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "resizeDisplay", at = @At("TAIL"))
     private void resizeDisplay(CallbackInfo ci) {
-        var event = new ResizeDisplayEvent(getWindow().getGuiScaledWidth(), getWindow().getGuiScaledHeight());
+        var event = new ResizeDisplayEvent(getWindow());
         AcademyCraft.EVENT_BUS.post(event);
     }
 

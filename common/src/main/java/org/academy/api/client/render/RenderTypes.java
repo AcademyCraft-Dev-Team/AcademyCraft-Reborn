@@ -103,7 +103,7 @@ public final class RenderTypes {
     public static final RenderType SDF_SHARP_QUAD = new RenderType.CompositeRenderType(
             "sdf_sharp_quad", DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS, 256, false, true,
             RenderType.CompositeState.builder()
-                    .setShaderState(new RenderType.ShaderStateShard(() -> Shaders.sdfSharpQuadWithMarginShader))
+                    .setShaderState(new RenderType.ShaderStateShard(() -> Shaders.SDF_SHARP_QUAD_WITH_MARGIN))
                     .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
@@ -134,7 +134,7 @@ public final class RenderTypes {
             VertexFormat.Mode.QUADS, 16,
             false, true,
             RenderType.CompositeState.builder()
-                    .setShaderState(new RenderType.ShaderStateShard(() -> Shaders.sdfCircleGlowShader))
+                    .setShaderState(new RenderType.ShaderStateShard(() -> Shaders.SDF_CIRCLE_GLOW))
                     .setTransparencyState(RenderStateUtil.TRANSLUCENT_TRANSPARENCY)
                     .setWriteMaskState(RenderStateUtil.COLOR_WRITE)
                     .createCompositeState(false)
@@ -146,7 +146,7 @@ public final class RenderTypes {
     /**
      * Cleaning Robot
      */
-    public static final RenderType CLEANING_ROBOT = RenderType.entityTranslucent(TextureResources.CLEANING_ROBOT);
+    public static final RenderType CLEANING_ROBOT = RenderType.entitySolid(TextureResources.CLEANING_ROBOT);
     /**
      * Media Player
      */
