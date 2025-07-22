@@ -3,11 +3,7 @@
   "minVersion": "0.8",
   "package": "org.academy.fabric.mixin",
   "compatibilityLevel": "JAVA_17",
-  "client": [
-    "client.MixinModelBakerImpl",
-    "client.MixinParticleEngine",
-    "client.MixinRenderTarget"
-  ],
+  "client": ["client.MixinEffectInstance", "client.MixinModelBakerImpl", "client.MixinParticleEngine", "client.MixinRenderTarget"],
   "injectors": {
     "defaultRequire": 1
   },
