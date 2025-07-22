@@ -12,6 +12,7 @@ public class MathUtil {
     public static final Random RANDOM = new Random();
     public static final float PI = (float) Math.PI;
     public static final float TWO_PI = 2.0f * PI;
+    public static final double EPSILON = 1e-6;
 
     public static float lerpStartEndFactor(float a, float b, float t) {
         return a + t * (b - a);

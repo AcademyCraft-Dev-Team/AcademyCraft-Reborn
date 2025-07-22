@@ -5,7 +5,7 @@
   ],
   "passes": [
     {
-      "name": "academy:blur_mask",
+      "name": "academy:masked_blur",
       "intarget": "minecraft:main",
       "outtarget": "temp",
       "auxtargets": [
@@ -17,7 +17,7 @@
       ]
     },
     {
-      "name": "academy:blur_mask",
+      "name": "academy:masked_blur",
       "intarget": "temp",
       "outtarget": "minecraft:main",
       "auxtargets": [

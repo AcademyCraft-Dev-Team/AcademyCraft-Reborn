@@ -9,16 +9,16 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.util.MathUtil;
+import org.academy.api.client.renderer.ArcFactory;
+import org.academy.api.client.renderer.ArcStyles;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings("resource")
 public class Arc extends Entity {
     public static final EntityDataAccessor<Float> ID_LENGTH = SynchedEntityData.defineId(Arc.class, EntityDataSerializers.FLOAT);
     public static final int defaultLifetime = 8;
     public int currentLifetime = defaultLifetime;
-    public long random;
+    public ArcFactory.ArcRenderData renderData;
 
     public Arc(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -26,9 +26,7 @@ public class Arc extends Entity {
 
     public Arc(Level level, Vec3 handPos, Vec3 targetPos) {
         super(EntityTypes.ARC, level);
-
         this.setPos(handPos);
-
         Vec3 dir = targetPos.subtract(handPos).normalize();
         float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
         float pitch = (float) Math.toDegrees(-Math.asin(dir.y));
@@ -58,7 +56,15 @@ public class Arc extends Entity {
     @Override
     public void tick() {
         super.tick();
-        this.random = MathUtil.RANDOM.nextLong();
+
+        if (level().isClientSide()) {
+            var style = ArcStyles.classic();
+            style.seed = this.random.nextLong();
+            style.start.set(0, 0, 0);
+            style.end.set(0, getLength(), 0);
+            this.renderData = ArcFactory.Generator.generate(style);
+        }
+
         currentLifetime--;
         if (currentLifetime <= 0) {
             if (!level().isClientSide()) {

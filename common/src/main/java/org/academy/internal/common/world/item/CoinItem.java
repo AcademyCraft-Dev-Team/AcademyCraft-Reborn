@@ -36,7 +36,7 @@ public class CoinItem extends Item {
                     initialVelocity.add(0, 0.5, 0),
                     player.getYRot(), player.getXRot())));
 
-            if (!player.isCreative()) {
+            if (!player.getAbilities().instabuild) {
                 itemStack.shrink(1);
             }
             player.playSound(AcademyCraftSoundEvents.COIN, 1.0F, 1.0F);

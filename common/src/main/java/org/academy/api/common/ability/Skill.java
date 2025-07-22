@@ -13,28 +13,28 @@ public abstract class Skill {
     public final List<Skill> dependencies = new ArrayList<>();
     public final int energy;
 
-    protected Skill(String newName, int newLevel) {
-        name = newName;
-        level = newLevel;
-        energy = 5000;
+    protected Skill(String name, int level) {
+        this.name = name;
+        this.level = level;
+        this.energy = 5000;
     }
 
-    protected Skill(String newName, int newLevel, int newEnergy) {
-        name = newName;
-        level = newLevel;
-        energy = newEnergy;
+    protected Skill(String name, int level, int energy) {
+        this.name = name;
+        this.level = level;
+        this.energy = energy;
     }
 
-    protected Skill(String newName, int newLevel, @NotNull List<Skill> newDependencies) {
-        this(newName, newLevel);
-        dependencies.addAll(newDependencies);
+    protected Skill(String name, int level, @NotNull List<Skill> dependencies) {
+        this(name, level);
+        this.dependencies.addAll(dependencies);
     }
 
-    protected Skill(String newName, int newLevel, int newEnergy, @NotNull List<Skill> newDependencies) {
-        name = newName;
-        level = newLevel;
-        energy = newEnergy;
-        dependencies.addAll(newDependencies);
+    protected Skill(String name, int level, int energy, @NotNull List<Skill> dependencies) {
+        this.name = name;
+        this.level = level;
+        this.energy = energy;
+        this.dependencies.addAll(dependencies);
     }
 
     public void init() {

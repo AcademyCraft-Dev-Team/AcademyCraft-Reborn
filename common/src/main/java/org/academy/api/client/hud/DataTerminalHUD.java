@@ -8,7 +8,6 @@ import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
@@ -23,6 +22,7 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.RenderTypes;
+import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.vanilla.ChangeScreenEvent;
@@ -30,12 +30,10 @@ import org.academy.api.client.vanilla.ClientTickEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.config.IConfigAction;
 import org.academy.api.common.util.MathUtil;
-import org.academy.api.client.renderer.BlurRenderer;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -82,17 +80,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     private static float APP_NAME_LABEL_OFFSET_X;
 
     private static LabelWidget playerNameLabel;
-    private static final PostChain postChain;
     private static final List<App> APP_LIST = new ArrayList<>();
-
-    static {
-        try {
-            postChain = new PostChain(Minecraft.getInstance().getTextureManager(), Minecraft.getInstance().getResourceManager(), Minecraft.getInstance().getMainRenderTarget(), AcademyCraft.getResourceLocation("shaders/post/blur_mask.json"));
-            postChain.resize(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private static void updateParametersFromConfig() {
         INFO_BAR_HEIGHT = config.infoBarHeight;
@@ -162,8 +150,8 @@ public final class DataTerminalHUD implements HUDRenderer {
             {
                 if (config.enableBlur) {
                     var blurMaskRenderType = RenderType.gui();
-                    BlurRenderer.setBlurRadius(config.blurRadius);
-                    BlurRenderer.start(bufferSource, blurMaskRenderType);
+                    BlurEffect.setBlurRadius(config.blurRadius);
+                    BlurEffect.start(bufferSource, blurMaskRenderType);
                     stack.pushPose();
                     stack.translate(guiW - WIDTH * 1.25f, (guiH - HEIGHT) / 2, 0);
                     RenderUtil.fill(stack, bufferSource, 0, 0, WIDTH, HEIGHT, 0XFFFFFFFF);
@@ -175,7 +163,7 @@ public final class DataTerminalHUD implements HUDRenderer {
                         RenderUtil.fill(stack, bufferSource, 0, 0, widget.getWidth(), widget.getHeight(), 0XFFFFFFFF);
                         stack.popPose();
                     }
-                    BlurRenderer.stop(bufferSource, blurMaskRenderType);
+                    BlurEffect.stop(bufferSource, blurMaskRenderType);
                 }
             }
             rootContainer.render(stack, bufferSource, xpos, ypos, partialTick);
@@ -467,8 +455,8 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onResizeDisplay(ResizeDisplayEvent event) {
-        postChain.resize(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight());
-        initGui(event.width, event.height);
+        var window = event.getWindow();
+        initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
     }
 
     @SubscribeEvent

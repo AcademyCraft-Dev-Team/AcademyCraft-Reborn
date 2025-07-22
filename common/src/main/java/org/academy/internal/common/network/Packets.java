@@ -70,6 +70,12 @@ public final class Packets {
             register(ArcGenerate.GeneratePacket.class, listener -> new ArcGenerate.GeneratePacket());
     public static final Class<Railgun.ShootPacket> RAILGUN_SHOOT =
             register(Railgun.ShootPacket.class, listener -> new Railgun.ShootPacket());
+    public static final Class<Railgun.StartChargePacket> RAILGUN_START_CHARGE =
+            register(Railgun.StartChargePacket.class, listener -> new Railgun.StartChargePacket());
+    public static final Class<Railgun.ConfirmChargePacket> RAILGUN_CONFIRM_CHARGE =
+            register(Railgun.ConfirmChargePacket.class, listener -> new Railgun.ConfirmChargePacket());
+    public static final Class<Railgun.ChargeEndPacket> RAILGUN_CHARGE_END =
+            register(Railgun.ChargeEndPacket.class, listener -> new Railgun.ChargeEndPacket());
     public static final Class<SingleHighSpeedElectronBeam.ShootPacket> SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT =
             register(SingleHighSpeedElectronBeam.ShootPacket.class, listener -> new SingleHighSpeedElectronBeam.ShootPacket());
     public static final Class<SelfTeleport.SelfTeleportPacket> SELF_TELEPORT =
