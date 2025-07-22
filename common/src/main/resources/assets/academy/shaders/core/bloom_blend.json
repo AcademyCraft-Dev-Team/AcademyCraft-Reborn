@@ -1,0 +1,20 @@
+{
+  "blend": {
+    "func": "add",
+    "srcrgb": "one",
+    "dstrgb": "zero"
+  },
+  "vertex": "academy:screen_blit",
+  "fragment": "academy:bloom_blend",
+  "attributes": ["Position"],
+  "samplers": [
+    {"name": "DiffuseSampler"},
+    {"name": "BlurTexture1"},
+    {"name": "BlurTexture2"},
+    {"name": "BlurTexture3"}
+  ],
+  "uniforms": [
+    {"name": "BloomRadius", "type": "float", "count": 1, "values": [1.0]},
+    {"name": "BloomIntensive", "type": "float", "count": 1, "values": [1.7]}
+  ]
+}

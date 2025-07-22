@@ -559,7 +559,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             renderType = GLOW_CIRCLE;
             progress = MathUtil.lerpStartEndFactor(progress, targetProgress,
                     ClientUtil.animationFactor(MathUtil.PI / 2));
-            var uniform = Shaders.glowCircle.getUniform("progress");
+            var uniform = Shaders.GLOW_CIRCLE.getUniform("progress");
             if (uniform != null) {
                 uniform.set(progress);
             }

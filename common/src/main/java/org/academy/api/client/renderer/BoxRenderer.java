@@ -3,11 +3,11 @@ package org.academy.api.client.renderer;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.util.VertexUtil;
 
+import static org.academy.api.client.render.post.BloomEffect.BUFFER_SOURCE;
 import static org.academy.api.client.util.RenderStateUtil.*;
 
 public final class BoxRenderer {
@@ -20,13 +20,14 @@ public final class BoxRenderer {
             true,
             RenderType.CompositeState.builder()
                     .setShaderState(POSITION_COLOR_SHADER)
+                    .setOutputState(BLOOM_TARGET)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                     .createCompositeState(false)
     );
 
-    public static void renderFilledBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
+    public static void renderFilledBox(PoseStack poseStack, AABB box,
                                        float r, float g, float b, float a) {
-        final var vertexConsumer = bufferSource.getBuffer(FILLED_BOX_RENDER_TYPE);
+        final var vertexConsumer = BUFFER_SOURCE.getBuffer(FILLED_BOX_RENDER_TYPE);
         final var matrix4f = poseStack.last().pose();
 
         var faces = VertexUtil.Box.getBoxVertices(box);

@@ -27,7 +27,7 @@ public class CursorWidget extends AbstractWidget {
 
     private void renderSDFGlowAndShadow(MatrixStack stack, MultiBufferSource.BufferSource bufferSource) {
         var renderType = CIRCLE_GLOW;
-        var sdfShader = Shaders.sdfCircleGlowShader;
+        var sdfShader = Shaders.SDF_CIRCLE_GLOW;
 
         sdfShader.safeGetUniform("Radius").set(radius);
         sdfShader.safeGetUniform("Softness").set(softness);

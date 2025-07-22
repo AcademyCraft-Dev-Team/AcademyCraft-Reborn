@@ -23,8 +23,6 @@ public class EntityRenderers {
             register(EntityTypes.ARC, ArcRenderer::new);
     public static final EntityRendererProvider<HighSpeedElectronBeam> HIGH_SPEED_ELECTRON_BEAM =
             register(EntityTypes.HIGH_SPEED_ELECTRON_BEAM, HighSpeedElectronBeamRenderer::new);
-    public static final EntityRendererProvider<Plasma> PLASMA =
-            register(EntityTypes.PLASMA, PlasmaRenderer::new);
     public static final EntityRendererProvider<GlowCircle> GLOW_CIRCLE =
             register(EntityTypes.GLOW_CIRCLE, GlowCircleRenderer::new);
     public static final EntityRendererProvider<Smoke> SMOKE =
