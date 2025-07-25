@@ -1,0 +1,53 @@
+package org.academy;
+
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.inventory.MenuTypes;
+import org.academy.internal.common.world.item.Items;
+import org.academy.internal.common.world.level.block.Blocks;
+import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
+import org.academy.internal.common.world.level.levelgen.feature.Features;
+import org.academy.internal.common.world.level.material.Fluids;
+
+import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_NAME;
+
+public class AcademyCraftRegister {
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    @SuppressWarnings("unused")
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CREATIVE_MODE_TAB = CREATIVE_MODE_TABS.register("all", () -> CreativeModeTab.builder().icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {
+        for (var key : Items.ITEMS.getEntries()) {
+            Item item = key.get();
+            if (!(item == Items.ICON.get())) {
+                output.accept(item);
+            }
+        }
+    }).title(Component.literal(MOD_NAME)).build());
+
+    private AcademyCraftRegister() {
+    }
+
+    public static void register(IEventBus modEventBus) {
+        Blocks.BLOCKS.register(modEventBus);
+        Items.ITEMS.register(modEventBus);
+        BlockEntityTypes.BLOCK_ENTITY_TYPES.register(modEventBus);
+        EntityTypes.ENTITY_TYPES.register(modEventBus);
+        SoundEvents.SOUND_EVENTS.register(modEventBus);
+        MenuTypes.MENU_TYPES.register(modEventBus);
+        Fluids.FLUIDS.register(modEventBus);
+        ParticleTypes.PARTICLE_TYPES.register(modEventBus);
+        Features.FEATURES.register(modEventBus);
+        AttachmentTypes.REGISTER.register(modEventBus);
+        CREATIVE_MODE_TABS.register(modEventBus);
+    }
+}

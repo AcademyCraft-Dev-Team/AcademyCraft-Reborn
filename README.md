@@ -1,17 +1,11 @@
 # AcademyCraft-Reborn
 
-A Minecraft mod about Academy City, for Fabric & Forge 1.20.1.
+A Minecraft mod about Academy City, for NeoForge 1.21.1.
 
 ## Downloads
 
 *   **Latest Builds**: GitHub Actions (Recommended)
 *   **Community (QQ Group)**: `217327418`
-
-## Runtime Requirements
-
-For runtime, this project requires a JDK that supports the `-XX:+AllowEnhancedClassRedefinition` flag, e.g., JetBrains Runtime (JBR).
-
-Additionally, place `hotswap-agent-core.jar` into the `JAVA_HOME/lib/hotswap/` directory.
 
 ## License
 
