@@ -1,8 +1,0 @@
-{
-  "loader": "forge:obj",
-  "model": "academy:models/block/wind_gen_pillar.obj",
-  "flip_v": true,
-  "textures": {
-    "particle": "academy:block/break_w"
-  }
-}

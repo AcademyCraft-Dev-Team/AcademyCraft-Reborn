@@ -1,9 +1,0 @@
-{
-  "loader": "forge:obj",
-  "model": "academy:models/block/ability_developer.obj",
-  "flip_v": true,
-  "textures": {
-    "texture0": "academy:block/legacy/ability_developer",
-    "particle": "academy:block/break_db"
-  }
-}
