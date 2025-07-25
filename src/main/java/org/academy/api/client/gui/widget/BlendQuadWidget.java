@@ -1,0 +1,61 @@
+package org.academy.api.client.gui.widget;
+
+import net.minecraft.client.renderer.MultiBufferSource;
+import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.RenderTypes;
+import org.academy.internal.client.renderer.Shaders;
+
+public class BlendQuadWidget extends AbstractWidget {
+    public float marginTop = 4f;
+    public float marginBottom = 4f;
+    public float marginLeft = 4f;
+    public float marginRight = 4f;
+    public boolean drawLine = true;
+
+    public float red;
+    public float green;
+    public float blue;
+
+    public final ImageWidget lineWidget;
+
+    public BlendQuadWidget(float x, float y, float width, float height) {
+        super(x, y, width, height);
+        lineWidget = new ImageWidget(1, 0, width - 2, 4, RenderTypes.ELEMENT_LINE);
+    }
+
+    @Override
+    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible()) return;
+
+        stack.pushPose();
+
+        var matrix = stack.lastMatrix();
+        stack.translate(getX(), getY(), getZ());
+
+        var w = getWidth();
+        var h = getHeight();
+        var finalAlpha = getAbsoluteAlpha();
+
+        var shader = Shaders.SDF_SHARP_QUAD_WITH_MARGIN;
+        shader.safeGetUniform("u_size").set(w, h);
+        shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
+        shader.safeGetUniform("u_fillColor").set(red, green, blue, finalAlpha);
+
+        var vertexConsumer = bufferSource.getBuffer(RenderTypes.SDF_SHARP_QUAD);
+        vertexConsumer.addVertex(matrix, 0, 0, 0).setUv(0, 0);
+        vertexConsumer.addVertex(matrix, 0, h, 0).setUv(0, 1);
+        vertexConsumer.addVertex(matrix, w, h, 0).setUv(1, 1);
+        vertexConsumer.addVertex(matrix, w, 0, 0).setUv(1, 0);
+        bufferSource.endBatch(RenderTypes.SDF_SHARP_QUAD);
+
+        if (drawLine) {
+            lineWidget.setAlpha(finalAlpha);
+            lineWidget.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            stack.translate(0, getHeight() - marginTop / 2, 0);
+            lineWidget.render(stack, bufferSource, mouseX, mouseY, partialTick);
+        }
+
+        stack.popPose();
+    }
+}
