@@ -28,7 +28,7 @@ public final class RenderUtil {
         try {
             IrisApi.getInstance().isShaderPackInUse();
             result = () -> IrisApi.getInstance().isShaderPackInUse();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             result = () -> false;
         }
         IS_SHADER_PACK_IN_USE = result;

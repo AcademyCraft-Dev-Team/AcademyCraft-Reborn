@@ -1,16 +1,20 @@
 package org.academy.api.client.vanilla;
 
-import com.mojang.blaze3d.platform.Window;
 import net.neoforged.bus.api.Event;
 
 public final class ResizeDisplayEvent extends Event {
-    private final Window window;
+    private final int width, height;
 
-    public ResizeDisplayEvent(Window window) {
-        this.window = window;
+    public ResizeDisplayEvent(int width, int height) {
+        this.width = width;
+        this.height = height;
     }
 
-    public Window getWindow() {
-        return window;
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
     }
 }

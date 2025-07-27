@@ -11,13 +11,11 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.util.RenderUtil;
-import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.internal.client.renderer.Shaders;
 import org.lwjgl.opengl.GL20;
 
+import java.nio.IntBuffer;
 import java.util.SequencedMap;
 
 import static com.mojang.blaze3d.platform.GlConst.*;
@@ -33,33 +31,30 @@ import static org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT1;
  * Modified for this project.
  */
 public final class BloomEffect {
-    private static RenderTarget INPUT, OUTPUT;
+    private static int lastWidth, lastHeight;
+    private static final RenderTarget INPUT;
+    private static RenderTarget OUTPUT;
     private static RenderTarget SWAP2A, SWAP4A, SWAP8A, SWAP2B, SWAP4B, SWAP8B;
     public static final ByteBufferBuilder BYTE_BUFFER_BUILDER = new ByteBufferBuilder(786432);
     private static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS = new Object2ObjectLinkedOpenHashMap<>();
     public static final MultiBufferSource.BufferSource BUFFER_SOURCE = MultiBufferSource.immediateWithBuffers(FIXED_BUFFERS, BYTE_BUFFER_BUILDER);
 
     static {
-        resize();
-    }
-
-    public static void resize() {
-        var window = Minecraft.getInstance().getWindow();
-        var width = window.getWidth();
-        var height = window.getHeight();
-        INPUT = new TextureTarget(width, height, true, Minecraft.ON_OSX) {
+        var mc = Minecraft.getInstance();
+        var mainRenderTarget = mc.getMainRenderTarget();
+        INPUT = new TextureTarget(mainRenderTarget.width, mainRenderTarget.height, true, Minecraft.ON_OSX) {
             @Override
             public void createBuffers(int width, int height, boolean clearError) {
                 RenderSystem.assertOnRenderThreadOrInit();
                 int i = RenderSystem.maxSupportedTextureSize();
                 if (width > 0 && width <= i && height > 0 && height <= i) {
-                    viewWidth = width;
-                    viewHeight = height;
+                    this.viewWidth = width;
+                    this.viewHeight = height;
                     this.width = width;
                     this.height = height;
-                    frameBufferId = GlStateManager.glGenFramebuffers();
-                    colorTextureId = TextureUtil.generateTextureId();
-                    depthBufferId = -1;
+                    this.frameBufferId = GlStateManager.glGenFramebuffers();
+                    this.colorTextureId = TextureUtil.generateTextureId();
+                    this.depthBufferId = -1;
 
                     var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
                     var mainDepthBufferId = mainRenderTarget.getDepthTextureId();
@@ -89,7 +84,17 @@ public final class BloomEffect {
             }
         };
         INPUT.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    }
 
+    public static void init() {
+        var mc = Minecraft.getInstance();
+        var mainRenderTarget = mc.getMainRenderTarget();
+
+        resize(mainRenderTarget.width, mainRenderTarget.height);
+    }
+
+    public static void resize(int width, int height) {
+        INPUT.resize(width, height, Minecraft.ON_OSX);
         OUTPUT = getRenderTarget(width, height);
 
         SWAP2A = getRenderTarget(width / 2, height / 2);
@@ -98,12 +103,11 @@ public final class BloomEffect {
         SWAP2B = getRenderTarget(width / 2, height / 2);
         SWAP4B = getRenderTarget(width / 4, height / 4);
         SWAP8B = getRenderTarget(width / 8, height / 8);
-
-        NeoForge.EVENT_BUS.register(BloomEffect.class);
     }
 
     /**
      * 防止 getBuffer 时的 endBatch 导致的提前渲染造成的深度测试 bug
+     *
      * @param type 需要注意, 必须 canConsolidateConsecutiveGeometry
      */
     public static void addFixedBuffer(RenderType type) {
@@ -115,29 +119,29 @@ public final class BloomEffect {
             @Override
             public void createBuffers(int width, int height, boolean clearError) {
                 RenderSystem.assertOnRenderThreadOrInit();
-                var maxSupportedTextureSize = RenderSystem.maxSupportedTextureSize();
-                if (width > 0 && width <= maxSupportedTextureSize && height > 0 && height <= maxSupportedTextureSize) {
-                    viewWidth = width;
-                    viewHeight = height;
+                int i = RenderSystem.maxSupportedTextureSize();
+                if (width > 0 && width <= i && height > 0 && height <= i) {
+                    this.viewWidth = width;
+                    this.viewHeight = height;
                     this.width = width;
                     this.height = height;
-                    frameBufferId = GlStateManager.glGenFramebuffers();
-                    colorTextureId = TextureUtil.generateTextureId();
+                    this.frameBufferId = GlStateManager.glGenFramebuffers();
+                    this.colorTextureId = TextureUtil.generateTextureId();
 
                     setFilterMode(GlConst.GL_LINEAR);
 
                     GlStateManager._bindTexture(this.colorTextureId);
                     GlStateManager._texParameter(3553, 10242, 33071);
                     GlStateManager._texParameter(3553, 10243, 33071);
-                    GlStateManager._texImage2D(3553, 0, 32856, this.width, this.height, 0, 6408, 5121, null);
+                    GlStateManager._texImage2D(3553, 0, 32856, this.width, this.height, 0, 6408, 5121, (IntBuffer) null);
                     GlStateManager._glBindFramebuffer(36160, this.frameBufferId);
                     GlStateManager._glFramebufferTexture2D(36160, 36064, 3553, this.colorTextureId, 0);
 
-                    checkStatus();
-                    clear(clearError);
-                    unbindRead();
+                    this.checkStatus();
+                    this.clear(clearError);
+                    this.unbindRead();
                 } else {
-                    throw new IllegalArgumentException("Window " + width + "x" + height + " size out of bounds (max. size: " + maxSupportedTextureSize + ")");
+                    throw new IllegalArgumentException("Window " + width + "x" + height + " size out of bounds (max. size: " + i + ")");
                 }
             }
         };
@@ -160,6 +164,13 @@ public final class BloomEffect {
         if (RenderUtil.IS_SHADER_PACK_IN_USE.get()) return;
 
         var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
+        var width = mainRenderTarget.width;
+        var height = mainRenderTarget.height;
+        if (width != lastWidth || height != lastHeight) {
+            resize(width, height);
+            lastWidth = width;
+            lastHeight = height;
+        }
         var mainRenderTargetColorTextureId = mainRenderTarget.getColorTextureId();
 
         RenderSystem.colorMask(true, true, true, true);
@@ -215,10 +226,5 @@ public final class BloomEffect {
 
         Shaders.SCREEN_BLIT.setSampler("DiffuseSampler", OUTPUT.getColorTextureId());
         blitScreen(Shaders.SCREEN_BLIT, mainRenderTarget);
-    }
-
-    @SubscribeEvent
-    public static void onResizeDisplayEvent(ResizeDisplayEvent event) {
-        resize();
     }
 }

@@ -19,6 +19,7 @@ import java.util.List;
 import static org.academy.AcademyCraft.getResourceLocation;
 
 public final class BlurEffect {
+    private static int lastWidth, lastHeight;
     private static float blurRadius = 20f;
     private static PostChain blurPostChain;
     private static RenderTarget mainRenderTarget;
@@ -26,9 +27,8 @@ public final class BlurEffect {
     private static final List<Uniform> blurRadiusUniforms = new ArrayList<>();
 
     public static void init() {
-        NeoForge.EVENT_BUS.register(BlurEffect.class);
         var mc = Minecraft.getInstance();
-        var window = mc.getWindow();
+        mainRenderTarget = mc.getMainRenderTarget();
         try {
             blurPostChain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(),
                     getResourceLocation("shaders/post/masked_blur.json")) {
@@ -46,10 +46,9 @@ public final class BlurEffect {
                     }
                 }
             };
-            blurPostChain.resize(window.getWidth(), window.getHeight());
+            blurPostChain.resize(mainRenderTarget.width, mainRenderTarget.height);
             maskInputRenderTarget = blurPostChain.getTempTarget("mask_input_target");
             maskInputRenderTarget.clear(Minecraft.ON_OSX);
-            mainRenderTarget = mc.getMainRenderTarget();
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -62,6 +61,13 @@ public final class BlurEffect {
     }
 
     public static void stop(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
+        var width = mainRenderTarget.width;
+        var height = mainRenderTarget.height;
+        if (width != lastWidth || height != lastHeight) {
+            blurPostChain.resize(width, height);
+            lastWidth = width;
+            lastHeight = height;
+        }
         bufferSource.endBatch(blurMaskRenderType);
         blurPostChain.process(0);
         mainRenderTarget.bindWrite(false);
@@ -76,12 +82,6 @@ public final class BlurEffect {
         for (var uniform : blurRadiusUniforms) {
             uniform.set(blurRadius);
         }
-    }
-
-    @SubscribeEvent
-    public static void onResizeDisplay(ResizeDisplayEvent event) {
-        var window = event.getWindow();
-        blurPostChain.resize(window.getWidth(), window.getHeight());
     }
 
     private BlurEffect() {
