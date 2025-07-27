@@ -2,6 +2,8 @@ package org.academy.api.client.jni;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public final class AudioDecoderJNI {
@@ -14,33 +16,53 @@ public final class AudioDecoderJNI {
 
     private static void loadNativeLibrary() {
         try {
-            var libName = "audiodecoder_jni";
-            var os = System.getProperty("os.name").toLowerCase();
+            String libName = "audiodecoder_jni";
+            String osName = System.getProperty("os.name").toLowerCase();
+            String osArch = System.getProperty("os.arch").toLowerCase();
+
+            String platform;
+            String arch;
             String libFileName;
 
-            if (os.contains("win")) {
+            if (osName.contains("win")) {
+                platform = "windows";
                 libFileName = libName + ".dll";
-            } else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
+            } else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix") || osName.contains("linux")) {
+                platform = "linux";
                 libFileName = "lib" + libName + ".so";
-            } else if (os.contains("mac")) {
-                libFileName = "lib" + libName + ".dylib";
             } else {
-                throw new UnsupportedOperationException("Unsupported operating system: " + os);
+                throw new UnsupportedOperationException("Unsupported operating system: " + osName);
             }
 
-            var tempDir = new File(System.getProperty("java.io.tmpdir"), "natives");
-            if (!tempDir.exists() && !tempDir.mkdirs()) {
-                throw new RuntimeException("Failed to create temp directory: " + tempDir.getAbsolutePath());
+            if (osArch.equals("amd64") || osArch.equals("x86_64")) {
+                arch = "x86_64";
+            } else if (osArch.equals("aarch64") || osArch.equals("arm64")) {
+                arch = "aarch64";
+            } else {
+                throw new UnsupportedOperationException("Unsupported architecture: " + osArch);
             }
 
-            var nativeLibFile = new File(tempDir, libFileName);
+            String resourcePath = String.format("/natives/%s-%s/%s", platform, arch, libFileName);
 
-            try (var in = AudioDecoderJNI.class.getResourceAsStream("/natives/" + libFileName);
-                 var out = new FileOutputStream(nativeLibFile)) {
-                if (in == null) {
-                    throw new UnsatisfiedLinkError("Native library not found in JAR: /natives/" + libFileName);
+            File tempDir = new File(System.getProperty("java.io.tmpdir"), "audiodecoder_natives_" + System.nanoTime());
+            if (!tempDir.exists()) {
+                if (!tempDir.mkdirs()) {
+                    throw new IOException("Failed to create temp directory: " + tempDir.getAbsolutePath());
                 }
-                in.transferTo(out);
+            }
+            tempDir.deleteOnExit();
+
+            File nativeLibFile = new File(tempDir, libFileName);
+            nativeLibFile.deleteOnExit();
+
+            try (InputStream in = AudioDecoderJNI.class.getResourceAsStream(resourcePath)) {
+                if (in == null) {
+                    String errorMessage = String.format("Native library not found in JAR for %s-%s: %s", platform, arch, resourcePath);
+                    throw new UnsatisfiedLinkError(errorMessage);
+                }
+                try (FileOutputStream out = new FileOutputStream(nativeLibFile)) {
+                    in.transferTo(out);
+                }
             }
 
             System.load(nativeLibFile.getAbsolutePath());

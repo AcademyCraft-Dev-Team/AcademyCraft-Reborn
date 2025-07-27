@@ -456,7 +456,7 @@ public final class DataTerminalHUD implements HUDRenderer {
 
     @SubscribeEvent
     public static void onResizeDisplay(ResizeDisplayEvent event) {
-        var window = event.getWindow();
+        var window = Minecraft.getInstance().getWindow();
         initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
     }
 

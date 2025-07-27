@@ -6,6 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.jni.AudioDecoderJNI;
@@ -66,6 +67,13 @@ public final class MediaPlayerBackend {
     @SubscribeEvent
     public static void onAddReloadListener(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(new MusicLoader());
+    }
+
+    @SubscribeEvent
+    public static void onClientPauseChangePost(ClientPauseChangeEvent.Post event) {
+        if (Minecraft.getInstance().level == null || event.isPaused()) {
+            stop();
+        }
     }
 
     public static void updatePlaylistFromData(Map<String, MusicData> musicMap, String sourceDescription) {
