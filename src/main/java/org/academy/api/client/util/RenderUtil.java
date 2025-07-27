@@ -167,7 +167,7 @@ public final class RenderUtil {
                 VertexFormat.Mode.QUADS,
                 16,
                 false,
-                true,
+                false,
                 RenderType.CompositeState.builder()
                         .setTextureState(
                                 new RenderStateShard.TextureStateShard(
