@@ -3,68 +3,30 @@ package org.academy.internal.client.app;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.RenderTypes;
-import org.academy.api.client.resource.TextureResources;
 import org.academy.api.client.util.RenderUtil;
+import org.academy.internal.client.app.mediaplayer.MediaPlayerBackend;
 import org.joml.Matrix4f;
-import org.lwjgl.openal.AL10;
-import org.lwjgl.openal.AL11;
-import org.lwjgl.stb.STBVorbis;
-import org.lwjgl.stb.STBVorbisInfo;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.MemoryUtil;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ShortBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
-import static org.academy.AcademyCraft.getResourceLocation;
 
+@EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
 public final class MediaPlayer implements DataTerminalHUD.App {
     private static final float MEDIA_ICON_SIZE = 20f;
     private static final float MEDIA_HEIGHT = 30f;
     private static final float MARGIN_MEDIA_ICON = 10f;
     public static final DataTerminalHUD.App INSTANCE = new MediaPlayer();
-    private static final int BUFFER_COUNT = 2;
-
-    private static final List<MediaInfo> PLAYLIST = new ArrayList<>();
-
-    private static int alSource = -1;
-    private static final int[] alBuffers = new int[BUFFER_COUNT];
-    private static long vorbisHandle = 0;
-    private static ByteBuffer oggDataBuffer;
-    private static ShortBuffer clientBuffer;
-    private static int baseSampleOffset = 0;
-
-    private static final AtomicBoolean isPlaying = new AtomicBoolean(false);
-    private static final AtomicBoolean isPaused = new AtomicBoolean(false);
-
-    private static int currentTrackIndex = -1;
-    private static float totalDuration = 0f;
-    private static float volume = 1.0f;
-    private static int sampleRate = 0;
-    private static int format = 0;
-    private static int channels = 0;
-
-    private static volatile boolean isProgrammaticallyUpdatingProgressBar = false;
 
     private static SliderWidget progressBar;
     private static LabelWidget timeLabel;
@@ -72,69 +34,22 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static GeometricButtonWidget playPauseButton;
     private static ImageButtonWidget modeButton;
 
-    public enum PlaybackMode {
-        REPEAT_LIST,
-        REPEAT_ONE,
-        SHUFFLE
-    }
-
     public enum ButtonShape {PLAY, PAUSE, NEXT, PREV}
 
-    private static PlaybackMode PLAYBACK_MODE = PlaybackMode.REPEAT_LIST;
-    private static final List<Integer> shuffledPlaylist = new ArrayList<>();
-    private static int shuffleIndex = -1;
-
-    private enum FadeState {NONE, FADING_IN, FADING_OUT}
-
-    private static FadeState fadeState = FadeState.NONE;
-    private static long fadeStartTime;
-    private static final float FADE_DURATION_SECONDS = 0.75f;
-    private static boolean isStoppingAfterFadeOut = false;
-
-    static {
-        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, getResourceLocation("minecraft", "sounds/music/game/creative/creative1.ogg"), "Creative 1", "C418"));
-        PLAYLIST.add(new MediaInfo(TextureResources.ICON_NODE, getResourceLocation("minecraft", "sounds/music/game/calm1.ogg"), "Calm 1", "C418"));
-    }
-
-    private static void initializeAudio() {
-        if (alSource != -1) return;
-        alSource = AL10.alGenSources();
-        AL10.alGenBuffers(alBuffers);
-        AL10.alSourcef(alSource, AL10.AL_GAIN, volume);
-        NeoForge.EVENT_BUS.register(MediaPlayer.class);
-    }
-
-    private static float getCurrentTime() {
-        if (alSource == -1 || !AL10.alIsSource(alSource) || sampleRate == 0) {
-            return 0;
-        }
-        return ((float) baseSampleOffset / sampleRate) + AL10.alGetSourcef(alSource, AL11.AL_SEC_OFFSET);
+    private MediaPlayer() {
     }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Pre event) {
-        if (rootPanel == null || !rootPanel.isVisible() || sampleRate == 0) return;
+        if (rootPanel == null || !rootPanel.isVisible()) return;
 
-        if (fadeState != FadeState.NONE) {
-            handleFade();
-        }
+        MediaPlayerBackend.update();
 
-        if (!isPlaying.get() || isPaused.get()) {
-            return;
-        }
-
-        swapBuffers();
-
-        if (AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING) {
-            AL10.alSourcePlay(alSource);
-        }
-
-        var offset = getCurrentTime();
+        var offset = MediaPlayerBackend.getCurrentTime();
+        var totalDuration = MediaPlayerBackend.getTotalDuration();
 
         if (progressBar != null && !progressBar.startDragging) {
-            isProgrammaticallyUpdatingProgressBar = true;
             progressBar.setValue(totalDuration > 0 ? offset / totalDuration : 0f);
-            isProgrammaticallyUpdatingProgressBar = false;
         }
 
         if (timeLabel != null) {
@@ -145,191 +60,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                     totalSeconds / 60, totalSeconds % 60);
         }
 
-        if (totalDuration > 0 && offset >= totalDuration - 0.1f) {
-            playNext();
-        }
-    }
-
-    private static void handleFade() {
-        var elapsedNanos = System.nanoTime() - fadeStartTime;
-        var progress = Math.min(1.0f, elapsedNanos / (FADE_DURATION_SECONDS * 1_000_000_000.0f));
-
-        if (fadeState == FadeState.FADING_IN) {
-            AL10.alSourcef(alSource, AL10.AL_GAIN, volume * progress);
-            if (progress >= 1.0f) {
-                fadeState = FadeState.NONE;
-            }
-        } else if (fadeState == FadeState.FADING_OUT) {
-            AL10.alSourcef(alSource, AL10.AL_GAIN, volume * (1.0f - progress));
-            if (progress >= 1.0f) {
-                fadeState = FadeState.NONE;
-                if (isStoppingAfterFadeOut) {
-                    performStop();
-                    isStoppingAfterFadeOut = false;
-                }
-            }
-        }
-    }
-
-
-    private static void generateShuffledPlaylist() {
-        shuffledPlaylist.clear();
-        if (PLAYLIST.isEmpty()) return;
-        for (var i = 0; i < PLAYLIST.size(); i++) {
-            shuffledPlaylist.add(i);
-        }
-        Collections.shuffle(shuffledPlaylist, new Random());
-        if (shuffledPlaylist.size() > 1 && currentTrackIndex != -1 && shuffledPlaylist.getFirst() == currentTrackIndex) {
-            Collections.swap(shuffledPlaylist, 0, 1);
-        }
-        shuffleIndex = 0;
-    }
-
-    private static void performStop() {
-        if (alSource != -1 && AL10.alIsSource(alSource)) {
-            AL10.alSourceStop(alSource);
-            var queued = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED);
-            if (queued > 0) {
-                var tempBuffers = new int[queued];
-                AL10.alSourceUnqueueBuffers(alSource, tempBuffers);
-            }
-        }
-
-        if (vorbisHandle != 0) {
-            STBVorbis.stb_vorbis_close(vorbisHandle);
-            vorbisHandle = 0;
-        }
-        if (oggDataBuffer != null) {
-            MemoryUtil.memFree(oggDataBuffer);
-            oggDataBuffer = null;
-        }
-        if (clientBuffer != null) {
-            MemoryUtil.memFree(clientBuffer);
-            clientBuffer = null;
-        }
-
-        isPlaying.set(false);
-        isPaused.set(false);
-        baseSampleOffset = 0;
-        fadeState = FadeState.NONE;
-
         updatePlayPauseButton();
-    }
-
-    private static void playNext() {
-        if (PLAYLIST.isEmpty()) return;
-
-        var nextIndex = switch (PLAYBACK_MODE) {
-            case REPEAT_ONE -> currentTrackIndex;
-            case SHUFFLE -> {
-                if (shuffledPlaylist.isEmpty() || ++shuffleIndex >= shuffledPlaylist.size()) {
-                    generateShuffledPlaylist();
-                }
-                yield shuffledPlaylist.isEmpty() ? -1 : shuffledPlaylist.get(shuffleIndex);
-            }
-            case REPEAT_LIST -> (currentTrackIndex + 1) % PLAYLIST.size();
-        };
-
-        if (nextIndex != -1) {
-            play(nextIndex);
-        } else {
-            stop();
-        }
-    }
-
-    private static void playPrevious() {
-        if (PLAYLIST.isEmpty()) return;
-
-        var prevIndex = switch (PLAYBACK_MODE) {
-            case REPEAT_ONE -> currentTrackIndex;
-            case SHUFFLE -> {
-                if (shuffledPlaylist.isEmpty()) {
-                    generateShuffledPlaylist();
-                }
-                if (shuffledPlaylist.isEmpty()) {
-                    yield -1;
-                }
-                shuffleIndex--;
-                if (shuffleIndex < 0) {
-                    shuffleIndex = shuffledPlaylist.size() - 1;
-                }
-                yield shuffledPlaylist.get(shuffleIndex);
-            }
-            case REPEAT_LIST -> (currentTrackIndex - 1 + PLAYLIST.size()) % PLAYLIST.size();
-        };
-
-        if (prevIndex != -1) {
-            play(prevIndex);
-        }
-    }
-
-    private static void seek(float timeRatio) {
-        if (isProgrammaticallyUpdatingProgressBar || vorbisHandle == 0 || sampleRate == 0) return;
-
-        var wasPlaying = isPlaying.get() && !isPaused.get();
-        if (wasPlaying) {
-            AL10.alSourceStop(alSource);
-        }
-
-        var queued = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED);
-        if (queued > 0) {
-            var tempBuffers = new int[queued];
-            AL10.alSourceUnqueueBuffers(alSource, tempBuffers);
-        }
-
-        var sampleOffset = (int) ((timeRatio * totalDuration) * sampleRate);
-        STBVorbis.stb_vorbis_seek(vorbisHandle, sampleOffset);
-        baseSampleOffset = sampleOffset;
-
-        for (var bufferId : alBuffers) {
-            forward(bufferId);
-        }
-
-        if (wasPlaying) {
-            AL10.alSourcePlay(alSource);
-        }
-    }
-
-    private static void setVolume(float value) {
-        volume = value;
-        if (fadeState != FadeState.NONE) return;
-        if (alSource != -1) {
-            AL10.alSourcef(alSource, AL10.AL_GAIN, volume);
-        }
-    }
-
-    private static void swapBuffers() {
-        var count = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_PROCESSED);
-
-        for (var i = 0; i < count; i++) {
-            var bufferId = AL10.alSourceUnqueueBuffers(alSource);
-            var samplesInBuf = AL10.alGetBufferi(bufferId, AL10.AL_SIZE) / (channels * 2);
-            baseSampleOffset += samplesInBuf;
-
-            forward(bufferId);
-        }
-    }
-
-    private static void forward(int bufferId) {
-        var samplesRead = 0;
-        var maxSamples = clientBuffer.capacity();
-
-        while (samplesRead < maxSamples) {
-            clientBuffer.position(samplesRead);
-            var read = STBVorbis.stb_vorbis_get_samples_short_interleaved(vorbisHandle, channels, clientBuffer);
-            if (read == 0) {
-                break;
-            }
-            samplesRead += read * channels;
-        }
-
-        if (samplesRead > 0) {
-            clientBuffer.position(0).limit(samplesRead);
-            AL10.alBufferData(bufferId, format, clientBuffer, sampleRate);
-            clientBuffer.clear();
-            AL10.alSourceQueueBuffers(alSource, bufferId);
-        }
-
     }
 
     private PanelWidget create() {
@@ -349,10 +80,11 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 var mediaList = new ScrollPanelWidget(0, 0, width, height - dockBarHeight);
                 main.addChild("list_media", mediaList);
                 {
-                    for (var i = 0; i < PLAYLIST.size(); i++) {
-                        var info = PLAYLIST.get(i);
+                    var playlist = MediaPlayerBackend.getPlaylist();
+                    for (var i = 0; i < playlist.size(); i++) {
+                        var info = playlist.get(i);
                         var trackIndex = i;
-                        var mediaWidget = createMediaWidget(info, i * (MEDIA_HEIGHT), () -> play(trackIndex));
+                        var mediaWidget = createMediaWidget(info, i * (MEDIA_HEIGHT), () -> MediaPlayerBackend.play(trackIndex));
                         mediaList.addChild("media_" + i, mediaWidget);
                     }
                 }
@@ -379,8 +111,15 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                     dockBar.addChild("layered", layered);
                     {
                         var progressBarHeight = 5f;
-                        progressBar = new SliderWidget(0, 0, layered.getWidth(), progressBarHeight, Orientation.HORIZONTAL, 0f, 1f, 0f);
-                        progressBar.onValueChanged = MediaPlayer::seek;
+                        progressBar = new SliderWidget(0, 0, layered.getWidth(), progressBarHeight, Orientation.HORIZONTAL, 0f, 1f, 0f) {
+                            @Override
+                            public boolean mouseReleased(double mouseX, double mouseY, int button) {
+                                if (this.startDragging) {
+                                    MediaPlayerBackend.seek(this.getValue());
+                                }
+                                return super.mouseReleased(mouseX, mouseY, button);
+                            }
+                        };
                         layered.addChild("progress_bar", progressBar);
 
                         var timeLabelY = progressBar.getY() + progressBar.getHeight() + 2f;
@@ -400,15 +139,15 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             var totalControlsWidth = btnSize * 4 + sliderWidth + smallGap * 2 + bigGap * 2;
                             var currentX = (controlPanel.getWidth() - totalControlsWidth) / 2;
 
-                            var prevButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, ButtonShape.PREV, MediaPlayer::playPrevious);
+                            var prevButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, ButtonShape.PREV, MediaPlayerBackend::playPrevious);
                             controlPanel.addChild("prev", prevButton);
                             currentX += btnSize + smallGap;
 
-                            playPauseButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, isPlaying.get() && !isPaused.get() ? ButtonShape.PAUSE : ButtonShape.PLAY, MediaPlayer::togglePlayPause);
+                            playPauseButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, ButtonShape.PLAY, MediaPlayerBackend::togglePlayPause);
                             controlPanel.addChild("play_pause", playPauseButton);
                             currentX += btnSize + smallGap;
 
-                            var nextButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, ButtonShape.NEXT, MediaPlayer::playNext);
+                            var nextButton = new GeometricButtonWidget(currentX, 0, btnSize, btnSize, ButtonShape.NEXT, MediaPlayerBackend::playNext);
                             controlPanel.addChild("next", nextButton);
                             currentX += btnSize + bigGap;
 
@@ -417,42 +156,40 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             controlPanel.addChild("mode_button", modeButton);
                             currentX += btnSize + bigGap;
 
-                            var volumeSlider = new SliderWidget(currentX, 0, sliderWidth, btnSize, Orientation.VERTICAL, 0f, 1f, volume) {
+                            var volumeSlider = new SliderWidget(currentX, 0, sliderWidth, btnSize, Orientation.VERTICAL, 0f, 1f, 1.0f) {
                                 @Override
                                 protected float getThumbSize() {
                                     return 3f;
                                 }
                             };
-                            volumeSlider.onValueChanged = MediaPlayer::setVolume;
+                            volumeSlider.onValueChanged = MediaPlayerBackend::setVolume;
                             controlPanel.addChild("volume_slider", volumeSlider);
                         }
                     }
                 }
             }
         }
+        updatePlayPauseButton();
         updateModeButtonIcon();
         return rootPanel;
     }
 
     private static void cyclePlaybackMode() {
-        PLAYBACK_MODE = PlaybackMode.values()[(PLAYBACK_MODE.ordinal() + 1) % PlaybackMode.values().length];
-        if (PLAYBACK_MODE == PlaybackMode.SHUFFLE && shuffledPlaylist.isEmpty()) {
-            generateShuffledPlaylist();
-        }
+        MediaPlayerBackend.cyclePlaybackMode();
         updateModeButtonIcon();
     }
 
     private static void updateModeButtonIcon() {
         if (modeButton == null) return;
         modeButton.setAlpha(1.0f);
-        switch (PLAYBACK_MODE) {
+        switch (MediaPlayerBackend.getPlaybackMode()) {
             case REPEAT_LIST -> modeButton.renderType = RenderTypes.ICON_CYCLE;
             case REPEAT_ONE -> modeButton.renderType = RenderTypes.ICON_SINGLE_CYCLE;
             case SHUFFLE -> modeButton.renderType = RenderTypes.ICON_RANDOM;
         }
     }
 
-    private PanelWidget createMediaWidget(MediaInfo mediaInfo, float y, Runnable onClick) {
+    private PanelWidget createMediaWidget(MediaPlayerBackend.MediaInfo mediaInfo, float y, Runnable onClick) {
         var root = new PanelWidget(0, y, 150f - 6f, MEDIA_HEIGHT);
         {
             var button = new ImageButtonWidget(0, 0, root.getWidth(), root.getHeight(), null, onClick);
@@ -466,7 +203,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             main.setEnabled(false);
             root.addChild("main", main);
             {
-                var iconRenderType = RenderUtil.getPositionColorTexRenderType(mediaInfo.name(), mediaInfo.icon(), false);
+                var iconRenderType = RenderUtil.getPositionColorTexRenderType(mediaInfo.name(), mediaInfo.icon(), true);
                 var icon = new ImageWidget(
                         MARGIN_MEDIA_ICON, (MEDIA_HEIGHT - MEDIA_ICON_SIZE) / 2,
                         MEDIA_ICON_SIZE, MEDIA_ICON_SIZE, iconRenderType
@@ -483,7 +220,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 main.addChild("name", name);
 
                 var info = new AutoScaleLabelWidget(
-                        mediaInfo.info(),
+                        mediaInfo.subtitle(),
                         icon.getX() + MEDIA_ICON_SIZE + 5, 16,
                         80f, true
                 );
@@ -493,6 +230,11 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             }
         }
         return root;
+    }
+
+    private static void updatePlayPauseButton() {
+        if (playPauseButton == null) return;
+        playPauseButton.shape = MediaPlayerBackend.isPlaying() && !MediaPlayerBackend.isPaused() ? ButtonShape.PAUSE : ButtonShape.PLAY;
     }
 
     @Override
@@ -505,111 +247,29 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         return "Media Player";
     }
 
-    private static void play(int trackIndex) {
-        initializeAudio();
-        performStop();
-
-        if (trackIndex < 0 || trackIndex >= PLAYLIST.size()) {
-            currentTrackIndex = -1;
-            return;
-        }
-        currentTrackIndex = trackIndex;
-        var mediaInfo = PLAYLIST.get(currentTrackIndex);
-
-        try (var stack = MemoryStack.stackPush();
-             var stream = Minecraft.getInstance().getResourceManager().open(mediaInfo.source())) {
-
-            var bytes = stream.readAllBytes();
-            oggDataBuffer = MemoryUtil.memAlloc(bytes.length).put(bytes).flip();
-
-            var error = stack.mallocInt(1);
-            vorbisHandle = STBVorbis.stb_vorbis_open_memory(oggDataBuffer, error, null);
-            if (vorbisHandle == 0) {
-                throw new IOException("Failed to open Ogg Vorbis memory stream: " + error.get(0));
-            }
-
-            var info = STBVorbisInfo.malloc(stack);
-            STBVorbis.stb_vorbis_get_info(vorbisHandle, info);
-            sampleRate = info.sample_rate();
-            channels = info.channels();
-            format = channels == 1 ? AL10.AL_FORMAT_MONO16 : AL10.AL_FORMAT_STEREO16;
-
-            var totalSamples = STBVorbis.stb_vorbis_stream_length_in_samples(vorbisHandle);
-            totalDuration = (float) totalSamples / sampleRate;
-
-            var targetSamples = sampleRate * channels / 2;
-            clientBuffer = MemoryUtil.memAllocShort(targetSamples);
-            baseSampleOffset = 0;
-
-            for (var bufferId : alBuffers) {
-                forward(bufferId);
-            }
-
-            AL10.alSourcePlay(alSource);
-            AL10.alSourcef(alSource, AL10.AL_GAIN, 0f);
-
-            isPlaying.set(true);
-            isPaused.set(false);
-            fadeState = FadeState.FADING_IN;
-            fadeStartTime = System.nanoTime();
-
-            updatePlayPauseButton();
-
-        } catch (IOException e) {
-            AcademyCraft.LOGGER.error("Failed to play media: {}", mediaInfo.source(), e);
-            stop();
-        }
-    }
-
-    private static void stop() {
-        initializeAudio();
-        if (!isPlaying.get() && !isPaused.get()) return;
-        isStoppingAfterFadeOut = true;
-        fadeState = FadeState.FADING_OUT;
-        fadeStartTime = System.nanoTime();
-    }
-
-    private static void togglePlayPause() {
-        initializeAudio();
-        if (!isPlaying.get()) {
-            play(currentTrackIndex != -1 ? currentTrackIndex : 0);
-            return;
-        }
-
-        boolean wasPaused;
-        do {
-            wasPaused = isPaused.get();
-        } while (!isPaused.compareAndSet(wasPaused, !wasPaused));
-        var isNowPaused = !wasPaused;
-
-        updatePlayPauseButton();
-
-        if (isNowPaused) {
-            AL10.alSourcePause(alSource);
-        } else {
-            AL10.alSourcePlay(alSource);
-            AL10.alSourcef(alSource, AL10.AL_GAIN, volume);
-        }
-        fadeState = FadeState.NONE;
-    }
-
-    private static void updatePlayPauseButton() {
-        if (playPauseButton == null) return;
-        playPauseButton.shape = isPlaying.get() && !isPaused.get() ? ButtonShape.PAUSE : ButtonShape.PLAY;
-    }
-
     @Override
     public Runnable onClick() {
         return () -> DataTerminalHUD.setAppArea(create());
     }
 
-    private MediaPlayer() {
-    }
-
-    private record MediaInfo(ResourceLocation icon, ResourceLocation source, String name, String info) {
-    }
-
     private static class GeometricButtonWidget extends AbstractButtonWidget {
+        private static final RenderType RENDER_TYPE = RenderType.create(
+                "geometric_button",
+                DefaultVertexFormat.POSITION_COLOR,
+                VertexFormat.Mode.TRIANGLES,
+                32,
+                false,
+                false,
+                RenderType.CompositeState
+                        .builder()
+                        .setCullState(NO_CULL)
+                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setDepthTestState(NO_DEPTH_TEST)
+                        .setWriteMaskState(COLOR_WRITE)
+                        .createCompositeState(false)
+        );
+
         public ButtonShape shape;
         public int color = 0xFFFFFFFF;
 
@@ -642,23 +302,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             stack.pushPose();
             stack.translate(getX(), getY(), getZ());
             var matrix = stack.lastMatrix();
-            var buffer = bufferSource.getBuffer(RenderType.create(
-                    "geometric_button",
-                    DefaultVertexFormat.POSITION_COLOR,
-                    VertexFormat.Mode.TRIANGLES,
-                    32,
-                    false,
-                    false,
-                    RenderType.CompositeState
-                            .builder()
-                            .setCullState(NO_CULL)
-                            .setShaderState(POSITION_COLOR_SHADER)
-                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                            .setDepthTestState(NO_DEPTH_TEST)
-                            .setWriteMaskState(COLOR_WRITE)
-                            .createCompositeState(false)
-            ));
-
+            var buffer = bufferSource.getBuffer(RENDER_TYPE);
             var w = getWidth();
             var h = getHeight();
             var r = (float) (color >> 16 & 255) / 255.0F;

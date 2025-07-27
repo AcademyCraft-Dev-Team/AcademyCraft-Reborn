@@ -118,6 +118,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     @Override
     public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, float partialTick) {
         if (active) {
+            bufferSource.endBatch();
             stack.pushPose();
             RenderSystem.backupProjectionMatrix();
             RenderSystem.disableDepthTest();
@@ -135,15 +136,15 @@ public final class DataTerminalHUD implements HUDRenderer {
             pose.identity();
             float z = -2.5125f;
             float scale = (2f * Math.abs(z) * (float) Math.tan(fovY / 2f)) / guiH;
-            pose.translate(0, 0, z);
-            pose.scale(scale, -scale, scale);
+            stack.translate(0, 0, z);
+            stack.scale(scale, -scale, scale);
             float centerX = guiW - WIDTH / 2f;
             float centerY = guiH / 2f;
             float dx = (float) (xpos - centerX);
             float dy = (float) (ypos - centerY);
-            pose.rotateAround(Axis.YP.rotationDegrees(dx * 0.035f - 5), guiW / 2 - WIDTH * 1.25f + WIDTH / 2, 0, 0);
-            pose.rotateAround(Axis.XP.rotationDegrees(-dy * 0.035f + 2), 0, 0, 0);
-            pose.translate(-guiW / 2, -guiH / 2, 0);
+            stack.lastMatrix().rotateAround(Axis.YP.rotationDegrees(dx * 0.035f - 5), guiW / 2 - WIDTH * 1.25f + WIDTH / 2, 0, 0);
+            stack.lastMatrix().rotateAround(Axis.XP.rotationDegrees(-dy * 0.035f + 2), 0, 0, 0);
+            stack.translate(-guiW / 2, -guiH / 2, 0);
             stack.scale(1, 1, 0.01f);
             RenderSystem.applyModelViewMatrix();
             stack.pushPose();
