@@ -38,7 +38,7 @@ public final class AcademyCraftServer {
         SERVER_FUTURE_MANAGER.clear();
         SERVER_NETWORK_MANAGER.registerPacketListener(SERVER_FUTURE_MANAGER);
         SERVER_FUTURE_MANAGER.registerPayloadHandler(ImagiphaseDowsingRodItem.class);
-        serverConfigFile = new File(new File(""), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
+        serverConfigFile = new File(event.getServer().getServerDirectory().toFile(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
         worldDataFile = event.getServer().getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);
         AcademyCraft.checkFile(worldDataFile);
