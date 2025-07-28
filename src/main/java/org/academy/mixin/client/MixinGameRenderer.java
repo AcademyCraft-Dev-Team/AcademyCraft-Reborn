@@ -4,9 +4,11 @@ import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,5 +25,11 @@ public abstract class MixinGameRenderer {
         var stack = new MatrixStack();
         stack.setFrom(guigraphics.pose().last());
         HUDManager.render(stack, guigraphics.bufferSource(), deltaTracker.getGameTimeDeltaPartialTick(true));
+    }
+
+    @Inject(method = "resize",at = @At("TAIL"))
+    private void resize(int width, int height, CallbackInfo ci) {
+        var event = new ResizeDisplayEvent(width, height);
+        NeoForge.EVENT_BUS.post(event);
     }
 }
