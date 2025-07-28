@@ -13,8 +13,7 @@ import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.network.future.FutureManagerClient;
-import org.academy.api.client.render.post.BloomEffect;
-import org.academy.api.client.render.post.BlurEffect;
+import org.academy.api.client.util.StencilUtil;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.FutureManager;
 import org.academy.internal.client.app.Apps;
@@ -54,8 +53,7 @@ public final class AcademyCraftClient {
         Apps.register();
         EntityRenderers.init();
         ParticleRenderTypes.init();
-        BlurEffect.init();
-        BloomEffect.init();
+        StencilUtil.init();
     }
 
     @SubscribeEvent

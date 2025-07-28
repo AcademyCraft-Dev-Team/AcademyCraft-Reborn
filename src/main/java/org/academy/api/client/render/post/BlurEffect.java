@@ -7,9 +7,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostPass;
 import net.minecraft.client.renderer.RenderType;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -21,12 +18,12 @@ import static org.academy.AcademyCraft.getResourceLocation;
 public final class BlurEffect {
     private static int lastWidth, lastHeight;
     private static float blurRadius = 20f;
-    private static PostChain blurPostChain;
-    private static RenderTarget mainRenderTarget;
-    private static RenderTarget maskInputRenderTarget;
+    private static final PostChain blurPostChain;
+    private static final RenderTarget mainRenderTarget;
+    private static final RenderTarget maskInputRenderTarget;
     private static final List<Uniform> blurRadiusUniforms = new ArrayList<>();
 
-    public static void init() {
+    static {
         var mc = Minecraft.getInstance();
         mainRenderTarget = mc.getMainRenderTarget();
         try {
@@ -55,12 +52,6 @@ public final class BlurEffect {
     }
 
     public static void start(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
-        bufferSource.endBatch(blurMaskRenderType);
-        maskInputRenderTarget.clear(Minecraft.ON_OSX);
-        maskInputRenderTarget.bindWrite(false);
-    }
-
-    public static void stop(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
         var width = mainRenderTarget.width;
         var height = mainRenderTarget.height;
         if (width != lastWidth || height != lastHeight) {
@@ -68,6 +59,12 @@ public final class BlurEffect {
             lastWidth = width;
             lastHeight = height;
         }
+        bufferSource.endBatch(blurMaskRenderType);
+        maskInputRenderTarget.clear(Minecraft.ON_OSX);
+        maskInputRenderTarget.bindWrite(false);
+    }
+
+    public static void stop(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
         bufferSource.endBatch(blurMaskRenderType);
         blurPostChain.process(0);
         mainRenderTarget.bindWrite(false);

@@ -15,7 +15,6 @@ import org.academy.api.client.util.RenderUtil;
 import org.academy.internal.client.renderer.Shaders;
 import org.lwjgl.opengl.GL20;
 
-import java.nio.IntBuffer;
 import java.util.SequencedMap;
 
 import static com.mojang.blaze3d.platform.GlConst.*;
@@ -32,9 +31,7 @@ import static org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT1;
  */
 public final class BloomEffect {
     private static int lastWidth, lastHeight;
-    private static final RenderTarget INPUT;
-    private static RenderTarget OUTPUT;
-    private static RenderTarget SWAP2A, SWAP4A, SWAP8A, SWAP2B, SWAP4B, SWAP8B;
+    private static final RenderTarget INPUT, OUTPUT, SWAP2A, SWAP4A, SWAP8A, SWAP2B, SWAP4B, SWAP8B;
     public static final ByteBufferBuilder BYTE_BUFFER_BUILDER = new ByteBufferBuilder(786432);
     private static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS = new Object2ObjectLinkedOpenHashMap<>();
     public static final MultiBufferSource.BufferSource BUFFER_SOURCE = MultiBufferSource.immediateWithBuffers(FIXED_BUFFERS, BYTE_BUFFER_BUILDER);
@@ -42,7 +39,9 @@ public final class BloomEffect {
     static {
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
-        INPUT = new TextureTarget(mainRenderTarget.width, mainRenderTarget.height, true, Minecraft.ON_OSX) {
+        var width = mainRenderTarget.width;
+        var height = mainRenderTarget.height;
+        INPUT = new TextureTarget(width, height, true, Minecraft.ON_OSX) {
             @Override
             public void createBuffers(int width, int height, boolean clearError) {
                 RenderSystem.assertOnRenderThreadOrInit();
@@ -84,17 +83,6 @@ public final class BloomEffect {
             }
         };
         INPUT.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    }
-
-    public static void init() {
-        var mc = Minecraft.getInstance();
-        var mainRenderTarget = mc.getMainRenderTarget();
-
-        resize(mainRenderTarget.width, mainRenderTarget.height);
-    }
-
-    public static void resize(int width, int height) {
-        INPUT.resize(width, height, Minecraft.ON_OSX);
         OUTPUT = getRenderTarget(width, height);
 
         SWAP2A = getRenderTarget(width / 2, height / 2);
@@ -103,6 +91,22 @@ public final class BloomEffect {
         SWAP2B = getRenderTarget(width / 2, height / 2);
         SWAP4B = getRenderTarget(width / 4, height / 4);
         SWAP8B = getRenderTarget(width / 8, height / 8);
+    }
+
+    public static void resize(int width, int height) {
+        INPUT.resize(width, height, Minecraft.ON_OSX);
+        resize(OUTPUT, width, height);
+        resize(SWAP2A, width / 2, height / 2);
+        resize(SWAP4A, width / 4, height / 4);
+        resize(SWAP8A, width / 8, height / 8);
+        resize(SWAP2B, width / 2, height / 2);
+        resize(SWAP4B, width / 4, height / 4);
+        resize(SWAP8B, width / 8, height / 8);
+    }
+
+    private static void resize(RenderTarget renderTarget, int width, int height) {
+        renderTarget.resize(width, height, Minecraft.ON_OSX);
+        renderTarget.setFilterMode(GlConst.GL_LINEAR);
     }
 
     /**
@@ -115,47 +119,14 @@ public final class BloomEffect {
     }
 
     private static RenderTarget getRenderTarget(int width, int height) {
-        var renderTarget = new TextureTarget(width, height, false, Minecraft.ON_OSX) {
-            @Override
-            public void createBuffers(int width, int height, boolean clearError) {
-                RenderSystem.assertOnRenderThreadOrInit();
-                int i = RenderSystem.maxSupportedTextureSize();
-                if (width > 0 && width <= i && height > 0 && height <= i) {
-                    this.viewWidth = width;
-                    this.viewHeight = height;
-                    this.width = width;
-                    this.height = height;
-                    this.frameBufferId = GlStateManager.glGenFramebuffers();
-                    this.colorTextureId = TextureUtil.generateTextureId();
-
-                    setFilterMode(GlConst.GL_LINEAR);
-
-                    GlStateManager._bindTexture(this.colorTextureId);
-                    GlStateManager._texParameter(3553, 10242, 33071);
-                    GlStateManager._texParameter(3553, 10243, 33071);
-                    GlStateManager._texImage2D(3553, 0, 32856, this.width, this.height, 0, 6408, 5121, (IntBuffer) null);
-                    GlStateManager._glBindFramebuffer(36160, this.frameBufferId);
-                    GlStateManager._glFramebufferTexture2D(36160, 36064, 3553, this.colorTextureId, 0);
-
-                    this.checkStatus();
-                    this.clear(clearError);
-                    this.unbindRead();
-                } else {
-                    throw new IllegalArgumentException("Window " + width + "x" + height + " size out of bounds (max. size: " + i + ")");
-                }
-            }
-        };
+        var renderTarget = new TextureTarget(width, height, false, Minecraft.ON_OSX);
         renderTarget.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
+        renderTarget.setFilterMode(GlConst.GL_LINEAR);
         return renderTarget;
     }
 
     public static RenderTarget getInput() {
         return INPUT;
-    }
-
-    public static RenderTarget getOutput() {
-        return OUTPUT;
     }
 
     public static void process() {
