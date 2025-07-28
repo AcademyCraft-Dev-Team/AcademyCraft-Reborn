@@ -7,6 +7,9 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostPass;
 import net.minecraft.client.renderer.RenderType;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -16,7 +19,6 @@ import java.util.List;
 import static org.academy.AcademyCraft.getResourceLocation;
 
 public final class BlurEffect {
-    private static int lastWidth, lastHeight;
     private static float blurRadius = 20f;
     private static final PostChain blurPostChain;
     private static final RenderTarget mainRenderTarget;
@@ -51,14 +53,11 @@ public final class BlurEffect {
         }
     }
 
+    public static void init() {
+        NeoForge.EVENT_BUS.register(BlurEffect.class);
+    }
+
     public static void start(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
-        var width = mainRenderTarget.width;
-        var height = mainRenderTarget.height;
-        if (width != lastWidth || height != lastHeight) {
-            blurPostChain.resize(width, height);
-            lastWidth = width;
-            lastHeight = height;
-        }
         bufferSource.endBatch(blurMaskRenderType);
         maskInputRenderTarget.clear(Minecraft.ON_OSX);
         maskInputRenderTarget.bindWrite(false);
@@ -79,6 +78,12 @@ public final class BlurEffect {
         for (var uniform : blurRadiusUniforms) {
             uniform.set(blurRadius);
         }
+    }
+
+    @SubscribeEvent
+    public static void onResizeDisplay(ResizeDisplayEvent event) {
+        var window = Minecraft.getInstance().getWindow();
+        blurPostChain.resize(window.getWidth(), window.getHeight());
     }
 
     private BlurEffect() {
