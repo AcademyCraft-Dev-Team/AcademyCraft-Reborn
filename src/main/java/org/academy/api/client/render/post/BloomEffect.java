@@ -11,7 +11,10 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.internal.client.renderer.Shaders;
 import org.lwjgl.opengl.GL20;
 
@@ -91,6 +94,10 @@ public final class BloomEffect {
         SWAP2B = getRenderTarget(width / 2, height / 2);
         SWAP4B = getRenderTarget(width / 4, height / 4);
         SWAP8B = getRenderTarget(width / 8, height / 8);
+    }
+
+    public static void init() {
+        NeoForge.EVENT_BUS.register(BloomEffect.class);
     }
 
     public static void resize(int width, int height) {
@@ -197,5 +204,11 @@ public final class BloomEffect {
 
         Shaders.SCREEN_BLIT.setSampler("DiffuseSampler", OUTPUT.getColorTextureId());
         blitScreen(Shaders.SCREEN_BLIT, mainRenderTarget);
+    }
+
+    @SubscribeEvent
+    public static void onResizeDisplay(ResizeDisplayEvent event) {
+        var window = Minecraft.getInstance().getWindow();
+        resize(window.getWidth(), window.getHeight());
     }
 }
