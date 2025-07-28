@@ -129,7 +129,7 @@ dependencies {
     runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
     runtimeOnly "maven.modrinth:sodium:mc1.21.1-0.6.9-neoforge"
-    compileOnly "maven.modrinth:iris:1.8.8+1.21.1-neoforge"
+    implementation "maven.modrinth:iris:1.8.8+1.21.1-neoforge"
     runtimeOnly "maven.modrinth:sodium-extra:mc1.21.1-0.6.0+neoforge"
     runtimeOnly "maven.modrinth:lithium:mc1.21.1-0.15.0-neoforge"
 }

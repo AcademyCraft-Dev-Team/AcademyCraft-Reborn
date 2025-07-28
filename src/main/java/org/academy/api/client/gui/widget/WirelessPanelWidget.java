@@ -130,14 +130,13 @@ public class WirelessPanelWidget extends PanelWidget {
     }
 
     private void updateConnectedNodeDisplay(boolean isNull, String nodeName) {
-        boolean changed = !connectedNodeName.equals(nodeName);
         connectedNodeName = nodeName;
         removeChild("connected_node");
         var connectedNodeWidgetRef = getNodeWidget(12, 38, nodeName, true, isNull);
         addChild("connected_node", connectedNodeWidgetRef);
         NeoForge.EVENT_BUS.post(new ConnectionStatusChangedEvent(nodeName));
 
-        if (changed && isVisible()) {
+        if (isVisible()) {
             requestAvailableNodes();
         }
     }
