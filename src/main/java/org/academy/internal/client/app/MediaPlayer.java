@@ -16,6 +16,7 @@ import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.RenderUtil;
+import org.academy.internal.client.app.mediaplayer.MediaInfo;
 import org.academy.internal.client.app.mediaplayer.MediaPlayerBackend;
 import org.joml.Matrix4f;
 
@@ -189,7 +190,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         }
     }
 
-    private PanelWidget createMediaWidget(MediaPlayerBackend.MediaInfo mediaInfo, float y, Runnable onClick) {
+    private PanelWidget createMediaWidget(MediaInfo mediaInfo, float y, Runnable onClick) {
         var root = new PanelWidget(0, y, 150f - 6f, MEDIA_HEIGHT);
         {
             var button = new ImageButtonWidget(0, 0, root.getWidth(), root.getHeight(), null, onClick);
