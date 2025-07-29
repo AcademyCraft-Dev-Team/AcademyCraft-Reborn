@@ -1,8 +1,0 @@
-{
-  "Only My Railgun": {
-    "icon": "academy:musics/only_my_railgun/icon.png",
-    "source_type": "RESOURCE_LOCATION",
-    "source": "academy:musics/only_my_railgun/source.ogg",
-    "subtitle": "Test"
-  }
-}

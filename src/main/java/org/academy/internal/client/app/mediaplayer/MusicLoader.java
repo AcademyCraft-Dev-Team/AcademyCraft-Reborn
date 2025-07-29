@@ -25,14 +25,14 @@ public class MusicLoader implements PreparableReloadListener {
             @NotNull ProfilerFiller preparationsProfiler, @NotNull ProfilerFiller reloadProfiler,
             @NotNull Executor backgroundExecutor, @NotNull Executor gameExecutor
     ) {
-        CompletableFuture<Map<String, MusicData>> future = CompletableFuture.supplyAsync(() -> {
-            Map<String, MusicData> combinedMap = new HashMap<>();
+        var future = CompletableFuture.supplyAsync(() -> {
+            var combinedMap = new HashMap<String, MusicData>();
 
-            for (String namespace : resourceManager.getNamespaces()) {
+            for (var namespace : resourceManager.getNamespaces()) {
                 try {
                     for (var resource : resourceManager.getResourceStack(AcademyCraft.getResourceLocation(namespace, FILE_PATH))) {
                         try (var reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
-                            Map<String, MusicData> map = GSON.fromJson(reader, MediaPlayerBackend.MUSIC_DATA_MAP_TYPE);
+                            var map = GSON.<Map<String, MusicData>>fromJson(reader, MediaPlayerBackend.MUSIC_DATA_MAP_TYPE);
                             if (map != null) {
                                 combinedMap.putAll(map);
                             }
