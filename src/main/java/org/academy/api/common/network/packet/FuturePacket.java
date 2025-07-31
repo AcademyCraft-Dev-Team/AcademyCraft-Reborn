@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.PacketListener;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class FuturePacket<T extends PacketListener> extends IPacket<T> {
+public abstract class FuturePacket<T extends PacketListener> extends Packet<T> {
     public int futureId;
     public int payloadTypeId;
     public FriendlyByteBuf payloadData;

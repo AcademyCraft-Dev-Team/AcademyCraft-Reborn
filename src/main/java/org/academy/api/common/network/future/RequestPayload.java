@@ -4,10 +4,10 @@ import net.minecraft.network.PacketListener;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class IResponsePayload<P extends PacketListener> extends IPayload<P> {
+public abstract class RequestPayload<P extends PacketListener, R extends ResponsePayload<?>> extends Payload<P> {
     public P packetListener;
 
-    protected IResponsePayload(@Nullable P packetListener) {
+    protected RequestPayload(@Nullable P packetListener) {
         this.packetListener = packetListener;
     }
 
@@ -18,4 +18,7 @@ public abstract class IResponsePayload<P extends PacketListener> extends IPayloa
         }
         return packetListener;
     }
+
+    @NotNull
+    public abstract PayloadType<?, R> getExpectedResponsePayloadType();
 }

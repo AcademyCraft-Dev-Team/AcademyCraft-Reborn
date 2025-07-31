@@ -37,7 +37,7 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -413,7 +413,7 @@ public final class VectorAccel extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class DashPacket extends IPacket<ServerGamePacketListenerImpl> {
+    public static final class DashPacket extends Packet<ServerGamePacketListenerImpl> {
         public float chargeRatio;
         public Vec3 direction;
 
@@ -442,7 +442,7 @@ public final class VectorAccel extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.VECTOR_ACCEL_DASH.get();
         }
     }

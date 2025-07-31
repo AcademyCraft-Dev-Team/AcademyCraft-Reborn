@@ -6,27 +6,23 @@ import org.academy.api.common.network.future.asm.IPayloadHandlerInvoker;
 import org.academy.api.common.network.future.asm.PayloadHandlerInvokerFactory;
 import org.academy.api.common.network.packet.FuturePacket;
 
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 public abstract class AbstractFutureManager {
     protected final Map<Integer, PendingFutureInfo> pendingFutures = new ConcurrentHashMap<>();
     protected final Map<Integer, IPayloadHandlerInvoker> requestHandlers = new ConcurrentHashMap<>();
-    protected final FutureManager futureManager;
     private final AtomicInteger nextFutureId = new AtomicInteger(0);
     protected static final long DEFAULT_TIMEOUT_MS = 60000;
 
     protected record PendingFutureInfo(Consumer<?> callback, int expectedResponsePayloadId, long expireTime) {
     }
 
-    protected AbstractFutureManager(FutureManager futureManager) {
-        this.futureManager = futureManager;
+    protected AbstractFutureManager() {
         AcademyCraft.executorService.scheduleAtFixedRate(this::cleanupTimedOutFutures, 1, 1, TimeUnit.SECONDS);
     }
 
@@ -39,11 +35,11 @@ public abstract class AbstractFutureManager {
         return nextFutureId.getAndIncrement();
     }
 
-    protected <T_RESP extends IPayload> int createPendingFuture(Class<T_RESP> responseClass, Consumer<T_RESP> callback, long timeoutMillis) {
+    protected <T_RESP extends Payload<?>> int createPendingFuture(PayloadType<?, T_RESP> responsePayloadType, Consumer<T_RESP> callback, long timeoutMillis) {
         int futureId = generateFutureId();
-        int expectedResponsePayloadId = futureManager.getPayloadId(responseClass);
-        if (expectedResponsePayloadId == -1 && responseClass != null) {
-            AcademyCraft.LOGGER.error("FutureManager: Response payload type {} is not registered.", responseClass.getName());
+        int expectedResponsePayloadId = responsePayloadType.getPayloadId();
+        if (expectedResponsePayloadId == -1) {
+            AcademyCraft.LOGGER.error("FutureManager: Response payload type {} is not registered.", responsePayloadType.getPayloadClass().getName());
             return -1;
         }
         long expireTime = System.currentTimeMillis() + timeoutMillis;
@@ -53,15 +49,15 @@ public abstract class AbstractFutureManager {
 
     @SuppressWarnings({"unchecked", "DuplicatedCode"})
     public void registerPayloadHandler(Object owner) {
-        Class<?> clazz = owner.getClass();
+        var clazz = owner.getClass();
         if (owner instanceof Class) {
             clazz = (Class<?>) owner;
         }
 
-        for (Method method : clazz.getDeclaredMethods()) {
+        for (var method : clazz.getDeclaredMethods()) {
             if (!method.isAnnotationPresent(HandlePayload.class)) continue;
 
-            boolean isStatic = Modifier.isStatic(method.getModifiers());
+            var isStatic = Modifier.isStatic(method.getModifiers());
             if (!isStatic && owner instanceof Class) {
                 AcademyCraft.LOGGER.warn("Cannot register non-static @HandlePayload method {} from a Class object.", method.getName());
                 continue;
@@ -70,73 +66,69 @@ public abstract class AbstractFutureManager {
                 AcademyCraft.LOGGER.warn("Should register static @HandlePayload method {} using its Class object.", method.getName());
             }
 
-            if (method.getParameterCount() != 1 || !IRequestPayload.class.isAssignableFrom(method.getParameterTypes()[0])) {
+            if (method.getParameterCount() != 1 || !RequestPayload.class.isAssignableFrom(method.getParameterTypes()[0])) {
                 AcademyCraft.LOGGER.error("Method {} annotated with @HandlePayload must have one IRequestPayload parameter.", method.getName());
                 continue;
             }
-            if (!IResponsePayload.class.isAssignableFrom(method.getReturnType()) || method.getReturnType() == void.class) {
+            if (!ResponsePayload.class.isAssignableFrom(method.getReturnType()) || method.getReturnType() == void.class) {
                 AcademyCraft.LOGGER.error("Method {} annotated with @HandlePayload must return a type implementing IResponsePayload.", method.getName());
                 continue;
             }
 
-            Class<? extends IRequestPayload<?, ?>> requestType = (Class<? extends IRequestPayload<?, ?>>) method.getParameterTypes()[0];
-            Class<? extends IResponsePayload> responseType = (Class<? extends IResponsePayload>) method.getReturnType();
+            var requestType = (Class<? extends RequestPayload<?, ?>>) method.getParameterTypes()[0];
+            var responseType = (Class<? extends ResponsePayload<?>>) method.getReturnType();
 
-            IPayloadHandlerInvoker invoker = isStatic
+            var invoker = isStatic
                     ? PayloadHandlerInvokerFactory.createStaticInvoker(method, requestType, responseType)
                     : PayloadHandlerInvokerFactory.createInstanceInvoker(method, requestType, responseType, owner);
 
-            int requestTypeId = this.futureManager.getPayloadId(requestType);
-            this.requestHandlers.put(requestTypeId, invoker);
+            var requestTypeId = FutureManager.getPayloadType(requestType).getPayloadId();
+            requestHandlers.put(requestTypeId, invoker);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    protected <L extends PacketListener> void handleRequest(FuturePacket<L> requestPacket, L packetListener, Consumer<IPayload> responseSender) {
-        IPayloadHandlerInvoker invoker = requestHandlers.get(requestPacket.payloadTypeId);
+    protected <L extends PacketListener> void handleRequest(FuturePacket<L> requestPacket, L packetListener, Consumer<Payload<?>> responseSender) {
+        var payloadTypeId = requestPacket.payloadTypeId;
+        var invoker = requestHandlers.get(payloadTypeId);
         if (invoker == null) {
-            AcademyCraft.LOGGER.error("No handler for request payload ID {}", requestPacket.payloadTypeId);
+            AcademyCraft.LOGGER.error("No handler for request payload ID {}", payloadTypeId);
             return;
         }
 
-        Function<PacketListener, ? extends IPayload> rawFactory = futureManager.getPayloadFactory(requestPacket.payloadTypeId);
-        if (rawFactory == null) {
-            AcademyCraft.LOGGER.error("No factory for request payload ID {}", requestPacket.payloadTypeId);
+        var payloadType = FutureManager.<PacketListener, RequestPayload<PacketListener, ?>>getPayloadTypeById(payloadTypeId);
+
+        var factory = payloadType.getFactory();
+        if (factory == null) {
+            AcademyCraft.LOGGER.error("No factory for request payload ID {}", payloadTypeId);
             return;
         }
-        Function<L, ? extends IRequestPayload<L, ?>> factory = (Function<L, ? extends IRequestPayload<L, ?>>) rawFactory;
 
-        IRequestPayload<L, ?> requestPayload = factory.apply(packetListener);
+        var requestPayload = factory.apply(packetListener);
         requestPayload.read(requestPacket.payloadData);
 
-        IPayload responsePayload = invoker.invoke(requestPayload);
+        var responsePayload = invoker.invoke(requestPayload);
         if (responsePayload != null) {
             responseSender.accept(responsePayload);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    protected <L extends PacketListener> void handleResponse(FuturePacket<L> responsePacket, Consumer<IPayload> callbackExecutor) {
-        PendingFutureInfo info = pendingFutures.get(responsePacket.futureId);
+    protected <L extends PacketListener> void handleResponse(FuturePacket<L> responsePacket, Consumer<Payload<?>> callbackExecutor) {
+        var payloadTypeId = responsePacket.payloadTypeId;
+        var info = pendingFutures.get(responsePacket.futureId);
         if (info == null) {
             AcademyCraft.LOGGER.warn("Received response for unknown/timed-out futureId: {}", responsePacket.futureId);
             return;
         }
 
-        if (info.expectedResponsePayloadId != -1 && info.expectedResponsePayloadId != responsePacket.payloadTypeId) {
-            AcademyCraft.LOGGER.error("Mismatched response payload. Expected ID {}, Got ID {}", info.expectedResponsePayloadId, responsePacket.payloadTypeId);
+        if (info.expectedResponsePayloadId != -1 && info.expectedResponsePayloadId != payloadTypeId) {
+            AcademyCraft.LOGGER.error("Mismatched response payload. Expected ID {}, Got ID {}", info.expectedResponsePayloadId, payloadTypeId);
             return;
         }
 
-        Function<PacketListener, ? extends IPayload> rawFactory = futureManager.getPayloadFactory(responsePacket.payloadTypeId);
-        if (rawFactory == null) {
-            AcademyCraft.LOGGER.error("No factory for response payload ID {}", responsePacket.payloadTypeId);
-            return;
-        }
-        Function<L, ? extends IPayload> factory = (Function<L, ? extends IPayload>) rawFactory;
+        var factory = FutureManager.getPayloadTypeById(payloadTypeId).getFactory();
 
         try {
-            IPayload responsePayload = factory.apply(null);
+            var responsePayload = factory.apply(null);
             responsePayload.read(responsePacket.payloadData);
             callbackExecutor.accept(responsePayload);
         } catch (Exception e) {
@@ -145,12 +137,12 @@ public abstract class AbstractFutureManager {
     }
 
     @SuppressWarnings("unchecked")
-    protected void executeCallback(int futureId, IPayload payload) {
+    protected void executeCallback(int futureId, Payload<?> payload) {
         PendingFutureInfo info = pendingFutures.remove(futureId);
         if (info != null) {
             if (info.callback() != null) {
                 try {
-                    ((Consumer<IPayload>) info.callback()).accept(payload);
+                    ((Consumer<Payload<?>>) info.callback()).accept(payload);
                 } catch (Exception e) {
                     AcademyCraft.LOGGER.error("Error executing callback for futureId {}: {}", futureId, e.getMessage(), e);
                 }

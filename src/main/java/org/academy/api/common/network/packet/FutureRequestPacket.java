@@ -17,7 +17,7 @@ public final class FutureRequestPacket<T extends PacketListener> extends FutureP
 
     @SuppressWarnings("unchecked")
     @Override
-    public @NotNull PacketType<T, ? extends IPacket<T>> getPacketType() {
-        return (PacketType<T, ? extends IPacket<T>>) PacketTypes.FUTURE_REQUEST.get();
+    public @NotNull PacketType<T, ? extends Packet<T>> getPacketType() {
+        return (PacketType<T, ? extends Packet<T>>) PacketTypes.FUTURE_REQUEST.get();
     }
 }

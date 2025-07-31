@@ -3,7 +3,6 @@ package org.academy.api.common.network.packet;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.PacketType;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -16,15 +15,15 @@ import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
-public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
+public class C2SPacket implements net.minecraft.network.protocol.Packet<ServerGamePacketListenerImpl> {
     public static final PacketType<C2SPacket> TYPE = new PacketType<>(PacketFlow.SERVERBOUND, AcademyCraft.getResourceLocation("s2c_packet"));
-    public static final StreamCodec<FriendlyByteBuf, C2SPacket> STREAM_CODEC = Packet.codec(
+    public static final StreamCodec<FriendlyByteBuf, C2SPacket> STREAM_CODEC = net.minecraft.network.protocol.Packet.codec(
             C2SPacket::write, C2SPacket::new
     );
     public int id;
     public FriendlyByteBuf friendlyByteBuf;
 
-    public <T extends IPacket<ServerGamePacketListenerImpl>> C2SPacket(T packet) {
+    public <T extends Packet<ServerGamePacketListenerImpl>> C2SPacket(T packet) {
         id = packet.getPacketType().getPacketId();
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
@@ -42,7 +41,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
     }
 
     @Override
-    public @NotNull PacketType<? extends Packet<ServerGamePacketListenerImpl>> type() {
+    public @NotNull PacketType<? extends net.minecraft.network.protocol.Packet<ServerGamePacketListenerImpl>> type() {
         return TYPE;
     }
 
@@ -53,7 +52,7 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
             NeoForge.EVENT_BUS.post(event);
 
             var packetType = NetworkSystem.<org.academy.api.common.network.PacketType
-                    <ServerGamePacketListenerImpl, IPacket<ServerGamePacketListenerImpl>>>getPacketTypeById(id);
+                    <ServerGamePacketListenerImpl, Packet<ServerGamePacketListenerImpl>>>getPacketTypeById(id);
             var packetClass = packetType.getPacketClass();
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {

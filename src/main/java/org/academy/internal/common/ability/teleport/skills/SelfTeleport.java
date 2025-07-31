@@ -33,7 +33,7 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -264,7 +264,7 @@ public final class SelfTeleport extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class SelfTeleportPacket extends IPacket<ServerGamePacketListenerImpl> {
+    public static final class SelfTeleportPacket extends Packet<ServerGamePacketListenerImpl> {
         public boolean hasPosition;
         public double x, y, z;
 
@@ -302,7 +302,7 @@ public final class SelfTeleport extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.SELF_TELEPORT.get();
         }
     }

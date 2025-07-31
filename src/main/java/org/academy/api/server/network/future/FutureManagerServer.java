@@ -9,8 +9,8 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.future.AbstractFutureManager;
 import org.academy.api.common.network.future.FutureManager;
-import org.academy.api.common.network.future.IRequestPayload;
-import org.academy.api.common.network.future.IResponsePayload;
+import org.academy.api.common.network.future.RequestPayload;
+import org.academy.api.common.network.future.ResponsePayload;
 import org.academy.api.common.network.packet.FutureRequestPacket;
 import org.academy.api.common.network.packet.FutureResponsePacket;
 import org.academy.api.common.network.packet.S2CPacket;
@@ -18,16 +18,15 @@ import org.academy.api.common.network.packet.S2CPacket;
 import java.util.function.Consumer;
 
 public class FutureManagerServer extends AbstractFutureManager {
-    public FutureManagerServer(FutureManager futureManager) {
-        super(futureManager);
+    public FutureManagerServer() {
     }
 
-    public <T_RESP extends IResponsePayload, T_REQ_LISTENER extends PacketListener, REQUEST extends IRequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToClient(
+    public <T_RESP extends ResponsePayload<?>, T_REQ_LISTENER extends PacketListener, REQUEST extends RequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToClient(
             ServerPlayer player, REQUEST requestPayload, Consumer<T_RESP> callback, long timeoutMillis) {
-        var futureId = createPendingFuture(requestPayload.getExpectedResponseType(), callback, timeoutMillis);
+        var futureId = createPendingFuture(requestPayload.getExpectedResponsePayloadType(), callback, timeoutMillis);
         if (futureId == -1) return;
 
-        var requestTypeId = futureManager.getPayloadId(requestPayload.getClass());
+        var requestTypeId = FutureManager.getPayloadType(requestPayload.getClass()).getPayloadId();
         var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
         requestPayload.write(payloadBuffer);
 
@@ -35,7 +34,7 @@ public class FutureManagerServer extends AbstractFutureManager {
         player.connection.send(new S2CPacket(packet));
     }
 
-    public <T_RESP extends IResponsePayload, T_REQ_LISTENER extends PacketListener, REQUEST extends IRequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToClient(
+    public <T_RESP extends ResponsePayload<?>, T_REQ_LISTENER extends PacketListener, REQUEST extends RequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToClient(
             ServerPlayer player, REQUEST requestPayload, Consumer<T_RESP> callback) {
         sendRequestToClient(player, requestPayload, callback, DEFAULT_TIMEOUT_MS);
     }
@@ -46,7 +45,7 @@ public class FutureManagerServer extends AbstractFutureManager {
         var player = packetListener.getPlayer();
 
         handleRequest(requestPacket, packetListener, response -> {
-            var responseTypeId = futureManager.getPayloadId(response.getClass());
+            var responseTypeId = FutureManager.getPayloadType(response.getClass()).getPayloadId();
             var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
             response.write(responseBuffer);
             var responsePkt = new FutureResponsePacket<ClientPacketListener>(requestPacket.futureId, responseTypeId, responseBuffer);

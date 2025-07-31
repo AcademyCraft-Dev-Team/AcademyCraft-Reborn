@@ -25,7 +25,7 @@ import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
@@ -197,7 +197,7 @@ public final class StormWing extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class ControlPacket extends IPacket<ServerGamePacketListenerImpl> {
+    public static final class ControlPacket extends Packet<ServerGamePacketListenerImpl> {
         public State state;
 
         public ControlPacket(ServerGamePacketListenerImpl listener) {
@@ -220,7 +220,7 @@ public final class StormWing extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.STORM_WING_CONTROL.get();
         }
     }
@@ -236,7 +236,7 @@ public final class StormWing extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.STORM_WING_TOGGLE.get();
         }
     }

@@ -23,7 +23,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AcquireCategoryPacket;
-import org.academy.api.common.ability.LearnSkillPacket;
+import org.academy.api.common.ability.LearnSkillPayload;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.Shaders;
@@ -434,9 +434,9 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         final PanelWidget depPanel = new PanelWidget(0, 0, 0, 16);
         final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, BUTTON, () -> {
             if (skillInfo == null) return;
-            LearnSkillPacket request = new LearnSkillPacket(skillInfo.skill().getDescriptionId(), mainPos);
+            LearnSkillPayload request = new LearnSkillPayload(skillInfo.skill().getDescriptionId(), mainPos);
             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
-                    (LearnSkillPacket.Response response) -> {
+                    (LearnSkillPayload.Response response) -> {
                         if (response != null && response.success) {
                             init();
                         }

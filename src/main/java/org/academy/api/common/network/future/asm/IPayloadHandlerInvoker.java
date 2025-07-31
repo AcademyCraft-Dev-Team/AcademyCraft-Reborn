@@ -1,8 +1,8 @@
 package org.academy.api.common.network.future.asm;
 
-import org.academy.api.common.network.future.IRequestPayload;
-import org.academy.api.common.network.future.IResponsePayload;
+import org.academy.api.common.network.future.RequestPayload;
+import org.academy.api.common.network.future.ResponsePayload;
 
 public interface IPayloadHandlerInvoker {
-    IResponsePayload invoke(IRequestPayload<?, ?> requestPayload);
+    ResponsePayload<?> invoke(RequestPayload<?, ?> requestPayload);
 }

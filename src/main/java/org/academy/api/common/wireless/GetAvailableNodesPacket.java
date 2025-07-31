@@ -6,15 +6,17 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
-import org.academy.api.common.network.future.IRequestPayload;
-import org.academy.api.common.network.future.IResponsePayload;
+import org.academy.api.common.network.future.Payload;
+import org.academy.api.common.network.future.PayloadType;
+import org.academy.api.common.network.future.RequestPayload;
+import org.academy.api.common.network.future.ResponsePayload;
+import org.academy.internal.common.network.future.PayloadTypes;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class GetAvailableNodesPacket extends IRequestPayload<ServerGamePacketListenerImpl, GetAvailableNodesPacket.Response> {
+public class GetAvailableNodesPacket extends RequestPayload<ServerGamePacketListenerImpl, GetAvailableNodesPacket.Response> {
     public BlockPos requesterPos;
 
     public GetAvailableNodesPacket(ServerGamePacketListenerImpl listener) {
@@ -36,13 +38,17 @@ public class GetAvailableNodesPacket extends IRequestPayload<ServerGamePacketLis
         requesterPos = buf.readBlockPos();
     }
 
-    @Nullable
     @Override
-    public Class<Response> getExpectedResponseType() {
-        return Response.class;
+    public @NotNull PayloadType<?, Response> getExpectedResponsePayloadType() {
+        return PayloadTypes.GET_AVAILABLE_NODES_RESPONSE.get();
     }
 
-    public static class Response extends IResponsePayload<ClientPacketListener> {
+    @Override
+    public @NotNull PayloadType<ServerGamePacketListenerImpl, ? extends Payload<ServerGamePacketListenerImpl>> getPayloadType() {
+        return PayloadTypes.GET_AVAILABLE_NODES.get();
+    }
+
+    public static class Response extends ResponsePayload<ClientPacketListener> {
         public ArrayList<String> availableNodeNames;
 
         public Response(ClientPacketListener listener) {
@@ -50,7 +56,6 @@ public class GetAvailableNodesPacket extends IRequestPayload<ServerGamePacketLis
         }
 
         public Response(List<String> newNames) {
-            super(null);
             availableNodeNames = new ArrayList<>(newNames);
         }
 
@@ -62,6 +67,11 @@ public class GetAvailableNodesPacket extends IRequestPayload<ServerGamePacketLis
         @Override
         public void read(@NotNull FriendlyByteBuf buf) {
             availableNodeNames = FBBDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, ArrayList::new).deserialize(buf);
+        }
+
+        @Override
+        public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+            return PayloadTypes.GET_AVAILABLE_NODES_RESPONSE.get();
         }
     }
 }
