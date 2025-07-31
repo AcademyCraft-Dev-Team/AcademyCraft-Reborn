@@ -3,15 +3,9 @@ package org.academy;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.AbilitySystem;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.util.GameUtil;
 import org.academy.api.common.vanilla.ThreadType;
-import org.academy.internal.common.ability.builtin.AbilityCategories;
-import org.academy.internal.common.network.Packets;
 import org.academy.internal.common.network.future.Payloads;
 import org.slf4j.Logger;
 
@@ -29,24 +23,14 @@ public final class AcademyCraft {
     public static final String MOD_NAME = "AcademyCraft";
     public static boolean DEBUG_UI = false;
 
-    public AcademyCraft(IEventBus modEventBus, ModContainer modContainer) {
+    public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
     }
 
     public static void init() {
-        for (AbilityCategory abilityCategory : AbilityCategories.ABILITY_CATEGORY_LIST) {
-            AbilitySystem.registerAbilityCategory(abilityCategory);
-        }
-
-        NetworkSystem.registerVanillaPacketsOnce();
         var threadType = GameUtil.getThreadType();
-        var networkSystem = threadType == ThreadType.CLIENT ?
-                AcademyCraftClient.NETWORK_SYSTEM : AcademyCraftServer.NETWORK_SYSTEM;
         var futureManager = threadType == ThreadType.CLIENT ?
                 AcademyCraftClient.FUTURE_MANAGER : AcademyCraftServer.FUTURE_MANAGER;
-        networkSystem.clear();
-        Packets.registerAll(networkSystem);
-        AbilitySystem.init();
         Payloads.registerAll(futureManager);
     }
 

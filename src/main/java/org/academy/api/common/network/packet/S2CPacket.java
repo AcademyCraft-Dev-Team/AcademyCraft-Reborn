@@ -12,7 +12,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftServer;
+import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
@@ -23,13 +23,11 @@ public class S2CPacket implements Packet<ClientPacketListener> {
     public static final StreamCodec<FriendlyByteBuf, S2CPacket> STREAM_CODEC = Packet.codec(
             S2CPacket::write, S2CPacket::new
     );
-    public final int id;
-    public final FriendlyByteBuf friendlyByteBuf;
+    private final int id;
+    private final FriendlyByteBuf friendlyByteBuf;
 
-    @SuppressWarnings("unchecked")
     public <T extends IPacket<ClientPacketListener>> S2CPacket(T packet) {
-        var clazz = (Class<T>) packet.getClass();
-        id = AcademyCraftServer.NETWORK_SYSTEM.getPacketIdByType(clazz);
+        id = packet.getPacketType().getPacketId();
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
     }
@@ -57,15 +55,16 @@ public class S2CPacket implements Packet<ClientPacketListener> {
             NeoForge.EVENT_BUS.post(event);
             if (event.isCanceled()) return;
 
-            var packetClass = AcademyCraftClient.NETWORK_SYSTEM.<IPacket<ClientGamePacketListener>>getClassById(id);
+            var packetType = NetworkSystem.<org.academy.api.common.network.PacketType
+                    <ClientGamePacketListener, IPacket<ClientGamePacketListener>>>getPacketTypeById(id);
+            var packetClass = packetType.getPacketClass();
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {
                     var targetType = packetClass.getAnnotation(PacketTarget.class).value();
                     if (targetType != ThreadType.CLIENT) return;
                 }
                 try {
-                    var factory =
-                            AcademyCraftClient.NETWORK_SYSTEM.<IPacket<ClientGamePacketListener>, ClientGamePacketListener>getPacketFactory(packetClass);
+                    var factory = packetType.getFactory();
                     if (factory == null) {
                         AcademyCraft.LOGGER.error("No factory found for S2C packet class: {}", packetClass.getName());
                         return;

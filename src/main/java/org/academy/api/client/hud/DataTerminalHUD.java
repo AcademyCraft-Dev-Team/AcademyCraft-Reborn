@@ -1,7 +1,5 @@
 package org.academy.api.client.hud;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
@@ -28,7 +26,7 @@ import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
-import org.academy.api.common.config.IConfigAction;
+import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
@@ -278,7 +276,7 @@ public final class DataTerminalHUD implements HUDRenderer {
     public static void init() {
         HUDManager.registerHUDRenderer(INSTANCE);
         NeoForge.EVENT_BUS.register(DataTerminalHUD.class);
-        AcademyCraftConfig.registerConfigActions(CONFIG_KEY_DATA_TERMINAL, Config.Action.INSTANCE);
+        AcademyCraftConfig.registerTypeHandler(CONFIG_KEY_DATA_TERMINAL, Config.Action.INSTANCE);
         config = AcademyCraftClient.CLIENT_CONFIG.getConfig(CONFIG_KEY_DATA_TERMINAL);
         if (config == null) {
             config = new Config();
@@ -505,29 +503,19 @@ public final class DataTerminalHUD implements HUDRenderer {
         @SerializedName("visibleAppRows")
         public int visibleAppRows = 3;
 
-        public static final class Action implements IConfigAction<Config> {
-            public static final IConfigAction<Config> INSTANCE = new Action();
+        public static final class Action implements TypeHandler<Config> {
+            public static final TypeHandler<Config> INSTANCE = new Action();
 
             private Action() {
             }
 
             @Override
-            public @NotNull DataTerminalHUD.Config deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-                return gson.fromJson(jsonElement, Config.class);
-            }
-
-            @Override
-            public @NotNull JsonElement serialize(@NotNull DataTerminalHUD.Config configInstance, @NotNull Gson gson) {
-                return gson.toJsonTree(configInstance);
-            }
-
-            @Override
-            public @NotNull DataTerminalHUD.Config getDefaultConfig() {
+            public @NotNull DataTerminalHUD.Config getDefault() {
                 return new Config();
             }
 
             @Override
-            public @NotNull Class<Config> getConfigClass() {
+            public @NotNull Class<Config> getTypeClass() {
                 return Config.class;
             }
         }

@@ -1,7 +1,6 @@
 package org.academy.internal.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -10,17 +9,17 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.AbilitySystem;
-import org.academy.api.common.ability.Skill;
+import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @EventBusSubscriber(modid = AcademyCraft.MODID)
 public final class AcademyCraftCommand {
@@ -39,12 +38,12 @@ public final class AcademyCraftCommand {
                         .executes(AcademyCraftCommand::listLearnedSkills))
                 .then(Commands.literal("learn")
                         .requires(source -> source.hasPermission(2))
-                        .then(Commands.argument("skill_name", StringArgumentType.string())
+                        .then(Commands.argument("skill_name", ResourceLocationArgument.id())
                                 .suggests(AcademyCraftCommand::suggestLearnableSkills)
                                 .executes(AcademyCraftCommand::learnSingleSkill)))
                 .then(Commands.literal("set_category")
                         .requires(source -> source.hasPermission(2))
-                        .then(Commands.argument("category_name", StringArgumentType.string())
+                        .then(Commands.argument("category_name", ResourceLocationArgument.id())
                                 .suggests(AcademyCraftCommand::suggestAbilityCategories)
                                 .executes(AcademyCraftCommand::setAbilityCategory))));
     }
@@ -53,22 +52,19 @@ public final class AcademyCraftCommand {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
         var currentCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
+        var categoryKey = Registries.ABILITY_CATEGORIES.getKey(currentCategory);
+        var categoryName = categoryKey != null ? categoryKey.toString() : "Unknown";
 
-        if (currentCategory == null) {
-            context.getSource().sendFailure(Component.literal("Could not retrieve current ability category."));
-            return 0;
-        }
-
-        if (currentCategory.skillList.isEmpty()) {
-            context.getSource().sendSuccess(() -> Component.literal("Current ability category " + currentCategory.name + " has no skills to learn."), false);
+        if (currentCategory.getSkills().isEmpty()) {
+            context.getSource().sendSuccess(() -> Component.literal("Current ability category " + categoryName + " has no skills to learn."), false);
             return 1;
         }
 
-        for (Skill skill : currentCategory.skillList) {
-            AbilitySystemServer.addPlayerSkill(playerUuid, skill.name);
+        for (var skill : currentCategory.getSkills()) {
+            AbilitySystemServer.addPlayerSkill(playerUuid, skill.getKeyString());
         }
 
-        context.getSource().sendSuccess(() -> Component.literal("All skills from ability category " + currentCategory.name + " have been learned."), true);
+        context.getSource().sendSuccess(() -> Component.literal("All skills from ability category " + categoryName + " have been learned."), true);
         return 1;
     }
 
@@ -89,47 +85,55 @@ public final class AcademyCraftCommand {
     private static int learnSingleSkill(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
-        var skillName = StringArgumentType.getString(context, "skill_name");
+        var skillResourceLocation = ResourceLocationArgument.getId(context, "skill_name");
 
-        var skillToLearn = AbilitySystem.SKILL_MAP.get(skillName);
+        var skillToLearn = Registries.SKILLS.get(skillResourceLocation);
 
         if (skillToLearn == null) {
-            context.getSource().sendFailure(Component.literal("Skill '" + skillName + "' not found."));
+            context.getSource().sendFailure(Component.literal("Skill '" + skillResourceLocation + "' not found."));
             return 0;
         }
 
         var playerCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
-        if (playerCategory == null || !playerCategory.skillList.contains(skillToLearn)) {
-            context.getSource().sendFailure(Component.literal("Skill '" + skillName + "' does not belong to your current ability category (" + (playerCategory != null ? playerCategory.name : "None") + ")."));
+        if (skillToLearn.getCategory() != playerCategory) {
+            var playerCategoryKey = Registries.ABILITY_CATEGORIES.getKey(playerCategory);
+            var playerCategoryName = playerCategoryKey != null ? playerCategoryKey.toString() : "None";
+            context.getSource().sendFailure(Component.literal("Skill '" + skillResourceLocation + "' does not belong to your current ability category (" + playerCategoryName + ")."));
             return 0;
         }
 
-        if (AbilitySystemServer.getPlayerSkills(playerUuid).contains(skillName)) {
-            context.getSource().sendFailure(Component.literal("You have already learned skill '" + skillName + "'."));
+        if (AbilitySystemServer.getPlayerSkills(playerUuid).contains(skillResourceLocation.toString())) {
+            context.getSource().sendFailure(Component.literal("You have already learned skill '" + skillResourceLocation + "'."));
             return 0;
         }
 
-        AbilitySystemServer.addPlayerSkill(playerUuid, skillName);
-        context.getSource().sendSuccess(() -> Component.literal("Successfully learned skill: " + skillName), true);
+        AbilitySystemServer.addPlayerSkill(playerUuid, skillResourceLocation.toString());
+        context.getSource().sendSuccess(() -> Component.literal("Successfully learned skill: " + skillResourceLocation), true);
         return 1;
     }
 
     private static int setAbilityCategory(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
-        var categoryName = StringArgumentType.getString(context, "category_name");
+        var categoryResourceLocation = ResourceLocationArgument.getId(context, "category_name");
 
-        var categoryToSet = AbilitySystem.ABILITY_CATEGORY_MAP.get(categoryName);
+        var categoryToSet = Registries.ABILITY_CATEGORIES.get(categoryResourceLocation);
 
         if (categoryToSet == null) {
-            context.getSource().sendFailure(Component.literal("Ability category '" + categoryName + "' not found."));
+            context.getSource().sendFailure(Component.literal("Ability category '" + categoryResourceLocation + "' not found."));
             return 0;
         }
 
         AbilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet);
-        AbilitySystemServer.getPlayerSkills(playerUuid).clear();
-        AbilitySystemServer.schedulePlayerSync(playerUuid, AbilitySystemServer.SyncType.SKILLS);
-        context.getSource().sendSuccess(() -> Component.literal("Ability category set to: " + categoryName + ". All previous skills have been cleared."), true);
+        var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
+        if (learnedSkills != null) {
+            learnedSkills.clear();
+            var playerData = AbilitySystemServer.getPlayerData(playerUuid);
+            if (playerData != null) playerData.markDirty();
+            AbilitySystemServer.schedulePlayerSync(playerUuid, AbilitySystemServer.SyncType.SKILLS);
+        }
+
+        context.getSource().sendSuccess(() -> Component.literal("Ability category set to: " + categoryResourceLocation + ". All previous skills have been cleared."), true);
         return 1;
     }
 
@@ -140,24 +144,20 @@ public final class AcademyCraftCommand {
             var currentCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
             var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
 
-            if (currentCategory != null) {
-                return SharedSuggestionProvider.suggest(
-                        currentCategory.skillList.stream()
-                                .map(skill -> skill.name)
-                                .filter(skillName -> !learnedSkills.contains(skillName))
-                                .collect(Collectors.toList()),
-                        builder
-                );
-            }
+            return SharedSuggestionProvider.suggest(
+                    currentCategory.getSkills().stream()
+                            .map(skill -> skill.getKey().toString())
+                            .filter(skillName -> !learnedSkills.contains(skillName)),
+                    builder
+            );
         } catch (CommandSyntaxException e) {
             return Suggestions.empty();
         }
-        return Suggestions.empty();
     }
 
     private static CompletableFuture<Suggestions> suggestAbilityCategories(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(
-                AbilitySystem.ABILITY_CATEGORY_MAP.keySet().stream(),
+                Registries.ABILITY_CATEGORIES.keySet().stream().map(ResourceLocation::toString),
                 builder
         );
     }
