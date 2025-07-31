@@ -6,7 +6,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.framework.Widget;
-import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.ConnectNodePacket;
 import org.academy.api.common.wireless.DisconnectNodePacket;
@@ -91,7 +90,7 @@ public class WirelessPanelWidget extends PanelWidget {
 
         if (!isConnected) {
             Consumer<String> connect = password -> {
-                NetworkManagerClient.sendPacket(new C2SPacket(new ConnectNodePacket(this.position, nodeName, password)));
+                AcademyCraftClient.sendPacket(new C2SPacket(new ConnectNodePacket(this.position, nodeName, password)));
                 this.requestCurrentNodeStatus();
             };
             var inputBox = new TextBoxWidget(12, 70, 3, 46, 10);
@@ -108,7 +107,7 @@ public class WirelessPanelWidget extends PanelWidget {
             if (!isNull) {
                 var buttonWidget = new ImageButtonWidget(118, 1, 14, 14, ICON_CONNECTED, () ->
                 {
-                    NetworkManagerClient.sendPacket(new C2SPacket(new DisconnectNodePacket(position)));
+                    AcademyCraftClient.sendPacket(new C2SPacket(new DisconnectNodePacket(position)));
                     requestCurrentNodeStatus();
                 });
                 nodeViewPanel.addChild("button", buttonWidget);

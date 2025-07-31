@@ -4,8 +4,8 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.FriendlyByteBufSerializers;
+import org.academy.api.common.network.FBBDeserializers;
+import org.academy.api.common.network.FBBSerializers;
 import org.academy.api.common.network.future.IRequestPayload;
 import org.academy.api.common.network.future.IResponsePayload;
 import org.jetbrains.annotations.NotNull;
@@ -56,12 +56,12 @@ public class AcquireCategoryPacket extends IRequestPayload<ServerGamePacketListe
 
         @Override
         public void write(@NotNull FriendlyByteBuf buf) {
-            FriendlyByteBufSerializers.getCollectionFriendlyByteBufSerializer(String.class).serialize(buf, messages);
+            FBBSerializers.getCollectionFriendlyByteBufSerializer(String.class).serialize(buf, messages);
         }
 
         @Override
         public void read(@NotNull FriendlyByteBuf buf) {
-            this.messages = FriendlyByteBufDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, ArrayList::new).deserialize(buf);
+            this.messages = FBBDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, ArrayList::new).deserialize(buf);
         }
     }
 }

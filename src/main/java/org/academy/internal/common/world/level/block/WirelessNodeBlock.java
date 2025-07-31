@@ -28,7 +28,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
-import org.academy.internal.server.world.level.storage.WorldData;
+import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +36,7 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     public static final MapCodec<WirelessNodeBlock> CODEC = simpleCodec(WirelessNodeBlock::new);
     public static final String WIRELESS_NODE_SCREEN = "wireless_node_screen";
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
-    private static final IntegerProperty ENERGY = IntegerProperty.create("energy", 0, 4);
+    private static final IntegerProperty ENERGY = IntegerProperty.create("energy_cost", 0, 4);
 
     public WirelessNodeBlock(Properties properties) {
         super(properties.noOcclusion());
@@ -66,7 +66,7 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
             String password = "";
             int radius = 32;
             int maxConnections = 8;
-            if (WorldData.WirelessNetworkData.get(serverLevel).registerNode(pos, nodeName, password, radius, maxConnections)) {
+            if (WirelessNetworkData.get(serverLevel).registerNode(pos, nodeName, password, radius, maxConnections)) {
                 AcademyCraft.LOGGER.debug("Registered wireless node at {} with name '{}'.", pos, nodeName);
             } else {
                 AcademyCraft.LOGGER.warn("Failed to register wireless node at {} with name '{}'.", pos, nodeName);
@@ -77,7 +77,7 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     @Override
     public void onRemove(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState newState, boolean movedByPiston) {
         if (level instanceof ServerLevel serverLevel) {
-            WorldData.WirelessNetworkData.get(serverLevel).unregisterNode(pos, serverLevel);
+            WirelessNetworkData.get(serverLevel).unregisterNode(pos, serverLevel);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

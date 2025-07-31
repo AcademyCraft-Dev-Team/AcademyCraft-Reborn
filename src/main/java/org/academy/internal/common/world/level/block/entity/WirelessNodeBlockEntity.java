@@ -20,7 +20,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.server.world.level.storage.WorldData;
+import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,7 +31,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
     private static final int TRANSFER_RATE = 20000;
 
     private int energyStored = 5000;
-    public WorldData.WirelessNetworkData.NodeConfig cachedConfig = null;
+    public WirelessNetworkData.NodeConfig cachedConfig = null;
     public NonNullList<ItemStack> items = NonNullList.withSize(2, ItemStack.EMPTY);
     private BlockPos connectedNodePos = null;
     public int connectedUsersCount;
@@ -47,7 +47,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
 
     public void serverTick(ServerLevel serverLevel, BlockPos pos) {
         if (cachedConfig == null) {
-            WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(serverLevel);
+            WirelessNetworkData networkData = WirelessNetworkData.get(serverLevel);
             cachedConfig = networkData.getNodeConfig(pos);
             if (cachedConfig == null && level != null && level.getGameTime() > 1) {
                 AcademyCraft.LOGGER.warn("Wireless Node BE at {} ticking but not (yet?) registered in SavedData!", pos);
@@ -59,10 +59,10 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         maxConnectedUsers = cachedConfig.maxConnections;
         radius = cachedConfig.radius;
 
-        Map<WirelessUser, WorldData.WirelessNetworkData.UserConfig> userMap = new HashMap<>(connectedUsersCount);
+        Map<WirelessUser, WirelessNetworkData.UserConfig> userMap = new HashMap<>(connectedUsersCount);
         List<BlockPos> toRemove = new ArrayList<>();
 
-        for (Map.Entry<BlockPos, WorldData.WirelessNetworkData.UserConfig> entry : cachedConfig.connectedUsers.entrySet()) {
+        for (Map.Entry<BlockPos, WirelessNetworkData.UserConfig> entry : cachedConfig.connectedUsers.entrySet()) {
             BlockPos userPos = entry.getKey();
             BlockEntity userBE = serverLevel.getBlockEntity(userPos);
             if (!(userBE instanceof WirelessUser user)) {
@@ -85,7 +85,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
 
     private void handleUserDisconnect(ServerLevel level, BlockPos userPos) {
         AcademyCraft.LOGGER.warn("Node at {} detected invalid or missing user at {}. Requesting disconnect from SavedData.", worldPosition, userPos);
-        WorldData.WirelessNetworkData networkData = WorldData.WirelessNetworkData.get(level);
+        WirelessNetworkData networkData = WirelessNetworkData.get(level);
         boolean removed = networkData.disconnectUserFromNode(this.worldPosition, userPos);
         if (removed) {
             cachedConfig = networkData.getNodeConfig(this.worldPosition);
@@ -125,7 +125,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         try {
             return user.extractEnergy(maxAmount, simulate);
         } catch (Exception e) {
-            AcademyCraft.LOGGER.error("Error extracting energy from user at {}: {}", user, e.getMessage());
+            AcademyCraft.LOGGER.error("Error extracting energyCost from user at {}: {}", user, e.getMessage());
             return 0;
         }
     }
@@ -135,7 +135,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         try {
             return user.receiveEnergy(maxAmount, simulate);
         } catch (Exception e) {
-            AcademyCraft.LOGGER.error("Error inserting energy into user at {}: {}", user, e.getMessage());
+            AcademyCraft.LOGGER.error("Error inserting energyCost into user at {}: {}", user, e.getMessage());
             return 0;
         }
     }

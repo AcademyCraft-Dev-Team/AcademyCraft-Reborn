@@ -9,11 +9,13 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.network.NetworkManagerClient;
+import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,7 +34,7 @@ public class CoinItem extends Item {
                     :
                     player.getDeltaMovement().multiply(1.5,0,1.5);
 
-            NetworkManagerClient.sendPacket(new C2SPacket(new ThrowCoinPacket(
+            AcademyCraftClient.sendPacket(new C2SPacket(new ThrowCoinPacket(
                     initialVelocity.add(0, 0.5, 0),
                     player.getYRot(), player.getXRot())));
 
@@ -78,6 +80,11 @@ public class CoinItem extends Item {
             buf.writeDouble(this.initialVelocity.z);
             buf.writeFloat(this.yRot);
             buf.writeFloat(this.xRot);
+        }
+
+        @Override
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+            return PacketTypes.THROW_COIN_WITH_VELOCITY.get();
         }
     }
 }

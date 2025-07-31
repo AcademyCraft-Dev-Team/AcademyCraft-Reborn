@@ -27,7 +27,7 @@ import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.Shaders;
-import org.academy.internal.common.ability.builtin.level0.Level0;
+import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,7 +53,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     public static final float PANEL_RIGHT_SKILL_SIZE = 32f;
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
             RenderUtil.getPositionColorTexRenderTypeFull("ability_icon_glow", getResourceLocation(
-                    "textures/ability/" + abilityCategory.name + "/icon_glow.png"
+                    "textures/ability/" + abilityCategory.getDescriptionId() + "/icon_glow.png"
             ), false);
     private PanelWidget screenWirelessPanel;
     private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
@@ -113,7 +113,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         var rightPanelInfo = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, SKILL_PANEL_INFO);
         rightPanel.addChild("panel_right_info", rightPanelInfo);
 
-        var bootFailed = AbilitySystemClient.getCategory() == Level0.INSTANCE;
+        var bootFailed = AbilitySystemClient.getCategory() == AbilityCategories.LEVEL0.get();
 
         var outputList = new ScrollPanelWidget(
                 PANEL_RIGHT_SKILL_BACK_X + 5, PANEL_RIGHT_SKILL_BACK_Y + 5, PANEL_RIGHT_WIDTH - 32, 132);
@@ -180,7 +180,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             textBox.scale = 0.75f;
 
             textBox.whenEnter = s -> {
-                var learned = AbilitySystemClient.getCategory() != Level0.INSTANCE;
+                var learned = AbilitySystemClient.getCategory() != AbilityCategories.LEVEL0.get();
                 var outputCommand = new LabelWidget("OS >" + s, 0, textBox.getY());
                 addOutput("output_command_" + s + outputCommand.hashCode(), outputCommand, outputList);
 
@@ -207,7 +207,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                                     });
                             return;
                         } else {
-                            singleLineOutput = "Insufficient energy available.";
+                            singleLineOutput = "Insufficient energyCost available.";
                         }
                     } else {
                         singleLineOutput = "You are learned,you can't learn again.";
@@ -246,7 +246,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 skillWidget.setVisible(visible);
                 skillWidget.setEnabled(visible);
                 skillWidget.setZ(1);
-                parent.addChild(skillInfo.skill().name, skillWidget);
+                parent.addChild(skillInfo.skill().getDescriptionId(), skillWidget);
             }
         }
     }
@@ -312,14 +312,14 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 icon.widthScale = 0.65f;
                 icon.heightScale = 0.65f;
                 leftPanelInfoPanel.addChild("icon", icon);
-                var name = new AutoScaleLabelWidget(abilityCategory.name, leftPanelInfoPanel.getHeight(), 5,
+                var name = new AutoScaleLabelWidget(abilityCategory.getDescriptionId(), leftPanelInfoPanel.getHeight(), 5,
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4);
                 leftPanelInfoPanel.addChild("name", name);
                 var learnProgress = new ProgressBarWidget(leftPanelInfoPanel.getHeight(), 16,
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4, 2,
                         () -> {
                             int learned = AbilitySystemClient.LEARNED_SKILLS.size();
-                            int all = abilityCategory.skillList.size();
+                            int all = abilityCategory.getSkills().size();
                             if (all == 0) return 100.0f;
                             else return (float) learned / all;
                         });
@@ -328,7 +328,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 var progress = new AutoScaleLabelWidget("LEARNED " + 100 + "%", leftPanelInfoPanel.getHeight(), 18,
                         learnProgress.getWidth() * 0.5f);
                 leftPanelInfoPanel.addChild("progress", progress);
-                var levelLabel = new AutoScaleLabelWidget(abilityCategory.name, progress.getX() + learnProgress.getWidth() * 0.5f, 18, learnProgress.getWidth() * 0.5f - 4);
+                var levelLabel = new AutoScaleLabelWidget(abilityCategory.getDescriptionId(), progress.getX() + learnProgress.getWidth() * 0.5f, 18, learnProgress.getWidth() * 0.5f - 4);
                 levelLabel.setX(leftPanelInfoPanel.getWidth() - levelLabel.getWidth() - 4);
                 levelLabel.color = 0xFF1177D6;
                 leftPanelInfoPanel.addChild("label_level", levelLabel);
@@ -381,7 +381,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         skillInfoPanel.iconBack.setY(((float) AbilityDeveloperScreen.this.height / 2 - skillInfoPanel.iconBack.getHeight() / 2) - 25);
         skillInfoPanel.icon.renderType = RenderUtil.getPositionColorTexRenderTypeFull("skill_icon", skill.texture(), false);
 
-        skillInfoPanel.nameLabel.setText("Skill: %s".formatted(skill.skill().name));
+        skillInfoPanel.nameLabel.setText("Skill: %s".formatted(skill.skill().getTranslatedName()));
         skillInfoPanel.nameLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.nameLabel.getWidth() / 2);
         skillInfoPanel.nameLabel.setY(skillInfoPanel.icon.getY() + 50);
 
@@ -407,7 +407,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 x += (int) empty.getWidth();
             }
             for (var dependency : skill.dependencies()) {
-                var name = "dep_skill_icon_" + skill.skill().name;
+                var name = "dep_skill_icon_" + skill.skill().getDescriptionId();
                 var icon = new ImageWidget(x, 4, 8, 8, RenderUtil.getPositionTexRenderType(name, dependency.texture(), false));
                 skillInfoPanel.depPanel.addChild(name, icon);
                 x += 12;
@@ -419,7 +419,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         skillInfoPanel.learnButton.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.learnButton.getWidth() / 2);
         skillInfoPanel.learnButton.setY(skillInfoPanel.depPanel.getY() + 18);
 
-        skillInfoPanel.energyLabel.setText(!lacked ? "" : "%d AF".formatted(skill.skill().energy));
+        skillInfoPanel.energyLabel.setText(!lacked ? "" : "%d AF".formatted(skill.skill().getEnergyCostToLearn()));
         skillInfoPanel.energyLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.energyLabel.getWidth() / 2);
         skillInfoPanel.energyLabel.setY(skillInfoPanel.learnButton.getY() + 18);
     }
@@ -434,7 +434,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         final PanelWidget depPanel = new PanelWidget(0, 0, 0, 16);
         final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, BUTTON, () -> {
             if (skillInfo == null) return;
-            LearnSkillPacket request = new LearnSkillPacket(skillInfo.skill().name, mainPos);
+            LearnSkillPacket request = new LearnSkillPacket(skillInfo.skill().getDescriptionId(), mainPos);
             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
                     (LearnSkillPacket.Response response) -> {
                         if (response != null && response.success) {
@@ -473,7 +473,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         @SuppressWarnings("SuspiciousNameCombination")
         SkillWidget(AbilitySystemClient.SkillInfo skillInfo) {
             super(skillInfo.x(), skillInfo.y(), PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE,
-                    SKILL_ICON.apply(skillInfo.skill().name, skillInfo.texture()),
+                    SKILL_ICON.apply(skillInfo.skill().getDescriptionId(), skillInfo.texture()),
                     () -> AbilityDeveloperScreen.this.openSkillViewPanel(skillInfo));
             dependencies.addAll(skillInfo.dependencies());
             targetProgress = AbilitySystemClient.getSkillExp(skillInfo.skill()) / 100f;

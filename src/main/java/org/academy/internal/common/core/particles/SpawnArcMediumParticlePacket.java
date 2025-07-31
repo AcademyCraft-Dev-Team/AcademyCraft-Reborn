@@ -3,8 +3,10 @@ package org.academy.internal.common.core.particles;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
+import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
@@ -64,5 +66,10 @@ public class SpawnArcMediumParticlePacket extends IPacket<ClientPacketListener> 
 
     public float getYaw() {
         return yaw;
+    }
+
+    @Override
+    public @NotNull PacketType<ClientPacketListener, ? extends IPacket<ClientPacketListener>> getPacketType() {
+        return PacketTypes.SPAWN_ARC_MEDIUM_PARTICLE.get();
     }
 }

@@ -2,11 +2,13 @@ package org.academy.api.common.ability;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
-import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.FriendlyByteBufSerializers;
+import org.academy.api.common.network.FBBDeserializers;
+import org.academy.api.common.network.FBBSerializers;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.IPacket;
 import org.academy.api.common.vanilla.ThreadType;
+import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
@@ -72,7 +74,7 @@ public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
         skillsChanged = buf.readBoolean();
         if (skillsChanged) {
             var setFriendlyByteBufDeserializer =
-                    FriendlyByteBufDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, HashSet::new);
+                    FBBDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, HashSet::new);
             skills = setFriendlyByteBufDeserializer.deserialize(buf);
         }
     }
@@ -98,8 +100,13 @@ public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
         buf.writeBoolean(skillsChanged);
         if (skillsChanged) {
             var setFriendlyByteBufSerializer =
-                    FriendlyByteBufSerializers.getCollectionFriendlyByteBufSerializer(String.class);
+                    FBBSerializers.getCollectionFriendlyByteBufSerializer(String.class);
             setFriendlyByteBufSerializer.serialize(buf, skills);
         }
+    }
+
+    @Override
+    public @NotNull PacketType<ClientPacketListener, ? extends IPacket<ClientPacketListener>> getPacketType() {
+        return PacketTypes.PLAYER_SYNC.get();
     }
 }
