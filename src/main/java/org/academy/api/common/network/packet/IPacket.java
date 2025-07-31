@@ -2,6 +2,7 @@ package org.academy.api.common.network.packet;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.PacketListener;
+import org.academy.api.common.network.PacketType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,4 +24,7 @@ public abstract class IPacket<T extends PacketListener> {
     public abstract void read(@NotNull FriendlyByteBuf buf);
 
     public abstract void write(@NotNull FriendlyByteBuf buf);
+
+    @NotNull
+    public abstract PacketType<T, ? extends IPacket<T>> getPacketType();
 }

@@ -3,7 +3,7 @@ package org.academy.mixin.common;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
-import org.academy.internal.common.ability.builtin.accelerator.skills.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.KineticEnergyApplied;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

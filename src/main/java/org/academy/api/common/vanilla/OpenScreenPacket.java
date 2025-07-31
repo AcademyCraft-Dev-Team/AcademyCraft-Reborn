@@ -4,7 +4,9 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import org.academy.api.common.network.PacketTarget;
+import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.IPacket;
+import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
@@ -48,5 +50,10 @@ public class OpenScreenPacket extends IPacket<ClientPacketListener> {
 
     public FriendlyByteBuf getDataPayload() {
         return new FriendlyByteBuf(dataPayload.copy());
+    }
+
+    @Override
+    public @NotNull PacketType<ClientPacketListener, ? extends IPacket<ClientPacketListener>> getPacketType() {
+        return PacketTypes.OPEN_SCREEN.get();
     }
 }

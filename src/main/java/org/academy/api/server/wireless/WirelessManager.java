@@ -9,7 +9,7 @@ import org.academy.AcademyCraftServer;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.future.HandlePayload;
 import org.academy.api.common.wireless.*;
-import org.academy.internal.server.world.level.storage.WorldData;
+import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,7 +81,7 @@ public class WirelessManager {
         if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
             return;
         }
-        var data = WorldData.WirelessNetworkData.get(level);
+        var data = WirelessNetworkData.get(level);
 
         var oldCfg = data.getNodeConfig(nodePos);
         if (oldCfg == null) {
@@ -114,7 +114,7 @@ public class WirelessManager {
         if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
             return;
         }
-        var data = WorldData.WirelessNetworkData.get(level);
+        var data = WirelessNetworkData.get(level);
 
         var cfg = data.getNodeConfig(nodePos);
         if (cfg == null) {
@@ -130,7 +130,7 @@ public class WirelessManager {
     }
 
     public static void handleConnect(ServerPlayer player, ServerLevel level, BlockPos userPos, String targetNodeName, String passwordAttempt) {
-        var networkData = WorldData.WirelessNetworkData.get(level);
+        var networkData = WirelessNetworkData.get(level);
 
         var nodePos = networkData.findNodePositionByName(targetNodeName);
         if (nodePos == null) {
@@ -185,7 +185,7 @@ public class WirelessManager {
         var connectedNodePosition = wirelessUser.getConnectedNodePosition();
 
         if (connectedNodePosition != null) {
-            var networkData = WorldData.WirelessNetworkData.get(level);
+            var networkData = WirelessNetworkData.get(level);
             var removedFromData = networkData.disconnectUserFromNode(connectedNodePosition, userPos);
             if (removedFromData) {
                 AcademyCraft.LOGGER.debug("Successfully removed user {} from node {}'s list in SavedData.", userPos, connectedNodePosition);
@@ -201,7 +201,7 @@ public class WirelessManager {
     }
 
     public static List<String> getAvailableNodes(ServerLevel level, BlockPos requesterPos) {
-        var data = WorldData.WirelessNetworkData.get(level);
+        var data = WirelessNetworkData.get(level);
         var nodeNamesInRange = new ArrayList<String>();
         for (var entry : data.getNodeEntries().entrySet()) {
             var nodePos = entry.getKey();
@@ -219,7 +219,7 @@ public class WirelessManager {
         if (be instanceof WirelessUser user) {
             var connectedNodePos = user.getConnectedNodePosition();
             if (connectedNodePos != null) {
-                var data = WorldData.WirelessNetworkData.get(level);
+                var data = WirelessNetworkData.get(level);
                 var nodeConfig = data.getNodeConfig(connectedNodePos);
                 if (nodeConfig != null) {
                     currentNodeName = nodeConfig.name;
@@ -236,7 +236,7 @@ public class WirelessManager {
 
     public static void balanceEnergy(
             WirelessNode node,
-            Map<WirelessUser, WorldData.WirelessNetworkData.UserConfig> userConfigMap
+            Map<WirelessUser, WirelessNetworkData.UserConfig> userConfigMap
     ) {
         if (userConfigMap.isEmpty()) return;
 

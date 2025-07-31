@@ -6,12 +6,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.AcademyCraftClient;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.network.NetworkManagerClient;
 import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.api.common.network.packet.C2SPacket;
@@ -164,7 +164,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
             var nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
             nameTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
-                    NetworkManagerClient.sendPacket(new C2SPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
+                    AcademyCraftClient.sendPacket(new C2SPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
                 }
             };
             nameTextBox.onFocusGained();
@@ -185,7 +185,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
             var passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
             passTextBox.whenEnter = s -> {
                 if (wirelessNodeBlockEntity != null) {
-                    NetworkManagerClient.sendPacket(new C2SPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
+                    AcademyCraftClient.sendPacket(new C2SPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
                 }
             };
             passTextBox.onFocusGained();

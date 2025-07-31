@@ -10,7 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.ability.builtin.electromaster.skills.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.Railgun;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.Items;
 import org.jetbrains.annotations.NotNull;

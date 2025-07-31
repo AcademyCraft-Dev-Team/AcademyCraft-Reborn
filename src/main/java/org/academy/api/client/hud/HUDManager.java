@@ -19,7 +19,10 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -43,10 +46,12 @@ public final class HUDManager {
                     "cp_bar_background",
                     TextureResources.CP_BAR_BACKGROUND,
                     false);
-    public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
-            RenderUtil.getPositionColorTexRenderTypeFull("ability_icon", getResourceLocation(
-                    "textures/ability/" + abilityCategory.name + "/icon_overlay.png"
-            ), false);
+    public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory -> {
+        var key = abilityCategory.getKey();
+        return RenderUtil.getPositionColorTexRenderTypeFull("ability_icon", getResourceLocation(key.getNamespace(),
+                "textures/ability/" + key.getPath() + "/icon_overlay.png"
+        ), false);
+    };
     public static final Supplier<Float> SCALE_FACTOR = () -> 1.0f;
     public static final float DEFAULT_SCALA = 0.2F;
     public static final int CP_BAR_WIDTH = 964;
@@ -119,7 +124,6 @@ public final class HUDManager {
         if (skillWidgets.size() == learnedSkills.size()) {
             var match = true;
             var tempList = new ArrayList<>(learnedSkills);
-            tempList.sort(Comparator.comparing(skill -> skill.name));
             for (var i = 0; i < skillWidgets.size(); i++) {
                 if (!skillWidgets.get(i).skill.equals(tempList.get(i))) {
                     match = false;
@@ -135,7 +139,6 @@ public final class HUDManager {
         skillWidgets.clear();
 
         var sortedSkills = new ArrayList<>(AbilitySystemClient.LEARNED_SKILLS);
-        sortedSkills.sort(Comparator.comparing(skill -> skill.name));
 
         for (var skill : sortedSkills) {
             var window = Minecraft.getInstance().getWindow();
@@ -316,7 +319,7 @@ public final class HUDManager {
             var padding = 2f;
             var iconSize = height - padding * 2;
 
-            label = new AutoScaleLabelWidget(skill.name, padding, 0, width - iconSize - padding * 3, false);
+            label = new AutoScaleLabelWidget(skill.getTranslatedName(), padding, 0, width - iconSize - padding * 3, false);
             label.scale = 0.7f;
             label.setCentered(false);
 
@@ -335,7 +338,7 @@ public final class HUDManager {
             for (var infos : AbilitySystemClient.SKILL_INFOS.values()) {
                 for (var info : infos) {
                     if (info.skill().equals(skillInstance)) {
-                        return RenderUtil.getPositionColorTexRenderTypeFull("skill_icon_hud_" + skillInstance.name.toLowerCase().replace(" ", "_"), info.texture(), false);
+                        return RenderUtil.getPositionColorTexRenderTypeFull("skill_icon_hud_" + skillInstance.getKey().getPath().toLowerCase().replace(" ", "_"), info.texture(), false);
                     }
                 }
             }

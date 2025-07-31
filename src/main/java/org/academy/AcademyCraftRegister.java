@@ -5,10 +5,19 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NewRegistryEvent;
+import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.inventory.MenuTypes;
@@ -20,6 +29,7 @@ import org.academy.internal.common.world.level.material.Fluids;
 
 import static org.academy.AcademyCraft.MODID;
 import static org.academy.AcademyCraft.MOD_NAME;
+import static org.academy.api.common.registries.Registries.*;
 
 public class AcademyCraftRegister {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
@@ -37,6 +47,8 @@ public class AcademyCraftRegister {
     }
 
     public static void register(IEventBus modEventBus) {
+        modEventBus.register(AcademyCraftRegister.class);
+
         Blocks.BLOCKS.register(modEventBus);
         Items.ITEMS.register(modEventBus);
         BlockEntityTypes.BLOCK_ENTITY_TYPES.register(modEventBus);
@@ -46,7 +58,29 @@ public class AcademyCraftRegister {
         Fluids.FLUIDS.register(modEventBus);
         ParticleTypes.PARTICLE_TYPES.register(modEventBus);
         Features.FEATURES.register(modEventBus);
-        AttachmentTypes.REGISTER.register(modEventBus);
+
         CREATIVE_MODE_TABS.register(modEventBus);
+
+        AttachmentTypes.REGISTER.register(modEventBus);
+
+        AbilityCategories.ABILITY_CATEGORIES.register(modEventBus);
+        PacketTypes.PACKET_TYPES.register(modEventBus);
+        Skills.SKILLS.register(modEventBus);
+
+        modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
+    }
+
+    @SubscribeEvent
+    public static void onNewRegistry(NewRegistryEvent event) {
+        event.register(ABILITY_CATEGORIES);
+        event.register(PACKET_TYPES);
+        event.register(SKILLS);
+    }
+
+    private static void onCommonSetup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
+            ABILITY_CATEGORIES.forEach(AbilityCategory::seal);
+        });
     }
 }

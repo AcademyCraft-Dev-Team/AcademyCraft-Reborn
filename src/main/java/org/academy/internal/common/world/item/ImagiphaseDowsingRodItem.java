@@ -14,8 +14,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.FriendlyByteBufDeserializers;
-import org.academy.api.common.network.FriendlyByteBufSerializers;
+import org.academy.api.common.network.FBBDeserializers;
+import org.academy.api.common.network.FBBSerializers;
 import org.academy.api.common.network.future.HandlePayload;
 import org.academy.api.common.network.future.IRequestPayload;
 import org.academy.api.common.network.future.IResponsePayload;
@@ -101,12 +101,12 @@ public class ImagiphaseDowsingRodItem extends Item {
 
             @Override
             public void write(@NotNull FriendlyByteBuf buf) {
-                FriendlyByteBufSerializers.getCollectionFriendlyByteBufSerializer(BlockPos.class).serialize(buf, sectionsWithImagPhase);
+                FBBSerializers.getCollectionFriendlyByteBufSerializer(BlockPos.class).serialize(buf, sectionsWithImagPhase);
             }
 
             @Override
             public void read(@NotNull FriendlyByteBuf buf) {
-                this.sectionsWithImagPhase = FriendlyByteBufDeserializers.getCollectionFriendlyByteBufDeserializer(BlockPos.class, ArrayList::new).deserialize(buf);
+                this.sectionsWithImagPhase = FBBDeserializers.getCollectionFriendlyByteBufDeserializer(BlockPos.class, ArrayList::new).deserialize(buf);
             }
         }
     }

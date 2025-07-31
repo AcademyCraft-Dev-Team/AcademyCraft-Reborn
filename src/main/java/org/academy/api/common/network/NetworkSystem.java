@@ -1,68 +1,24 @@
 package org.academy.api.common.network;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import net.minecraft.network.PacketListener;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.asm.PacketListenerFactory;
 import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.registries.Registries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 
 public class NetworkSystem {
-    private final BiMap<Class<? extends IPacket<?>>, Integer> classToId;
-    private final Map<Class<? extends IPacket<?>>, Function<? extends PacketListener, ? extends IPacket<?>>> packetFactories;
-    private static boolean vanillaPacketsRegistered = false;
-
     public NetworkSystem() {
-        classToId = HashBiMap.create();
-        packetFactories = new HashMap<>();
-    }
-
-    public void clear() {
-        classToId.clear();
-        packetFactories.clear();
-        vanillaPacketsRegistered = false;
-    }
-
-    public <T extends IPacket<?>, PL extends PacketListener> void registerPacketType(Class<T> packetClass, Function<PL, T> factory) {
-        packetFactories.put(packetClass, factory);
-        classToId.put(packetClass, classToId.size());
-    }
-
-    @Nullable
-    @SuppressWarnings("unchecked")
-    public <T extends IPacket<?>, PL extends PacketListener> Function<PL, T> getPacketFactory(Class<T> packetClass) {
-        return (Function<PL, T>) packetFactories.get(packetClass);
-    }
-
-    public static void registerVanillaPacketsOnce() {
-        if (!vanillaPacketsRegistered) {
-            vanillaPacketsRegistered = true;
-        }
-    }
-
-    public <T extends IPacket<?>> int getPacketIdByType(Class<T> packetClass) {
-        if (classToId.containsKey(packetClass)) {
-            return classToId.get(packetClass);
-        } else {
-            AcademyCraft.LOGGER.info("{} has no id registered", packetClass.getName());
-            return -1;
-        }
     }
 
     @SuppressWarnings("unchecked")
-    @Nullable
-    public <T extends IPacket<?>> Class<T> getClassById(int id) {
-        return (Class<T>) classToId.inverse().get(id);
+    public static <T extends PacketType<?, ?>> T getPacketTypeById(int id) {
+        return (T) Registries.PACKET_TYPES.byIdOrThrow(id);
     }
 
     public static List<IPacketListener> findPacketListeners(@NotNull Class<?> clazz, @Nullable Object instance) {

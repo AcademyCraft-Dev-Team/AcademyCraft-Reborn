@@ -7,6 +7,6 @@ import java.util.UUID;
 
 public class ServerUtil {
     public static boolean lacksSkill(UUID uuid, Skill skill) {
-        return !AbilitySystemServer.getPlayerSkills(uuid).contains(skill.name);
+        return !AbilitySystemServer.getPlayerSkills(uuid).contains(skill.getKeyString());
     }
 }

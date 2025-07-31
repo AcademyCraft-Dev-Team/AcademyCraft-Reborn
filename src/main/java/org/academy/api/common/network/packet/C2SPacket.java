@@ -9,8 +9,8 @@ import net.minecraft.network.protocol.PacketType;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
-import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftServer;
+import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
@@ -24,10 +24,8 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
     public int id;
     public FriendlyByteBuf friendlyByteBuf;
 
-    @SuppressWarnings("unchecked")
     public <T extends IPacket<ServerGamePacketListenerImpl>> C2SPacket(T packet) {
-        var clazz = (Class<T>) packet.getClass();
-        id = AcademyCraftClient.NETWORK_SYSTEM.getPacketIdByType(clazz);
+        id = packet.getPacketType().getPacketId();
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
     }
@@ -54,15 +52,16 @@ public class C2SPacket implements Packet<ServerGamePacketListenerImpl> {
             var event = new C2SPacketEvent(this);
             NeoForge.EVENT_BUS.post(event);
 
-            var packetClass = AcademyCraftServer.NETWORK_SYSTEM.<IPacket<ServerGamePacketListenerImpl>>getClassById(id);
+            var packetType = NetworkSystem.<org.academy.api.common.network.PacketType
+                    <ServerGamePacketListenerImpl, IPacket<ServerGamePacketListenerImpl>>>getPacketTypeById(id);
+            var packetClass = packetType.getPacketClass();
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {
                     var targetType = packetClass.getAnnotation(PacketTarget.class).value();
                     if (targetType != ThreadType.SERVER) return;
                 }
                 try {
-                    var factory =
-                            AcademyCraftServer.NETWORK_SYSTEM.<IPacket<ServerGamePacketListenerImpl>, ServerGamePacketListenerImpl>getPacketFactory(packetClass);
+                    var factory = packetType.getFactory();
                     if (factory == null) {
                         AcademyCraft.LOGGER.error("No factory found for C2S packet class: {}", packetClass.getName());
                         return;

@@ -1,9 +1,7 @@
 package org.academy.internal.server.config;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
-import org.academy.api.common.config.IConfigAction;
+import org.academy.api.common.gson.TypeHandler;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -15,24 +13,14 @@ public class GenericConfig {
     @SerializedName("booleanMap")
     public final Map<String, Boolean> booleanMap = new HashMap<>();
 
-    public static final class Action implements IConfigAction<GenericConfig> {
-        public static final IConfigAction<GenericConfig> INSTANCE = new Action();
+    public static final class Action implements TypeHandler<GenericConfig> {
+        public static final TypeHandler<GenericConfig> INSTANCE = new Action();
 
         private Action(){
         }
 
         @Override
-        public @NotNull GenericConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-            return gson.fromJson(jsonElement, GenericConfig.class);
-        }
-
-        @Override
-        public @NotNull JsonElement serialize(@NotNull GenericConfig configInstance, @NotNull Gson gson) {
-            return gson.toJsonTree(configInstance);
-        }
-
-        @Override
-        public @NotNull GenericConfig getDefaultConfig() {
+        public @NotNull GenericConfig getDefault() {
             GenericConfig defaultConfig = new GenericConfig();
             defaultConfig.booleanMap.put("attackPlayer", true);
             defaultConfig.booleanMap.put("destroyBlocks", true);
@@ -42,7 +30,7 @@ public class GenericConfig {
         }
 
         @Override
-        public @NotNull Class<GenericConfig> getConfigClass() {
+        public @NotNull Class<GenericConfig> getTypeClass() {
             return GenericConfig.class;
         }
     }

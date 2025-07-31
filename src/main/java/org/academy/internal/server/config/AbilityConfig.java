@@ -1,9 +1,7 @@
 package org.academy.internal.server.config;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.annotations.SerializedName;
-import org.academy.api.common.config.IConfigAction;
+import org.academy.api.common.gson.TypeHandler;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -33,24 +31,14 @@ public class AbilityConfig {
         public final Map<String, Float> floatMap = new HashMap<>();
     }
 
-    public static class Action implements IConfigAction<AbilityConfig> {
-        public static final IConfigAction<AbilityConfig> INSTANCE = new Action();
+    public static class Action implements TypeHandler<AbilityConfig> {
+        public static final TypeHandler<AbilityConfig> INSTANCE = new Action();
 
         private Action() {
         }
 
         @Override
-        public @NotNull AbilityConfig deserialize(@NotNull JsonElement jsonElement, @NotNull Gson gson) {
-            return gson.fromJson(jsonElement, AbilityConfig.class);
-        }
-
-        @Override
-        public @NotNull JsonElement serialize(@NotNull AbilityConfig configInstance, @NotNull Gson gson) {
-            return gson.toJsonTree(configInstance);
-        }
-
-        @Override
-        public @NotNull AbilityConfig getDefaultConfig() {
+        public @NotNull AbilityConfig getDefault() {
             AbilityConfig defaultConfig = new AbilityConfig();
 
             List<String> minecraftMetalBlocks = new ArrayList<>();
@@ -83,7 +71,7 @@ public class AbilityConfig {
         }
 
         @Override
-        public @NotNull Class<AbilityConfig> getConfigClass() {
+        public @NotNull Class<AbilityConfig> getTypeClass() {
             return AbilityConfig.class;
         }
     }
