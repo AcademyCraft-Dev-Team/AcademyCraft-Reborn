@@ -1,8 +1,8 @@
 package org.academy.api.common.network.asm;
 
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 
 public interface IPacketListener {
-    void handlePacket(IPacket<?> packet);
-    <T extends IPacket<?>> Class<T> getPacketType();
+    void handlePacket(Packet<?> packet);
+    <T extends Packet<?>> Class<T> getPacketType();
 }

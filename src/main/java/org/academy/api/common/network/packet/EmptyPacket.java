@@ -5,7 +5,7 @@ import net.minecraft.network.PacketListener;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class EmptyPacket<T extends PacketListener> extends IPacket<T> {
+public abstract class EmptyPacket<T extends PacketListener> extends Packet<T> {
     protected EmptyPacket(@Nullable T listener) {
         super(listener);
     }

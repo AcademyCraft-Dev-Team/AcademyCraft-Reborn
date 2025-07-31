@@ -18,7 +18,6 @@ import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.util.StencilUtil;
 import org.academy.api.common.network.NetworkManager;
-import org.academy.api.common.network.future.FutureManager;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.particle.ParticleRenderTypes;
@@ -34,9 +33,8 @@ public final class AcademyCraftClient {
     public static Connection connection;
     public static final File CLIENT_CONFIG_FILE;
     public static final AcademyCraftConfig CLIENT_CONFIG;
-    public static final FutureManager FUTURE_MANAGER = new FutureManager();
     public static final NetworkManager CLIENT_NETWORK_MANAGER = new NetworkManager();
-    public static final FutureManagerClient CLIENT_FUTURE_MANAGER = new FutureManagerClient(FUTURE_MANAGER);
+    public static final FutureManagerClient CLIENT_FUTURE_MANAGER = new FutureManagerClient();
 
     static {
         CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");

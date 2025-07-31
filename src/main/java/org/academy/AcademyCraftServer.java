@@ -6,7 +6,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.academy.api.common.network.NetworkManager;
-import org.academy.api.common.network.future.FutureManager;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.future.FutureManagerServer;
 import org.academy.api.server.wireless.WirelessManager;
@@ -29,16 +28,13 @@ public final class AcademyCraftServer {
     public static GenericConfig genericConfig;
     public static File serverConfigFile;
     public static File worldDataFile;
-    public static final FutureManager FUTURE_MANAGER = new FutureManager();
     public static final NetworkManager SERVER_NETWORK_MANAGER = new NetworkManager();
-    public static final FutureManagerServer SERVER_FUTURE_MANAGER = new FutureManagerServer(FUTURE_MANAGER);
+    public static final FutureManagerServer SERVER_FUTURE_MANAGER = new FutureManagerServer();
 
     private static ScheduledFuture<?> worldDataSaveTask;
 
     @SubscribeEvent
     public static void init(ServerStartedEvent event) {
-        AcademyCraft.init();
-
         SERVER_NETWORK_MANAGER.clear();
         SERVER_FUTURE_MANAGER.clear();
         SERVER_NETWORK_MANAGER.registerPacketListener(SERVER_FUTURE_MANAGER);

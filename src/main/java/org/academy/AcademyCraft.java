@@ -4,9 +4,6 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import org.academy.api.common.util.GameUtil;
-import org.academy.api.common.vanilla.ThreadType;
-import org.academy.internal.common.network.future.Payloads;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -25,13 +22,6 @@ public final class AcademyCraft {
 
     public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
-    }
-
-    public static void init() {
-        var threadType = GameUtil.getThreadType();
-        var futureManager = threadType == ThreadType.CLIENT ?
-                AcademyCraftClient.FUTURE_MANAGER : AcademyCraftServer.FUTURE_MANAGER;
-        Payloads.registerAll(futureManager);
     }
 
     public static void checkFile(File file) {

@@ -16,7 +16,7 @@ import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -132,7 +132,7 @@ public final class ArcGenerate extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.ARC_GENERATE_GENERATE.get();
         }
     }

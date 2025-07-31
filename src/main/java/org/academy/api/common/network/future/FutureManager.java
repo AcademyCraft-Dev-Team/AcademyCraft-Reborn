@@ -3,52 +3,30 @@ package org.academy.api.common.network.future;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import net.minecraft.network.PacketListener;
+import org.academy.api.common.registries.Registries;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+public final class FutureManager {
+    private static final BiMap<Class<? extends Payload<?>>, PayloadType<?, ?>> PAYLOAD_CLASS_TO_PAYLOAD_TYPE = HashBiMap.create();
 
-public class FutureManager {
-    private final BiMap<Class<? extends IPayload>, Integer> payloadClassToId;
-    private final Map<Integer, Class<? extends IPayload>> idToPayloadClass;
-    private final Map<Class<? extends IPayload>, Function<? extends PacketListener, ? extends IPayload>> payloadFactories;
-    private final AtomicInteger nextPayloadId;
-
-    public FutureManager() {
-        payloadClassToId = HashBiMap.create();
-        idToPayloadClass = new ConcurrentHashMap<>();
-        payloadFactories = new ConcurrentHashMap<>();
-        nextPayloadId = new AtomicInteger(0);
+    private FutureManager() {
     }
 
-    public <T extends IPayload> void registerPayloadType(Class<T> payloadClass, Function<? extends PacketListener, T> factory) {
-        if (!payloadClassToId.containsKey(payloadClass)) {
-            var id = nextPayloadId.getAndIncrement();
-            payloadClassToId.put(payloadClass, id);
-            idToPayloadClass.put(id, payloadClass);
-            payloadFactories.put(payloadClass, factory);
+    public static void progressRegistry() {
+        for (var payloadType : Registries.PAYLOAD_TYPES) {
+            PAYLOAD_CLASS_TO_PAYLOAD_TYPE.put(payloadType.getPayloadClass(), payloadType);
         }
     }
 
-    public int getPayloadId(Class<? extends IPayload> payloadClass) {
-        if (payloadClassToId.containsKey(payloadClass)) {
-            return payloadClassToId.get(payloadClass);
-        } else {
-            throw new IllegalStateException("PayloadType " + payloadClass + " not registered.");
-        }
-    }
-
-    public Class<? extends IPayload> getPayloadClass(int id) {
-        return idToPayloadClass.get(id);
+    /**
+     * 给参数加泛型也没什么用了, 这样还省事
+     */
+    @SuppressWarnings({"unchecked"})
+    public static <T extends PayloadType<?, ?>> T getPayloadType(Class<?> payloadClass) {
+        return (T) PAYLOAD_CLASS_TO_PAYLOAD_TYPE.get(payloadClass);
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends IPayload, L extends PacketListener> Function<L, T> getPayloadFactory(int payloadId) {
-        var payloadClass = getPayloadClass(payloadId);
-        if (payloadClass == null) {
-            return null;
-        }
-        return (Function<L, T>) payloadFactories.get(payloadClass);
+    public static <L extends PacketListener, P extends Payload<L>> PayloadType<L, P> getPayloadTypeById(int id) {
+        return (PayloadType<L, P>) Registries.PAYLOAD_TYPES.byIdOrThrow(id);
     }
 }

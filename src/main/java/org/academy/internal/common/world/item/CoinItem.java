@@ -13,7 +13,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -50,7 +50,7 @@ public class CoinItem extends Item {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static class ThrowCoinPacket extends IPacket<ServerGamePacketListenerImpl> {
+    public static class ThrowCoinPacket extends Packet<ServerGamePacketListenerImpl> {
         public Vec3 initialVelocity;
         public float yRot;
         public float xRot;
@@ -83,7 +83,7 @@ public class CoinItem extends Item {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.THROW_COIN_WITH_VELOCITY.get();
         }
     }

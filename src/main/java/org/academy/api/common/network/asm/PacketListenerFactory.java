@@ -1,6 +1,6 @@
 package org.academy.api.common.network.asm;
 
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -13,14 +13,14 @@ import java.lang.reflect.Method;
 @SuppressWarnings("unchecked")
 public class PacketListenerFactory {
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-    private static final String IPACKET_DESCRIPTOR = Type.getDescriptor(IPacket.class);
+    private static final String IPACKET_DESCRIPTOR = Type.getDescriptor(Packet.class);
     private static final String STATIC_HANDLER_PARENT_INTERNAL_NAME = Type.getInternalName(StaticPacketListener.class);
     private static final String INSTANCE_HANDLER_PARENT_INTERNAL_NAME = Type.getInternalName(InstancePacketListener.class);
     private static final String OBJECT_DESCRIPTOR = Type.getDescriptor(Object.class);
     private static final String CLASS_DESCRIPTOR = Type.getDescriptor(Class.class);
 
     public static StaticPacketListener createStatic(Method method) {
-        var specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
+        var specificPacketParameterType = (Class<? extends Packet<?>>) method.getParameterTypes()[0];
 
         try {
             var className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
@@ -42,7 +42,7 @@ public class PacketListenerFactory {
     }
 
     public static InstancePacketListener createInstance(Method method, Object targetInstance) {
-        var specificPacketParameterType = (Class<? extends IPacket<?>>) method.getParameterTypes()[0];
+        var specificPacketParameterType = (Class<? extends Packet<?>>) method.getParameterTypes()[0];
 
         try {
             var className = PacketListenerFactory.class.getName().replace('.', '/') + "$"
@@ -62,7 +62,7 @@ public class PacketListenerFactory {
     }
 
     private static byte[] makeHandlerClassBytecode(String classNameInternal, Method targetMethod,
-                                                   Class<? extends IPacket<?>> specificPacketParameterType, boolean isStatic) {
+                                                   Class<? extends Packet<?>> specificPacketParameterType, boolean isStatic) {
         var cv = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         var parentInternalName = isStatic ? STATIC_HANDLER_PARENT_INTERNAL_NAME : INSTANCE_HANDLER_PARENT_INTERNAL_NAME;
         var targetClassInternalName = Type.getInternalName(targetMethod.getDeclaringClass());
@@ -107,7 +107,7 @@ public class PacketListenerFactory {
         mvHandle.visitInsn(Opcodes.RETURN);
         mvHandle.visitEnd();
 
-        var mvGetType = cv.visitMethod(Opcodes.ACC_PUBLIC, "getPacketType", "()" + CLASS_DESCRIPTOR, "()<Ljava/lang/Class<+L" + Type.getInternalName(IPacket.class) + ";>;>;", null);
+        var mvGetType = cv.visitMethod(Opcodes.ACC_PUBLIC, "getPacketType", "()" + CLASS_DESCRIPTOR, "()<Ljava/lang/Class<+L" + Type.getInternalName(Packet.class) + ";>;>;", null);
         mvGetType.visitCode();
         mvGetType.visitLdcInsn(Type.getType(specificPacketParameterType));
         mvGetType.visitInsn(Opcodes.ARETURN);

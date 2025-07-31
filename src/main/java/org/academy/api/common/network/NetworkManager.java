@@ -4,7 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.asm.IPacketListener;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class NetworkManager {
-    private final ConcurrentHashMap<Class<? extends IPacket<?>>, List<IPacketListener>> typedListeners;
+    private final ConcurrentHashMap<Class<? extends Packet<?>>, List<IPacketListener>> typedListeners;
     private final Map<Object, List<IPacketListener>> listenersByTarget;
     private final ReadWriteLock lock;
 
@@ -100,7 +100,7 @@ public final class NetworkManager {
         }
     }
 
-    public <T extends IPacket<?>> void dispatchPacket(T packet) {
+    public <T extends Packet<?>> void dispatchPacket(T packet) {
         List<IPacketListener> handlers = null;
         lock.readLock().lock();
         try {
