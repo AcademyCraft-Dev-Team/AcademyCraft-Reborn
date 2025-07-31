@@ -21,7 +21,6 @@ import org.academy.api.common.network.NetworkManager;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.particle.ParticleRenderTypes;
-import org.academy.internal.client.renderer.entity.EntityRenderers;
 import org.academy.internal.client.renderer.item.ItemRenderers;
 import org.academy.internal.common.world.level.material.ImagiphasePlasma;
 import org.jetbrains.annotations.NotNull;
@@ -51,7 +50,6 @@ public final class AcademyCraftClient {
         DataTerminalHUD.init();
         HUDManager.init();
         Apps.register();
-        EntityRenderers.init();
         ParticleRenderTypes.init();
         BloomEffect.init();
         BlurEffect.init();
