@@ -1,41 +1,24 @@
 package org.academy.internal.client.renderer.entity;
 
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.projectile.ThrownCoin;
-import org.academy.internal.common.world.entity.skill.*;
-import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @SuppressWarnings("unused")
+@EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
 public class EntityRenderers {
-    public static final Map<EntityType<?>, EntityRendererProvider<?>> RENDERER_MAP = new HashMap<>();
-
-    public static final EntityRendererProvider<ThrownCoin> THROWN_COIN =
-            register(EntityTypes.THROWN_COIN.get(), ThrownCoinRenderer::new);
-    public static final EntityRendererProvider<RailgunRay> RAILGUN_RAY =
-            register(EntityTypes.RAILGUN_RAY.get(), RailgunRayRenderer::new);
-    public static final EntityRendererProvider<Arc> ARC =
-            register(EntityTypes.ARC.get(), ArcRenderer::new);
-    public static final EntityRendererProvider<HighSpeedElectronBeam> HIGH_SPEED_ELECTRON_BEAM =
-            register(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), HighSpeedElectronBeamRenderer::new);
-    public static final EntityRendererProvider<GlowCircle> GLOW_CIRCLE =
-            register(EntityTypes.GLOW_CIRCLE.get(), GlowCircleRenderer::new);
-    public static final EntityRendererProvider<Smoke> SMOKE =
-            register(EntityTypes.SMOKE.get(), SmokeRenderer::new);
-    public static final EntityRendererProvider<CleaningRobot> CLEANING_ROBOT =
-            register(EntityTypes.CLEANING_ROBOT.get(), CleaningRobotRenderer::new);
-
-    public static <T extends Entity> EntityRendererProvider<T> register(EntityType<T> type, EntityRendererProvider<T> provider) {
-        net.minecraft.client.renderer.entity.EntityRenderers.register(type, provider);
-        return provider;
-    }
-
-    public static void init() {
+    @SubscribeEvent
+    public static void onRegister(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(EntityTypes.THROWN_COIN.get(), ThrownCoinRenderer::new);
+        event.registerEntityRenderer(EntityTypes.RAILGUN_RAY.get(), RailgunRayRenderer::new);
+        event.registerEntityRenderer(EntityTypes.ARC.get(), ArcRenderer::new);
+        event.registerEntityRenderer(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), HighSpeedElectronBeamRenderer::new);
+        event.registerEntityRenderer(EntityTypes.GLOW_CIRCLE.get(), GlowCircleRenderer::new);
+        event.registerEntityRenderer(EntityTypes.SMOKE.get(), SmokeRenderer::new);
+        event.registerEntityRenderer(EntityTypes.CLEANING_ROBOT.get(), CleaningRobotRenderer::new);
     }
 
     private EntityRenderers() {
