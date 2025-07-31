@@ -1,7 +1,7 @@
 package org.academy.api.common.network.future.asm;
 
-import org.academy.api.common.network.future.IRequestPayload;
-import org.academy.api.common.network.future.IResponsePayload;
+import org.academy.api.common.network.future.RequestPayload;
+import org.academy.api.common.network.future.ResponsePayload;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -14,7 +14,7 @@ public class PayloadHandlerInvokerFactory {
     private PayloadHandlerInvokerFactory() {
     }
 
-    public static StaticPayloadHandlerInvoker createStaticInvoker(Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType) {
+    public static StaticPayloadHandlerInvoker createStaticInvoker(Method targetMethod, Class<? extends RequestPayload<?, ?>> requestType, Class<? extends ResponsePayload<?>> responseType) {
         var generatedClassName = generateClassName(targetMethod, requestType, true);
         var classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, true);
         try {
@@ -26,7 +26,7 @@ public class PayloadHandlerInvokerFactory {
         }
     }
 
-    public static InstancePayloadHandlerInvoker createInstanceInvoker(Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType, Object targetInstance) {
+    public static InstancePayloadHandlerInvoker createInstanceInvoker(Method targetMethod, Class<? extends RequestPayload<?, ?>> requestType, Class<? extends ResponsePayload<?>> responseType, Object targetInstance) {
         var generatedClassName = generateClassName(targetMethod, requestType, false);
         var classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, false);
         try {
@@ -47,11 +47,11 @@ public class PayloadHandlerInvokerFactory {
                 + requestType.getSimpleName() + "$";
     }
 
-    private static byte[] generateInvokerBytecode(String generatedClassNameInternal, Method targetMethod, Class<? extends IRequestPayload<?, ?>> requestType, Class<? extends IResponsePayload> responseType, boolean isStatic) {
+    private static byte[] generateInvokerBytecode(String generatedClassNameInternal, Method targetMethod, Class<? extends RequestPayload<?, ?>> requestType, Class<? extends ResponsePayload<?>> responseType, boolean isStatic) {
         var handlerClassNameInternal = Type.getInternalName(targetMethod.getDeclaringClass());
         var requestTypeInternalName = Type.getInternalName(requestType);
-        var iRequestPayloadInternalName = Type.getInternalName(IRequestPayload.class);
-        var iResponsePayloadInternalName = Type.getInternalName(IResponsePayload.class);
+        var iRequestPayloadInternalName = Type.getInternalName(RequestPayload.class);
+        var iResponsePayloadInternalName = Type.getInternalName(ResponsePayload.class);
         var parentInvokerName = isStatic ? Type.getInternalName(StaticPayloadHandlerInvoker.class) : Type.getInternalName(InstancePayloadHandlerInvoker.class);
         var objectDescriptor = Type.getDescriptor(Object.class);
 

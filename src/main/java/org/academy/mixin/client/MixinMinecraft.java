@@ -2,7 +2,6 @@ package org.academy.mixin.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,7 +19,6 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void init(CallbackInfo ci) {
-        AcademyCraft.init();
         AcademyCraftClient.init();
     }
 }

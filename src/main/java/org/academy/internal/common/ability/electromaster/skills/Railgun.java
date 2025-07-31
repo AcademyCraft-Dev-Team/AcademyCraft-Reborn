@@ -36,7 +36,7 @@ import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.vanilla.ThreadType;
@@ -384,7 +384,7 @@ public class Railgun extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.RAILGUN_START_CHARGE.get();
         }
     }
@@ -400,13 +400,13 @@ public class Railgun extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends IPacket<ServerGamePacketListenerImpl>> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
             return PacketTypes.RAILGUN_SHOOT.get();
         }
     }
 
     @PacketTarget(ThreadType.CLIENT)
-    public static final class ConfirmChargePacket extends IPacket<ClientPacketListener> {
+    public static final class ConfirmChargePacket extends Packet<ClientPacketListener> {
         public int coinEntityId;
 
         public ConfirmChargePacket(ClientPacketListener listener) {
@@ -429,7 +429,7 @@ public class Railgun extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ClientPacketListener, ? extends IPacket<ClientPacketListener>> getPacketType() {
+        public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
             return PacketTypes.RAILGUN_CONFIRM_CHARGE.get();
         }
     }
@@ -445,7 +445,7 @@ public class Railgun extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ClientPacketListener, ? extends IPacket<ClientPacketListener>> getPacketType() {
+        public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
             return PacketTypes.RAILGUN_CHARGE_END.get();
         }
     }

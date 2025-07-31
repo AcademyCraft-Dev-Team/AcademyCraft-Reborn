@@ -3,7 +3,7 @@ package org.academy.api.common.network;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.asm.PacketListenerFactory;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.registries.Registries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -44,7 +44,7 @@ public class NetworkSystem {
                 continue;
             }
 
-            if (!IPacket.class.isAssignableFrom(method.getParameterTypes()[0])) {
+            if (!Packet.class.isAssignableFrom(method.getParameterTypes()[0])) {
                 AcademyCraft.LOGGER.error("Skipping method {} in {}: parameter type {} does not implement IPacket<?>", method.getName(), clazz.getName(), method.getParameterTypes()[0].getName());
                 continue;
             }

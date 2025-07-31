@@ -1,17 +1,23 @@
-package org.academy.api.common.network.packet;
+package org.academy.api.common.network.future;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.PacketListener;
-import org.academy.api.common.network.PacketType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public abstract class IPacket<T extends PacketListener> {
+public abstract class Payload<T extends PacketListener> {
     private final T packetListener;
 
-    protected IPacket(@Nullable T packetListener) {
+    protected Payload(@NotNull T packetListener) {
         this.packetListener = packetListener;
     }
+
+    protected Payload() {
+        this.packetListener = null;
+    }
+
+    public abstract void write(@NotNull FriendlyByteBuf buf);
+
+    public abstract void read(@NotNull FriendlyByteBuf buf);
 
     @NotNull
     public T getPacketListener() {
@@ -21,10 +27,6 @@ public abstract class IPacket<T extends PacketListener> {
         return packetListener;
     }
 
-    public abstract void read(@NotNull FriendlyByteBuf buf);
-
-    public abstract void write(@NotNull FriendlyByteBuf buf);
-
     @NotNull
-    public abstract PacketType<T, ? extends IPacket<T>> getPacketType();
+    public abstract PayloadType<T, ? extends Payload<T>> getPayloadType();
 }

@@ -8,7 +8,7 @@ import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +19,7 @@ import static net.neoforged.neoforge.registries.NeoForgeRegistries.ATTACHMENT_TY
  * SubscribePacket is not needed.
  */
 @PacketTarget(ThreadType.CLIENT)
-public final class AttachmentDataSyncPacket<T> extends IPacket<ClientPacketListener> {
+public final class AttachmentDataSyncPacket<T> extends Packet<ClientPacketListener> {
     private Entity entity;
     private AttachmentType<T> type;
 
@@ -57,7 +57,7 @@ public final class AttachmentDataSyncPacket<T> extends IPacket<ClientPacketListe
     }
 
     @Override
-    public @NotNull PacketType<ClientPacketListener, ? extends IPacket<ClientPacketListener>> getPacketType() {
+    public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
         return PacketTypes.ATTACHMENT_DATA_SYNC.get();
     }
 }

@@ -6,7 +6,7 @@ import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.packet.IPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashSet;
 
 @PacketTarget(ThreadType.CLIENT)
-public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
+public class PlayerSyncPacket extends Packet<ClientPacketListener> {
     public boolean levelChanged;
     public int level;
     public boolean maxComputingPowerChanged;
@@ -106,7 +106,7 @@ public class PlayerSyncPacket extends IPacket<ClientPacketListener> {
     }
 
     @Override
-    public @NotNull PacketType<ClientPacketListener, ? extends IPacket<ClientPacketListener>> getPacketType() {
+    public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
         return PacketTypes.PLAYER_SYNC.get();
     }
 }

@@ -16,9 +16,8 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
-import org.academy.api.common.network.future.HandlePayload;
-import org.academy.api.common.network.future.IRequestPayload;
-import org.academy.api.common.network.future.IResponsePayload;
+import org.academy.api.common.network.future.*;
+import org.academy.internal.common.network.future.PayloadTypes;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.jetbrains.annotations.NotNull;
 
@@ -59,7 +58,7 @@ public class ImagiphaseDowsingRodItem extends Item {
         return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());
     }
 
-    public static final class GetLevelChunkSectionsPacket extends IRequestPayload<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket.Response> {
+    public static final class GetLevelChunkSectionsPacket extends RequestPayload<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket.Response> {
         public BlockPos playerPos;
 
         public GetLevelChunkSectionsPacket(ServerGamePacketListenerImpl listener) {
@@ -72,8 +71,13 @@ public class ImagiphaseDowsingRodItem extends Item {
         }
 
         @Override
-        public Class<GetLevelChunkSectionsPacket.Response> getExpectedResponseType() {
-            return GetLevelChunkSectionsPacket.Response.class;
+        public @NotNull PayloadType<?, Response> getExpectedResponsePayloadType() {
+            return PayloadTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
+        }
+
+        @Override
+        public @NotNull PayloadType<ServerGamePacketListenerImpl, ? extends Payload<ServerGamePacketListenerImpl>> getPayloadType() {
+            return PayloadTypes.GET_LEVEL_CHUNK_SECTIONS.get();
         }
 
         @Override
@@ -86,7 +90,7 @@ public class ImagiphaseDowsingRodItem extends Item {
             playerPos = buf.readBlockPos();
         }
 
-        public static final class Response extends IResponsePayload<ClientPacketListener> {
+        public static final class Response extends ResponsePayload<ClientPacketListener> {
             public List<BlockPos> sectionsWithImagPhase;
 
             public Response(ClientPacketListener listener) {
@@ -95,7 +99,6 @@ public class ImagiphaseDowsingRodItem extends Item {
             }
 
             public Response(List<BlockPos> sections) {
-                super(null);
                 this.sectionsWithImagPhase = sections;
             }
 
@@ -107,6 +110,11 @@ public class ImagiphaseDowsingRodItem extends Item {
             @Override
             public void read(@NotNull FriendlyByteBuf buf) {
                 this.sectionsWithImagPhase = FBBDeserializers.getCollectionFriendlyByteBufDeserializer(BlockPos.class, ArrayList::new).deserialize(buf);
+            }
+
+            @Override
+            public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+                return PayloadTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
             }
         }
     }

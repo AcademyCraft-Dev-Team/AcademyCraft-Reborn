@@ -25,7 +25,6 @@ import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.item.CoinItem;
 
-@SuppressWarnings({"unused"})
 public final class PacketTypes {
     public static final DeferredRegister<PacketType<?, ?>> PACKET_TYPES =
             DeferredRegister.create(Registries.Keys.PACKET_TYPES, AcademyCraft.MOD_ID);
@@ -43,9 +42,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ExpSyncPacket>>
             EXP_SYNC = PACKET_TYPES.register("exp_sync",
             () -> new PacketType<>(ExpSyncPacket.class, ExpSyncPacket::new));
-
-    private PacketTypes() {
-    }
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ConnectNodePacket>>
             CONNECT_NODE = PACKET_TYPES.register("connect_node",
@@ -141,4 +137,7 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpawnArcMediumParticlePacket>>
             SPAWN_ARC_MEDIUM_PARTICLE = PACKET_TYPES.register("spawn_arc_medium_particle",
             () -> new PacketType<>(SpawnArcMediumParticlePacket.class, SpawnArcMediumParticlePacket::new));
+
+    private PacketTypes() {
+    }
 }

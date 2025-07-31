@@ -4,20 +4,22 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.future.IRequestPayload;
-import org.academy.api.common.network.future.IResponsePayload;
+import org.academy.api.common.network.future.Payload;
+import org.academy.api.common.network.future.PayloadType;
+import org.academy.api.common.network.future.RequestPayload;
+import org.academy.api.common.network.future.ResponsePayload;
+import org.academy.internal.common.network.future.PayloadTypes;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerImpl, LearnSkillPacket.Response> {
+public class LearnSkillPayload extends RequestPayload<ServerGamePacketListenerImpl, LearnSkillPayload.Response> {
     public String skillName;
     public BlockPos userPos;
 
-    public LearnSkillPacket(ServerGamePacketListenerImpl listener) {
+    public LearnSkillPayload(ServerGamePacketListenerImpl listener) {
         super(listener);
     }
 
-    public LearnSkillPacket(String newSkillName, BlockPos newUserPos) {
+    public LearnSkillPayload(String newSkillName, BlockPos newUserPos) {
         super(null);
         skillName = newSkillName;
         userPos = newUserPos;
@@ -35,13 +37,17 @@ public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerIm
         userPos = buf.readBlockPos();
     }
 
-    @Nullable
     @Override
-    public Class<Response> getExpectedResponseType() {
-        return Response.class;
+    public @NotNull PayloadType<ServerGamePacketListenerImpl, ? extends Payload<ServerGamePacketListenerImpl>> getPayloadType() {
+        return PayloadTypes.LEARN_SKILL.get();
     }
 
-    public static class Response extends IResponsePayload<ClientPacketListener> {
+    @Override
+    public @NotNull PayloadType<?, Response> getExpectedResponsePayloadType() {
+        return PayloadTypes.LEARN_SKILL_RESPONSE.get();
+    }
+
+    public static class Response extends ResponsePayload<ClientPacketListener> {
         public boolean success;
 
         public Response(ClientPacketListener listener) {
@@ -49,7 +55,6 @@ public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerIm
         }
 
         public Response(boolean newSuccess) {
-            super(null);
             success = newSuccess;
         }
 
@@ -61,6 +66,11 @@ public class LearnSkillPacket extends IRequestPayload<ServerGamePacketListenerIm
         @Override
         public void read(@NotNull FriendlyByteBuf buf) {
             success = buf.readBoolean();
+        }
+
+        @Override
+        public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+            return PayloadTypes.LEARN_SKILL_RESPONSE.get();
         }
     }
 }

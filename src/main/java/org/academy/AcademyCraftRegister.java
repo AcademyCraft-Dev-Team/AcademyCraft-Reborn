@@ -13,11 +13,13 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
+import org.academy.api.common.network.future.FutureManager;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.future.PayloadTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.inventory.MenuTypes;
@@ -65,6 +67,7 @@ public class AcademyCraftRegister {
 
         AbilityCategories.ABILITY_CATEGORIES.register(modEventBus);
         PacketTypes.PACKET_TYPES.register(modEventBus);
+        PayloadTypes.PAYLOAD_TYPES.register(modEventBus);
         Skills.SKILLS.register(modEventBus);
 
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
@@ -74,6 +77,7 @@ public class AcademyCraftRegister {
     public static void onNewRegistry(NewRegistryEvent event) {
         event.register(ABILITY_CATEGORIES);
         event.register(PACKET_TYPES);
+        event.register(PAYLOAD_TYPES);
         event.register(SKILLS);
     }
 
@@ -81,6 +85,7 @@ public class AcademyCraftRegister {
         event.enqueueWork(() -> {
             NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
             ABILITY_CATEGORIES.forEach(AbilityCategory::seal);
+            FutureManager.progressRegistry();
         });
     }
 }

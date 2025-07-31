@@ -104,11 +104,11 @@ public class AbilitySystemServer {
 
     @HandlePayload
     @SuppressWarnings("resource")
-    public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
+    public static LearnSkillPayload.Response handleLearnSkill(LearnSkillPayload payload) {
         var player = payload.getPacketListener().getPlayer();
         var userPos = payload.userPos;
         if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
-            return new LearnSkillPacket.Response(false);
+            return new LearnSkillPayload.Response(false);
         }
 
         var level = player.serverLevel();
@@ -131,10 +131,10 @@ public class AbilitySystemServer {
                     user.extractEnergy(energy, false);
                     addPlayerSkill(player.getUUID(), skillKey);
                 }
-                return new LearnSkillPacket.Response(canLearn);
+                return new LearnSkillPayload.Response(canLearn);
             }
         }
-        return new LearnSkillPacket.Response(false);
+        return new LearnSkillPayload.Response(false);
     }
 
     public static void scheduleFullPlayerSync(final UUID uuid) {

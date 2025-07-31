@@ -4,12 +4,15 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.future.IRequestPayload;
-import org.academy.api.common.network.future.IResponsePayload;
+import org.academy.api.common.network.future.Payload;
+import org.academy.api.common.network.future.PayloadType;
+import org.academy.api.common.network.future.RequestPayload;
+import org.academy.api.common.network.future.ResponsePayload;
+import org.academy.internal.common.network.future.PayloadTypes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListenerImpl, GetCurrentNodePacket.Response> {
+public class GetCurrentNodePacket extends RequestPayload<ServerGamePacketListenerImpl, GetCurrentNodePacket.Response> {
     public BlockPos userPos;
 
     public GetCurrentNodePacket(ServerGamePacketListenerImpl listener) {
@@ -31,13 +34,17 @@ public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListen
         userPos = buf.readBlockPos();
     }
 
-    @Nullable
     @Override
-    public Class<Response> getExpectedResponseType() {
-        return Response.class;
+    public @NotNull PayloadType<?, Response> getExpectedResponsePayloadType() {
+        return PayloadTypes.GET_CURRENT_NODE_RESPONSE.get();
     }
 
-    public static class Response extends IResponsePayload<ClientPacketListener> {
+    @Override
+    public @NotNull PayloadType<ServerGamePacketListenerImpl, ? extends Payload<ServerGamePacketListenerImpl>> getPayloadType() {
+        return PayloadTypes.GET_CURRENT_NODE.get();
+    }
+
+    public static class Response extends ResponsePayload<ClientPacketListener> {
         public boolean isNull;
         public String nodeName;
 
@@ -46,7 +53,6 @@ public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListen
         }
 
         public Response(boolean newIsNull, String newNodeName) {
-            super(null);
             isNull = newIsNull;
             nodeName = newNodeName;
         }
@@ -61,6 +67,11 @@ public class GetCurrentNodePacket extends IRequestPayload<ServerGamePacketListen
         public void read(@NotNull FriendlyByteBuf buf) {
             isNull = buf.readBoolean();
             nodeName = buf.readUtf();
+        }
+
+        @Override
+        public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+            return PayloadTypes.GET_CURRENT_NODE_RESPONSE.get();
         }
     }
 }
