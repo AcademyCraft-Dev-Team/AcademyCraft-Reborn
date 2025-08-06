@@ -20,6 +20,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+/**
+ * For SkillEffectsLayer
+ */
 @Mixin(PlayerRenderer.class)
 public abstract class MixinPlayerRenderer {
     @Shadow protected abstract void scale(AbstractClientPlayer livingEntity, PoseStack poseStack, float partialTickTime);

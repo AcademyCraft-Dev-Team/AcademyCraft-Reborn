@@ -17,8 +17,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
+
 @Mixin(GameRenderer.class)
 public abstract class MixinGameRenderer {
+    /**
+     * For HUDManager
+     */
     @Inject(method = "render", locals = LocalCapture.CAPTURE_FAILSOFT, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V"))
     public void gui(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci, boolean flag, int i, int j, Window window, Matrix4f matrix4f, Matrix4fStack matrix4fstack, GuiGraphics guigraphics) {
         AnimationManager.getInstance().onFrameUpdate();
@@ -27,6 +31,9 @@ public abstract class MixinGameRenderer {
         HUDManager.render(stack, guigraphics.bufferSource(), deltaTracker.getGameTimeDeltaPartialTick(true));
     }
 
+    /**
+     * For ResizeDisplayEvent
+     */
     @Inject(method = "resize",at = @At("TAIL"))
     private void resize(int width, int height, CallbackInfo ci) {
         var event = new ResizeDisplayEvent(width, height);

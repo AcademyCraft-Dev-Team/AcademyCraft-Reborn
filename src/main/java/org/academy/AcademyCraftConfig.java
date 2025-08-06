@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class AcademyCraftConfig {
-
     private static final Map<String, TypeHandler<?>> HANDLER_MAP = new ConcurrentHashMap<>();
     private static final Gson GSON = new GsonBuilder().create();
 
@@ -47,11 +46,11 @@ public final class AcademyCraftConfig {
         } else {
             rootJsonConfig = new JsonObject();
         }
-        this.dirty = false;
+        dirty = false;
     }
 
     public synchronized void save() {
-        if (!this.dirty) {
+        if (!dirty) {
             return;
         }
 
@@ -64,12 +63,12 @@ public final class AcademyCraftConfig {
                 newRootJson.add(configKey, serializeWithHandler(handler, configInstance));
             }
         }
-        this.rootJsonConfig = newRootJson;
+        rootJsonConfig = newRootJson;
 
         try (var writer = new FileWriter(configFile)) {
             var gsonPretty = new GsonBuilder().setPrettyPrinting().create();
             gsonPretty.toJson(rootJsonConfig, writer);
-            this.dirty = false;
+            dirty = false;
         } catch (Throwable e) {
             AcademyCraft.LOGGER.warn("Failed to save config to {}", configFile.getAbsolutePath(), e);
         }

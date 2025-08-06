@@ -31,6 +31,7 @@ public final class StencilUtil {
     }
 
     public static void end() {
+        RenderSystem.clear(GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
         GL30.glDisable(GL_STENCIL_TEST);
     }
 

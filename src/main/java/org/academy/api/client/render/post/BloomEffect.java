@@ -11,10 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.util.RenderUtil;
-import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.internal.client.renderer.Shaders;
 import org.lwjgl.opengl.GL20;
 
@@ -33,7 +30,6 @@ import static org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT1;
  * Modified for this project.
  */
 public final class BloomEffect {
-    private static int lastWidth, lastHeight;
     private static final RenderTarget INPUT, OUTPUT, SWAP2A, SWAP4A, SWAP8A, SWAP2B, SWAP4B, SWAP8B;
     public static final ByteBufferBuilder BYTE_BUFFER_BUILDER = new ByteBufferBuilder(786432);
     private static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS = new Object2ObjectLinkedOpenHashMap<>();
@@ -56,10 +52,15 @@ public final class BloomEffect {
                     this.height = height;
                     this.frameBufferId = GlStateManager.glGenFramebuffers();
                     this.colorTextureId = TextureUtil.generateTextureId();
-                    this.depthBufferId = -1;
+                    this.depthBufferId = TextureUtil.generateTextureId();
 
                     var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
-                    var mainDepthBufferId = mainRenderTarget.getDepthTextureId();
+                    var translucent = Minecraft.getInstance().levelRenderer.getTranslucentTarget();
+                    var mainDepthBufferId =
+                            Minecraft.useShaderTransparency() && translucent != null ?
+                                    translucent.getDepthTextureId()
+                                    :
+                                    mainRenderTarget.getDepthTextureId();
                     var mainColorTextureId = mainRenderTarget.getColorTextureId();
 
                     GlStateManager._bindTexture(colorTextureId);
@@ -94,10 +95,6 @@ public final class BloomEffect {
         SWAP2B = getRenderTarget(width / 2, height / 2);
         SWAP4B = getRenderTarget(width / 4, height / 4);
         SWAP8B = getRenderTarget(width / 8, height / 8);
-    }
-
-    public static void init() {
-        NeoForge.EVENT_BUS.register(BloomEffect.class);
     }
 
     public static void resize(int width, int height) {
@@ -142,13 +139,6 @@ public final class BloomEffect {
         if (RenderUtil.IS_SHADER_PACK_IN_USE.get()) return;
 
         var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
-        var width = mainRenderTarget.width;
-        var height = mainRenderTarget.height;
-        if (width != lastWidth || height != lastHeight) {
-            resize(width, height);
-            lastWidth = width;
-            lastHeight = height;
-        }
         var mainRenderTargetColorTextureId = mainRenderTarget.getColorTextureId();
 
         RenderSystem.colorMask(true, true, true, true);
@@ -204,11 +194,5 @@ public final class BloomEffect {
 
         Shaders.SCREEN_BLIT.setSampler("DiffuseSampler", OUTPUT.getColorTextureId());
         blitScreen(Shaders.SCREEN_BLIT, mainRenderTarget);
-    }
-
-    @SubscribeEvent
-    public static void onResizeDisplay(ResizeDisplayEvent event) {
-        var window = Minecraft.getInstance().getWindow();
-        resize(window.getWidth(), window.getHeight());
     }
 }

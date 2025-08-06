@@ -17,6 +17,7 @@ import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -32,23 +33,23 @@ public final class HUDManager {
     private static boolean initialized = false;
     private static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
     public static final RenderType CP_BAR_VALUE =
-            RenderUtil.getPositionColorTexRenderTypeFull(
+            RenderUtil.getPositionColorTexRenderType(
                     "cp_bar_value",
                     TextureResources.CP_BAR_VALUE,
                     false);
     public static final RenderType CP_BAR =
-            RenderUtil.getPositionColorTexRenderTypeFull(
+            RenderUtil.getPositionColorTexRenderType(
                     "cp_bar",
                     TextureResources.CP_BAR,
                     false);
     public static final RenderType CP_BAR_BACKGROUND =
-            RenderUtil.getPositionColorTexRenderTypeFull(
+            RenderUtil.getPositionColorTexRenderType(
                     "cp_bar_background",
                     TextureResources.CP_BAR_BACKGROUND,
                     false);
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory -> {
         var key = abilityCategory.getKey();
-        return RenderUtil.getPositionColorTexRenderTypeFull("ability_icon", getResourceLocation(key.getNamespace(),
+        return RenderUtil.getPositionColorTexRenderType("ability_icon", getResourceLocation(key.getNamespace(),
                 "textures/ability/" + key.getPath() + "/icon_overlay.png"
         ), false);
     };
@@ -204,15 +205,13 @@ public final class HUDManager {
         var targetG = 174 / 255.0f;
         var targetB = 68 / 255.0f;
 
-        var finalR = MathUtil.lerpFactorStartEnd(targetR, 1.0f, currentAlpha);
-        var finalG = MathUtil.lerpStartEndFactor(targetG, 1.0f, currentAlpha);
-        var finalB = MathUtil.lerpFactorStartEnd(targetB, 1.0f, currentAlpha);
+        var finalR = MathUtil.lerpFactorStartEnd(currentAlpha, 1.0f, targetR);
+        var finalG = MathUtil.lerpFactorStartEnd(currentAlpha, 1.0f, targetG);
+        var finalB = MathUtil.lerpFactorStartEnd(currentAlpha, 1.0f, targetB);
 
         cpBarWidget.setX(screenWidth - cpBarWidget.getWidth());
         cpBarWidget.setY(0);
-        cpBarWidget.red = finalR;
-        cpBarWidget.green = finalG;
-        cpBarWidget.blue = finalB;
+        cpBarWidget.setColor(finalR, finalG, finalB);
         cpBarWidget.setAlpha(currentAlpha);
         cpBarWidget.render(stack, bufferSource, 0, 0, partialTick);
 
@@ -242,17 +241,15 @@ public final class HUDManager {
         cpBarValueWidget.setVertex(1, leftBottomX, height, 0, leftBottomUv, 1);
         cpBarValueWidget.setVertex(2, rightTopX, height, 0, 1, 1);
         cpBarValueWidget.setVertex(3, rightTopX, 0, 0, 1, 0);
-        cpBarValueWidget.red = finalR;
-        cpBarValueWidget.green = finalG;
-        cpBarValueWidget.blue = finalB;
+        cpBarValueWidget.setColor(finalR, finalG, finalB);
         cpBarValueWidget.setAlpha(currentAlpha);
         cpBarValueWidget.render(stack, bufferSource, 0, 0, partialTick);
 
         final var rightSafeZone = (CP_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
         final var topSafeZone = (CP_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
         final var abilityCategory = AbilitySystemClient.getCategory();
-        abilityIconWidget.renderType = ABILITY_ICON.apply(abilityCategory);
-        if (abilityIconWidget.renderType != null) {
+        abilityIconWidget.setRenderType(ABILITY_ICON.apply(abilityCategory));
+        if (abilityIconWidget.getRenderType() != null) {
             abilityIconWidget.setX(screenWidth - rightSafeZone - abilityIconWidget.getWidth());
             abilityIconWidget.setY(topSafeZone);
             abilityIconWidget.setAlpha(currentAlpha);
@@ -319,13 +316,12 @@ public final class HUDManager {
             var padding = 2f;
             var iconSize = height - padding * 2;
 
-            label = new AutoScaleLabelWidget(skill.getTranslatedName(), padding, 0, width - iconSize - padding * 3, false);
-            label.scale = 0.7f;
-            label.setCentered(false);
+            label = new AutoScaleLabelWidget(skill.getTranslatedName(), padding, 0, width - iconSize - padding * 3);
+            label.setScale(0.7f);
 
             icon = new ImageWidget(width - padding - iconSize, padding, iconSize, iconSize, getSkillIconRenderType(skill));
-            icon.widthScale = 0.8f;
-            icon.heightScale = 0.8f;
+            icon.setWidthScale(0.8f);
+            icon.setHeightScale(0.8f);
 
             back = new FillWidget(0, 0, width, height, 0x60000000);
 
@@ -338,7 +334,7 @@ public final class HUDManager {
             for (var infos : AbilitySystemClient.SKILL_INFOS.values()) {
                 for (var info : infos) {
                     if (info.skill().equals(skillInstance)) {
-                        return RenderUtil.getPositionColorTexRenderTypeFull("skill_icon_hud_" + skillInstance.getKey().getPath().toLowerCase().replace(" ", "_"), info.texture(), false);
+                        return RenderUtil.getPositionColorTexRenderType("skill_icon_hud_" + skillInstance.getKey().getPath().toLowerCase().replace(" ", "_"), info.texture(), false);
                     }
                 }
             }
@@ -346,7 +342,7 @@ public final class HUDManager {
         }
 
         @Override
-        public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
             var animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
             currentWidgetAlpha = MathUtil.lerpStartEndFactor(currentWidgetAlpha, getAbsoluteAlpha(), animFactor);
 
@@ -355,11 +351,9 @@ public final class HUDManager {
             setWidth(MathUtil.lerpStartEndFactor(getWidth(), targetWidth, animFactor));
             setHeight(MathUtil.lerpStartEndFactor(getHeight(), targetHeight, animFactor));
 
-            var finalBackAlpha = (int) (0x70 * currentWidgetAlpha);
-            back.color = (back.color & 0x00FFFFFF) | (finalBackAlpha << 24);
+            back.setColor((back.getColor() & 0x00FFFFFF) | ((int)(0x70 * currentWidgetAlpha) << 24));
 
-            var finalLabelAlpha = (int) (0xFF * currentWidgetAlpha);
-            label.color = (label.color & 0x00FFFFFF) | (finalLabelAlpha << 24);
+            label.setColor((label.getColor() & 0x00FFFFFF) | ((int)(0xFF * currentWidgetAlpha) << 24));
             icon.setAlpha(currentWidgetAlpha);
 
             back.setWidth(getWidth());
@@ -371,7 +365,7 @@ public final class HUDManager {
 
             label.setX(padding);
             label.setWidth(getWidth() - iconSize - padding * 3);
-            label.setY((getHeight() - (label.getHeight() * label.scale * currentHeightRatio)) / 2f);
+            label.setY((getHeight() - label.getHeight()) / 2f);
 
             icon.setX(getWidth() - padding - iconSize);
             icon.setY(padding);

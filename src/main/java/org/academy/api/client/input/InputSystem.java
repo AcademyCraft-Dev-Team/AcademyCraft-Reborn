@@ -42,7 +42,7 @@ public final class InputSystem {
         currentKeyAction = action;
         KEYBOARD_STATE.put(key, action);
 
-        var event = new KeyEvent(key, scanCode, action, modifiers);
+        var event = new KeyInputEvent(key, scanCode, action, modifiers);
         NeoForge.EVENT_BUS.post(event);
 
         if (event.isCanceled()) {

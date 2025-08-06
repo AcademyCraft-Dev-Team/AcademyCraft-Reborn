@@ -4,6 +4,7 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.Tickable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -15,7 +16,9 @@ import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
+import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.render.MatrixStack;
@@ -52,8 +55,8 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     public static final float PANEL_RIGHT_SKILL_BACK_HEIGHT = 139.5f;
     public static final float PANEL_RIGHT_SKILL_SIZE = 32f;
     public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory ->
-            RenderUtil.getPositionColorTexRenderTypeFull("ability_icon_glow", getResourceLocation(
-                    "textures/ability/" + abilityCategory.getDescriptionId() + "/icon_glow.png"
+            RenderUtil.getPositionColorTexRenderType("ability_icon_glow", getResourceLocation(
+                    "textures/ability/" + abilityCategory.getKey().getPath() + "/icon_glow.png"
             ), false);
     private PanelWidget screenWirelessPanel;
     private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
@@ -135,7 +138,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         rightPanelAnimation.addListener(new AnimatorListener() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                welcome.start();
+                welcome.startAnimation();
             }
         });
 
@@ -167,19 +170,19 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         addOutput("invalid", invalid, outputList);
         var hint = new TypewriterLabelWidget("Type 'learn' to acquire new category.", invalid.getX(), invalid.getY() + invalid.getHeight());
         addOutput("hint", hint, outputList);
-        welcome.afterFinished = copyright::start;
-        copyright.afterFinished = userDetected::start;
-        userDetected.afterFinished = loadingBar::start;
-        loadingBar.afterFinished = invalid::start;
-        invalid.afterFinished = hint::start;
-        hint.afterFinished = () -> {
+        welcome.setOnAnimationFinished(copyright::startAnimation);
+        copyright.setOnAnimationFinished(userDetected::startAnimation);
+        userDetected.setOnAnimationFinished(loadingBar::startAnimation);
+        loadingBar.setOnAnimationFinished(invalid::startAnimation);
+        invalid.setOnAnimationFinished(hint::startAnimation);
+        hint.setOnAnimationFinished(() -> {
             var os = new LabelWidget("OS >", hint.getX(), hint.getY() + hint.getHeight());
             addOutput("os", os, outputList);
 
             var textBox = new TextBoxWidget(32, os.getX() + os.getWidth(), os.getY(), PANEL_RIGHT_WIDTH - 24, hint.getHeight());
-            textBox.scale = 0.75f;
+            textBox.setForceScale(true, 0.75f);
 
-            textBox.whenEnter = s -> {
+            textBox.setWhenEnter(s -> {
                 var learned = AbilitySystemClient.getCategory() != AbilityCategories.LEVEL0.get();
                 var outputCommand = new LabelWidget("OS >" + s, 0, textBox.getY());
                 addOutput("output_command_" + s + outputCommand.hashCode(), outputCommand, outputList);
@@ -224,16 +227,16 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 os.setY(outputInfo.getY() + outputInfo.getHeight());
                 textBox.setY(outputInfo.getY() + outputInfo.getHeight());
                 outputList.scrollToBottom();
-            };
+            });
 
             outputList.addChild("text_box", textBox);
-            rootContainer.setFocusedChild(textBox);
-        };
+            outputList.setFocusedChild(textBox);
+        });
         return welcome;
     }
 
     private void setupSkillArea(PanelWidget parent, boolean visible) {
-        var parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, SKILL_PANEL_BACK, width, height);
+        var parallaxImageWidget = new ParallaxImageWidget(PANEL_RIGHT_SKILL_BACK_X, PANEL_RIGHT_SKILL_BACK_Y, PANEL_RIGHT_SKILL_BACK_WIDTH, PANEL_RIGHT_SKILL_BACK_HEIGHT, SKILL_PANEL_BACK);
         parallaxImageWidget.setVisible(visible);
         parallaxImageWidget.setEnabled(visible);
         parent.addChild("skill_area_back", parallaxImageWidget);
@@ -246,22 +249,35 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 skillWidget.setVisible(visible);
                 skillWidget.setEnabled(visible);
                 skillWidget.setZ(1);
-                parent.addChild(skillInfo.skill().getDescriptionId(), skillWidget);
+                parent.addChild(skillInfo.skill().getKey().toString(), skillWidget);
             }
         }
     }
 
     private void setupWirelessPanel() {
-        screenWirelessPanel = new PanelWidget(0, 0, width, height);
-        screenWirelessPanel.setZ(100);
+        screenWirelessPanel = new PanelWidget(0, 0, width, height) {
+            @Override
+            protected void onMousePressed(@NotNull MouseEvent event) {
+                this.setVisible(false);
+                this.setEnabled(false);
+                event.consume();
+            }
+
+            @Override
+            public boolean isClickable() {
+                return true;
+            }
+        };
         screenWirelessPanel.setVisible(false);
         screenWirelessPanel.setEnabled(false);
         rootContainer.addChild("panel_screen_wireless", screenWirelessPanel);
 
-        var backgroundWidget = new BackgroundWidget(this);
-        backgroundWidget.runnable = () -> {
-            screenWirelessPanel.setVisible(false);
-            screenWirelessPanel.setEnabled(false);
+        var backgroundWidget = new AbstractWidget(0, 0, width, height) {
+            @Override
+            public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+                bufferSource.endBatch();
+                renderBlurredBackground(partialTick);
+            }
         };
         screenWirelessPanel.addChild("screen_back", backgroundWidget);
 
@@ -278,21 +294,18 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
 
     public static AbilitySystemClient.SkillInfo registerSkillInfo(AbilityCategory abilityCategory, Skill skill, List<AbilitySystemClient.SkillInfo> dependencies, ResourceLocation icon, float x, float y) {
         var info = new AbilitySystemClient.SkillInfo(skill, dependencies, icon, x, y);
-        if (!AbilitySystemClient.SKILL_INFOS.containsKey(abilityCategory)) {
-            AbilitySystemClient.SKILL_INFOS.put(abilityCategory, new ArrayList<>());
-        }
-        AbilitySystemClient.SKILL_INFOS.get(abilityCategory).add(info);
+        AbilitySystemClient.SKILL_INFOS.computeIfAbsent(abilityCategory, k -> new ArrayList<>()).add(info);
         return info;
     }
 
     private static void addOutput(String name, LabelWidget labelWidget, AbstractContainerWidget abstractContainerWidget) {
-        labelWidget.scale = 0.75f;
-        labelWidget.setWidth(labelWidget.getWidth() * labelWidget.scale);
+        labelWidget.setScale(0.75f);
         abstractContainerWidget.addChild(name, labelWidget);
     }
 
     private @NotNull PanelWidget getLeftPanel() {
         var localLeftPanel = new PanelWidget(0, 0, PANEL_LEFT_WIDTH, PANEL_MAIN_HEIGHT);
+        var abilityCategory = AbilitySystemClient.getCategory();
         {
             var leftPanelBack = new BlendQuadWidget(0, 70, PANEL_LEFT_WIDTH, 115);
             leftPanelBack.setAlpha(0.5f);
@@ -306,31 +319,32 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             {
                 var iconBack = new ImageWidget(0, 0, leftPanelInfoPanel.getHeight(), leftPanelInfoPanel.getHeight(), ICON_BOX);
                 leftPanelInfoPanel.addChild("icon_back", iconBack);
-                var abilityCategory = AbilitySystemClient.getCategory();
+
                 var icon = new ImageWidget(0, 0, iconBack.getHeight(), iconBack.getHeight(),
                         ABILITY_ICON.apply(abilityCategory));
-                icon.widthScale = 0.65f;
-                icon.heightScale = 0.65f;
+                icon.setWidthScale(0.65f);
+                icon.setHeightScale(0.65f);
                 leftPanelInfoPanel.addChild("icon", icon);
                 var name = new AutoScaleLabelWidget(abilityCategory.getDescriptionId(), leftPanelInfoPanel.getHeight(), 5,
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4);
                 leftPanelInfoPanel.addChild("name", name);
+
+                int learned = AbilitySystemClient.LEARNED_SKILLS.size();
+                int all = abilityCategory.getSkills().size();
+                float progressRatio = (all == 0) ? 1.0f : (float) learned / all;
+                int percentage = (int) (progressRatio * 100);
+
                 var learnProgress = new ProgressBarWidget(leftPanelInfoPanel.getHeight(), 16,
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4, 2,
-                        () -> {
-                            int learned = AbilitySystemClient.LEARNED_SKILLS.size();
-                            int all = abilityCategory.getSkills().size();
-                            if (all == 0) return 100.0f;
-                            else return (float) learned / all;
-                        });
-                learnProgress.progressBarColor = Color.WHITE.hashCode();
+                        () -> progressRatio);
+                learnProgress.setProgressBarColor(Color.WHITE.hashCode());
                 leftPanelInfoPanel.addChild("learn_progress", learnProgress);
-                var progress = new AutoScaleLabelWidget("LEARNED " + 100 + "%", leftPanelInfoPanel.getHeight(), 18,
+                var progress = new AutoScaleLabelWidget("LEARNED " + percentage + "%", leftPanelInfoPanel.getHeight(), 18,
                         learnProgress.getWidth() * 0.5f);
                 leftPanelInfoPanel.addChild("progress", progress);
                 var levelLabel = new AutoScaleLabelWidget(abilityCategory.getDescriptionId(), progress.getX() + learnProgress.getWidth() * 0.5f, 18, learnProgress.getWidth() * 0.5f - 4);
                 levelLabel.setX(leftPanelInfoPanel.getWidth() - levelLabel.getWidth() - 4);
-                levelLabel.color = 0xFF1177D6;
+                levelLabel.setColor(0xFF1177D6);
                 leftPanelInfoPanel.addChild("label_level", levelLabel);
             }
             var wirelessLabel = new AutoScaleLabelWidget("Current Node:", 8, 110, 90);
@@ -379,7 +393,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         skillInfoPanel.icon.setY(((float) AbilityDeveloperScreen.this.height / 2 - skillInfoPanel.icon.getHeight() / 2) - 25);
         skillInfoPanel.iconBack.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.iconBack.getWidth() / 2);
         skillInfoPanel.iconBack.setY(((float) AbilityDeveloperScreen.this.height / 2 - skillInfoPanel.iconBack.getHeight() / 2) - 25);
-        skillInfoPanel.icon.renderType = RenderUtil.getPositionColorTexRenderTypeFull("skill_icon", skill.texture(), false);
+        skillInfoPanel.icon.setRenderType(RenderUtil.getPositionColorTexRenderType("skill_icon", skill.texture(), false));
 
         skillInfoPanel.nameLabel.setText("Skill: %s".formatted(skill.skill().getTranslatedName()));
         skillInfoPanel.nameLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.nameLabel.getWidth() / 2);
@@ -387,7 +401,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
 
         var lacked = ClientUtil.lacksSkill(skill.skill());
         skillInfoPanel.stateLabel.setText(lacked ? "Skill not learned" : "Skill learned");
-        skillInfoPanel.stateLabel.color = lacked ? 0XFFFF0000 : 0xFFFFFFFF;
+        skillInfoPanel.stateLabel.setColor(lacked ? 0XFFFF0000 : 0xFFFFFFFF);
         skillInfoPanel.stateLabel.setX((float) AbilityDeveloperScreen.this.width / 2 - skillInfoPanel.stateLabel.getWidth() / 2);
         skillInfoPanel.stateLabel.setY(skillInfoPanel.nameLabel.getY() + 12);
 
@@ -397,18 +411,18 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         skillInfoPanel.depPanel.clearChildren();
         skillInfoPanel.depPanel.setY(skillInfoPanel.stateLabel.getY() + 10);
         if (lacked) {
-            var x = 0;
+            var x = 0f;
             var labelWidget = new LabelWidget("Dep.", x, 3.5f);
-            x += (int) labelWidget.getWidth();
+            x += labelWidget.getWidth();
             skillInfoPanel.depPanel.addChild("label_name", labelWidget);
             if (skill.dependencies().isEmpty()) {
                 var empty = new LabelWidget("Empty", x, 3.5f);
                 skillInfoPanel.depPanel.addChild("label_empty", empty);
-                x += (int) empty.getWidth();
+                x += empty.getWidth();
             }
             for (var dependency : skill.dependencies()) {
-                var name = "dep_skill_icon_" + skill.skill().getDescriptionId();
-                var icon = new ImageWidget(x, 4, 8, 8, RenderUtil.getPositionTexRenderType(name, dependency.texture(), false));
+                var name = "dep_skill_icon_" + dependency.skill().getKey();
+                var icon = new ImageWidget(x, 4, 8, 8, RenderUtil.getPositionColorTexRenderType(name, dependency.texture(), false));
                 skillInfoPanel.depPanel.addChild(name, icon);
                 x += 12;
             }
@@ -426,26 +440,31 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
 
     final class SkillInfoPanel extends PanelWidget {
         AbilitySystemClient.SkillInfo skillInfo;
-        final BackgroundWidget background = new BackgroundWidget(AbilityDeveloperScreen.this);
+        final BackgroundWidget background;
         final ImageWidget iconBack = new ImageWidget(0, 0, 65, 65, PANEL_RIGHT_SKILL_ICON_BACK);
         final ImageWidget icon = new ImageWidget(0, 0, 32.5f, 32.5f, null);
-        final AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget("", 0, 0, 200, true);
-        final AutoScaleLabelWidget stateLabel = new AutoScaleLabelWidget("", 0, 0, 200, true);
+        final AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget("", 0, 0, 200);
+        final AutoScaleLabelWidget stateLabel = new AutoScaleLabelWidget("", 0, 0, 200);
         final PanelWidget depPanel = new PanelWidget(0, 0, 0, 16);
         final ImageButtonWidget learnButton = new ImageButtonWidget(0, 0, 32, 16, BUTTON, () -> {
             if (skillInfo == null) return;
-            LearnSkillPayload request = new LearnSkillPayload(skillInfo.skill().getDescriptionId(), mainPos);
+            LearnSkillPayload request = new LearnSkillPayload(skillInfo.skill().getKey().toString(), mainPos);
             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
                     (LearnSkillPayload.Response response) -> {
                         if (response != null && response.success) {
-                            init();
+                            onInit();
                         }
                     });
         });
-        final AutoScaleLabelWidget energyLabel = new AutoScaleLabelWidget("", 0, 0, 100, true);
+        final AutoScaleLabelWidget energyLabel = new AutoScaleLabelWidget("", 0, 0, 100);
 
         public SkillInfoPanel() {
             super(0, 0, 0, 0);
+            this.background = new BackgroundWidget(() -> {
+                setEnabled(false);
+                setVisible(false);
+            });
+
             addChild("back", background);
             addChild("icon_back", iconBack);
             addChild("icon", icon);
@@ -454,14 +473,10 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             addChild("panel_dep", depPanel);
             addChild("learn_button", learnButton);
             addChild("energy_label", energyLabel);
-            background.runnable = () -> {
-                setEnabled(false);
-                setVisible(false);
-            };
         }
     }
 
-    final class SkillWidget extends ImageButtonWidget {
+    final class SkillWidget extends ImageButtonWidget implements Tickable {
         public float targetScale = 1.0f;
         public float currentScale = 1.0f;
         public boolean dynamicFollow = true;
@@ -469,21 +484,28 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         public float targetProgress;
         public float progress;
         public final List<AbilitySystemClient.SkillInfo> dependencies = new ArrayList<>();
+        private final AbilitySystemClient.SkillInfo skillInfo;
 
-        @SuppressWarnings("SuspiciousNameCombination")
         SkillWidget(AbilitySystemClient.SkillInfo skillInfo) {
             super(skillInfo.x(), skillInfo.y(), PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE,
-                    SKILL_ICON.apply(skillInfo.skill().getDescriptionId(), skillInfo.texture()),
+                    RenderUtil.getPositionColorTexRenderType("skill_icon_" + skillInfo.skill().getKey(), skillInfo.texture(), false),
                     () -> AbilityDeveloperScreen.this.openSkillViewPanel(skillInfo));
+            this.skillInfo = skillInfo;
             dependencies.addAll(skillInfo.dependencies());
-            targetProgress = AbilitySystemClient.getSkillExp(skillInfo.skill()) / 100f;
         }
 
         @Override
-        public void mouseMoved(double mouseX, double mouseY) {
-            super.mouseMoved(mouseX, mouseY);
-            this.xOffset = -(dynamicFollow ? ((float) mouseX / AbilityDeveloperScreen.this.width) : 0f);
-            this.yOffset = -(dynamicFollow ? ((float) mouseY / AbilityDeveloperScreen.this.height) : 0f);
+        public void tick() {
+            if (skillInfo != null) {
+                targetProgress = AbilitySystemClient.getSkillExp(skillInfo.skill()) / 100f;
+            }
+        }
+
+        @Override
+        public void setHovered(boolean hovered) {
+            super.setHovered(hovered);
+            this.xOffset = -(dynamicFollow ? ((float) Minecraft.getInstance().mouseHandler.xpos() / AbilityDeveloperScreen.this.width) : 0f);
+            this.yOffset = -(dynamicFollow ? ((float) Minecraft.getInstance().mouseHandler.ypos() / AbilityDeveloperScreen.this.height) : 0f);
         }
 
         @Override
@@ -498,32 +520,32 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         }
 
         @Override
-        public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
             if (!isVisible()) return;
 
             stack.pushPose();
+            stack.translate(this.getX(), this.getY(), this.getZ());
             stack.translate(xOffset, yOffset, 0f);
 
             targetScale = isHovered() ? 1.25f : 1.0f;
             currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
-            widthScale = currentScale;
-            heightScale = currentScale;
+            this.setScale(currentScale, currentScale, true);
 
-            final var cX = x + PANEL_RIGHT_SKILL_SIZE / 2f;
-            final var cY = y + PANEL_RIGHT_SKILL_SIZE / 2f;
+            final var cX = getWidth() / 2f;
+            final var cY = getHeight() / 2f;
 
             var lineBuf = bufferSource.getBuffer(ELEMENT_LINE);
             final var thickness = 5f;
             for (var dep : dependencies) {
                 stack.pushPose();
                 var m = stack.lastMatrix();
-                var dX = dep.x() + PANEL_RIGHT_SKILL_SIZE / 2f;
-                var dY = dep.y() + PANEL_RIGHT_SKILL_SIZE / 2f;
+                var dX = dep.x() + PANEL_RIGHT_SKILL_SIZE / 2f - this.getX();
+                var dY = dep.y() + PANEL_RIGHT_SKILL_SIZE / 2f - this.getY();
                 float dx = dX - cX, dy = dY - cY;
                 var rawLen = (float) Math.hypot(dx, dy);
                 var length = rawLen - PANEL_RIGHT_SKILL_SIZE + thickness;
                 var angle = (float) Math.atan2(dy, dx);
-                stack.translate(cX, cY, getZ());
+                stack.translate(cX, cY, 0);
                 stack.mulPose(Axis.ZP.rotation(angle));
                 stack.translate(PANEL_RIGHT_SKILL_SIZE / 2f - thickness / 2, -thickness / 2f, 0f);
                 stack.scale(length, thickness, 1f);
@@ -534,29 +556,19 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 stack.popPose();
             }
 
-            var oldType = renderType;
-            renderType = PANEL_RIGHT_SKILL_ICON_BACK;
+            var oldType = getRenderType();
+            setRenderType(PANEL_RIGHT_SKILL_ICON_BACK);
             super.render(stack, bufferSource, mouseX, mouseY, partialTick);
 
-            var oRed = red;
-            var oGreen = green;
-            var oBlue = blue;
-            red = 1f;
-            green = 1f;
-            blue = 1f;
+            this.setColor(1f, 1f, 1f);
 
-            renderType = oldType;
-            widthScale *= 0.5f;
-            heightScale *= 0.5f;
+            setRenderType(oldType);
+            this.setScale(currentScale * 0.5f, currentScale * 0.5f, true);
             super.render(stack, bufferSource, mouseX, mouseY, partialTick);
 
-            red = oRed;
-            green = oGreen;
-            blue = oBlue;
-            widthScale /= 0.5f;
-            heightScale /= 0.5f;
+            this.setScale(currentScale, currentScale, true);
 
-            renderType = GLOW_CIRCLE;
+            setRenderType(GLOW_CIRCLE);
             progress = MathUtil.lerpStartEndFactor(progress, targetProgress,
                     ClientUtil.animationFactor(MathUtil.PI / 2));
             var uniform = Shaders.GLOW_CIRCLE.getUniform("progress");
@@ -566,7 +578,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             super.render(stack, bufferSource, mouseX, mouseY, partialTick);
             bufferSource.endBatch(GLOW_CIRCLE);
 
-            renderType = oldType;
+            setRenderType(oldType);
             stack.popPose();
         }
     }

@@ -53,7 +53,7 @@ public class WirelessPanelWidget extends PanelWidget {
     }
 
     @Override
-    public Widget setVisible(boolean visible) {
+    public @NotNull Widget setVisible(boolean visible) {
         super.setVisible(visible);
         if (visible) {
             requestCurrentNodeStatus();

@@ -1,44 +1,71 @@
 package org.academy.api.client.gui.widget;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.render.MatrixStack;
+import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * A specialized ImageWidget that creates a parallax effect by shifting its texture coordinates
+ * based on the mouse's position relative to the screen's center. This is a purely visual
+ * effect, and its calculations are performed in the render loop for maximum smoothness.
+ */
 public class ParallaxImageWidget extends ImageWidget {
-    public float anchorX;
-    public float anchorY;
-    public float parallaxWidth = 0.95f;
-    public float parallaxHeight = 0.95f;
-    public float scaleX = -1.0f;
-    public float scaleY = -1.0f;
 
-    public ParallaxImageWidget(float x, float y, float width, float height, @NotNull RenderType renderType, float newAnchorX, float newAnchorY) {
+    protected float parallaxFactorX = 0.5f;
+    protected float parallaxFactorY = 0.5f;
+
+    protected float imageToViewRatioWidth = 0.95f;
+    protected float imageToViewRatioHeight = 0.95f;
+
+    public ParallaxImageWidget(float x, float y, float width, float height, @NotNull RenderType renderType) {
         super(x, y, width, height, renderType);
-        anchorX = newAnchorX;
-        anchorY = newAnchorY;
     }
 
     @Override
-    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        stack.pushPose();
-        var dx = (float) (((mouseX - anchorX) / anchorX) * scaleX);
-        var dy = (float) (((mouseY - anchorY) / anchorY) * scaleY);
+    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        var window = Minecraft.getInstance().getWindow();
+        var screenWidth = window.getGuiScaledWidth();
+        var screenHeight = window.getGuiScaledHeight();
 
-        dx = Math.max(-1f, Math.min(1f, dx));
-        dy = Math.max(-1f, Math.min(1f, dy));
+        var anchorX = screenWidth / 2.0f;
+        var anchorY = screenHeight / 2.0f;
 
-        var maxUOffset = (1f - parallaxWidth);
-        var maxVOffset = (1f - parallaxHeight);
+        var deviationX = (float) ((mouseX - anchorX) / anchorX);
+        var deviationY = (float) ((mouseY - anchorY) / anchorY);
 
-        var offsetU = (dx + 1f) / 2f * maxUOffset;
-        var offsetV = (dy + 1f) / 2f * maxVOffset;
+        var motionX = MathUtil.clamp(deviationX * this.parallaxFactorX, -1.0f, 1.0f);
+        var motionY = MathUtil.clamp(deviationY * this.parallaxFactorY, -1.0f, 1.0f);
 
-        u0 = offsetU;
-        v0 = offsetV;
-        u1 = u0 + parallaxWidth;
-        v1 = v0 + parallaxHeight;
+        var maxUOffset = 1.0f - this.imageToViewRatioWidth;
+        var maxVOffset = 1.0f - this.imageToViewRatioHeight;
+
+        var uOffset = (motionX + 1.0f) / 2.0f * maxUOffset;
+        var vOffset = (motionY + 1.0f) / 2.0f * maxVOffset;
+
+        this.setTextureCoords(
+                uOffset,
+                vOffset,
+                uOffset + this.imageToViewRatioWidth,
+                vOffset + this.imageToViewRatioHeight
+        );
+
         super.render(stack, bufferSource, mouseX, mouseY, partialTick);
-        stack.popPose();
+    }
+
+    @NotNull
+    public ParallaxImageWidget setParallaxFactor(float parallaxFactorX, float parallaxFactorY) {
+        this.parallaxFactorX = parallaxFactorX;
+        this.parallaxFactorY = parallaxFactorY;
+        return this;
+    }
+
+    @NotNull
+    public ParallaxImageWidget setImageToViewRatio(float imageToViewRatioWidth, float imageToViewRatioHeight) {
+        this.imageToViewRatioWidth = MathUtil.clamp(imageToViewRatioWidth, 0.01f, 1.0f);
+        this.imageToViewRatioHeight = MathUtil.clamp(imageToViewRatioHeight, 0.01f, 1.0f);
+        return this;
     }
 }

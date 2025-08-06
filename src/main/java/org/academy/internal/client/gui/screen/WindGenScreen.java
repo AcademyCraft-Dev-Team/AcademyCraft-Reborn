@@ -53,7 +53,6 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
             var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.WIND_GEN_UI);
             invPage.addChild("ui", ui);
             var statePanel = new PanelWidget(0, 0, imageWidth, 187);
-            statePanel.setHorizontalGravity(PanelWidget.HorizontalGravity.CENTER);
             invPage.addChild("panel_state", statePanel);
             {
                 topIcon = new ImageWidget(0, 13, 24, 24, RenderTypes.ICON_WIND_GEN_TOP);
@@ -117,19 +116,19 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
             infoArea.addChild("icon_buffer", bufferIcon);
 
             var bufferLabel = new LabelWidget("BUFFER", 15, 72);
-            bufferLabel.scale = 0.75f;
+            bufferLabel.setScale(0.75f);
             infoArea.addChild("label_buffer", bufferLabel);
 
             bufferValueLabel = new LabelWidget(AF, 50, 72);
-            bufferValueLabel.scale = 0.75f;
+            bufferValueLabel.setScale(0.75f);
             infoArea.addChild("label_buffer_value", bufferValueLabel);
 
             var infoLabel = new LabelWidget("Information", 8, 82);
-            infoLabel.scale = 0.75f;
+            infoLabel.setScale(0.75f);
             infoArea.addChild("label_info", infoLabel);
 
             var altitudeLabel = new LabelWidget("Altitude", 10, 90);
-            altitudeLabel.scale = 0.75f;
+            altitudeLabel.setScale(0.75f);
             infoArea.addChild("label_altitude", altitudeLabel);
 
             var altitudeValue = "N/A";
@@ -137,7 +136,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
                 altitudeValue = windGenBaseBlockEntity.altitude + "";
             }
             var altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
-            altitudeValueLabel.scale = 0.75f;
+            altitudeValueLabel.setScale(0.75f);
             infoArea.addChild("label_altitude_value", altitudeValueLabel);
         }
 
@@ -157,7 +156,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
     protected void containerTick() {
         super.containerTick();
         if (baseIcon != null && pillarIcon != null && topIcon != null && bufferValueLabel != null) {
-            bufferValueLabel.value = String.format(AF, windGenBaseBlockEntity.energyStored);
+            bufferValueLabel.setText(String.format(AF, windGenBaseBlockEntity.energyStored));
             var progress = (float) windGenBaseBlockEntity.energyStored / (float) windGenBaseBlockEntity.getMaxEnergyStorage();
             if (Float.isNaN(progress)) {
                 progress = 0;

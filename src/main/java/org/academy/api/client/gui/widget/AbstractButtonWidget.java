@@ -1,44 +1,49 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.MouseButtonState;
 import org.academy.api.client.util.ClientUtil;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class AbstractButtonWidget extends AbstractWidget {
     public Runnable onPress;
     public MouseButtonState state = MouseButtonState.PRESSED;
 
-    public AbstractButtonWidget(float x, float y, float width, float height, Runnable newOnPress) {
+    public AbstractButtonWidget(float x, float y, float width, float height, Runnable onPress) {
         super(x, y, width, height);
-        onPress = newOnPress;
+        this.onPress = onPress;
+        this.clickable = true;
     }
 
     @Override
-    public boolean mousePressed(double mouseX, double mouseY, int button) {
-        if (isAbsoluteMouseOver(mouseX, mouseY) && button == 0 && isAbsoluteEnabled() && state == MouseButtonState.PRESSED) {
-            return handlePress();
+    protected void onMousePressed(@NotNull MouseEvent event) {
+        if (this.state == MouseButtonState.PRESSED
+                && event.getButton() == 0
+                && this.isMouseOver(event.getX(), event.getY())) {
+            this.handlePress(event);
         }
-        return false;
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (isAbsoluteMouseOver(mouseX, mouseY) && button == 0 && isAbsoluteEnabled() && state == MouseButtonState.RELEASED) {
-            return handlePress();
+    protected void onMouseReleased(@NotNull MouseEvent event) {
+        if (this.state == MouseButtonState.RELEASED
+                && event.getButton() == 0
+                && this.isMouseOver(event.getX(), event.getY())) {
+            this.handlePress(event);
         }
-        return false;
     }
 
-    protected boolean handlePress() {
+    protected void handlePress(@NotNull MouseEvent event) {
         ClientUtil.playDownSound();
-        if (onPress != null) {
-            onPress.run();
+        if (this.onPress != null) {
+            this.onPress.run();
         }
-        return true;
+        event.consume();
     }
 
     @Override
     public boolean canFocus() {
-        return enabled;
+        return this.isAbsoluteEnabled();
     }
 }

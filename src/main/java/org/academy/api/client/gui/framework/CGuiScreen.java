@@ -1,11 +1,11 @@
 package org.academy.api.client.gui.framework;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.widget.PanelWidget;
 import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.NotNull;
@@ -54,42 +54,66 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        final var mouseHandler = Minecraft.getInstance().mouseHandler;
         var stack = new MatrixStack();
         var bufferSource = guiGraphics.bufferSource();
         stack.pushPose();
-        rootContainer.render(stack, bufferSource, mouseHandler.xpos(), mouseHandler.ypos(), partialTick);
+        rootContainer.render(stack, bufferSource, mouseX, mouseY, partialTick);
         stack.popPose();
     }
 
     @Override
     public void tick() {
         rootContainer.tick();
+        super.tick();
     }
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        rootContainer.mouseMoved(mouseX, mouseY);
+        var event = MouseEvent.createMoveEvent(mouseX, mouseY);
+        rootContainer.dispatchEvent(event);
+        super.mouseMoved(mouseX, mouseY);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return rootContainer.mousePressed(mouseX, mouseY, button);
+        var event = MouseEvent.createPressEvent(mouseX, mouseY, button);
+        rootContainer.dispatchEvent(event);
+        
+        if (event.isConsumed()) {
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return rootContainer.mouseReleased(mouseX, mouseY, button);
+        var event = MouseEvent.createReleaseEvent(mouseX, mouseY, button);
+        rootContainer.dispatchEvent(event);
+        if (event.isConsumed()) {
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        return rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        var event = MouseEvent.createDragEvent(mouseX, mouseY, button, dragX, dragY);
+        rootContainer.dispatchEvent(event);
+        if (event.isConsumed()) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        return rootContainer.mouseScrolled(mouseX, mouseY, scrollY);
+        
+        var event = new ScrollEvent(mouseX, mouseY, scrollY);
+        rootContainer.dispatchEvent(event);
+        if (event.isConsumed()) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
@@ -98,7 +122,9 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
             AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
             return true;
         }
-        if (rootContainer.keyPressed(keyCode, scanCode, modifiers)) {
+        var event = new KeyEvent(EventType.KEY_PRESSED, keyCode, scanCode, modifiers);
+        rootContainer.dispatchEvent(event);
+        if (event.isConsumed()) {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -106,7 +132,9 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (rootContainer.charTyped(codePoint, modifiers)) {
+        var event = new CharTypedEvent(codePoint, modifiers);
+        rootContainer.dispatchEvent(event);
+        if (event.isConsumed()) {
             return true;
         }
         return super.charTyped(codePoint, modifiers);

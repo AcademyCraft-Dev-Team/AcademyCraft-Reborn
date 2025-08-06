@@ -1,19 +1,28 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.Tickable;
+import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.util.ClientUtil;
+import org.academy.api.client.render.RenderTypes;
 import org.academy.api.common.util.MathUtil;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.OptionalDouble;
 
-public class DynamicGeometricBackgroundWidget extends AbstractWidget {
-    private static class Point {
+/**
+ * Renders an interactive background of moving points and connecting lines.
+ * The particle simulation is updated on the client tick for stable performance.
+ * Note: For performance, this widget sorts its points list on every render frame
+ * to optimize line drawing, which can be intensive with a very high number of points.
+ */
+public class DynamicGeometricBackgroundWidget extends AbstractWidget implements Tickable {
+    private static final class Point {
         float x, y;
         float vx, vy;
 
@@ -26,7 +35,6 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     }
 
     private final List<Point> points;
-
     private final int numPoints;
     private final float pointSpeed;
     private final float connectionDistanceSq;
@@ -35,22 +43,20 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     private final float mouseInteractionRadiusSq;
 
     private double relativeMouseX, relativeMouseY;
-    private boolean isInteracting = false;
     private int interactingButton = -1;
 
-
     public DynamicGeometricBackgroundWidget(float x, float y, float width, float height,
-                                            int newNumPoints, float newPointSpeed, float connectionDistance,
-                                            int newLineColor, boolean newMouseInteraction, float mouseInteractionRadius) {
+                                            int numPoints, float pointSpeed, float connectionDistance,
+                                            int lineColor, boolean mouseInteraction, float mouseInteractionRadius) {
         super(x, y, width, height);
-        numPoints = newNumPoints;
-        pointSpeed = newPointSpeed;
-        connectionDistanceSq = connectionDistance * connectionDistance;
-        lineColor = newLineColor;
-        mouseInteraction = newMouseInteraction;
-        mouseInteractionRadiusSq = mouseInteractionRadius * mouseInteractionRadius;
-        points = new ArrayList<>(newNumPoints);
-        initPoints();
+        this.numPoints = numPoints;
+        this.pointSpeed = pointSpeed;
+        this.connectionDistanceSq = connectionDistance * connectionDistance;
+        this.lineColor = lineColor;
+        this.mouseInteraction = mouseInteraction;
+        this.mouseInteractionRadiusSq = mouseInteractionRadius * mouseInteractionRadius;
+        this.points = new ArrayList<>(numPoints);
+        this.initPoints();
     }
 
     private void initPoints() {
@@ -67,12 +73,11 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
         }
     }
 
-    private void updatePoints() {
-        var dt = ClientUtil.animationFactor(1);
-
+    @Override
+    public void tick() {
         for (var p : points) {
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
+            p.x += p.vx;
+            p.y += p.vy;
 
             if (p.x < 0) {
                 p.x = 0;
@@ -89,24 +94,24 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
                 p.vy *= -1;
             }
 
-            if (mouseInteraction && isInteracting && isHovered()) {
-                var dx = p.x - (float) relativeMouseX;
-                var dy = p.y - (float) relativeMouseY;
+            if (mouseInteraction && this.interactingButton != -1) {
+                var dx = p.x - (float) this.relativeMouseX;
+                var dy = p.y - (float) this.relativeMouseY;
                 var distSq = dx * dx + dy * dy;
 
-                if (distSq < mouseInteractionRadiusSq && distSq > 0.001f) {
+                if (distSq < this.mouseInteractionRadiusSq && distSq > 0.001f) {
                     var dist = (float) Math.sqrt(distSq);
-                    var forceMagnitude = (1f - dist / (float) Math.sqrt(mouseInteractionRadiusSq)) * pointSpeed * 0.5f;
+                    var forceMagnitude = (1f - dist / (float) Math.sqrt(this.mouseInteractionRadiusSq)) * this.pointSpeed * 0.5f;
 
-                    if (interactingButton == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+                    if (this.interactingButton == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
                         forceMagnitude *= -1;
                     }
 
-                    p.vx -= (dx / dist) * forceMagnitude * dt * 20;
-                    p.vy -= (dy / dist) * forceMagnitude * dt * 20;
+                    p.vx -= (dx / dist) * forceMagnitude;
+                    p.vy -= (dy / dist) * forceMagnitude;
 
                     var speedSq = p.vx * p.vx + p.vy * p.vy;
-                    var maxSpeed = pointSpeed * 2.0f;
+                    var maxSpeed = this.pointSpeed * 2.0f;
                     if (speedSq > maxSpeed * maxSpeed) {
                         var actualSpeed = (float) Math.sqrt(speedSq);
                         p.vx = (p.vx / actualSpeed) * maxSpeed;
@@ -118,57 +123,52 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mousePressed(double newMouseX, double newMouseY, int button) {
-        if (mouseInteraction && isHovered() && (button == GLFW.GLFW_MOUSE_BUTTON_LEFT || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
-            isInteracting = true;
-            interactingButton = button;
-            relativeMouseX = newMouseX - getAbsoluteX();
-            relativeMouseY = newMouseY - getAbsoluteY();
-            return true;
-        }
-        return super.mousePressed(newMouseX, newMouseY, button);
-    }
-
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (mouseInteraction && isInteracting && button == interactingButton) {
-            isInteracting = false;
-            interactingButton = -1;
-            return true;
-        }
-        return super.mouseReleased(mouseX, mouseY, button);
-    }
-
-    @Override
-    public void mouseMoved(double newMouseX, double newMouseY) {
-        super.mouseMoved(newMouseX, newMouseY);
-        if (isHovered()) {
-            relativeMouseX = newMouseX - getAbsoluteX();
-            relativeMouseY = newMouseY - getAbsoluteY();
+    protected void onMousePressed(@NotNull MouseEvent event) {
+        if (this.mouseInteraction && isMouseOver(event.getX(), event.getY()) && (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT || event.getButton() == GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
+            this.interactingButton = event.getButton();
+            this.relativeMouseX = event.getX() - getAbsoluteX();
+            this.relativeMouseY = event.getY() - getAbsoluteY();
+            event.consume();
         }
     }
 
     @Override
-    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+    protected void onMouseReleased(@NotNull MouseEvent event) {
+        if (this.mouseInteraction && event.getButton() == this.interactingButton) {
+            this.interactingButton = -1;
+            event.consume();
+        }
+    }
+
+    @Override
+    protected void onMouseDragged(@NotNull MouseEvent event) {
+        if (this.mouseInteraction && event.getButton() == this.interactingButton) {
+            this.relativeMouseX = event.getX() - getAbsoluteX();
+            this.relativeMouseY = event.getY() - getAbsoluteY();
+            event.consume();
+        }
+    }
+
+    @Override
+    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        updatePoints();
+        stack.pushPose();
+        stack.translate(this.getX(), this.getY(), this.getZ());
 
-        var vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+        var vertexConsumer = bufferSource.getBuffer(RenderTypes.LINES.apply(OptionalDouble.empty()));
         var matrix = stack.lastMatrix();
 
-        var r = (float) (lineColor >> 16 & 255) / 255.0F;
-        var g = (float) (lineColor >> 8 & 255) / 255.0F;
-        var b = (float) (lineColor & 255) / 255.0F;
-        var a = (float) (lineColor >> 24 & 255) / 255.0F;
+        var r = (float) (this.lineColor >> 16 & 255) / 255.0F;
+        var g = (float) (this.lineColor >> 8 & 255) / 255.0F;
+        var b = (float) (this.lineColor & 255) / 255.0F;
+        var a = (float) (this.lineColor >> 24 & 255) / 255.0F;
         if (a == 0 && (r != 0 || g != 0 || b != 0)) a = 1.0f;
-        if (r == 0 && g == 0 && b == 0 && a == 0) {
-            r = g = b = a = 1.0f;
-        }
+        if (r == 0 && g == 0 && b == 0 && a == 0) r = g = b = a = 1.0f;
         var finalBaseAlpha = a * getAbsoluteAlpha();
 
-        points.sort(Comparator.comparingDouble(p -> p.x));
-        var connectionDistance = (float) Math.sqrt(connectionDistanceSq);
+        this.points.sort(Comparator.comparingDouble(p -> p.x));
+        var connectionDistance = (float) Math.sqrt(this.connectionDistanceSq);
 
         for (var i = 0; i < points.size(); i++) {
             var p1 = points.get(i);
@@ -183,18 +183,18 @@ public class DynamicGeometricBackgroundWidget extends AbstractWidget {
                 var dy = p1.y - p2.y;
                 var distanceSq = dx * dx + dy * dy;
 
-                if (distanceSq < connectionDistanceSq) {
+                if (distanceSq < this.connectionDistanceSq) {
                     var dist = (float) Math.sqrt(distanceSq);
                     var lineAlpha = finalBaseAlpha * (1f - dist / connectionDistance);
                     lineAlpha = Math.max(0, Math.min(lineAlpha, 1.0f));
 
-
-                    vertexConsumer.addVertex(matrix, getX() + p1.x, getY() + p1.y, getZ())
-                            .setColor(r, g, b, lineAlpha).setNormal(0, 0, 1);
-                    vertexConsumer.addVertex(matrix, getX() + p2.x, getY() + p2.y, getZ())
-                            .setColor(r, g, b, lineAlpha).setNormal(0, 0, 1);
+                    vertexConsumer.addVertex(matrix, p1.x, p1.y, 0)
+                            .setColor(r, g, b, lineAlpha);
+                    vertexConsumer.addVertex(matrix, p2.x, p2.y, 0)
+                            .setColor(r, g, b, lineAlpha);
                 }
             }
         }
+        stack.popPose();
     }
 }
