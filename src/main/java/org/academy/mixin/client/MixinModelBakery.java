@@ -12,6 +12,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ModelBakery.class)
 public abstract class MixinModelBakery {
+    /**
+     * For Coin Model
+     */
     @Inject(method = "loadBlockModel", at = @At("HEAD"), cancellable = true)
     private void loadBlockModel(ResourceLocation location, CallbackInfoReturnable<BlockModel> cir) {
         if (location.getNamespace().equals(AcademyCraft.MODID)) {

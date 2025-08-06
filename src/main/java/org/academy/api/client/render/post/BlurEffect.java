@@ -2,14 +2,10 @@ package org.academy.api.client.render.post;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.shaders.Uniform;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.PostChain;
-import net.minecraft.client.renderer.PostPass;
-import net.minecraft.client.renderer.RenderType;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.vanilla.ResizeDisplayEvent;
+import net.minecraft.client.renderer.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -19,6 +15,18 @@ import java.util.List;
 import static org.academy.AcademyCraft.getResourceLocation;
 
 public final class BlurEffect {
+    private static final RenderType RENDER_TYPE = RenderType.create(
+            "blur_mask",
+            DefaultVertexFormat.POSITION_COLOR,
+            VertexFormat.Mode.QUADS,
+            256,
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderStateShard.POSITION_COLOR_SHADER)
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setDepthTestState(RenderStateShard.NO_DEPTH_TEST)
+                    .createCompositeState(false)
+    );
     private static float blurRadius = 20f;
     private static final PostChain blurPostChain;
     private static final RenderTarget mainRenderTarget;
@@ -45,7 +53,7 @@ public final class BlurEffect {
                     }
                 }
             };
-            blurPostChain.resize(mainRenderTarget.width, mainRenderTarget.height);
+            resize(mainRenderTarget.width, mainRenderTarget.height);
             maskInputRenderTarget = blurPostChain.getTempTarget("mask_input_target");
             maskInputRenderTarget.clear(Minecraft.ON_OSX);
         } catch (Throwable e) {
@@ -53,8 +61,8 @@ public final class BlurEffect {
         }
     }
 
-    public static void init() {
-        NeoForge.EVENT_BUS.register(BlurEffect.class);
+    public static void resize(int width, int height) {
+        blurPostChain.resize(width, height);
     }
 
     public static void start(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
@@ -80,10 +88,8 @@ public final class BlurEffect {
         }
     }
 
-    @SubscribeEvent
-    public static void onResizeDisplay(ResizeDisplayEvent event) {
-        var window = Minecraft.getInstance().getWindow();
-        blurPostChain.resize(window.getWidth(), window.getHeight());
+    public static RenderType getBlurMaskRenderType() {
+        return RENDER_TYPE;
     }
 
     private BlurEffect() {

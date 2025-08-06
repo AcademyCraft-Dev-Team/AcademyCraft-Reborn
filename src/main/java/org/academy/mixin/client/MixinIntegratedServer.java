@@ -8,6 +8,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * For AbilitySystemServer
+ */
 @Mixin(IntegratedServer.class)
 public abstract class MixinIntegratedServer {
     @Inject(method = "tickServer",at = @At("HEAD"))

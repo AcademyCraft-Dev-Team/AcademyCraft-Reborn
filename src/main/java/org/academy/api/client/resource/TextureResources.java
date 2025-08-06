@@ -54,15 +54,11 @@ public final class TextureResources {
     public static final ResourceLocation HISTOGRAM = getResourceLocation("textures/gui/element/histogram.png");
     public static final ResourceLocation UI_BUTTON_LEARN = getResourceLocation("textures/gui/element/button.png");
     public static final ResourceLocation HUD_SKILL_FRAME = getResourceLocation("textures/gui/icon/icon_box.png");
-    public static final ResourceLocation CURSOR = getResourceLocation("textures/gui/element/cursor.png");
     /**
      * Data Terminal
      */
     public static final ResourceLocation ICON_DATA_TERMINAL = getResourceLocation("textures/gui/icon/icon_data_terminal.png");
     public static final ResourceLocation APP_BACK = getResourceLocation("textures/gui/element/app_back.png");
-    public static final ResourceLocation APP_MEDIA_PLAYER = getResourceLocation("textures/gui/element/app_media_player.png");
-    public static final ResourceLocation APP_MISAKA_CLOUD = getResourceLocation("textures/gui/element/app_misaka_cloud.png");
-    public static final ResourceLocation APP_SETTINGS = getResourceLocation("textures/gui/element/app_settings.png");
     /**
      * Electromaster
      */
@@ -93,9 +89,9 @@ public final class TextureResources {
      */
     public static final ResourceLocation CLEANING_ROBOT = getResourceLocation("textures/model/cleaning_robot.png");
     /**
-     * Media Player
+     * Music Player
      */
-    public static final ResourceLocation ICON_MEDIA_PLAYER = getResourceLocation("textures/gui/icon/icon_media_player.png");
+    public static final ResourceLocation ICON_MUSIC_PLAYER = getResourceLocation("textures/gui/icon/icon_music_player.png");
     public static final ResourceLocation ICON_CYCLE = getResourceLocation("textures/gui/icon/icon_cycle.png");
     public static final ResourceLocation ICON_RANDOM = getResourceLocation("textures/gui/icon/icon_random.png");
     public static final ResourceLocation ICON_SINGLE_CYCLE = getResourceLocation("textures/gui/icon/icon_single_cycle.png");

@@ -1,84 +1,100 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.renderer.RenderType;
+import org.academy.api.client.gui.event.MouseEvent;
+import org.jetbrains.annotations.NotNull;
 
+/**
+ * A specialized ImageButton that can be part of a RadioGroup. Only one button
+ * within a group can be selected at a time. Its visual appearance (alpha)
+ * changes based on its selection, hover, and enabled states.
+ */
 public class ImageRadioButtonWidget extends ImageButtonWidget {
-    private boolean selected = false;
-    private RadioGroupWidget radioGroup = null;
+    protected boolean selected = false;
+    protected RadioGroupWidget radioGroup = null;
 
-    public float selectedAlpha = 1.0f;
-    public float unselectedAlpha = 0.7f;
-    public float hoverAlpha = 1.0f;
-    public float disabledAlpha = 0.5f;
-    private int id = -1;
+    protected float selectedAlpha = 1.0f;
+    protected float unselectedAlpha = 0.7f;
+    protected float hoverAlpha = 1.0f;
+    protected float disabledAlpha = 0.5f;
+    protected int id = -1;
 
     public ImageRadioButtonWidget(float x, float y, float width, float height,
                                   RenderType renderType, Runnable onPress) {
         super(x, y, width, height, renderType, onPress);
-        defaultHoverEffect = false;
-        updateVisualState();
+        this.defaultHoverEffect = false;
+        this.updateVisualState();
     }
 
     public int getId() {
-        return id;
+        return this.id;
     }
 
     public boolean isSelected() {
-        return selected;
+        return this.selected;
     }
 
     @Override
-    public ImageRadioButtonWidget setEnabled(boolean enabled) {
-        super.setEnabled(enabled);
-        updateVisualState();
-        return this;
+    protected void onMousePressed(@NotNull MouseEvent event) {
+        super.onMousePressed(event);
+        if (event.isConsumed() && this.radioGroup != null) {
+            this.radioGroup.selectButton(this);
+        }
     }
 
     @Override
-    public ImageRadioButtonWidget setHovered(boolean hovered) {
+    public void setHovered(boolean hovered) {
         super.setHovered(hovered);
-        updateVisualState();
-        return this;
+        this.updateVisualState();
     }
 
     @Override
-    public boolean mousePressed(double mouseX, double mouseY, int button) {
-        var result = super.mousePressed(mouseX, mouseY, button);
-        if (result) {
-            if (radioGroup != null) {
-                radioGroup.selectButton(this);
-            }
-        }
-        return result;
-    }
-
-    public ImageRadioButtonWidget setId(int newId) {
-        id = newId;
+    public @NotNull ImageButtonWidget setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        this.updateVisualState();
         return this;
     }
 
-    protected ImageRadioButtonWidget setRadioGroup(RadioGroupWidget newRadioGroup) {
-        radioGroup = newRadioGroup;
+    public ImageRadioButtonWidget setId(int id) {
+        this.id = id;
         return this;
     }
 
-    public ImageRadioButtonWidget setSelected(boolean newSelected) {
-        if (selected != newSelected) {
-            selected = newSelected;
-            updateVisualState();
+    protected ImageRadioButtonWidget setRadioGroup(RadioGroupWidget radioGroup) {
+        this.radioGroup = radioGroup;
+        return this;
+    }
+
+    public ImageRadioButtonWidget setSelected(boolean selected) {
+        if (this.selected != selected) {
+            this.selected = selected;
+            this.updateVisualState();
         }
         return this;
     }
 
+    public ImageRadioButtonWidget setVisualAlphas(float selected, float unselected, float hover, float disabled) {
+        this.selectedAlpha = selected;
+        this.unselectedAlpha = unselected;
+        this.hoverAlpha = hover;
+        this.disabledAlpha = disabled;
+        this.updateVisualState();
+        return this;
+    }
+
+    /**
+     * Updates the widget's alpha based on its current state hierarchy:
+     * disabled -> hovered -> selected -> unselected.
+     */
     public void updateVisualState() {
-        if (!enabled) {
-            setAlpha(disabledAlpha);
-        } else if (hovered) {
-            setAlpha(hoverAlpha);
-        } else if (selected) {
-            setAlpha(selectedAlpha);
+        if (!this.isEnabled()) {
+            this.setAlpha(this.disabledAlpha);
+        } else if (this.isHovered()) {
+            this.setAlpha(this.hoverAlpha);
+        } else if (this.isSelected()) {
+            this.setAlpha(this.selectedAlpha);
         } else {
-            setAlpha(unselectedAlpha);
+            this.setAlpha(this.unselectedAlpha);
         }
     }
 }

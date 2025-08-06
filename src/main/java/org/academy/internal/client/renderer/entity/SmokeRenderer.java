@@ -43,7 +43,7 @@ public class SmokeRenderer extends EntityRenderer<Smoke> {
         var vertexConsumer = buffer.getBuffer(
                 shaderPackInUse
                         ? RenderType.eyes(TEXTURE)
-                        : RenderUtil.getPositionColorTexRenderTypeFull("smoke", TEXTURE, true)
+                        : RenderUtil.getPositionColorTexRenderType("smoke", TEXTURE, true)
         );
 
         var frame = Math.max(0, Math.min(entity.frame, 3));

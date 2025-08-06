@@ -13,6 +13,9 @@ import java.util.function.Function;
 
 @Mixin(ModelBakery.ModelBakerImpl.class)
 public abstract class MixinModelBakerImpl {
+    /**
+     * For Coin Model
+     */
     @Inject(method = "bakeUncached(Lnet/minecraft/client/resources/model/UnbakedModel;Lnet/minecraft/client/resources/model/ModelState;Ljava/util/function/Function;)Lnet/minecraft/client/resources/model/BakedModel;", at = @At(value = "HEAD"), cancellable = true)
     private void bake(UnbakedModel model, ModelState state, Function<Material, TextureAtlasSprite> sprites, CallbackInfoReturnable<BakedModel> cir) {
         if (model instanceof BlockModel blockmodel && blockmodel.getRootModel() == CoinModelGenerator.COIN) {
