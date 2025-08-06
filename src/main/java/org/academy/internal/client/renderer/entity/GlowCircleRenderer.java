@@ -32,7 +32,7 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle> {
         var vertexConsumer = buffer.getBuffer(
                 shaderPackInUse
                         ? RenderType.eyes(TEXTURE)
-                        : RenderUtil.getPositionColorTexRenderTypeFull("glow_circle", TEXTURE, true)
+                        : RenderUtil.getPositionColorTexRenderType("glow_circle", TEXTURE, true)
         );
 
         var yaw = entity.getYRot();

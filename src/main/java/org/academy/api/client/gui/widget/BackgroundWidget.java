@@ -1,37 +1,43 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.MultiBufferSource;
+import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+/**
+ * A simple, often screen-sized, widget used to capture background clicks.
+ * This widget itself is transparent; the actual background rendering (e.g., a gradient or texture)
+ * should be handled by the screen class before rendering the main widget tree.
+ */
 public class BackgroundWidget extends AbstractWidget {
-    private final Screen screen;
-    public Runnable runnable;
+    @Nullable
+    private final Runnable onClick;
 
-    public BackgroundWidget(@NotNull Screen newScreen) {
-        super(0, 0, newScreen.width, newScreen.height);
-        screen = newScreen;
+    /**
+     * Creates a clickable background area. Its dimensions should be set by its parent
+     * container, typically to fill the entire screen.
+     * @param onClick The action to perform when the background is clicked. Can be null.
+     */
+    public BackgroundWidget(@Nullable Runnable onClick) {
+        super(0, 0, 0, 0);
+        this.onClick = onClick;
+        this.clickable = true;
     }
 
     @Override
-    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        var graphics = new GuiGraphics(Minecraft.getInstance(), bufferSource);
-        graphics.pose().last().pose().mul(stack.lastMatrix());
-        screen.renderBackground(graphics, 0, 0, partialTick);
+    public void render(@NotNull MatrixStack stack, @NotNull MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        // This widget is intended to be a transparent, clickable area.
+        // The visual background is rendered by the Screen class before this widget.
     }
 
     @Override
-    public boolean mousePressed(double mouseX, double mouseY, int button) {
-        if (isAbsoluteMouseOver(mouseX, mouseY) && button == 0) {
-            if (runnable != null) {
-                runnable.run();
-            }
-            return true;
+    protected void onMousePressed(@NotNull MouseEvent event) {
+        if (event.getButton() == 0 && this.onClick != null) {
+            this.onClick.run();
+            event.consume();
         }
-        return false;
     }
 }

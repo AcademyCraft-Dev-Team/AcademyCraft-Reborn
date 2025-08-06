@@ -10,6 +10,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.client.gui.event.MouseEvent;
+import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.DataTerminalHUD;
@@ -18,6 +20,7 @@ import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.RenderUtil;
 import org.academy.internal.client.app.mediaplayer.MediaInfo;
 import org.academy.internal.client.app.mediaplayer.MediaPlayerBackend;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
@@ -34,6 +37,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static PanelWidget rootPanel;
     private static GeometricButtonWidget playPauseButton;
     private static ImageButtonWidget modeButton;
+    private static boolean isProgressBarDragging = false;
 
     public enum ButtonShape {PLAY, PAUSE, NEXT, PREV}
 
@@ -49,16 +53,16 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         var offset = MediaPlayerBackend.getCurrentTime();
         var totalDuration = MediaPlayerBackend.getTotalDuration();
 
-        if (progressBar != null && !progressBar.startDragging) {
-            progressBar.setValue(totalDuration > 0 ? offset / totalDuration : 0f);
+        if (progressBar != null && !isProgressBarDragging) {
+            progressBar.setValue(totalDuration > 0 ? (offset / totalDuration) : 0f);
         }
 
         if (timeLabel != null) {
             var totalSeconds = (int) totalDuration;
             var currentSeconds = (int) offset;
-            timeLabel.value = String.format("%02d:%02d / %02d:%02d",
+            timeLabel.setText(String.format("%02d:%02d / %02d:%02d",
                     currentSeconds / 60, currentSeconds % 60,
-                    totalSeconds / 60, totalSeconds % 60);
+                    totalSeconds / 60, totalSeconds % 60));
         }
 
         updatePlayPauseButton();
@@ -73,7 +77,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             back.setAlpha(0.25f);
             rootPanel.addChild("back", back);
 
-            var main = new LayeredPanelWidget(0, 0, width, height);
+            var main = new PanelWidget(0, 0, width, height);
             rootPanel.addChild("main", main);
             {
                 var dockBarHeight = 60f;
@@ -108,25 +112,34 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                     dockBarBack.setAlpha(0.25f);
                     dockBar.addChild("back", dockBarBack);
 
-                    var layered = new LayeredPanelWidget(dockBarPadding, dockBarPadding, width - dockBarPadding * 2, dockBarHeight - dockBarPadding * 2);
+                    var layered = new PanelWidget(dockBarPadding, dockBarPadding, width - dockBarPadding * 2, dockBarHeight - dockBarPadding * 2);
                     dockBar.addChild("layered", layered);
                     {
                         var progressBarHeight = 5f;
                         progressBar = new SliderWidget(0, 0, layered.getWidth(), progressBarHeight, Orientation.HORIZONTAL, 0f, 1f, 0f) {
                             @Override
-                            public boolean mouseReleased(double mouseX, double mouseY, int button) {
-                                if (this.startDragging) {
-                                    MediaPlayerBackend.seek(this.getValue());
+                            protected void onMousePressed(@NotNull MouseEvent event) {
+                                super.onMousePressed(event);
+                                if (event.isConsumed()) {
+                                    isProgressBarDragging = true;
                                 }
-                                return super.mouseReleased(mouseX, mouseY, button);
+                            }
+
+                            @Override
+                            protected void onMouseReleased(@NotNull MouseEvent event) {
+                                if (isProgressBarDragging) {
+                                    MediaPlayerBackend.seek(this.getValue());
+                                    isProgressBarDragging = false;
+                                }
+                                super.onMouseReleased(event);
                             }
                         };
                         layered.addChild("progress_bar", progressBar);
 
                         var timeLabelY = progressBar.getY() + progressBar.getHeight() + 2f;
-                        timeLabel = new AutoScaleLabelWidget("00:00 / 00:00", 0, timeLabelY, layered.getWidth(), true);
-                        timeLabel.scale = 0.7f;
-                        timeLabel.dropShadow = false;
+                        timeLabel = new AutoScaleLabelWidget("00:00 / 00:00", 0, timeLabelY, layered.getWidth());
+                        timeLabel.setScale(0.7f);
+                        timeLabel.setDropShadow(false);
                         layered.addChild("time_label", timeLabel);
 
                         var controlsY = timeLabel.getY() + timeLabel.getHeight() + 5f;
@@ -153,7 +166,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             currentX += btnSize + bigGap;
 
                             modeButton = new ImageButtonWidget(currentX, 0, btnSize, btnSize, null, MediaPlayer::cyclePlaybackMode);
-                            modeButton.defaultHoverEffect = true;
+                            modeButton.setDefaultHoverEffect(true);
                             controlPanel.addChild("mode_button", modeButton);
                             currentX += btnSize + bigGap;
 
@@ -163,7 +176,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                                     return 3f;
                                 }
                             };
-                            volumeSlider.onValueChanged = MediaPlayerBackend::setVolume;
+                            volumeSlider.setOnValueChanged(MediaPlayerBackend::setVolume);
                             controlPanel.addChild("volume_slider", volumeSlider);
                         }
                     }
@@ -184,9 +197,9 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         if (modeButton == null) return;
         modeButton.setAlpha(1.0f);
         switch (MediaPlayerBackend.getPlaybackMode()) {
-            case REPEAT_LIST -> modeButton.renderType = RenderTypes.ICON_CYCLE;
-            case REPEAT_ONE -> modeButton.renderType = RenderTypes.ICON_SINGLE_CYCLE;
-            case SHUFFLE -> modeButton.renderType = RenderTypes.ICON_RANDOM;
+            case REPEAT_LIST -> modeButton.setRenderType(RenderTypes.ICON_CYCLE);
+            case REPEAT_ONE -> modeButton.setRenderType(RenderTypes.ICON_SINGLE_CYCLE);
+            case SHUFFLE -> modeButton.setRenderType(RenderTypes.ICON_RANDOM);
         }
     }
 
@@ -200,7 +213,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             back.setAlpha(0.25f);
             root.addChild("back", back);
 
-            var main = new LayeredPanelWidget(0, 0, root.getWidth(), root.getHeight());
+            var main = new PanelWidget(0, 0, root.getWidth(), root.getHeight());
             main.setEnabled(false);
             root.addChild("main", main);
             {
@@ -214,19 +227,19 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                 var name = new AutoScaleLabelWidget(
                         mediaInfo.name(),
                         icon.getX() + MEDIA_ICON_SIZE + 5, 4,
-                        80f, true
+                        80f
                 );
-                name.scale = 0.8f;
-                name.dropShadow = false;
+                name.setScale(0.8f);
+                name.setDropShadow(false);
                 main.addChild("name", name);
 
                 var info = new AutoScaleLabelWidget(
                         mediaInfo.subtitle(),
                         icon.getX() + MEDIA_ICON_SIZE + 5, 16,
-                        80f, true
+                        80f
                 );
-                info.dropShadow = false;
-                info.scale = 0.6f;
+                info.setDropShadow(false);
+                info.setScale(0.6f);
                 main.addChild("info", info);
             }
         }
@@ -235,22 +248,38 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
     private static void updatePlayPauseButton() {
         if (playPauseButton == null) return;
-        playPauseButton.shape = MediaPlayerBackend.isPlaying() && !MediaPlayerBackend.isPaused() ? ButtonShape.PAUSE : ButtonShape.PLAY;
+        playPauseButton.setShape(MediaPlayerBackend.isPlaying() && !MediaPlayerBackend.isPaused() ? ButtonShape.PAUSE : ButtonShape.PLAY);
     }
 
     @Override
-    public RenderType getIcon() {
-        return RenderTypes.ICON_MEDIA_PLAYER;
+    public @NotNull RenderType getIcon() {
+        return RenderTypes.ICON_MUSIC_PLAYER;
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "Media Player";
     }
 
     @Override
-    public Runnable onClick() {
-        return () -> DataTerminalHUD.setAppArea(create());
+    public @NotNull Runnable onClick() {
+        return () -> {
+        };
+    }
+
+    @Override
+    public @NotNull Runnable onClose() {
+        return new Runnable() {
+            @Override
+            public void run() {
+
+            }
+        };
+    }
+
+    @Override
+    public @NotNull AbstractContainerWidget getContainer() {
+        return create();
     }
 
     private static class GeometricButtonWidget extends AbstractButtonWidget {
@@ -271,12 +300,23 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                         .createCompositeState(false)
         );
 
-        public ButtonShape shape;
-        public int color = 0xFFFFFFFF;
+        protected ButtonShape shape;
+        protected int color = 0xFFFFFFFF;
+        protected float currentAlpha = 0.7f;
 
         public GeometricButtonWidget(float x, float y, float width, float height, ButtonShape newShape, Runnable onPress) {
             super(x, y, width, height, onPress);
-            shape = newShape;
+            this.shape = newShape;
+        }
+
+        @Override
+        public void setHovered(boolean hovered) {
+            super.setHovered(hovered);
+            this.currentAlpha = hovered ? 1.0f : 0.7f;
+        }
+
+        public void setShape(ButtonShape shape) {
+            this.shape = shape;
         }
 
         private void drawTriangle(VertexConsumer buffer, Matrix4f matrix, float x1, float y1, float x2, float y2, float x3, float y3, float r, float g, float b, float a) {
@@ -297,11 +337,9 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         }
 
         @Override
-        public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
             if (!isVisible()) return;
 
-            stack.pushPose();
-            stack.translate(getX(), getY(), getZ());
             var matrix = stack.lastMatrix();
             var buffer = bufferSource.getBuffer(RENDER_TYPE);
             var w = getWidth();
@@ -309,7 +347,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             var r = (float) (color >> 16 & 255) / 255.0F;
             var g = (float) (color >> 8 & 255) / 255.0F;
             var b = (float) (color & 255) / 255.0F;
-            var a = (isHovered() ? 1.0f : 0.7f);
+            var a = this.currentAlpha;
 
             var padding = 5.0f;
             var drawW = w - padding * 2;
@@ -345,8 +383,6 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                     drawTriangle(buffer, matrix, offsetX + barWidth + gap + triangleWidth, padding, offsetX + barWidth + gap, padding + drawH / 2f, offsetX + barWidth + gap + triangleWidth, padding + drawH, r, g, b, a);
                 }
             }
-
-            stack.popPose();
         }
     }
 }

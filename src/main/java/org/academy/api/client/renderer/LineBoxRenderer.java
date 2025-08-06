@@ -11,6 +11,9 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.Map;
+import java.util.OptionalDouble;
+
+import static org.academy.api.client.render.RenderTypes.LINES;
 
 public final class LineBoxRenderer {
     private static final int[][] EDGES = {
@@ -43,7 +46,7 @@ public final class LineBoxRenderer {
     public static void renderWireframeBox(MatrixStack poseStack, MultiBufferSource bufferSource, AABB box,
                                           float r, float g, float b, float a) {
         var vertices = getVertices(box);
-        var vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+        var vertexConsumer = bufferSource.getBuffer(LINES.apply(OptionalDouble.empty()));
         var matrix4f = poseStack.lastMatrix();
         var matrix3f = poseStack.lastNormal();
 
@@ -60,7 +63,7 @@ public final class LineBoxRenderer {
         var faceIndices = FACE_EDGES.get(face);
         if (faceIndices == null) return;
 
-        var vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+        var vertexConsumer = bufferSource.getBuffer(LINES.apply(OptionalDouble.empty()));
         var matrix4f = poseStack.lastMatrix();
         var matrix3f = poseStack.lastNormal();
 
@@ -88,7 +91,7 @@ public final class LineBoxRenderer {
             nz = 0;
         }
         var vector3f = normMat.transform(new Vector3f(nx, ny, nz));
-        vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(vector3f.x(), vector3f.y(), vector3f.z());
-        vc.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(vector3f.x(), vector3f.y(), vector3f.z());
+        vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a);
+        vc.addVertex(mat, x2, y2, z2).setColor(r, g, b, a);
     }
 }

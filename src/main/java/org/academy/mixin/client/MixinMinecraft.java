@@ -1,7 +1,9 @@
 package org.academy.mixin.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientLevel;
 import org.academy.AcademyCraftClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,5 +22,14 @@ public abstract class MixinMinecraft {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void init(CallbackInfo ci) {
         AcademyCraftClient.init();
+    }
+
+    @Inject(method = "setLevel", at = @At("TAIL"))
+    private void setLevel(ClientLevel level, ReceivingLevelScreen.Reason reason, CallbackInfo ci) {
+        var mc = Minecraft.getInstance();
+        var mainRenderTarget = mc.getMainRenderTarget();
+        var width = mainRenderTarget.width;
+        var height = mainRenderTarget.height;
+        AcademyCraftClient.resize(width, height);
     }
 }

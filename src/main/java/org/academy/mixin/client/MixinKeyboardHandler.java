@@ -7,6 +7,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * For InputSystem
+ */
 @Mixin(KeyboardHandler.class)
 public abstract class MixinKeyboardHandler {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)

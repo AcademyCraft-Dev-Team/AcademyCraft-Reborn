@@ -12,6 +12,7 @@ public interface WidgetContainer extends Widget {
 
     void clearChildren();
 
+    @NotNull
     Map<String, Widget> getChildren();
 
     @SuppressWarnings("unchecked")

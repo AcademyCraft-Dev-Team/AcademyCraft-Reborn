@@ -4,18 +4,20 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.render.MatrixStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class QuadVertexWidget extends AbstractWidget {
-    public final float[][] vertices = new float[4][5];
-    public float red = 1f;
-    public float green = 1f;
-    public float blue = 1f;
-    public RenderType renderType;
+    protected final float[][] vertices = new float[4][5];
+    protected float red = 1f;
+    protected float green = 1f;
+    protected float blue = 1f;
+    protected RenderType renderType;
 
-    public QuadVertexWidget(float x, float y, float width, float height, @Nullable RenderType newRenderType) {
+    public QuadVertexWidget(float x, float y, float width, float height, @Nullable RenderType renderType) {
         super(x, y, width, height);
-        this.renderType = newRenderType;
+        this.renderType = renderType;
+        this.resetVerticesToBounds();
     }
 
     public void setVertex(int index, float x, float y, float z, float u, float v) {
@@ -28,26 +30,41 @@ public class QuadVertexWidget extends AbstractWidget {
         }
     }
 
+    public final void resetVerticesToBounds() {
+        float w = this.getWidth();
+        float h = this.getHeight();
+        this.setVertex(0, 0, 0, 0, 0, 0);
+        this.setVertex(1, 0, h, 0, 0, 1);
+        this.setVertex(2, w, h, 0, 1, 1);
+        this.setVertex(3, w, 0, 0, 1, 0);
+    }
+
     @Override
-    public void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible() || renderType == null) return;
+    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible() || this.renderType == null) return;
 
-        var vertexConsumer = bufferSource.getBuffer(renderType);
+        var vertexConsumer = bufferSource.getBuffer(this.renderType);
         var matrix = stack.lastMatrix();
-
         var finalAlpha = getAbsoluteAlpha();
 
-        vertexConsumer.addVertex(matrix, vertices[0][0], vertices[0][1], vertices[0][2])
-                .setColor(red, green, blue, finalAlpha)
-                .setUv(vertices[0][3], vertices[0][4]);
-        vertexConsumer.addVertex(matrix, vertices[1][0], vertices[1][1], vertices[1][2])
-                .setColor(red, green, blue, finalAlpha)
-                .setUv(vertices[1][3], vertices[1][4]);
-        vertexConsumer.addVertex(matrix, vertices[2][0], vertices[2][1], vertices[2][2])
-                .setColor(red, green, blue, finalAlpha)
-                .setUv(vertices[2][3], vertices[2][4]);
-        vertexConsumer.addVertex(matrix, vertices[3][0], vertices[3][1], vertices[3][2])
-                .setColor(red, green, blue, finalAlpha)
-                .setUv(vertices[3][3], vertices[3][4]);
+        for (int i = 0; i < 4; i++) {
+            vertexConsumer.addVertex(matrix, vertices[i][0], vertices[i][1], vertices[i][2])
+                    .setColor(this.red, this.green, this.blue, finalAlpha)
+                    .setUv(vertices[i][3], vertices[i][4]);
+        }
+    }
+
+    @NotNull
+    public QuadVertexWidget setColor(float red, float green, float blue) {
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
+        return this;
+    }
+
+    @NotNull
+    public QuadVertexWidget setRenderType(@Nullable RenderType renderType) {
+        this.renderType = renderType;
+        return this;
     }
 }

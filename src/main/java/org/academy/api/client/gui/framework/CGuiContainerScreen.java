@@ -9,6 +9,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.widget.BlendQuadWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
@@ -59,11 +60,11 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
         var finalHeight = 187f;
 
-        back = new BlendQuadWidget(leftPos, topPos - 22, imageWidth, finalHeight);
+        back = new BlendQuadWidget(0, 0, imageWidth, finalHeight);
         back.setHeight(0);
         back.setAlpha(0f);
 
-        inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, finalHeight,
+        inventory = new ImageWidget(0, 0, imageWidth, finalHeight,
                 RenderTypes.INVENTORY);
         inventory.setHeight(0);
         inventory.setAlpha(0f);
@@ -95,8 +96,11 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
             guiGraphics.pose().scale(1, scaleY, 1);
             guiGraphics.pose().translate(0, -topPos, 0);
 
+            stack.pushPose();
+            stack.translate(leftPos, topPos - 22, 0);
             back.render(stack, bufferSource, mouseX, mouseY, partialTick);
             inventory.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            stack.popPose();
             rootContainer.render(stack, bufferSource, mouseX, mouseY, partialTick);
 
             super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -126,42 +130,65 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        rootContainer.mouseMoved(mouseX, mouseY);
+        var event = MouseEvent.createMoveEvent(mouseX, mouseY);
+        rootContainer.dispatchEvent(event);
+        super.mouseMoved(mouseX, mouseY);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        AcademyCraft.LOGGER.debug("CGuiContainerScreen mouseClicked at ({}, {})", mouseX, mouseY);
-        var rootResult = rootContainer.mousePressed(mouseX, mouseY, button);
-        if (rootResult) {
-            AcademyCraft.LOGGER.debug("rootContainer consumed the click.");
+        var event = MouseEvent.createPressEvent(mouseX, mouseY, button);
+        rootContainer.dispatchEvent(event);
+        var rootResult = event.isConsumed();
+
+        var superResult = false;
+        if (shouldHandleContainer()) {
+            superResult = super.mouseClicked(mouseX, mouseY, button);
         }
-        var superResult = shouldHandleContainer() && super.mouseClicked(mouseX, mouseY, button);
-        if (superResult) {
-            AcademyCraft.LOGGER.debug("super (vanilla container) consumed the click.");
-        }
+
         return rootResult || superResult;
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        var rootResult = rootContainer.mouseReleased(mouseX, mouseY, button);
-        var superResult = shouldHandleContainer() && super.mouseReleased(mouseX, mouseY, button);
-        return superResult || rootResult;
+        var event = MouseEvent.createReleaseEvent(mouseX, mouseY, button);
+        rootContainer.dispatchEvent(event);
+        var rootResult = event.isConsumed();
+
+        var superResult = false;
+        if (shouldHandleContainer()) {
+            superResult = super.mouseReleased(mouseX, mouseY, button);
+        }
+
+        return rootResult || superResult;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        var rootResult = rootContainer.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-        var superResult = shouldHandleContainer() && super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-        return superResult || rootResult;
+        var event = MouseEvent.createDragEvent(mouseX, mouseY, button, dragX, dragY);
+        rootContainer.dispatchEvent(event);
+        var rootResult = event.isConsumed();
+
+        var superResult = false;
+        if (shouldHandleContainer()) {
+            superResult = super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+
+        return rootResult || superResult;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        var rootResult = rootContainer.mouseScrolled(mouseX, mouseY, scrollY);
-        var superResult = shouldHandleContainer() && super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        return superResult || rootResult;
+        var event = new ScrollEvent(mouseX, mouseY, scrollY);
+        rootContainer.dispatchEvent(event);
+        var rootResult = event.isConsumed();
+
+        var superResult = false;
+        if (shouldHandleContainer()) {
+            superResult = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        }
+
+        return rootResult || superResult;
     }
 
     @Override
@@ -170,7 +197,10 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
             AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
             return true;
         }
-        if (rootContainer.keyPressed(keyCode, scanCode, modifiers)) {
+
+        var event = new KeyEvent(EventType.KEY_PRESSED, keyCode, scanCode, modifiers);
+        rootContainer.dispatchEvent(event);
+        if (event.isConsumed()) {
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && shouldCloseOnEsc()) {
@@ -182,7 +212,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (rootContainer.charTyped(codePoint, modifiers)) {
+        var event = new CharTypedEvent(codePoint, modifiers);
+        rootContainer.dispatchEvent(event);
+        if (event.isConsumed()) {
             return true;
         }
         return shouldHandleContainer() && super.charTyped(codePoint, modifiers);

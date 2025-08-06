@@ -1,74 +1,94 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.Orientation;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class DragBarWidget extends AbstractWidget {
-    public boolean showBackground = true;
-    public boolean startDragging = false;
-    public float dragOffset = 0f;
+    protected boolean showBackground = true;
+    protected float dragOffset = 0f;
     protected int thumbColor = 0xFFAAAAAA;
     protected int trackColor = 0xFF202020;
     protected final Orientation orientation;
+    private boolean isDragging = false;
 
-    public DragBarWidget(float x, float y, float width, float height, Orientation newOrientation) {
+    public DragBarWidget(float x, float y, float width, float height, Orientation orientation) {
         super(x, y, width, height);
-        orientation = newOrientation;
+        this.orientation = orientation;
+        this.clickable = true;
     }
 
     protected abstract float getThumbSize();
 
     protected abstract float getThumbPosition();
 
+    protected abstract void updateTargetFromMouse(float mouse);
+
     protected float getTrackSize() {
-        return orientation == Orientation.HORIZONTAL ? getWidth() : getHeight();
+        return this.orientation == Orientation.HORIZONTAL ? this.getWidth() : this.getHeight();
     }
 
     protected float getMouseRelative(float mouseX, float mouseY) {
-        return orientation == Orientation.HORIZONTAL ? (mouseX - getAbsoluteX()) : (mouseY - getAbsoluteY());
+        return this.orientation == Orientation.HORIZONTAL ? (mouseX - this.getAbsoluteX()) : (mouseY - this.getAbsoluteY());
     }
 
-    protected abstract void updateTargetFromMouse(float mouse);
-
     @Override
-    public boolean mousePressed(double mouseX, double mouseY, int button) {
-        if (isHovered()) {
-            startDragging = true;
-            dragOffset = getThumbSize() / 2f;
-            updateTargetFromMouse(getMouseRelative((float) mouseX, (float) mouseY));
-            return true;
+    protected void onMousePressed(@NotNull MouseEvent event) {
+        if (isMouseOver(event.getX(), event.getY()) && event.getButton() == 0) {
+            this.isDragging = true;
+            this.dragOffset = this.getThumbSize() / 2f;
+            this.updateTargetFromMouse(this.getMouseRelative((float) event.getX(), (float) event.getY()));
+            event.consume();
         }
-        return false;
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        startDragging = false;
-        return false;
+    protected void onMouseReleased(@NotNull MouseEvent event) {
+        this.isDragging = false;
+        super.onMouseReleased(event);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (startDragging) {
-            updateTargetFromMouse(getMouseRelative((float) mouseX, (float) mouseY));
-            return true;
+    protected void onMouseDragged(@NotNull MouseEvent event) {
+        if (this.isDragging && event.getButton() == 0) {
+            this.updateTargetFromMouse(this.getMouseRelative((float) event.getX(), (float) event.getY()));
+            event.consume();
         }
-        return false;
     }
 
-    public void setThumbColor(int newColor) {
-        thumbColor = newColor;
+    @NotNull
+    public DragBarWidget setThumbColor(int color) {
+        this.thumbColor = color;
+        return this;
     }
 
-    public void setTrackColor(int newColor) {
-        trackColor = newColor;
+    @NotNull
+    public DragBarWidget setTrackColor(int color) {
+        this.trackColor = color;
+        return this;
+    }
+
+    @NotNull
+    public DragBarWidget setShowBackground(boolean show) {
+        this.showBackground = show;
+        return this;
     }
 
     public int getThumbColor() {
-        return thumbColor;
+        return this.thumbColor;
     }
 
     public int getTrackColor() {
-        return trackColor;
+        return this.trackColor;
+    }
+
+    public boolean isShowBackground() {
+        return this.showBackground;
+    }
+
+    @Override
+    public boolean canFocus() {
+        return true;
     }
 }

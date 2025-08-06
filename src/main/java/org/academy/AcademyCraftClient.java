@@ -17,6 +17,7 @@ import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.util.StencilUtil;
+import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.network.NetworkManager;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
@@ -51,11 +52,20 @@ public final class AcademyCraftClient {
         HUDManager.init();
         Apps.register();
         ParticleRenderTypes.init();
-        BloomEffect.init();
-        BlurEffect.init();
         StencilUtil.init();
 
         AbilitySystemClient.init();
+    }
+
+    @SubscribeEvent
+    public static void onResizeDisplay(ResizeDisplayEvent event) {
+        resize(event.getWidth(), event.getHeight());
+    }
+
+    public static void resize(int width, int height) {
+        BloomEffect.resize(width, height);
+        BlurEffect.resize(width, height);
+        DataTerminalHUD.UI.resize(width, height, Minecraft.ON_OSX);
     }
 
     @SubscribeEvent
