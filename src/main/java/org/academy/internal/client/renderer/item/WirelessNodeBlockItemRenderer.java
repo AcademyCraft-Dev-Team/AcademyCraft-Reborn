@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.renderer.item;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -8,7 +9,6 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.academy.api.client.renderer.ItemRenderer;
 
 import static org.academy.internal.client.renderer.blockentity.WirelessNodeBlockEntityRenderer.WIRELESS_NODE_MODEL;
 
@@ -28,4 +28,4 @@ public class WirelessNodeBlockItemRenderer implements ItemRenderer {
         WIRELESS_NODE_MODEL.render(poseStack, buffer, combinedLight, combinedOverlay);
         poseStack.popPose();
     }
-}
+}*/

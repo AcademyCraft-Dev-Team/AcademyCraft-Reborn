@@ -7,12 +7,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
+import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.SetNodeNamePacket;
@@ -20,8 +20,11 @@ import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 
+import javax.annotation.Nullable;
+
 public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMenu> {
     private final BlockPos mainPos;
+    @Nullable
     private WirelessNodeBlockEntity wirelessNodeBlockEntity;
     private PanelWidget wirelessPanel;
     private SpriteSheetWidget state;
@@ -36,33 +39,32 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
 
     public WirelessNodeScreen(WirelessNodeMenu menu, Inventory playerInventory, Component title, BlockPos newMainPos) {
         super(menu, playerInventory, title);
-        mainPos = newMainPos;
+        this.mainPos = newMainPos;
         assert Minecraft.getInstance().level != null;
         if (Minecraft.getInstance().level.getBlockEntity(newMainPos) instanceof WirelessNodeBlockEntity blockEntity) {
-            wirelessNodeBlockEntity = blockEntity;
+            this.wirelessNodeBlockEntity = blockEntity;
         } else {
-            onClose();
+            this.onClose();
         }
     }
 
     @Override
     protected void onInit() {
-        NeoForge.EVENT_BUS.unregister(this);
-
         var startYOffset = 20f;
         var duration = 600L;
         var delay = 250L;
         var childDuration = duration - 100;
 
         var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
+        invPage.setZ(1);
         rootContainer.addChild("page_inv", invPage);
         {
-            var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.WIRELESS_NODE_UI);
+            var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.WIRELESS_NODE_UI);
             invPage.addChild("ui", ui);
 
             state = new SpriteSheetWidget(
                     42, 33.5f, 186 / 2f, 75 / 2f,
-                    RenderTypes.WIRELESS_NODE_STATE,
+                    Resource.Textures.WIRELESS_NODE_STATE,
                     Orientation.VERTICAL,
                     186, 750, 186, 75, 10);
             invPage.addChild("state", state);
@@ -75,7 +77,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         wirelessPanel.setEnabled(false);
         rootContainer.addChild("panel_wireless", wirelessPanel);
 
-        var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
+        var radioGroupWidget = new RadioGroupWidget(leftPos - 16, topPos - 22, 16, 40);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
             var showInv = "inv".equals(imageRadioButtonWidget.getName());
             var panelY = getTopPos() - 22;
@@ -91,12 +93,12 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
-            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, RenderTypes.ICON_INV, () -> {
+            var inv = new ImageRadioButtonWidget(0, 0, 16, 16, Resource.Textures.ICON_INV, () -> {
             });
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, RenderTypes.ICON_WIRELESS, () -> {
+            var wireless = new ImageRadioButtonWidget(0, 22, 16, 16, Resource.Textures.ICON_WIRELESS, () -> {
             });
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);
@@ -110,84 +112,89 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
             infoArea.addChild("back", back);
             playAnimation(ObjectAnimator.ofFloat(back::setAlpha, 0, 0.5f).setDuration(duration));
 
-            var histogramWidget = new HistogramWidget(0, 0, 84, 84);
-            histogramWidget.addValue(histogramEnergyValue);
-            histogramWidget.addValue(histogramCapacityValue);
-            infoArea.addChild("histogram", histogramWidget);
+            var infoTextArea = new PanelWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());
+            infoTextArea.setZ(1);
+            infoArea.addChild("area_info_text", infoTextArea);
+            {
+                var histogramWidget = new HistogramWidget(0, 0, 84, 84);
+                histogramWidget.addValue(this.histogramEnergyValue);
+                histogramWidget.addValue(this.histogramCapacityValue);
+                infoTextArea.addChild("histogram", histogramWidget);
 
-            var energyIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25C4FF);
-            infoArea.addChild("icon_energy", energyIcon);
+                var energyIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25C4FF);
+                infoTextArea.addChild("icon_energy", energyIcon);
 
-            var energyLabel = new LabelWidget("ENERGY", 15, 72);
-            energyLabel.setScale(0.75f);
-            infoArea.addChild("label_energy", energyLabel);
+                var energyLabel = new LabelWidget("ENERGY", 15, 72);
+                energyLabel.setScale(0.75f);
+                infoTextArea.addChild("label_energy", energyLabel);
 
-            energyValueLabel = new LabelWidget("0 AF", 50, 72);
-            energyValueLabel.setScale(0.75f);
-            infoArea.addChild("label_energy_value", energyValueLabel);
+                energyValueLabel = new LabelWidget("0 AF", 50, 72);
+                energyValueLabel.setScale(0.75f);
+                infoTextArea.addChild("label_energy_value", energyValueLabel);
 
-            var capacityIcon = new FillWidget(6.5f, 82, 6.5f, 6.5f, 0xFFFF6C00);
-            infoArea.addChild("icon_capacity", capacityIcon);
+                var capacityIcon = new FillWidget(6.5f, 82, 6.5f, 6.5f, 0xFFFF6C00);
+                infoTextArea.addChild("icon_capacity", capacityIcon);
 
-            var capacityLabel = new LabelWidget("CAPACITY", 15, 81);
-            capacityLabel.setScale(0.75f);
-            infoArea.addChild("label_capacity", capacityLabel);
+                var capacityLabel = new LabelWidget("CAPACITY", 15, 81);
+                capacityLabel.setScale(0.75f);
+                infoTextArea.addChild("label_capacity", capacityLabel);
 
-            capacityValueLabel = new LabelWidget("0 / 0", 50, 81);
-            capacityValueLabel.setScale(0.75f);
-            infoArea.addChild("label_capacity_value", capacityValueLabel);
+                this.capacityValueLabel = new LabelWidget("0 / 0", 50, 81);
+                this.capacityValueLabel.setScale(0.75f);
+                infoTextArea.addChild("label_capacity_value", this.capacityValueLabel);
 
-            var infoLabel = new LabelWidget("Information", 8, 92);
-            infoLabel.setScale(0.75f);
-            infoArea.addChild("label_info", infoLabel);
+                var infoLabel = new LabelWidget("Information", 8, 92);
+                infoLabel.setScale(0.75f);
+                infoTextArea.addChild("label_info", infoLabel);
 
-            var rangeLabel = new LabelWidget("Trans. Range", 10, 102);
-            rangeLabel.setScale(0.65f);
-            infoArea.addChild("label_range", rangeLabel);
+                var rangeLabel = new LabelWidget("Trans. Range", 10, 102);
+                rangeLabel.setScale(0.65f);
+                infoTextArea.addChild("label_range", rangeLabel);
 
-            rangeValueLabel = new LabelWidget("0", 60, 102);
-            rangeValueLabel.setScale(0.65f);
-            infoArea.addChild("label_range_value", rangeValueLabel);
+                this.rangeValueLabel = new LabelWidget("0", 60, 102);
+                this.rangeValueLabel.setScale(0.65f);
+                infoTextArea.addChild("label_range_value", this.rangeValueLabel);
 
-            var nameLabel = new LabelWidget("Node Name", 10, 112);
-            nameLabel.setScale(0.65f);
-            infoArea.addChild("label_name", nameLabel);
+                var nameLabel = new LabelWidget("Node Name", 10, 112);
+                nameLabel.setScale(0.65f);
+                infoTextArea.addChild("label_name", nameLabel);
 
-            var inputNameLabelLeft = new LabelWidget("[", 50, 112);
-            inputNameLabelLeft.setScale(0.65f);
-            infoArea.addChild("label_input_name_left", inputNameLabelLeft);
+                var inputNameLabelLeft = new LabelWidget("[", 50, 112);
+                inputNameLabelLeft.setScale(0.85f);
+                infoTextArea.addChild("label_input_name_left", inputNameLabelLeft);
 
-            var inputNameLabelRight = new LabelWidget("]", 100, 112);
-            inputNameLabelRight.setScale(0.65f);
-            infoArea.addChild("label_input_name_right", inputNameLabelRight);
+                var inputNameLabelRight = new LabelWidget("]", 100, 112);
+                inputNameLabelRight.setScale(0.85f);
+                infoTextArea.addChild("label_input_name_right", inputNameLabelRight);
 
-            var nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
-            nameTextBox.setWhenEnter(s -> {
-                if (wirelessNodeBlockEntity != null) {
-                    AcademyCraftClient.sendPacket(new C2SPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
-                }
-            });
-            infoArea.addChild("label_name_text_box", nameTextBox);
+                var nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
+                nameTextBox.setWhenEnter(s -> {
+                    if (this.wirelessNodeBlockEntity != null) {
+                        AcademyCraftClient.sendPacket(new C2SPacket(new SetNodeNamePacket(this.wirelessNodeBlockEntity.getBlockPos(), s)));
+                    }
+                });
+                infoTextArea.addChild("label_name_text_box", nameTextBox);
 
-            var passLabel = new LabelWidget("Password", 10, 122);
-            passLabel.setScale(0.6f);
-            infoArea.addChild("label_pass", passLabel);
+                var passLabel = new LabelWidget("Password", 10, 122);
+                passLabel.setScale(0.6f);
+                infoTextArea.addChild("label_pass", passLabel);
 
-            var inputPassLabelLeft = new LabelWidget("[", 50, 122);
-            inputPassLabelLeft.setScale(0.65f);
-            infoArea.addChild("label_input_pass_left", inputPassLabelLeft);
+                var inputPassLabelLeft = new LabelWidget("[", 50, 122);
+                inputPassLabelLeft.setScale(0.85f);
+                infoTextArea.addChild("label_input_pass_left", inputPassLabelLeft);
 
-            var inputPassLabelRight = new LabelWidget("]", 100, 122);
-            inputPassLabelRight.setScale(0.65f);
-            infoArea.addChild("label_input_pass_right", inputPassLabelRight);
+                var inputPassLabelRight = new LabelWidget("]", 100, 122);
+                inputPassLabelRight.setScale(0.85f);
+                infoTextArea.addChild("label_input_pass_right", inputPassLabelRight);
 
-            var passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
-            passTextBox.setWhenEnter(s -> {
-                if (wirelessNodeBlockEntity != null) {
-                    AcademyCraftClient.sendPacket(new C2SPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
-                }
-            });
-            infoArea.addChild("label_pass_text_box", passTextBox);
+                var passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
+                passTextBox.setWhenEnter(s -> {
+                    if (this.wirelessNodeBlockEntity != null) {
+                        AcademyCraftClient.sendPacket(new C2SPacket(new SetNodePassPacket(this.wirelessNodeBlockEntity.getBlockPos(), s)));
+                    }
+                });
+                infoTextArea.addChild("label_pass_text_box", passTextBox);
+            }
         }
 
         var radioFinalY = radioGroupWidget.getY();
@@ -207,28 +214,28 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (wirelessNodeBlockEntity != null) {
-            ticks++;
+        if (this.wirelessNodeBlockEntity != null) {
+            this.ticks++;
 
-            if (capacityValueLabel != null) {
-                capacityValueLabel.setText(wirelessNodeBlockEntity.connectedUsersCount + " / " + wirelessNodeBlockEntity.maxConnectedUsers);
+            if (this.capacityValueLabel != null) {
+                this.capacityValueLabel.setText(this.wirelessNodeBlockEntity.connectedUsersCount + " / " + this.wirelessNodeBlockEntity.maxConnectedUsers);
             }
-            if (energyValueLabel != null) {
-                energyValueLabel.setText(WindGenScreen.AF.formatted(wirelessNodeBlockEntity.getEnergyStored()));
+            if (this.energyValueLabel != null) {
+                this.energyValueLabel.setText(WindGenScreen.AF.formatted(this.wirelessNodeBlockEntity.getEnergyStored()));
             }
-            if (rangeValueLabel != null) {
-                rangeValueLabel.setText(wirelessNodeBlockEntity.radius + "");
+            if (this.rangeValueLabel != null) {
+                this.rangeValueLabel.setText(this.wirelessNodeBlockEntity.radius + "");
             }
 
             var progressCapacity =
-                    (float) wirelessNodeBlockEntity.connectedUsersCount
+                    (float) this.wirelessNodeBlockEntity.connectedUsersCount
                             /
-                            (float) wirelessNodeBlockEntity.maxConnectedUsers;
+                            (float) this.wirelessNodeBlockEntity.maxConnectedUsers;
 
             var progressEnergy =
-                    (float) wirelessNodeBlockEntity.getEnergyStored()
+                    (float) this.wirelessNodeBlockEntity.getEnergyStored()
                             /
-                            (float) wirelessNodeBlockEntity.getMaxEnergyStorage();
+                            (float) this.wirelessNodeBlockEntity.getMaxEnergyStorage();
 
             if (Float.isNaN(progressCapacity)) {
                 progressCapacity = 0;
@@ -237,28 +244,28 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 progressEnergy = 0;
             }
 
-            histogramCapacityValue.height = progressCapacity * 60;
-            histogramEnergyValue.height = progressEnergy * 60;
+            this.histogramCapacityValue.height = progressCapacity * 60;
+            this.histogramEnergyValue.height = progressEnergy * 60;
 
             int index;
-            if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
-                index = (ticks / 20) % 2 == 0 ? 8 : 9;
+            if (this.wirelessNodeBlockEntity.connectedUsersCount == 0) {
+                index = (this.ticks / 20) % 2 == 0 ? 8 : 9;
             } else {
                 index = Math.max(0, Math.min((int) (progressCapacity * 8 - 1), 7));
             }
 
-            state.setFrameIndex(index);
+            this.state.setFrameIndex(index);
         }
     }
 
     @SubscribeEvent
     public void onFocusGainedEvent(TextBoxWidget.FocusGainedEvent event) {
-        handleContainer = false;
+        this.handleContainer = false;
     }
 
     @SubscribeEvent
     public void onFocusLostEvent(TextBoxWidget.FocusLostEvent event) {
-        handleContainer = true;
+        this.handleContainer = true;
     }
 
     @Override

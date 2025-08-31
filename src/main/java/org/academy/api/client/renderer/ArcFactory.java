@@ -1,11 +1,7 @@
 package org.academy.api.client.renderer;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.common.util.MathUtil;
 import org.joml.Vector3f;
@@ -14,78 +10,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static net.minecraft.client.renderer.RenderStateShard.NO_CULL;
-import static net.minecraft.client.renderer.RenderStateShard.*;
-import static org.academy.AcademyCraft.getResourceLocation;
-import static org.academy.api.client.render.post.BloomEffect.BUFFER_SOURCE;
-import static org.academy.api.client.util.RenderStateUtil.*;
+import static org.academy.api.client.Render.RenderTypes;
 import static org.academy.api.common.util.MathUtil.EPSILON;
 
 public final class ArcFactory {
-    public static final ResourceLocation ARC_TEXTURE = getResourceLocation(
-            "textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
-    public static final RenderType ARC_RENDER_TYPE = RenderType.create(
-            "arc_render_type",
-            DefaultVertexFormat.POSITION_TEX,
-            VertexFormat.Mode.QUADS,
-            256,
-            RenderType.CompositeState.builder()
-                    .setTextureState(new RenderStateShard.TextureStateShard(
-                            ARC_TEXTURE,
-                            false,
-                            false
-                    ))
-                    .setCullState(NO_CULL)
-                    .setShaderState(POSITION_TEX_SHADER)
-                    .setOutputState(BLOOM_TARGET)
-                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                    .createCompositeState(false)
-    );
-    public static final RenderType ARC_RENDER_TYPE_COLORED = RenderType.create(
-            "arc_render_type_colored",
-            DefaultVertexFormat.POSITION_TEX_COLOR,
-            VertexFormat.Mode.QUADS,
-            256,
-            RenderType.CompositeState.builder()
-                    .setTextureState(new RenderStateShard.TextureStateShard(
-                            ARC_TEXTURE,
-                            false,
-                            false
-                    ))
-                    .setCullState(NO_CULL)
-                    .setShaderState(POSITION_TEX_COLOR_SHADER)
-                    .setOutputState(BLOOM_TARGET)
-                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                    .createCompositeState(false)
-    );
-
     private static final float THICKNESS_VARIATION = 0.4f;
     private static final float MIN_THICKNESS_FACTOR = 0.1f;
 
     static {
-        BloomEffect.addFixedBuffer(ARC_RENDER_TYPE);
-        BloomEffect.addFixedBuffer(ARC_RENDER_TYPE_COLORED);
+        BloomEffect.addFixedBuffer(RenderTypes.ARC);
     }
 
-    public static void render(PoseStack ps, ArcRenderData data) {
-        var vc = BUFFER_SOURCE.getBuffer(ARC_RENDER_TYPE);
-        var matrix = ps.last().pose();
-
-        for (var quad : data.quads) {
-            vc.addVertex(matrix, quad.v1.pos.x(), quad.v1.pos.y(), quad.v1.pos.z()).setUv(quad.v1.u, quad.v1.v);
-            vc.addVertex(matrix, quad.v2.pos.x(), quad.v2.pos.y(), quad.v2.pos.z()).setUv(quad.v2.u, quad.v2.v);
-            vc.addVertex(matrix, quad.v3.pos.x(), quad.v3.pos.y(), quad.v3.pos.z()).setUv(quad.v3.u, quad.v3.v);
-            vc.addVertex(matrix, quad.v4.pos.x(), quad.v4.pos.y(), quad.v4.pos.z()).setUv(quad.v4.u, quad.v4.v);
-        }
-
-        for (var branch : data.branches) {
-            render(ps, branch);
-        }
+    public static void render(PoseStack ps, MultiBufferSource bufferSource, ArcRenderData data) {
+        render(ps, bufferSource, data, 1, 1, 1, 1);
     }
 
-    public static void render(PoseStack ps, ArcRenderData data, float r, float g, float b, float a) {
-        var vc = BUFFER_SOURCE.getBuffer(ARC_RENDER_TYPE_COLORED);
-        var matrix = ps.last().pose();
+    public static void render(PoseStack ps, MultiBufferSource bufferSource, ArcRenderData data, float r, float g, float b, float a) {
+        var vc = bufferSource.getBuffer(RenderTypes.ARC);
+        var matrix = ps.last();
 
         for (var quad : data.quads) {
             vc.addVertex(matrix, quad.v1.pos.x(), quad.v1.pos.y(), quad.v1.pos.z()).setUv(quad.v1.u, quad.v1.v).setColor(r, g, b, a);
@@ -95,7 +37,7 @@ public final class ArcFactory {
         }
 
         for (var branch : data.branches) {
-            render(ps, branch, r, g, b, a);
+            render(ps, bufferSource, branch, r, g, b, a);
         }
     }
 

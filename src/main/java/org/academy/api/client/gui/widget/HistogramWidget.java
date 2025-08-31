@@ -1,26 +1,23 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.Minecraft;
+import org.academy.api.client.Resource;
+import org.academy.api.client.gui.command.FillRectDrawCommand;
+import org.academy.api.client.gui.command.ImageDrawCommand;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.RenderTypes;
-import org.academy.api.client.util.RenderUtil;
-import org.jetbrains.annotations.NotNull;
-import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 public class HistogramWidget extends AbstractWidget {
-    public boolean renderBack = true;
+    protected boolean renderBack = true;
     private final List<Value> values;
 
     public HistogramWidget(float x, float y, float width, float height, List<Value> initialValues) {
         super(x, y, width, height);
-        this.values = new ArrayList<>(Objects.requireNonNullElse(initialValues, Collections.emptyList()));
+        values = new ArrayList<>(initialValues);
     }
 
     public HistogramWidget(float x, float y, float width, float height) {
@@ -28,70 +25,66 @@ public class HistogramWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible()) return;
-
-        stack.pushPose();
-        stack.translate(this.getX(), this.getY(), this.getZ());
-
-        float finalAlpha = getAbsoluteAlpha();
-        if (finalAlpha < 1.0f / 255.0f) {
-            stack.popPose();
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {if (!isVisible())
             return;
+
+        context.pose().pushPose();
+        {
+            context.pose().translate(getX(), getY(), getZ());
+
+            var accumulatedAlpha = context.getAccumulatedAlpha() * getAlpha();
+
+            if (renderBack) renderBackground(context, accumulatedAlpha);
+
+            renderBars(context, accumulatedAlpha);
         }
-
-        if (renderBack) {
-            this.renderBackground(bufferSource, stack.lastMatrix(), finalAlpha);
-        }
-
-        this.renderBars(bufferSource, stack);
-
-        stack.popPose();
+        context.pose().popPose();
     }
 
-    private void renderBackground(MultiBufferSource.BufferSource bufferSource, Matrix4f matrix, float alpha) {
-        var consumer = bufferSource.getBuffer(RenderTypes.HISTOGRAM);
-        addPositionColorTexQuad(consumer, matrix, 5, -15, this.getWidth(), this.getHeight(), 1f, 1f, 1f, alpha);
-        bufferSource.endBatch(RenderTypes.HISTOGRAM);
+    private void renderBackground(WidgetRenderContext context, float finalAlpha) {
+        context.pose().pushPose();
+        {
+            context.pose().translate(5.0f, -15.0f, 0.0f);
+
+            var textureManager = Minecraft.getInstance().getTextureManager();
+            var texture = textureManager.getTexture(Resource.Textures.HISTOGRAM_TEXTURE).getTextureView();
+            var command = new ImageDrawCommand(texture, getWidth(), getHeight(), 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, finalAlpha);
+            context.submit(command);
+        }
+        context.pose().popPose();
     }
 
-    private void renderBars(MultiBufferSource.BufferSource bufferSource, MatrixStack stack) {
+    private void renderBars(WidgetRenderContext context, float accumulatedAlpha) {
         for (var value : values) {
-            var left = Math.max(0, value.x);
-            var right = Math.min(this.getWidth(), value.x + value.width);
+            var left = Math.max(0.0f, value.x);
+            var right = Math.min(getWidth(), value.x + value.width);
 
             if (left >= right) continue;
 
-            var bottom = this.getHeight() - 20;
-            var top = bottom - value.height;
+            var barWidth = right - left;
+            var barHeight = value.height;
 
-            var r = (int) (value.red * 255.0f);
-            var g = (int) (value.green * 255.0f);
-            var b = (int) (value.blue * 255.0f);
-            var a = (int) (value.alpha * getAbsoluteAlpha() * 255.0f);
-            var packedColor = (a << 24) | (r << 16) | (g << 8) | b;
+            var bottom = getHeight() - 20.0f;
+            var top = bottom - barHeight;
 
-            RenderUtil.fill(
-                    stack,
-                    bufferSource,
-                    left, top,
-                    right - left, bottom - top,
-                    packedColor
-            );
+            context.pose().pushPose();
+            {
+                context.pose().translate(left, top, 0.1f);
+                var finalBarAlpha = value.alpha * accumulatedAlpha;
+                var command = new FillRectDrawCommand(barWidth, barHeight, value.red, value.green, value.blue, finalBarAlpha);
+                context.submit(command);
+            }
+            context.pose().popPose();
         }
     }
 
-    public void setValues(List<Value> newValues) {
-        values.clear();
-        if (newValues != null) {
-            values.addAll(newValues);
-        }
+    public void setValues(List<Value> values) {
+        this.values.clear();
+        this.values.addAll(values);
     }
 
-    public void addValue(Value newValue) {
-        if (newValue != null) {
-            values.add(newValue);
-        }
+    public void addValue(Value value) {
+        values.add(value);
     }
 
     public void clearValues() {
@@ -100,15 +93,6 @@ public class HistogramWidget extends AbstractWidget {
 
     public List<Value> getValues() {
         return Collections.unmodifiableList(values);
-    }
-
-    private static void addPositionColorTexQuad(VertexConsumer consumer, Matrix4f matrix, float x, float y, float width, float height, float r, float g, float b, float a) {
-        float x2 = x + width;
-        float y2 = y + height;
-        consumer.addVertex(matrix, x, y, 0).setColor(r, g, b, a).setUv(0, 0);
-        consumer.addVertex(matrix, x, y2, 0).setColor(r, g, b, a).setUv(0, 1);
-        consumer.addVertex(matrix, x2, y2, 0).setColor(r, g, b, a).setUv(1, 1);
-        consumer.addVertex(matrix, x2, y, 0).setColor(r, g, b, a).setUv(1, 0);
     }
 
     public static class Value {

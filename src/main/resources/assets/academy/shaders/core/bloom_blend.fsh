@@ -10,8 +10,10 @@ uniform sampler2D BlurTexture1;
 uniform sampler2D BlurTexture2;
 uniform sampler2D BlurTexture3;
 
-uniform float BloomRadius;
-uniform float BloomIntensive;
+layout(std140) uniform BloomInfo {
+    float BloomRadius;
+    float BloomIntensive;
+};
 
 in vec2 texCoord;
 out vec4 fragColor;

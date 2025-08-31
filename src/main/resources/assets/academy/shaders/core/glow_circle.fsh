@@ -2,14 +2,14 @@
 
 in vec2 texCoord0;
 
-uniform vec2 ringCenter;
-uniform float innerRadius;
-uniform float outerRadius;
-uniform float innerGlowRadius;
-uniform float outerGlowRadius;
-uniform float progress;
-uniform vec4 ringColor;
-uniform float startAngle;
+uniform vec2 RingCenter;
+uniform float InnerRadius;
+uniform float OuterRadius;
+uniform float InnerGlowRadius;
+uniform float OuterGlowRadius;
+uniform float Progress;
+uniform vec4 RingColor;
+uniform float StartAngle;
 
 out vec4 fragColor;
 
@@ -19,7 +19,7 @@ const float TWO_PI = 2.0 * PI;
 void main() {
     fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 
-    vec2 diff = texCoord0 - ringCenter;
+    vec2 diff = texCoord0 - RingCenter;
 
     float dist = length(diff);
 
@@ -28,13 +28,13 @@ void main() {
         angle += TWO_PI;
     }
 
-    float targetAngle = startAngle + progress * TWO_PI;
+    float targetAngle = StartAngle + Progress * TWO_PI;
 
     bool angleInRange = false;
-    if (progress >= 1.0) {
+    if (Progress >= 1.0) {
         angleInRange = true;
-    } else if (progress > 0.001) {
-        float normalizedStart = mod(startAngle, TWO_PI);
+    } else if (Progress > 0.001) {
+        float normalizedStart = mod(StartAngle, TWO_PI);
         float normalizedTarget = mod(targetAngle, TWO_PI);
 
         if (normalizedTarget >= normalizedStart) {
@@ -45,16 +45,16 @@ void main() {
     }
 
     if (angleInRange) {
-        if (dist >= innerRadius && dist < outerRadius) {
-            fragColor = ringColor;
+        if (dist >= InnerRadius && dist < OuterRadius) {
+            fragColor = RingColor;
 
-        } else if (dist >= outerRadius && dist < outerGlowRadius) {
-            float outerGlowFactor = 1.0 - smoothstep(outerRadius, outerGlowRadius, dist);
-            fragColor = vec4(ringColor.rgb, ringColor.a * outerGlowFactor);
+        } else if (dist >= OuterRadius && dist < OuterGlowRadius) {
+            float outerGlowFactor = 1.0 - smoothstep(OuterRadius, OuterGlowRadius, dist);
+            fragColor = vec4(RingColor.rgb, RingColor.a * outerGlowFactor);
 
-        } else if (dist >= innerGlowRadius && dist < innerRadius) {
-            float innerGlowFactor = smoothstep(innerGlowRadius, innerRadius, dist);
-            fragColor = vec4(ringColor.rgb, ringColor.a * innerGlowFactor);
+        } else if (dist >= InnerGlowRadius && dist < InnerRadius) {
+            float innerGlowFactor = smoothstep(InnerGlowRadius, InnerRadius, dist);
+            fragColor = vec4(RingColor.rgb, RingColor.a * innerGlowFactor);
         }
     }
 }

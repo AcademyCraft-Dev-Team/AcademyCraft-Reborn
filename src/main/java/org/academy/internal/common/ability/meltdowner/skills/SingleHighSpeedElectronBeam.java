@@ -40,10 +40,10 @@ public class SingleHighSpeedElectronBeam extends Skill {
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
-        Client.Config skillKeyConfig = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
+        Client.Config skillKeyConfig = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         if (skillKeyConfig == null) {
             skillKeyConfig = new Client.Config();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, skillKeyConfig);
+            AcademyCraftClient.Config.INSTANCE.setConfig(key, skillKeyConfig);
         }
 
         Client.KEY = skillKeyConfig.getKeyBinding(
@@ -62,7 +62,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {

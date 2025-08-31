@@ -1,9 +1,9 @@
 package org.academy.internal.client.gui.screen;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.world.entity.player.Inventory;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.SubscribePacket;
@@ -20,7 +20,7 @@ import java.util.function.BiConsumer;
 
 @SuppressWarnings("unused")
 public final class Screens {
-    public static final Map<String, BiConsumer<ClientPacketListener, FriendlyByteBuf>> SCREEN_HANDLERS = new HashMap<>();
+    public static final Map<String, BiConsumer<ClientGamePacketListener, FriendlyByteBuf>> SCREEN_HANDLERS = new HashMap<>();
 
     static {
         SCREEN_HANDLERS.put(WindGenBaseBlock.WIND_GEN_SCREEN,
@@ -45,7 +45,7 @@ public final class Screens {
                     Minecraft.getInstance().setScreen(new AbilityDeveloperScreen(pos));
                 });
         SCREEN_HANDLERS.put(WirelessNodeBlock.WIRELESS_NODE_SCREEN,
-                (clientPacketListener, buf) -> {
+                (ClientGamePacketListener, buf) -> {
                     var containerId = buf.readVarInt();
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();
@@ -57,7 +57,7 @@ public final class Screens {
                     }
                 });
         SCREEN_HANDLERS.put(OmniCraftingTableBlock.OMNI_CRAFTING_TABLE_SCREEN,
-                (clientPacketListener, buf) -> {
+                (ClientGamePacketListener, buf) -> {
                     var containerId = buf.readVarInt();
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();

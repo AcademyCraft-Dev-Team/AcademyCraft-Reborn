@@ -3,7 +3,6 @@ package org.academy.api.client.gui.widget;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.Orientation;
-import org.jetbrains.annotations.NotNull;
 
 public abstract class DragBarWidget extends AbstractWidget {
     protected boolean showBackground = true;
@@ -34,7 +33,7 @@ public abstract class DragBarWidget extends AbstractWidget {
     }
 
     @Override
-    protected void onMousePressed(@NotNull MouseEvent event) {
+    protected void onMousePressed(MouseEvent event) {
         if (isMouseOver(event.getX(), event.getY()) && event.getButton() == 0) {
             this.isDragging = true;
             this.dragOffset = this.getThumbSize() / 2f;
@@ -44,32 +43,29 @@ public abstract class DragBarWidget extends AbstractWidget {
     }
 
     @Override
-    protected void onMouseReleased(@NotNull MouseEvent event) {
+    protected void onMouseReleased(MouseEvent event) {
         this.isDragging = false;
         super.onMouseReleased(event);
     }
 
     @Override
-    protected void onMouseDragged(@NotNull MouseEvent event) {
+    protected void onMouseDragged(MouseEvent event) {
         if (this.isDragging && event.getButton() == 0) {
             this.updateTargetFromMouse(this.getMouseRelative((float) event.getX(), (float) event.getY()));
             event.consume();
         }
     }
 
-    @NotNull
     public DragBarWidget setThumbColor(int color) {
         this.thumbColor = color;
         return this;
     }
 
-    @NotNull
     public DragBarWidget setTrackColor(int color) {
         this.trackColor = color;
         return this;
     }
 
-    @NotNull
     public DragBarWidget setShowBackground(boolean show) {
         this.showBackground = show;
         return this;

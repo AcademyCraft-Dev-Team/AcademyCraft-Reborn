@@ -7,24 +7,26 @@ import net.minecraft.client.animation.AnimationChannel;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
-import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.Entity;
-import org.academy.api.client.renderer.BakedModelRenderer;
-import org.academy.api.client.resource.TextureResources;
+import net.minecraft.world.level.EmptyBlockAndTintGetter;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
-@SuppressWarnings({"unused", "FieldCanBeLocal", "SpellCheckingInspection"})
-public class WindGenBaseModel extends HierarchicalModel<Entity> {
+import static org.academy.api.client.Resource.Textures.MODEL_WIND_GEN;
+
+@SuppressWarnings({"unused", "SpellCheckingInspection"})
+public class WindGenBaseModel extends Model {
     public static final float[][] PILLAR_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 8, true);
     private final ModelPart all;
     private final ModelPart pole;
@@ -35,6 +37,7 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
     private final ModelPart rods;
 
     public WindGenBaseModel(ModelPart root) {
+        super(root, RenderType::entityCutoutNoCull);
         this.all = root.getChild("all");
         this.pole = this.all.getChild("pole");
         this.parts = this.all.getChild("parts");
@@ -181,10 +184,6 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
             ))
             .build();
 
-    @Override
-    public void setupAnim(@NotNull Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-    }
-
     public void setupAnim(WindGenBaseBlockEntity windGenBaseBlockEntity, float partialTick) {
         pole.resetPose();
         parts.resetPose();
@@ -192,17 +191,19 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
         rhalf.resetPose();
         lhalf.resetPose();
         rods.resetPose();
+/*
 
         animate(windGenBaseBlockEntity.setupState, WindGenBaseModel.setup, windGenBaseBlockEntity.ticks + partialTick);
         animate(windGenBaseBlockEntity.shutdownState, WindGenBaseModel.shut, windGenBaseBlockEntity.ticks + partialTick);
+*/
     }
 
-
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        all.render(poseStack, bufferSource.getBuffer(renderType(TextureResources.UI_WIND_GEN)), packedLight, packedOverlay);
+        all.render(poseStack, bufferSource.getBuffer(renderType(MODEL_WIND_GEN)), packedLight, packedOverlay);
         poseStack.pushPose();
         Minecraft minecraft = Minecraft.getInstance();
-        BakedModel bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.get().defaultBlockState());
+        var defaultBlockState = Blocks.WIND_GEN_PILLAR.get().defaultBlockState();
+        var bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(defaultBlockState);
         RandomSource randomSource = RandomSource.create();
         randomSource.setSeed(42L);
         poseStack.rotateAround(Axis.YP.rotationDegrees(-90), 0, 0, 0);
@@ -210,12 +211,7 @@ public class WindGenBaseModel extends HierarchicalModel<Entity> {
         matrix4f.translate(-0.5f, 0.505f, -0.5f);
         matrix4f.scale(1,0.9f,1);
         poseStack.mulPose(matrix4f);
-        BakedModelRenderer.render(poseStack, bakedModel, bufferSource, randomSource, false, packedLight, packedOverlay);
+        ModelBlockRenderer.renderModel(poseStack.last(), bufferSource, bakedModel, 1, 1, 1, packedLight, packedOverlay, EmptyBlockAndTintGetter.INSTANCE, BlockPos.ZERO, defaultBlockState);
         poseStack.popPose();
-    }
-
-    @Override
-    public @NotNull ModelPart root() {
-        return all;
     }
 }

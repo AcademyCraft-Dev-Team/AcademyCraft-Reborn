@@ -1,8 +1,8 @@
 package org.academy.api.common.wireless;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
@@ -48,10 +48,10 @@ public class GetAvailableNodesPacket extends RequestPayload<ServerGamePacketList
         return PayloadTypes.GET_AVAILABLE_NODES.get();
     }
 
-    public static class Response extends ResponsePayload<ClientPacketListener> {
+    public static class Response extends ResponsePayload<ClientGamePacketListener> {
         public ArrayList<String> availableNodeNames;
 
-        public Response(ClientPacketListener listener) {
+        public Response(ClientGamePacketListener listener) {
             super(listener);
         }
 
@@ -70,7 +70,7 @@ public class GetAvailableNodesPacket extends RequestPayload<ServerGamePacketList
         }
 
         @Override
-        public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+        public @NotNull PayloadType<ClientGamePacketListener, ? extends Payload<ClientGamePacketListener>> getPayloadType() {
             return PayloadTypes.GET_AVAILABLE_NODES_RESPONSE.get();
         }
     }

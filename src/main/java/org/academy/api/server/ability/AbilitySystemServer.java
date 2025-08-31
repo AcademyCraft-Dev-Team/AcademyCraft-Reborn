@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.academy.api.server.ability.AbilitySystemServer.SyncType.COMPUTING_POWER;
@@ -39,7 +40,7 @@ public class AbilitySystemServer {
 
     public static void init(final MinecraftServer server, PlayerDataManager manager) {
         playerDataManager = manager;
-        AcademyCraftServer.SERVER_FUTURE_MANAGER.registerPayloadHandler(AbilitySystemServer.class);
+        AcademyCraftServer.FUTURE_MANAGER.registerPayloadHandler(AbilitySystemServer.class);
         minecraftServer = server;
 
         for (var category : Registries.ABILITY_CATEGORIES) {
@@ -49,14 +50,27 @@ public class AbilitySystemServer {
             skill.initServer(server);
         }
 
+        var errorCount = new AtomicInteger(0);
+
         scheduledFuture = AcademyCraft.executorService.scheduleAtFixedRate(
                 () -> {
                     try {
                         AbilitySystemTicker.tick();
+                        errorCount.set(0);
                     } catch (Throwable e) {
-                        AcademyCraft.LOGGER.error(e.getMessage());
+                        var count = errorCount.incrementAndGet();
+                        AcademyCraft.LOGGER.error(
+                                "[AbilitySystemTicker] Consecutive error #{} - Timestamp: {}, Thread: {}",
+                                count,
+                                System.currentTimeMillis(),
+                                Thread.currentThread().getName(),
+                                e
+                        );
                     }
-                }, 0, 50, TimeUnit.MILLISECONDS
+                },
+                0,
+                50,
+                TimeUnit.MILLISECONDS
         );
     }
 
@@ -73,7 +87,7 @@ public class AbilitySystemServer {
             return new AcquireCategoryPacket.Response(Collections.singletonList("Error: You are too far away."));
         }
 
-        var level = player.serverLevel();
+        var level = player.level();
         var be = level.getBlockEntity(userPos);
         if (be instanceof AbilityDeveloperBlockEntity blockEntity) {
             var outputList = new ArrayList<String>();
@@ -111,12 +125,13 @@ public class AbilitySystemServer {
             return new LearnSkillPayload.Response(false);
         }
 
-        var level = player.serverLevel();
+        var level = player.level();
         var skillKey = payload.skillName;
         var be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
-            var skill = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
-            if (skill != null) {
+            var skillReference = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
+            if (skillReference.isPresent()) {
+                var skill = skillReference.get().value();
                 var energy = skill.getEnergyCostToLearn();
                 var depLearned = true;
                 for (var dep : skill.getDependencies()) {
@@ -145,9 +160,16 @@ public class AbilitySystemServer {
     }
 
     public static AbilityCategory getPlayerAbilityCategory(UUID uuid) {
-        var categoryKey = ResourceLocation.parse(getPlayerData(uuid).getAbilityCategory());
-        var category = Registries.ABILITY_CATEGORIES.get(categoryKey);
-        return category != null ? category : AbilityCategories.LEVEL0.get();
+        var abilityCategory = getPlayerData(uuid).getAbilityCategory();
+        AbilityCategory category;
+        if (abilityCategory == null) {
+            category = AbilityCategories.LEVEL0.get();
+        } else {
+            var categoryKey = ResourceLocation.parse(abilityCategory);
+            category = Registries.ABILITY_CATEGORIES.get(categoryKey).orElseThrow().value();
+        }
+
+        return category;
     }
 
     public static void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
@@ -166,9 +188,7 @@ public class AbilitySystemServer {
         Player playerData = getPlayerData(uuid);
         if (playerData.getSkills().add(skillKey)) {
             var skill = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
-            if (skill != null) {
-                addPlayerSkillData(uuid, skillKey, skill.getDefaultSkillData());
-            }
+            skill.ifPresent(skillReference -> addPlayerSkillData(uuid, skillKey, skillReference.value().getDefaultSkillData()));
             playerData.markDirty();
             schedulePlayerSync(uuid, SyncType.SKILLS);
         }
@@ -271,7 +291,9 @@ public class AbilitySystemServer {
     }
 
     public static float getDamageMultiplier() {
-        return AcademyCraftServer.abilityConfig.damageMultiplier;
+        return AcademyCraftServer.abilityConfig == null
+                ? 1
+                : AcademyCraftServer.abilityConfig.damageMultiplier;
     }
 
     public static void schedulePlayerSync(final UUID uuid, final SyncType syncType) {
@@ -378,11 +400,11 @@ public class AbilitySystemServer {
 
     public static void registerContext(ServerContext serverContext) {
         NeoForge.EVENT_BUS.register(serverContext);
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(serverContext);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
         NeoForge.EVENT_BUS.unregister(serverContext);
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.unregisterPacketListener(serverContext);
+        AcademyCraftServer.NETWORK_MANAGER.unregisterPacketListener(serverContext);
     }
 }

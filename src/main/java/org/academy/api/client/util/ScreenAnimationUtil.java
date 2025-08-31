@@ -94,9 +94,7 @@ public final class ScreenAnimationUtil {
             public void onAnimationEnd(Animator animation) {
                 widget.setVisible(false);
                 widget.setEnabled(false);
-                if (onEndCallback != null) {
-                    onEndCallback.run();
-                }
+                onEndCallback.run();
             }
         };
     }

@@ -6,7 +6,6 @@ import org.academy.api.common.util.MathUtil;
 public class VertexUtil {
     public static final class Ring {
         public static float[][][] getRingVertexBuffer(float radius, int segments, float yBottom, float yTop) {
-            if (segments <= 0) return null;
             var vertexBuffer = new float[segments][4][4];
             final var twoPi = MathUtil.TWO_PI;
 

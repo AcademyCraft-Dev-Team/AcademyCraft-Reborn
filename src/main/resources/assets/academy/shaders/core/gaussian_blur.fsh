@@ -6,9 +6,12 @@
 #version 150
 
 uniform sampler2D DiffuseSampler;
-uniform vec2 OutSize;
-uniform vec2 BlurDir;
-uniform int Radius;
+
+layout(std140) uniform BlurInfo {
+    vec2 OutSize;
+    vec2 BlurDir;
+    int Radius;
+};
 
 in vec2 texCoord;
 out vec4 fragColor;

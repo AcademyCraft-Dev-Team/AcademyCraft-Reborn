@@ -16,7 +16,7 @@ public abstract class MixinProjectile {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void academy_replaceShootFromRotation(
+    private void shootFromRotation(
             Entity shooter,
             float x,
             float y,
@@ -30,9 +30,9 @@ public abstract class MixinProjectile {
         if (KineticEnergyApplied.Server.SKILL_STATS.containsKey(shooter.getUUID()) && KineticEnergyApplied.Server.SKILL_STATS.get(shooter.getUUID())) {
             velocity = KineticEnergyApplied.Server.onProjectileShoot(projectile,shooter, velocity);
 
-            float f = -Mth.sin(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
-            float f1 = -Mth.sin((x + z) * ((float) Math.PI / 180F));
-            float f2 = Mth.cos(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
+            var f = -Mth.sin(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
+            var f1 = -Mth.sin((x + z) * ((float) Math.PI / 180F));
+            var f2 = Mth.cos(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
 
             projectile.shoot(f, f1, f2, velocity, inaccuracy);
 

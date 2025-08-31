@@ -1,13 +1,22 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Map;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.DynamicUniformStorage;
+import org.academy.api.client.Render;
+import org.academy.api.client.Resource;
+import org.academy.api.client.gui.command.ImageDrawCommand;
+import org.academy.api.client.gui.command.PosTexRectDrawCommand;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.RenderTypes;
-import org.academy.internal.client.renderer.Shaders;
-import org.jetbrains.annotations.NotNull;
-import org.joml.Matrix4f;
+import org.joml.Vector2f;
+import org.joml.Vector4f;
 
 public class BlendQuadWidget extends AbstractWidget {
     public float marginTop = 4f;
@@ -25,55 +34,78 @@ public class BlendQuadWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible()) return;
-
-        Matrix4f matrix = stack.lastMatrix();
-
-        float w = this.getWidth();
-        float h = this.getHeight();
-        float finalAlpha = this.getAbsoluteAlpha();
-
-        if (finalAlpha < 1.0f / 255.0f) {
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible())
             return;
+
+        var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
+
+        context.pose().pushPose();
+        context.pose().translate(getX(), getY(), getZ());
+        {
+            var sdfCommand = new PosTexRectDrawCommand(
+                    Render.RenderPipelines.SDF_SHARP_MARGIN,
+                    getWidth(),
+                    getHeight(),
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f
+            ) {
+                @Override
+                public Map<String, GpuTextureView> getSamplers() {
+                    return Collections.emptyMap();
+                }
+
+                @Override
+                public Map<String, GpuBufferSlice> getUniforms() {
+                    var uboStorage = context.getDynamicUbo(SDFData.class, SDFData.UBO_SIZE);
+                    var size = new Vector2f(getWidth(), getHeight());
+                    var margins = new Vector4f(marginLeft, marginTop, marginRight, marginBottom);
+                    var fillColor = new Vector4f(red, green, blue, finalAlpha);
+                    var sdfData = new SDFData(size, margins, fillColor);
+                    var uboSlice = uboStorage.writeUniform(sdfData);
+                    return Map.of("SdfUniforms", uboSlice);
+                }
+            };
+            context.submit(sdfCommand);
+
+            if (this.drawLine) {
+                this.renderLines(context, context.getAccumulatedAlpha());
+            }
         }
+        context.pose().popPose();
+    }
 
-        var shader = Shaders.SDF_SHARP_QUAD_WITH_MARGIN;
-        shader.safeGetUniform("u_size").set(w, h);
-        shader.safeGetUniform("u_margins").set(marginLeft, marginTop, marginRight, marginBottom);
-        shader.safeGetUniform("u_fillColor").set(red, green, blue, finalAlpha);
+    private void renderLines(WidgetRenderContext context, float finalAlpha) {
+        var textureManager = Minecraft.getInstance().getTextureManager();
+        var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE_TEXTURE).getTextureView();
+        var lineW = getWidth() - 2.0f;
+        var lineH = 4.0f;
 
-        VertexConsumer quadConsumer = bufferSource.getBuffer(RenderTypes.SDF_SHARP_QUAD);
-        addPositionTexQuad(quadConsumer, matrix, 0, 0, w, h);
-        bufferSource.endBatch(RenderTypes.SDF_SHARP_QUAD);
-
-        if (drawLine) {
-            float bottomLineY = h - this.marginTop / 2.0f;
-            float lineW = w - 2.0f;
-            float lineH = 4.0f;
-
-            VertexConsumer lineConsumer = bufferSource.getBuffer(RenderTypes.ELEMENT_LINE);
-            addPositionColorTexQuad(lineConsumer, matrix, 1, 0, lineW, lineH, 1f, 1f, 1f, finalAlpha);
-            addPositionColorTexQuad(lineConsumer, matrix, 1, bottomLineY, lineW, lineH, 1f, 1f, 1f, finalAlpha);
-            bufferSource.endBatch(RenderTypes.ELEMENT_LINE);
+        {
+            context.pose().pushPose();
+            context.pose().translate(1.0f, 0.0f, 0.1f);
+            var topLineCommand = new ImageDrawCommand(lineTexture, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            context.submit(topLineCommand);
+            context.pose().popPose();
+        }
+        {
+            context.pose().pushPose();
+            var bottomLineY = getHeight() - marginTop / 2.0f;
+            context.pose().translate(1.0f, bottomLineY, 0.1f);
+            var bottomLineCommand = new ImageDrawCommand(lineTexture, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            context.submit(bottomLineCommand);
+            context.pose().popPose();
         }
     }
 
-    private static void addPositionTexQuad(VertexConsumer consumer, Matrix4f matrix, float x, float y, float width, float height) {
-        float x2 = x + width;
-        float y2 = y + height;
-        consumer.addVertex(matrix, x, y, 0).setUv(0, 0);
-        consumer.addVertex(matrix, x, y2, 0).setUv(0, 1);
-        consumer.addVertex(matrix, x2, y2, 0).setUv(1, 1);
-        consumer.addVertex(matrix, x2, y, 0).setUv(1, 0);
-    }
+    public record SDFData(Vector2f size, Vector4f margins, Vector4f fillColor) implements DynamicUniformStorage.DynamicUniform {
+        public static final int UBO_SIZE = new Std140SizeCalculator().putVec2().putVec4().putVec4().get();
 
-    private static void addPositionColorTexQuad(VertexConsumer consumer, Matrix4f matrix, float x, float y, float width, float height, float r, float g, float b, float a) {
-        float x2 = x + width;
-        float y2 = y + height;
-        consumer.addVertex(matrix, x, y, 0).setColor(r, g, b, a).setUv(0, 0);
-        consumer.addVertex(matrix, x, y2, 0).setColor(r, g, b, a).setUv(0, 1);
-        consumer.addVertex(matrix, x2, y2, 0).setColor(r, g, b, a).setUv(1, 1);
-        consumer.addVertex(matrix, x2, y, 0).setColor(r, g, b, a).setUv(1, 0);
+        @Override
+        public void write(ByteBuffer buffer) {
+            Std140Builder.intoBuffer(buffer).putVec2(size).putVec4(margins).putVec4(fillColor);
+        }
     }
 }

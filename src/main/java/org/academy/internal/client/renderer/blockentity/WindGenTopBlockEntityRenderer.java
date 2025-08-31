@@ -6,12 +6,14 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import org.academy.api.client.resource.TextureResources;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.client.Resource;
 import org.academy.internal.client.model.WindGenTopModel;
 import org.academy.internal.client.model.WindGenTurbineModel;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.WindGenTopBlockEntity;
-import org.jetbrains.annotations.NotNull;
+
+import static net.minecraft.client.renderer.RenderType.entityCutoutNoCull;
 
 public class WindGenTopBlockEntityRenderer implements BlockEntityRenderer<WindGenTopBlockEntity> {
     public static final BlockEntityRenderer<WindGenTopBlockEntity> INSTANCE = new WindGenTopBlockEntityRenderer();
@@ -21,34 +23,33 @@ public class WindGenTopBlockEntityRenderer implements BlockEntityRenderer<WindGe
     }
 
     @Override
-    public void render(@NotNull WindGenTopBlockEntity newBlockEntity, float partialTick, @NotNull PoseStack newPoseStack, @NotNull MultiBufferSource newBuffer, int packedLight, int packedOverlay) {
-        if (newBlockEntity.isMain()) {
-            newPoseStack.pushPose();
+    public void render(WindGenTopBlockEntity blockEntity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, Vec3 cameraPos) {
+        if (blockEntity.isMain()) {
+            poseStack.pushPose();
 
-            var facing = newBlockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
+            var facing = blockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
             var yRot = facing.getOpposite().toYRot();
 
-            newPoseStack.translate(0.5f, 1.5f, 0.5f);
-            newPoseStack.mulPose(Axis.XP.rotationDegrees(180));
-            newPoseStack.mulPose(Axis.YP.rotationDegrees(yRot - 90));
+            poseStack.translate(0.5f, 1.5f, 0.5f);
+            poseStack.mulPose(Axis.XP.rotationDegrees(180));
+            poseStack.mulPose(Axis.YP.rotationDegrees(yRot - 90));
 
-            MODEL.setupAnim(newBlockEntity, partialTick);
-            MODEL.render(newPoseStack, newBuffer, packedLight, packedOverlay);
+            MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
 
-            if (newBlockEntity.hasFan) {
-                newPoseStack.pushPose();
-                newPoseStack.mulPose(Axis.XP.rotationDegrees(-180));
-                newPoseStack.mulPose(Axis.YP.rotationDegrees(90));
+            if (blockEntity.hasFan) {
+                poseStack.pushPose();
+                poseStack.mulPose(Axis.XP.rotationDegrees(-180));
+                poseStack.mulPose(Axis.YP.rotationDegrees(90));
 
-                newPoseStack.translate(0, -0.85f, 1.25f);
+                poseStack.translate(0, -0.85f, 1.25f);
 
-                newPoseStack.mulPose(Axis.ZP.rotationDegrees((newBlockEntity.ticks + partialTick) * 5));
+                poseStack.mulPose(Axis.ZP.rotationDegrees((blockEntity.ticks + partialTick) * 5));
                 var windGenTurbineModel = new WindGenTurbineModel(WindGenTurbineModel.createBodyLayer().bakeRoot());
-                windGenTurbineModel.main.render(newPoseStack, newBuffer.getBuffer(windGenTurbineModel.renderType(TextureResources.UI_WIND_GEN)), packedLight, packedOverlay);
-                windGenTurbineModel.tip_li.render(newPoseStack, newBuffer.getBuffer(windGenTurbineModel.renderType(TextureResources.UI_WIND_GEN)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
-                newPoseStack.popPose();
+                windGenTurbineModel.main.render(poseStack, bufferSource.getBuffer(entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN)), packedLight, packedOverlay);
+                windGenTurbineModel.tip_li.render(poseStack, bufferSource.getBuffer(entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                poseStack.popPose();
             }
-            newPoseStack.popPose();
+            poseStack.popPose();
         }
     }
 }

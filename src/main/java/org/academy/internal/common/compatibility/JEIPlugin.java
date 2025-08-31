@@ -17,7 +17,7 @@ import java.util.List;
 public final class JEIPlugin implements IModPlugin {
     @Override
     public @NotNull ResourceLocation getPluginUid() {
-        return AcademyCraft.getResourceLocation("jei_plugin");
+        return AcademyCraft.academy("jei_plugin");
     }
 
     @Override

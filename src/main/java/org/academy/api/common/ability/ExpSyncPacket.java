@@ -1,7 +1,7 @@
 package org.academy.api.common.ability;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.Packet;
@@ -10,11 +10,11 @@ import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
-public final class ExpSyncPacket extends Packet<ClientPacketListener> {
+public final class ExpSyncPacket extends Packet<ClientGamePacketListener> {
     public String skillName;
     public float exp;
 
-    public ExpSyncPacket(ClientPacketListener packetListener) {
+    public ExpSyncPacket(ClientGamePacketListener packetListener) {
         super(packetListener);
     }
 
@@ -37,7 +37,7 @@ public final class ExpSyncPacket extends Packet<ClientPacketListener> {
     }
 
     @Override
-    public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
+    public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
         return PacketTypes.EXP_SYNC.get();
     }
 }

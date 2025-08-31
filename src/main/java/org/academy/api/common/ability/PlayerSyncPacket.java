@@ -1,7 +1,7 @@
 package org.academy.api.common.ability;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
 import org.academy.api.common.network.PacketTarget;
@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashSet;
 
 @PacketTarget(ThreadType.CLIENT)
-public class PlayerSyncPacket extends Packet<ClientPacketListener> {
+public class PlayerSyncPacket extends Packet<ClientGamePacketListener> {
     public boolean levelChanged;
     public int level;
     public boolean maxComputingPowerChanged;
@@ -26,7 +26,7 @@ public class PlayerSyncPacket extends Packet<ClientPacketListener> {
     public boolean skillsChanged;
     public HashSet<String> skills;
 
-    public PlayerSyncPacket(ClientPacketListener listener) {
+    public PlayerSyncPacket(ClientGamePacketListener listener) {
         super(listener);
     }
 
@@ -106,7 +106,7 @@ public class PlayerSyncPacket extends Packet<ClientPacketListener> {
     }
 
     @Override
-    public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
+    public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
         return PacketTypes.PLAYER_SYNC.get();
     }
 }

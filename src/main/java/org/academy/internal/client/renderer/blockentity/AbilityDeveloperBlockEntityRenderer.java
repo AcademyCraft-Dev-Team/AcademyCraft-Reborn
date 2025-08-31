@@ -9,42 +9,31 @@ import org.academy.api.client.render.RenderTypes;
 import org.academy.internal.client.model.AbilityDeveloperModel;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.jetbrains.annotations.NotNull;
 
 public class AbilityDeveloperBlockEntityRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntity> {
     public static final BlockEntityRenderer<AbilityDeveloperBlockEntity> INSTANCE = new AbilityDeveloperBlockEntityRenderer();
     public static final AbilityDeveloperModel MODEL = new AbilityDeveloperModel(AbilityDeveloperModel.createBodyLayer().bakeRoot());
 
-    private AbilityDeveloperBlockEntityRenderer() {
-    }
-
     @Override
-    public void render(@NotNull AbilityDeveloperBlockEntity be, float partialTick, @NotNull PoseStack ps, @NotNull MultiBufferSource bf, int packedLight, int packedOverlay) {
-        if (be.isMain()) {
-            ps.pushPose();
-            var facing = be.getBlockState().getValue(AbilityDeveloperBlock.FACING);
+    public void render(AbilityDeveloperBlockEntity blockEntity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, Vec3 cameraPos) {
+        if (blockEntity.isMain()) {
+            poseStack.pushPose();
+            var facing = blockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
             var yRot = facing.getOpposite().toYRot();
 
-            ps.translate(0, 1.5f, 1);
-            ps.mulPose(Axis.XP.rotationDegrees(180));
-            ps.rotateAround(Axis.YP.rotationDegrees(yRot), 0.5f, 0, 0.5f);
-            ps.translate(0.5f, 0, 0);
+            poseStack.translate(0, 1.5f, 1);
+            poseStack.mulPose(Axis.XP.rotationDegrees(180));
+            poseStack.rotateAround(Axis.YP.rotationDegrees(yRot), 0.5f, 0, 0.5f);
+            poseStack.translate(0.5f, 0, 0);
 
-            MODEL.setupAnim(be, partialTick);
-            var vc = bf.getBuffer(RenderTypes.ABILITY_DEVELOPER);
-            MODEL.setupAnim(be, partialTick);
-            MODEL.renderToBuffer(ps, vc, packedLight, packedOverlay);
-            ps.popPose();
+            MODEL.setupAnim(blockEntity, partialTick);
+            var vc = bufferSource.getBuffer(RenderTypes.ABILITY_DEVELOPER);
+            MODEL.setupAnim(blockEntity, partialTick);
+            MODEL.renderToBuffer(poseStack, vc, packedLight, packedOverlay);
+            poseStack.popPose();
         }
     }
 
-    @Override
-    public boolean shouldRenderOffScreen(@NotNull AbilityDeveloperBlockEntity newBlockEntity) {
-        return true;
-    }
-
-    @Override
-    public boolean shouldRender(@NotNull AbilityDeveloperBlockEntity newBlockEntity, @NotNull Vec3 newCameraPos) {
-        return true;
+    private AbilityDeveloperBlockEntityRenderer() {
     }
 }

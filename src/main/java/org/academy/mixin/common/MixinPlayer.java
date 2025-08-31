@@ -1,5 +1,6 @@
 package org.academy.mixin.common;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import org.academy.internal.common.ability.accelerator.skills.VectorReflection;
@@ -12,8 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Player.class)
 public abstract class MixinPlayer implements PlayerSyncData {
     @SuppressWarnings("UnusedAssignment")
-    @Inject(method = "hurt", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"), cancellable = true)
-    public void hurt(DamageSource damageSource, float amount, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "hurtServer", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z"), cancellable = true)
+    public void hurt(ServerLevel p_376451_, DamageSource damageSource, float amount, CallbackInfoReturnable<Boolean> cir) {
         var pair = VectorReflection.Server.onPlayerHurt((Player) (Object) this, damageSource, amount);
         if (!pair.getLeft()) {
             cir.setReturnValue(false);

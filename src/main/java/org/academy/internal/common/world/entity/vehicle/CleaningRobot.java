@@ -2,15 +2,19 @@ package org.academy.internal.common.world.entity.vehicle;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,22 +30,18 @@ public class CleaningRobot extends Entity {
     }
 
     @Override
-    public boolean canCollideWith(@NotNull Entity entity) {
-        return canVehicleCollide(this, entity);
-    }
-
-    public static boolean canVehicleCollide(Entity vehicle, Entity entity) {
-        return (entity.canBeCollidedWith() || entity.isPushable()) && !vehicle.isPassengerOfSameVehicle(entity);
-    }
-
-    @Override
-    public boolean canBeCollidedWith() {
-        return true;
-    }
-
-    @Override
     public boolean isPushable() {
         return true;
+    }
+
+    @Override
+    protected void readAdditionalSaveData(ValueInput input) {
+
+    }
+
+    @Override
+    protected void addAdditionalSaveData(ValueOutput output) {
+
     }
 
     @Override
@@ -113,12 +113,8 @@ public class CleaningRobot extends Entity {
         this.move(MoverType.SELF, this.getDeltaMovement());
     }
 
-
     @Override
-    protected void readAdditionalSaveData(@NotNull CompoundTag compoundTag) {
-    }
-
-    @Override
-    protected void addAdditionalSaveData(@NotNull CompoundTag compoundTag) {
+    public boolean hurtServer(ServerLevel level, DamageSource damageSource, float amount) {
+        return false;
     }
 }

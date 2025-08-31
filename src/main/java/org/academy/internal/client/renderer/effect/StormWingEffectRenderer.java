@@ -2,28 +2,28 @@ package org.academy.internal.client.renderer.effect;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.context.ContextKey;
+import org.academy.AcademyCraft;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.renderer.RingRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.common.attachment.AttachmentTypes;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
-import static org.academy.AcademyCraft.getResourceLocation;
-
 @SuppressWarnings("SuspiciousNameCombination")
 public final class StormWingEffectRenderer implements EffectRenderer {
+    public static final ContextKey<Boolean> CONTEXT_KEY = new ContextKey<>(AcademyCraft.academy("storm_wing"));
     private static final StormWingEffectRenderer INSTANCE = new StormWingEffectRenderer();
-    public static final ResourceLocation TEXTURE = getResourceLocation("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
+    public static final ResourceLocation TEXTURE = AcademyCraft.academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
     public static final int RING_SEGMENTS = 4;
     private static final RandomSource RAND = RandomSource.create();
     private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0);
@@ -137,7 +137,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
         tempTiltQuat.identity().rotateZ((float) (tiltNoiseZ * RING_TILT_SCALE)).rotateX((float) (tiltNoiseX * RING_TILT_SCALE));
     }
 
-    private static void renderSingleTornado(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, float effectiveTime) {
+    private static void renderSingleTornado(PoseStack poseStack, VertexConsumer vertexConsumer, float effectiveTime) {
         var tPosBase = effectiveTime * TIME_POS_BASE;
         var tWarp = effectiveTime * TIME_POS_WARP;
         var tGap = effectiveTime * TIME_GAP;
@@ -190,7 +190,8 @@ public final class StormWingEffectRenderer implements EffectRenderer {
                     poseStack.last().pose(),
                     vertexConsumer,
                     RING_SEGMENTS,
-                    CACHED_VERTICAL_VERTEX_BUFFER
+                    CACHED_VERTICAL_VERTEX_BUFFER,
+                    1, 1, 1, 1
             );
             poseStack.popPose();
 
@@ -204,7 +205,8 @@ public final class StormWingEffectRenderer implements EffectRenderer {
                 poseStack.scale(finalRadiusNested, nestedWidth, finalRadiusNested);
                 RingRenderer.renderRing(
                         poseStack.last().pose(), vertexConsumer,
-                        RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER
+                        RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER,
+                        1, 1, 1, 1
                 );
                 poseStack.popPose();
             }
@@ -214,15 +216,15 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     }
 
     @Override
-    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight, @NotNull AbstractClientPlayer livingEntity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        if (!livingEntity.getData(AttachmentTypes.ACTIVATED_STORM_WING)) return;
+    public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, PlayerRenderState renderState, float yRot, float xRot) {
+        if (IrisCompat.isShadowRendererActive() || !renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
 
         poseStack.pushPose();
         poseStack.mulPose(BASE_MATRIX);
 
         var vertexConsumer = BloomEffect.BUFFER_SOURCE.getBuffer(RENDER_TYPE);
 
-        var time = livingEntity.tickCount + partialTick;
+        var time = renderState.ageInTicks;
 
         poseStack.pushPose();
         poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));

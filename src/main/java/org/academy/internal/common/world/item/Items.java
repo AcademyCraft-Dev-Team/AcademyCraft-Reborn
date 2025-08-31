@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.item;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -11,56 +10,59 @@ import static org.academy.AcademyCraft.MODID;
 
 @SuppressWarnings("unused")
 public final class Items {
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(BuiltInRegistries.ITEM, MODID);
-    public static final DeferredHolder<Item, Item> ICON = ITEMS.register("icon", () -> new Item(new Item.Properties()));
-    public static final DeferredHolder<Item, DataTerminalItem> DATA_TERMINAL = ITEMS.register("data_terminal", DataTerminalItem::new);
-    public static final DeferredHolder<Item, CoinItem> COIN = ITEMS.register("coin", CoinItem::new);
-    public static final DeferredHolder<Item, BlockItem> WIRELESS_NODE = ITEMS.register("wireless_node",
-            () -> new BlockItem(Blocks.WIRELESS_NODE.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> WIND_GEN_BASE = ITEMS.register("wind_gen_base",
-            () -> new BlockItem(Blocks.WIND_GEN_BASE.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, MultiBlockItem> WIND_GEN_TOP = ITEMS.register("wind_gen_top",
-            () -> new MultiBlockItem(Blocks.WIND_GEN_TOP.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> WIND_GEN_PILLAR = ITEMS.register("wind_gen_pillar",
-            () -> new BlockItem(Blocks.WIND_GEN_PILLAR.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, MultiBlockItem> ABILITY_DEVELOPER = ITEMS.register("ability_developer",
-            () -> new MultiBlockItem(Blocks.ABILITY_DEVELOPER.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, Item> WIND_GEN_FAN_ITEM = ITEMS.register("wind_gen_fan",
-            () -> new Item(new Item.Properties().stacksTo(16)));
-    public static final DeferredHolder<Item, Item> IMAGIPHASE_METAL = ITEMS.register("imagiphase_metal",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_METAL_BLOCK = ITEMS.register("imagiphase_metal_block",
-            () -> new BlockItem(Blocks.IMAGIPHASE_METAL_BLOCK.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, EmptyUnitItem> EMPTY_UNIT = ITEMS.register("empty_unit",
-            EmptyUnitItem::new);
-    public static final DeferredHolder<Item, ImagiphaseUnitItem> IMAGIPHASE_UNIT = ITEMS.register("imagiphase_unit",
-            ImagiphaseUnitItem::new);
-    public static final DeferredHolder<Item, Item> WIND_GEN_BASE_SCREEN = ITEMS.register("wind_gen_base_screen",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredHolder<Item, Item> IMAGIPHASE_CIRCUIT = ITEMS.register("imagiphase_circuit",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredHolder<Item, Item> IMAGIPHASE_POLYMER = ITEMS.register("imagiphase_polymer",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredHolder<Item, Item> IMAGIPHASE_PLATE = ITEMS.register("imagiphase_plate",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredHolder<Item, ImagiphaseDowsingRodItem> IMAGIPHASE_DOWSING_ROD = ITEMS.register("imagiphase_dowsing_rod",
-            ImagiphaseDowsingRodItem::new);
-    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_VEGETATION = ITEMS.register("imagiphase_vegetation",
-            () -> new BlockItem(Blocks.IMAGIPHASE_VEGETATION.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_LEAVES = ITEMS.register("imagiphase_leaves",
-            () -> new BlockItem(Blocks.IMAGIPHASE_LEAVES.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_LOG = ITEMS.register("imagiphase_log",
-            () -> new BlockItem(Blocks.IMAGIPHASE_LOG.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_LICHEN = ITEMS.register("imagiphase_lichen",
-            () -> new BlockItem(Blocks.IMAGIPHASE_LICHEN.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> OMNI_CRAFTING_TABLE = ITEMS.register("omni_crafting_table",
-            () -> new BlockItem(Blocks.OMNI_CRAFTING_TABLE.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> CAT_ENGINE = ITEMS.register("cat_engine",
-            () -> new BlockItem(Blocks.CAT_ENGINE.get(), new Item.Properties()));
-    public static final DeferredHolder<Item, Item> IMAGIPHASE_AMETHYST = ITEMS.register("imagiphase_amethyst",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_AMETHYST_BLOCK = ITEMS.register("imagiphase_amethyst_block",
-            () -> new BlockItem(Blocks.IMAGIPHASE_AMETHYST_BLOCK.get(), new Item.Properties()));
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
+    public static final DeferredHolder<Item, Item> ICON =
+            ITEMS.registerItem("icon", Item::new);
+    public static final DeferredHolder<Item, DataTerminalItem> DATA_TERMINAL =
+            ITEMS.registerItem("data_terminal", DataTerminalItem::new);
+    public static final DeferredHolder<Item, CoinItem> COIN =
+            ITEMS.registerItem("coin", CoinItem::new);
+    public static final DeferredHolder<Item, BlockItem> WIRELESS_NODE =
+            ITEMS.registerSimpleBlockItem("wireless_node", Blocks.WIRELESS_NODE, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> WIND_GEN_BASE =
+            ITEMS.registerSimpleBlockItem("wind_gen_base", Blocks.WIND_GEN_BASE, new Item.Properties());
+    public static final DeferredHolder<Item, MultiBlockItem> WIND_GEN_TOP =
+            ITEMS.registerItem("wind_gen_top", properties -> new MultiBlockItem(Blocks.WIND_GEN_TOP.get(), properties));
+    public static final DeferredHolder<Item, BlockItem> WIND_GEN_PILLAR =
+            ITEMS.registerSimpleBlockItem("wind_gen_pillar", Blocks.WIND_GEN_PILLAR, new Item.Properties());
+    public static final DeferredHolder<Item, MultiBlockItem> ABILITY_DEVELOPER =
+            ITEMS.registerItem("ability_developer", properties -> new MultiBlockItem(Blocks.ABILITY_DEVELOPER.get(), properties));
+    public static final DeferredHolder<Item, Item> WIND_GEN_FAN_ITEM =
+            ITEMS.registerItem("wind_gen_fan", properties -> new Item(properties.stacksTo(16)));
+    public static final DeferredHolder<Item, Item> IMAGIPHASE_METAL =
+            ITEMS.registerItem("imagiphase_metal", Item::new);
+    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_METAL_BLOCK =
+            ITEMS.registerSimpleBlockItem("imagiphase_metal_block", Blocks.IMAGIPHASE_METAL_BLOCK, new Item.Properties());
+    public static final DeferredHolder<Item, EmptyUnitItem> EMPTY_UNIT =
+            ITEMS.registerItem("empty_unit", EmptyUnitItem::new);
+    public static final DeferredHolder<Item, ImagiphaseUnitItem> IMAGIPHASE_UNIT =
+            ITEMS.registerItem("imagiphase_unit", ImagiphaseUnitItem::new);
+    public static final DeferredHolder<Item, Item> WIND_GEN_BASE_SCREEN =
+            ITEMS.registerItem("wind_gen_base_screen", Item::new);
+    public static final DeferredHolder<Item, Item> IMAGIPHASE_CIRCUIT =
+            ITEMS.registerItem("imagiphase_circuit", Item::new);
+    public static final DeferredHolder<Item, Item> IMAGIPHASE_POLYMER =
+            ITEMS.registerItem("imagiphase_polymer", Item::new);
+    public static final DeferredHolder<Item, Item> IMAGIPHASE_PLATE =
+            ITEMS.registerItem("imagiphase_plate", Item::new);
+    public static final DeferredHolder<Item, ImagiphaseDowsingRodItem> IMAGIPHASE_DOWSING_ROD =
+            ITEMS.registerItem("imagiphase_dowsing_rod", ImagiphaseDowsingRodItem::new);
+    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_VEGETATION =
+            ITEMS.registerSimpleBlockItem("imagiphase_vegetation", Blocks.IMAGIPHASE_VEGETATION, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_LEAVES =
+            ITEMS.registerSimpleBlockItem("imagiphase_leaves", Blocks.IMAGIPHASE_LEAVES, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_LOG =
+            ITEMS.registerSimpleBlockItem("imagiphase_log", Blocks.IMAGIPHASE_LOG, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_LICHEN =
+            ITEMS.registerSimpleBlockItem("imagiphase_lichen", Blocks.IMAGIPHASE_LICHEN, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> OMNI_CRAFTING_TABLE =
+            ITEMS.registerSimpleBlockItem("omni_crafting_table", Blocks.OMNI_CRAFTING_TABLE, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> CAT_ENGINE =
+            ITEMS.registerSimpleBlockItem("cat_engine", Blocks.CAT_ENGINE, new Item.Properties());
+    public static final DeferredHolder<Item, Item> IMAGIPHASE_AMETHYST =
+            ITEMS.registerItem("imagiphase_amethyst", Item::new);
+    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_AMETHYST_BLOCK =
+            ITEMS.registerSimpleBlockItem("imagiphase_amethyst_block", Blocks.IMAGIPHASE_AMETHYST_BLOCK, new Item.Properties());
 
     private Items() {
     }

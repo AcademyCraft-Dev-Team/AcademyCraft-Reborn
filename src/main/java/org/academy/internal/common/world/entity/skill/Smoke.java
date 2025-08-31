@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.academy.api.common.util.MathUtil;
@@ -28,13 +29,10 @@ public class Smoke extends RenderOnlyEntity {
         super.tick();
         ticks++;
         if (ticks >= lifeTime) {
-            kill();
+            if (level() instanceof ServerLevel serverLevel) {
+                kill(serverLevel);
+            }
         }
         alpha = Math.max(0, 0.65f - (ticks / lifeTime));
-    }
-
-    @Override
-    public double getRenderRadius() {
-        return 2;
     }
 }

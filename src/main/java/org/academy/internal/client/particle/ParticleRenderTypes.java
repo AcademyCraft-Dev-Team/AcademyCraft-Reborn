@@ -33,7 +33,7 @@ public final class ParticleRenderTypes {
     public static void init() {
         AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(ParticleRenderTypes.class);
     }
-
+/*
     public static final ParticleRenderType PARTICLE_IMAG_PHASE = new ParticleRenderType() {
         @SuppressWarnings("deprecation")
         @Override
@@ -55,7 +55,7 @@ public final class ParticleRenderTypes {
         public boolean isTranslucent() {
             return false;
         }
-    };
+    };*/
 
     @SubscribePacket
     public static void handleSpawnArcMediumParticle(SpawnArcMediumParticlePacket packet) {

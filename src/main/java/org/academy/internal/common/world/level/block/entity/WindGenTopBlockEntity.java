@@ -23,6 +23,7 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
         super(BlockEntityTypes.WIND_GEN_TOP.get(), pos, blockState);
     }
 
+/*
     @Override
     protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         super.loadAdditional(tag, registries);
@@ -35,6 +36,7 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
         super.saveAdditional(tag, registries);
         ContainerHelper.saveAllItems(tag, items, registries);
     }
+*/
 
     @Override
     public int getContainerSize() {

@@ -1,8 +1,8 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
 import org.academy.api.client.gui.event.MouseEvent;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A specialized ImageButton that can be part of a RadioGroup. Only one button
@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ImageRadioButtonWidget extends ImageButtonWidget {
     protected boolean selected = false;
+    @Nullable
     protected RadioGroupWidget radioGroup = null;
 
     protected float selectedAlpha = 1.0f;
@@ -20,9 +21,8 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     protected int id = -1;
 
     public ImageRadioButtonWidget(float x, float y, float width, float height,
-                                  RenderType renderType, Runnable onPress) {
-        super(x, y, width, height, renderType, onPress);
-        this.defaultHoverEffect = false;
+                                  ResourceLocation texture, Runnable onPress) {
+        super(x, y, width, height, texture, onPress);
         this.updateVisualState();
     }
 
@@ -35,7 +35,7 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     }
 
     @Override
-    protected void onMousePressed(@NotNull MouseEvent event) {
+    protected void onMousePressed(MouseEvent event) {
         super.onMousePressed(event);
         if (event.isConsumed() && this.radioGroup != null) {
             this.radioGroup.selectButton(this);
@@ -49,7 +49,7 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     }
 
     @Override
-    public @NotNull ImageButtonWidget setEnabled(boolean enabled) {
+    public ImageButtonWidget setEnabled(boolean enabled) {
         super.setEnabled(enabled);
         this.updateVisualState();
         return this;
@@ -60,7 +60,7 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
         return this;
     }
 
-    protected ImageRadioButtonWidget setRadioGroup(RadioGroupWidget radioGroup) {
+    protected ImageRadioButtonWidget setRadioGroup(@Nullable RadioGroupWidget radioGroup) {
         this.radioGroup = radioGroup;
         return this;
     }

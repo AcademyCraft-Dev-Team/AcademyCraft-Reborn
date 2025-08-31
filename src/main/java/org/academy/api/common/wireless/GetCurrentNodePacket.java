@@ -1,8 +1,8 @@
 package org.academy.api.common.wireless;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.future.Payload;
 import org.academy.api.common.network.future.PayloadType;
@@ -10,7 +10,6 @@ import org.academy.api.common.network.future.RequestPayload;
 import org.academy.api.common.network.future.ResponsePayload;
 import org.academy.internal.common.network.future.PayloadTypes;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class GetCurrentNodePacket extends RequestPayload<ServerGamePacketListenerImpl, GetCurrentNodePacket.Response> {
     public BlockPos userPos;
@@ -44,11 +43,11 @@ public class GetCurrentNodePacket extends RequestPayload<ServerGamePacketListene
         return PayloadTypes.GET_CURRENT_NODE.get();
     }
 
-    public static class Response extends ResponsePayload<ClientPacketListener> {
+    public static class Response extends ResponsePayload<ClientGamePacketListener> {
         public boolean isNull;
         public String nodeName;
 
-        public Response(ClientPacketListener packetListener) {
+        public Response(ClientGamePacketListener packetListener) {
             super(packetListener);
         }
 
@@ -70,7 +69,7 @@ public class GetCurrentNodePacket extends RequestPayload<ServerGamePacketListene
         }
 
         @Override
-        public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+        public @NotNull PayloadType<ClientGamePacketListener, ? extends Payload<ClientGamePacketListener>> getPayloadType() {
             return PayloadTypes.GET_CURRENT_NODE_RESPONSE.get();
         }
     }

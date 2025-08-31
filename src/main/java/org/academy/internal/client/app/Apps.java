@@ -1,24 +1,23 @@
 package org.academy.internal.client.app;
 
-import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.hud.DataTerminalHUD;
+import org.academy.api.client.hud.terminal.App;
+import org.academy.api.client.hud.terminal.AppManager;
+import org.academy.api.client.hud.terminal.apps.SettingsApp;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class Apps {
-    public static final List<DataTerminalHUD.App> APPS = new ArrayList<>();
+    public static final List<App> APPS = new ArrayList<>();
 
     static {
-        APPS.add(Settings.INSTANCE);
-        APPS.add(MediaPlayer.INSTANCE);
+        APPS.add(SettingsApp.INSTANCE);
     }
 
     public static void register() {
         for (var app : APPS) {
-            DataTerminalHUD.registerApp(app);
+            AppManager.registerApp(app);
         }
-        NeoForge.EVENT_BUS.register(Settings.class);
     }
 
     private Apps() {
