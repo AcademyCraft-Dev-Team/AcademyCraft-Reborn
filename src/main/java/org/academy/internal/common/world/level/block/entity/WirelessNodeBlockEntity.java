@@ -171,7 +171,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         if (!simulate) setEnergyStored(getEnergyStored() + energyToReceive);
         return energyToReceive;
     }
-
+/*
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         super.saveAdditional(tag, registries);
@@ -192,7 +192,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         maxConnectedUsers = tag.getInt("max_connected_users");
         radius = tag.getInt("radius");
         this.cachedConfig = null;
-    }
+    }*/
 
     @Override
     public int getContainerSize() {

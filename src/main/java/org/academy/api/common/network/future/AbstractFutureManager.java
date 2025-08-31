@@ -47,7 +47,7 @@ public abstract class AbstractFutureManager {
         return futureId;
     }
 
-    @SuppressWarnings({"unchecked", "DuplicatedCode"})
+    @SuppressWarnings({"unchecked"})
     public void registerPayloadHandler(Object owner) {
         var clazz = owner.getClass();
         if (owner instanceof Class) {
@@ -153,7 +153,7 @@ public abstract class AbstractFutureManager {
     }
 
     private void cleanupTimedOutFutures() {
-        long now = System.currentTimeMillis();
+        var now = System.currentTimeMillis();
         pendingFutures.forEach((id, info) -> {
             if (now > info.expireTime()) {
                 AcademyCraft.LOGGER.warn("Future {} timed out.", id);

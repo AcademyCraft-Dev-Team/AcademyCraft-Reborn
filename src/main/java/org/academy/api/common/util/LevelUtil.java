@@ -6,7 +6,6 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -198,11 +197,11 @@ public class LevelUtil {
         var hitSet = new HashSet<Entity>();
 
         for (var entity : candidates) {
-            processEntityForAttack(entity, start, end, radius, damageSource, damage, hitSet);
+            processEntityForAttack(serverLevel, entity, start, end, radius, damageSource, damage, hitSet);
         }
     }
 
-    private static void processEntityForAttack(Entity entity, Vec3 start, Vec3 end, float radius,
+    private static void processEntityForAttack(ServerLevel serverLevel, Entity entity, Vec3 start, Vec3 end, float radius,
                                                DamageSource damageSource, float damage, Set<Entity> hitSet) {
         if (hitSet.contains(entity)) return;
 
@@ -212,11 +211,7 @@ public class LevelUtil {
         var effectiveRadius = radius + entity.getBbWidth() / 2.0;
 
         if (distSq <= effectiveRadius * effectiveRadius) {
-            if (entity instanceof EnderDragon) {
-                ((EnderDragon) entity).reallyHurt(damageSource, damage);
-            } else {
-                entity.hurt(damageSource, damage);
-            }
+            entity.hurtServer(serverLevel, damageSource, damage);
             hitSet.add(entity);
         }
     }

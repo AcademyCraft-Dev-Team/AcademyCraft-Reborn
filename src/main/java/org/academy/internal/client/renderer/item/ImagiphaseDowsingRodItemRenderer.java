@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.renderer.item;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -14,7 +15,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.renderer.ItemRenderer;
 import org.academy.api.client.resource.TextureResources;
 import org.academy.internal.client.model.ImagiphaseDowsingRodModel;
 import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
@@ -30,7 +30,7 @@ public class ImagiphaseDowsingRodItemRenderer implements ItemRenderer {
     public static final ItemRenderer INSTANCE = new ImagiphaseDowsingRodItemRenderer();
     public static final RenderType CUBE_MAP = RenderType.create(
             "cube_map",
-            DefaultVertexFormat.POSITION_COLOR,
+            DefaultVertexFormat.POS_COLOR,
             VertexFormat.Mode.QUADS,
             256,
             false,
@@ -182,4 +182,4 @@ public class ImagiphaseDowsingRodItemRenderer implements ItemRenderer {
 
         poseStack.popPose();
     }
-}
+}*/

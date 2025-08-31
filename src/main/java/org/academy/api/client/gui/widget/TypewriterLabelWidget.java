@@ -1,58 +1,59 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.NotNull;
+import org.academy.api.client.gui.animation.ValueAnimator;
 
 public class TypewriterLabelWidget extends AbstractAnimatedLabelWidget {
-    private Component targetComponent;
     private float charactersPerSecond = 100.0f;
     private int lastRenderedLength = -1;
 
-    public TypewriterLabelWidget(@NotNull String fullText, float x, float y) {
+    public TypewriterLabelWidget(String fullText, float x, float y) {
         this(Component.literal(fullText), x, y);
     }
 
-    public TypewriterLabelWidget(@NotNull Component targetComponent, float x, float y) {
-        super("", x, y);
-        this.targetComponent = targetComponent;
+    public TypewriterLabelWidget(Component targetComponent, float x, float y) {
+        super(targetComponent, x, y);
     }
 
     @Override
-    protected void updateAnimation(float deltaTime) {
-        this.animationStep += this.charactersPerSecond * deltaTime;
-
-        int currentLength = Math.min((int) Math.floor(this.animationStep), this.getTotalAnimationSteps());
-        this.updateTextForStep(currentLength);
-        this.checkAnimationCompletion(currentLength);
-    }
-
-    @Override
-    protected int getTotalAnimationSteps() {
-        return this.targetComponent.getString().length();
-    }
-
-    @Override
-    protected void updateTextForStep(int length) {
-        if (length == this.lastRenderedLength) {
+    protected void onAnimationUpdate(ValueAnimator animator) {
+        var fullTextString = targetComponent.getString();
+        if (fullTextString.isEmpty()) {
+            setAnimationProgressText(Component.empty());
             return;
         }
-        this.lastRenderedLength = length;
 
-        var fullTextString = this.targetComponent.getString();
-        var currentTextSlice = fullTextString.substring(0, Math.max(0, length));
-        var animatedComponent = Component.literal(currentTextSlice).setStyle(this.targetComponent.getStyle());
+        var fraction = animator.getAnimatedValue();
+        int currentLength = (int) Math.floor(fraction * fullTextString.length());
+        currentLength = Math.min(currentLength, fullTextString.length());
 
-        super.setText(animatedComponent);
+        if (currentLength == lastRenderedLength)
+            return;
+
+        lastRenderedLength = currentLength;
+
+        var currentTextSlice = fullTextString.substring(0, currentLength);
+        var animatedComponent = Component.literal(currentTextSlice).setStyle(targetComponent.getStyle());
+        setAnimationProgressText(animatedComponent);
     }
 
-    @NotNull
-    public TypewriterLabelWidget setTargetComponent(@NotNull Component component) {
-        this.targetComponent = component;
-        this.resetAnimation();
-        return this;
+    @Override
+    public void animateText(Component newTarget) {
+        lastRenderedLength = -1;
+        var textLength = newTarget.getString().length();
+        if (textLength > 0 && charactersPerSecond > 0.0f) {
+            long newDuration = (long) (textLength / charactersPerSecond * 1000.0f);
+            setDuration(newDuration);
+        } else {
+            setDuration(0);
+        }
+        super.animateText(newTarget);
     }
 
-    @NotNull
+    public void startAnimation() {
+        animateText(targetComponent);
+    }
+
     public TypewriterLabelWidget setCharactersPerSecond(float charactersPerSecond) {
         this.charactersPerSecond = charactersPerSecond;
         return this;

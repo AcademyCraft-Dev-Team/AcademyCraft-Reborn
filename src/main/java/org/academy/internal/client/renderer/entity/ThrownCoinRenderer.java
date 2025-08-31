@@ -5,47 +5,51 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.RandomSource;
-import org.academy.api.client.renderer.BakedModelRenderer;
+import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
+import org.academy.internal.client.renderer.entity.state.ThrownCoinRenderState;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
-import org.jetbrains.annotations.NotNull;
+import org.academy.internal.common.world.item.Items;
 import org.joml.Matrix4f;
 
-public class ThrownCoinRenderer extends ThrownItemRenderer<ThrownCoin> {
+public class ThrownCoinRenderer extends EntityRenderer<ThrownCoin, ThrownCoinRenderState> {
     public ThrownCoinRenderer(EntityRendererProvider.Context context) {
-        super(context, 1.0f, false);
+        super(context);
     }
 
     @Override
-    public void render(ThrownCoin entity, float entityYaw, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
-        poseStack.pushPose();
-        var itemStack = entity.getItem();
-        var minecraft = Minecraft.getInstance();
-        var bakedModel = minecraft.getItemRenderer().getItemModelShaper().getItemModel(itemStack);
-        var randomSource = RandomSource.create();
-        entity.renderAngle = MathUtil.lerpStartEndFactor(entity.renderAngle, entity.angle, ClientUtil.animationFactor(1));
-        bakedModel.getTransforms().ground.apply(false, poseStack);
-        poseStack.mulPose(Axis.YP.rotationDegrees(entityYaw));
-        var matrix4f = new Matrix4f();
+    public void render(ThrownCoinRenderState renderState, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+        if (renderState.thrownCoin != null) {
+            poseStack.pushPose();
+            var matrix4f = new Matrix4f();
+            renderState.thrownCoin.renderAngle = MathUtil.lerpStartEndFactor(renderState.thrownCoin.renderAngle, renderState.thrownCoin.angle, ClientUtil.animationFactor(1));
+            poseStack.mulPose(Axis.YP.rotationDegrees(renderState.thrownCoin.getYRot()));
 
-        var x = 0.5f;
-        var y = 0.5f;
-        var z = 0.5f;
-        
-        matrix4f.rotateX(entity.renderAngle);
-        matrix4f.translate(-x, -y, -z);
-        poseStack.mulPose(matrix4f);
-        BakedModelRenderer.render(poseStack, bakedModel, buffer, randomSource, false, packedLight, OverlayTexture.NO_OVERLAY);
-        poseStack.popPose();
+            matrix4f.rotateX(renderState.thrownCoin.renderAngle);
+            matrix4f.translate(0, -0.125f, 0);
+            poseStack.mulPose(matrix4f);
+            Minecraft.getInstance().getItemRenderer().renderStatic(Items.COIN.get().getDefaultInstance(), ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+            poseStack.popPose();
+        }
     }
 
     @Override
-    public boolean shouldRender(@NotNull ThrownCoin livingEntity, @NotNull Frustum camera, double camX, double camY, double camZ) {
+    public ThrownCoinRenderState createRenderState() {
+        return new ThrownCoinRenderState();
+    }
+
+    @Override
+    public void extractRenderState(ThrownCoin entity, ThrownCoinRenderState reusedState, float partialTick) {
+        super.extractRenderState(entity, reusedState, partialTick);
+        reusedState.thrownCoin = entity;
+    }
+
+    @Override
+    public boolean shouldRender(ThrownCoin livingEntity, Frustum camera, double camX, double camY, double camZ) {
         return livingEntity.getDeltaMovement().length() < 2;
     }
 }

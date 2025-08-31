@@ -1,9 +1,9 @@
 package org.academy.api.server.network.future;
 
 import io.netty.buffer.Unpooled;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.PacketListener;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.SubscribePacket;
@@ -30,7 +30,7 @@ public class FutureManagerServer extends AbstractFutureManager {
         var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
         requestPayload.write(payloadBuffer);
 
-        var packet = new FutureRequestPacket<ClientPacketListener>(futureId, requestTypeId, payloadBuffer);
+        var packet = new FutureRequestPacket<ClientGamePacketListener>(futureId, requestTypeId, payloadBuffer);
         player.connection.send(new S2CPacket(packet));
     }
 
@@ -48,15 +48,17 @@ public class FutureManagerServer extends AbstractFutureManager {
             var responseTypeId = FutureManager.getPayloadType(response.getClass()).getPayloadId();
             var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
             response.write(responseBuffer);
-            var responsePkt = new FutureResponsePacket<ClientPacketListener>(requestPacket.futureId, responseTypeId, responseBuffer);
+            var responsePkt = new FutureResponsePacket<ClientGamePacketListener>(requestPacket.futureId, responseTypeId, responseBuffer);
             player.connection.send(new S2CPacket(responsePkt));
         });
     }
 
     @SubscribePacket
     public void handleFutureResponseFromClient(FutureResponsePacket<ServerGamePacketListenerImpl> responsePacket) {
-        var player = responsePacket.getPacketListener().getPlayer();
-
-        handleResponse(responsePacket, payload -> player.server.execute(() -> executeCallback(responsePacket.futureId, payload)));
+        handleResponse(responsePacket, payload ->
+                responsePacket.getPacketListener().server.execute(
+                        () -> executeCallback(responsePacket.futureId, payload)
+                )
+        );
     }
 }

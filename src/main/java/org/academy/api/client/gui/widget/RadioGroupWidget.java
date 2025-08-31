@@ -15,7 +15,9 @@ import java.util.function.Consumer;
  * as a child of this widget, and then add the buttons to that layout container.
  */
 public class RadioGroupWidget extends AbstractContainerWidget {
+    @Nullable
     private ImageRadioButtonWidget selectedButton = null;
+    @Nullable
     private Consumer<ImageRadioButtonWidget> onSelectionChanged = null;
     private boolean allowReselect = false;
 
@@ -29,13 +31,6 @@ public class RadioGroupWidget extends AbstractContainerWidget {
         }
 
         this.internalSelect(buttonToSelect, true);
-    }
-
-    public void selectButtonByName(String name) {
-        var widget = this.getChildUnSafe(name);
-        if (widget instanceof ImageRadioButtonWidget radioButton) {
-            this.selectButton(radioButton);
-        }
     }
 
     private void internalSelect(@Nullable ImageRadioButtonWidget buttonToSelect, boolean triggerCallback) {

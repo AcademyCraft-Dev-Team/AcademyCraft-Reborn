@@ -3,6 +3,7 @@ package org.academy.internal.common.world.level.material;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.BlockGetter;
@@ -25,7 +26,7 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class ImagiphasePlasma extends FlowingFluid {
-    public static final ResourceLocation TEXTURE = AcademyCraft.getResourceLocation("block/black");
+    public static final ResourceLocation TEXTURE = AcademyCraft.academy("block/black");
     public static FluidType FLUID_TYPE = new FluidType(
             FluidType.Properties.create()
                     .canSwim(false)
@@ -70,7 +71,7 @@ public abstract class ImagiphasePlasma extends FlowingFluid {
     }
 
     @Override
-    protected boolean canConvertToSource(@NotNull Level level) {
+    protected boolean canConvertToSource(@NotNull ServerLevel level) {
         return false;
     }
 

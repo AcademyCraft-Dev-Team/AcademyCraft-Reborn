@@ -1,7 +1,8 @@
 package org.academy.api.common.attachment;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.academy.api.common.network.FBBDeserializers;
@@ -19,11 +20,11 @@ import static net.neoforged.neoforge.registries.NeoForgeRegistries.ATTACHMENT_TY
  * SubscribePacket is not needed.
  */
 @PacketTarget(ThreadType.CLIENT)
-public final class AttachmentDataSyncPacket<T> extends Packet<ClientPacketListener> {
+public final class AttachmentDataSyncPacket<T> extends Packet<ClientGamePacketListener> {
     private Entity entity;
     private AttachmentType<T> type;
 
-    public AttachmentDataSyncPacket(ClientPacketListener clientPacketListener) {
+    public AttachmentDataSyncPacket(ClientGamePacketListener clientPacketListener) {
         super(clientPacketListener);
     }
 
@@ -37,7 +38,7 @@ public final class AttachmentDataSyncPacket<T> extends Packet<ClientPacketListen
     @Override
     public void read(@NotNull FriendlyByteBuf buf) {
         var id = buf.readInt();
-        entity = getPacketListener().getLevel().getEntity(id);
+        entity = Minecraft.getInstance().level.getEntity(id);
         var typeId = buf.readInt();
         type = (AttachmentType<T>) ATTACHMENT_TYPES.byIdOrThrow(typeId);
         var deserializerId = buf.readInt();
@@ -57,7 +58,7 @@ public final class AttachmentDataSyncPacket<T> extends Packet<ClientPacketListen
     }
 
     @Override
-    public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
+    public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
         return PacketTypes.ATTACHMENT_DATA_SYNC.get();
     }
 }

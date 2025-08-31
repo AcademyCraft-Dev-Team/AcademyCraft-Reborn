@@ -1,12 +1,14 @@
 package org.academy.internal.common.world.entity;
 
 
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class RenderOnlyEntity extends Entity {
@@ -25,14 +27,6 @@ public abstract class RenderOnlyEntity extends Entity {
     }
 
     @Override
-    protected void readAdditionalSaveData(@NotNull CompoundTag compoundTag) {
-    }
-
-    @Override
-    protected void addAdditionalSaveData(@NotNull CompoundTag compoundTag) {
-    }
-
-    @Override
     protected void doWaterSplashEffect() {
     }
 
@@ -47,11 +41,15 @@ public abstract class RenderOnlyEntity extends Entity {
     }
 
     @Override
-    public @NotNull AABB getBoundingBoxForCulling() {
-        var pos = this.position();
-        var radius = getRenderRadius();
-        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
+    public boolean hurtServer(@NotNull ServerLevel level, @NotNull DamageSource damageSource, float amount) {
+        return false;
     }
 
-    public abstract double getRenderRadius();
+    @Override
+    protected void readAdditionalSaveData(@NotNull ValueInput input) {
+    }
+
+    @Override
+    protected void addAdditionalSaveData(@NotNull ValueOutput output) {
+    }
 }

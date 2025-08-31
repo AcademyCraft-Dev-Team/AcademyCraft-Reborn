@@ -1,7 +1,0 @@
-{
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "particle": "academy:block/cat_engine"
-  },
-  "render_type": "translucent"
-}

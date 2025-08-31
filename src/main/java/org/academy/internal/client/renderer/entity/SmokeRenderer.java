@@ -7,46 +7,34 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.inventory.InventoryMenu;
+import org.academy.AcademyCraft;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.api.common.util.MathUtil;
+import org.academy.internal.client.renderer.entity.state.SmokeRenderState;
 import org.academy.internal.common.world.entity.skill.Smoke;
-import org.jetbrains.annotations.NotNull;
 
-import static org.academy.AcademyCraft.getResourceLocation;
-
-public class SmokeRenderer extends EntityRenderer<Smoke> {
-    public static final ResourceLocation TEXTURE = getResourceLocation("textures/ability/generic/effect/smokes.png");
-
-    public SmokeRenderer(EntityRendererProvider.Context context) {
-        super(context);
-    }
+public class SmokeRenderer extends EntityRenderer<Smoke, SmokeRenderState> {
+    public static final ResourceLocation TEXTURE = AcademyCraft.academy("textures/ability/generic/effect/smokes.png");
 
     @Override
-    public void render(@NotNull Smoke entity, float entityYaw, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource buffer, int packedLight) {
+    public void render(SmokeRenderState renderState, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
         poseStack.pushPose();
-        entity.renderCount++;
-        entity.renderAlpha = MathUtil.lerpStartEndFactor(entity.renderAlpha, entity.alpha, ClientUtil.animationFactor(MathUtil.PI / 2));
+        renderState.renderCount++;
+        renderState.renderAlpha = MathUtil.lerpStartEndFactor(renderState.renderAlpha, renderState.alpha, ClientUtil.animationFactor(MathUtil.PI / 2));
 
         var size = 0.5f;
         var halfSize = 1f;
         var r = 1f;
         var g = 1f;
         var b = 1f;
-        var a = entity.renderAlpha;
+        var a = renderState.renderAlpha;
 
         poseStack.mulPose(entityRenderDispatcher.cameraOrientation());
         var matrix = poseStack.last().pose();
 
-        var shaderPackInUse = RenderUtil.IS_SHADER_PACK_IN_USE.get();
-        var vertexConsumer = buffer.getBuffer(
-                shaderPackInUse
-                        ? RenderType.eyes(TEXTURE)
-                        : RenderUtil.getPositionColorTexRenderType("smoke", TEXTURE, true)
-        );
+        var vertexConsumer = bufferSource.getBuffer(RenderType.eyes(TEXTURE));
 
-        var frame = Math.max(0, Math.min(entity.frame, 3));
+        var frame = Math.max(0, Math.min(renderState.frame, 3));
         var col = frame % 2;
         var row = frame / 2;
 
@@ -63,9 +51,12 @@ public class SmokeRenderer extends EntityRenderer<Smoke> {
         poseStack.popPose();
     }
 
-
     @Override
-    public @NotNull ResourceLocation getTextureLocation(@NotNull Smoke entity) {
-        return InventoryMenu.BLOCK_ATLAS;
+    public SmokeRenderState createRenderState() {
+        return new SmokeRenderState();
+    }
+
+    public SmokeRenderer(EntityRendererProvider.Context context) {
+        super(context);
     }
 }

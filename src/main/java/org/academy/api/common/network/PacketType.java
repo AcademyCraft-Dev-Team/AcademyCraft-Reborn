@@ -8,7 +8,7 @@ import java.util.function.Function;
 
 public final class PacketType<L extends PacketListener, P extends Packet<L>> {
     private final Class<P> packetClass;
-    private final Function<L, P> factory;
+    private final Function<? extends PacketListener, P> factory;
 
     public PacketType(Class<P> packetClass, Function<L, P> factory) {
         this.packetClass = packetClass;
@@ -19,8 +19,9 @@ public final class PacketType<L extends PacketListener, P extends Packet<L>> {
         return packetClass;
     }
 
-    public Function<L, P> getFactory() {
-        return factory;
+    @SuppressWarnings("unchecked")
+    public <T extends PacketListener> Function<T, P> getFactory() {
+        return (Function<T, P>) factory;
     }
 
     public int getPacketId() {

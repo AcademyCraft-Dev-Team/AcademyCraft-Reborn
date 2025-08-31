@@ -1,7 +1,6 @@
 package org.academy.api.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -24,12 +23,10 @@ public final class MatrixStack {
         return this;
     }
 
-    @NotNull
     public Matrix4f lastMatrix() {
         return matrixStack.getLast();
     }
 
-    @NotNull
     public Matrix3f lastNormal() {
         return normalStack.getLast();
     }
@@ -58,14 +55,14 @@ public final class MatrixStack {
         if (x == y && y == z) {
             return this;
         }
-        float invX = 1.0f / x;
-        float invY = 1.0f / y;
-        float invZ = 1.0f / z;
+        var invX = 1.0f / x;
+        var invY = 1.0f / y;
+        var invZ = 1.0f / z;
         lastNormal().scale(invX, invY, invZ);
         return this;
     }
 
-    public MatrixStack mulPose(@NotNull Quaternionf quaternion) {
+    public MatrixStack mulPose(Quaternionf quaternion) {
         lastMatrix().rotate(quaternion);
         lastNormal().rotate(quaternion);
         return this;

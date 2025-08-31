@@ -1,13 +1,13 @@
 package org.academy.api.client.gui.framework;
 
 import org.academy.api.client.gui.event.*;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractWidget implements Widget {
     protected float x, y, z, width, height;
     protected boolean visible = true;
     protected boolean enabled = true;
+    @Nullable
     protected WidgetContainer parent = null;
     protected boolean hovered = false;
     protected boolean focused = false;
@@ -25,7 +25,11 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void dispatchEvent(@NotNull InputEvent event) {
+    public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+    }
+
+    @Override
+    public void dispatchEvent(InputEvent event) {
         if (!isAbsoluteEnabled() || !isVisible()) {
             return;
         }
@@ -42,43 +46,43 @@ public abstract class AbstractWidget implements Widget {
         }
     }
 
-    protected void onMousePressed(@NotNull MouseEvent event) {
+    protected void onMousePressed(MouseEvent event) {
         if (isClickable() && isMouseOver(event.getX(), event.getY())) {
             event.consume();
         }
     }
 
-    protected void onMouseReleased(@NotNull MouseEvent event) {
+    protected void onMouseReleased(MouseEvent event) {
         if (isMouseOver(event.getX(), event.getY())) {
             event.consume();
         }
     }
 
-    protected void onMouseMoved(@NotNull MouseEvent event) {
+    protected void onMouseMoved(MouseEvent event) {
     }
 
-    protected void onMouseScrolled(@NotNull ScrollEvent event) {
+    protected void onMouseScrolled(ScrollEvent event) {
     }
 
-    protected void onMouseDragged(@NotNull MouseEvent event) {
+    protected void onMouseDragged(MouseEvent event) {
     }
 
-    protected void onKeyPressed(@NotNull KeyEvent event) {
+    protected void onKeyPressed(KeyEvent event) {
     }
 
-    protected void onKeyReleased(@NotNull KeyEvent event) {
+    protected void onKeyReleased(KeyEvent event) {
     }
 
-    protected void onCharTyped(@NotNull CharTypedEvent event) {
+    protected void onCharTyped(CharTypedEvent event) {
     }
 
     @Override
-    public @NotNull String getName() {
+    public String getName() {
         return name;
     }
 
     @Override
-    public @NotNull Widget setName(String name) {
+    public Widget setName(String name) {
         this.name = name;
         return this;
     }
@@ -87,62 +91,75 @@ public abstract class AbstractWidget implements Widget {
     public float getX() {
         return x;
     }
+
     @Override
     public float getY() {
         return y;
     }
+
     @Override
     public float getZ() {
         return z;
     }
+
     @Override
     public float getWidth() {
         return width;
     }
+
     @Override
     public float getHeight() {
         return height;
     }
+
     @Override
-    public @NotNull Widget setX(float x) {
+    public Widget setX(float x) {
         this.x = x;
         return this;
     }
+
     @Override
-    public @NotNull Widget setY(float y) {
+    public Widget setY(float y) {
         this.y = y;
         return this;
     }
+
     @Override
-    public @NotNull Widget setZ(float z) {
+    public Widget setZ(float z) {
         this.z = z;
         return this;
     }
+
     @Override
-    public @NotNull Widget setWidth(float width) {
+    public Widget setWidth(float width) {
         this.width = width;
         return this;
     }
+
     @Override
-    public @NotNull Widget setHeight(float height) {
+    public Widget setHeight(float height) {
         this.height = height;
         return this;
     }
+
     @Override
     public boolean isVisible() {
         return visible;
     }
+
     @Override
-    public @NotNull Widget setVisible(boolean visible) {
+    public Widget setVisible(boolean visible) {
         this.visible = visible;
         return this;
     }
+
     @Override
     public boolean isEnabled() {
         return enabled;
     }
+
     @Override
-    public @NotNull Widget setEnabled(boolean enabled) {
+    public Widget setEnabled(boolean enabled) {
         this.enabled = enabled;
         return this;
     }
@@ -151,18 +168,20 @@ public abstract class AbstractWidget implements Widget {
     public @Nullable WidgetContainer getParent() {
         return parent;
     }
+
     @Override
-    public @NotNull Widget setParent(@Nullable WidgetContainer parent) {
+    public Widget setParent(@Nullable WidgetContainer parent) {
         this.parent = parent;
         return this;
     }
+
     @Override
     public boolean isFocused() {
         return focused;
     }
 
     @Override
-    public @NotNull Widget setFocused(boolean focused) {
+    public Widget setFocused(boolean focused) {
         if (this.focused != focused && canFocus()) {
             this.focused = focused;
             if (focused) onFocusGained();
@@ -170,11 +189,13 @@ public abstract class AbstractWidget implements Widget {
         }
         return this;
     }
+
     @Override
     public boolean isHovered() {
         return hovered;
     }
 
+    @Override
     public void setHovered(boolean hovered) {
         this.hovered = hovered;
     }
@@ -183,11 +204,13 @@ public abstract class AbstractWidget implements Widget {
     public float getAlpha() {
         return alpha;
     }
+
     @Override
-    public @NotNull Widget setAlpha(float alpha) {
+    public Widget setAlpha(float alpha) {
         this.alpha = alpha;
         return this;
     }
+
     @Override
     public float getScrollX() {
         return scrollX;
@@ -216,7 +239,7 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public @NotNull Widget setClickable(boolean clickable) {
+    public Widget setClickable(boolean clickable) {
         this.clickable = clickable;
         return this;
     }
@@ -277,6 +300,7 @@ public abstract class AbstractWidget implements Widget {
     public boolean canFocus() {
         return false;
     }
+
     @Override
     public void onFocusGained() {
     }

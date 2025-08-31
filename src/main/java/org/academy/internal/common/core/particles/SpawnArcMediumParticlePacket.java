@@ -1,7 +1,7 @@
 package org.academy.internal.common.core.particles;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.Packet;
@@ -10,15 +10,15 @@ import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
-public class SpawnArcMediumParticlePacket extends Packet<ClientPacketListener> {
+public class SpawnArcMediumParticlePacket extends Packet<ClientGamePacketListener> {
     private double x;
     private double y;
     private double z;
     private float yaw;
     private float pitch;
 
-    public SpawnArcMediumParticlePacket(ClientPacketListener clientPacketListener) {
-        super(clientPacketListener);
+    public SpawnArcMediumParticlePacket(ClientGamePacketListener ClientGamePacketListener) {
+        super(ClientGamePacketListener);
     }
 
     public SpawnArcMediumParticlePacket(double x, double y, double z, float yaw, float pitch) {
@@ -69,7 +69,7 @@ public class SpawnArcMediumParticlePacket extends Packet<ClientPacketListener> {
     }
 
     @Override
-    public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
+    public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
         return PacketTypes.SPAWN_ARC_MEDIUM_PARTICLE.get();
     }
 }

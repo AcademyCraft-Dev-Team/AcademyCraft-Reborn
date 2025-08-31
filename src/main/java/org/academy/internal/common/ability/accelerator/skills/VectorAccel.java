@@ -67,11 +67,7 @@ public final class VectorAccel extends Skill {
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
-        if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.Config();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, Client.CONFIG);
-        }
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
                 new InputSystem.InputPair(
@@ -97,7 +93,7 @@ public final class VectorAccel extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -225,7 +221,7 @@ public final class VectorAccel extends Skill {
                     }
 
                     var searchBox = playerBox.move(nextPos.subtract(currentPos)).inflate(1.0);
-                    var entityHit = ProjectileUtil.getEntityHitResult(level, player, currentPos, nextPos, searchBox, e -> !e.isSpectator() && e.isPickable() && !e.is(player));
+                    var entityHit = ProjectileUtil.getEntityHitResult(level, player, currentPos, nextPos, searchBox, e -> !e.isSpectator() && e.isPickable() && !e.is(player), 0.3f);
 
                     if (entityHit != null) {
                         lastHitResult = entityHit;
@@ -314,7 +310,7 @@ public final class VectorAccel extends Skill {
 
                 if (lastHitResult instanceof BlockHitResult blockHitResult) {
                     var hitPos = blockHitResult.getLocation();
-                    var normal = Vec3.atLowerCornerOf(blockHitResult.getDirection().getNormal());
+                    var normal = Vec3.atLowerCornerOf(blockHitResult.getDirection().getUnitVec3i());
 
                     var lerpFactor = ClientUtil.animationFactor(1.5f);
                     final float ringRadius = 0.4f;

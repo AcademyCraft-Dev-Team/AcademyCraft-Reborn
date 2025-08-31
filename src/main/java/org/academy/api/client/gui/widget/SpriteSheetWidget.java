@@ -1,13 +1,8 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
 import org.academy.api.client.gui.framework.Orientation;
-import org.jetbrains.annotations.NotNull;
 
-/**
- * A specialized ImageWidget that displays a single frame from a larger texture atlas (a sprite sheet).
- * It calculates the appropriate texture coordinates (UVs) based on a frame index and the sheet's layout.
- */
 public class SpriteSheetWidget extends ImageWidget {
     protected final int sheetWidth;
     protected final int sheetHeight;
@@ -18,14 +13,19 @@ public class SpriteSheetWidget extends ImageWidget {
     protected final Orientation orientation;
 
     public SpriteSheetWidget(
-            float x, float y, float width, float height,
-            @NotNull RenderType renderType,
-            @NotNull Orientation orientation,
-            int sheetWidth, int sheetHeight,
-            int frameWidth, int frameHeight,
+            float x,
+            float y,
+            float width,
+            float height,
+            ResourceLocation texture,
+            Orientation orientation,
+            int sheetWidth,
+            int sheetHeight,
+            int frameWidth,
+            int frameHeight,
             int frameCount
     ) {
-        super(x, y, width, height, renderType);
+        super(x, y, width, height, texture);
         this.orientation = orientation;
         this.sheetWidth = sheetWidth;
         this.sheetHeight = sheetHeight;
@@ -40,11 +40,6 @@ public class SpriteSheetWidget extends ImageWidget {
         return this.currentFrame;
     }
 
-    /**
-     * Sets the currently displayed frame by its index.
-     * @param index The zero-based index of the frame to display.
-     * @throws IllegalArgumentException if the index is out of the valid range (0 to frameCount - 1).
-     */
     public void setFrameIndex(int index) {
         if (index < 0 || index >= this.frameCount) {
             throw new IllegalArgumentException("Frame index " + index + " is out of bounds for frame count " + this.frameCount);

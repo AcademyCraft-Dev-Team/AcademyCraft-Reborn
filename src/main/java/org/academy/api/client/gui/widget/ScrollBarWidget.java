@@ -1,11 +1,10 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.util.ARGB;
+import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.framework.Orientation;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.util.RenderUtil;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.academy.api.common.util.MathUtil;
-import org.jetbrains.annotations.NotNull;
 
 public class ScrollBarWidget extends DragBarWidget {
     protected final ScrollPanelWidget panel;
@@ -16,62 +15,87 @@ public class ScrollBarWidget extends DragBarWidget {
     }
 
     @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!this.isVisible()) return;
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible()) return;
 
-        stack.pushPose();
+        var finalAlpha = getAbsoluteAlpha() * context.getAccumulatedAlpha();
 
-        if (this.showBackground) {
-            int finalTrackColor = RenderUtil.applyAlpha(this.getTrackColor(), this.getAbsoluteAlpha());
-            RenderUtil.fill(stack, bufferSource, 0, 0, this.getWidth(), this.getHeight(), finalTrackColor);
-        }
+        context.pose().pushPose();
+        context.pose().translate(getX(), getY(), getZ());
 
-        var thumbStart = this.getThumbPosition();
-        var thumbSize = this.getThumbSize();
-        int finalThumbColor = RenderUtil.applyAlpha(this.getThumbColor(), this.getAbsoluteAlpha());
+        if (showBackground) renderTrack(context, finalAlpha);
 
-        stack.translate(0, 0, 1);
-        if (this.orientation == Orientation.HORIZONTAL) {
-            RenderUtil.fill(stack, bufferSource, thumbStart, 0, thumbSize, this.getHeight(), finalThumbColor);
+        renderThumb(context, finalAlpha);
+
+        context.pose().popPose();
+    }
+
+    private void renderTrack(WidgetRenderContext context, float finalAlpha) {
+        var trackAlpha = ARGB.alpha(trackColor) / 255.0f * finalAlpha;
+        var r = ARGB.red(trackColor) / 255.0f;
+        var g = ARGB.green(trackColor) / 255.0f;
+        var b = ARGB.blue(trackColor) / 255.0f;
+        var trackCommand = new FillRectDrawCommand(getWidth(), getHeight(), r, g, b, trackAlpha);
+        context.submit(trackCommand);
+    }
+
+    private void renderThumb(WidgetRenderContext context, float finalAlpha) {
+        var thumbStart = getThumbPosition();
+        var thumbSize = getThumbSize();
+
+        var thumbAlpha = ARGB.alpha(thumbColor) / 255.0f * finalAlpha;
+        var r = ARGB.red(thumbColor) / 255.0f;
+        var g = ARGB.green(thumbColor) / 255.0f;
+        var b = ARGB.blue(thumbColor) / 255.0f;
+
+        context.pose().pushPose();
+        context.pose().translate(0.0f, 0.0f, 0.1f);
+
+        if (orientation == Orientation.HORIZONTAL) {
+            context.pose().translate(thumbStart, 0.0f, 0.0f);
+            var thumbCommand = new FillRectDrawCommand(thumbSize, getHeight(), r, g, b, thumbAlpha);
+            context.submit(thumbCommand);
         } else {
-            RenderUtil.fill(stack, bufferSource, 0, thumbStart, this.getWidth(), thumbSize, finalThumbColor);
+            context.pose().translate(0.0f, thumbStart, 0.0f);
+            var thumbCommand = new FillRectDrawCommand(getWidth(), thumbSize, r, g, b, thumbAlpha);
+            context.submit(thumbCommand);
         }
 
-        stack.popPose();
+        context.pose().popPose();
     }
 
     @Override
     protected float getThumbSize() {
-        var maxScroll = this.panel.getMaxScroll();
-        if (maxScroll <= 0f) {
-            return this.getTrackSize();
-        }
-        var viewSize = this.orientation == Orientation.HORIZONTAL ? this.panel.getWidth() : this.panel.getHeight();
+        var maxScroll = panel.getMaxScroll();
+
+        var viewSize = orientation == Orientation.HORIZONTAL ? panel.getWidth() : panel.getHeight();
         var contentSize = maxScroll + viewSize;
         var ratio = viewSize / contentSize;
-        return MathUtil.clamp(ratio * this.getTrackSize(), 16f, this.getTrackSize());
+        return MathUtil.clamp(ratio * getTrackSize(), 16.0f, getTrackSize());
     }
 
     @Override
     protected float getThumbPosition() {
-        var maxScroll = this.panel.getMaxScroll();
-        if (maxScroll <= 0f) {
-            return 0;
-        }
-        var track = this.getTrackSize() - this.getThumbSize();
-        var ratio = this.panel.getScrollY() / maxScroll;
+        var maxScroll = panel.getMaxScroll();
+        if (maxScroll <= 0.0f)
+            return 0.0f;
+
+        var track = getTrackSize() - getThumbSize();
+        var ratio = panel.getScrollY() / maxScroll;
         return ratio * track;
     }
 
     @Override
     protected void updateTargetFromMouse(float mouse) {
-        var maxScroll = this.panel.getMaxScroll();
-        if (maxScroll <= 0f) return;
+        var maxScroll = panel.getMaxScroll();
+        if (maxScroll <= 0.0f)
+            return;
 
-        var track = this.getTrackSize() - this.getThumbSize();
-        if (track <= 0f) return;
+        var track = getTrackSize() - getThumbSize();
+        if (track <= 0.0f)
+            return;
 
-        var ratio = MathUtil.clamp((mouse - this.dragOffset) / track, 0f, 1f);
-        this.panel.setScrollTargetY(ratio * maxScroll);
+        var ratio = MathUtil.clamp((mouse - dragOffset) / track, 0.0f, 1.0f);
+        panel.setScrollTarget(ratio * maxScroll);
     }
 }

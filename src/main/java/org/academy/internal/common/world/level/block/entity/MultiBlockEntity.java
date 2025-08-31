@@ -9,11 +9,16 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.internal.common.world.level.block.MultiBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 public abstract class MultiBlockEntity extends BlockEntity {
+    @Nullable
     public BlockPos mainPos;
 
     public MultiBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
@@ -32,8 +37,7 @@ public abstract class MultiBlockEntity extends BlockEntity {
     }
 
     public boolean isMain() {
-        BlockState state = this.getBlockState();
-        return state.getValue(MultiBlock.TYPE).equals(MultiBlock.MultiBlockType.MAIN);
+        return getBlockState().getValue(MultiBlock.TYPE).equals(MultiBlock.MultiBlockType.MAIN);
     }
 
     @Nullable
@@ -42,7 +46,7 @@ public abstract class MultiBlockEntity extends BlockEntity {
             return this;
         } else {
             if (level != null) {
-                BlockEntity blockEntity = level.getBlockEntity(mainPos);
+                var blockEntity = level.getBlockEntity(Objects.requireNonNull(mainPos));
                 if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
                     return multiBlockEntity;
                 }
@@ -52,24 +56,22 @@ public abstract class MultiBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
         if (mainPos != null) {
-            tag.putLong("main_pos", mainPos.asLong());
+            output.putLong("main_pos", mainPos.asLong());
         }
     }
 
     @Override
-    protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.loadAdditional(tag, registries);
-        mainPos = BlockPos.of(tag.getLong("main_pos"));
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        mainPos = BlockPos.of(input.getLong("main_pos").orElseThrow());
     }
 
     @Override
-    public @NotNull CompoundTag getUpdateTag(HolderLookup.@NotNull Provider registries) {
-        CompoundTag tag = super.getUpdateTag(registries);
-        saveAdditional(tag, registries);
-        return tag;
+    public CompoundTag getUpdateTag(HolderLookup.@NotNull Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 
     @Override

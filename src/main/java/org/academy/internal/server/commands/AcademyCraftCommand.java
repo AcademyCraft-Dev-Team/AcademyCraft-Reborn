@@ -89,13 +89,13 @@ public final class AcademyCraftCommand {
 
         var skillToLearn = Registries.SKILLS.get(skillResourceLocation);
 
-        if (skillToLearn == null) {
+        if (skillToLearn.isEmpty()) {
             context.getSource().sendFailure(Component.literal("Skill '" + skillResourceLocation + "' not found."));
             return 0;
         }
 
         var playerCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
-        if (skillToLearn.getCategory() != playerCategory) {
+        if (skillToLearn.get().value().getCategory() != playerCategory) {
             var playerCategoryKey = Registries.ABILITY_CATEGORIES.getKey(playerCategory);
             var playerCategoryName = playerCategoryKey != null ? playerCategoryKey.toString() : "None";
             context.getSource().sendFailure(Component.literal("Skill '" + skillResourceLocation + "' does not belong to your current ability category (" + playerCategoryName + ")."));
@@ -119,12 +119,12 @@ public final class AcademyCraftCommand {
 
         var categoryToSet = Registries.ABILITY_CATEGORIES.get(categoryResourceLocation);
 
-        if (categoryToSet == null) {
+        if (categoryToSet.isEmpty()) {
             context.getSource().sendFailure(Component.literal("Ability category '" + categoryResourceLocation + "' not found."));
             return 0;
         }
 
-        AbilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet);
+        AbilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet.get().value());
         var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
         if (learnedSkills != null) {
             learnedSkills.clear();

@@ -1,80 +1,164 @@
 package org.academy.api.client.render.post;
 
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.shaders.Uniform;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.*;
-import org.jetbrains.annotations.NotNull;
+import org.academy.api.client.Render;
+import org.joml.Vector2f;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.academy.AcademyCraft.getResourceLocation;
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.function.Consumer;
 
 public final class BlurEffect {
-    private static final RenderType RENDER_TYPE = RenderType.create(
-            "blur_mask",
-            DefaultVertexFormat.POSITION_COLOR,
-            VertexFormat.Mode.QUADS,
-            256,
-            RenderType.CompositeState.builder()
-                    .setShaderState(RenderStateShard.POSITION_COLOR_SHADER)
-                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
-                    .setCullState(RenderStateShard.NO_CULL)
-                    .setDepthTestState(RenderStateShard.NO_DEPTH_TEST)
-                    .createCompositeState(false)
-    );
-    private static float blurRadius = 20f;
-    private static final PostChain blurPostChain;
-    private static final RenderTarget mainRenderTarget;
-    private static final RenderTarget maskInputRenderTarget;
-    private static final List<Uniform> blurRadiusUniforms = new ArrayList<>();
+    private static float blurRadius = 20.0F;
+    @Nullable
+    private static RenderTarget maskInputRenderTarget;
+    @Nullable
+    private static RenderTarget swapTarget;
+    @Nullable
+    private static GpuBuffer blurUniformsBuffer;
+    @Nullable
+    private static GpuBuffer fullscreenQuadVertexBuffer;
 
-    static {
+    public static void init() {
         var mc = Minecraft.getInstance();
-        mainRenderTarget = mc.getMainRenderTarget();
-        try {
-            blurPostChain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(),
-                    getResourceLocation("shaders/post/masked_blur.json")) {
-                @Override
-                public @NotNull PostPass addPass(@NotNull String name, @NotNull RenderTarget inTarget, @NotNull RenderTarget outTarget, boolean useLinearFilter) throws IOException {
-                    if (name.equals("academy:masked_blur")) {
-                        var blurMaskPostPass = super.addPass(name, inTarget, outTarget, useLinearFilter);
-                        var uniform = blurMaskPostPass.getEffect().getUniform("Radius");
-                        if (uniform != null) {
-                            blurRadiusUniforms.add(uniform);
-                        }
-                        return blurMaskPostPass;
-                    } else {
-                        return super.addPass(name, inTarget, outTarget, useLinearFilter);
-                    }
-                }
-            };
-            resize(mainRenderTarget.width, mainRenderTarget.height);
-            maskInputRenderTarget = blurPostChain.getTempTarget("mask_input_target");
-            maskInputRenderTarget.clear(Minecraft.ON_OSX);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
+        var mainRenderTarget = mc.getMainRenderTarget();
+        var width = mainRenderTarget.width;
+        var height = mainRenderTarget.height;
+        maskInputRenderTarget = createRenderTarget(width, height);
+        swapTarget = createRenderTarget(width, height);
+
+        var device = RenderSystem.getDevice();
+        var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
+        blurUniformsBuffer = device.createBuffer(() -> "Blur UBO", uboUsage, BlurUniforms.UBO_SIZE);
+        createFullscreenQuad();
     }
 
     public static void resize(int width, int height) {
-        blurPostChain.resize(width, height);
+        if (maskInputRenderTarget != null)
+            resizeRenderTarget(maskInputRenderTarget, width, height);
+        if (swapTarget != null)
+            resizeRenderTarget(swapTarget, width, height);
     }
 
-    public static void start(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
-        bufferSource.endBatch(blurMaskRenderType);
-        maskInputRenderTarget.clear(Minecraft.ON_OSX);
-        maskInputRenderTarget.bindWrite(false);
+    public static void close() {
+        if (maskInputRenderTarget != null)
+            maskInputRenderTarget.destroyBuffers();
+        if (swapTarget != null)
+            swapTarget.destroyBuffers();
+        if (blurUniformsBuffer != null)
+            blurUniformsBuffer.close();
+        if (fullscreenQuadVertexBuffer != null)
+            fullscreenQuadVertexBuffer.close();
     }
 
-    public static void stop(MultiBufferSource.BufferSource bufferSource, RenderType blurMaskRenderType) {
-        bufferSource.endBatch(blurMaskRenderType);
-        blurPostChain.process(0);
-        mainRenderTarget.bindWrite(false);
+    public static void apply(Consumer<RenderPass> maskDrawer) {
+        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+
+        {
+            try (
+                    var renderPass = commandEncoder.createRenderPass(
+                            () -> "Blur Mask Pass",
+                            maskInputRenderTarget.getColorTextureView(),
+                            OptionalInt.of(0),
+                            maskInputRenderTarget.getDepthTextureView(),
+                            OptionalDouble.of(1.0)
+                    )
+            ) {
+                maskDrawer.accept(renderPass);
+            }
+        }
+
+        var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
+        var blurUboSlice = blurUniformsBuffer.slice();
+
+        {
+            writeBlurUniforms(new Vector2f((float) swapTarget.width, (float) swapTarget.height), 1.0F, 0.0F);
+            var samplers = Map.of("DiffuseSampler", mainRenderTarget.getColorTextureView(), "MaskSampler", maskInputRenderTarget.getColorTextureView());
+            var uniforms = Map.of("BlurInfo", blurUboSlice);
+            runBlitPass(swapTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms);
+        }
+
+        {
+            writeBlurUniforms(new Vector2f((float) mainRenderTarget.width, (float) mainRenderTarget.height), 0.0F, 1.0F);
+            var samplers = Map.of("DiffuseSampler", swapTarget.getColorTextureView(), "MaskSampler", maskInputRenderTarget.getColorTextureView());
+            var uniforms = Map.of("BlurInfo", blurUboSlice);
+            runBlitPass(mainRenderTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms);
+        }
+    }
+
+    private static void createFullscreenQuad() {
+        if (fullscreenQuadVertexBuffer != null) {
+            fullscreenQuadVertexBuffer.close();
+        }
+
+        try (var byteBufferBuilder = ByteBufferBuilder.exactlySized(DefaultVertexFormat.POSITION_TEX.getVertexSize() * 4)) {
+            var bufferBuilder = new BufferBuilder(byteBufferBuilder, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+            bufferBuilder.addVertex(-1.0F, -1.0F, 0.0F).setUv(0.0F, 0.0F);
+            bufferBuilder.addVertex(1.0F, -1.0F, 0.0F).setUv(1.0F, 0.0F);
+            bufferBuilder.addVertex(1.0F, 1.0F, 0.0F).setUv(1.0F, 1.0F);
+            bufferBuilder.addVertex(-1.0F, 1.0F, 0.0F).setUv(0.0F, 1.0F);
+
+            try (var meshData = bufferBuilder.buildOrThrow()) {
+                fullscreenQuadVertexBuffer = RenderSystem.getDevice().createBuffer(() -> "Blur Fullscreen Quad", 32, meshData.vertexBuffer());
+            }
+        }
+    }
+
+    private static void resizeRenderTarget(RenderTarget renderTarget, int width, int height) {
+        renderTarget.resize(width, height);
+        renderTarget.setFilterMode(FilterMode.LINEAR);
+    }
+
+    private static RenderTarget createRenderTarget(int width, int height) {
+        var renderTarget = new TextureTarget(null, width, height, true);
+        renderTarget.setFilterMode(FilterMode.LINEAR);
+        return renderTarget;
+    }
+
+    private static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY) {
+        try (var memoryStack = org.lwjgl.system.MemoryStack.stackPush()) {
+            var builder = Std140Builder.onStack(memoryStack, BlurUniforms.UBO_SIZE);
+            new BlurUniforms(outSize, new Vector2f(dirX, dirY), blurRadius).write(builder);
+            var byteBuffer = builder.get();
+            RenderSystem.getDevice().createCommandEncoder().writeToBuffer(blurUniformsBuffer.slice(), byteBuffer);
+        }
+    }
+
+    private static void runBlitPass(RenderTarget target, RenderPipeline pipeline, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms) {
+        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+
+        commandEncoder.clearColorAndDepthTextures(target.getColorTexture(), 0, target.getDepthTexture(), 1);
+
+        try (
+                var renderPass = commandEncoder.createRenderPass(
+                        () -> "Blit Pass to " + target, target.getColorTextureView(), OptionalInt.empty(), target.getDepthTextureView(), OptionalDouble.empty()
+                )
+        ) {
+            renderPass.setPipeline(pipeline);
+            samplers.forEach(renderPass::bindSampler);
+            uniforms.forEach(renderPass::setUniform);
+            renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer);
+            var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
+            renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
+            renderPass.drawIndexed(0, 0, 6, 1);
+        }
     }
 
     public static float getBlurRadius() {
@@ -83,15 +167,50 @@ public final class BlurEffect {
 
     public static void setBlurRadius(float blurRadius) {
         BlurEffect.blurRadius = blurRadius;
-        for (var uniform : blurRadiusUniforms) {
-            uniform.set(blurRadius);
-        }
-    }
-
-    public static RenderType getBlurMaskRenderType() {
-        return RENDER_TYPE;
     }
 
     private BlurEffect() {
+    }
+
+    public static class BlurUniforms {
+        public static final int UBO_SIZE = new Std140SizeCalculator().putVec2().putVec2().putFloat().get();
+
+        private Vector2f outSize;
+        private Vector2f blurDir;
+        private float radius;
+
+        public BlurUniforms(Vector2f outSize, Vector2f blurDir, float radius) {
+            this.outSize = outSize;
+            this.blurDir = blurDir;
+            this.radius = radius;
+        }
+
+        public void write(Std140Builder builder) {
+            builder.putVec2(this.outSize).putVec2(this.blurDir).putFloat(this.radius);
+        }
+
+        public Vector2f getOutSize() {
+            return this.outSize;
+        }
+
+        public void setOutSize(Vector2f outSize) {
+            this.outSize = outSize;
+        }
+
+        public Vector2f getBlurDir() {
+            return this.blurDir;
+        }
+
+        public void setBlurDir(Vector2f blurDir) {
+            this.blurDir = blurDir;
+        }
+
+        public float getRadius() {
+            return this.radius;
+        }
+
+        public void setRadius(float radius) {
+            this.radius = radius;
+        }
     }
 }

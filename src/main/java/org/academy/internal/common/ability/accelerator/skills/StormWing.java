@@ -18,7 +18,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.attachment.AttachmentDataSyncPacket;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
@@ -26,7 +25,6 @@ import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
-import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -58,11 +56,7 @@ public final class StormWing extends Skill {
         RendererManager.registerEffectRenderer(StormWingEffectRenderer.getInstance());
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
-        if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.Config();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, Client.CONFIG);
-        }
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 new InputSystem.InputPair(
@@ -83,7 +77,7 @@ public final class StormWing extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -146,7 +140,7 @@ public final class StormWing extends Skill {
             var type = AttachmentTypes.ACTIVATED_STORM_WING.get();
             var activated = player.getData(type);
             player.setData(type, !activated);
-            player.connection.send(new S2CPacket(new AttachmentDataSyncPacket<>(player, type)));
+            player.syncData(type);
         }
 
         @SubscribePacket

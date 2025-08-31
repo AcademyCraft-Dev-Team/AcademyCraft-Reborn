@@ -16,7 +16,7 @@ public class ImagiphaseDowsingRodModel extends Model {
     private final ModelPart main;
 
     public ImagiphaseDowsingRodModel(ModelPart root) {
-        super(RenderType::entityCutout);
+        super(root.getChild("all"), RenderType::entityCutout);
         this.all = root.getChild("all");
         this.handle = this.all.getChild("handle");
         this.pointer = this.handle.getChild("pointer");
@@ -47,10 +47,5 @@ public class ImagiphaseDowsingRodModel extends Model {
                 .texOffs(25, 35).addBox(-13.5F, -14.5F, -0.5F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
 
         return LayerDefinition.create(meshdefinition, 64, 64);
-    }
-
-    @Override
-    public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer buffer, int packedLight, int packedOverlay, int color) {
-        all.render(poseStack, buffer, packedLight, packedOverlay, color);
     }
 }

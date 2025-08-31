@@ -3,11 +3,11 @@ package org.academy.internal.client.gui.screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.OmniCraftingMenu;
 
@@ -29,7 +29,7 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
         var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
         rootContainer.addChild("page_inv", invPage);
         {
-            var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.OMNI_CRAFTING_UI);
+            var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.OMNI_CRAFTING_UI);
             invPage.addChild("ui", ui);
         }
         invPage.setY(getTopPos() - 22);
@@ -56,12 +56,12 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
         });
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
-            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, RenderTypes.ICON_INV, () -> {
+            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, Resource.Textures.ICON_INV, () -> {
             });
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, RenderTypes.ICON_WIRELESS, () -> {
+            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, Resource.Textures.ICON_WIRELESS, () -> {
             });
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);
