@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import org.academy.internal.client.data.AcademyCraftData;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -22,6 +23,7 @@ public final class AcademyCraft {
 
     public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
+        modEventBus.addListener(AcademyCraftData::dataSetup);
     }
 
     public static void checkFile(File file) {
@@ -50,11 +52,15 @@ public final class AcademyCraft {
         }
     }
 
-    public static ResourceLocation getResourceLocation(String path) {
-        return getResourceLocation(MOD_ID, path);
+    public static ResourceLocation custom(String namespace, String path) {
+        return ResourceLocation.fromNamespaceAndPath(namespace, path);
     }
 
-    public static ResourceLocation getResourceLocation(String namespace, String path) {
-        return ResourceLocation.fromNamespaceAndPath(namespace, path);
+    public static ResourceLocation vanilla(String name) {
+        return ResourceLocation.withDefaultNamespace(name);
+    }
+
+    public static ResourceLocation academy(String name) {
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, name);
     }
 }

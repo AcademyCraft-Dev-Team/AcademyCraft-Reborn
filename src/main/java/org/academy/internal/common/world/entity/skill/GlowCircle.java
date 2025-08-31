@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.academy.api.common.util.MathUtil;
@@ -25,11 +26,6 @@ public class GlowCircle extends RenderOnlyEntity {
     }
 
     @Override
-    public double getRenderRadius() {
-        return 1;
-    }
-
-    @Override
     public void tick() {
         super.tick();
         ticks++;
@@ -42,7 +38,9 @@ public class GlowCircle extends RenderOnlyEntity {
         }
 
         if (leftLifeTicks < 0) {
-            kill();
+            if (level() instanceof ServerLevel serverLevel) {
+                kill(serverLevel);
+            }
         }
     }
 

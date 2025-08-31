@@ -2,33 +2,71 @@ package org.academy.api.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-public class ItemRenderEvent extends Event implements ICancellableEvent {
-    public ItemStack itemStack;
-    public ItemDisplayContext displayContext;
-    public boolean leftHand;
-    public PoseStack poseStack;
-    public MultiBufferSource buffer;
-    public int combinedLight;
-    public int combinedOverlay;
-    public BakedModel model;
-    public CallbackInfo ci;
+import java.util.List;
 
-    public ItemRenderEvent(ItemStack newItemStack, ItemDisplayContext newDisplayContext, boolean newLeftHand, PoseStack newPoseStack, MultiBufferSource newBuffer, int newCombinedLight, int newCombinedOverlay, BakedModel newModel, CallbackInfo newCi) {
-        itemStack = newItemStack;
-        displayContext = newDisplayContext;
-        leftHand = newLeftHand;
-        poseStack = newPoseStack;
-        buffer = newBuffer;
-        combinedLight = newCombinedLight;
-        combinedOverlay = newCombinedOverlay;
-        model = newModel;
-        ci = newCi;
+public final class ItemRenderEvent extends Event implements ICancellableEvent {
+    private final ItemDisplayContext displayContext;
+    private final PoseStack poseStack;
+    private final MultiBufferSource bufferSource;
+    private final int packedLight;
+    private final int packedOverlay;
+    private final int[] tintLayers;
+    private final List<BakedQuad> quads;
+    private final RenderType renderType;
+    private final ItemStackRenderState.FoilType foilType;
+
+    public ItemRenderEvent(ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, int[] tintLayers, List<BakedQuad> quads, RenderType renderType, ItemStackRenderState.FoilType foilType) {
+        this.displayContext = displayContext;
+        this.poseStack = poseStack;
+        this.bufferSource = bufferSource;
+        this.packedLight = packedLight;
+        this.packedOverlay = packedOverlay;
+        this.tintLayers = tintLayers;
+        this.quads = quads;
+        this.renderType = renderType;
+        this.foilType = foilType;
+    }
+
+    public ItemDisplayContext getDisplayContext() {
+        return displayContext;
+    }
+
+    public PoseStack getPoseStack() {
+        return poseStack;
+    }
+
+    public MultiBufferSource getBufferSource() {
+        return bufferSource;
+    }
+
+    public int getPackedLight() {
+        return packedLight;
+    }
+
+    public int getPackedOverlay() {
+        return packedOverlay;
+    }
+
+    public int[] getTintLayers() {
+        return tintLayers;
+    }
+
+    public List<BakedQuad> getQuads() {
+        return quads;
+    }
+
+    public RenderType getRenderType() {
+        return renderType;
+    }
+
+    public ItemStackRenderState.FoilType getFoilType() {
+        return foilType;
     }
 }

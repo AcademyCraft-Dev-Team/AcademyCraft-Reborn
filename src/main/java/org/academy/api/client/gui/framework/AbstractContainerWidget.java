@@ -1,29 +1,32 @@
 package org.academy.api.client.gui.framework;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.Tickable;
+import net.minecraft.util.ARGB;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
+import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.util.RenderUtil;
-import org.jetbrains.annotations.NotNull;
+import org.academy.api.client.gui.util.GlyphCommandGenerator;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-public abstract class AbstractContainerWidget extends AbstractWidget implements WidgetContainer, Tickable {
+public abstract class AbstractContainerWidget extends AbstractWidget implements WidgetContainer {
     protected final Map<String, Widget> children = new LinkedHashMap<>();
-    protected final List<Tickable> tickableChildren = new ArrayList<>();
 
+    @Nullable
     protected Widget focusedChild = null;
+    @Nullable
     protected Widget hoveredWidget = null;
+    @Nullable
     protected Widget gestureTarget = null;
 
     public AbstractContainerWidget(float x, float y, float width, float height) {
@@ -32,21 +35,21 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     }
 
     @Override
-    public void dispatchEvent(@NotNull InputEvent event) {
+    public void dispatchEvent(InputEvent event) {
         if (!isAbsoluteEnabled() || !isVisible()) {
             return;
         }
 
         if (AcademyCraft.DEBUG_UI && event instanceof MouseEvent) {
-            AcademyCraft.LOGGER.debug("[UI Event] Dispatching {} to Container '{}'", event.getType(), this.getName());
+            AcademyCraft.LOGGER.debug("[UI Event] Dispatching {} to Container '{}'", event.getType(), getName());
         }
 
         if (event.getType() == EventType.MOUSE_MOVED) {
-            Widget newHoveredWidget = findTopWidgetAt(((MouseEvent) event).getX(), ((MouseEvent) event).getY());
+            var newHoveredWidget = findTopWidgetAt(((MouseEvent) event).getX(), ((MouseEvent) event).getY());
             if (hoveredWidget != newHoveredWidget) {
                 if (AcademyCraft.DEBUG_UI) {
-                    String oldName = hoveredWidget != null ? hoveredWidget.getName() : "null";
-                    String newName = newHoveredWidget != null ? newHoveredWidget.getName() : "null";
+                    var oldName = hoveredWidget != null ? hoveredWidget.getName() : "null";
+                    var newName = newHoveredWidget != null ? newHoveredWidget.getName() : "null";
                     AcademyCraft.LOGGER.debug("[UI Hover] Hover changed from '{}' to '{}'", oldName, newName);
                 }
                 if (hoveredWidget instanceof AbstractWidget oldHovered) {
@@ -73,7 +76,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             return;
         }
 
-        var childrenList = new ArrayList<>(this.children.values());
+        var childrenList = new ArrayList<>(children.values());
         Collections.reverse(childrenList);
 
         for (var child : childrenList) {
@@ -85,24 +88,18 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
             if (event.isConsumed()) {
                 if (AcademyCraft.DEBUG_UI) {
-                    AcademyCraft.LOGGER.debug("[UI Event] Event consumed by child '{}'. Stopping propagation in '{}'.", child.getName(), this.getName());
+                    AcademyCraft.LOGGER.debug("[UI Event] Event consumed by child '{}'. Stopping propagation in '{}'.", child.getName(), getName());
                 }
                 if (event.getType() == EventType.MOUSE_PRESSED) {
-                    this.gestureTarget = child;
+                    gestureTarget = child;
                     setFocusedChild(child.canFocus() ? child : this);
                 }
-                /*
-                 * This is the fix. A parent container should not attempt to re-handle an event
-                 * that has already been fully consumed by one of its children. Doing so
-                 * creates a confusing and incorrect event flow.
-                 */
-                // super.dispatchEvent(event); // BUG: This line was removed.
                 return;
             }
         }
 
         if (AcademyCraft.DEBUG_UI && event.getType() != EventType.MOUSE_MOVED) {
-            AcademyCraft.LOGGER.debug("[UI Event] No child consumed event. '{}' is handling it.", this.getName());
+            AcademyCraft.LOGGER.debug("[UI Event] No child consumed event. '{}' is handling it.", getName());
         }
         super.dispatchEvent(event);
         if (event.isConsumed() && event.getType() == EventType.MOUSE_PRESSED) {
@@ -110,82 +107,121 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
     }
 
-    private static void drawInfo(Widget widget, MatrixStack stack, MultiBufferSource.BufferSource bufferSource) {
-        if (!(widget instanceof AbstractWidget aw)) {
+    @Override
+    public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible()) {
             return;
         }
 
-        stack.pushPose();
-        stack.translate(5, 5, 500);
+        renderContext.pose().pushPose();
+        {
+            renderContext.pushAlpha(getAlpha());
+            renderContext.pose().translate(getX(), getY(), getZ());
 
+            if (AcademyCraft.DEBUG_UI) {
+                renderDebugLayoutBounds(this, renderContext);
+            }
+
+            renderChildren(renderContext, mouseX, mouseY, partialTick);
+
+            renderContext.popAlpha();
+        }
+        renderContext.pose().popPose();
+    }
+
+    protected void renderChildren(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+        for (var child : children.values()) {
+            if (child.isVisible()) {
+                child.render(renderContext, mouseX, mouseY, partialTick);
+            }
+        }
+    }
+
+    private void renderDebugLayoutBounds(Widget widget, WidgetRenderContext context) {
+        var outlineColor = 0xFFFF0000;
+        if (widget.isFocused()) {
+            outlineColor = 0xFF00FF00;
+        } else if (widget.isHovered()) {
+            outlineColor = 0xFF0000FF;
+        }
+
+        var red = ARGB.red(outlineColor) / 255.0f;
+        var green = ARGB.green(outlineColor) / 255.0f;
+        var blue = ARGB.blue(outlineColor) / 255.0f;
+        var alpha = 0.8f;
+        var thickness = 1.0f;
+
+        var width = widget.getWidth();
+        var height = widget.getHeight();
+
+        // Top border
+        context.submit(new FillRectDrawCommand(width, thickness, red, green, blue, alpha));
+        // Bottom border
+        context.pose().pushPose();
+        context.pose().translate(0, height - thickness, 0);
+        context.submit(new FillRectDrawCommand(width, thickness, red, green, blue, alpha));
+        context.pose().popPose();
+        // Left border
+        context.submit(new FillRectDrawCommand(thickness, height, red, green, blue, alpha));
+        // Right border
+        context.pose().pushPose();
+        context.pose().translate(width - thickness, 0, 0);
+        context.submit(new FillRectDrawCommand(thickness, height, red, green, blue, alpha));
+        context.pose().popPose();
+
+        if (widget.isHovered()) {
+            renderDebugInfo(widget, context);
+        }
+    }
+
+    private void renderDebugInfo(Widget widget, WidgetRenderContext context) {
         var font = Minecraft.getInstance().font;
-        var namePart = aw.getName().isEmpty() ? "" : "'" + aw.getName() + "'";
+        var namePart = widget.getName().isEmpty() ? "" : "'" + widget.getName() + "'";
         var infoText = String.format(
                 "[%s] %s\nPos: (%.1f, %.1f) Size: (%.1f, %.1f) Alpha: %.2f",
-                aw.getClass().getSimpleName(),
+                widget.getClass().getSimpleName(),
                 namePart,
-                aw.getX(), aw.getY(),
-                aw.getWidth(), aw.getHeight(),
-                aw.getAbsoluteAlpha()
+                widget.getAbsoluteX(), widget.getAbsoluteY(),
+                widget.getWidth(), widget.getHeight(),
+                widget.getAbsoluteAlpha()
         );
 
         var textScale = 0.8f;
-        var textColor = 0xA0FFFFFF;
+        var textColor = 0xD0FFFFFF;
+        var backColor = 0x90000000;
+        var padding = 2.0f;
 
-        stack.pushPose();
-        stack.scale(textScale, textScale, 1.0f);
-        RenderUtil.drawString(stack, bufferSource, font, infoText, textColor, true);
-        stack.popPose();
+        var textCommands = GlyphCommandGenerator.generate(font, infoText, 0, 0, textColor, true);
+        var textWidth = font.width(infoText);
+        var textHeight = font.wordWrapHeight(infoText, (int) (textWidth / textScale));
 
-        stack.popPose();
-    }
+        context.pose().pushPose();
+        {
+            context.pose().translate(padding, padding, 500);
 
-    private void renderChildDebugInfo(Widget child, MatrixStack stack, MultiBufferSource.BufferSource bufferSource) {
-        var outlineColor = 0xFFFF0000;
-        if (child.isFocused()) {
-            outlineColor = 0xFF00FF00;
-        } else if (child.isHovered()) {
-            outlineColor = 0xFF0000FF;
-        }
-        RenderUtil.drawOutline(stack, bufferSource, 0, 0, child.getWidth(), child.getHeight(), outlineColor, 1);
-    }
+            var backRed = ARGB.red(backColor) / 255.0f;
+            var backGreen = ARGB.green(backColor) / 255.0f;
+            var backBlue = ARGB.blue(backColor) / 255.0f;
+            var backAlpha = ARGB.alpha(backColor) / 255.0f;
+            context.submit(new FillRectDrawCommand(textWidth * textScale + padding * 2, textHeight * textScale + padding * 2, backRed, backGreen, backBlue, backAlpha));
 
-    protected void renderChildren(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        for (var child : this.children.values()) {
-            if (child.isVisible()) {
-                stack.pushPose();
-                stack.translate(child.getX() - this.getScrollX(), child.getY() - this.getScrollY(), child.getZ());
-
-                child.render(stack, bufferSource, mouseX, mouseY, partialTick);
-
-                if (AcademyCraft.DEBUG_UI) {
-                    renderChildDebugInfo(child, stack, bufferSource);
+            context.pose().pushPose();
+            {
+                context.pose().translate(padding, padding, 0.1f);
+                context.pose().scale(textScale, textScale, 1.0f);
+                for (var command : textCommands) {
+                    context.submit(command);
                 }
-
-                stack.popPose();
             }
+            context.pose().popPose();
         }
+        context.pose().popPose();
     }
 
-    @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!this.isVisible()) return;
-
-        if (AcademyCraft.DEBUG_UI) {
-            var color = isFocused() ? 0xFF00FF00 : 0xFFFF0000;
-            RenderUtil.drawOutline(stack, bufferSource, 0, 0, getWidth(), getHeight(), color, 1);
-
-            if (isHovered()) {
-                drawInfo(this, stack, bufferSource);
-            }
-        }
-
-        this.renderChildren(stack, bufferSource, mouseX, mouseY, partialTick);
-    }
 
     @Override
     public void tick() {
-        for (var tickable : this.tickableChildren) {
+        for (var tickable : getChildren().values()) {
             tickable.tick();
         }
     }
@@ -208,19 +244,19 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         if (containerSetFocusedChildEvent.isCanceled()) return;
         child = containerSetFocusedChildEvent.child;
 
-        if (this.focusedChild == child) {
+        if (focusedChild == child) {
             return;
         }
 
-        if (this.focusedChild != null) {
-            this.focusedChild.setFocused(false);
+        if (focusedChild != null) {
+            focusedChild.setFocused(false);
         }
 
-        this.focusedChild = child;
+        focusedChild = child;
 
-        if (this.focusedChild != null) {
-            this.focusedChild.setFocused(true);
-            if (this.getParent() instanceof AbstractContainerWidget parentContainer) {
+        if (focusedChild != null) {
+            focusedChild.setFocused(true);
+            if (getParent() instanceof AbstractContainerWidget parentContainer) {
                 parentContainer.setFocusedChild(this);
             }
         }
@@ -233,53 +269,48 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
         child.setParent(this);
         child.setName(name);
-        this.children.put(name, child);
-        if (child instanceof Tickable tickable) {
-            this.tickableChildren.add(tickable);
-        }
+        children.put(name, child);
     }
 
     @Override
     public void removeChild(String name) {
-        if (this.children.containsKey(name)) {
-            var widget = this.children.get(name);
+        if (children.containsKey(name)) {
+            var widget = children.get(name);
             widget.setParent(null);
-            if (this.focusedChild == widget) {
-                this.focusedChild = null;
+            if (focusedChild == widget) {
+                focusedChild = null;
             }
-            if (this.hoveredWidget == widget) {
-                this.hoveredWidget = null;
+            if (hoveredWidget == widget) {
+                hoveredWidget = null;
             }
-            if (this.gestureTarget == widget) {
-                this.gestureTarget = null;
+            if (gestureTarget == widget) {
+                gestureTarget = null;
             }
-            if (widget instanceof Tickable tickable) {
-                this.tickableChildren.remove(tickable);
-            }
-            this.children.remove(name);
+            children.remove(name);
         }
     }
 
     @Override
     public void clearChildren() {
-        var childList = new ArrayList<>(this.children.values());
+        var childList = new ArrayList<>(children.values());
         for (var child : childList) {
-            this.removeChild(child.getName());
+            removeChild(child.getName());
         }
     }
 
     @Override
-    public @NotNull Map<String, Widget> getChildren() {
-        return Collections.unmodifiableMap(this.children);
+    public Map<String, Widget> getChildren() {
+        return Collections.unmodifiableMap(children);
     }
 
+    @Nullable
     private Widget findTopWidgetAt(double mouseX, double mouseY) {
         var childrenList = new ArrayList<>(children.values());
         Collections.reverse(childrenList);
 
         if (AcademyCraft.DEBUG_UI) {
-            String childNames = childrenList.stream().map(Widget::getName).collect(Collectors.joining(", "));
-            AcademyCraft.LOGGER.debug("[UI Find] Searching in '{}' for widget at ({}, {}). Children (top to bottom): [{}]", this.getName(), mouseX, mouseY, childNames);
+            var childNames = childrenList.stream().map(Widget::getName).collect(Collectors.joining(", "));
+            AcademyCraft.LOGGER.debug("[UI Find] Searching in '{}' for widget at ({}, {}). Children (top to bottom): [{}]", getName(), mouseX, mouseY, childNames);
         }
 
         for (var child : childrenList) {
@@ -291,7 +322,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
                     AcademyCraft.LOGGER.debug("[UI Find] Mouse is over child '{}'.", child.getName());
                 }
                 if (child instanceof AbstractContainerWidget acw) {
-                    Widget nestedChild = acw.findTopWidgetAt(mouseX, mouseY);
+                    var nestedChild = acw.findTopWidgetAt(mouseX, mouseY);
                     return nestedChild != null ? nestedChild : acw;
                 } else {
                     return child;
@@ -299,9 +330,9 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
             }
         }
 
-        if (this.isMouseOver(mouseX, mouseY)) {
+        if (isMouseOver(mouseX, mouseY)) {
             if (AcademyCraft.DEBUG_UI) {
-                AcademyCraft.LOGGER.debug("[UI Find] Mouse is over container '{}' itself.", this.getName());
+                AcademyCraft.LOGGER.debug("[UI Find] Mouse is over container '{}' itself.", getName());
             }
             return this;
         }
@@ -310,11 +341,11 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     }
 
     @Override
-    public @NotNull Widget setFocused(boolean focused) {
+    public Widget setFocused(boolean focused) {
         super.setFocused(focused);
-        if (!focused && this.focusedChild != null) {
-            this.focusedChild.setFocused(false);
-            this.focusedChild = null;
+        if (!focused && focusedChild != null) {
+            focusedChild.setFocused(false);
+            focusedChild = null;
         }
         return this;
     }

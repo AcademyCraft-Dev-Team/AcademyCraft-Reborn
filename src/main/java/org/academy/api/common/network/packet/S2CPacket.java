@@ -2,7 +2,6 @@ package org.academy.api.common.network.packet;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.PacketFlow;
@@ -17,15 +16,15 @@ import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
-public class S2CPacket implements net.minecraft.network.protocol.Packet<ClientPacketListener> {
-    public static final PacketType<S2CPacket> TYPE = new PacketType<>(PacketFlow.CLIENTBOUND, AcademyCraft.getResourceLocation("s2c_packet"));
+public class S2CPacket implements net.minecraft.network.protocol.Packet<ClientGamePacketListener> {
+    public static final PacketType<S2CPacket> TYPE = new PacketType<>(PacketFlow.CLIENTBOUND, AcademyCraft.academy("s2c_packet"));
     public static final StreamCodec<FriendlyByteBuf, S2CPacket> STREAM_CODEC = net.minecraft.network.protocol.Packet.codec(
             S2CPacket::write, S2CPacket::new
     );
     private final int id;
     private final FriendlyByteBuf friendlyByteBuf;
 
-    public <T extends Packet<ClientPacketListener>> S2CPacket(T packet) {
+    public <T extends Packet<ClientGamePacketListener>> S2CPacket(T packet) {
         id = packet.getPacketType().getPacketId();
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
         packet.write(friendlyByteBuf);
@@ -43,12 +42,12 @@ public class S2CPacket implements net.minecraft.network.protocol.Packet<ClientPa
     }
 
     @Override
-    public @NotNull PacketType<? extends net.minecraft.network.protocol.Packet<ClientPacketListener>> type() {
+    public @NotNull PacketType<? extends net.minecraft.network.protocol.Packet<ClientGamePacketListener>> type() {
         return TYPE;
     }
 
     @Override
-    public void handle(@NotNull ClientPacketListener handler) {
+    public void handle(@NotNull ClientGamePacketListener handler) {
         Minecraft.getInstance().execute(() -> {
             var event = new S2CPacketEvent(this);
             NeoForge.EVENT_BUS.post(event);

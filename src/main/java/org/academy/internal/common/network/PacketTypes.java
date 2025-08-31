@@ -1,6 +1,6 @@
 package org.academy.internal.common.network;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -29,17 +29,17 @@ public final class PacketTypes {
     public static final DeferredRegister<PacketType<?, ?>> PACKET_TYPES =
             DeferredRegister.create(Registries.Keys.PACKET_TYPES, AcademyCraft.MOD_ID);
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerSyncPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, PlayerSyncPacket>>
             PLAYER_SYNC = PACKET_TYPES.register("player_sync",
             () -> new PacketType<>(PlayerSyncPacket.class, PlayerSyncPacket::new));
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AttachmentDataSyncPacket<?>>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, AttachmentDataSyncPacket<?>>>
             ATTACHMENT_DATA_SYNC = PACKET_TYPES.register("attachment_data_sync",
-            () -> new PacketType<ClientPacketListener, AttachmentDataSyncPacket<?>>
+            () -> new PacketType<ClientGamePacketListener, AttachmentDataSyncPacket<?>>
                     ((Class) AttachmentDataSyncPacket.class, AttachmentDataSyncPacket::new));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ExpSyncPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, ExpSyncPacket>>
             EXP_SYNC = PACKET_TYPES.register("exp_sync",
             () -> new PacketType<>(ExpSyncPacket.class, ExpSyncPacket::new));
 
@@ -60,7 +60,7 @@ public final class PacketTypes {
             () -> new PacketType<>(SetNodePassPacket.class, SetNodePassPacket::new));
 
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, OpenScreenPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, OpenScreenPacket>>
             OPEN_SCREEN = PACKET_TYPES.register("open_screen",
             () -> new PacketType<>(OpenScreenPacket.class, OpenScreenPacket::new));
 
@@ -102,11 +102,11 @@ public final class PacketTypes {
             RAILGUN_START_CHARGE = PACKET_TYPES.register("railgun_start_charge",
             () -> new PacketType<>(Railgun.StartChargePacket.class, Railgun.StartChargePacket::new));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, Railgun.ConfirmChargePacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, Railgun.ConfirmChargePacket>>
             RAILGUN_CONFIRM_CHARGE = PACKET_TYPES.register("railgun_confirm_charge",
             () -> new PacketType<>(Railgun.ConfirmChargePacket.class, Railgun.ConfirmChargePacket::new));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, Railgun.ChargeEndPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, Railgun.ChargeEndPacket>>
             RAILGUN_CHARGE_END = PACKET_TYPES.register("railgun_charge_end",
             () -> new PacketType<>(Railgun.ChargeEndPacket.class, Railgun.ChargeEndPacket::new));
 
@@ -134,7 +134,7 @@ public final class PacketTypes {
             REVERSE_BLOODFLOW = PACKET_TYPES.register("reverse_bloodflow",
             () -> new PacketType<>(BloodflowReverse.ReverseBloodflowPacket.class, BloodflowReverse.ReverseBloodflowPacket::new));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpawnArcMediumParticlePacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SpawnArcMediumParticlePacket>>
             SPAWN_ARC_MEDIUM_PARTICLE = PACKET_TYPES.register("spawn_arc_medium_particle",
             () -> new PacketType<>(SpawnArcMediumParticlePacket.class, SpawnArcMediumParticlePacket::new));
 

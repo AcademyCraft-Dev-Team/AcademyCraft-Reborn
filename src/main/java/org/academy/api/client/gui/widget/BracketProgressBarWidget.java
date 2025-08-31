@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.widget;
 
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.network.chat.Component;
+import org.academy.api.client.gui.animation.ValueAnimator;
 
 public class BracketProgressBarWidget extends AbstractAnimatedLabelWidget {
     private final char fillChar;
@@ -9,47 +10,62 @@ public class BracketProgressBarWidget extends AbstractAnimatedLabelWidget {
     private int lastRenderedStep = -1;
 
     public BracketProgressBarWidget(char fillChar, int totalSlots, float x, float y) {
-        super("", x, y);
+        super(Component.empty(), x, y);
         this.fillChar = fillChar;
         this.totalSlots = totalSlots;
+        this.targetComponent = Component.literal("[" + String.valueOf(fillChar).repeat(totalSlots) + "]");
     }
 
     @Override
-    protected void updateAnimation(float deltaTime) {
-        this.animationStep += this.stepsPerSecond * deltaTime;
+    protected void onAnimationUpdate(ValueAnimator animator) {
+        var totalAnimationSteps = totalSlots + 2;
+        var fraction = animator.getAnimatedValue();
+        int currentStep = Math.min((int) Math.floor(fraction * totalAnimationSteps), totalAnimationSteps);
 
-        int currentVisualStep = Math.min((int) Math.floor(this.animationStep), this.getTotalAnimationSteps());
-        this.updateTextForStep(currentVisualStep);
-        this.checkAnimationCompletion(currentVisualStep);
+        if (currentStep == lastRenderedStep)
+            return;
+
+        lastRenderedStep = currentStep;
+
+        var builder = new StringBuilder();
+        if (currentStep > 0)
+            builder.append('[');
+
+        int filledSlots = Math.max(0, currentStep - 1);
+        if (filledSlots > 0)
+            builder.append(String.valueOf(fillChar).repeat(Math.min(filledSlots, totalSlots)));
+
+        if (currentStep >= totalSlots + 2)
+            builder.append(']');
+
+        setAnimationProgressText(Component.literal(builder.toString()));
     }
 
-    @Override
-    protected int getTotalAnimationSteps() {
-        return this.totalSlots + 2;
+    public void startAnimation() {
+        var totalAnimationSteps = totalSlots + 2;
+        if (totalAnimationSteps > 0 && stepsPerSecond > 0.0f) {
+            long newDuration = (long) (totalAnimationSteps / stepsPerSecond * 1000.0f);
+            setDuration(newDuration);
+        } else {
+            setDuration(0);
+        }
+
+        animateText(targetComponent);
     }
 
-    @Override
-    protected void updateTextForStep(int step) {
-        if (step == this.lastRenderedStep) {
-            return;
-        }
-        this.lastRenderedStep = step;
+    public void resetAnimation() {
+        if (animator != null && animator.isRunning())
+            animator.cancel();
 
-        if (step <= 0) {
-            super.setText("");
-            return;
-        }
-        if (step == 1) {
-            super.setText("[");
-            return;
-        }
-
-        int filledSlots = Math.min(step - 2, this.totalSlots);
-        var fill = String.valueOf(fillChar).repeat(Math.max(0, filledSlots));
-        super.setText("[" + fill + "]");
+        lastRenderedStep = -1;
+        setAnimationProgressText(Component.empty());
     }
 
-    @NotNull
+    public void restartAnimation() {
+        resetAnimation();
+        startAnimation();
+    }
+
     public BracketProgressBarWidget setStepsPerSecond(float stepsPerSecond) {
         this.stepsPerSecond = stepsPerSecond;
         return this;

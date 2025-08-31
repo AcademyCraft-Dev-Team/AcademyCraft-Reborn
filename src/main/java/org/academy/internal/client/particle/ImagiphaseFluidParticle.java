@@ -1,23 +1,19 @@
 package org.academy.internal.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.SuspendedParticle;
 import net.minecraft.client.renderer.LightTexture;
-import org.jetbrains.annotations.NotNull;
-
-import static org.academy.internal.client.particle.ParticleRenderTypes.PARTICLE_IMAG_PHASE;
 
 public class ImagiphaseFluidParticle extends SuspendedParticle {
     public ImagiphaseFluidParticle(ClientLevel level, SpriteSet sprites, double x, double y, double z) {
         super(level, sprites, x, y, z);
     }
 
-    @Override
+/*    @Override
     public @NotNull ParticleRenderType getRenderType() {
         return PARTICLE_IMAG_PHASE;
-    }
+    }*/
 
     @Override
     protected int getLightColor(float partialTick) {

@@ -1,38 +1,15 @@
 package org.academy.api.client.renderer;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.phys.AABB;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.Render;
 import org.academy.api.client.util.VertexUtil;
 
-import static net.minecraft.client.renderer.RenderStateShard.*;
-import static org.academy.api.client.render.post.BloomEffect.BUFFER_SOURCE;
-import static org.academy.api.client.util.RenderStateUtil.BLOOM_TARGET;
-
 public final class BoxRenderer {
-    public static final RenderType FILLED_BOX_RENDER_TYPE = RenderType.create(
-            "filled_box_render_type",
-            DefaultVertexFormat.POSITION_COLOR,
-            VertexFormat.Mode.QUADS,
-            256,
-            RenderType.CompositeState.builder()
-                    .setShaderState(POSITION_COLOR_SHADER)
-                    .setOutputState(BLOOM_TARGET)
-                    .setCullState(NO_CULL)
-                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                    .createCompositeState(false)
-    );
-
-    static {
-        BloomEffect.addFixedBuffer(FILLED_BOX_RENDER_TYPE);
-    }
-
-    public static void renderFilledBox(PoseStack poseStack, AABB box,
+    public static void renderFilledBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
                                        float r, float g, float b, float a) {
-        final var vertexConsumer = BUFFER_SOURCE.getBuffer(FILLED_BOX_RENDER_TYPE);
+        final var vertexConsumer = bufferSource.getBuffer(Render.RenderTypes.BOX);
         final var matrix4f = poseStack.last().pose();
 
         var faces = VertexUtil.Box.getBoxVertices(box);

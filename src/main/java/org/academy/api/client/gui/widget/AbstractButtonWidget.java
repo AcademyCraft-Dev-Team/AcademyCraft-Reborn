@@ -4,7 +4,6 @@ import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.MouseButtonState;
 import org.academy.api.client.util.ClientUtil;
-import org.jetbrains.annotations.NotNull;
 
 public abstract class AbstractButtonWidget extends AbstractWidget {
     public Runnable onPress;
@@ -17,7 +16,7 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
     }
 
     @Override
-    protected void onMousePressed(@NotNull MouseEvent event) {
+    protected void onMousePressed(MouseEvent event) {
         if (this.state == MouseButtonState.PRESSED
                 && event.getButton() == 0
                 && this.isMouseOver(event.getX(), event.getY())) {
@@ -26,7 +25,7 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
     }
 
     @Override
-    protected void onMouseReleased(@NotNull MouseEvent event) {
+    protected void onMouseReleased(MouseEvent event) {
         if (this.state == MouseButtonState.RELEASED
                 && event.getButton() == 0
                 && this.isMouseOver(event.getX(), event.getY())) {
@@ -34,11 +33,9 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
         }
     }
 
-    protected void handlePress(@NotNull MouseEvent event) {
+    protected void handlePress(MouseEvent event) {
         ClientUtil.playDownSound();
-        if (this.onPress != null) {
-            this.onPress.run();
-        }
+        this.onPress.run();
         event.consume();
     }
 

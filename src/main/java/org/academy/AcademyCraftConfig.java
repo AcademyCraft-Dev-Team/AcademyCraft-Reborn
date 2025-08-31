@@ -4,7 +4,6 @@ import com.google.gson.*;
 import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.api.common.gson.TypeHandler;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileReader;
@@ -22,16 +21,16 @@ public final class AcademyCraftConfig {
     private volatile boolean dirty = false;
     private final Map<String, Object> runtimeConfigCache = new ConcurrentHashMap<>();
 
-    public AcademyCraftConfig(@NotNull File configFile) {
+    public AcademyCraftConfig(File configFile) {
         this.configFile = configFile;
         this.load();
     }
 
-    public static void registerTypeHandler(@NotNull String configKey, @NotNull TypeHandler<?> handler) {
+    public static void registerTypeHandler(String configKey, TypeHandler<?> handler) {
         HANDLER_MAP.put(configKey, handler);
     }
 
-    public static void registerTypeHandler(@NotNull ResourceLocation configKey, @NotNull TypeHandler<?> handler) {
+    public static void registerTypeHandler(ResourceLocation configKey, TypeHandler<?> handler) {
         registerTypeHandler(Util.makeDescriptionId("config", configKey), handler);
     }
 
@@ -79,19 +78,20 @@ public final class AcademyCraftConfig {
         return handler.getAdapter(GSON).toJsonTree((T) instance);
     }
 
-    public <T> T getConfig(@NotNull ResourceLocation configKey) {
+    public <T> T getConfig(ResourceLocation configKey) {
         return getConfig(Util.makeDescriptionId("config", configKey));
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T getConfig(@NotNull String configKey) {
-        if (runtimeConfigCache.containsKey(configKey)) {
-            return (T) runtimeConfigCache.get(configKey);
+    public <T> T getConfig(String configKey) {
+        var cachedInstance = runtimeConfigCache.get(configKey);
+        if (cachedInstance != null) {
+            return (T) cachedInstance;
         }
 
         var handler = (TypeHandler<T>) HANDLER_MAP.get(configKey);
         if (handler == null) {
-            throw new RuntimeException("No TypeHandler registered for key: " + configKey);
+            throw new IllegalStateException("No TypeHandler registered for key: " + configKey);
         }
 
         var jsonElement = rootJsonConfig.get(configKey);
@@ -103,15 +103,23 @@ public final class AcademyCraftConfig {
         } else {
             configInstance = handler.getAdapter(GSON).fromJsonTree(jsonElement);
         }
+
+        if (configInstance == null) {
+            throw new IllegalStateException(
+                    "TypeHandler for key '" + configKey + "' (" + handler.getClass().getName() +
+                            ") illegally returned a null value either from getDefault() or fromJsonTree()."
+            );
+        }
+
         runtimeConfigCache.put(configKey, configInstance);
         return configInstance;
     }
 
-    public void setConfig(@NotNull ResourceLocation configKey, @NotNull Object configInstance) {
+    public void setConfig(ResourceLocation configKey, Object configInstance) {
         setConfig(Util.makeDescriptionId("config", configKey), configInstance);
     }
 
-    public void setConfig(@NotNull String configKey, @NotNull Object configInstance) {
+    public void setConfig(String configKey, Object configInstance) {
         var handler = HANDLER_MAP.get(configKey);
         if (handler == null) {
             AcademyCraft.LOGGER.warn("Attempted to set config for unregistered key: {}", configKey);

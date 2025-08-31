@@ -22,7 +22,7 @@ public final class Registries {
         public static final ResourceKey<Registry<PayloadType<?, ?>>> PAYLOAD_TYPES = key("payload_types");
 
         private static <T> ResourceKey<Registry<T>> key(String name) {
-            return ResourceKey.createRegistryKey(AcademyCraft.getResourceLocation(name));
+            return ResourceKey.createRegistryKey(AcademyCraft.academy(name));
         }
 
         private Keys() {

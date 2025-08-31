@@ -1,22 +1,19 @@
 package org.academy.internal.common.world.entity.skill;
 
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("resource")
-public class HighSpeedElectronBeam extends Entity {
+public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public static final int maxChargerTicks = 40;
     public static final int maxRayLifeTicks = 15;
     public int currentChargerTicks = 0;
@@ -34,25 +31,6 @@ public class HighSpeedElectronBeam extends Entity {
 
     @Override
     protected void defineSynchedData(SynchedEntityData.@NotNull Builder builder) {
-    }
-
-    @Override
-    public boolean isAttackable() {
-        return false;
-    }
-
-    @Override
-    protected void doWaterSplashEffect() {
-    }
-
-    @Override
-    public boolean displayFireAnimation() {
-        return false;
-    }
-
-    @Override
-    public boolean ignoreExplosion(@NotNull Explosion explosion) {
-        return true;
     }
 
     @Override
@@ -86,7 +64,9 @@ public class HighSpeedElectronBeam extends Entity {
             }
             if (shouldStopRay) {
                 if (currentRayLifeTicks <= 0) {
-                    kill();
+                    if (level() instanceof ServerLevel serverLevel) {
+                        kill(serverLevel);
+                    }
                 } else {
                     currentRayLifeTicks--;
                     progress *= 0.75f;
@@ -108,7 +88,7 @@ public class HighSpeedElectronBeam extends Entity {
             }
 
             if (!level().isClientSide) {
-                LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.125f, new DamageSource(level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), this), 100);
+                LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.125f, new DamageSource(level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK), this), 100);
             }
             fired = true;
         }
@@ -117,25 +97,5 @@ public class HighSpeedElectronBeam extends Entity {
 
     public boolean isCharging() {
         return currentChargerTicks < maxChargerTicks;
-    }
-
-    @Override
-    public boolean shouldRender(double d, double e, double f) {
-        return true;
-    }
-
-    @Override
-    protected void readAdditionalSaveData(@NotNull CompoundTag compound) {
-    }
-
-    @Override
-    protected void addAdditionalSaveData(@NotNull CompoundTag compound) {
-    }
-
-    @Override
-    public @NotNull AABB getBoundingBoxForCulling() {
-        Vec3 pos = this.position();
-        double radius = 50.0;
-        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }

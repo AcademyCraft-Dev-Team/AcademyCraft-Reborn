@@ -8,7 +8,7 @@ public abstract class Animator {
     long startDelay = 0;
     long duration = 300;
     boolean running = false;
-    private List<AnimatorListener> listeners = null;
+    private final List<AnimatorListener> listeners = new ArrayList<>();
 
     public void start() {
         if (running) {
@@ -23,11 +23,9 @@ public abstract class Animator {
         }
         running = false;
         AnimationManager.getInstance().remove(this);
-        if (listeners != null) {
-            var tempList = new ArrayList<>(listeners);
-            for (var listener : tempList) {
-                listener.onAnimationCancel(this);
-            }
+        var tempList = new ArrayList<>(listeners);
+        for (var listener : tempList) {
+            listener.onAnimationCancel(this);
         }
     }
 
@@ -35,22 +33,18 @@ public abstract class Animator {
         if (running) {
             running = false;
             AnimationManager.getInstance().remove(this);
-            if (listeners != null) {
-                var tempList = new ArrayList<>(listeners);
-                for (var listener : tempList) {
-                    listener.onAnimationEnd(this);
-                }
+            var tempList = new ArrayList<>(listeners);
+            for (var listener : tempList) {
+                listener.onAnimationEnd(this);
             }
         }
     }
 
     void onStartInternal() {
         running = true;
-        if (listeners != null) {
-            var tempList = new ArrayList<>(listeners);
-            for (var listener : tempList) {
-                listener.onAnimationStart(this);
-            }
+        var tempList = new ArrayList<>(listeners);
+        for (var listener : tempList) {
+            listener.onAnimationStart(this);
         }
     }
 
@@ -59,20 +53,11 @@ public abstract class Animator {
     }
 
     public void addListener(AnimatorListener listener) {
-        if (listeners == null) {
-            listeners = new ArrayList<>();
-        }
         listeners.add(listener);
     }
 
     public void removeListener(AnimatorListener listener) {
-        if (listeners == null) {
-            return;
-        }
         listeners.remove(listener);
-        if (listeners.isEmpty()) {
-            listeners = null;
-        }
     }
 
     public Animator setDuration(long duration) {

@@ -1,11 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
+import org.academy.api.client.gui.command.FillRectDrawCommand;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.util.RenderUtil;
-import org.jetbrains.annotations.NotNull;
 
 public class FillWidget extends AbstractWidget {
     protected int color;
@@ -16,28 +14,33 @@ public class FillWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible()) return;
-
-        var baseAlpha = FastColor.ARGB32.alpha(this.color);
-        var finalAlpha = (int)(baseAlpha * getAbsoluteAlpha());
-
-        if (finalAlpha < 1) {
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible())
             return;
-        }
 
-        var finalColor = (this.color & 0x00FFFFFF) | (finalAlpha << 24);
+        var colorAlpha = ARGB.alpha(this.color) / 255.0f;
+        var finalAlpha = colorAlpha * context.getAccumulatedAlpha();
 
-        RenderUtil.fill(stack, bufferSource, 0, 0,
-                this.getWidth(), this.getHeight(), finalColor);
+        if (finalAlpha <= 1.0f / 255.0f)
+            return;
 
+        context.pose().pushPose();
+        context.pose().translate(this.getX(), this.getY(), this.getZ());
+
+        var red = ARGB.red(this.color) / 255.0f;
+        var green = ARGB.green(this.color) / 255.0f;
+        var blue = ARGB.blue(this.color) / 255.0f;
+
+        var command = new FillRectDrawCommand(this.getWidth(), this.getHeight(), red, green, blue, finalAlpha);
+        context.submit(command);
+
+        context.pose().popPose();
     }
 
     public int getColor() {
         return this.color;
     }
 
-    @NotNull
     public FillWidget setColor(int color) {
         this.color = color;
         return this;

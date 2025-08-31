@@ -9,7 +9,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -23,10 +22,12 @@ import org.academy.internal.common.world.level.material.Fluids;
 import org.jetbrains.annotations.NotNull;
 
 public class ImagiphaseUnitItem extends Item {
-    public ImagiphaseUnitItem() {
-        super(new Properties().stacksTo(16));
+    public ImagiphaseUnitItem(Properties properties) {
+        super(properties.stacksTo(16));
     }
 
+
+/*
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand usedHand) {
         ItemStack itemStack = player.getItemInHand(usedHand);
@@ -60,5 +61,5 @@ public class ImagiphaseUnitItem extends Item {
                 }
             }
         }
-    }
+    }*/
 }

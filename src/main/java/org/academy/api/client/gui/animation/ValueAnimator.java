@@ -9,7 +9,7 @@ public class ValueAnimator extends Animator {
     private float endValue;
     private float animatedValue;
     private TimeInterpolator interpolator = EasingFunctions.LINEAR;
-    private List<Consumer<ValueAnimator>> updateListeners = null;
+    private final List<Consumer<ValueAnimator>> updateListeners = new ArrayList<>();
 
     protected ValueAnimator() {
     }
@@ -48,19 +48,11 @@ public class ValueAnimator extends Animator {
     }
 
     public void addUpdateListener(Consumer<ValueAnimator> listener) {
-        if (updateListeners == null) {
-            updateListeners = new ArrayList<>();
-        }
         updateListeners.add(listener);
     }
 
     public void removeUpdateListener(Consumer<ValueAnimator> listener) {
-        if (updateListeners != null) {
-            updateListeners.remove(listener);
-            if (updateListeners.isEmpty()) {
-                updateListeners = null;
-            }
-        }
+        updateListeners.remove(listener);
     }
 
     @Override
@@ -78,10 +70,8 @@ public class ValueAnimator extends Animator {
         var interpolatedFraction = interpolator.getInterpolation(fraction);
         animatedValue = startValue + interpolatedFraction * (endValue - startValue);
 
-        if (updateListeners != null) {
-            for (var listener : updateListeners) {
-                listener.accept(this);
-            }
+        for (var listener : updateListeners) {
+            listener.accept(this);
         }
 
         if (finished) end();

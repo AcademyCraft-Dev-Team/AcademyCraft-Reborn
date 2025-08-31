@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.common.util.MathUtil;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
@@ -23,6 +23,7 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
     protected float minValue;
     protected float maxValue;
     protected float currentValue;
+    @Nullable
     protected Consumer<Float> onValueChanged;
     protected Direction direction = Direction.BOTTOM_TO_TOP;
 
@@ -82,13 +83,11 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
         this.setValue(newValue);
     }
 
-    @NotNull
     public AbstractSliderWidget setDirection(Direction direction) {
         this.direction = direction;
         return this;
     }
 
-    @NotNull
     public AbstractSliderWidget setOnValueChanged(Consumer<Float> onValueChanged) {
         this.onValueChanged = onValueChanged;
         return this;

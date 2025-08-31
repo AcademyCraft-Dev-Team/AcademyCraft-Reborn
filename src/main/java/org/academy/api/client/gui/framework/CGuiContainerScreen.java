@@ -1,11 +1,17 @@
 package org.academy.api.client.gui.framework;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import org.academy.AcademyCraft;
+import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
@@ -13,9 +19,7 @@ import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.widget.BlendQuadWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.RenderTypes;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -24,13 +28,22 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IAnimationScreen {
+    @Nullable
     public BlendQuadWidget back;
+    @Nullable
     public ImageWidget inventory;
     public final PanelWidget rootContainer = new PanelWidget(0, 0, 0, 0);
     public boolean handleContainer = true;
     public boolean renderInventory = true;
     private final List<Animator> screenAnimations = new ArrayList<>();
     private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
+    private final UIRenderContext uiRenderContext = new UIRenderContext();
+    private final RenderTarget renderTarget;
+
+    {
+        var window = Minecraft.getInstance().getWindow();
+        renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
+    }
 
     protected CGuiContainerScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -50,30 +63,49 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     public void removed() {
         super.removed();
         cancelAllAnimations();
+        renderTarget.destroyBuffers();
+        uiRenderContext.close();
     }
 
     @Override
     protected void init() {
         super.init();
+        var window = Minecraft.getInstance().getWindow();
+        renderTarget.resize(window.getWidth(), window.getHeight());
         rootContainer.setWidth(width);
         rootContainer.setHeight(height);
+        rootContainer.clearChildren();
 
         var finalHeight = 187f;
 
-        back = new BlendQuadWidget(0, 0, imageWidth, finalHeight);
+        back = new BlendQuadWidget(leftPos, topPos - 22, imageWidth, finalHeight) {
+            @Override
+            public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+                if (shouldRenderInventory()) {
+                    super.render(renderContext, mouseX, mouseY, partialTick);
+                }
+            }
+        };
         back.setHeight(0);
-        back.setAlpha(0f);
+        back.setAlpha(0.5f);
+        rootContainer.addChild("back", back);
 
-        inventory = new ImageWidget(0, 0, imageWidth, finalHeight,
-                RenderTypes.INVENTORY);
+        inventory = new ImageWidget(leftPos, topPos - 22, imageWidth, finalHeight, Resource.Textures.INVENTORY) {
+            @Override
+            public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+                if (shouldRenderInventory()) {
+                    super.render(renderContext, mouseX, mouseY, partialTick);
+                }
+            }
+        };
         inventory.setHeight(0);
-        inventory.setAlpha(0f);
+        inventory.setZ(1);
+        rootContainer.addChild("inventory", inventory);
 
         var duration = 600L;
         playAnimation(ObjectAnimator.ofFloat(back::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
         playAnimation(ObjectAnimator.ofFloat(inventory::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
-        playAnimation(ObjectAnimator.ofFloat(back::setAlpha, 0, 0.5f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR));
-        playAnimation(ObjectAnimator.ofFloat(inventory::setAlpha, 0, 1.0f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR));
+        playAnimation(ObjectAnimator.ofFloat(rootContainer::setAlpha, 0, 1.0f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR));
 
         onInit();
     }
@@ -81,46 +113,44 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     protected abstract void onInit();
 
     @Override
-    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBlurredBackground(partialTick);
-        renderMenuBackground(guiGraphics);
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+        var colorTexture = renderTarget.getColorTexture();
+        var depthTexture = renderTarget.getDepthTexture();
+        var colorTextureView = renderTarget.getColorTextureView();
 
-        var stack = new MatrixStack();
-        var bufferSource = guiGraphics.bufferSource();
+        if (colorTexture == null || depthTexture == null || colorTextureView == null) return;
+
+        commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1);
+
+        uiRenderContext.renderFrame(rootContainer, renderTarget, mouseX, mouseY, partialTick);
+        guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
+
         if (shouldRenderInventory()) {
             var originHeight = 187f;
             var currentHeight = inventory.getHeight();
             var scaleY = currentHeight / originHeight;
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(0, topPos, 0);
-            guiGraphics.pose().scale(1, scaleY, 1);
-            guiGraphics.pose().translate(0, -topPos, 0);
+            guiGraphics.pose().pushMatrix();
+            guiGraphics.pose().translate(0, topPos);
+            guiGraphics.pose().scale(1, scaleY);
+            guiGraphics.pose().translate(0, -topPos);
 
-            stack.pushPose();
-            stack.translate(leftPos, topPos - 22, 0);
-            back.render(stack, bufferSource, mouseX, mouseY, partialTick);
-            inventory.render(stack, bufferSource, mouseX, mouseY, partialTick);
-            stack.popPose();
-            rootContainer.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            renderContents(guiGraphics, mouseX, mouseY, partialTick);
+            renderCarriedItem(guiGraphics, mouseX, mouseY);
+            renderSnapbackItem(guiGraphics);
 
-            super.render(guiGraphics, mouseX, mouseY, partialTick);
-            guiGraphics.pose().popPose();
-        } else {
-            rootContainer.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            guiGraphics.pose().popMatrix();
         }
+
         renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
     @Override
-    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
     }
 
     @Override
-    protected void renderLabels(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-    }
-
-    @Override
-    protected void renderBg(@NotNull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
     }
 
     @Override
@@ -142,9 +172,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         var rootResult = event.isConsumed();
 
         var superResult = false;
-        if (shouldHandleContainer()) {
-            superResult = super.mouseClicked(mouseX, mouseY, button);
-        }
+        if (shouldHandleContainer()) superResult = super.mouseClicked(mouseX, mouseY, button);
 
         return rootResult || superResult;
     }
@@ -156,9 +184,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         var rootResult = event.isConsumed();
 
         var superResult = false;
-        if (shouldHandleContainer()) {
-            superResult = super.mouseReleased(mouseX, mouseY, button);
-        }
+        if (shouldHandleContainer()) superResult = super.mouseReleased(mouseX, mouseY, button);
 
         return rootResult || superResult;
     }
@@ -170,9 +196,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         var rootResult = event.isConsumed();
 
         var superResult = false;
-        if (shouldHandleContainer()) {
-            superResult = super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-        }
+        if (shouldHandleContainer()) superResult = super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
 
         return rootResult || superResult;
     }
@@ -184,9 +208,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         var rootResult = event.isConsumed();
 
         var superResult = false;
-        if (shouldHandleContainer()) {
-            superResult = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        }
+        if (shouldHandleContainer()) superResult = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
 
         return rootResult || superResult;
     }
@@ -200,9 +222,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
         var event = new KeyEvent(EventType.KEY_PRESSED, keyCode, scanCode, modifiers);
         rootContainer.dispatchEvent(event);
-        if (event.isConsumed()) {
-            return true;
-        }
+        if (event.isConsumed()) return true;
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && shouldCloseOnEsc()) {
             onClose();
             return true;
@@ -214,9 +234,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     public boolean charTyped(char codePoint, int modifiers) {
         var event = new CharTypedEvent(codePoint, modifiers);
         rootContainer.dispatchEvent(event);
-        if (event.isConsumed()) {
-            return true;
-        }
+        if (event.isConsumed()) return true;
         return shouldHandleContainer() && super.charTyped(codePoint, modifiers);
     }
 

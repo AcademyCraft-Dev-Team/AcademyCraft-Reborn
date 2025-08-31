@@ -17,7 +17,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -31,15 +31,16 @@ public final class AbilitySystemClient {
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
     public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
     public static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
-    public static volatile AbilityCategory category;
-    private static volatile boolean activeHUD = false;
-    private static volatile float computingPower;
-    private static volatile float maximumComputingPower;
-    private static volatile int level;
+    @Nullable
+    public static AbilityCategory category;
+    private static boolean activeHUD = false;
+    private static float computingPower;
+    private static float maximumComputingPower;
+    private static int level;
 
     static {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY_ABILITY_SYSTEM, Config.Action.INSTANCE);
-        var configData = AcademyCraftClient.CLIENT_CONFIG.<Config>getConfig(CONFIG_KEY_ABILITY_SYSTEM);
+        var configData = AcademyCraftClient.Config.INSTANCE.<Config>getConfig(CONFIG_KEY_ABILITY_SYSTEM);
         ACTIVATE_HUD_KEY = configData.getKeyBinding(KEY_NAME_ACTIVATE_HUD,
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
@@ -73,9 +74,7 @@ public final class AbilitySystemClient {
         var skillKey = ResourceLocation.parse(packet.skillName);
         var exp = packet.exp;
         var skill = Registries.SKILLS.get(skillKey);
-        if (skill != null) {
-            setSkillExp(skill, exp);
-        }
+        skill.ifPresent(skillReference -> setSkillExp(skillReference.value(), exp));
     }
 
     @SubscribePacket
@@ -91,8 +90,8 @@ public final class AbilitySystemClient {
         }
         if (packet.abilityCategoryChanged) {
             var newCategory = Registries.ABILITY_CATEGORIES.get(ResourceLocation.parse(packet.abilityCategory));
-            if (newCategory != null) {
-                category = newCategory;
+            if (newCategory.isPresent()) {
+                category = newCategory.get().value();
             } else {
                 AcademyCraft.LOGGER.warn("Received unknown ability category: {}", packet.abilityCategory);
                 category = AbilityCategories.LEVEL0.get();
@@ -103,8 +102,8 @@ public final class AbilitySystemClient {
             if (packet.skills != null) {
                 for (var skillName : packet.skills) {
                     var skill = Registries.SKILLS.get(ResourceLocation.parse(skillName));
-                    if (skill != null) {
-                        LEARNED_SKILLS.add(skill);
+                    if (skill.isPresent()) {
+                        LEARNED_SKILLS.add(skill.get().value());
                     } else {
                         AcademyCraft.LOGGER.warn("Received unknown skill name during sync: {}", skillName);
                     }
@@ -153,7 +152,6 @@ public final class AbilitySystemClient {
         Minecraft.getInstance().execute(() -> AbilitySystemClient.activeHUD = activeHUD);
     }
 
-    @NotNull
     public static AbilityCategory getCategory() {
         return category == null ? AbilityCategories.LEVEL0.get() : category;
     }
@@ -176,12 +174,12 @@ public final class AbilitySystemClient {
             }
 
             @Override
-            public @NotNull AbilitySystemClient.Config getDefault() {
+            public AbilitySystemClient.Config getDefault() {
                 return new Config();
             }
 
             @Override
-            public @NotNull Class<Config> getTypeClass() {
+            public Class<Config> getTypeClass() {
                 return Config.class;
             }
         }

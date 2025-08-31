@@ -1,59 +1,136 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.Tickable;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.event.CharTypedEvent;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.util.RenderUtil;
-import org.jetbrains.annotations.NotNull;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-public class TextBoxWidget extends AbstractWidget implements Tickable {
+public class TextBoxWidget extends LabelWidget {
     protected final StringBuilder text = new StringBuilder();
     protected final int maxLength;
     protected int caretPos = 0;
     protected boolean showBackground = false;
     protected int bgColor = 0x5F1F1F1F;
     protected int borderColor = 0x5F5A5A5A;
-    protected int textColor = 0xFFFFFFFF;
+    @Nullable
     protected Consumer<String> whenEnter;
+    @Nullable
     protected Runnable onFocusLostCallback = null;
     protected boolean clearWhenEnter = true;
     protected boolean forceScale = false;
-    protected float scale = 1.0f;
+    @Nullable
     protected Predicate<String> inputValidator = null;
 
     private boolean showCaret = true;
     private long lastBlinkTime = 0L;
 
     public TextBoxWidget(int maxLength, float x, float y, float width, float height) {
-        super(x, y, width, height);
+        super(Component.empty(), x, y, width, height);
         this.maxLength = maxLength;
-        this.clickable = true;
+        clickable = true;
+        setVerticalAlignment(VerticalAlignment.MIDDLE);
     }
 
-    public String getText() {
-        return this.text.toString();
-    }
-
-    public void setText(String newText) {
-        this.text.setLength(0);
-        if (newText != null) {
-            this.text.append(newText, 0, Math.min(newText.length(), this.maxLength));
+    @Override
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible()) {
+            return;
         }
-        this.caretPos = this.text.length();
-        this.updateScale();
+
+        context.pose().pushPose();
+        context.pose().translate(getX(), getY(), getZ());
+        {
+            if (showBackground) {
+                renderBackground(context);
+            }
+        }
+        context.pose().popPose();
+
+        context.pose().pushPose();
+        context.pose().translate(0, 0, 0.2f);
+        {
+            super.render(context, mouseX, mouseY, partialTick);
+        }
+        context.pose().popPose();
+
+        if (isFocused() && showCaret) {
+            renderCaret(context);
+        }
+    }
+
+    private void renderBackground(WidgetRenderContext context) {
+        var finalAlpha = getAbsoluteAlpha() * context.getAccumulatedAlpha();
+
+        var borderR = ARGB.red(borderColor) / 255.0f;
+        var borderG = ARGB.green(borderColor) / 255.0f;
+        var borderB = ARGB.blue(borderColor) / 255.0f;
+        var borderA = ARGB.alpha(borderColor) / 255.0f * finalAlpha;
+        context.submit(new FillRectDrawCommand(getWidth(), getHeight(), borderR, borderG, borderB, borderA));
+    }
+
+    private void renderCaret(WidgetRenderContext context) {
+        var font = Minecraft.getInstance().font;
+        var finalScale = getScale() * globalScale;
+        var textBeforeCaret = text.substring(0, caretPos);
+        var caretXOffset = font.width(textBeforeCaret) * finalScale;
+
+        var textHeight = font.lineHeight * finalScale * 0.85f;
+        var alignmentOffsetY = (getHeight() - textHeight) / 2.0f;
+
+        var finalCaretX = getX() + 2 + caretXOffset;
+        var finalCaretY = getY() + alignmentOffsetY;
+
+        context.pose().pushPose();
+        context.pose().translate(finalCaretX, finalCaretY, getZ() + 0.2f);
+        {
+            var finalTextColor = ARGB.color((int) (getAbsoluteAlpha() * 255), ARGB.red(getColor()), ARGB.green(getColor()), ARGB.blue(getColor()));
+            var r = ARGB.red(finalTextColor) / 255.0f;
+            var g = ARGB.green(finalTextColor) / 255.0f;
+            var b = ARGB.blue(finalTextColor) / 255.0f;
+            var a = ARGB.alpha(finalTextColor) / 255.0f;
+
+            context.submit(new FillRectDrawCommand(0.75f, textHeight, r, g, b, a));
+        }
+        context.pose().popPose();
+    }
+
+    @Override
+    public String getText() {
+        return text.toString();
+    }
+
+    @Override
+    public LabelWidget setText(String text) {
+        this.text.setLength(0);
+        this.text.append(text, 0, Math.min(text.length(), maxLength));
+        super.setText(Component.literal(this.text.toString()));
+        caretPos = this.text.length();
+        updateScale();
+        return this;
+    }
+
+    @Override
+    public LabelWidget setText(Component component) {
+        var textStr = component.getString();
+        text.setLength(0);
+        text.append(textStr, 0, Math.min(textStr.length(), maxLength));
+        super.setText(component);
+        caretPos = text.length();
+        updateScale();
+        return this;
     }
 
     @Override
@@ -63,206 +140,197 @@ public class TextBoxWidget extends AbstractWidget implements Tickable {
 
     @Override
     public void tick() {
-        if (!this.isFocused()) return;
-
-        long now = System.currentTimeMillis();
-        if (now - this.lastBlinkTime >= 500) {
-            this.showCaret = !this.showCaret;
-            this.lastBlinkTime = now;
-        }
-    }
-
-    @Override
-    protected void onMousePressed(@NotNull MouseEvent event) {
-        if (event.getButton() == 0 && this.isMouseOver(event.getX(), event.getY())) {
-            event.consume();
-        }
-    }
-
-    @Override
-    protected void onCharTyped(@NotNull CharTypedEvent event) {
-        if (!this.isFocused() || this.text.length() >= this.maxLength || Character.isISOControl(event.getCodePoint())) {
+        if (!isFocused()) {
             return;
         }
-        var potentialText = new StringBuilder(this.text).insert(this.caretPos, event.getCodePoint()).toString();
-        if (this.inputValidator == null || this.inputValidator.test(potentialText)) {
-            this.text.insert(this.caretPos++, event.getCodePoint());
-            this.updateScale();
+
+        var now = System.currentTimeMillis();
+        if (now - lastBlinkTime >= 500) {
+            showCaret = !showCaret;
+            lastBlinkTime = now;
+        }
+    }
+
+    @Override
+    protected void onMousePressed(MouseEvent event) {
+        if (event.getButton() == 0 && isMouseOver(event.getX(), event.getY())) {
+            var font = Minecraft.getInstance().font;
+            var localX = (float) event.getX() - getAbsoluteX() - 2;
+            var textStr = getText();
+            caretPos = font.plainSubstrByWidth(textStr, (int) (localX / getScale())).length();
             event.consume();
         }
     }
 
     @Override
-    protected void onKeyPressed(@NotNull KeyEvent event) {
-        if (!isFocused()) return;
-        boolean handled = switch (event.getKeyCode()) {
+    protected void onCharTyped(CharTypedEvent event) {
+        if (!isFocused() || text.length() >= maxLength || Character.isISOControl(event.getCodePoint())) {
+            return;
+        }
+
+        caretPos = Mth.clamp(caretPos, 0, text.length());
+        var potentialText = new StringBuilder(text).insert(caretPos, event.getCodePoint()).toString();
+
+        if (inputValidator == null || inputValidator.test(potentialText)) {
+            text.insert(caretPos, event.getCodePoint());
+            caretPos++;
+            super.setText(text.toString());
+            updateScale();
+            event.consume();
+        }
+    }
+
+    @Override
+    protected void onKeyPressed(KeyEvent event) {
+        if (!isFocused()) {
+            return;
+        }
+
+        var handled = switch (event.getKeyCode()) {
             case GLFW.GLFW_KEY_BACKSPACE -> {
-                if (this.caretPos > 0) {
-                    this.text.deleteCharAt(--this.caretPos);
-                    this.updateScale();
+                if (caretPos > 0) {
+                    --caretPos;
+                    text.deleteCharAt(caretPos);
+                    super.setText(text.toString());
+                    updateScale();
                 }
                 yield true;
             }
             case GLFW.GLFW_KEY_DELETE -> {
-                if (this.caretPos < this.text.length()) {
-                    this.text.deleteCharAt(this.caretPos);
-                    this.updateScale();
+                if (caretPos < text.length()) {
+                    text.deleteCharAt(caretPos);
+                    super.setText(text.toString());
+                    updateScale();
                 }
                 yield true;
             }
             case GLFW.GLFW_KEY_RIGHT -> {
-                if (this.caretPos < this.text.length()) this.caretPos++;
+                if (caretPos < text.length()) {
+                    caretPos++;
+                }
                 yield true;
             }
             case GLFW.GLFW_KEY_LEFT -> {
-                if (this.caretPos > 0) this.caretPos--;
+                if (caretPos > 0) {
+                    caretPos--;
+                }
                 yield true;
             }
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
-                if (this.whenEnter != null) {
-                    this.whenEnter.accept(this.getText());
+                if (whenEnter != null) {
+                    whenEnter.accept(getText());
                 }
-                if (this.clearWhenEnter) {
-                    this.setText("");
+                if (clearWhenEnter) {
+                    setText("");
                 }
                 yield true;
             }
-            case GLFW.GLFW_KEY_END, 334 -> {
-                this.caretPos = this.text.length();
+            case GLFW.GLFW_KEY_END -> {
+                caretPos = text.length();
                 yield true;
             }
             case GLFW.GLFW_KEY_HOME -> {
-                this.caretPos = 0;
+                caretPos = 0;
                 yield true;
             }
             default -> false;
         };
-        if (handled) event.consume();
+
+        if (handled) {
+            event.consume();
+        }
     }
 
     @Override
     public void onFocusGained() {
         var event = new FocusGainedEvent(this);
         NeoForge.EVENT_BUS.post(event);
-        if (event.isCanceled()) return;
-        this.showCaret = true;
-        this.lastBlinkTime = System.currentTimeMillis();
+        if (event.isCanceled()) {
+            return;
+        }
+
+        showCaret = true;
+        lastBlinkTime = System.currentTimeMillis();
     }
 
     @Override
     public void onFocusLost() {
         var event = new FocusLostEvent(this);
         NeoForge.EVENT_BUS.post(event);
-        if (event.isCanceled()) return;
-        this.showCaret = false;
-        if (this.onFocusLostCallback != null) {
-            this.onFocusLostCallback.run();
+        if (event.isCanceled()) {
+            return;
+        }
+
+        showCaret = false;
+        if (onFocusLostCallback != null) {
+            onFocusLostCallback.run();
         }
     }
 
     private void updateScale() {
-        if (this.forceScale) {
+        var font = Minecraft.getInstance().font;
+        if (forceScale) {
+            setScale(scale);
             return;
         }
-        var font = Minecraft.getInstance().font;
-        float textWidth = font.width(this.text.toString()) + 6;
-        if (textWidth > this.getWidth()) {
-            this.scale = this.getWidth() / textWidth;
+
+        var textWidth = font.width(text.toString());
+        var availableWidth = getWidth() - 4;
+        if (textWidth > availableWidth && textWidth > 0) {
+            setScale(availableWidth / textWidth);
         } else {
-            this.scale = 1.0f;
+            setScale(1.0f);
         }
+    }
+
+    public TextBoxWidget setShowBackground(boolean show) {
+        showBackground = show;
+        return this;
+    }
+
+    public TextBoxWidget setBgColor(int color) {
+        bgColor = color;
+        return this;
+    }
+
+    public TextBoxWidget setBorderColor(int color) {
+        borderColor = color;
+        return this;
     }
 
     @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!this.isVisible()) return;
-
-        if (this.showBackground) {
-            this.renderBackground(stack, bufferSource);
-        }
-        this.renderTextAndCaret(stack, bufferSource);
-    }
-
-    private void renderBackground(MatrixStack stack, MultiBufferSource.BufferSource bufferSource) {
-        var finalBorderColor = RenderUtil.applyAlpha(this.borderColor, this.getAbsoluteAlpha());
-        var finalBgColor = RenderUtil.applyAlpha(this.bgColor, this.getAbsoluteAlpha());
-        RenderUtil.fill(stack, bufferSource, 0, 0, this.getWidth(), this.getHeight(), finalBorderColor);
-        RenderUtil.fill(stack, bufferSource, 1, 1, this.getWidth() - 2, this.getHeight() - 2, finalBgColor);
-    }
-
-    private void renderTextAndCaret(MatrixStack stack, MultiBufferSource.BufferSource bufferSource) {
-        var finalTextColor = RenderUtil.applyAlpha(this.textColor, this.getAbsoluteAlpha());
-        var font = Minecraft.getInstance().font;
-        var finalScale = this.scale * LabelWidget.globalScale;
-        stack.pushPose();
-        var textHeight = font.lineHeight;
-        var scaledHeight = textHeight * finalScale;
-        stack.translate(2, (this.getHeight() - scaledHeight) / 2.0f, 0);
-        stack.scale(finalScale, finalScale, 1.0f);
-        RenderUtil.drawString(stack, bufferSource, font, this.text.toString(), finalTextColor, false);
-        if (this.isFocused() && this.showCaret) {
-            var caretX = 0f;
-            if (this.caretPos > 0) {
-                var beforeCaret = this.text.substring(0, this.caretPos);
-                caretX = font.width(beforeCaret);
-            }
-            RenderUtil.fill(stack, bufferSource, caretX - 1, -1, 1, textHeight + 1, finalTextColor);
-        }
-        stack.popPose();
-    }
-
-    @NotNull
-    public TextBoxWidget setShowBackground(boolean show) {
-        this.showBackground = show;
+    public LabelWidget setColor(int color) {
+        super.setColor(color);
         return this;
     }
 
-    @NotNull
-    public TextBoxWidget setBgColor(int color) {
-        this.bgColor = color;
-        return this;
-    }
-
-    @NotNull
-    public TextBoxWidget setBorderColor(int color) {
-        this.borderColor = color;
-        return this;
-    }
-
-    @NotNull
-    public TextBoxWidget setTextColor(int color) {
-        this.textColor = color;
-        return this;
-    }
-
-    @NotNull
     public TextBoxWidget setWhenEnter(@Nullable Consumer<String> callback) {
-        this.whenEnter = callback;
+        whenEnter = callback;
         return this;
     }
 
-    @NotNull
     public TextBoxWidget setOnFocusLost(@Nullable Runnable callback) {
-        this.onFocusLostCallback = callback;
+        onFocusLostCallback = callback;
         return this;
     }
 
-    @NotNull
     public TextBoxWidget setClearWhenEnter(boolean clear) {
-        this.clearWhenEnter = clear;
+        clearWhenEnter = clear;
         return this;
     }
 
-    @NotNull
     public TextBoxWidget setForceScale(boolean force, float scale) {
-        this.forceScale = force;
-        this.scale = scale;
+        forceScale = force;
+        if (force) {
+            setScale(scale);
+        } else {
+            updateScale();
+        }
         return this;
     }
 
-    @NotNull
     public TextBoxWidget setInputValidator(@Nullable Predicate<String> validator) {
-        this.inputValidator = validator;
+        inputValidator = validator;
         return this;
     }
 
@@ -270,7 +338,7 @@ public class TextBoxWidget extends AbstractWidget implements Tickable {
         public final TextBoxWidget textBoxWidget;
 
         public FocusGainedEvent(TextBoxWidget widget) {
-            this.textBoxWidget = widget;
+            textBoxWidget = widget;
         }
     }
 
@@ -278,7 +346,7 @@ public class TextBoxWidget extends AbstractWidget implements Tickable {
         public final TextBoxWidget textBoxWidget;
 
         public FocusLostEvent(TextBoxWidget widget) {
-            this.textBoxWidget = widget;
+            textBoxWidget = widget;
         }
     }
 }

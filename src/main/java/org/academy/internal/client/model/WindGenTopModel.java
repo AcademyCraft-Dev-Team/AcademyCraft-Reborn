@@ -2,7 +2,7 @@ package org.academy.internal.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
@@ -10,15 +10,14 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.entity.Entity;
-import org.academy.api.client.resource.TextureResources;
-import org.academy.internal.common.world.level.block.entity.WindGenTopBlockEntity;
-import org.jetbrains.annotations.NotNull;
+import org.academy.api.client.Resource;
+
+import static net.minecraft.client.renderer.RenderType.ENTITY_SOLID;
 
 /**
  * @author 这里没有Badd
  */
-public class WindGenTopModel extends HierarchicalModel<Entity> {
+public class WindGenTopModel extends Model {
     private final ModelPart all;
     private final ModelPart main;
     private final ModelPart shell;
@@ -30,6 +29,7 @@ public class WindGenTopModel extends HierarchicalModel<Entity> {
     private final ModelPart li;
 
     public WindGenTopModel(ModelPart root) {
+        super(root, ENTITY_SOLID);
         this.all = root.getChild("all");
         this.main = this.all.getChild("main");
         this.shell = this.all.getChild("shell");
@@ -74,25 +74,13 @@ public class WindGenTopModel extends HierarchicalModel<Entity> {
         return LayerDefinition.create(meshdefinition, 128, 128);
     }
 
-    public void setupAnim(@NotNull WindGenTopBlockEntity entity, float partialTick) {
-    }
-
-    @Override
-    public void setupAnim(@NotNull Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-    }
-
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         poseStack.pushPose();
         all.translateAndRotate(poseStack);
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(TextureResources.UI_WIND_GEN));
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(Resource.Textures.MODEL_WIND_GEN));
         main.render(poseStack, vertexConsumer, packedLight, packedOverlay);
         shell.render(poseStack, vertexConsumer, packedLight, packedOverlay);
         li.render(poseStack, vertexConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         poseStack.popPose();
-    }
-
-    @Override
-    public @NotNull ModelPart root() {
-        return all;
     }
 }

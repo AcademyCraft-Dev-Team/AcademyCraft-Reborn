@@ -2,11 +2,13 @@ package org.academy.internal.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.irisshaders.iris.shaderpack.materialmap.WorldRenderingSettings;
+import net.irisshaders.iris.uniforms.CapturedRenderingState;
 import net.minecraft.client.animation.AnimationChannel;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
-import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
@@ -14,9 +16,9 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.entity.Entity;
-import org.academy.api.client.resource.TextureResources;
-import org.academy.api.client.util.RenderUtil;
+import net.minecraft.world.level.block.Blocks;
+import org.academy.api.client.Resource;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,23 +27,18 @@ import static net.minecraft.client.renderer.blockentity.TheEndPortalRenderer.END
 /**
  * @author 这里没有Badd
  */
-public class WirelessNodeModel extends HierarchicalModel<Entity> {
+public class WirelessNodeModel extends Model {
     private final ModelPart all;
     private final ModelPart core_li;
     private final ModelPart base2;
     private final ModelPart innner_ef;
 
     public WirelessNodeModel(ModelPart root) {
-        super(RenderType::entityTranslucent);
+        super(root.getChild("all"), RenderType::entityTranslucent);
         this.all = root.getChild("all");
         this.core_li = this.all.getChild("core_li");
         this.base2 = this.all.getChild("base2");
         this.innner_ef = this.all.getChild("innner_ef");
-    }
-
-    @Override
-    public @NotNull ModelPart root() {
-        return all;
     }
 
     public static final AnimationDefinition empty = AnimationDefinition.Builder.withLength(0.0F).looping()
@@ -187,12 +184,8 @@ public class WirelessNodeModel extends HierarchicalModel<Entity> {
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
 
-    @Override
-    public void setupAnim(@NotNull Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-    }
-
     public void setupAnim(@NotNull WirelessNodeBlockEntity wirelessNodeBlockEntity, float partialTick) {
-        core_li.resetPose();
+       /* core_li.resetPose();
 
         if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
             animate(wirelessNodeBlockEntity.coreState, empty, wirelessNodeBlockEntity.ticks + partialTick);
@@ -218,17 +211,24 @@ public class WirelessNodeModel extends HierarchicalModel<Entity> {
                     break;
                 }
             }
-        }
+        }*/
     }
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType(TextureResources.WIRELESS_NODE_MODEL));
+        var vertexConsumer = bufferSource.getBuffer(renderType(Resource.Textures.WIRELESS_NODE_MODEL));
         base2.render(poseStack, vertexConsumer, packedLight, packedOverlay);
         core_li.render(poseStack, vertexConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         VertexConsumer effect;
-        if (!RenderUtil.IS_SHADER_PACK_IN_USE.get()) {
+        if (!IrisCompat.isShaderPackInUse()) {
             effect = bufferSource.getBuffer(RenderType.endGateway());
         } else {
+            var blockStateIds = WorldRenderingSettings.INSTANCE.getBlockStateIds();
+
+            if (blockStateIds != null) {
+                var intId = blockStateIds.getOrDefault(Blocks.END_PORTAL.defaultBlockState(), -1);
+                CapturedRenderingState.INSTANCE.setCurrentBlockEntity(intId);
+            }
+
             effect = bufferSource.getBuffer(RenderType.entitySolid(END_PORTAL_LOCATION));
         }
         innner_ef.render(poseStack, effect, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);

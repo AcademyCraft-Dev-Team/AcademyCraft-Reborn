@@ -1,5 +1,6 @@
 package org.academy.api.common.util;
 
+import it.unimi.dsi.fastutil.ints.IntComparator;
 import net.minecraft.world.phys.AABB;
 import org.joml.*;
 
@@ -134,6 +135,82 @@ public class MathUtil {
             var r = RANDOM.nextDouble() * totalWeight;
             var entry = map.ceilingEntry(r);
             return entry != null ? entry.getValue() : map.firstEntry().getValue();
+        }
+    }
+
+    public enum Axis2D {
+        HORIZONTAL,
+        VERTICAL;
+
+        public Axis2D orthogonal() {
+            return switch (this) {
+                case HORIZONTAL -> VERTICAL;
+                case VERTICAL -> HORIZONTAL;
+            };
+        }
+
+        public Direction2D getPositive() {
+            return switch (this) {
+                case HORIZONTAL -> Direction2D.RIGHT;
+                case VERTICAL -> Direction2D.DOWN;
+            };
+        }
+
+        public Direction2D getNegative() {
+            return switch (this) {
+                case HORIZONTAL -> Direction2D.LEFT;
+                case VERTICAL -> Direction2D.UP;
+            };
+        }
+
+        public Direction2D getDirection(boolean isPositive) {
+            return isPositive ? this.getPositive() : this.getNegative();
+        }
+    }
+
+    public enum Direction2D {
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT;
+
+        private final IntComparator coordinateValueComparator = (first, second) -> first == second
+                ? 0
+                : (this.isBefore(first, second) ? -1 : 1);
+
+        public Axis2D getAxis() {
+            return switch (this) {
+                case UP, DOWN -> Axis2D.VERTICAL;
+                case LEFT, RIGHT -> Axis2D.HORIZONTAL;
+            };
+        }
+
+        public Direction2D getOpposite() {
+            return switch (this) {
+                case UP -> DOWN;
+                case DOWN -> UP;
+                case LEFT -> RIGHT;
+                case RIGHT -> LEFT;
+            };
+        }
+
+        public boolean isPositive() {
+            return switch (this) {
+                case UP, LEFT -> false;
+                case DOWN, RIGHT -> true;
+            };
+        }
+
+        public boolean isAfter(int first, int second) {
+            return this.isPositive() ? first > second : second > first;
+        }
+
+        public boolean isBefore(int first, int second) {
+            return this.isPositive() ? first < second : second < first;
+        }
+
+        public IntComparator coordinateValueComparator() {
+            return this.coordinateValueComparator;
         }
     }
 }

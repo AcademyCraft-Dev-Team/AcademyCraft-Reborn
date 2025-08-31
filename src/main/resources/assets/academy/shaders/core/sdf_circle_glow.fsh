@@ -1,10 +1,12 @@
 #version 150
 
-in vec2 texCoord0;
+layout (std140) uniform GlowUniforms {
+    vec4 Color;
+    float Radius;
+    float Softness;
+};
 
-uniform vec4 Color;
-uniform float Radius;
-uniform float Softness;
+in vec2 texCoord0;
 
 out vec4 fragColor;
 

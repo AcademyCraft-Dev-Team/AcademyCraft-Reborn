@@ -2,13 +2,11 @@ package org.academy.internal.common.ability.accelerator.skills;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
@@ -31,7 +29,6 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 public class BloodflowReverse extends Skill {
@@ -43,11 +40,7 @@ public class BloodflowReverse extends Skill {
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
-        if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.Config();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, Client.CONFIG);
-        }
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME,
                         new InputSystem.InputPair(
@@ -66,7 +59,7 @@ public class BloodflowReverse extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -101,15 +94,15 @@ public class BloodflowReverse extends Skill {
         @SuppressWarnings("resource")
         @SubscribePacket
         public static void onAction(ReverseBloodflowPacket packet) {
-            ServerPlayer player = packet.getPacketListener().getPlayer();
-            HitResult hitResult = player.pick(1, 1, false);
-            List<LivingEntity> entityList = player.level().getEntitiesOfClass(LivingEntity.class,
+            var player = packet.getPacketListener().getPlayer();
+            var hitResult = player.pick(1, 1, false);
+            var entityList = player.level().getEntitiesOfClass(LivingEntity.class,
                     new AABB(new BlockPos((int) hitResult.getLocation().x, (int) hitResult.getLocation().y, (int) hitResult.getLocation().z))
             );
             if (!entityList.isEmpty()) {
-                LivingEntity livingEntity = entityList.getFirst();
+                var livingEntity = entityList.getFirst();
                 if (livingEntity != player) {
-                    livingEntity.hurt(new DamageSource(player.damageSources().damageTypes.getHolderOrThrow(DamageTypes.MAGIC)), livingEntity.getHealth());
+                    livingEntity.hurt(new DamageSource(player.damageSources().damageTypes.getOrThrow(DamageTypes.MAGIC)), livingEntity.getHealth());
                 }
             }
         }

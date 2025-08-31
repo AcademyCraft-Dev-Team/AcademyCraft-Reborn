@@ -11,17 +11,16 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.FBBUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -43,7 +42,7 @@ public class AbilityDeveloperBlock extends MultiBlock {
     public static final String ABILITY_DEVELOPER_SCREEN = "ability_developer_screen";
 
     public AbilityDeveloperBlock(Properties properties) {
-        super(BlockBehaviour.Properties.of().noOcclusion().strength(6.0F, 7.0F).requiresCorrectToolForDrops());
+        super(properties.noOcclusion().strength(6.0F, 7.0F).requiresCorrectToolForDrops());
     }
 
     @Override
@@ -52,7 +51,7 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public boolean canBeReplaced(@NotNull BlockState state, @NotNull BlockPlaceContext useContext) {
+    public boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
         return false;
     }
 
@@ -61,9 +60,13 @@ public class AbilityDeveloperBlock extends MultiBlock {
         return SUBJECT_BLOCKS;
     }
 
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.INVISIBLE;
+    }
 
     @Override
-    protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, Player player, @NotNull BlockHitResult hitResult) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (!player.isShiftKeyDown()) {
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
                 if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity blockEntity) {
@@ -80,15 +83,15 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new AbilityDeveloperBlockEntity(pos, state);
     }
 
     @Override
     @Nullable
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level,
-                                                                  @NotNull BlockState state,
-                                                                  @NotNull BlockEntityType<T> blockEntityType) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level,
+                                                                  BlockState state,
+                                                                  BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof AbilityDeveloperBlockEntity abe) {
                 if (abe.isMain()) {
@@ -105,12 +108,12 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public boolean skipRendering(@NotNull BlockState state, @NotNull BlockState adjacentState, @NotNull Direction direction) {
+    public boolean skipRendering(BlockState state, BlockState adjacentState, Direction direction) {
         return false;
     }
 
     @Override
-    protected @NotNull MapCodec<? extends BaseEntityBlock> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 }

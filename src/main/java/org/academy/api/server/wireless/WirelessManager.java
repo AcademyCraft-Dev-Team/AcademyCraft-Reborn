@@ -17,14 +17,14 @@ import java.util.*;
 
 public class WirelessManager {
     public static void initServer() {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(WirelessManager.class);
-        AcademyCraftServer.SERVER_FUTURE_MANAGER.registerPayloadHandler(WirelessManager.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(WirelessManager.class);
+        AcademyCraftServer.FUTURE_MANAGER.registerPayloadHandler(WirelessManager.class);
     }
 
     @HandlePayload
     public static GetAvailableNodesPacket.Response onGetAvailableNodes(GetAvailableNodesPacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var level = player.serverLevel();
+        var level = player.level();
         var requesterPos = payload.requesterPos;
         return new GetAvailableNodesPacket.Response(getAvailableNodes(level, requesterPos));
     }
@@ -32,7 +32,7 @@ public class WirelessManager {
     @HandlePayload
     public static GetCurrentNodePacket.Response onGetCurrentNode(GetCurrentNodePacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var level = player.serverLevel();
+        var level = player.level();
         var userPos = payload.userPos;
         var currentNode = getCurrentNode(level, userPos);
         return new GetCurrentNodePacket.Response(currentNode.getLeft(), currentNode.getRight());
@@ -41,7 +41,7 @@ public class WirelessManager {
     @SubscribePacket
     public static void onConnectNode(ConnectNodePacket packet) {
         var player = packet.getPacketListener().getPlayer();
-        var level = player.serverLevel();
+        var level = player.level();
         var userPos = packet.userPos;
         var targetNodeName = packet.targetNodeName;
         var passwordAttempt = packet.passwordAttempt;
@@ -51,7 +51,7 @@ public class WirelessManager {
     @SubscribePacket
     public static void onDisconnectNode(DisconnectNodePacket packet) {
         var player = packet.getPacketListener().getPlayer();
-        var level = player.serverLevel();
+        var level = player.level();
         var userPos = packet.userPos;
         handleDisconnect(player, level, userPos);
     }
@@ -59,7 +59,7 @@ public class WirelessManager {
     @SubscribePacket
     public static void onSetNodeName(SetNodeNamePacket packet) {
         var player = packet.getPacketListener().getPlayer();
-        var level = player.serverLevel();
+        var level = player.level();
         var nodePos = packet.nodePos;
         var newName = packet.newName;
         WirelessManager.setNodeName(player, level, nodePos, newName);
@@ -68,7 +68,7 @@ public class WirelessManager {
     @SubscribePacket
     public static void onSetNodePass(SetNodePassPacket packet) {
         var player = packet.getPacketListener().getPlayer();
-        var level = player.serverLevel();
+        var level = player.level();
         var nodePos = packet.nodePos;
         var newPass = packet.newPass;
         WirelessManager.setNodePass(player, level, nodePos, newPass);

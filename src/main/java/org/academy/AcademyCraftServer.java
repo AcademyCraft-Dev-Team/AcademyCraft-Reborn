@@ -14,31 +14,43 @@ import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.WorldData;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Logic server, not physical.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MODID)
 public final class AcademyCraftServer {
+    @Nullable
     public static AcademyCraftConfig serverConfig;
+    @Nullable
     public static WorldData worldData;
+    @Nullable
     public static PlayerDataManager playerDataManager;
+    @Nullable
     public static AbilityConfig abilityConfig;
+    @Nullable
     public static GenericConfig genericConfig;
+    @Nullable
     public static File serverConfigFile;
+    @Nullable
     public static File worldDataFile;
-    public static final NetworkManager SERVER_NETWORK_MANAGER = new NetworkManager();
-    public static final FutureManagerServer SERVER_FUTURE_MANAGER = new FutureManagerServer();
+    public static final NetworkManager NETWORK_MANAGER = new NetworkManager();
+    public static final FutureManagerServer FUTURE_MANAGER = new FutureManagerServer();
 
+    @Nullable
     private static ScheduledFuture<?> worldDataSaveTask;
 
     @SubscribeEvent
     public static void init(ServerStartedEvent event) {
-        SERVER_NETWORK_MANAGER.clear();
-        SERVER_FUTURE_MANAGER.clear();
-        SERVER_NETWORK_MANAGER.registerPacketListener(SERVER_FUTURE_MANAGER);
-        SERVER_FUTURE_MANAGER.registerPayloadHandler(ImagiphaseDowsingRodItem.class);
+        NETWORK_MANAGER.clear();
+        FUTURE_MANAGER.clear();
+        NETWORK_MANAGER.registerPacketListener(FUTURE_MANAGER);
+        FUTURE_MANAGER.registerPayloadHandler(ImagiphaseDowsingRodItem.class);
         serverConfigFile = new File(event.getServer().getServerDirectory().toFile(), "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json");
         worldDataFile = event.getServer().getWorldPath(LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json").toFile();
         AcademyCraft.checkFile(serverConfigFile);
@@ -73,6 +85,8 @@ public final class AcademyCraftServer {
         }
         AcademyCraft.LOGGER.info("Server stopping. Performing final data saves...");
         WorldData.saveData();
-        serverConfig.save();
+        if (serverConfig != null) {
+            serverConfig.save();
+        }
     }
 }

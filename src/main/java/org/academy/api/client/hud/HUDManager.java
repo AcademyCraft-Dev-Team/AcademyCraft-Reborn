@@ -1,401 +1,437 @@
 package org.academy.api.client.hud;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.AcademyCraft;
+import org.academy.api.client.Render;
+import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.animation.EasingFunctions;
+import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.command.DrawCommand;
+import org.academy.api.client.gui.framework.*;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.RenderTypes;
-import org.academy.api.client.resource.TextureResources;
-import org.academy.api.client.util.ClientUtil;
-import org.academy.api.client.util.RenderUtil;
-import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
-import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
+import org.joml.Matrix4f;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.*;
 
-import static org.academy.AcademyCraft.getResourceLocation;
+public final class HUDManager implements IAnimationScreen {
+    public static final HUDManager INSTANCE = new HUDManager();
 
-public final class HUDManager {
-    private static boolean initialized = false;
-    private static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
-    public static final RenderType CP_BAR_VALUE =
-            RenderUtil.getPositionColorTexRenderType(
-                    "cp_bar_value",
-                    TextureResources.CP_BAR_VALUE,
-                    false);
-    public static final RenderType CP_BAR =
-            RenderUtil.getPositionColorTexRenderType(
-                    "cp_bar",
-                    TextureResources.CP_BAR,
-                    false);
-    public static final RenderType CP_BAR_BACKGROUND =
-            RenderUtil.getPositionColorTexRenderType(
-                    "cp_bar_background",
-                    TextureResources.CP_BAR_BACKGROUND,
-                    false);
-    public static final Function<AbilityCategory, RenderType> ABILITY_ICON = abilityCategory -> {
-        var key = abilityCategory.getKey();
-        return RenderUtil.getPositionColorTexRenderType("ability_icon", getResourceLocation(key.getNamespace(),
-                "textures/ability/" + key.getPath() + "/icon_overlay.png"
-        ), false);
-    };
-    public static final Supplier<Float> SCALE_FACTOR = () -> 1.0f;
-    public static final float DEFAULT_SCALA = 0.2F;
-    public static final int CP_BAR_WIDTH = 964;
-    public static final int CP_BAR_HEIGHT = 147;
-    public static final int CP_BAR_CONSUMABLE_WIDTH = 743;
-    public static final int CP_BAR_LEFT_SAFE_ZONE = 46;
-    public static final int CP_BAR_RIGHT_SAFE_ZONE = 34;
-    public static final int CP_BAR_TOP_SAFE_ZONE = 30;
-    public static final float CP_BAR_ANGLE = 45F;
-    public static final float CP_BAR_TANGENT = (float) Math.tan(Math.toRadians(CP_BAR_ANGLE));
-    public static final int ABILITY_ICON_WIDTH = 64;
-    public static final int ABILITY_ICON_HEIGHT = 64;
-    public static final int ABILITY_ICON_RIGHT_SAFE_ZONE = 10;
-    public static final int ABILITY_ICON_TOP_SAFE_ZONE = 10;
-    public static float targetAlpha;
-    public static float currentAlpha;
-    public static float smoothProgress;
-    private static final List<SkillWidget> skillWidgets = new ArrayList<>();
-    private static int selectedSkillIndex = 0;
-    private static final float SKILL_LIST_RIGHT_MARGIN = 5f;
-    private static final float DEFAULT_SKILL_WIDGET_WIDTH = 80f;
-    private static final float DEFAULT_SKILL_WIDGET_HEIGHT = 20f;
-    private static final float SKILL_WIDGET_SPACING = 2f;
-    private static final float SELECTED_SKILL_WIDTH_MULTIPLIER = 1.25f;
-    private static final float SELECTED_SKILL_HEIGHT_MULTIPLIER = 1.25f;
     public static final String KEY_SKILL_UP = "hud_skill_up";
     public static final String KEY_SKILL_DOWN = "hud_skill_down";
-    private static ImageWidget cpBarBackgroundWidget;
-    private static ImageWidget cpBarWidget;
-    private static QuadVertexWidget cpBarValueWidget;
-    private static ImageWidget abilityIconWidget;
+
+    public static final UIRenderContext UI_RENDER_CONTEXT = new UIRenderContext();
+    public static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
+    public static final RenderTarget RENDER_TARGET;
+    public static final PanelWidget ROOT;
+    public static final AbstractWidget CP_BAR_BACKGROUND_WIDGET;
+    public static final ImageWidget CP_BAR_WIDGET;
+    private static final CPBarValueWidget CP_BAR_VALUE_WIDGET;
+    public static final ImageWidget ABILITY_ICON_WIDGET;
+    public static final LinearLayoutContainer SKILL_LIST_CONTAINER;
+
+    private static final float CP_BAR_WIDTH = 192.8F;
+    private static final float CP_BAR_HEIGHT = 29.400002F;
+    private static final float ABILITY_ICON_SIZE = 8;
+    private static final float ABILITY_ICON_RIGHT_MARGIN = 10;
+    private static final float ABILITY_ICON_TOP_MARGIN = 12;
+
+    private static final float SKILL_LIST_RIGHT_MARGIN = 5.0F;
+    private static final float DEFAULT_SKILL_WIDGET_WIDTH = 80.0F;
+    private static final float DEFAULT_SKILL_WIDGET_HEIGHT = 20.0F;
+    private static final float SELECTED_SKILL_WIDTH = 100.0F;
+    private static final float SELECTED_SKILL_HEIGHT = 25.0F;
+    private static final float SELECTED_SKILL_X_OFFSET = 20.0F;
+
+    private final List<Animator> screenAnimations = new ArrayList<>();
+    private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
+
+    private static boolean initialized = false;
+    private static int selectedSkillIndex = 0;
+    private static float currentAlpha = 0.0F;
+    private static float smoothProgress = 0.0F;
+
+    static {
+        var window = Minecraft.getInstance().getWindow();
+        RENDER_TARGET = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
+
+        ROOT = new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F);
+        ROOT.setAlpha(0.0F);
+
+        var backTexture = Minecraft.getInstance().getTextureManager().getTexture(Resource.Textures.CP_BAR_BACKGROUND);
+        backTexture.getTexture().setTextureFilter(FilterMode.NEAREST, false);
+        var backTextureView = backTexture.getTextureView();
+
+        CP_BAR_BACKGROUND_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, backTextureView);
+        ROOT.addChild("cp_bar_bg", CP_BAR_BACKGROUND_WIDGET);
+
+        var barTexture = Minecraft.getInstance().getTextureManager().getTexture(Resource.Textures.CP_BAR);
+        barTexture.getTexture().setTextureFilter(FilterMode.LINEAR, true);
+        var barTextureView = barTexture.getTextureView();
+
+        CP_BAR_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, barTextureView);
+        ROOT.addChild("cp_bar", CP_BAR_WIDGET);
+
+        CP_BAR_VALUE_WIDGET = new CPBarValueWidget(0.0F, 0.0F, 0.0F, 0.0F);
+        ROOT.addChild("cp_bar_value", CP_BAR_VALUE_WIDGET);
+
+        ABILITY_ICON_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, (ResourceLocation) null);
+        ROOT.addChild("ability_icon", ABILITY_ICON_WIDGET);
+
+        SKILL_LIST_CONTAINER = new LinearLayoutContainer(0.0F, 0.0F, 0.0F, 0.0F, Orientation.VERTICAL);
+        SKILL_LIST_CONTAINER.setSpacing(2.0F);
+        ROOT.addChild("skill_list", SKILL_LIST_CONTAINER);
+    }
 
     private HUDManager() {
     }
 
     public static void init() {
-        if (initialized) return;
+        if (initialized)
+            return;
+
         initialized = true;
 
-        InputSystem.addKeyBinding(KEY_SKILL_UP, new InputSystem.InputPair(
-                InputSystem.InputType.KEYBOARD,
-                new InputSystem.KeyInfo(new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_UP)), GLFW.GLFW_RELEASE, new LinkedHashSet<>())
-        ), HUDManager::selectPreviousSkill);
+        var upKeys = new LinkedHashSet<Integer>();
+        upKeys.add(265);
+        InputSystem.addKeyBinding(KEY_SKILL_UP,
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(upKeys, 0, new LinkedHashSet<>())),
+                HUDManager::selectPreviousSkill);
 
-        InputSystem.addKeyBinding(KEY_SKILL_DOWN, new InputSystem.InputPair(
-                InputSystem.InputType.KEYBOARD,
-                new InputSystem.KeyInfo(new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_DOWN)), GLFW.GLFW_RELEASE, new LinkedHashSet<>())
-        ), HUDManager::selectNextSkill);
-
-        final var scale = DEFAULT_SCALA * SCALE_FACTOR.get();
-        final var bgWidth = 946 * scale;
-        final var bgHeight = 147 * scale;
-        cpBarBackgroundWidget = new ImageWidget(0, 0, bgWidth, bgHeight, CP_BAR_BACKGROUND);
-        cpBarWidget = new ImageWidget(0, 0, bgWidth, bgHeight, CP_BAR);
-        cpBarValueWidget = new QuadVertexWidget(0, 0, 0, 0, CP_BAR_VALUE);
-
-        final var iconWidth = ABILITY_ICON_WIDTH * scale;
-        final var iconHeight = ABILITY_ICON_HEIGHT * scale;
-        abilityIconWidget = new ImageWidget(0, 0, iconWidth, iconHeight, null);
+        var downKeys = new LinkedHashSet<Integer>();
+        downKeys.add(264);
+        InputSystem.addKeyBinding(KEY_SKILL_DOWN,
+                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(downKeys, 0, new LinkedHashSet<>())),
+                HUDManager::selectNextSkill);
 
         NeoForge.EVENT_BUS.register(HUDManager.class);
     }
 
     public static void registerHUDRenderer(HUDRenderer renderer) {
-        if (!initialized) HUD_RENDERERS.add(renderer);
+        if (!HUD_RENDERERS.contains(renderer))
+            HUD_RENDERERS.add(renderer);
     }
 
-    private static void updateSkillWidgetsList() {
-        var learnedSkills = AbilitySystemClient.LEARNED_SKILLS;
-        if (skillWidgets.size() == learnedSkills.size()) {
-            var match = true;
-            var tempList = new ArrayList<>(learnedSkills);
-            for (var i = 0; i < skillWidgets.size(); i++) {
-                if (!skillWidgets.get(i).skill.equals(tempList.get(i))) {
-                    match = false;
-                    break;
-                }
+    private static float getAnimationFactor(float partialTick) {
+        return partialTick * 0.5f;
+    }
+
+    @SubscribeEvent
+    public static void onRenderGui(RenderGuiEvent.Pre event) {
+        if (!initialized)
+            return;
+
+        var colorTexture = RENDER_TARGET.getColorTexture();
+        var depthTexture = RENDER_TARGET.getDepthTexture();
+        var colorTextureView = RENDER_TARGET.getColorTextureView();
+        if (colorTexture == null || depthTexture == null || colorTextureView == null)
+            return;
+
+        var partialTick = event.getPartialTick().getGameTimeDeltaTicks();
+        var animFactor = partialTick;
+
+        {
+            var targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
+            currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, animFactor);
+            ROOT.setAlpha(currentAlpha);
+
+            var r = 1.0f;
+            var g = 0.68235296F;
+            var b = 0.26666668F;
+            var finalR = MathUtil.lerpFactorStartEnd(currentAlpha, r, 1.0f);
+            var finalG = MathUtil.lerpFactorStartEnd(currentAlpha, g, 1.0f);
+            var finalB = MathUtil.lerpFactorStartEnd(currentAlpha, b, 1.0f);
+            CP_BAR_WIDGET.setColor(finalR, finalG, finalB);
+        }
+
+        {
+            var computingPower = AbilitySystemClient.getComputingPower();
+            var maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
+            var progress = (computingPower > 0.0F && maximumComputingPower > 0.0F) ? (computingPower / maximumComputingPower) : 0.0f;
+            smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, animFactor);
+            if (Float.isNaN(smoothProgress)) {
+                smoothProgress = 0.0f;
             }
-            if (match) return;
-        }
-        populateSkillWidgets();
-    }
-
-    private static void populateSkillWidgets() {
-        skillWidgets.clear();
-
-        var sortedSkills = new ArrayList<>(AbilitySystemClient.LEARNED_SKILLS);
-
-        for (var skill : sortedSkills) {
-            var window = Minecraft.getInstance().getWindow();
-            var widget = new SkillWidget(window.getGuiScaledWidth(), window.getGuiScaledHeight() / 2f, DEFAULT_SKILL_WIDGET_WIDTH, DEFAULT_SKILL_WIDGET_HEIGHT, skill);
-            skillWidgets.add(widget);
         }
 
-        if (!skillWidgets.isEmpty()) {
-            if (selectedSkillIndex >= skillWidgets.size()) {
-                selectedSkillIndex = 0;
-            }
-        } else {
-            selectedSkillIndex = 0;
-        }
-    }
+        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+        commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1.0);
 
-    public static void selectNextSkill() {
-        if (skillWidgets.isEmpty() || !AbilitySystemClient.isActiveHUD()) return;
-        var screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        var baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
-        skillWidgets.get(selectedSkillIndex).setSelected(false, baseSkillWidgetX);
-        selectedSkillIndex = (selectedSkillIndex + 1) % skillWidgets.size();
-        skillWidgets.get(selectedSkillIndex).setSelected(true, baseSkillWidgetX);
-        ClientUtil.playDownSound();
-    }
+        var mc = Minecraft.getInstance();
+        var window = mc.getWindow();
+        var mouse = mc.mouseHandler;
+        var mouseX = mouse.getScaledXPos(window);
+        var mouseY = mouse.getScaledYPos(window);
 
-    public static void selectPreviousSkill() {
-        if (skillWidgets.isEmpty() || !AbilitySystemClient.isActiveHUD()) return;
-        var screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        var baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
-        skillWidgets.get(selectedSkillIndex).setSelected(false, baseSkillWidgetX);
-        selectedSkillIndex = (selectedSkillIndex - 1 + skillWidgets.size()) % skillWidgets.size();
-        skillWidgets.get(selectedSkillIndex).setSelected(true, baseSkillWidgetX);
-        ClientUtil.playDownSound();
+        layoutWidgets((float) window.getGuiScaledWidth(), (float) window.getGuiScaledHeight());
+        UI_RENDER_CONTEXT.renderFrame(ROOT, RENDER_TARGET, mouseX, mouseY, partialTick);
+
+        for (var renderer : HUD_RENDERERS)
+            renderer.render(mouseX, mouseY, partialTick);
+
+        var guiGraphics = event.getGuiGraphics();
+        guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0,
+                guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
     }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Pre event) {
-        if (!initialized) return;
+        if (!initialized || Minecraft.getInstance().player == null)
+            return;
 
-        if (AbilitySystemClient.isActiveHUD()) {
-            updateSkillWidgetsList();
+        updateSkillWidgetsList();
+        ROOT.tick();
+    }
+
+    public static void resize(int width, int height) {
+        RENDER_TARGET.resize(width, height);
+    }
+
+    private static void layoutWidgets(float screenWidth, float screenHeight) {
+        ROOT.setWidth(screenWidth);
+        ROOT.setHeight(screenHeight);
+
+        {
+            CP_BAR_BACKGROUND_WIDGET.setWidth(CP_BAR_WIDTH).setHeight(CP_BAR_HEIGHT).setX(screenWidth - CP_BAR_WIDTH);
+            CP_BAR_WIDGET.setWidth(CP_BAR_WIDTH).setHeight(CP_BAR_HEIGHT).setX(screenWidth - CP_BAR_WIDTH);
+            CP_BAR_WIDGET.setZ(1);
+            CP_BAR_VALUE_WIDGET.setWidth(screenWidth).setHeight(CP_BAR_HEIGHT);
+            CP_BAR_VALUE_WIDGET.setZ(1);
+        }
+
+        {
+            ABILITY_ICON_WIDGET.setWidth(ABILITY_ICON_SIZE).setHeight(ABILITY_ICON_SIZE);
+            ABILITY_ICON_WIDGET.setX(screenWidth - ABILITY_ICON_RIGHT_MARGIN - ABILITY_ICON_SIZE);
+            ABILITY_ICON_WIDGET.setY(ABILITY_ICON_TOP_MARGIN);
+            ABILITY_ICON_WIDGET.setZ(1);
+
+            var category = AbilitySystemClient.getCategory();
+            var key = category.getKey();
+            var iconPath = AcademyCraft.custom(key.getNamespace(), "textures/ability/" + key.getPath() + "/icon_overlay.png");
+            ABILITY_ICON_WIDGET.setTexture(iconPath);
+        }
+
+        {
+            var children = SKILL_LIST_CONTAINER.getChildren().values();
+            var totalListHeight = children.stream().mapToDouble(Widget::getHeight).sum();
+            totalListHeight += Math.max(0, children.size() - 1) * SKILL_LIST_CONTAINER.getSpacing();
+            SKILL_LIST_CONTAINER.setY((float) ((screenHeight - totalListHeight) / 2.0F));
         }
     }
 
-    public static void render(MatrixStack stack, MultiBufferSource.BufferSource bufferSource, float partialTick) {
-        targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
+    private static void updateSkillWidgetsList() {
+        var learnedSkills = AbilitySystemClient.LEARNED_SKILLS;
+        var currentWidgets = new HashMap<Skill, SkillWidget>();
 
-        var animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
-        currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, animFactor);
+        SKILL_LIST_CONTAINER.getChildren().values().stream()
+                .filter(SkillWidget.class::isInstance)
+                .map(SkillWidget.class::cast)
+                .forEach(skillWidget -> currentWidgets.put(skillWidget.skill, skillWidget));
 
-        for (var renderer : HUD_RENDERERS) {
-            renderer.render(stack, bufferSource, partialTick);
+        var skillsToRemove = new ArrayList<Skill>();
+        for (var skill : currentWidgets.keySet())
+            if (!learnedSkills.contains(skill))
+                skillsToRemove.add(skill);
+
+        skillsToRemove.forEach(skill -> {
+            var widget = currentWidgets.get(skill);
+            SKILL_LIST_CONTAINER.removeChild(widget.getName());
+        });
+
+        var skillsToAdd = new ArrayList<>(learnedSkills);
+        skillsToAdd.removeAll(currentWidgets.keySet());
+        skillsToAdd.forEach(skill -> {
+            var widget = new SkillWidget(skill);
+            SKILL_LIST_CONTAINER.addChild("skill_" + skill.getKey().toString().replace(":", "_"), widget);
+        });
+
+        if (selectedSkillIndex >= SKILL_LIST_CONTAINER.getChildren().size())
+            selectedSkillIndex = 0;
+
+        updateSelectionState(false);
+    }
+
+    private static void selectNextSkill() {
+        if (!SKILL_LIST_CONTAINER.getChildren().isEmpty() && AbilitySystemClient.isActiveHUD()) {
+            updateSelectionState(false);
+            selectedSkillIndex = (selectedSkillIndex + 1) % SKILL_LIST_CONTAINER.getChildren().size();
+            updateSelectionState(true);
+        }
+    }
+
+    private static void selectPreviousSkill() {
+        if (!SKILL_LIST_CONTAINER.getChildren().isEmpty() && AbilitySystemClient.isActiveHUD()) {
+            updateSelectionState(false);
+            selectedSkillIndex = (selectedSkillIndex - 1 + SKILL_LIST_CONTAINER.getChildren().size()) % SKILL_LIST_CONTAINER.getChildren().size();
+            updateSelectionState(true);
+        }
+    }
+
+    private static void updateSelectionState(boolean selected) {
+        var children = new ArrayList<>(SKILL_LIST_CONTAINER.getChildren().values());
+        if (selectedSkillIndex < children.size()) {
+            var widget = (SkillWidget) children.get(selectedSkillIndex);
+            widget.animateSelection(selected);
+        }
+    }
+
+    @Override
+    public List<Animator> getScreenAnimations() {
+        return screenAnimations;
+    }
+
+    @Override
+    public Map<Widget, List<Animator>> getTrackedAnimations() {
+        return trackedAnimations;
+    }
+
+    private static class CPBarValueWidget extends AbstractWidget {
+        private final GpuTextureView valueTextureView;
+
+        public CPBarValueWidget(float x, float y, float width, float height) {
+            super(x, y, width, height);
+            var texture = Minecraft.getInstance().getTextureManager().getTexture(Resource.Textures.CP_BAR_VALUE);
+            texture.getTexture().setTextureFilter(FilterMode.LINEAR, true);
+            this.valueTextureView = texture.getTextureView();
         }
 
-        var screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        cpBarBackgroundWidget.setX(screenWidth - cpBarBackgroundWidget.getWidth());
-        cpBarBackgroundWidget.setY(0);
-        cpBarBackgroundWidget.setAlpha(currentAlpha);
-        cpBarBackgroundWidget.render(stack, bufferSource, 0, 0, partialTick);
+        public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+            var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
+            context.pose().translate(0, 0, 1);
 
-        var targetR = 1.0f;
-        var targetG = 174 / 255.0f;
-        var targetB = 68 / 255.0f;
+            var r = CP_BAR_WIDGET.getRed();
+            var g = CP_BAR_WIDGET.getGreen();
+            var b = CP_BAR_WIDGET.getBlue();
+            var rootAlpha = ROOT.getAlpha();
 
-        var finalR = MathUtil.lerpFactorStartEnd(currentAlpha, 1.0f, targetR);
-        var finalG = MathUtil.lerpFactorStartEnd(currentAlpha, 1.0f, targetG);
-        var finalB = MathUtil.lerpFactorStartEnd(currentAlpha, 1.0f, targetB);
+            var command = new DrawCommand(Render.RenderPipelines.IMAGE) {
+                public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
+                    var barWidthOffset = 148.54579F * (1.0F - smoothProgress);
+                    var leftSafeZoneWidth = 3.2000003F;
 
-        cpBarWidget.setX(screenWidth - cpBarWidget.getWidth());
-        cpBarWidget.setY(0);
-        cpBarWidget.setColor(finalR, finalG, finalB);
-        cpBarWidget.setAlpha(currentAlpha);
-        cpBarWidget.render(stack, bufferSource, 0, 0, partialTick);
+                    var leftTopOffset = barWidthOffset + leftSafeZoneWidth;
+                    var leftBottomOffset = leftTopOffset + CP_BAR_HEIGHT;
 
-        final var computingPower = AbilitySystemClient.getComputingPower();
-        final var maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
-        final var progress = (computingPower != 0 && maximumComputingPower != 0) ? (computingPower / maximumComputingPower) : 0;
-        smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, ClientUtil.animationFactor(MathUtil.PI / 2));
-        if (Float.isNaN(smoothProgress)) {
-            smoothProgress = 0f;
-        }
+                    var rightTopX = getWidth();
+                    var leftTopX = rightTopX - CP_BAR_WIDTH + leftTopOffset;
+                    var leftBottomX = rightTopX - CP_BAR_WIDTH + leftBottomOffset;
 
-        final var scale = DEFAULT_SCALA * SCALE_FACTOR.get();
-        final var width = CP_BAR_WIDTH * scale;
-        final var height = CP_BAR_HEIGHT * scale;
-        final var leftSafeZoneWidth = (CP_BAR_LEFT_SAFE_ZONE - (CP_BAR_TOP_SAFE_ZONE / CP_BAR_TANGENT)) * scale;
-        final var barLength = CP_BAR_CONSUMABLE_WIDTH * scale;
-        final var barWidthOffset = barLength * (1.0f - smoothProgress);
-        final var leftTopOffset = barWidthOffset + leftSafeZoneWidth;
-        final var leftBottomOffset = leftTopOffset + (height / CP_BAR_TANGENT);
-        final var rightTopX = (float) screenWidth;
-        final var leftTopX = rightTopX - width + leftTopOffset;
-        final var leftBottomX = rightTopX - width + leftBottomOffset;
-        final var leftTopUv = 1 - ((width - leftTopOffset) / width);
-        final var leftBottomUv = 1 - ((width - leftBottomOffset) / width);
+                    var leftTopUv = 1.0F - (CP_BAR_WIDTH - leftTopOffset) / CP_BAR_WIDTH;
+                    var leftBottomUv = 1.0F - (CP_BAR_WIDTH - leftBottomOffset) / CP_BAR_WIDTH;
 
-        cpBarValueWidget.setVertex(0, leftTopX, 0, 0, leftTopUv, 0);
-        cpBarValueWidget.setVertex(1, leftBottomX, height, 0, leftBottomUv, 1);
-        cpBarValueWidget.setVertex(2, rightTopX, height, 0, 1, 1);
-        cpBarValueWidget.setVertex(3, rightTopX, 0, 0, 1, 0);
-        cpBarValueWidget.setColor(finalR, finalG, finalB);
-        cpBarValueWidget.setAlpha(currentAlpha);
-        cpBarValueWidget.render(stack, bufferSource, 0, 0, partialTick);
+                    var leftAlpha = finalAlpha * rootAlpha;
+                    leftAlpha *= leftAlpha;
+                    leftAlpha *= leftAlpha;
 
-        final var rightSafeZone = (CP_BAR_RIGHT_SAFE_ZONE + ABILITY_ICON_RIGHT_SAFE_ZONE) * scale;
-        final var topSafeZone = (CP_BAR_TOP_SAFE_ZONE + ABILITY_ICON_TOP_SAFE_ZONE) * scale;
-        final var abilityCategory = AbilitySystemClient.getCategory();
-        abilityIconWidget.setRenderType(ABILITY_ICON.apply(abilityCategory));
-        if (abilityIconWidget.getRenderType() != null) {
-            abilityIconWidget.setX(screenWidth - rightSafeZone - abilityIconWidget.getWidth());
-            abilityIconWidget.setY(topSafeZone);
-            abilityIconWidget.setAlpha(currentAlpha);
-            abilityIconWidget.render(stack, bufferSource, 0, 0, partialTick);
-        }
-
-        if (!skillWidgets.isEmpty()) {
-            var screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-            var baseSkillWidgetX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
-
-            for (var i = 0; i < skillWidgets.size(); i++) {
-                skillWidgets.get(i).setSelected(i == selectedSkillIndex, baseSkillWidgetX);
-            }
-
-            var totalListTargetHeight = 0f;
-            for (var i = 0; i < skillWidgets.size(); i++) {
-                var widget = skillWidgets.get(i);
-                totalListTargetHeight += widget.targetHeight;
-                if (i < skillWidgets.size() - 1) {
-                    totalListTargetHeight += SKILL_WIDGET_SPACING;
+                    consumer.addVertex(pose, leftTopX, 0.0F, 0.0F).setUv(leftTopUv, 0.0F).setColor(r, g, b, leftAlpha);
+                    consumer.addVertex(pose, leftBottomX, CP_BAR_HEIGHT, 0.0F).setUv(leftBottomUv, 1.0F).setColor(r, g, b, leftAlpha);
+                    consumer.addVertex(pose, rightTopX, CP_BAR_HEIGHT, 0.0F).setUv(1.0F, 1.0F).setColor(r, g, b, finalAlpha);
+                    consumer.addVertex(pose, rightTopX, 0.0F, 0.0F).setUv(1.0F, 0.0F).setColor(r, g, b, finalAlpha);
                 }
-            }
 
-            var currentLayoutY = (screenHeight - totalListTargetHeight) / 2f;
+                public Map<String, GpuTextureView> getSamplers() {
+                    return Map.of("Sampler0", valueTextureView);
+                }
 
-            for (var i = 0; i < skillWidgets.size(); i++) {
-                var widget = skillWidgets.get(i);
-                var selected = i == selectedSkillIndex;
-                widget.originalY = currentLayoutY;
-                widget.setSelected(selected, baseSkillWidgetX);
-                widget.setAlpha((selected ? 1 : 0.65f) * currentAlpha);
-                widget.render(stack, bufferSource, 0, 0, partialTick);
-                currentLayoutY += widget.targetHeight + SKILL_WIDGET_SPACING;
-            }
+                public Map<String, GpuBufferSlice> getUniforms() {
+                    return Collections.emptyMap();
+                }
+            };
+            context.submit(command);
         }
     }
 
-    public static final class SkillWidget extends PanelWidget {
+    private static class SkillWidget extends PanelWidget {
         private final Skill skill;
         private final FillWidget back;
         private final AutoScaleLabelWidget label;
         private final ImageWidget icon;
 
-        public float originalX, originalY, originalWidth, originalHeight;
-        private float targetX;
-        public float targetY;
-        public float targetWidth;
-        public float targetHeight;
-        private float currentWidgetAlpha = 0.0f;
+        public SkillWidget(Skill newSkill) {
+            super(0.0F, 0.0F, DEFAULT_SKILL_WIDGET_WIDTH, DEFAULT_SKILL_WIDGET_HEIGHT);
+            this.skill = newSkill;
+            setName("skill_" + newSkill.getKey().toString().replace(":", "_"));
 
-        public SkillWidget(float initialXOffset, float initialYOffset, float width, float height, Skill newSkill) {
-            super(initialXOffset, initialYOffset, width, height);
-            skill = newSkill;
-            originalX = 0;
-            originalY = initialYOffset;
-            targetY = initialYOffset;
-            originalWidth = width;
-            originalHeight = height;
+            var padding = 2.0F;
+            var iconSize = 16.0F;
 
-            targetX = 0;
-            targetWidth = width;
-            targetHeight = height;
+            this.back = new FillWidget(0.0F, 0.0F, getWidth(), getHeight(), 1610612736);
+            this.label = new AutoScaleLabelWidget(skill.getTranslatedName(), padding, 0.0F, getWidth() - iconSize - padding * 3.0F);
+            this.label.setScale(0.7F);
+            this.icon = new ImageWidget(getWidth() - padding - iconSize, padding, iconSize, iconSize, skill.getKey());
+            this.icon.setWidthScale(0.8F);
+            this.icon.setHeightScale(0.8F);
 
-            var padding = 2f;
-            var iconSize = height - padding * 2;
-
-            label = new AutoScaleLabelWidget(skill.getTranslatedName(), padding, 0, width - iconSize - padding * 3);
-            label.setScale(0.7f);
-
-            icon = new ImageWidget(width - padding - iconSize, padding, iconSize, iconSize, getSkillIconRenderType(skill));
-            icon.setWidthScale(0.8f);
-            icon.setHeightScale(0.8f);
-
-            back = new FillWidget(0, 0, width, height, 0x60000000);
-
-            addChild("back", back);
-            addChild("label", label);
-            addChild("icon", icon);
+            addChild("back", this.back);
+            addChild("label", this.label);
+            addChild("icon", this.icon);
         }
 
-        private RenderType getSkillIconRenderType(Skill skillInstance) {
-            for (var infos : AbilitySystemClient.SKILL_INFOS.values()) {
-                for (var info : infos) {
-                    if (info.skill().equals(skillInstance)) {
-                        return RenderUtil.getPositionColorTexRenderType("skill_icon_hud_" + skillInstance.getKey().getPath().toLowerCase().replace(" ", "_"), info.texture(), false);
-                    }
-                }
-            }
-            return RenderTypes.ICON_BOX;
-        }
-
-        @Override
-        public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-            var animFactor = ClientUtil.animationFactor(MathUtil.PI / 2);
-            currentWidgetAlpha = MathUtil.lerpStartEndFactor(currentWidgetAlpha, getAbsoluteAlpha(), animFactor);
-
-            setX(MathUtil.lerpStartEndFactor(getX(), targetX, animFactor));
-            setY(MathUtil.lerpStartEndFactor(getY(), targetY, animFactor));
-            setWidth(MathUtil.lerpStartEndFactor(getWidth(), targetWidth, animFactor));
-            setHeight(MathUtil.lerpStartEndFactor(getHeight(), targetHeight, animFactor));
-
-            back.setColor((back.getColor() & 0x00FFFFFF) | ((int)(0x70 * currentWidgetAlpha) << 24));
-
-            label.setColor((label.getColor() & 0x00FFFFFF) | ((int)(0xFF * currentWidgetAlpha) << 24));
-            icon.setAlpha(currentWidgetAlpha);
-
+        public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
             back.setWidth(getWidth());
             back.setHeight(getHeight());
+            back.setColor(back.getColor() & 16777215 | (int) (112.0F * getAbsoluteAlpha() * context.getAccumulatedAlpha()) << 24);
+            label.setColor(label.getColor() & 16777215 | (int) (255.0F * getAbsoluteAlpha() * context.getAccumulatedAlpha()) << 24);
 
-            var currentHeightRatio = getHeight() / originalHeight;
-            var padding = 2f * currentHeightRatio;
-            var iconSize = getHeight() - padding * 2;
+            var currentHeightRatio = getHeight() / DEFAULT_SKILL_WIDGET_HEIGHT;
+            var padding = 2.0F * currentHeightRatio;
+            var iconSize = getHeight() - padding * 2.0F;
 
             label.setX(padding);
-            label.setWidth(getWidth() - iconSize - padding * 3);
-            label.setY((getHeight() - label.getHeight()) / 2f);
+            label.setWidth(getWidth() - iconSize - padding * 3.0F);
+            label.setY((getHeight() - label.getHeight()) / 2.0F);
 
             icon.setX(getWidth() - padding - iconSize);
             icon.setY(padding);
             icon.setWidth(iconSize);
             icon.setHeight(iconSize);
 
-            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            super.render(context, mouseX, mouseY, partialTick);
         }
 
-        public void setSelected(boolean selected, float currentFrameBaseX) {
-            originalX = currentFrameBaseX;
+        public void animateSelection(boolean selected) {
+            INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(alpha ->
+                    setAlpha(alpha * (selected ? 1.0F : 0.65F) + (1.0F - alpha) * getAlpha()), 0.0F, 1.0F).setDuration(450L));
 
-            float newTargetWidth;
-            float newTargetHeight;
-            float newTargetX;
+            var screenWidth = (float) Minecraft.getInstance().getWindow().getGuiScaledWidth();
+            var baseX = screenWidth - DEFAULT_SKILL_WIDGET_WIDTH - SKILL_LIST_RIGHT_MARGIN;
 
+            float targetWidth;
+            float targetHeight;
+            float targetX;
             if (selected) {
-                newTargetWidth = originalWidth * SELECTED_SKILL_WIDTH_MULTIPLIER;
-                newTargetHeight = originalHeight * SELECTED_SKILL_HEIGHT_MULTIPLIER;
-                newTargetX = originalX - (newTargetWidth - originalWidth);
+                targetWidth = SELECTED_SKILL_WIDTH;
+                targetHeight = SELECTED_SKILL_HEIGHT;
+                targetX = baseX - SELECTED_SKILL_X_OFFSET;
             } else {
-                newTargetWidth = originalWidth;
-                newTargetHeight = originalHeight;
-                newTargetX = originalX;
+                targetWidth = DEFAULT_SKILL_WIDGET_WIDTH;
+                targetHeight = DEFAULT_SKILL_WIDGET_HEIGHT;
+                targetX = baseX;
             }
 
-            targetX = newTargetX;
-            targetY = originalY;
-            targetWidth = newTargetWidth;
-            targetHeight = newTargetHeight;
+            INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(this::setWidth, getWidth(), targetWidth)
+                    .setDuration(450L).setInterpolator(EasingFunctions.EASE_OUT_BACK));
+            INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(this::setHeight, getHeight(), targetHeight)
+                    .setDuration(450L).setInterpolator(EasingFunctions.EASE_OUT_BACK));
+            INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(this::setX, getX(), targetX)
+                    .setDuration(450L).setInterpolator(EasingFunctions.EASE_OUT_BACK));
         }
     }
 }

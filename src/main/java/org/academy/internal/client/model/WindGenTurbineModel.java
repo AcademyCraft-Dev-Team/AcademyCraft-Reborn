@@ -1,21 +1,21 @@
 package org.academy.internal.client.model;
 
-import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.world.entity.Entity;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.client.renderer.RenderType;
 
 /**
  * @author 这里没有Badd
  */
-public class WindGenTurbineModel extends HierarchicalModel<Entity> {
+public class WindGenTurbineModel extends Model {
     public final ModelPart all;
     public final ModelPart main;
     public final ModelPart tip_li;
 
     public WindGenTurbineModel(ModelPart root) {
+        super(root.getChild("all"), RenderType::entityCutoutNoCull);
         this.all = root.getChild("all");
         this.main = this.all.getChild("main");
         this.tip_li = this.all.getChild("tip_li");
@@ -43,14 +43,5 @@ public class WindGenTurbineModel extends HierarchicalModel<Entity> {
         tip_li.addOrReplaceChild("li_r2", CubeListBuilder.create().texOffs(41, 75).addBox(-2.5F, -129.0F, -0.5F, 5.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.2679F, 0.0F, 0.0F, 0.0F, 0.0F, -2.0944F));
 
         return LayerDefinition.create(meshdefinition, 128, 128);
-    }
-
-    @Override
-    public void setupAnim(@NotNull Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-    }
-
-    @Override
-    public @NotNull ModelPart root() {
-        return all;
     }
 }

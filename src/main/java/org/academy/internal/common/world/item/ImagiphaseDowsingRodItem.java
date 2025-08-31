@@ -1,19 +1,11 @@
 package org.academy.internal.common.world.item;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunkSection;
-import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
 import org.academy.api.common.network.future.*;
@@ -27,9 +19,10 @@ import java.util.List;
 public class ImagiphaseDowsingRodItem extends Item {
     public static List<BlockPos> RENDER_TARGET_POSITIONS = new ArrayList<>();
 
-    public ImagiphaseDowsingRodItem() {
-        super(new Item.Properties());
+    public ImagiphaseDowsingRodItem(Properties properties) {
+        super(properties);
     }
+/*
 
     @Override
     public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
@@ -57,6 +50,7 @@ public class ImagiphaseDowsingRodItem extends Item {
         }
         return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());
     }
+*/
 
     public static final class GetLevelChunkSectionsPacket extends RequestPayload<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket.Response> {
         public BlockPos playerPos;
@@ -90,10 +84,10 @@ public class ImagiphaseDowsingRodItem extends Item {
             playerPos = buf.readBlockPos();
         }
 
-        public static final class Response extends ResponsePayload<ClientPacketListener> {
+        public static final class Response extends ResponsePayload<ClientGamePacketListener> {
             public List<BlockPos> sectionsWithImagPhase;
 
-            public Response(ClientPacketListener listener) {
+            public Response(ClientGamePacketListener listener) {
                 super(listener);
                 this.sectionsWithImagPhase = new ArrayList<>();
             }
@@ -113,7 +107,7 @@ public class ImagiphaseDowsingRodItem extends Item {
             }
 
             @Override
-            public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+            public @NotNull PayloadType<ClientGamePacketListener, ? extends Payload<ClientGamePacketListener>> getPayloadType() {
                 return PayloadTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
             }
         }
@@ -123,7 +117,7 @@ public class ImagiphaseDowsingRodItem extends Item {
     @HandlePayload
     public static ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response onGetLevelChunkSections(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var serverLevel = player.serverLevel();
+        var serverLevel = player.level();
         var chunkCache = serverLevel.getChunkSource();
         var sectionsWithImagPhase = new ArrayList<BlockPos>();
 

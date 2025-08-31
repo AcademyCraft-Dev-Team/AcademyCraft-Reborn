@@ -16,7 +16,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 public class C2SPacket implements net.minecraft.network.protocol.Packet<ServerGamePacketListenerImpl> {
-    public static final PacketType<C2SPacket> TYPE = new PacketType<>(PacketFlow.SERVERBOUND, AcademyCraft.getResourceLocation("s2c_packet"));
+    public static final PacketType<C2SPacket> TYPE = new PacketType<>(PacketFlow.SERVERBOUND, AcademyCraft.academy("c2s_packet"));
     public static final StreamCodec<FriendlyByteBuf, C2SPacket> STREAM_CODEC = net.minecraft.network.protocol.Packet.codec(
             C2SPacket::write, C2SPacket::new
     );
@@ -47,7 +47,7 @@ public class C2SPacket implements net.minecraft.network.protocol.Packet<ServerGa
 
     @Override
     public void handle(@NotNull ServerGamePacketListenerImpl handler) {
-        handler.getPlayer().server.execute(() -> {
+        handler.server.execute(() -> {
             var event = new C2SPacketEvent(this);
             NeoForge.EVENT_BUS.post(event);
 
@@ -67,7 +67,7 @@ public class C2SPacket implements net.minecraft.network.protocol.Packet<ServerGa
                     }
                     var instance = factory.apply(handler);
                     instance.read(friendlyByteBuf);
-                    AcademyCraftServer.SERVER_NETWORK_MANAGER.dispatchPacket(instance);
+                    AcademyCraftServer.NETWORK_MANAGER.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(
                             "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",

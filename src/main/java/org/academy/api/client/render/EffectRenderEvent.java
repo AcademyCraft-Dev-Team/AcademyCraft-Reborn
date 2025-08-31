@@ -1,34 +1,48 @@
 package org.academy.api.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
-import org.jetbrains.annotations.NotNull;
 
-public class EffectRenderEvent extends Event implements ICancellableEvent {
-    public PoseStack poseStack;
-    public MultiBufferSource buffer;
-    public int packedLight;
-    public AbstractClientPlayer livingEntity;
-    public float limbSwing;
-    public float limbSwingAmount;
-    public float partialTick;
-    public float ageInTicks;
-    public float netHeadYaw;
-    public float headPitch;
+public final class EffectRenderEvent extends Event {
+    private final PoseStack poseStack;
+    private final MultiBufferSource bufferSource;
+    private final int packedLight;
+    private final PlayerRenderState renderState;
+    private final float yRot;
+    private final float xRot;
 
-    public EffectRenderEvent(@NotNull PoseStack newPoseStack, @NotNull MultiBufferSource newBuffer, int newPackedLight, @NotNull AbstractClientPlayer newLivingEntity, float newLimbSwing, float newLimbSwingAmount, float newPartialTick, float newAgeInTicks, float newNetHeadYaw, float newHeadPitch) {
-        poseStack = newPoseStack;
-        buffer = newBuffer;
-        packedLight = newPackedLight;
-        livingEntity = newLivingEntity;
-        limbSwing = newLimbSwing;
-        limbSwingAmount = newLimbSwingAmount;
-        partialTick = newPartialTick;
-        ageInTicks = newAgeInTicks;
-        netHeadYaw = newNetHeadYaw;
-        headPitch = newHeadPitch;
+    public EffectRenderEvent(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, PlayerRenderState renderState, float yRot, float xRot) {
+        this.poseStack = poseStack;
+        this.bufferSource = bufferSource;
+        this.packedLight = packedLight;
+        this.renderState = renderState;
+        this.yRot = yRot;
+        this.xRot = xRot;
+    }
+
+    public PoseStack getPoseStack() {
+        return poseStack;
+    }
+
+    public MultiBufferSource getBufferSource() {
+        return bufferSource;
+    }
+
+    public int getPackedLight() {
+        return packedLight;
+    }
+
+    public PlayerRenderState getRenderState() {
+        return renderState;
+    }
+
+    public float getYRot() {
+        return yRot;
+    }
+
+    public float getXRot() {
+        return xRot;
     }
 }

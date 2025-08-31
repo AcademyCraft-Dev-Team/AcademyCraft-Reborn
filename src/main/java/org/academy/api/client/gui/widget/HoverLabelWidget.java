@@ -2,7 +2,6 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.NotNull;
 
 public class HoverLabelWidget extends LabelWidget {
     private static final String ELLIPSIS = "...";
@@ -12,13 +11,12 @@ public class HoverLabelWidget extends LabelWidget {
     private final float maxWidth;
     private float baseScale = 1.0f;
 
-    public HoverLabelWidget(@NotNull String text, float x, float y, float maxWidth) {
+    public HoverLabelWidget(String text, float x, float y, float maxWidth) {
         super(Component.empty(), x, y, maxWidth, Minecraft.getInstance().font.lineHeight);
         this.originalComponent = Component.literal(text);
         this.maxWidth = maxWidth;
         this.truncatedComponent = truncate(originalComponent, maxWidth);
         this.setText(this.truncatedComponent);
-        this.setAlignment(Alignment.CENTER);
         this.setVerticalAlignment(VerticalAlignment.MIDDLE);
     }
 
@@ -57,7 +55,6 @@ public class HoverLabelWidget extends LabelWidget {
         }
     }
 
-    @NotNull
     public HoverLabelWidget setBaseScale(float scale) {
         this.baseScale = scale;
         if (!this.isHovered()) {
@@ -67,13 +64,7 @@ public class HoverLabelWidget extends LabelWidget {
     }
 
     @Override
-    public @NotNull final LabelWidget setText(@NotNull String text) {
+    public final LabelWidget setText(String text) {
         throw new UnsupportedOperationException("Cannot set text directly on a HoverLabelWidget.");
-    }
-
-    @Override
-    public @NotNull final LabelWidget setText(@NotNull Component component) {
-        super.setText(component);
-        return this;
     }
 }

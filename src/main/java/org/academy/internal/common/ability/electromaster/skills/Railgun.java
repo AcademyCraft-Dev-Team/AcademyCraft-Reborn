@@ -1,9 +1,9 @@
 package org.academy.internal.common.ability.electromaster.skills;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -67,18 +67,14 @@ public class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     @Override
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CLIENT_CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
-        if (Client.CLIENT_CONFIG == null) {
-            Client.CLIENT_CONFIG = new Client.Config();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, Client.CLIENT_CONFIG);
-        }
+        Client.CLIENT_CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_SHOOT, Client.CLIENT_CONFIG.getKeyBinding(Client.KEY_NAME_SHOOT,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD,
@@ -217,17 +213,17 @@ public class Railgun extends Skill {
 
             @SubscribeEvent
             public void onEffectRender(EffectRenderEvent event) {
-                if (!active || event.livingEntity != this.player) return;
+                if (!active) return;
 
-                event.poseStack.pushPose();
-                event.poseStack.translate(-0.35f, 0.45f, -0.2f);
-                event.poseStack.last().pose().rotateY((float) Math.toRadians(player.yBodyRot));
+                event.getPoseStack().pushPose();
+                event.getPoseStack().translate(-0.35f, 0.45f, -0.2f);
+                event.getPoseStack().last().pose().rotateY((float) Math.toRadians(player.yBodyRot));
 
                 for (ArcEffect effect : activeArcs) {
-                    ArcFactory.render(event.poseStack, effect.data, 1.0f, 1.0f, 1.0f, 1.0f);
+                    ArcFactory.render(event.getPoseStack(), event.getBufferSource(), effect.data, 1.0f, 1.0f, 1.0f, 1.0f);
                 }
 
-                event.poseStack.popPose();
+                event.getPoseStack().popPose();
             }
         }
     }
@@ -320,7 +316,7 @@ public class Railgun extends Skill {
                 length = (float) d;
                 endPos = startPos.add(lookDir.scale(length));
             }
-            LevelUtil.attackEntitiesAlongPath(railgunRay.level(), startPos, endPos, 0.125f, new DamageSource(railgunRay.level().damageSources().damageTypes.getHolderOrThrow(DamageTypes.MOB_ATTACK), railgunRay), 150);
+            LevelUtil.attackEntitiesAlongPath(railgunRay.level(), startPos, endPos, 0.125f, new DamageSource(railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK), railgunRay), 150);
             railgunRay.playSound(SoundEvents.RAILGUN.get());
         }
 
@@ -406,10 +402,10 @@ public class Railgun extends Skill {
     }
 
     @PacketTarget(ThreadType.CLIENT)
-    public static final class ConfirmChargePacket extends Packet<ClientPacketListener> {
+    public static final class ConfirmChargePacket extends Packet<ClientGamePacketListener> {
         public int coinEntityId;
 
-        public ConfirmChargePacket(ClientPacketListener listener) {
+        public ConfirmChargePacket(ClientGamePacketListener listener) {
             super(listener);
         }
 
@@ -429,14 +425,14 @@ public class Railgun extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
+        public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
             return PacketTypes.RAILGUN_CONFIRM_CHARGE.get();
         }
     }
 
     @PacketTarget(ThreadType.CLIENT)
-    public static final class ChargeEndPacket extends EmptyPacket<ClientPacketListener> {
-        public ChargeEndPacket(ClientPacketListener listener) {
+    public static final class ChargeEndPacket extends EmptyPacket<ClientGamePacketListener> {
+        public ChargeEndPacket(ClientGamePacketListener listener) {
             super(listener);
         }
 
@@ -445,7 +441,7 @@ public class Railgun extends Skill {
         }
 
         @Override
-        public @NotNull PacketType<ClientPacketListener, ? extends Packet<ClientPacketListener>> getPacketType() {
+        public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
             return PacketTypes.RAILGUN_CHARGE_END.get();
         }
     }

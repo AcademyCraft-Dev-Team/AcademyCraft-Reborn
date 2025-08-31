@@ -43,11 +43,7 @@ public final class ArcGenerate extends Skill {
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.ArcGenerateConfig.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
-        if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.ArcGenerateConfig();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, Client.CONFIG);
-        }
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(KEY_NAME_GENERATE, Client.CONFIG.getKeyBinding(KEY_NAME_GENERATE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
@@ -60,7 +56,7 @@ public final class ArcGenerate extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -94,7 +90,7 @@ public final class ArcGenerate extends Skill {
         @SubscribePacket
         public static void handle(GeneratePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var level = player.serverLevel();
+            var level = player.level();
             float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower <= 10) return;
             AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);

@@ -1,13 +1,13 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.util.RenderUtil;
-import org.jetbrains.annotations.NotNull;
+import org.academy.api.client.gui.command.ImageDrawCommand;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.jetbrains.annotations.Nullable;
 
 public class ImageButtonWidget extends AbstractButtonWidget {
@@ -18,65 +18,74 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     protected float red;
     protected float green;
     protected float blue;
-    protected RenderType renderType;
+    @Nullable
+    protected GpuTextureView textureView;
     protected float widthScale = 1.0f;
     protected float heightScale = 1.0f;
     protected boolean centerScale = true;
-    protected boolean defaultHoverEffect = false;
+    protected boolean defaultHoverEffect = true;
 
-    public ImageButtonWidget(float x, float y, float width, float height,
-                             @Nullable RenderType renderType, Runnable onPress) {
+    public ImageButtonWidget(float x, float y, float width, float height, @Nullable ResourceLocation texture, Runnable onPress) {
         super(x, y, width, height, onPress);
-        this.renderType = renderType;
-        this.red = 0.75F;
-        this.green = 0.75F;
-        this.blue = 0.75F;
+        textureView = resolveTexture(texture);
+        red = 0.75F;
+        green = 0.75F;
+        blue = 0.75F;
+    }
+
+    @Nullable
+    private static GpuTextureView resolveTexture(@Nullable ResourceLocation location) {
+        if (location == null)
+            return null;
+
+        return Minecraft.getInstance().getTextureManager().getTexture(location).getTextureView();
     }
 
     @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!this.isVisible() || this.renderType == null) return;
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible() || textureView == null)
+            return;
 
-        float scaledWidth = this.getWidth() * this.widthScale;
-        float scaledHeight = this.getHeight() * this.heightScale;
-        float renderX = 0;
-        float renderY = 0;
+        var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
 
-        if (this.centerScale) {
-            renderX = (this.getWidth() - scaledWidth) / 2f;
-            renderY = (this.getHeight() - scaledHeight) / 2f;
+        var scaledWidth = getWidth() * widthScale;
+        var scaledHeight = getHeight() * heightScale;
+
+        context.pose().pushPose();
+        {
+            context.pose().translate(getX(), getY(), getZ());
+            if (centerScale) {
+                context.pose().translate((getWidth() - scaledWidth) / 2.0f, (getHeight() - scaledHeight) / 2.0f, 0.0f);
+            }
+
+            var command = new ImageDrawCommand(
+                    textureView, scaledWidth, scaledHeight, u0, v0, u1, v1, red, green, blue, finalAlpha
+            );
+            context.submit(command);
         }
-
-        float finalAlpha = this.getAbsoluteAlpha();
-
-        RenderUtil.blitWithRenderType(stack, bufferSource, this.renderType, renderX, renderY, scaledWidth, scaledHeight,
-                this.u0, this.v0, this.u1, this.v1, this.red, this.green, this.blue, finalAlpha);
-
+        context.pose().popPose();
     }
 
     @Override
     public void setHovered(boolean hovered) {
-        if (this.isHovered() == hovered) {
+        if (isHovered() == hovered)
             return;
-        }
 
         var pre = new ChangeHoverEffectEvent.Pre(this);
         NeoForge.EVENT_BUS.post(pre);
-        if (pre.isCanceled()) {
-            return;
-        }
+        if (pre.isCanceled()) return;
 
         super.setHovered(hovered);
 
-        if (this.defaultHoverEffect) {
+        if (defaultHoverEffect) {
             if (hovered) {
-                this.red = 1.0F;
-                this.green = 1.0F;
-                this.blue = 1.0F;
+                red = 1.0F;
+                green = 1.0F;
+                blue = 1.0F;
             } else {
-                this.red = 0.75F;
-                this.green = 0.75F;
-                this.blue = 0.75F;
+                red = 0.75F;
+                green = 0.75F;
+                blue = 0.75F;
             }
         }
 
@@ -84,17 +93,11 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         NeoForge.EVENT_BUS.post(post);
     }
 
-    public RenderType getRenderType() {
-        return this.renderType;
-    }
-
-    @NotNull
-    public ImageButtonWidget setRenderType(@Nullable RenderType renderType) {
-        this.renderType = renderType;
+    public ImageButtonWidget setTexture(@Nullable ResourceLocation texture) {
+        textureView = resolveTexture(texture);
         return this;
     }
 
-    @NotNull
     public ImageButtonWidget setUV(float u0, float v0, float u1, float v1) {
         this.u0 = u0;
         this.v0 = v0;
@@ -103,26 +106,22 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         return this;
     }
 
-    @NotNull
     public ImageButtonWidget setColor(float r, float g, float b) {
-        this.red = r;
-        this.green = g;
-        this.blue = b;
+        red = r;
+        green = g;
+        blue = b;
         return this;
     }
 
-    @NotNull
     public ImageButtonWidget setScale(float widthScale, float heightScale, boolean center) {
         this.widthScale = widthScale;
         this.heightScale = heightScale;
-        this.centerScale = center;
+        centerScale = center;
         return this;
     }
 
-    @NotNull
     public ImageButtonWidget setDefaultHoverEffect(boolean enabled) {
-        this.defaultHoverEffect = enabled;
-        this.setHovered(this.isHovered());
+        defaultHoverEffect = enabled;
         return this;
     }
 

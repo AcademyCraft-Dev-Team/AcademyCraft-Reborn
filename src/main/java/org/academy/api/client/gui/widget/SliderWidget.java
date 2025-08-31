@@ -1,10 +1,6 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.renderer.MultiBufferSource;
 import org.academy.api.client.gui.framework.Orientation;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.util.RenderUtil;
-import org.jetbrains.annotations.NotNull;
 
 public class SliderWidget extends AbstractSliderWidget {
 
@@ -12,7 +8,7 @@ public class SliderWidget extends AbstractSliderWidget {
                         float minValue, float maxValue, float initialValue) {
         super(x, y, width, height, orientation, minValue, maxValue, initialValue);
     }
-
+/*
     @Override
     public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
@@ -38,5 +34,5 @@ public class SliderWidget extends AbstractSliderWidget {
         }
 
         stack.popPose();
-    }
+    }*/
 }

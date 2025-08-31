@@ -14,36 +14,36 @@ public class LinearLayoutContainer extends AbstractContainerWidget {
     }
 
     public void doLayout() {
-        float currentPos = 0;
-        for (Widget child : this.getChildren().values()) {
+        var currentPos = 0f;
+        for (var child : getChildren().values()) {
             if (orientation == Orientation.HORIZONTAL) {
                 child.setX(currentPos);
-                child.setY((this.getHeight() - child.getHeight()) / 2f);
-                currentPos += child.getWidth() + this.spacing;
+                child.setY((getHeight() - child.getHeight()) / 2f);
+                currentPos += child.getWidth() + spacing;
             } else {
-                child.setX((this.getWidth() - child.getWidth()) / 2f);
+                child.setX((getWidth() - child.getWidth()) / 2f);
                 child.setY(currentPos);
-                currentPos += child.getHeight() + this.spacing;
+                currentPos += child.getHeight() + spacing;
             }
         }
 
         if (orientation == Orientation.HORIZONTAL) {
-            this.setWidth(Math.max(0, currentPos - this.spacing));
+            setWidth(Math.max(0, currentPos - spacing));
         } else {
-            this.setHeight(Math.max(0, currentPos - this.spacing));
+            setHeight(Math.max(0, currentPos - spacing));
         }
     }
 
     @Override
     public void addChild(String name, Widget child) {
         super.addChild(name, child);
-        this.doLayout();
+        doLayout();
     }
 
     @Override
     public void removeChild(String name) {
         super.removeChild(name);
-        this.doLayout();
+        doLayout();
     }
 
     public void setSpacing(float spacing) {

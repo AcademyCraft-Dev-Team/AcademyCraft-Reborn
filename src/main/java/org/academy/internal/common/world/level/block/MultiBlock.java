@@ -11,21 +11,20 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.redstone.Orientation;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-@SuppressWarnings("deprecation")
 public abstract class MultiBlock extends BaseEntityBlock {
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     public static final EnumProperty<MultiBlockType> TYPE = EnumProperty.create("type", MultiBlockType.class);
 
     protected MultiBlock(Properties properties) {
@@ -33,8 +32,8 @@ public abstract class MultiBlock extends BaseEntityBlock {
     }
 
     @Nullable
-    public MultiBlockEntity getMainBlockEntity(@NotNull Level level, @NotNull BlockPos anyPos) {
-        BlockEntity blockEntity = level.getBlockEntity(anyPos);
+    public MultiBlockEntity getMainBlockEntity(Level level, BlockPos anyPos) {
+        var blockEntity = level.getBlockEntity(anyPos);
         if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
             return multiBlockEntity.getMain();
         } else return null;
@@ -43,10 +42,10 @@ public abstract class MultiBlock extends BaseEntityBlock {
     public abstract List<Vec3i> getSubBlocks();
 
     public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction, List<Vec3i> subBlocks) {
-        final List<BlockPos> subjectBlocks = new ArrayList<>();
+        var subjectBlocks = new ArrayList<BlockPos>();
 
-        for (Vec3i vec3i : subBlocks) {
-            BlockPos offsetPos = switch (direction) {
+        for (var vec3i : subBlocks) {
+            var offsetPos = switch (direction) {
                 case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), vec3i.getZ());
                 case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), -vec3i.getZ());
                 case EAST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
@@ -70,14 +69,14 @@ public abstract class MultiBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void neighborChanged(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Block neighborBlock, @NotNull BlockPos neighborPos, boolean movedByPiston) {
-        BlockEntity blockEntity = level.getBlockEntity(pos);
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, @Nullable Orientation orientation, boolean movedByPiston) {
+        var blockEntity = level.getBlockEntity(pos);
         if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
-            List<BlockPos> blockPosList = getRotatedSubjectBlocks(multiBlockEntity.mainPos, state.getValue(FACING), getSubBlocks());
+            var blockPosList = getRotatedSubjectBlocks(Objects.requireNonNull(multiBlockEntity.mainPos), state.getValue(FACING), getSubBlocks());
             blockPosList.add(multiBlockEntity.mainPos);
-            boolean broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof MultiBlockEntity));
+            var broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof MultiBlockEntity));
             if (broken) {
-                for (BlockPos subjectBlock : blockPosList) {
+                for (var subjectBlock : blockPosList) {
                     level.destroyBlock(subjectBlock, false);
                 }
             }
@@ -85,15 +84,15 @@ public abstract class MultiBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void setPlacedBy(@NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState state, @Nullable LivingEntity placer, @NotNull ItemStack stack) {
-        List<BlockPos> subjectBlocks = getRotatedSubjectBlocks(pos, state.getValue(FACING), getSubBlocks());
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        var subjectBlocks = getRotatedSubjectBlocks(pos, state.getValue(FACING), getSubBlocks());
         setSubBlocks(level, pos, state, subjectBlocks);
     }
 
-    public static void setSubBlocks(@NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull List<BlockPos> subBlocks) {
-        for (BlockPos subjectBlock : subBlocks) {
+    public static void setSubBlocks(Level level, BlockPos pos, BlockState state, List<BlockPos> subBlocks) {
+        for (var subjectBlock : subBlocks) {
             level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
-            BlockEntity blockEntity = level.getBlockEntity(subjectBlock);
+            var blockEntity = level.getBlockEntity(subjectBlock);
             if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
                 multiBlockEntity.setMainPos(pos);
             }
@@ -111,7 +110,7 @@ public abstract class MultiBlock extends BaseEntityBlock {
         }
 
         @Override
-        public @NotNull String getSerializedName() {
+        public String getSerializedName() {
             return name;
         }
     }

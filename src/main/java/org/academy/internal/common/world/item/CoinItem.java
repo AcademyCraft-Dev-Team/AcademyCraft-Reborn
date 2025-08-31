@@ -3,10 +3,9 @@ package org.academy.internal.common.world.item;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
@@ -20,16 +19,16 @@ import org.academy.internal.common.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
 
 public class CoinItem extends Item {
-    public CoinItem() {
-        super(new Properties());
+    public CoinItem(Properties properties) {
+        super(properties);
     }
 
     @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, Player player, @NotNull InteractionHand interactionHand) {
-        ItemStack itemStack = player.getItemInHand(interactionHand);
+    public @NotNull InteractionResult use(Level level, Player player, @NotNull InteractionHand hand) {
+        var itemStack = player.getItemInHand(hand);
 
         if (level.isClientSide) {
-            Vec3 initialVelocity = player.onGround() ?
+            var initialVelocity = player.onGround() ?
                     player.getDeltaMovement().multiply(2.25, 0, 2.25)
                     :
                     player.getDeltaMovement().multiply(1.5,0,1.5);
@@ -42,11 +41,11 @@ public class CoinItem extends Item {
                 itemStack.shrink(1);
             }
             player.playSound(SoundEvents.COIN.get(), 1.0F, 1.0F);
-            player.getCooldowns().addCooldown(this, 5);
-            return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide());
+            player.getCooldowns().addCooldown(itemStack, 5);
+            return InteractionResult.SUCCESS_SERVER;
         }
 
-        return InteractionResultHolder.pass(itemStack);
+        return InteractionResult.PASS;
     }
 
     @PacketTarget(ThreadType.SERVER)

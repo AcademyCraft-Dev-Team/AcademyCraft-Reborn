@@ -2,9 +2,9 @@ package org.academy.api.client.network.future;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.PacketListener;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.SubscribePacket;
@@ -40,7 +40,7 @@ public class FutureManagerClient extends AbstractFutureManager {
     }
 
     @SubscribePacket
-    public void handleFutureRequestFromServer(FutureRequestPacket<ClientPacketListener> requestPacket) {
+    public void handleFutureRequestFromServer(FutureRequestPacket<ClientGamePacketListener> requestPacket) {
         handleRequest(requestPacket, requestPacket.getPacketListener(), response -> {
             var responseTypeId = response.getPayloadType().getPayloadId();
             var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -51,7 +51,7 @@ public class FutureManagerClient extends AbstractFutureManager {
     }
 
     @SubscribePacket
-    public void handleFutureResponseFromServer(FutureResponsePacket<ClientPacketListener> responsePacket) {
+    public void handleFutureResponseFromServer(FutureResponsePacket<ClientGamePacketListener> responsePacket) {
         handleResponse(responsePacket, payload -> Minecraft.getInstance().execute(() -> executeCallback(responsePacket.futureId, payload)));
     }
 }

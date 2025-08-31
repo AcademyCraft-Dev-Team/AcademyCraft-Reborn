@@ -60,10 +60,10 @@ public final class SelfTeleport extends Skill {
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
+        CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         if (CONFIG == null) {
             CONFIG = new Client.Config();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, CONFIG);
+            AcademyCraftClient.Config.INSTANCE.setConfig(key, CONFIG);
         }
 
         KEY_START = CONFIG.getKeyBinding(Client.KEY_NAME_START,
@@ -85,7 +85,7 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Server {

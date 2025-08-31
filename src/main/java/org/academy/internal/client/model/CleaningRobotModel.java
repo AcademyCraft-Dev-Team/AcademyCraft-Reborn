@@ -1,18 +1,15 @@
 package org.academy.internal.client.model;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
-import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 
 /**
  * @author 这里没有Badd
  */
-public class CleaningRobotModel extends EntityModel<CleaningRobot> {
+public class CleaningRobotModel extends EntityModel<EntityRenderState> {
     private final ModelPart all;
     private final ModelPart top;
     private final ModelPart bottom;
@@ -21,6 +18,7 @@ public class CleaningRobotModel extends EntityModel<CleaningRobot> {
     private final ModelPart bleg;
 
     public CleaningRobotModel(ModelPart root) {
+        super(root);
         this.all = root.getChild("all");
         this.top = this.all.getChild("top");
         this.bottom = this.all.getChild("bottom");
@@ -62,14 +60,5 @@ public class CleaningRobotModel extends EntityModel<CleaningRobot> {
         PartDefinition cube_r3 = bleg.addOrReplaceChild("cube_r3", CubeListBuilder.create().texOffs(51, 19).addBox(-0.5F, -0.5F, -1.5F, 1.0F, 1.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -1.75F, -0.3927F, 0.0F, 0.0F));
 
         return LayerDefinition.create(meshdefinition, 64, 64);
-    }
-
-    @Override
-    public void setupAnim(@NotNull CleaningRobot cleaningRobot, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-    }
-
-    @Override
-    public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer buffer, int packedLight, int packedOverlay, int color) {
-        all.render(poseStack, buffer, packedLight, packedOverlay, color);
     }
 }

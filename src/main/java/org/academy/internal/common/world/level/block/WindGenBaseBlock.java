@@ -4,10 +4,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.*;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -18,7 +21,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.AcademyCraft;
@@ -40,19 +43,19 @@ public class WindGenBaseBlock extends MultiBlock {
     public static final List<Vec3i> SUB_BLOCKS = List.of(
             new Vec3i(0, 1, 0)
     );
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
 
     public WindGenBaseBlock(Properties properties) {
         super(properties.noOcclusion());
     }
 
     @Override
-    protected @NotNull MapCodec<? extends BaseEntityBlock> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
     @Override
-    protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hitResult) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             if (player.isShiftKeyDown()) {
                 Vector3f startPos = player.getEyePosition().toVector3f();
@@ -61,13 +64,13 @@ public class WindGenBaseBlock extends MultiBlock {
 
                 AABB aabb = new AABB(-0.5, -5.0 / 16.0, -0.05, 0.5, 5.0 / 16.0, 0.05);
 
-                PoseStack poseStack = new PoseStack();
-                BlockPos mainPos = getMainBlockEntity(level, pos).mainPos;
+                var poseStack = new PoseStack();
+                var mainPos = getMainBlockEntity(level, pos).mainPos;
                 poseStack.translate(mainPos.getX(), mainPos.getY(), mainPos.getZ());
                 poseStack.translate(0.5f, 1.5f, 0.5f);
                 poseStack.mulPose(Axis.XP.rotationDegrees(180));
 
-                float yRot = state.getValue(WindGenBaseBlock.FACING).getOpposite().toYRot();
+                var yRot = state.getValue(WindGenBaseBlock.FACING).getOpposite().toYRot();
                 poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
                 poseStack.translate(0, 0.3075f, 0.625f);
@@ -76,7 +79,7 @@ public class WindGenBaseBlock extends MultiBlock {
                 Matrix4f matrix = poseStack.last().pose();
 
                 Vector3f result = new Vector3f();
-                boolean b = MathUtil.RayUtil.intersectRayTransformedAABB(startPos, endPos, aabb, matrix, result);
+                var b = MathUtil.RayUtil.intersectRayTransformedAABB(startPos, endPos, aabb, matrix, result);
                 if (b) {
                     Matrix4f worldToAABB = new Matrix4f(matrix).invert();
                     Vector3f localIntersectionPoint = worldToAABB.transformPosition(result, new Vector3f());
@@ -93,7 +96,7 @@ public class WindGenBaseBlock extends MultiBlock {
                     guiX = MathUtil.clamp(guiX, 0, WindGenWorldGUI.WIDTH);
                     guiY = MathUtil.clamp(guiY, 0, WindGenWorldGUI.HEIGHT);
 
-                    AcademyCraft.LOGGER.info("Intersection in GUI coords: " + guiX + ", " + guiY);
+                    AcademyCraft.LOGGER.info("Intersection in GUI coords: {}, {}", guiX, guiY);
                 }
             }
             return InteractionResult.SUCCESS;
@@ -111,16 +114,6 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    public void onRemove(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState newState, boolean movedByPiston) {
-        BlockEntity blockentity = level.getBlockEntity(pos);
-        if (blockentity instanceof Container container) {
-            Containers.dropContents(level, pos, container);
-            level.updateNeighbourForOutputSignal(pos, this);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }
-
-    @Override
     public List<Vec3i> getSubBlocks() {
         return SUB_BLOCKS;
     }
@@ -131,17 +124,12 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    public @NotNull RenderShape getRenderShape(@NotNull BlockState state) {
-        return RenderShape.ENTITYBLOCK_ANIMATED;
-    }
-
-    @Override
-    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new WindGenBaseBlockEntity(pos, state);
     }
 
     @Override
-    public @NotNull BlockState rotate(BlockState pState, Rotation pRotation) {
+    public BlockState rotate(BlockState pState, Rotation pRotation) {
         return pState.setValue(FACING, pRotation.rotate(pState.getValue(FACING)));
     }
 
@@ -151,12 +139,12 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    public boolean canBeReplaced(@NotNull BlockState state, @NotNull BlockPlaceContext useContext) {
+    public boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
         return false;
     }
 
     @Override
-    public @Nullable MenuProvider getMenuProvider(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos) {
+    public @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
             if (windGenBaseBlockEntity.getMain() instanceof WindGenBaseBlockEntity windGenBaseBlock) {
                 return new SimpleMenuProvider((containerId, playerInventory, player) -> new WindGenMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), windGenBaseBlock), Component.empty());
@@ -166,7 +154,7 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
+    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
                 if (windGenBaseBlockEntity.isMain()) {

@@ -1,98 +1,99 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.client.renderer.MultiBufferSource;
+import javax.annotation.Nullable;
 import net.minecraft.network.chat.Component;
-import org.academy.api.client.render.MatrixStack;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.animation.AnimatorListener;
+import org.academy.api.client.gui.animation.TimeInterpolator;
+import org.academy.api.client.gui.animation.ValueAnimator;
 
 public abstract class AbstractAnimatedLabelWidget extends LabelWidget {
-    protected float animationStep = 0.0f;
-    protected boolean isAnimating = false;
+    @Nullable
+    protected ValueAnimator animator;
+    protected Component targetComponent;
+    @Nullable
     protected Runnable onAnimationFinished;
-    private long lastUpdateTime = 0L;
 
-    public AbstractAnimatedLabelWidget(@NotNull String initialText, float x, float y) {
-        super(initialText, x, y);
+    private long duration = 300L;
+    @Nullable
+    private TimeInterpolator interpolator;
+
+    public AbstractAnimatedLabelWidget(String initialText, float x, float y) {
+        this(Component.literal(initialText), x, y);
     }
 
-    /**
-     * Calculates the animation progress based on elapsed time since the last frame.
-     * @param deltaTime The time elapsed since the last update, in seconds.
-     */
-    protected abstract void updateAnimation(float deltaTime);
+    public AbstractAnimatedLabelWidget(Component initialText, float x, float y) {
+        super(Component.empty(), x, y);
+        targetComponent = initialText;
+    }
 
-    /**
-     * Returns the total number of steps required to complete the animation.
-     */
-    protected abstract int getTotalAnimationSteps();
+    public void animateText(Component newTarget) {
+        if (animator != null && animator.isRunning())
+            animator.cancel();
 
-    /**
-     * Updates the displayed text to reflect a specific step in the animation.
-     * @param step The step to display.
-     */
-    protected abstract void updateTextForStep(int step);
+        targetComponent = newTarget;
+        animator = ValueAnimator.ofFloat(0.0f, 1.0f);
+        animator.setDuration(duration);
+        if (interpolator != null)
+            animator.setInterpolator(interpolator);
 
-    @Override
-    public void render(@NotNull MatrixStack stack, @NotNull MultiBufferSource.BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (this.isAnimating) {
-            long currentTime = System.nanoTime();
-            if (this.lastUpdateTime == 0L) {
-                this.lastUpdateTime = currentTime;
+        animator.addUpdateListener(this::onAnimationUpdate);
+        registerFinishCallback(animator);
+        animator.start();
+    }
+
+    protected abstract void onAnimationUpdate(ValueAnimator animator);
+
+    private void registerFinishCallback(ValueAnimator valueAnimator) {
+        if (onAnimationFinished == null)
+            return;
+
+        valueAnimator.addListener(new AnimatorListener() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                onAnimationFinished.run();
             }
-            float deltaTime = (currentTime - this.lastUpdateTime) / 1_000_000_000.0f;
-            this.lastUpdateTime = currentTime;
-
-            this.updateAnimation(deltaTime);
-        }
-        super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+        });
     }
 
-    protected void finishAnimation() {
-        this.isAnimating = false;
-        if (onAnimationFinished != null) {
-            onAnimationFinished.run();
-        }
-    }
-
-    protected void checkAnimationCompletion(int currentStep) {
-        if (currentStep >= getTotalAnimationSteps()) {
-            finishAnimation();
-        }
-    }
-
-    public void startAnimation() {
-        this.isAnimating = true;
-        this.lastUpdateTime = 0L;
-    }
-
-    public void stopAnimation() {
-        this.isAnimating = false;
-    }
-
-    public void resetAnimation() {
-        this.animationStep = 0.0f;
-        this.updateTextForStep(0);
-    }
-
-    public void restartAnimation() {
-        this.resetAnimation();
-        this.startAnimation();
+    protected final void setAnimationProgressText(Component component) {
+        this.component = component;
     }
 
     public void skipToEnd() {
-        this.stopAnimation();
-        this.updateTextForStep(getTotalAnimationSteps());
+        if (animator != null && animator.isRunning())
+            animator.end();
+
+        super.setText(targetComponent);
     }
 
-    @NotNull
     public AbstractAnimatedLabelWidget setOnAnimationFinished(@Nullable Runnable onAnimationFinished) {
         this.onAnimationFinished = onAnimationFinished;
         return this;
     }
 
+    public AbstractAnimatedLabelWidget setDuration(long duration) {
+        this.duration = duration;
+        return this;
+    }
+
+    public AbstractAnimatedLabelWidget setInterpolator(@Nullable TimeInterpolator interpolator) {
+        this.interpolator = interpolator;
+        return this;
+    }
+
     @Override
-    public @NotNull final LabelWidget setText(@NotNull Component component) {
-        throw new UnsupportedOperationException("Cannot set text directly on an animated LabelWidget. Use animation controls.");
+    public LabelWidget setText(Component component) {
+        if (animator != null && animator.isRunning()) {
+            animator.cancel();
+        }
+        targetComponent = component;
+        super.setText(component);
+        return this;
+    }
+
+    @Override
+    public LabelWidget setText(String text) {
+        return setText(Component.literal(text));
     }
 }

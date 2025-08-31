@@ -1,29 +1,24 @@
 package org.academy.internal.client.app;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.client.Resource;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.DataTerminalHUD;
-import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.RenderTypes;
-import org.academy.api.client.util.RenderUtil;
 import org.academy.internal.client.app.mediaplayer.MediaInfo;
 import org.academy.internal.client.app.mediaplayer.MediaPlayerBackend;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
-import static net.minecraft.client.renderer.RenderStateShard.*;
+import static org.academy.api.client.Resource.Textures.ICON_MUSIC_PLAYER;
 
 @EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
 public final class MediaPlayer implements DataTerminalHUD.App {
@@ -33,7 +28,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     public static final DataTerminalHUD.App INSTANCE = new MediaPlayer();
 
     private static SliderWidget progressBar;
-    private static LabelWidget timeLabel;
+    private static AutoScaleLabelWidget timeLabel;
     private static PanelWidget rootPanel;
     private static GeometricButtonWidget playPauseButton;
     private static ImageButtonWidget modeButton;
@@ -197,9 +192,9 @@ public final class MediaPlayer implements DataTerminalHUD.App {
         if (modeButton == null) return;
         modeButton.setAlpha(1.0f);
         switch (MediaPlayerBackend.getPlaybackMode()) {
-            case REPEAT_LIST -> modeButton.setRenderType(RenderTypes.ICON_CYCLE);
-            case REPEAT_ONE -> modeButton.setRenderType(RenderTypes.ICON_SINGLE_CYCLE);
-            case SHUFFLE -> modeButton.setRenderType(RenderTypes.ICON_RANDOM);
+            case REPEAT_LIST -> modeButton.setTexture(Resource.Textures.ICON_CYCLE);
+            case REPEAT_ONE -> modeButton.setTexture(Resource.Textures.ICON_SINGLE_CYCLE);
+            case SHUFFLE -> modeButton.setTexture(Resource.Textures.ICON_RANDOM);
         }
     }
 
@@ -217,10 +212,9 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             main.setEnabled(false);
             root.addChild("main", main);
             {
-                var iconRenderType = RenderUtil.getPositionColorTexRenderType(mediaInfo.name(), mediaInfo.icon(), true);
                 var icon = new ImageWidget(
                         MARGIN_MEDIA_ICON, (MEDIA_HEIGHT - MEDIA_ICON_SIZE) / 2,
-                        MEDIA_ICON_SIZE, MEDIA_ICON_SIZE, iconRenderType
+                        MEDIA_ICON_SIZE, MEDIA_ICON_SIZE, mediaInfo.icon()
                 );
                 main.addChild("icon", icon);
 
@@ -252,8 +246,8 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     }
 
     @Override
-    public @NotNull RenderType getIcon() {
-        return RenderTypes.ICON_MUSIC_PLAYER;
+    public @NotNull ResourceLocation getIcon() {
+        return ICON_MUSIC_PLAYER;
     }
 
     @Override
@@ -283,9 +277,9 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     }
 
     private static class GeometricButtonWidget extends AbstractButtonWidget {
-        private static final RenderType RENDER_TYPE = RenderType.create(
+/*        private static final RenderType RENDER_TYPE = RenderType.create(
                 "geometric_button",
-                DefaultVertexFormat.POSITION_COLOR,
+                DefaultVertexFormat.POS_COLOR,
                 VertexFormat.Mode.TRIANGLES,
                 32,
                 false,
@@ -298,7 +292,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                         .setDepthTestState(NO_DEPTH_TEST)
                         .setWriteMaskState(COLOR_WRITE)
                         .createCompositeState(false)
-        );
+        );*/
 
         protected ButtonShape shape;
         protected int color = 0xFFFFFFFF;
@@ -311,8 +305,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
         @Override
         public void setHovered(boolean hovered) {
-            super.setHovered(hovered);
-            this.currentAlpha = hovered ? 1.0f : 0.7f;
+            currentAlpha = hovered ? 1.0f : 0.7f;
         }
 
         public void setShape(ButtonShape shape) {
@@ -334,55 +327,6 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             buffer.addVertex(matrix, x2, y2, 0).setColor(r, g, b, a);
             buffer.addVertex(matrix, x2, y, 0).setColor(r, g, b, a);
             buffer.addVertex(matrix, x, y, 0).setColor(r, g, b, a);
-        }
-
-        @Override
-        public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-            if (!isVisible()) return;
-
-            var matrix = stack.lastMatrix();
-            var buffer = bufferSource.getBuffer(RENDER_TYPE);
-            var w = getWidth();
-            var h = getHeight();
-            var r = (float) (color >> 16 & 255) / 255.0F;
-            var g = (float) (color >> 8 & 255) / 255.0F;
-            var b = (float) (color & 255) / 255.0F;
-            var a = this.currentAlpha;
-
-            var padding = 5.0f;
-            var drawW = w - padding * 2;
-            var drawH = h - padding * 2;
-
-            switch (shape) {
-                case PLAY ->
-                        drawTriangle(buffer, matrix, padding, padding, padding + drawW, padding + drawH / 2, padding, padding + drawH, r, g, b, a);
-                case PAUSE -> {
-                    var barWidth = drawW * 0.3f;
-                    var gap = drawW * 0.2f;
-                    var totalVisualWidth = barWidth * 2 + gap;
-                    var offsetX = padding + (drawW - totalVisualWidth) / 2f;
-                    drawRectangle(buffer, matrix, offsetX, padding, barWidth, drawH, r, g, b, a);
-                    drawRectangle(buffer, matrix, offsetX + barWidth + gap, padding, barWidth, drawH, r, g, b, a);
-                }
-                case NEXT -> {
-                    var triangleWidth = drawW * 0.5f;
-                    var barWidth = drawW * 0.2f;
-                    var gap = drawW * 0.1f;
-                    var totalVisualWidth = triangleWidth + gap + barWidth;
-                    var offsetX = padding + (drawW - totalVisualWidth) / 2f;
-                    drawTriangle(buffer, matrix, offsetX, padding, offsetX + triangleWidth, padding + drawH / 2f, offsetX, padding + drawH, r, g, b, a);
-                    drawRectangle(buffer, matrix, offsetX + triangleWidth + gap, padding, barWidth, drawH, r, g, b, a);
-                }
-                case PREV -> {
-                    var triangleWidth = drawW * 0.5f;
-                    var barWidth = drawW * 0.2f;
-                    var gap = drawW * 0.1f;
-                    var totalVisualWidth = triangleWidth + gap + barWidth;
-                    var offsetX = padding + (drawW - totalVisualWidth) / 2f;
-                    drawRectangle(buffer, matrix, offsetX, padding, barWidth, drawH, r, g, b, a);
-                    drawTriangle(buffer, matrix, offsetX + barWidth + gap + triangleWidth, padding, offsetX + barWidth + gap, padding + drawH / 2f, offsetX + barWidth + gap + triangleWidth, padding + drawH, r, g, b, a);
-                }
-            }
         }
     }
 }

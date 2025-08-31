@@ -5,8 +5,8 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.material.PushReaction;
 
 public class ImagiphaseLichenBlock extends GlowLichenBlock {
-    public ImagiphaseLichenBlock() {
-        super(Properties.of()
+    public ImagiphaseLichenBlock(Properties  properties) {
+        super(properties
                 .replaceable()
                 .noCollission()
                 .strength(0.2F)

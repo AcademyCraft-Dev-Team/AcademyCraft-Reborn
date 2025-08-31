@@ -1,8 +1,8 @@
 package org.academy.api.common.ability;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.FBBDeserializers;
 import org.academy.api.common.network.FBBSerializers;
@@ -49,10 +49,10 @@ public class AcquireCategoryPacket extends RequestPayload<ServerGamePacketListen
         return PayloadTypes.ACQUIRE_CATEGORY_RESPONSE.get();
     }
 
-    public static class Response extends ResponsePayload<ClientPacketListener> {
+    public static class Response extends ResponsePayload<ClientGamePacketListener> {
         public List<String> messages;
 
-        public Response(ClientPacketListener listener) {
+        public Response(ClientGamePacketListener listener) {
             super(listener);
         }
 
@@ -71,7 +71,7 @@ public class AcquireCategoryPacket extends RequestPayload<ServerGamePacketListen
         }
 
         @Override
-        public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+        public @NotNull PayloadType<ClientGamePacketListener, ? extends Payload<ClientGamePacketListener>> getPayloadType() {
             return PayloadTypes.ACQUIRE_CATEGORY_RESPONSE.get();
         }
     }

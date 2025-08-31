@@ -5,7 +5,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -49,8 +48,6 @@ public class AcademyCraftRegister {
     }
 
     public static void register(IEventBus modEventBus) {
-        modEventBus.register(AcademyCraftRegister.class);
-
         Blocks.BLOCKS.register(modEventBus);
         Items.ITEMS.register(modEventBus);
         BlockEntityTypes.BLOCK_ENTITY_TYPES.register(modEventBus);
@@ -70,11 +67,11 @@ public class AcademyCraftRegister {
         PayloadTypes.PAYLOAD_TYPES.register(modEventBus);
         Skills.SKILLS.register(modEventBus);
 
+        modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
     }
 
-    @SubscribeEvent
-    public static void onNewRegistry(NewRegistryEvent event) {
+    private static void onNewRegistry(NewRegistryEvent event) {
         event.register(ABILITY_CATEGORIES);
         event.register(PACKET_TYPES);
         event.register(PAYLOAD_TYPES);

@@ -1,6 +1,6 @@
 package org.academy.api.common.network.asm;
 
-@SuppressWarnings({"unused", "FieldCanBeLocal"})
+@SuppressWarnings({"unused"})
 public abstract class InstancePacketListener implements IPacketListener {
     protected final Object instance;
 

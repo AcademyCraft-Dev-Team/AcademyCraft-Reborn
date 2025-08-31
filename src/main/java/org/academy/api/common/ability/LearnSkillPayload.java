@@ -1,8 +1,8 @@
 package org.academy.api.common.ability;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.future.Payload;
 import org.academy.api.common.network.future.PayloadType;
@@ -47,10 +47,10 @@ public class LearnSkillPayload extends RequestPayload<ServerGamePacketListenerIm
         return PayloadTypes.LEARN_SKILL_RESPONSE.get();
     }
 
-    public static class Response extends ResponsePayload<ClientPacketListener> {
+    public static class Response extends ResponsePayload<ClientGamePacketListener> {
         public boolean success;
 
-        public Response(ClientPacketListener listener) {
+        public Response(ClientGamePacketListener listener) {
             super(listener);
         }
 
@@ -69,7 +69,7 @@ public class LearnSkillPayload extends RequestPayload<ServerGamePacketListenerIm
         }
 
         @Override
-        public @NotNull PayloadType<ClientPacketListener, ? extends Payload<ClientPacketListener>> getPayloadType() {
+        public @NotNull PayloadType<ClientGamePacketListener, ? extends Payload<ClientGamePacketListener>> getPayloadType() {
             return PayloadTypes.LEARN_SKILL_RESPONSE.get();
         }
     }

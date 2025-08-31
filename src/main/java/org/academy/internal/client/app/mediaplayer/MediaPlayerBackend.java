@@ -6,8 +6,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.academy.AcademyCraft;
 import org.lwjgl.openal.AL11;
 import org.lwjgl.stb.STBVorbis;
@@ -23,6 +23,8 @@ import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.academy.AcademyCraft.academy;
 
 @EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
 public final class MediaPlayerBackend {
@@ -67,8 +69,8 @@ public final class MediaPlayerBackend {
     }
 
     @SubscribeEvent
-    public static void onAddReloadListener(RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(new MusicLoader());
+    public static void onAddReloadListener(AddClientReloadListenersEvent event) {
+        event.addListener(academy("music_loader"), new MusicLoader());
     }
 
     @SubscribeEvent

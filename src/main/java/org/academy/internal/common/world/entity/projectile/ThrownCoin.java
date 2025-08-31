@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.entity.projectile;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -13,7 +14,6 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.Items;
-import org.jetbrains.annotations.NotNull;
 
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     public int angle;
@@ -25,6 +25,7 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
 
     public ThrownCoin(Level level, LivingEntity shooter) {
         super(EntityTypes.THROWN_COIN.get(), shooter, level, new ItemStack(Items.COIN), null);
+        setRot(shooter.getYRot(), shooter.getXRot());
     }
 
     @Override
@@ -47,22 +48,26 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     }
 
     @Override
-    public @NotNull ItemStack getItem() {
+    public ItemStack getItem() {
         return new ItemStack(Items.COIN);
     }
 
     @Override
-    protected void onHitEntity(@NotNull EntityHitResult entityHitResult) {
+    protected void onHitEntity(EntityHitResult entityHitResult) {
     }
 
     @Override
-    protected void onHitBlock(@NotNull BlockHitResult blockHitResult) {
+    protected void onHitBlock(BlockHitResult blockHitResult) {
+        if (level() instanceof ServerLevel serverLevel) {
+            spawnAtLocation(serverLevel, getPickupItem(), 0.1F);
+            discard();
+        }
     }
 
     @Override
     public void discard() {
         if (!level().isClientSide() && getOwner() instanceof ServerPlayer ownerPlayer) {
-            Railgun.Server.Context context = Railgun.Server.CONTEXT_MAP.get(ownerPlayer.getUUID());
+            var context = Railgun.Server.CONTEXT_MAP.get(ownerPlayer.getUUID());
             if (context != null) {
                 context.cleanup();
             }

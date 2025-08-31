@@ -63,7 +63,7 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
             itemStack = itemStack1.copy();
 
             if (index == 1) {
-                this.access.execute((level, pos) -> itemStack1.getItem().onCraftedBy(itemStack1, level, player));
+               // this.access.execute((level, pos) -> itemStack1.getItem().onCraftedBy(itemStack1, level, player));
                 if (!this.moveItemStackTo(itemStack1, 11, 47, true)) {
                     return ItemStack.EMPTY;
                 }
@@ -119,12 +119,12 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
             if (optional.isPresent()) {
                 RecipeHolder<CraftingRecipe> recipeholder = optional.get();
                 CraftingRecipe craftingrecipe = recipeholder.value();
-                if (resultSlots.setRecipeUsed(level, serverplayer, recipeholder)) {
+              /*  if (resultSlots.setRecipeUsed(level, serverplayer, recipeholder)) {
                     ItemStack itemstack1 = craftingrecipe.assemble(craftinginput, level.registryAccess());
                     if (itemstack1.isItemEnabled(level.enabledFeatures())) {
                         itemstack = itemstack1;
                     }
-                }
+                }*/
             }
 
             resultSlots.setItem(0, itemstack);

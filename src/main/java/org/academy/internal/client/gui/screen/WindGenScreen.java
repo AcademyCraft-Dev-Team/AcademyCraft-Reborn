@@ -5,11 +5,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
@@ -50,16 +50,16 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
         var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
         rootContainer.addChild("page_inv", invPage);
         {
-            var ui = new ImageWidget(0, 0, imageWidth, 187, RenderTypes.WIND_GEN_UI);
+            var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.WIND_GEN_UI);
             invPage.addChild("ui", ui);
             var statePanel = new PanelWidget(0, 0, imageWidth, 187);
             invPage.addChild("panel_state", statePanel);
             {
-                topIcon = new ImageWidget(0, 13, 24, 24, RenderTypes.ICON_WIND_GEN_TOP);
+                topIcon = new ImageWidget(0, 13, 24, 24, Resource.Textures.ICON_WIND_GEN_TOP);
                 statePanel.addChild("icon_top", topIcon);
-                pillarIcon = new ImageWidget(0, 31, 24, 24, RenderTypes.ICON_WIND_GEN_PILLAR);
+                pillarIcon = new ImageWidget(0, 31, 24, 24, Resource.Textures.ICON_WIND_GEN_PILLAR);
                 statePanel.addChild("icon_pillar", pillarIcon);
-                baseIcon = new ImageWidget(0, 49, 24, 24, RenderTypes.ICON_WIND_GEN_BASE);
+                baseIcon = new ImageWidget(0, 49, 24, 24, Resource.Textures.ICON_WIND_GEN_BASE);
                 statePanel.addChild("icon_base", baseIcon);
             }
         }
@@ -88,13 +88,13 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
         rootContainer.addChild("radio_group", radioGroupWidget);
         {
             var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
-                    RenderTypes.ICON_INV, () -> {
+                    Resource.Textures.ICON_INV, () -> {
             });
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
             var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
-                    RenderTypes.ICON_WIRELESS, () -> {
+                    Resource.Textures.ICON_WIRELESS, () -> {
             });
             radioGroupWidget.addChild("wireless", wireless);
             wireless.setSelected(false);

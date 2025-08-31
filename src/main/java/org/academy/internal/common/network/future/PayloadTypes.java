@@ -1,6 +1,6 @@
 package org.academy.internal.common.network.future;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -21,7 +21,7 @@ public final class PayloadTypes {
             ACQUIRE_CATEGORY = PAYLOAD_TYPES.register("acquire_category",
             () -> new PayloadType<>(AcquireCategoryPacket.class, AcquireCategoryPacket::new));
 
-    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientPacketListener, AcquireCategoryPacket.Response>>
+    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientGamePacketListener, AcquireCategoryPacket.Response>>
             ACQUIRE_CATEGORY_RESPONSE = PAYLOAD_TYPES.register("acquire_category_response",
             () -> new PayloadType<>(AcquireCategoryPacket.Response.class, AcquireCategoryPacket.Response::new));
 
@@ -29,7 +29,7 @@ public final class PayloadTypes {
             LEARN_SKILL = PAYLOAD_TYPES.register("learn_skill",
             () -> new PayloadType<>(LearnSkillPayload.class, LearnSkillPayload::new));
 
-    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientPacketListener, LearnSkillPayload.Response>>
+    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientGamePacketListener, LearnSkillPayload.Response>>
             LEARN_SKILL_RESPONSE = PAYLOAD_TYPES.register("learn_skill_response",
             () -> new PayloadType<>(LearnSkillPayload.Response.class, LearnSkillPayload.Response::new));
 
@@ -37,7 +37,7 @@ public final class PayloadTypes {
             GET_AVAILABLE_NODES = PAYLOAD_TYPES.register("get_available_nodes",
             () -> new PayloadType<>(GetAvailableNodesPacket.class, GetAvailableNodesPacket::new));
 
-    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientPacketListener, GetAvailableNodesPacket.Response>>
+    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientGamePacketListener, GetAvailableNodesPacket.Response>>
             GET_AVAILABLE_NODES_RESPONSE = PAYLOAD_TYPES.register("get_available_nodes_response",
             () -> new PayloadType<>(GetAvailableNodesPacket.Response.class, GetAvailableNodesPacket.Response::new));
 
@@ -45,7 +45,7 @@ public final class PayloadTypes {
             GET_CURRENT_NODE = PAYLOAD_TYPES.register("get_current_node",
             () -> new PayloadType<>(GetCurrentNodePacket.class, GetCurrentNodePacket::new));
 
-    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientPacketListener, GetCurrentNodePacket.Response>>
+    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientGamePacketListener, GetCurrentNodePacket.Response>>
             GET_CURRENT_NODE_RESPONSE = PAYLOAD_TYPES.register("get_current_node_response",
             () -> new PayloadType<>(GetCurrentNodePacket.Response.class, GetCurrentNodePacket.Response::new));
 
@@ -53,7 +53,7 @@ public final class PayloadTypes {
             GET_LEVEL_CHUNK_SECTIONS = PAYLOAD_TYPES.register("get_level_chunk_sections",
             () -> new PayloadType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket::new));
 
-    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientPacketListener, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response>>
+    public static final DeferredHolder<PayloadType<?, ?>, PayloadType<ClientGamePacketListener, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response>>
             GET_LEVEL_CHUNK_SECTIONS_RESPONSE = PAYLOAD_TYPES.register("get_level_chunk_sections_response",
             () -> new PayloadType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response::new));
 

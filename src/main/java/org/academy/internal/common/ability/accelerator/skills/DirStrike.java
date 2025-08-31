@@ -52,10 +52,10 @@ public class DirStrike extends Skill {
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.CLIENT_CONFIG.getConfig(key);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         if (Client.CONFIG == null) {
             Client.CONFIG = new Client.Config();
-            AcademyCraftClient.CLIENT_CONFIG.setConfig(key, Client.CONFIG);
+            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
         }
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, new InputSystem.InputPair(
@@ -74,7 +74,7 @@ public class DirStrike extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.SERVER_NETWORK_MANAGER.registerPacketListener(Server.class);
+        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
@@ -111,7 +111,7 @@ public class DirStrike extends Skill {
         public static void onAction(ActionPacket packet) {
             var serverPlayer = packet.getPacketListener().getPlayer();
 
-            var level = serverPlayer.serverLevel();
+            var level = serverPlayer.level();
             var chunkCache = level.getChunkSource();
             var lookDir = serverPlayer.getLookAngle();
             var horizontalLookDir = new Vec3(lookDir.x, 0, lookDir.z).normalize();
