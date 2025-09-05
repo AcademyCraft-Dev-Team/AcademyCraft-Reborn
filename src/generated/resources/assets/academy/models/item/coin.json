@@ -1,0 +1,75 @@
+{
+  "parent": "academy:builtin/coin",
+  "display": {
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        -90,
+        25
+      ],
+      "scale": [
+        0.34,
+        0.34,
+        0.34
+      ],
+      "translation": [
+        1.13,
+        3.2,
+        1.13
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    "ground": {
+      "scale": [
+        0.25,
+        0.25,
+        0.25
+      ],
+      "translation": [
+        0,
+        2,
+        0
+      ]
+    },
+    "head": {
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "translation": [
+        0,
+        13,
+        7
+      ]
+    },
+    "thirdperson_righthand": {
+      "scale": [
+        0.275,
+        0.275,
+        0.275
+      ],
+      "translation": [
+        0,
+        3,
+        0
+      ]
+    }
+  },
+  "gui_light": "front",
+  "textures": {
+    "back": "academy:item/coin_back",
+    "front": "academy:item/coin"
+  }
+}

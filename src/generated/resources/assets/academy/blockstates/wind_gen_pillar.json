@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "academy:block/wind_gen_pillar"
+    }
+  }
+}
