@@ -1,0 +1,21 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "academy:block/wind_gen_base"
+      },
+      {
+        "model": "academy:block/wind_gen_base",
+        "y": 90
+      },
+      {
+        "model": "academy:block/wind_gen_base",
+        "y": 180
+      },
+      {
+        "model": "academy:block/wind_gen_base",
+        "y": 270
+      }
+    ]
+  }
+}
