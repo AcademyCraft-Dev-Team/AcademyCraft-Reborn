@@ -1,27 +1,26 @@
 package org.academy.api.common.network;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.network.PacketListener;
+import net.minecraft.network.codec.StreamCodec;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.registries.Registries;
 
-import java.util.function.Function;
-
-public final class PacketType<L extends PacketListener, P extends Packet<L>> {
+public final class PacketType<L extends PacketListener, P extends Packet<L, P>> {
     private final Class<P> packetClass;
-    private final Function<? extends PacketListener, P> factory;
+    private final StreamCodec<ByteBuf, P> codec;
 
-    public PacketType(Class<P> packetClass, Function<L, P> factory) {
+    public PacketType(Class<P> packetClass, StreamCodec<ByteBuf, P> codec) {
         this.packetClass = packetClass;
-        this.factory = factory;
+        this.codec = codec;
     }
 
     public Class<P> getPacketClass() {
         return packetClass;
     }
 
-    @SuppressWarnings("unchecked")
-    public <T extends PacketListener> Function<T, P> getFactory() {
-        return (Function<T, P>) factory;
+    public StreamCodec<ByteBuf, P> getCodec() {
+        return codec;
     }
 
     public int getPacketId() {

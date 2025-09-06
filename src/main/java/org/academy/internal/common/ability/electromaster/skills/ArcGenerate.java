@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.electromaster.skills;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
@@ -15,7 +17,6 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.vanilla.ThreadType;
@@ -63,7 +64,7 @@ public final class ArcGenerate extends Skill {
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
-            AcademyCraftClient.sendPacket(new C2SPacket(new GeneratePacket()));
+            AcademyCraftClient.sendPacket(new C2SPacket(GeneratePacket.INSTANCE));
         }
 
         public static class ArcGenerateConfig extends KeyBindingConfig {
@@ -118,17 +119,15 @@ public final class ArcGenerate extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class GeneratePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public GeneratePacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+    public static final class GeneratePacket extends Packet<ServerGamePacketListenerImpl, GeneratePacket> {
+        public static final GeneratePacket INSTANCE = new GeneratePacket();
+        public static final StreamCodec<ByteBuf, GeneratePacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public GeneratePacket() {
-            super(null);
+        private GeneratePacket() {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, GeneratePacket> getPacketType() {
             return PacketTypes.ARC_GENERATE_GENERATE.get();
         }
     }

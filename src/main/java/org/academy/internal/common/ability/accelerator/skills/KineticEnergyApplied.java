@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.accelerator.skills;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -18,7 +20,6 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -44,10 +45,6 @@ public class KineticEnergyApplied extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.KineticEnergyAppliedConfig.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.KineticEnergyAppliedConfig();
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
-        }
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 new InputSystem.InputPair(
@@ -71,7 +68,7 @@ public class KineticEnergyApplied extends Skill {
         public static KineticEnergyAppliedConfig CONFIG = new KineticEnergyAppliedConfig();
 
         public static void toggle() {
-            AcademyCraftClient.sendPacket(new C2SPacket(new TogglePacket()));
+            AcademyCraftClient.sendPacket(new C2SPacket(TogglePacket.INSTANCE));
         }
 
         public static class KineticEnergyAppliedConfig extends KeyBindingConfig {
@@ -100,11 +97,7 @@ public class KineticEnergyApplied extends Skill {
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             ServerPlayer player = packet.getPacketListener().getPlayer();
-            if (SKILL_STATS.containsKey(player.getUUID())) {
-                SKILL_STATS.put(player.getUUID(), !SKILL_STATS.get(player.getUUID()));
-            } else {
-                SKILL_STATS.put(player.getUUID(), true);
-            }
+            SKILL_STATS.compute(player.getUUID(), (uuid, aBoolean) -> aBoolean == null || !aBoolean);
         }
 
         @SuppressWarnings("resource")
@@ -120,17 +113,15 @@ public class KineticEnergyApplied extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class TogglePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public TogglePacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+    public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
+        public static final TogglePacket INSTANCE = new TogglePacket();
+        public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public TogglePacket() {
-            super(null);
+        private TogglePacket() {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.KINETIC_ENERGY_APPLIED_TOGGLE.get();
         }
     }

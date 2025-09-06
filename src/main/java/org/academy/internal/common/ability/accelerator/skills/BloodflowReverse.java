@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.accelerator.skills;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
@@ -19,7 +21,6 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -67,7 +68,7 @@ public class BloodflowReverse extends Skill {
         public static Config CONFIG = new Config();
 
         public static void reverseBloodflow() {
-            AcademyCraftClient.sendPacket(new C2SPacket(new ReverseBloodflowPacket()));
+            AcademyCraftClient.sendPacket(new C2SPacket(ReverseBloodflowPacket.INSTANCE));
         }
 
         public static class Config extends KeyBindingConfig {
@@ -109,17 +110,15 @@ public class BloodflowReverse extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class ReverseBloodflowPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public ReverseBloodflowPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+    public static final class ReverseBloodflowPacket extends Packet<ServerGamePacketListenerImpl, ReverseBloodflowPacket> {
+        public static final ReverseBloodflowPacket INSTANCE = new ReverseBloodflowPacket();
+        public static final StreamCodec<ByteBuf, ReverseBloodflowPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public ReverseBloodflowPacket() {
-            super(null);
+        private ReverseBloodflowPacket() {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, ReverseBloodflowPacket> getPacketType() {
             return PacketTypes.REVERSE_BLOODFLOW.get();
         }
     }

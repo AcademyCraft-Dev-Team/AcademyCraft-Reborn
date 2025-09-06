@@ -3,7 +3,6 @@ package org.academy.api.client.ability;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -71,45 +70,17 @@ public final class AbilitySystemClient {
 
     @SubscribePacket
     public static void handleExpSync(ExpSyncPacket packet) {
-        var skillKey = ResourceLocation.parse(packet.skillName);
-        var exp = packet.exp;
+        var skillKey = ResourceLocation.parse(packet.getSkillName());
+        var exp = packet.getExp();
         var skill = Registries.SKILLS.get(skillKey);
         skill.ifPresent(skillReference -> setSkillExp(skillReference.value(), exp));
     }
 
     @SubscribePacket
     public static void handleSync(PlayerSyncPacket packet) {
-        if (packet.levelChanged) {
-            setLevel(packet.level);
-        }
-        if (packet.maxComputingPowerChanged) {
-            setMaximumComputingPower(packet.maxComputingPower);
-        }
-        if (packet.currentComputingPowerChanged) {
-            setComputingPower(packet.currentComputingPower);
-        }
-        if (packet.abilityCategoryChanged) {
-            var newCategory = Registries.ABILITY_CATEGORIES.get(ResourceLocation.parse(packet.abilityCategory));
-            if (newCategory.isPresent()) {
-                category = newCategory.get().value();
-            } else {
-                AcademyCraft.LOGGER.warn("Received unknown ability category: {}", packet.abilityCategory);
-                category = AbilityCategories.LEVEL0.get();
-            }
-        }
-        if (packet.skillsChanged) {
-            LEARNED_SKILLS.clear();
-            if (packet.skills != null) {
-                for (var skillName : packet.skills) {
-                    var skill = Registries.SKILLS.get(ResourceLocation.parse(skillName));
-                    if (skill.isPresent()) {
-                        LEARNED_SKILLS.add(skill.get().value());
-                    } else {
-                        AcademyCraft.LOGGER.warn("Received unknown skill name during sync: {}", skillName);
-                    }
-                }
-            }
-        }
+        setLevel(packet.getLevel());
+        setMaximumComputingPower(packet.getMaxComputingPower());
+        setComputingPower(packet.getCurrentComputingPower());
     }
 
     public static float getSkillExp(Skill skill) {
