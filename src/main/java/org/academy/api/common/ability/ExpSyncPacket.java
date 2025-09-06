@@ -1,6 +1,8 @@
 package org.academy.api.common.ability;
 
-import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
@@ -10,34 +12,32 @@ import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
-public final class ExpSyncPacket extends Packet<ClientGamePacketListener> {
-    public String skillName;
-    public float exp;
+public final class ExpSyncPacket extends Packet<ClientGamePacketListener,ExpSyncPacket> {
+    public static final StreamCodec<ByteBuf,ExpSyncPacket> CODEC = StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8,
+            ExpSyncPacket::getSkillName,
+            ByteBufCodecs.FLOAT,
+            ExpSyncPacket::getExp,
+            ExpSyncPacket::new
+    );
+    private final String skillName;
+    private final float exp;
 
-    public ExpSyncPacket(ClientGamePacketListener packetListener) {
-        super(packetListener);
+    public ExpSyncPacket(String skillName, float exp) {
+        this.skillName = skillName;
+        this.exp = exp;
     }
 
-    public ExpSyncPacket(String newSkillName, float newExp) {
-        super(null);
-        skillName = newSkillName;
-        exp = newExp;
+    public String getSkillName() {
+        return skillName;
+    }
+
+    public float getExp() {
+        return exp;
     }
 
     @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
-        skillName = buf.readUtf();
-        exp = buf.readFloat();
-    }
-
-    @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeUtf(skillName);
-        buf.writeFloat(exp);
-    }
-
-    @Override
-    public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
+    public @NotNull PacketType<ClientGamePacketListener, ExpSyncPacket> getPacketType() {
         return PacketTypes.EXP_SYNC.get();
     }
 }

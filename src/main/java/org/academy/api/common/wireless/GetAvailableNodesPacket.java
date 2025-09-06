@@ -1,77 +1,63 @@
 package org.academy.api.common.wireless;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.FBBDeserializers;
-import org.academy.api.common.network.FBBSerializers;
-import org.academy.api.common.network.future.Payload;
-import org.academy.api.common.network.future.PayloadType;
-import org.academy.api.common.network.future.RequestPayload;
-import org.academy.api.common.network.future.ResponsePayload;
-import org.academy.internal.common.network.future.PayloadTypes;
-import org.jetbrains.annotations.NotNull;
+import org.academy.api.common.network.PacketType;
+import org.academy.api.common.network.future.packet.RequestPacket;
+import org.academy.api.common.network.future.packet.ResponsePacket;
+import org.academy.internal.common.network.PacketTypes;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class GetAvailableNodesPacket extends RequestPayload<ServerGamePacketListenerImpl, GetAvailableNodesPacket.Response> {
-    public BlockPos requesterPos;
+public class GetAvailableNodesPacket extends RequestPacket<ServerGamePacketListenerImpl, GetAvailableNodesPacket, ClientGamePacketListener, GetAvailableNodesPacket.Response> {
+    public static final StreamCodec<ByteBuf, GetAvailableNodesPacket> CODEC = StreamCodec.composite(
+            BlockPos.STREAM_CODEC,
+            GetAvailableNodesPacket::getRequesterPos,
+            GetAvailableNodesPacket::new
+    );
 
-    public GetAvailableNodesPacket(ServerGamePacketListenerImpl listener) {
-        super(listener);
+    private final BlockPos requesterPos;
+
+    public GetAvailableNodesPacket(BlockPos requesterPos) {
+        this.requesterPos = requesterPos;
     }
 
-    public GetAvailableNodesPacket(BlockPos newRequesterPos) {
-        super(null);
-        requesterPos = newRequesterPos;
-    }
-
-    @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(requesterPos);
-    }
-
-    @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
-        requesterPos = buf.readBlockPos();
+    public BlockPos getRequesterPos() {
+        return requesterPos;
     }
 
     @Override
-    public @NotNull PayloadType<?, Response> getExpectedResponsePayloadType() {
-        return PayloadTypes.GET_AVAILABLE_NODES_RESPONSE.get();
+    public PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
+        return PacketTypes.GET_AVAILABLE_NODES_RESPONSE.get();
     }
 
     @Override
-    public @NotNull PayloadType<ServerGamePacketListenerImpl, ? extends Payload<ServerGamePacketListenerImpl>> getPayloadType() {
-        return PayloadTypes.GET_AVAILABLE_NODES.get();
+    public PacketType<ServerGamePacketListenerImpl, GetAvailableNodesPacket> getPacketType() {
+        return PacketTypes.GET_AVAILABLE_NODES.get();
     }
 
-    public static class Response extends ResponsePayload<ClientGamePacketListener> {
-        public ArrayList<String> availableNodeNames;
+    public static class Response extends ResponsePacket<ClientGamePacketListener, Response> {
+        public static final StreamCodec<ByteBuf, Response> CODEC = ByteBufCodecs.STRING_UTF8
+                .apply(ByteBufCodecs.list())
+                .map(Response::new, Response::getAvailableNodeNames);
 
-        public Response(ClientGamePacketListener listener) {
-            super(listener);
+        private final List<String> availableNodeNames;
+
+        public Response(List<String> availableNodeNames) {
+            this.availableNodeNames = availableNodeNames;
         }
 
-        public Response(List<String> newNames) {
-            availableNodeNames = new ArrayList<>(newNames);
-        }
-
-        @Override
-        public void write(@NotNull FriendlyByteBuf buf) {
-            FBBSerializers.getCollectionFriendlyByteBufSerializer(String.class).serialize(buf, availableNodeNames);
+        public List<String> getAvailableNodeNames() {
+            return availableNodeNames;
         }
 
         @Override
-        public void read(@NotNull FriendlyByteBuf buf) {
-            availableNodeNames = FBBDeserializers.getCollectionFriendlyByteBufDeserializer(String.class, ArrayList::new).deserialize(buf);
-        }
-
-        @Override
-        public @NotNull PayloadType<ClientGamePacketListener, ? extends Payload<ClientGamePacketListener>> getPayloadType() {
-            return PayloadTypes.GET_AVAILABLE_NODES_RESPONSE.get();
+        public PacketType<ClientGamePacketListener, Response> getPacketType() {
+            return PacketTypes.GET_AVAILABLE_NODES_RESPONSE.get();
         }
     }
 }

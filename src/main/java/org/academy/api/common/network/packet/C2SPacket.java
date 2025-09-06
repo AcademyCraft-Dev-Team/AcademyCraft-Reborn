@@ -23,10 +23,10 @@ public class C2SPacket implements net.minecraft.network.protocol.Packet<ServerGa
     public int id;
     public FriendlyByteBuf friendlyByteBuf;
 
-    public <T extends Packet<ServerGamePacketListenerImpl>> C2SPacket(T packet) {
+    public <L extends ServerGamePacketListenerImpl, T extends Packet<L, T>> C2SPacket(T packet) {
         id = packet.getPacketType().getPacketId();
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
-        packet.write(friendlyByteBuf);
+        packet.getPacketType().getCodec().encode(friendlyByteBuf, packet);
     }
 
     @ApiStatus.Internal
@@ -52,7 +52,7 @@ public class C2SPacket implements net.minecraft.network.protocol.Packet<ServerGa
             NeoForge.EVENT_BUS.post(event);
 
             var packetType = NetworkSystem.<org.academy.api.common.network.PacketType
-                    <ServerGamePacketListenerImpl, Packet<ServerGamePacketListenerImpl>>>getPacketTypeById(id);
+                    <ServerGamePacketListenerImpl, ?>>getPacketTypeById(id);
             var packetClass = packetType.getPacketClass();
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {
@@ -60,13 +60,8 @@ public class C2SPacket implements net.minecraft.network.protocol.Packet<ServerGa
                     if (targetType != ThreadType.SERVER) return;
                 }
                 try {
-                    var factory = packetType.getFactory();
-                    if (factory == null) {
-                        AcademyCraft.LOGGER.error("No factory found for C2S packet class: {}", packetClass.getName());
-                        return;
-                    }
-                    var instance = factory.apply(handler);
-                    instance.read(friendlyByteBuf);
+                    var instance = packetType.getCodec().decode(friendlyByteBuf);
+                    instance.setPacketListener(handler);
                     AcademyCraftServer.NETWORK_MANAGER.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(

@@ -2,18 +2,19 @@ package org.academy.api.client.network.future;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.ClientboundPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.PacketListener;
+import net.minecraft.network.ServerboundPacketListener;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.future.AbstractFutureManager;
-import org.academy.api.common.network.future.RequestPayload;
-import org.academy.api.common.network.future.ResponsePayload;
+import org.academy.api.common.network.future.packet.FutureRequestPacket;
+import org.academy.api.common.network.future.packet.FutureResponsePacket;
+import org.academy.api.common.network.future.packet.RequestPacket;
+import org.academy.api.common.network.future.packet.ResponsePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.FutureRequestPacket;
-import org.academy.api.common.network.packet.FutureResponsePacket;
 
 import java.util.function.Consumer;
 
@@ -21,37 +22,66 @@ public class FutureManagerClient extends AbstractFutureManager {
     public FutureManagerClient() {
     }
 
-    public <T_RESP extends ResponsePayload<?>, T_REQ_LISTENER extends PacketListener, REQUEST extends RequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToServer(
-            REQUEST requestPayload, Consumer<T_RESP> callback, long timeoutMillis) {
-        var futureId = createPendingFuture(requestPayload.getExpectedResponsePayloadType(), callback, timeoutMillis);
+    public <
+            RES_L extends ClientboundPacketListener,
+            RES_P extends ResponsePacket<RES_L, RES_P>,
+            REQ_L extends ServerboundPacketListener,
+            REQ_P extends RequestPacket<REQ_L, REQ_P, RES_L, RES_P>
+            >
+    void sendRequestToServer(REQ_P requestPacket, Consumer<RES_P> callback, long timeoutMillis) {
+        var futureId = createPendingFuture(requestPacket.getResponsePacketType(), callback, timeoutMillis);
         if (futureId == -1) return;
+        var requestTypeId = requestPacket.getPacketType().getPacketId();
+        var buffer = new FriendlyByteBuf(Unpooled.buffer());
+        requestPacket.getPacketType().getCodec().encode(buffer, requestPacket);
 
-        var requestTypeId = requestPayload.getPayloadType().getPayloadId();
-        var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
-        requestPayload.write(payloadBuffer);
+        var payload = new byte[buffer.readableBytes()];
+        buffer.readBytes(payload);
 
-        var packet = new FutureRequestPacket<ServerGamePacketListenerImpl>(futureId, requestTypeId, payloadBuffer);
+        var packet = new FutureRequestPacket<ServerGamePacketListenerImpl>(futureId, requestTypeId, payload);
         AcademyCraftClient.sendPacket(new C2SPacket(packet));
     }
 
-    public <T_RESP extends ResponsePayload<?>, T_REQ_LISTENER extends PacketListener, REQUEST extends RequestPayload<T_REQ_LISTENER, T_RESP>> void sendRequestToServer(
-            REQUEST requestPayload, Consumer<T_RESP> callback) {
-        sendRequestToServer(requestPayload, callback, DEFAULT_TIMEOUT_MS);
+    public <
+            RES_L extends ClientboundPacketListener,
+            RES_P extends ResponsePacket<RES_L, RES_P>,
+            REQ_L extends ServerboundPacketListener,
+            REQ_P extends RequestPacket<REQ_L, REQ_P, RES_L, RES_P>
+            >
+    void sendRequestToServer(REQ_P requestPacket, Consumer<RES_P> callback) {
+        sendRequestToServer(requestPacket, callback, DEFAULT_TIMEOUT_MS);
     }
 
     @SubscribePacket
-    public void handleFutureRequestFromServer(FutureRequestPacket<ClientGamePacketListener> requestPacket) {
-        handleRequest(requestPacket, requestPacket.getPacketListener(), response -> {
-            var responseTypeId = response.getPayloadType().getPayloadId();
-            var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
-            response.write(responseBuffer);
-            var responsePkt = new FutureResponsePacket<ServerGamePacketListenerImpl>(requestPacket.futureId, responseTypeId, responseBuffer);
-            AcademyCraftClient.sendPacket(new C2SPacket(responsePkt));
-        });
+    public <
+            RES_P extends ResponsePacket<ServerGamePacketListenerImpl, RES_P>,
+            REQ_P extends RequestPacket<ClientGamePacketListener, REQ_P, ServerGamePacketListenerImpl, RES_P>
+            > void handleFutureRequestFromServer(FutureRequestPacket<ClientGamePacketListener> futureRequestPacket) {
+        super.<ClientGamePacketListener, FutureRequestPacket<ClientGamePacketListener>, ServerGamePacketListenerImpl, RES_P, REQ_P>handleRequest(
+                futureRequestPacket, futureRequestPacket.getPacketListener(), response -> {
+                    var responseTypeId = response.getPacketType().getPacketId();
+                    var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
+                    response.getPacketType().getCodec().encode(responseBuffer, response);
+
+                    var payload = new byte[responseBuffer.readableBytes()];
+                    responseBuffer.readBytes(payload);
+
+                    var responsePkt = new FutureResponsePacket<ServerGamePacketListenerImpl>(
+                            futureRequestPacket.getFutureId(), responseTypeId, payload
+                    );
+                    AcademyCraftClient.sendPacket(new C2SPacket(responsePkt));
+                }
+        );
     }
 
     @SubscribePacket
     public void handleFutureResponseFromServer(FutureResponsePacket<ClientGamePacketListener> responsePacket) {
-        handleResponse(responsePacket, payload -> Minecraft.getInstance().execute(() -> executeCallback(responsePacket.futureId, payload)));
+        handleResponse(responsePacket, payload ->
+                Minecraft.getInstance().execute(
+                        () -> executeCallback(
+                                responsePacket.getFutureId(), payload
+                        )
+                )
+        );
     }
 }

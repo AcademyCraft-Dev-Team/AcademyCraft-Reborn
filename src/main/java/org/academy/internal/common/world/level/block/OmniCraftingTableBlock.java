@@ -45,7 +45,8 @@ public class OmniCraftingTableBlock extends BaseEntityBlock {
     protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hitResult) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
             var menuProvider = getMenuProvider(state, level, pos);
-            ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, OMNI_CRAFTING_TABLE_SCREEN, pos);
+            ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, OMNI_CRAFTING_TABLE_SCREEN,
+                    buf -> buf.writeBlockPos(pos));
             return InteractionResult.CONSUME;
         } else {
             return InteractionResult.SUCCESS;

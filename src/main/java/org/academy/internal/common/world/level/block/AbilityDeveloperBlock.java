@@ -1,9 +1,11 @@
 package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.MapCodec;
+import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -18,7 +20,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.network.packet.S2CPacket;
-import org.academy.api.common.util.FBBUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.Nullable;
@@ -30,14 +31,13 @@ public class AbilityDeveloperBlock extends MultiBlock {
     public static final MapCodec<AbilityDeveloperBlock> CODEC = simpleCodec(AbilityDeveloperBlock::new);
 
     public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
-            // 以 South
-            new Vec3i(0, 1, 0),   // 上
-            new Vec3i(0, 0, 1),   // 前
-            new Vec3i(0, 1, 1),   // 前上
-            new Vec3i(0, 2, 1),   // 前上上
-            new Vec3i(0, 0, 2),   // 前前
-            new Vec3i(0, 1, 2),   // 前前上
-            new Vec3i(0, 2, 2)    // 前前上上
+            new Vec3i(0, 1, 0),
+            new Vec3i(0, 0, 1),
+            new Vec3i(0, 1, 1),
+            new Vec3i(0, 2, 1),
+            new Vec3i(0, 0, 2),
+            new Vec3i(0, 1, 2),
+            new Vec3i(0, 2, 2)
     );
     public static final String ABILITY_DEVELOPER_SCREEN = "ability_developer_screen";
 
@@ -71,9 +71,14 @@ public class AbilityDeveloperBlock extends MultiBlock {
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
                 if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity blockEntity) {
                     if (blockEntity.mainPos != null) {
+                        var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
+                        payloadBuffer.writeBlockPos(blockEntity.mainPos);
+
+                        var dataPayload = new byte[payloadBuffer.readableBytes()];
+                        payloadBuffer.readBytes(dataPayload);
+
                         serverPlayer.connection.send(new S2CPacket(
-                                new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN,
-                                        FBBUtil.autoSerializable(blockEntity.mainPos))
+                                new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN, dataPayload)
                         ));
                     }
                 }

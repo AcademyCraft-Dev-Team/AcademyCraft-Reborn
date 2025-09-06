@@ -6,7 +6,7 @@
       <item index="1" class="java.lang.String" itemvalue="net.neoforged.fml.common.EventBusSubscriber" />
       <item index="2" class="java.lang.String" itemvalue="org.academy.api.common.network.ReceiverConstructor" />
       <item index="3" class="java.lang.String" itemvalue="org.academy.api.common.network.SubscribePacket" />
-      <item index="4" class="java.lang.String" itemvalue="org.academy.api.common.network.future.HandlePayload" />
+      <item index="4" class="java.lang.String" itemvalue="org.academy.api.common.network.future.HandleFuture" />
     </list>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />

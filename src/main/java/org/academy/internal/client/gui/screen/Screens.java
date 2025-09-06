@@ -1,5 +1,6 @@
 package org.academy.internal.client.gui.screen;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -71,18 +72,19 @@ public final class Screens {
     }
 
 
+    private Screens() {
+    }
+
     public static void register() {
         AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(Screens.class);
     }
 
     @SubscribePacket
     public static void handle(OpenScreenPacket packet) {
-        var handler = SCREEN_HANDLERS.get(packet.screenName);
-        if (handler != null) {
-            handler.accept(packet.getPacketListener(), packet.getDataPayload());
+        var handler = SCREEN_HANDLERS.get(packet.getScreenName());
+        if (handler != null && packet.getDataPayload() != null) {
+            var buffer = new FriendlyByteBuf(Unpooled.wrappedBuffer(packet.getDataPayload()));
+            handler.accept(packet.getPacketListener(), buffer);
         }
-    }
-
-    private Screens() {
     }
 }

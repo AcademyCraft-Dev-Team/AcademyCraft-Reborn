@@ -1,12 +1,14 @@
 package org.academy.internal.common.ability.accelerator.skills;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.Direction;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -397,10 +399,10 @@ public final class VectorAccel extends Skill {
         public static void handleDash(DashPacket packet) {
             var player = packet.getPacketListener().getPlayer();
 
-            var speedScalarProg = MathUtil.lerpFactorStartEnd(packet.chargeRatio, 0.4f, 1.0f);
+            var speedScalarProg = MathUtil.lerpFactorStartEnd(packet.getChargeRatio(), 0.4f, 1.0f);
             var actualSpeedScalar = Math.sin(speedScalarProg) * MAX_VELOCITY_SCALAR;
 
-            var dashVelocity = packet.direction.scale(actualSpeedScalar);
+            var dashVelocity = packet.getDirection().scale(actualSpeedScalar);
             player.setDeltaMovement(dashVelocity);
 
             player.resetFallDistance();
@@ -409,36 +411,40 @@ public final class VectorAccel extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class DashPacket extends Packet<ServerGamePacketListenerImpl> {
-        public float chargeRatio;
-        public Vec3 direction;
+    public static final class DashPacket extends Packet<ServerGamePacketListenerImpl, DashPacket> {
+        private static final StreamCodec<ByteBuf, Vec3> VEC3_STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.DOUBLE, Vec3::x,
+                ByteBufCodecs.DOUBLE, Vec3::y,
+                ByteBufCodecs.DOUBLE, Vec3::z,
+                Vec3::new
+        );
 
-        public DashPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+        public static final StreamCodec<ByteBuf, DashPacket> CODEC = StreamCodec.composite(
+                ByteBufCodecs.FLOAT,
+                DashPacket::getChargeRatio,
+                VEC3_STREAM_CODEC,
+                DashPacket::getDirection,
+                DashPacket::new
+        );
+
+        private final float chargeRatio;
+        private final Vec3 direction;
 
         public DashPacket(float chargeRatio, Vec3 direction) {
-            super(null);
             this.chargeRatio = chargeRatio;
             this.direction = direction;
         }
 
-        @Override
-        public void read(@NotNull FriendlyByteBuf buf) {
-            this.chargeRatio = buf.readFloat();
-            this.direction = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+        public float getChargeRatio() {
+            return chargeRatio;
+        }
+
+        public Vec3 getDirection() {
+            return direction;
         }
 
         @Override
-        public void write(@NotNull FriendlyByteBuf buf) {
-            buf.writeFloat(chargeRatio);
-            buf.writeDouble(direction.x);
-            buf.writeDouble(direction.y);
-            buf.writeDouble(direction.z);
-        }
-
-        @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, DashPacket> getPacketType() {
             return PacketTypes.VECTOR_ACCEL_DASH.get();
         }
     }

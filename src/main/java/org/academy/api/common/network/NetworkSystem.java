@@ -1,5 +1,7 @@
 package org.academy.api.common.network;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.asm.PacketListenerFactory;
@@ -12,8 +14,16 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NetworkSystem {
-    public NetworkSystem() {
+public final class NetworkSystem {
+    private static final BiMap<Class<? extends Packet<?, ?>>, PacketType<?, ?>> CLASS_TO_TYPE = HashBiMap.create();
+
+    private NetworkSystem() {
+    }
+
+    public static void progressRegistry() {
+        for (var type : Registries.PACKET_TYPES) {
+            CLASS_TO_TYPE.put(type.getPacketClass(), type);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -21,8 +31,13 @@ public class NetworkSystem {
         return (T) Registries.PACKET_TYPES.byIdOrThrow(id);
     }
 
-    public static List<IPacketListener> findPacketListeners(@NotNull Class<?> clazz, @Nullable Object instance) {
-        var generatedHandlers = new ArrayList<IPacketListener>();
+    @SuppressWarnings("unchecked")
+    public static <T extends PacketType<?, ?>> T getPacketType(Class<?> payloadClass) {
+        return (T) CLASS_TO_TYPE.get(payloadClass);
+    }
+
+    public static List<IPacketListener<?, ?>> findPacketListeners(@NotNull Class<?> clazz, @Nullable Object instance) {
+        var generatedHandlers = new ArrayList<IPacketListener<?, ?>>();
         var foundAnnotation = false;
 
         if (!Modifier.isPublic(clazz.getModifiers())) {
@@ -44,8 +59,9 @@ public class NetworkSystem {
                 continue;
             }
 
-            if (!Packet.class.isAssignableFrom(method.getParameterTypes()[0])) {
-                AcademyCraft.LOGGER.error("Skipping method {} in {}: parameter type {} does not implement IPacket<?>", method.getName(), clazz.getName(), method.getParameterTypes()[0].getName());
+            var parameterClass = method.getParameterTypes()[0];
+            if (!Packet.class.isAssignableFrom(parameterClass)) {
+                AcademyCraft.LOGGER.error("Skipping method {} in {}: parameter type {} does not implement Packet<?, ?>", method.getName(), clazz.getName(), parameterClass.getName());
                 continue;
             }
 

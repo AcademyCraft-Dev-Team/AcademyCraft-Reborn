@@ -86,12 +86,12 @@ public class WirelessPanelWidget extends PanelWidget {
         var requestPayload = new GetAvailableNodesPacket(position);
         AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
                 requestPayload,
-                (GetAvailableNodesPacket.Response response) -> {
-                    if (response != null && response.availableNodeNames != null) {
+               response -> {
+                    if (response != null && response.getAvailableNodeNames() != null) {
                         nodeList.clearChildren();
-                        response.availableNodeNames.removeIf(s -> s.equals(connectedNodeName));
-                        for (int i = 0; i < response.availableNodeNames.size(); i++) {
-                            var name = response.availableNodeNames.get(i);
+                        response.getAvailableNodeNames().removeIf(s -> s.equals(connectedNodeName));
+                        for (int i = 0; i < response.getAvailableNodeNames().size(); i++) {
+                            var name = response.getAvailableNodeNames().get(i);
                             var nodeViewPanel = getNodeWidget(0, i * LIST_ITEM_HEIGHT, name, false, false);
                             nodeList.addChild("node_" + name, nodeViewPanel);
                         }
@@ -146,7 +146,7 @@ public class WirelessPanelWidget extends PanelWidget {
                 requestPayload,
                 (GetCurrentNodePacket.Response response) -> {
                     if (response != null)
-                        updateConnectedNodeDisplay(response.isNull, response.nodeName);
+                        updateConnectedNodeDisplay(response.isNull(), response.getNodeName());
                 }
         );
     }

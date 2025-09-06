@@ -21,7 +21,7 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AcquireCategoryPacket;
-import org.academy.api.common.ability.LearnSkillPayload;
+import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
@@ -181,12 +181,12 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 if ("learn".equals(s)) {
                     if (!learned) {
                         if (abilityDeveloperBlockEntity != null && abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
-                            var request = new AcquireCategoryPacket(mainPos);
+                            var request = new AcquireCategoryPacket(mainPos.asLong());
                             AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
-                                    (var response) -> {
-                                        if (response != null && response.messages != null) {
+                                    response -> {
+                                        if (response != null && response.getMessages() != null) {
                                             var lastWidget = outputCommand;
-                                            for (var string : response.messages) {
+                                            for (var string : response.getMessages()) {
                                                 var newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
                                                 addOutput("output_info_" + string + newOutput.hashCode(), newOutput, outputList);
                                                 os.setY(newOutput.getY() + newOutput.getHeight());
@@ -448,10 +448,10 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 if (skillInfo == null)
                     return;
 
-                LearnSkillPayload request = new LearnSkillPayload(skillInfo.skill().getKey().toString(), mainPos);
+                var request = new LearnSkillPacket(skillInfo.skill().getKey().toString(), mainPos.asLong());
                 AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
-                        (LearnSkillPayload.Response response) -> {
-                            if (response != null && response.success)
+                        response -> {
+                            if (response != null && response.isSuccess())
                                 onInit();
                         });
             });

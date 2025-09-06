@@ -24,10 +24,10 @@ public class S2CPacket implements net.minecraft.network.protocol.Packet<ClientGa
     private final int id;
     private final FriendlyByteBuf friendlyByteBuf;
 
-    public <T extends Packet<ClientGamePacketListener>> S2CPacket(T packet) {
+    public <T extends Packet<ClientGamePacketListener, T>> S2CPacket(T packet) {
         id = packet.getPacketType().getPacketId();
         friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
-        packet.write(friendlyByteBuf);
+        packet.getPacketType().getCodec().encode(friendlyByteBuf, packet);
     }
 
     @ApiStatus.Internal
@@ -54,7 +54,7 @@ public class S2CPacket implements net.minecraft.network.protocol.Packet<ClientGa
             if (event.isCanceled()) return;
 
             var packetType = NetworkSystem.<org.academy.api.common.network.PacketType
-                    <ClientGamePacketListener, Packet<ClientGamePacketListener>>>getPacketTypeById(id);
+                    <ClientGamePacketListener, ?>>getPacketTypeById(id);
             var packetClass = packetType.getPacketClass();
             if (packetClass != null) {
                 if (packetClass.isAnnotationPresent(PacketTarget.class)) {
@@ -62,13 +62,13 @@ public class S2CPacket implements net.minecraft.network.protocol.Packet<ClientGa
                     if (targetType != ThreadType.CLIENT) return;
                 }
                 try {
-                    var factory = packetType.getFactory();
-                    if (factory == null) {
-                        AcademyCraft.LOGGER.error("No factory found for S2C packet class: {}", packetClass.getName());
+                    var codec = packetType.getCodec();
+                    if (codec == null) {
+                        AcademyCraft.LOGGER.error("No codec found for S2C packet class: {}", packetClass.getName());
                         return;
                     }
-                    var instance = factory.apply(handler);
-                    instance.read(friendlyByteBuf);
+                    var instance = codec.decode(friendlyByteBuf);
+                    instance.setPacketListener(handler);
                     AcademyCraftClient.CLIENT_NETWORK_MANAGER.dispatchPacket(instance);
                 } catch (Throwable e) {
                     AcademyCraft.LOGGER.error(

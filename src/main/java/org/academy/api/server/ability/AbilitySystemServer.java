@@ -1,5 +1,6 @@
 package org.academy.api.server.ability;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -12,7 +13,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.*;
-import org.academy.api.common.network.future.HandlePayload;
+import org.academy.api.common.network.future.HandleFuture;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
@@ -79,10 +80,10 @@ public class AbilitySystemServer {
     }
 
     @SuppressWarnings("resource")
-    @HandlePayload
+    @HandleFuture
     public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var userPos = payload.userPos;
+        var userPos = BlockPos.of(payload.getUserPos());
         if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
             return new AcquireCategoryPacket.Response(Collections.singletonList("Error: You are too far away."));
         }
@@ -116,17 +117,17 @@ public class AbilitySystemServer {
         return new AcquireCategoryPacket.Response(Collections.singletonList("Error: Block is not an Ability Developer."));
     }
 
-    @HandlePayload
+    @HandleFuture
     @SuppressWarnings("resource")
-    public static LearnSkillPayload.Response handleLearnSkill(LearnSkillPayload payload) {
+    public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var userPos = payload.userPos;
+        var userPos = BlockPos.of(payload.getUserPos());
         if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
-            return new LearnSkillPayload.Response(false);
+            return new LearnSkillPacket.Response(false);
         }
 
         var level = player.level();
-        var skillKey = payload.skillName;
+        var skillKey = payload.getSkillName();
         var be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
             var skillReference = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
@@ -146,10 +147,10 @@ public class AbilitySystemServer {
                     user.extractEnergy(energy, false);
                     addPlayerSkill(player.getUUID(), skillKey);
                 }
-                return new LearnSkillPayload.Response(canLearn);
+                return new LearnSkillPacket.Response(canLearn);
             }
         }
-        return new LearnSkillPayload.Response(false);
+        return new LearnSkillPacket.Response(false);
     }
 
     public static void scheduleFullPlayerSync(final UUID uuid) {
@@ -338,11 +339,9 @@ public class AbilitySystemServer {
             var categoryKey = Registries.ABILITY_CATEGORIES.getKey(playerCategory);
 
             var packet = new PlayerSyncPacket(
-                    levelChanged, getPlayerLevel(uuid),
-                    currentComputingPowerChanged, getPlayerComputingPower(uuid),
-                    maxComputingPowerChanged, getPlayerMaxComputingPower(uuid),
-                    abilityCategoryChanged, categoryKey != null ? categoryKey.toString() : "academy:level0",
-                    skillsChanged, getPlayerSkills(uuid)
+                    getPlayerLevel(uuid),
+                    getPlayerComputingPower(uuid),
+                    getPlayerMaxComputingPower(uuid)
             );
             connection.send(new S2CPacket(packet));
             player.syncQueue.clear();

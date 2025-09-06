@@ -1,10 +1,12 @@
 package org.academy.internal.common.ability.teleport.skills;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -42,6 +44,7 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.Set;
 
 public final class SelfTeleport extends Skill {
@@ -61,10 +64,6 @@ public final class SelfTeleport extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        if (CONFIG == null) {
-            CONFIG = new Client.Config();
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, CONFIG);
-        }
 
         KEY_START = CONFIG.getKeyBinding(Client.KEY_NAME_START,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
@@ -92,16 +91,15 @@ public final class SelfTeleport extends Skill {
         @SubscribePacket
         public static void handleTeleport(SelfTeleportPacket packet) {
             var serverPlayer = packet.getPacketListener().getPlayer();
-            if (packet.hasPosition) {
+            packet.getPosition().ifPresent(pos -> {
                 var dimensions = serverPlayer.getDimensions(Pose.STANDING);
                 var playerHeight = dimensions.height();
-                var teleportY = packet.y - (playerHeight / 2.0);
-                serverPlayer.teleportTo(packet.x, teleportY, packet.z);
+                var teleportY = pos.y() - (playerHeight / 2.0);
+                serverPlayer.teleportTo(pos.x(), teleportY, pos.z());
                 serverPlayer.resetFallDistance();
                 serverPlayer.setDeltaMovement(0, 0.25, 0);
-
                 serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(serverPlayer));
-            }
+            });
         }
     }
 
@@ -125,7 +123,7 @@ public final class SelfTeleport extends Skill {
                 Vec3 finalTargetPos = currentContext.currentRenderPos;
                 currentContext.cleanup();
                 if (ClientUtil.hasScreen()) return;
-                AcademyCraftClient.sendPacket(new C2SPacket(new SelfTeleportPacket(finalTargetPos.x(), finalTargetPos.y(), finalTargetPos.z())));
+                AcademyCraftClient.sendPacket(new C2SPacket(new SelfTeleportPacket(finalTargetPos)));
             }
         }
 
@@ -264,45 +262,33 @@ public final class SelfTeleport extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class SelfTeleportPacket extends Packet<ServerGamePacketListenerImpl> {
-        public boolean hasPosition;
-        public double x, y, z;
+    public static final class SelfTeleportPacket extends Packet<ServerGamePacketListenerImpl, SelfTeleportPacket> {
+        private static final StreamCodec<ByteBuf, Vec3> VEC3_CODEC = StreamCodec.composite(
+                ByteBufCodecs.DOUBLE, Vec3::x,
+                ByteBufCodecs.DOUBLE, Vec3::y,
+                ByteBufCodecs.DOUBLE, Vec3::z,
+                Vec3::new
+        );
 
-        public SelfTeleportPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-            this.hasPosition = false;
+        public static final StreamCodec<ByteBuf, SelfTeleportPacket> CODEC = ByteBufCodecs.optional(VEC3_CODEC)
+                .map(SelfTeleportPacket::new, SelfTeleportPacket::getPosition);
+
+        private final Optional<Vec3> position;
+
+        public SelfTeleportPacket(Optional<Vec3> position) {
+            this.position = position;
         }
 
-        public SelfTeleportPacket(double x, double y, double z) {
-            super(null);
-            this.hasPosition = true;
-            this.x = x;
-            this.y = y;
-            this.z = z;
+        public SelfTeleportPacket(Vec3 position) {
+            this(Optional.of(position));
         }
 
-        @Override
-        public void read(@NotNull FriendlyByteBuf buf) {
-            this.hasPosition = buf.readBoolean();
-            if (this.hasPosition) {
-                this.x = buf.readDouble();
-                this.y = buf.readDouble();
-                this.z = buf.readDouble();
-            }
-        }
-
-        @Override
-        public void write(@NotNull FriendlyByteBuf buf) {
-            buf.writeBoolean(this.hasPosition);
-            if (this.hasPosition) {
-                buf.writeDouble(this.x);
-                buf.writeDouble(this.y);
-                buf.writeDouble(this.z);
-            }
+        public Optional<Vec3> getPosition() {
+            return position;
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, SelfTeleportPacket> getPacketType() {
             return PacketTypes.SELF_TELEPORT.get();
         }
     }
