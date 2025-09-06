@@ -1,28 +1,38 @@
 package org.academy.internal.common.core.particles;
 
-import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
-public class SpawnArcMediumParticlePacket extends Packet<ClientGamePacketListener> {
-    private double x;
-    private double y;
-    private double z;
-    private float yaw;
-    private float pitch;
+public class SpawnArcMediumParticlePacket extends Packet<ClientGamePacketListener, SpawnArcMediumParticlePacket> {
+    public static final StreamCodec<ByteBuf, SpawnArcMediumParticlePacket> CODEC = StreamCodec.composite(
+            ByteBufCodecs.DOUBLE,
+            SpawnArcMediumParticlePacket::getX,
+            ByteBufCodecs.DOUBLE,
+            SpawnArcMediumParticlePacket::getY,
+            ByteBufCodecs.DOUBLE,
+            SpawnArcMediumParticlePacket::getZ,
+            ByteBufCodecs.FLOAT,
+            SpawnArcMediumParticlePacket::getYaw,
+            ByteBufCodecs.FLOAT,
+            SpawnArcMediumParticlePacket::getPitch,
+            SpawnArcMediumParticlePacket::new
+    );
 
-    public SpawnArcMediumParticlePacket(ClientGamePacketListener ClientGamePacketListener) {
-        super(ClientGamePacketListener);
-    }
+    private final double x;
+    private final double y;
+    private final double z;
+    private final float yaw;
+    private final float pitch;
 
     public SpawnArcMediumParticlePacket(double x, double y, double z, float yaw, float pitch) {
-        super(null);
         this.x = x;
         this.y = y;
         this.z = z;
@@ -30,34 +40,12 @@ public class SpawnArcMediumParticlePacket extends Packet<ClientGamePacketListene
         this.pitch = pitch;
     }
 
-    @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
-        this.x = buf.readDouble();
-        this.y = buf.readDouble();
-        this.z = buf.readDouble();
-        this.yaw = buf.readFloat();
-        this.pitch = buf.readFloat();
-    }
-
-    @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeDouble(this.x);
-        buf.writeDouble(this.y);
-        buf.writeDouble(this.z);
-        buf.writeFloat(this.yaw);
-        buf.writeFloat(this.pitch);
-    }
-
-    public float getPitch() {
-        return pitch;
+    public double getX() {
+        return x;
     }
 
     public double getY() {
         return y;
-    }
-
-    public double getX() {
-        return x;
     }
 
     public double getZ() {
@@ -68,8 +56,12 @@ public class SpawnArcMediumParticlePacket extends Packet<ClientGamePacketListene
         return yaw;
     }
 
+    public float getPitch() {
+        return pitch;
+    }
+
     @Override
-    public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
+    public PacketType<ClientGamePacketListener, SpawnArcMediumParticlePacket> getPacketType() {
         return PacketTypes.SPAWN_ARC_MEDIUM_PARTICLE.get();
     }
 }

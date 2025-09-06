@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.accelerator.skills;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -21,7 +23,6 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -52,10 +53,6 @@ public class VectorReflection extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.Config();
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
-        }
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                         new InputSystem.InputPair(
@@ -80,7 +77,7 @@ public class VectorReflection extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            AcademyCraftClient.sendPacket(new C2SPacket(new TogglePacket()));
+            AcademyCraftClient.sendPacket(new C2SPacket(TogglePacket.INSTANCE));
         }
 
         public static class Config extends KeyBindingConfig {
@@ -109,11 +106,7 @@ public class VectorReflection extends Skill {
         @SubscribePacket
         public static void toggleReflection(TogglePacket packet) {
             var uuid = packet.getPacketListener().getPlayer().getUUID();
-            if (ACTIVE_REFLECTION_MAP.containsKey(uuid)) {
-                ACTIVE_REFLECTION_MAP.put(uuid, !ACTIVE_REFLECTION_MAP.get(uuid));
-            } else {
-                ACTIVE_REFLECTION_MAP.put(uuid, true);
-            }
+            ACTIVE_REFLECTION_MAP.compute(uuid, (key, value) -> value == null || !value);
         }
 
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
@@ -199,17 +192,15 @@ public class VectorReflection extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class TogglePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public TogglePacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+    public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
+        public static final TogglePacket INSTANCE = new TogglePacket();
+        public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public TogglePacket() {
-            super(null);
+        private TogglePacket() {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.VECTOR_REFLECTION_TOGGLE.get();
         }
     }

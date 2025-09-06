@@ -1,17 +1,31 @@
 package org.academy.internal.common.world.item;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunkSection;
-import org.academy.api.common.network.FBBDeserializers;
-import org.academy.api.common.network.FBBSerializers;
-import org.academy.api.common.network.future.*;
-import org.academy.internal.common.network.future.PayloadTypes;
+import org.academy.AcademyCraftClient;
+import org.academy.api.common.network.PacketType;
+import org.academy.api.common.network.future.HandleFuture;
+import org.academy.api.common.network.future.packet.RequestPacket;
+import org.academy.api.common.network.future.packet.ResponsePacket;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,14 +36,12 @@ public class ImagiphaseDowsingRodItem extends Item {
     public ImagiphaseDowsingRodItem(Properties properties) {
         super(properties);
     }
-/*
 
     @Override
-    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
+    public void inventoryTick(@NotNull ItemStack stack, ServerLevel level, @NotNull Entity entity, @Nullable EquipmentSlot slot) {
         if (level.isClientSide) {
-            if (!isSelected && entity instanceof LocalPlayer localPlayer) {
-                if (!(localPlayer.getItemInHand(InteractionHand.MAIN_HAND).getItem() == this
-                        || localPlayer.getItemInHand(InteractionHand.OFF_HAND).getItem() == this)) {
+            if (entity instanceof LocalPlayer localPlayer) {
+                if (!(localPlayer.getMainHandItem() == stack || localPlayer.getOffhandItem() == stack)) {
                     RENDER_TARGET_POSITIONS.clear();
                 }
             }
@@ -37,84 +49,67 @@ public class ImagiphaseDowsingRodItem extends Item {
     }
 
     @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
-        ItemStack itemstack = player.getItemInHand(hand);
+    public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         if (level.isClientSide()) {
             RENDER_TARGET_POSITIONS.clear();
-            GetLevelChunkSectionsPacket packet = new GetLevelChunkSectionsPacket(player.blockPosition());
-            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(packet, (GetLevelChunkSectionsPacket.Response response) -> {
-                if (response != null && response.sectionsWithImagPhase != null) {
-                    RENDER_TARGET_POSITIONS = response.sectionsWithImagPhase;
+            var packet = new GetLevelChunkSectionsPacket(player.blockPosition());
+            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(packet, response -> {
+                if (response != null) {
+                    RENDER_TARGET_POSITIONS.addAll(response.getSectionsWithImagPhase());
                 }
             });
         }
-        return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
-*/
 
-    public static final class GetLevelChunkSectionsPacket extends RequestPayload<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket.Response> {
-        public BlockPos playerPos;
+    public static final class GetLevelChunkSectionsPacket extends RequestPacket<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket, ClientGamePacketListener, GetLevelChunkSectionsPacket.Response> {
+        public static final StreamCodec<ByteBuf, GetLevelChunkSectionsPacket> CODEC = BlockPos.STREAM_CODEC
+                .map(GetLevelChunkSectionsPacket::new, GetLevelChunkSectionsPacket::getPlayerPos);
 
-        public GetLevelChunkSectionsPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+        private final BlockPos playerPos;
 
         public GetLevelChunkSectionsPacket(BlockPos playerPos) {
-            super(null);
             this.playerPos = playerPos;
         }
 
-        @Override
-        public @NotNull PayloadType<?, Response> getExpectedResponsePayloadType() {
-            return PayloadTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
+        public BlockPos getPlayerPos() {
+            return playerPos;
         }
 
         @Override
-        public @NotNull PayloadType<ServerGamePacketListenerImpl, ? extends Payload<ServerGamePacketListenerImpl>> getPayloadType() {
-            return PayloadTypes.GET_LEVEL_CHUNK_SECTIONS.get();
+        public PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
+            return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
         }
 
         @Override
-        public void write(@NotNull FriendlyByteBuf buf) {
-            buf.writeBlockPos(playerPos);
+        public PacketType<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket> getPacketType() {
+            return PacketTypes.GET_LEVEL_CHUNK_SECTIONS.get();
         }
 
-        @Override
-        public void read(@NotNull FriendlyByteBuf buf) {
-            playerPos = buf.readBlockPos();
-        }
+        public static final class Response extends ResponsePacket<ClientGamePacketListener, Response> {
+            public static final StreamCodec<ByteBuf, Response> CODEC = BlockPos.STREAM_CODEC
+                    .apply(ByteBufCodecs.list())
+                    .map(Response::new, Response::getSectionsWithImagPhase);
 
-        public static final class Response extends ResponsePayload<ClientGamePacketListener> {
-            public List<BlockPos> sectionsWithImagPhase;
-
-            public Response(ClientGamePacketListener listener) {
-                super(listener);
-                this.sectionsWithImagPhase = new ArrayList<>();
-            }
+            private final List<BlockPos> sectionsWithImagPhase;
 
             public Response(List<BlockPos> sections) {
                 this.sectionsWithImagPhase = sections;
             }
 
-            @Override
-            public void write(@NotNull FriendlyByteBuf buf) {
-                FBBSerializers.getCollectionFriendlyByteBufSerializer(BlockPos.class).serialize(buf, sectionsWithImagPhase);
+            public List<BlockPos> getSectionsWithImagPhase() {
+                return sectionsWithImagPhase;
             }
 
             @Override
-            public void read(@NotNull FriendlyByteBuf buf) {
-                this.sectionsWithImagPhase = FBBDeserializers.getCollectionFriendlyByteBufDeserializer(BlockPos.class, ArrayList::new).deserialize(buf);
-            }
-
-            @Override
-            public @NotNull PayloadType<ClientGamePacketListener, ? extends Payload<ClientGamePacketListener>> getPayloadType() {
-                return PayloadTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
+            public PacketType<ClientGamePacketListener, Response> getPacketType() {
+                return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
             }
         }
     }
 
     @SuppressWarnings("resource")
-    @HandlePayload
+    @HandleFuture
     public static ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response onGetLevelChunkSections(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket payload) {
         var player = payload.getPacketListener().getPlayer();
         var serverLevel = player.level();
@@ -125,10 +120,10 @@ public class ImagiphaseDowsingRodItem extends Item {
             var chunk = chunkHolder.getTickingChunk();
             if (chunk != null) {
                 LevelChunkSection[] sections = chunk.getSections();
-                for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
-                    LevelChunkSection section = sections[sectionIndex];
+                for (var i = 0; i < sections.length; i++) {
+                    LevelChunkSection section = sections[i];
                     if (section != null && !section.hasOnlyAir() && section.maybeHas(blockState -> blockState.getFluidState().is(Fluids.IMAGIPHASE_PLASMA.get()))) {
-                        int sectionBottomY = chunk.getSectionYFromSectionIndex(sectionIndex);
+                        int sectionBottomY = chunk.getSectionYFromSectionIndex(i);
                         sectionsWithImagPhase.add(new BlockPos(chunk.getPos().getMinBlockX(), sectionBottomY, chunk.getPos().getMinBlockZ()));
                     }
                 }

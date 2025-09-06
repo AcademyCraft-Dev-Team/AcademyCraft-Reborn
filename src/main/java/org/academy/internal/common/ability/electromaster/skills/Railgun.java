@@ -1,8 +1,10 @@
 package org.academy.internal.common.ability.electromaster.skills;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,7 +37,6 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.LevelUtil;
@@ -109,7 +110,7 @@ public class Railgun extends Skill {
                 if (hasCoin) {
                     currentContext = new Context(player);
                     AbilitySystemClient.registerContext(currentContext);
-                    AcademyCraftClient.sendPacket(new C2SPacket(new StartChargePacket()));
+                    AcademyCraftClient.sendPacket(new C2SPacket(StartChargePacket.INSTANCE));
                 }
             }
         }
@@ -158,7 +159,7 @@ public class Railgun extends Skill {
             }
 
             public void release() {
-                AcademyCraftClient.sendPacket(new C2SPacket(new ShootPacket()));
+                AcademyCraftClient.sendPacket(new C2SPacket(ShootPacket.INSTANCE));
                 cleanup();
             }
 
@@ -171,7 +172,7 @@ public class Railgun extends Skill {
 
             @SubscribePacket
             public void onConfirmCharge(ConfirmChargePacket packet) {
-                this.coinEntityId = packet.coinEntityId;
+                this.coinEntityId = packet.getCoinEntityId();
                 this.chargeStartTime = System.nanoTime();
                 this.active = true;
             }
@@ -280,10 +281,10 @@ public class Railgun extends Skill {
             Level level = player.level();
             ThrownCoin thrownCoin = new ThrownCoin(level, player);
             thrownCoin.setPos(player.getX(), player.getEyeY() - 0.1D, player.getZ());
-            thrownCoin.setDeltaMovement(packet.initialVelocity);
-            thrownCoin.setRot(packet.yRot, packet.xRot);
-            thrownCoin.yRotO = packet.yRot;
-            thrownCoin.xRotO = packet.xRot;
+            thrownCoin.setDeltaMovement(packet.getInitialVelocity());
+            thrownCoin.setRot(packet.getYRot(), packet.getXRot());
+            thrownCoin.yRotO = packet.getYRot();
+            thrownCoin.xRotO = packet.getXRot();
             level.addFreshEntity(thrownCoin);
         }
 
@@ -364,84 +365,71 @@ public class Railgun extends Skill {
                 if (coin != null) {
                     coin.discard();
                 }
-                player.connection.send(new S2CPacket(new ChargeEndPacket()));
+                player.connection.send(new S2CPacket(ChargeEndPacket.INSTANCE));
             }
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class StartChargePacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public StartChargePacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
+    public static final class StartChargePacket extends Packet<ServerGamePacketListenerImpl, StartChargePacket> {
+        public static final StartChargePacket INSTANCE = new StartChargePacket();
+        public static final StreamCodec<ByteBuf, StartChargePacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private StartChargePacket() {
         }
 
-        public StartChargePacket() {
-            super(null);
-        }
+
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, StartChargePacket> getPacketType() {
             return PacketTypes.RAILGUN_START_CHARGE.get();
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class ShootPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public ShootPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+    public static final class ShootPacket extends Packet<ServerGamePacketListenerImpl, ShootPacket> {
+        public static final ShootPacket INSTANCE = new ShootPacket();
+        public static final StreamCodec<ByteBuf, ShootPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public ShootPacket() {
-            super(null);
+        private ShootPacket() {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, ShootPacket> getPacketType() {
             return PacketTypes.RAILGUN_SHOOT.get();
         }
     }
 
     @PacketTarget(ThreadType.CLIENT)
-    public static final class ConfirmChargePacket extends Packet<ClientGamePacketListener> {
-        public int coinEntityId;
+    public static final class ConfirmChargePacket extends Packet<ClientGamePacketListener, ConfirmChargePacket> {
+        public static final StreamCodec<ByteBuf, ConfirmChargePacket> CODEC = ByteBufCodecs.VAR_INT.map(ConfirmChargePacket::new, ConfirmChargePacket::getCoinEntityId);
 
-        public ConfirmChargePacket(ClientGamePacketListener listener) {
-            super(listener);
-        }
+        private final int coinEntityId;
 
         public ConfirmChargePacket(int coinEntityId) {
-            super(null);
             this.coinEntityId = coinEntityId;
         }
 
-        @Override
-        public void read(@NotNull FriendlyByteBuf buf) {
-            this.coinEntityId = buf.readVarInt();
+        public int getCoinEntityId() {
+            return coinEntityId;
         }
 
         @Override
-        public void write(@NotNull FriendlyByteBuf buf) {
-            buf.writeVarInt(this.coinEntityId);
-        }
-
-        @Override
-        public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
+        public PacketType<ClientGamePacketListener, ConfirmChargePacket> getPacketType() {
             return PacketTypes.RAILGUN_CONFIRM_CHARGE.get();
         }
     }
 
     @PacketTarget(ThreadType.CLIENT)
-    public static final class ChargeEndPacket extends EmptyPacket<ClientGamePacketListener> {
-        public ChargeEndPacket(ClientGamePacketListener listener) {
-            super(listener);
-        }
+    public static final class ChargeEndPacket extends Packet<ClientGamePacketListener, ChargeEndPacket> {
+        public static final ChargeEndPacket INSTANCE = new ChargeEndPacket();
+        public static final StreamCodec<ByteBuf, ChargeEndPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public ChargeEndPacket() {
-            super(null);
+        private ChargeEndPacket() {
         }
 
         @Override
-        public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
+        public PacketType<ClientGamePacketListener, ChargeEndPacket> getPacketType() {
             return PacketTypes.RAILGUN_CHARGE_END.get();
         }
     }

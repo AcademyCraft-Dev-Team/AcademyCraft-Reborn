@@ -1,17 +1,15 @@
 package org.academy.internal.common.ability.accelerator.skills;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
-import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
@@ -26,7 +24,6 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.ThreadType;
@@ -37,7 +34,10 @@ import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class DirStrike extends Skill {
     public DirStrike() {
@@ -53,10 +53,6 @@ public class DirStrike extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        if (Client.CONFIG == null) {
-            Client.CONFIG = new Client.Config();
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
-        }
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, new InputSystem.InputPair(
                 InputSystem.InputType.KEYBOARD,
@@ -83,7 +79,7 @@ public class DirStrike extends Skill {
 
         public static void onAction() {
             if (Minecraft.getInstance().player == null) return;
-            AcademyCraftClient.sendPacket(new C2SPacket(new ActionPacket()));
+            AcademyCraftClient.sendPacket(new C2SPacket(ActionPacket.INSTANCE));
         }
 
         public static class Config extends KeyBindingConfig {
@@ -112,7 +108,6 @@ public class DirStrike extends Skill {
             var serverPlayer = packet.getPacketListener().getPlayer();
 
             var level = serverPlayer.level();
-            var chunkCache = level.getChunkSource();
             var lookDir = serverPlayer.getLookAngle();
             var horizontalLookDir = new Vec3(lookDir.x, 0, lookDir.z).normalize();
 
@@ -145,69 +140,47 @@ public class DirStrike extends Skill {
                 }
             }
 
-            for (BlockPos pos : affectedBlocks) {
-                BlockState blockState = level.getBlockState(pos);
+            for (var pos : affectedBlocks) {
+                var blockState = level.getBlockState(pos);
                 if (!blockState.isAir() && !blockState.hasBlockEntity() && blockState.getDestroySpeed(level, pos) >= 0 && blockState.getFluidState().isEmpty()) {
-                    SoundType soundType = blockState.getSoundType(level, pos, null);
-                    level.playSound(null, pos, soundType.getBreakSound(), SoundSource.BLOCKS, soundType.getVolume() * 0.8f, soundType.getPitch() * 0.9f);
-
-                    FallingBlockEntity fallingBlock = new FallingBlockEntity(EntityType.FALLING_BLOCK, level);
+                    var fallingBlock = FallingBlockEntity.fall(level, pos, blockState);
                     fallingBlock.disableDrop();
-                    fallingBlock.blockState = blockState;
-                    fallingBlock.blocksBuilding = true;
-                    fallingBlock.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-                    fallingBlock.setStartPos(pos);
-                    fallingBlock.dropItem = false;
                     fallingBlock.setHurtsEntities(0.0f, 0);
-                    fallingBlock.time = 1;
 
-                    Vec3 blockCenter = Vec3.atCenterOf(pos);
-                    Vec3 playerCenter = serverPlayer.position();
-                    Vec3 outwardDir = blockCenter.subtract(playerCenter).normalize();
+                    var blockCenter = Vec3.atCenterOf(pos);
+                    var playerCenter = serverPlayer.position();
+                    var outwardDir = blockCenter.subtract(playerCenter).normalize();
 
-                    double yVel = MathUtil.RANDOM.nextDouble(0.2, 0.3);
-                    double outwardVel = 0.1 + level.random.nextDouble();
+                    var yVel = MathUtil.RANDOM.nextDouble(0.2, 0.3);
+                    var outwardVel = 0.1 + level.random.nextDouble();
 
-                    Vec3 velocity = new Vec3(outwardDir.x * outwardVel, yVel, outwardDir.z * outwardVel);
+                    var velocity = new Vec3(outwardDir.x * outwardVel, yVel, outwardDir.z * outwardVel);
 
                     fallingBlock.setDeltaMovement(velocity);
-
-                    level.addFreshEntity(fallingBlock);
-                    chunkCache.broadcast(fallingBlock, new ClientboundSetEntityMotionPacket(fallingBlock));
-
-                    level.sendParticles(
-                            new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK, blockState),
-                            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                            40,
-                            0.4, 0.4, 0.4,
-                            0.2
-                    );
                 }
             }
 
-            Vec3 basePos = serverPlayer.position();
+            var basePos = serverPlayer.position();
             var attackArea = new AABB(basePos, basePos.add(horizontalLookDir.scale(5))).inflate(1.0);
-            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, attackArea, e ->
+            var targets = level.getEntitiesOfClass(LivingEntity.class, attackArea, e ->
                     e != serverPlayer && e.isAlive());
 
-            for (LivingEntity target : targets) {
+            for (var target : targets) {
                 target.hurt(level.damageSources().playerAttack(serverPlayer), 6.0f);
             }
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class ActionPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public ActionPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+    public static final class ActionPacket extends Packet<ServerGamePacketListenerImpl, ActionPacket> {
+        public static final ActionPacket INSTANCE = new ActionPacket();
+        public static final StreamCodec<ByteBuf, ActionPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public ActionPacket() {
-            super(null);
+        private ActionPacket() {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, ActionPacket> getPacketType() {
             return PacketTypes.DIR_STRIKE.get();
         }
     }

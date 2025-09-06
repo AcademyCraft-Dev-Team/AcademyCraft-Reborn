@@ -1,6 +1,8 @@
 package org.academy.internal.common.world.item;
 
-import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -31,7 +33,7 @@ public class CoinItem extends Item {
             var initialVelocity = player.onGround() ?
                     player.getDeltaMovement().multiply(2.25, 0, 2.25)
                     :
-                    player.getDeltaMovement().multiply(1.5,0,1.5);
+                    player.getDeltaMovement().multiply(1.5, 0, 1.5);
 
             AcademyCraftClient.sendPacket(new C2SPacket(new ThrowCoinPacket(
                     initialVelocity.add(0, 0.5, 0),
@@ -42,47 +44,55 @@ public class CoinItem extends Item {
             }
             player.playSound(SoundEvents.COIN.get(), 1.0F, 1.0F);
             player.getCooldowns().addCooldown(itemStack, 5);
-            return InteractionResult.SUCCESS_SERVER;
+            return InteractionResult.SUCCESS;
         }
 
         return InteractionResult.PASS;
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static class ThrowCoinPacket extends Packet<ServerGamePacketListenerImpl> {
-        public Vec3 initialVelocity;
-        public float yRot;
-        public float xRot;
+    public static class ThrowCoinPacket extends Packet<ServerGamePacketListenerImpl, ThrowCoinPacket> {
+        private static final StreamCodec<ByteBuf, Vec3> VEC3_STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.DOUBLE, Vec3::x,
+                ByteBufCodecs.DOUBLE, Vec3::y,
+                ByteBufCodecs.DOUBLE, Vec3::z,
+                Vec3::new
+        );
 
-        public ThrowCoinPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+        public static final StreamCodec<ByteBuf, ThrowCoinPacket> CODEC = StreamCodec.composite(
+                VEC3_STREAM_CODEC,
+                ThrowCoinPacket::getInitialVelocity,
+                ByteBufCodecs.FLOAT,
+                ThrowCoinPacket::getYRot,
+                ByteBufCodecs.FLOAT,
+                ThrowCoinPacket::getXRot,
+                ThrowCoinPacket::new
+        );
+
+        private final Vec3 initialVelocity;
+        private final float yRot;
+        private final float xRot;
 
         public ThrowCoinPacket(Vec3 initialVelocity, float yRot, float xRot) {
-            super(null);
             this.initialVelocity = initialVelocity;
             this.yRot = yRot;
             this.xRot = xRot;
         }
 
-        @Override
-        public void read(@NotNull FriendlyByteBuf buf) {
-            this.initialVelocity = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
-            this.yRot = buf.readFloat();
-            this.xRot = buf.readFloat();
+        public Vec3 getInitialVelocity() {
+            return initialVelocity;
+        }
+
+        public float getYRot() {
+            return yRot;
+        }
+
+        public float getXRot() {
+            return xRot;
         }
 
         @Override
-        public void write(@NotNull FriendlyByteBuf buf) {
-            buf.writeDouble(this.initialVelocity.x);
-            buf.writeDouble(this.initialVelocity.y);
-            buf.writeDouble(this.initialVelocity.z);
-            buf.writeFloat(this.yRot);
-            buf.writeFloat(this.xRot);
-        }
-
-        @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, ThrowCoinPacket> getPacketType() {
             return PacketTypes.THROW_COIN_WITH_VELOCITY.get();
         }
     }

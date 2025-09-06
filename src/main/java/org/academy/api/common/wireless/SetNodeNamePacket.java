@@ -1,44 +1,44 @@
 package org.academy.api.common.wireless;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.SERVER)
-public class SetNodeNamePacket extends Packet<ServerGamePacketListenerImpl> {
-    public BlockPos nodePos;
-    public String newName;
+public class SetNodeNamePacket extends Packet<ServerGamePacketListenerImpl, SetNodeNamePacket> {
+    public static final StreamCodec<ByteBuf, SetNodeNamePacket> CODEC = StreamCodec.composite(
+            BlockPos.STREAM_CODEC,
+            SetNodeNamePacket::getNodePos,
+            ByteBufCodecs.STRING_UTF8,
+            SetNodeNamePacket::getNewName,
+            SetNodeNamePacket::new
+    );
 
-    public SetNodeNamePacket(ServerGamePacketListenerImpl listener) {
-        super(listener);
+    private final BlockPos nodePos;
+    private final String newName;
+
+    public SetNodeNamePacket(BlockPos nodePos, String newName) {
+        this.nodePos = nodePos;
+        this.newName = newName;
     }
 
-    public SetNodeNamePacket(BlockPos newNodePos, String newNewName) {
-        super(null);
-        nodePos = newNodePos;
-        newName = newNewName;
+    public BlockPos getNodePos() {
+        return nodePos;
+    }
+
+    public String getNewName() {
+        return newName;
     }
 
     @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
-        nodePos = buf.readBlockPos();
-        newName = buf.readUtf();
-    }
-
-    @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(nodePos);
-        buf.writeUtf(newName);
-    }
-
-    @Override
-    public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+    public PacketType<ServerGamePacketListenerImpl, SetNodeNamePacket> getPacketType() {
         return PacketTypes.SET_NODE_NAME.get();
     }
 }

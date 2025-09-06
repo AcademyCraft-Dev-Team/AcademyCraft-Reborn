@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.meltdowner.skills;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraftClient;
@@ -14,7 +16,6 @@ import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.SubscribePacket;
 import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.EmptyPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -41,10 +42,6 @@ public class SingleHighSpeedElectronBeam extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
         Client.Config skillKeyConfig = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        if (skillKeyConfig == null) {
-            skillKeyConfig = new Client.Config();
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, skillKeyConfig);
-        }
 
         Client.KEY = skillKeyConfig.getKeyBinding(
                 Client.KEY_NAME_SHOOT,
@@ -70,7 +67,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
         public static InputSystem.InputPair KEY;
 
         public static void handleKey() {
-            AcademyCraftClient.sendPacket(new C2SPacket(new ShootPacket()));
+            AcademyCraftClient.sendPacket(new C2SPacket(ShootPacket.INSTANCE));
         }
 
         public static class Config extends KeyBindingConfig {
@@ -130,17 +127,15 @@ public class SingleHighSpeedElectronBeam extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class ShootPacket extends EmptyPacket<ServerGamePacketListenerImpl> {
-        public ShootPacket(ServerGamePacketListenerImpl listener) {
-            super(listener);
-        }
+    public static final class ShootPacket extends Packet<ServerGamePacketListenerImpl, ShootPacket> {
+        public static final ShootPacket INSTANCE = new ShootPacket();
+        public static final StreamCodec<ByteBuf, ShootPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public ShootPacket() {
-            super(null);
+        private ShootPacket() {
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, ShootPacket> getPacketType() {
             return PacketTypes.SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT.get();
         }
     }

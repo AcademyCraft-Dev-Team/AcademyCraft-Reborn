@@ -1,48 +1,53 @@
 package org.academy.api.common.wireless;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.SERVER)
-public class ConnectNodePacket extends Packet<ServerGamePacketListenerImpl> {
-    public BlockPos userPos;
-    public String targetNodeName;
-    public String passwordAttempt;
+public class ConnectNodePacket extends Packet<ServerGamePacketListenerImpl, ConnectNodePacket> {
+    public static final StreamCodec<ByteBuf, ConnectNodePacket> CODEC = StreamCodec.composite(
+            BlockPos.STREAM_CODEC,
+            ConnectNodePacket::getUserPos,
+            ByteBufCodecs.STRING_UTF8,
+            ConnectNodePacket::getTargetNodeName,
+            ByteBufCodecs.STRING_UTF8,
+            ConnectNodePacket::getPasswordAttempt,
+            ConnectNodePacket::new
+    );
 
-    public ConnectNodePacket(ServerGamePacketListenerImpl listener) {
-        super(listener);
+    private final BlockPos userPos;
+    private final String targetNodeName;
+    private final String passwordAttempt;
+
+    public ConnectNodePacket(BlockPos userPos, String targetNodeName, String passwordAttempt) {
+        this.userPos = userPos;
+        this.targetNodeName = targetNodeName;
+        this.passwordAttempt = passwordAttempt;
     }
 
-    public ConnectNodePacket(BlockPos newUserPos, String newTargetNodeName, String newPasswordAttempt) {
-        super(null);
-        userPos = newUserPos;
-        targetNodeName = newTargetNodeName;
-        passwordAttempt = newPasswordAttempt;
+    public BlockPos getUserPos() {
+        return userPos;
+    }
+
+    public String getTargetNodeName() {
+        return targetNodeName;
+    }
+
+    public String getPasswordAttempt() {
+        return passwordAttempt;
     }
 
     @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
-        userPos = buf.readBlockPos();
-        targetNodeName = buf.readUtf();
-        passwordAttempt = buf.readUtf();
-    }
-
-    @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(userPos);
-        buf.writeUtf(targetNodeName);
-        buf.writeUtf(passwordAttempt);
-    }
-
-    @Override
-    public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+    public PacketType<ServerGamePacketListenerImpl, ConnectNodePacket> getPacketType() {
         return PacketTypes.CONNECT_NODE.get();
     }
 }

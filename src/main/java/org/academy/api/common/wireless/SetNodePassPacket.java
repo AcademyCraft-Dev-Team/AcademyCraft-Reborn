@@ -1,44 +1,44 @@
 package org.academy.api.common.wireless;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.SERVER)
-public class SetNodePassPacket extends Packet<ServerGamePacketListenerImpl> {
-    public BlockPos nodePos;
-    public String newPass;
+public class SetNodePassPacket extends Packet<ServerGamePacketListenerImpl, SetNodePassPacket> {
+    public static final StreamCodec<ByteBuf, SetNodePassPacket> CODEC = StreamCodec.composite(
+            BlockPos.STREAM_CODEC,
+            SetNodePassPacket::getNodePos,
+            ByteBufCodecs.STRING_UTF8,
+            SetNodePassPacket::getNewPass,
+            SetNodePassPacket::new
+    );
 
-    public SetNodePassPacket(ServerGamePacketListenerImpl listener) {
-        super(listener);
+    private final BlockPos nodePos;
+    private final String newPass;
+
+    public SetNodePassPacket(BlockPos nodePos, String newPass) {
+        this.nodePos = nodePos;
+        this.newPass = newPass;
     }
 
-    public SetNodePassPacket(BlockPos newNodePos, String newNewPass) {
-        super(null);
-        nodePos = newNodePos;
-        newPass = newNewPass;
+    public BlockPos getNodePos() {
+        return nodePos;
+    }
+
+    public String getNewPass() {
+        return newPass;
     }
 
     @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
-        nodePos = buf.readBlockPos();
-        newPass = buf.readUtf();
-    }
-
-    @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeBlockPos(nodePos);
-        buf.writeUtf(newPass);
-    }
-
-    @Override
-    public @NotNull PacketType<ServerGamePacketListenerImpl, ? extends Packet<ServerGamePacketListenerImpl>> getPacketType() {
+    public PacketType<ServerGamePacketListenerImpl, SetNodePassPacket> getPacketType() {
         return PacketTypes.SET_NODE_PASS.get();
     }
 }

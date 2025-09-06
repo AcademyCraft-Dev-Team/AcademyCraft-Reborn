@@ -1,59 +1,46 @@
 package org.academy.api.common.vanilla;
 
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.api.common.network.PacketTarget;
 import org.academy.api.common.network.PacketType;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
-public class OpenScreenPacket extends Packet<ClientGamePacketListener> {
-    public String screenName;
-    private FriendlyByteBuf dataPayload;
+public class OpenScreenPacket extends Packet<ClientGamePacketListener, OpenScreenPacket> {
+    public static final StreamCodec<ByteBuf, OpenScreenPacket> CODEC = StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8,
+            OpenScreenPacket::getScreenName,
+            ByteBufCodecs.BYTE_ARRAY,
+            OpenScreenPacket::getDataPayload,
+            OpenScreenPacket::new
+    );
 
-    public OpenScreenPacket(ClientGamePacketListener listener) {
-        super(listener);
-        dataPayload = new FriendlyByteBuf(Unpooled.buffer());
+    private final String screenName;
+    private final byte[] dataPayload;
+
+    public OpenScreenPacket(String screenName, byte[] dataPayload) {
+        this.screenName = screenName;
+        this.dataPayload = dataPayload;
     }
 
-    public OpenScreenPacket(@NotNull String newScreenName, @NotNull FriendlyByteBuf payload) {
-        super(null);
-        screenName = newScreenName;
-        dataPayload = new FriendlyByteBuf(Unpooled.buffer(payload.readableBytes()));
-        payload.readBytes(dataPayload, payload.readableBytes());
+    public OpenScreenPacket(String screenName) {
+        this(screenName, new byte[0]);
     }
 
-    @SuppressWarnings("unused")
-    public OpenScreenPacket(@NotNull String newScreenName) {
-        super(null);
-        screenName = newScreenName;
-        dataPayload = new FriendlyByteBuf(Unpooled.buffer());
+    public String getScreenName() {
+        return screenName;
     }
 
-    @Override
-    public void read(@NotNull FriendlyByteBuf buf) {
-        screenName = buf.readUtf();
-        var readableBytes = buf.readableBytes();
-        dataPayload = new FriendlyByteBuf(buf.readBytes(readableBytes));
-    }
-
-    @Override
-    public void write(@NotNull FriendlyByteBuf buf) {
-        buf.writeUtf(screenName);
-        if (dataPayload != null && dataPayload.readableBytes() > 0) {
-            buf.writeBytes(dataPayload.copy());
-        }
-    }
-
-    public FriendlyByteBuf getDataPayload() {
-        return new FriendlyByteBuf(dataPayload.copy());
+    public byte[] getDataPayload() {
+        return dataPayload;
     }
 
     @Override
-    public @NotNull PacketType<ClientGamePacketListener, ? extends Packet<ClientGamePacketListener>> getPacketType() {
+    public PacketType<ClientGamePacketListener, OpenScreenPacket> getPacketType() {
         return PacketTypes.OPEN_SCREEN.get();
     }
 }

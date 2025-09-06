@@ -1,7 +1,7 @@
 package org.academy.api.common.network.future.asm;
 
-import org.academy.api.common.network.future.RequestPayload;
-import org.academy.api.common.network.future.ResponsePayload;
+import org.academy.api.common.network.future.packet.RequestPacket;
+import org.academy.api.common.network.future.packet.ResponsePacket;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -14,32 +14,32 @@ public class PayloadHandlerInvokerFactory {
     private PayloadHandlerInvokerFactory() {
     }
 
-    public static StaticPayloadHandlerInvoker createStaticInvoker(Method targetMethod, Class<? extends RequestPayload<?, ?>> requestType, Class<? extends ResponsePayload<?>> responseType) {
+    public static StaticFutureHandlerInvoker<?, ?, ?, ?> createStaticInvoker(Method targetMethod, Class<? extends RequestPacket<?, ?, ?, ?>> requestType, Class<? extends ResponsePacket<?, ?>> responseType) {
         var generatedClassName = generateClassName(targetMethod, requestType, true);
         var classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, true);
         try {
             var lookup = MethodHandles.privateLookupIn(PayloadHandlerInvokerFactory.class, MethodHandles.lookup());
             var invokerClass = lookup.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE).lookupClass();
-            return (StaticPayloadHandlerInvoker) invokerClass.getDeclaredConstructor().newInstance();
+            return (StaticFutureHandlerInvoker<?, ?, ?, ?>) invokerClass.getDeclaredConstructor().newInstance();
         } catch (Throwable e) {
             throw new RuntimeException("Failed to create StaticPayloadHandlerInvoker for " + targetMethod, e);
         }
     }
 
-    public static InstancePayloadHandlerInvoker createInstanceInvoker(Method targetMethod, Class<? extends RequestPayload<?, ?>> requestType, Class<? extends ResponsePayload<?>> responseType, Object targetInstance) {
+    public static InstanceFutureHandlerInvoker<?, ?, ?, ?> createInstanceInvoker(Method targetMethod, Class<? extends RequestPacket<?, ?, ?, ?>> requestType, Class<? extends ResponsePacket<?, ?>> responseType, Object targetInstance) {
         var generatedClassName = generateClassName(targetMethod, requestType, false);
         var classBytes = generateInvokerBytecode(generatedClassName, targetMethod, requestType, responseType, false);
         try {
             var lookup = MethodHandles.privateLookupIn(PayloadHandlerInvokerFactory.class, MethodHandles.lookup());
             var invokerClass = lookup.defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE).lookupClass();
-            return (InstancePayloadHandlerInvoker) invokerClass.getDeclaredConstructor(Object.class).newInstance(targetInstance);
+            return (InstanceFutureHandlerInvoker<?, ?, ?, ?>) invokerClass.getDeclaredConstructor(Object.class).newInstance(targetInstance);
         } catch (Throwable e) {
             throw new RuntimeException("Failed to create InstancePayloadHandlerInvoker for " + targetMethod, e);
         }
     }
 
     private static String generateClassName(Method targetMethod, Class<?> requestType, boolean isStatic) {
-        var prefix = isStatic ? StaticPayloadHandlerInvoker.class.getSimpleName() : InstancePayloadHandlerInvoker.class.getSimpleName();
+        var prefix = isStatic ? StaticFutureHandlerInvoker.class.getSimpleName() : InstanceFutureHandlerInvoker.class.getSimpleName();
         return PayloadHandlerInvokerFactory.class.getName().replace('.', '/') + "$"
                 + prefix + "Impl" + "$"
                 + targetMethod.getDeclaringClass().getSimpleName() + "$"
@@ -47,16 +47,16 @@ public class PayloadHandlerInvokerFactory {
                 + requestType.getSimpleName() + "$";
     }
 
-    private static byte[] generateInvokerBytecode(String generatedClassNameInternal, Method targetMethod, Class<? extends RequestPayload<?, ?>> requestType, Class<? extends ResponsePayload<?>> responseType, boolean isStatic) {
+    private static byte[] generateInvokerBytecode(String generatedClassNameInternal, Method targetMethod, Class<? extends RequestPacket<?, ?, ?, ?>> requestType, Class<? extends ResponsePacket<?, ?>> responseType, boolean isStatic) {
         var handlerClassNameInternal = Type.getInternalName(targetMethod.getDeclaringClass());
         var requestTypeInternalName = Type.getInternalName(requestType);
-        var iRequestPayloadInternalName = Type.getInternalName(RequestPayload.class);
-        var iResponsePayloadInternalName = Type.getInternalName(ResponsePayload.class);
-        var parentInvokerName = isStatic ? Type.getInternalName(StaticPayloadHandlerInvoker.class) : Type.getInternalName(InstancePayloadHandlerInvoker.class);
+        var iRequestPayloadInternalName = Type.getInternalName(RequestPacket.class);
+        var iResponsePayloadInternalName = Type.getInternalName(ResponsePacket.class);
+        var parentInvokerName = isStatic ? Type.getInternalName(StaticFutureHandlerInvoker.class) : Type.getInternalName(InstanceFutureHandlerInvoker.class);
         var objectDescriptor = Type.getDescriptor(Object.class);
 
         var cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, generatedClassNameInternal, null, parentInvokerName, new String[]{Type.getInternalName(IPayloadHandlerInvoker.class)});
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, generatedClassNameInternal, null, parentInvokerName, new String[]{Type.getInternalName(IFutureHandlerInvoker.class)});
 
         if (!isStatic) {
             var fv = cw.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL, "instance", objectDescriptor, null, null);

@@ -105,7 +105,8 @@ public class WindGenBaseBlock extends MultiBlock {
                 if (!serverPlayer.isShiftKeyDown() && level.getBlockEntity(pos) instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
                     if (windGenBaseBlockEntity.getMain() instanceof WindGenBaseBlockEntity windGenBaseBlock) {
                         MenuProvider menuProvider = getMenuProvider(state, level, pos);
-                        ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIND_GEN_SCREEN, windGenBaseBlock.getBlockPos());
+                        ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIND_GEN_SCREEN,
+                                buf -> buf.writeBlockPos(windGenBaseBlock.getBlockPos()));
                     }
                 }
             }

@@ -91,7 +91,8 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
             if (player instanceof ServerPlayer serverPlayer) {
                 if (level.getBlockEntity(pos) instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
                     MenuProvider menuProvider = getMenuProvider(state, level, pos);
-                    ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIRELESS_NODE_SCREEN, wirelessNodeBlockEntity.getBlockPos());
+                    ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIRELESS_NODE_SCREEN,
+                            buf -> buf.writeBlockPos(wirelessNodeBlockEntity.getBlockPos()));
                 }
             }
             return InteractionResult.CONSUME;

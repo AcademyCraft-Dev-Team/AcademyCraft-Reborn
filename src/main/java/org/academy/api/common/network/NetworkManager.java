@@ -16,8 +16,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class NetworkManager {
-    private final ConcurrentHashMap<Class<? extends Packet<?>>, List<IPacketListener>> typedListeners;
-    private final Map<Object, List<IPacketListener>> listenersByTarget;
+    private final ConcurrentHashMap<Class<? extends Packet<?, ?>>, List<IPacketListener<?, ?>>> typedListeners;
+    private final Map<Object, List<IPacketListener<?, ?>>> listenersByTarget;
     private final ReadWriteLock lock;
 
     public NetworkManager() {
@@ -44,11 +44,11 @@ public final class NetworkManager {
         registerPacketListenerInternal(targetInstance.getClass(), targetInstance);
     }
 
-    public void registerPacketListener(@NotNull IPacketListener iPacketListener) {
+    public void registerPacketListener(@NotNull IPacketListener<?, ?> iPacketListener) {
         lock.writeLock().lock();
         try {
-            listenersByTarget.computeIfAbsent(iPacketListener.getPacketType(), o -> new ArrayList<>()).add(iPacketListener);
-            typedListeners.computeIfAbsent(iPacketListener.getPacketType(), k -> new ArrayList<>()).add(iPacketListener);
+            listenersByTarget.computeIfAbsent(iPacketListener.getPacketClass(), o -> new ArrayList<>()).add(iPacketListener);
+            typedListeners.computeIfAbsent(iPacketListener.getPacketClass(), k -> new ArrayList<>()).add(iPacketListener);
         } finally {
             lock.writeLock().unlock();
         }
@@ -64,7 +64,7 @@ public final class NetworkManager {
                 listenersByTarget.put(key, List.copyOf(generatedHandlers));
 
                 for (var handler : generatedHandlers) {
-                    typedListeners.computeIfAbsent(handler.getPacketType(), k -> new ArrayList<>()).add(handler);
+                    typedListeners.computeIfAbsent(handler.getPacketClass(), k -> new ArrayList<>()).add(handler);
                 }
             } finally {
                 lock.writeLock().unlock();
@@ -86,11 +86,11 @@ public final class NetworkManager {
             var handlersToRemove = listenersByTarget.remove(keyToRemove);
             if (handlersToRemove != null) {
                 for (var handler : handlersToRemove) {
-                    var typedList = typedListeners.get(handler.getPacketType());
+                    var typedList = typedListeners.get(handler.getPacketClass());
                     if (typedList != null) {
                         typedList.remove(handler);
                         if (typedList.isEmpty()) {
-                            typedListeners.remove(handler.getPacketType());
+                            typedListeners.remove(handler.getPacketClass());
                         }
                     }
                 }
@@ -100,8 +100,8 @@ public final class NetworkManager {
         }
     }
 
-    public <T extends Packet<?>> void dispatchPacket(T packet) {
-        List<IPacketListener> handlers = null;
+    public void dispatchPacket(Packet<?, ?> packet) {
+        List<IPacketListener<?, ?>> handlers = null;
         lock.readLock().lock();
         try {
             var typedList = typedListeners.get(packet.getClass());
