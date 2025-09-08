@@ -10,7 +10,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.context.ContextKey;
 import org.academy.AcademyCraft;
 import org.academy.api.client.compatibility.IrisCompat;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.renderer.RingRenderer;
 import org.academy.api.client.util.VertexUtil;
@@ -72,7 +72,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     private static final float[][][] CACHED_VERTICAL_VERTEX_BUFFER = VertexUtil.Ring.getVerticalVertexBuffer(1.0f, 1.0f, RING_SEGMENTS);
 
     static {
-        BloomEffect.addFixedBuffer(RENDER_TYPE);
+        PostEffect.addFixedBuffer(RENDER_TYPE);
     }
 
     public static StormWingEffectRenderer getInstance() {
@@ -222,7 +222,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
         poseStack.pushPose();
         poseStack.mulPose(BASE_MATRIX);
 
-        var vertexConsumer = BloomEffect.BUFFER_SOURCE.getBuffer(RENDER_TYPE);
+        var vertexConsumer = PostEffect.BUFFER_SOURCE_PRE.getBuffer(RENDER_TYPE);
 
         var time = renderState.ageInTicks;
 

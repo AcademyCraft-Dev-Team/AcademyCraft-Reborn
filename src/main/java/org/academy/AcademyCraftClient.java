@@ -20,6 +20,7 @@ import org.academy.api.client.hud.terminal.HUDController;
 import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.BlurEffect;
+import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.network.NetworkManager;
 import org.academy.internal.client.app.Apps;
@@ -67,6 +68,7 @@ public final class AcademyCraftClient {
     }
 
     public static void resize(int width, int height) {
+        PostEffect.resize(width, height);
         BloomEffect.resize(width, height);
         BlurEffect.resize(width, height);
         HUDManager.resize(width, height);

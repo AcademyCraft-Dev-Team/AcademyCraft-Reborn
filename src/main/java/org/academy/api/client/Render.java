@@ -7,14 +7,16 @@ import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormatElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import org.academy.api.client.render.post.PostEffect;
 
 import static com.mojang.blaze3d.pipeline.RenderPipeline.builder;
 import static net.minecraft.client.renderer.RenderStateShard.EmptyTextureStateShard;
 import static org.academy.AcademyCraft.academy;
-import static org.academy.api.client.Resource.Textures.*;
+import static org.academy.api.client.Resource.Textures.ARC_TEXTURE;
 import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 
 public final class Render {
@@ -120,12 +122,33 @@ public final class Render {
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
+        public static final RenderPipeline DISTORTION_RING = builder(MATRICES_PROJECTION_SNIPPET)
+                .withLocation(academy("pipeline/distortion_ring"))
+                .withVertexShader(Resource.Shaders.DISTORTION_RING)
+                .withFragmentShader(Resource.Shaders.DISTORTION_RING)
+                .withSampler("Sampler0")
+                .withCull(false)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withVertexFormat(VertexFormat.builder()
+                        .add("Position", VertexFormatElement.POSITION)
+                        .add("UV0", VertexFormatElement.UV0)
+                        .add("Normal", VertexFormatElement.NORMAL)
+                        .padding(1)
+                        .build(), VertexFormat.Mode.QUADS)
+                .build();
+
         private RenderPipelines() {
         }
     }
 
     public static final class TextureStateShards {
         public static final EmptyTextureStateShard ARC = blur(ARC_TEXTURE);
+
+        public static final EmptyTextureStateShard MAIN_SCENE = new EmptyTextureStateShard(
+                () -> RenderSystem.setShaderTexture(0, PostEffect.MAIN_SCENE.getColorTextureView()),
+                () -> {
+                }
+        );
 
         public static EmptyTextureStateShard pixel(ResourceLocation texture) {
             return new EmptyTextureStateShard(() -> {
@@ -165,6 +188,15 @@ public final class Render {
                 RenderPipelines.LEVEL_POS_COLOR,
                 CompositeState.builder()
                         .setOutputState(BLOOM_TARGET)
+                        .createCompositeState(false)
+        );
+
+        public static final RenderType DISTORTION_RING = create(
+                "distortion_ring",
+                1536,
+                RenderPipelines.DISTORTION_RING,
+                CompositeState.builder()
+                        .setTextureState(TextureStateShards.MAIN_SCENE)
                         .createCompositeState(false)
         );
 

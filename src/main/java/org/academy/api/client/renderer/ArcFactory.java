@@ -2,7 +2,7 @@ package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.util.MathUtil;
 import org.joml.Vector3f;
 
@@ -18,7 +18,7 @@ public final class ArcFactory {
     private static final float MIN_THICKNESS_FACTOR = 0.1f;
 
     static {
-        BloomEffect.addFixedBuffer(RenderTypes.ARC);
+        PostEffect.addFixedBuffer(RenderTypes.ARC);
     }
 
     public static void render(PoseStack ps, MultiBufferSource bufferSource, ArcRenderData data) {

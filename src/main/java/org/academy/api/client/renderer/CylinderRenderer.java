@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
 
 import static org.academy.api.client.Render.RenderTypes.BOX;
@@ -15,7 +15,7 @@ public final class CylinderRenderer {
     }
 
     static {
-        BloomEffect.addFixedBuffer(BOX);
+        PostEffect.addFixedBuffer(BOX);
     }
 
     public static void renderCylinder(PoseStack poseStack, MultiBufferSource buffer, float[][] vertexBuffer,
