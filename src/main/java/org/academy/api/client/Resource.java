@@ -21,6 +21,7 @@ public final class Resource {
          * AcademyCraft
          */
         public static final ResourceLocation SCREEN_BLIT = academy("core/screen_blit");
+        public static final ResourceLocation DISTORTION_RING = academy("core/distortion_ring");
 
         /**
          * Vert only.
@@ -41,6 +42,7 @@ public final class Resource {
             public static final ResourceLocation GLOW_CIRCLE = academy("core/glow_circle");
             public static final ResourceLocation SDF_CIRCLE_GLOW = academy("core/sdf_circle_glow");
             public static final ResourceLocation SDF_SHARP_MARGIN = academy("core/sdf_sharp_margin");
+
 
             private Fragment() {
             }

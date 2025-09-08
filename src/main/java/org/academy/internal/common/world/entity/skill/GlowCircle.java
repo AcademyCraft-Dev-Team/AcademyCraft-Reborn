@@ -10,11 +10,9 @@ import org.jetbrains.annotations.NotNull;
 
 public class GlowCircle extends RenderOnlyEntity {
     public int ticks;
-    public int leftLifeTicks = 20;
+    public int leftLifeTicks = 10;
     public float alpha;
-    public float renderAlpha;
     public float radius;
-    public float renderRadius;
     public final float life = 20;
 
     public GlowCircle(EntityType<?> entityType, Level level) {
@@ -50,7 +48,7 @@ public class GlowCircle extends RenderOnlyEntity {
     }
 
     private float sizeCurve(float p) {
-        if (p <= 0f || p >= 1f) return 0.5f;
-        return 0.5f + 0.15f * (float)Math.sin(p * Math.PI);
+        p = MathUtil.clamp(p, 0f, 1f);
+        return 0.5f * (float) Math.sin(p * Math.PI);
     }
 }

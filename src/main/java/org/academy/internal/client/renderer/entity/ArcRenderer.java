@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import org.academy.api.client.compatibility.IrisCompat;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.ArcFactory;
 import org.academy.internal.client.renderer.entity.state.ArcRenderState;
 import org.academy.internal.common.world.entity.skill.Arc;
@@ -27,7 +27,7 @@ public class ArcRenderer extends EntityRenderer<Arc, ArcRenderState> {
         poseStack.mulPose(matrix4f);
 
         if (renderState.renderData != null) {
-            ArcFactory.render(poseStack, BloomEffect.BUFFER_SOURCE, renderState.renderData);
+            ArcFactory.render(poseStack, PostEffect.BUFFER_SOURCE_PRE, renderState.renderData);
         }
 
         poseStack.popPose();
