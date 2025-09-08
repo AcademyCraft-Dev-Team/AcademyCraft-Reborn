@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.VertexUtil;
@@ -26,7 +26,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
                 .rotateZ((float) Math.toRadians(90 + renderState.xRot))
         );
         poseStack.scale(renderState.renderProgress * 0.1f, 50, renderState.renderProgress * 0.1f);
-        CylinderRenderer.renderCylinder(poseStack, BloomEffect.BUFFER_SOURCE, BUFFERED_VERTEX, 0.75f, 0.5f, 0, 1f);
+        CylinderRenderer.renderCylinder(poseStack, PostEffect.BUFFER_SOURCE_PRE, BUFFERED_VERTEX, 0.75f, 0.5f, 0, 1f);
         poseStack.popPose();
     }
 
