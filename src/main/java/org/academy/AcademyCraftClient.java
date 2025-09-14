@@ -10,6 +10,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
+import net.neoforged.neoforge.client.event.RegisterSpecialBlockModelRendererEvent;
 import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
@@ -28,8 +29,12 @@ import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.particle.ParticleRenderTypes;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.client.renderer.item.ItemRenderers;
+import org.academy.internal.client.renderer.special.WindGenBaseSpecialRenderer;
+import org.academy.internal.client.renderer.special.WindGenPillarSpecialRenderer;
+import org.academy.internal.client.renderer.special.WindGenTopSpecialRenderer;
 import org.academy.internal.client.renderer.special.WirelessNodeSpecialRenderer;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.material.ImagiphasePlasma;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,6 +51,7 @@ public final class AcademyCraftClient {
         modEventBus.addListener(AcademyCraftClient::onRegisterClientExtensions);
         modEventBus.addListener(AcademyCraftClient::onRegisterRenderStateModifiers);
         modEventBus.addListener(AcademyCraftClient::onRegisterSpecialModelRenderer);
+        modEventBus.addListener(AcademyCraftClient::onRegisterSpecialBlockModelRenderer);
     }
 
     public static void init() {
@@ -87,6 +93,13 @@ public final class AcademyCraftClient {
 
     public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
         event.register(AcademyCraft.academy("wireless_node"), WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC);
+        event.register(AcademyCraft.academy("wind_gen_base"), WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC);
+        event.register(AcademyCraft.academy("wind_gen_pillar"), WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC);
+        event.register(AcademyCraft.academy("wind_gen_top"), WindGenTopSpecialRenderer.Unbaked.MAP_CODEC);
+    }
+
+    public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
+        event.register(Blocks.WIND_GEN_PILLAR.get(), WindGenPillarSpecialRenderer.Unbaked.INSTANCE);
     }
 
     public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
@@ -127,6 +140,9 @@ public final class AcademyCraftClient {
             CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
             AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
             INSTANCE = new AcademyCraftConfig(CLIENT_CONFIG_FILE);
+        }
+
+        private Config() {
         }
     }
 }

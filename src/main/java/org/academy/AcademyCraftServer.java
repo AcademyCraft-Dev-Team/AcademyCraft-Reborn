@@ -45,6 +45,9 @@ public final class AcademyCraftServer {
     @Nullable
     private static ScheduledFuture<?> worldDataSaveTask;
 
+    private AcademyCraftServer() {
+    }
+
     @SubscribeEvent
     public static void init(ServerStartedEvent event) {
         NETWORK_MANAGER.clear();

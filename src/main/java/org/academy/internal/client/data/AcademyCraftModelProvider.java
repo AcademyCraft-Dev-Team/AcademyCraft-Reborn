@@ -3,7 +3,6 @@ package org.academy.internal.client.data;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.ModelProvider;
-import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
 import net.minecraft.client.data.models.model.*;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.data.PackOutput;
@@ -11,6 +10,9 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.FoliageColor;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
+import org.academy.internal.client.renderer.special.WindGenBaseSpecialRenderer;
+import org.academy.internal.client.renderer.special.WindGenPillarSpecialRenderer;
+import org.academy.internal.client.renderer.special.WindGenTopSpecialRenderer;
 import org.academy.internal.client.renderer.special.WirelessNodeSpecialRenderer;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -27,15 +29,17 @@ public class AcademyCraftModelProvider extends ModelProvider {
 
     @Override
     protected void registerModels(@NotNull BlockModelGenerators blockModels, @NotNull ItemModelGenerators itemModels) {
-        blockModels.createTrivialBlock(Blocks.WIRELESS_NODE.get(), createDefault(
+        var providerW = createDefault(
                 block ->
                         new TextureMapping().put(
                                 TextureSlot.ALL, academy("break_w").withPrefix("block/")
-                        ), ModelTemplates.CUBE_ALL)
-        );
-        blockModels.createRotatedVariantBlock(Blocks.WIND_GEN_BASE.get());
-        blockModels.createRotatedVariantBlock(Blocks.WIND_GEN_TOP.get());
-        blockModels.blockStateOutput.accept(MultiVariantGenerator.dispatch(Blocks.WIND_GEN_PILLAR.get(), BlockModelGenerators.plainVariant(academy("block/wind_gen_pillar"))));
+                        ), ModelTemplates.CUBE_ALL);
+
+        blockModels.createTrivialBlock(Blocks.WIRELESS_NODE.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.WIND_GEN_BASE.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.WIND_GEN_TOP.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.WIND_GEN_PILLAR.get(), providerW);
+
         blockModels.createRotatedVariantBlock(Blocks.ABILITY_DEVELOPER.get());
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_PLASMA.get());
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_VEGETATION.get());
@@ -112,7 +116,28 @@ public class AcademyCraftModelProvider extends ModelProvider {
                 Items.WIRELESS_NODE.get(),
                 ItemModelUtils.specialModel(
                         AcademyCraft.vanilla("block").withPrefix("block/"),
-                        new WirelessNodeSpecialRenderer.Unbaked()
+                        WirelessNodeSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.WIND_GEN_BASE.get(),
+                ItemModelUtils.specialModel(
+                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        WindGenBaseSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.WIND_GEN_PILLAR.get(),
+                ItemModelUtils.specialModel(
+                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        WindGenPillarSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.WIND_GEN_TOP.get(),
+                ItemModelUtils.specialModel(
+                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        WindGenTopSpecialRenderer.Unbaked.INSTANCE
                 )
         );
     }

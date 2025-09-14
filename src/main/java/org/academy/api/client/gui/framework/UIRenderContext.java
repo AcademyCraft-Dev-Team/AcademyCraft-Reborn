@@ -37,13 +37,12 @@ public final class UIRenderContext {
         CUSTOM
     }
 
-
     public UIRenderContext() {
         this.sharedByteBufferBuilder = new ByteBufferBuilder(DEFAULT_BUFFER_CAPACITY);
         this.vertexBuffers = new HashMap<>();
         this.batchProcessor = new BatchProcessor(this.sharedByteBufferBuilder);
         this.commandExecutor = new CommandExecutor(this.vertexBuffers);
-        this.projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("AC_GUI", -1000.0F, 3000.0F, true);
+        this.projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("AC_GUI", -3000.0F, 0.0F, true);
         this.dynamicUniformStorages = new HashMap<>();
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;

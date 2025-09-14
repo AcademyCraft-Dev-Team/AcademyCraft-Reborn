@@ -46,7 +46,7 @@ public final class BatchProcessor {
         var currentZ = firstCommand.getPose().pose().m32();
 
         var currentBuilder = new BufferBuilder(
-                this.sharedByteBufferBuilder,
+                sharedByteBufferBuilder,
                 currentPipeline.getVertexFormatMode(),
                 currentPipeline.getVertexFormat()
         );
@@ -73,7 +73,7 @@ public final class BatchProcessor {
                 currentZ = submittedCommand.getPose().pose().m32();
 
                 currentBuilder = new BufferBuilder(
-                        this.sharedByteBufferBuilder,
+                        sharedByteBufferBuilder,
                         currentPipeline.getVertexFormatMode(),
                         currentPipeline.getVertexFormat()
                 );

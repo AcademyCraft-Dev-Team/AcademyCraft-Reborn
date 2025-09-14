@@ -1,4 +1,4 @@
-#version 150
+#version 330
 
 layout(std140) uniform SdfUniforms {
     vec2 Size;

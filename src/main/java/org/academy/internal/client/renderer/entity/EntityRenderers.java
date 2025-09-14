@@ -9,7 +9,7 @@ import org.academy.internal.common.world.entity.EntityTypes;
 
 @SuppressWarnings("unused")
 @EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
-public class EntityRenderers {
+public final class EntityRenderers {
     @SubscribeEvent
     public static void onRegister(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(EntityTypes.THROWN_COIN.get(), ThrownCoinRenderer::new);

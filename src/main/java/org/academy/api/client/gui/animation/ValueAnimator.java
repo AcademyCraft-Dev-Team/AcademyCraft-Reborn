@@ -58,7 +58,6 @@ public class ValueAnimator extends Animator {
     @Override
     boolean tick(long currentTime) {
         if (startTime == -1) return true;
-
         if (currentTime < startTime) return false;
 
         var elapsedTime = currentTime - startTime;
@@ -70,9 +69,7 @@ public class ValueAnimator extends Animator {
         var interpolatedFraction = interpolator.getInterpolation(fraction);
         animatedValue = startValue + interpolatedFraction * (endValue - startValue);
 
-        for (var listener : updateListeners) {
-            listener.accept(this);
-        }
+        for (var listener : updateListeners) listener.accept(this);
 
         if (finished) end();
 

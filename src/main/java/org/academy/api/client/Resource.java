@@ -77,6 +77,8 @@ public final class Resource {
          * Wind Gen
          */
         public static final ResourceLocation MODEL_WIND_GEN = academy("textures/model/wind_gen.png");
+        public static final ResourceLocation MODEL_WIND_GEN_TOP = academy("textures/model/wind_gen_top.png");
+        public static final ResourceLocation BLOCK_WIND_GEN_PILLAR =  academy("textures/block/wind_gen_pillar.png");
         public static final ResourceLocation WIND_GEN_UI = academy("textures/gui/wind_gen/ui_windgen.png");
         public static final ResourceLocation ICON_WIND_GEN_BASE = academy("textures/gui/icon/icon_wind_base.png");
         public static final ResourceLocation ICON_WIND_GEN_PILLAR = academy("textures/gui/icon/icon_wind_pillar.png");

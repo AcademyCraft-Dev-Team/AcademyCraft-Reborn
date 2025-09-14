@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.event;
 
-public class CharTypedEvent extends InputEvent {
+public final class CharTypedEvent extends InputEvent {
     private final char codePoint;
     private final int modifiers;
 

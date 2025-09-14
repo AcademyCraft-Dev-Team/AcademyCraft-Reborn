@@ -5,7 +5,6 @@ import com.google.common.collect.MapMaker;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.packet.Packet;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -16,8 +15,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class NetworkManager {
-    private final ConcurrentHashMap<Class<? extends Packet<?, ?>>, List<IPacketListener<?, ?>>> typedListeners;
-    private final Map<Object, List<IPacketListener<?, ?>>> listenersByTarget;
+    private final ConcurrentHashMap<Class<? extends Packet<?, ?>>, List<IPacketListener>> typedListeners;
+    private final Map<Object, List<IPacketListener>> listenersByTarget;
     private final ReadWriteLock lock;
 
     public NetworkManager() {
@@ -36,15 +35,15 @@ public final class NetworkManager {
         }
     }
 
-    public void registerPacketListener(@NotNull Class<?> targetClass) {
+    public void registerPacketListener(Class<?> targetClass) {
         registerPacketListenerInternal(targetClass, null);
     }
 
-    public void registerPacketListener(@NotNull Object targetInstance) {
+    public void registerPacketListener(Object targetInstance) {
         registerPacketListenerInternal(targetInstance.getClass(), targetInstance);
     }
 
-    public void registerPacketListener(@NotNull IPacketListener<?, ?> iPacketListener) {
+    public void registerPacketListener(IPacketListener iPacketListener) {
         lock.writeLock().lock();
         try {
             listenersByTarget.computeIfAbsent(iPacketListener.getPacketClass(), o -> new ArrayList<>()).add(iPacketListener);
@@ -54,7 +53,7 @@ public final class NetworkManager {
         }
     }
 
-    private void registerPacketListenerInternal(@NotNull Class<?> clazz, @Nullable Object instance) {
+    private void registerPacketListenerInternal(Class<?> clazz, @Nullable Object instance) {
         var generatedHandlers = NetworkSystem.findPacketListeners(clazz, instance);
 
         if (!generatedHandlers.isEmpty()) {
@@ -72,15 +71,15 @@ public final class NetworkManager {
         }
     }
 
-    public void unregisterPacketListener(@NotNull Class<?> targetClass) {
+    public void unregisterPacketListener(Class<?> targetClass) {
         unregisterPacketListenerInternal(targetClass);
     }
 
-    public void unregisterPacketListener(@NotNull Object targetInstance) {
+    public void unregisterPacketListener(Object targetInstance) {
         unregisterPacketListenerInternal(targetInstance);
     }
 
-    private void unregisterPacketListenerInternal(@NotNull Object keyToRemove) {
+    private void unregisterPacketListenerInternal(Object keyToRemove) {
         lock.writeLock().lock();
         try {
             var handlersToRemove = listenersByTarget.remove(keyToRemove);
@@ -101,7 +100,7 @@ public final class NetworkManager {
     }
 
     public void dispatchPacket(Packet<?, ?> packet) {
-        List<IPacketListener<?, ?>> handlers = null;
+        List<IPacketListener> handlers = null;
         lock.readLock().lock();
         try {
             var typedList = typedListeners.get(packet.getClass());
