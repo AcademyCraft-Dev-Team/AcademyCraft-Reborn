@@ -11,18 +11,14 @@ public abstract class Animator {
     private final List<AnimatorListener> listeners = new ArrayList<>();
 
     public void start() {
-        if (running) {
-            return;
-        }
-        AnimationManager.getInstance().startAnimation(this);
+        if (running) return;
+        AnimationManager.startAnimation(this);
     }
 
     public void cancel() {
-        if (!running) {
-            return;
-        }
+        if (!running) return;
         running = false;
-        AnimationManager.getInstance().remove(this);
+        AnimationManager.remove(this);
         var tempList = new ArrayList<>(listeners);
         for (var listener : tempList) {
             listener.onAnimationCancel(this);
@@ -32,7 +28,7 @@ public abstract class Animator {
     public void end() {
         if (running) {
             running = false;
-            AnimationManager.getInstance().remove(this);
+            AnimationManager.remove(this);
             var tempList = new ArrayList<>(listeners);
             for (var listener : tempList) {
                 listener.onAnimationEnd(this);
@@ -43,9 +39,7 @@ public abstract class Animator {
     void onStartInternal() {
         running = true;
         var tempList = new ArrayList<>(listeners);
-        for (var listener : tempList) {
-            listener.onAnimationStart(this);
-        }
+        for (var listener : tempList) listener.onAnimationStart(this);
     }
 
     public boolean isRunning() {
@@ -61,9 +55,7 @@ public abstract class Animator {
     }
 
     public Animator setDuration(long duration) {
-        if (duration < 0) {
-            throw new IllegalArgumentException("Animators cannot have negative duration: " + duration);
-        }
+        if (duration < 0) throw new IllegalArgumentException("Animators cannot have negative duration: " + duration);
         this.duration = duration;
         return this;
     }
@@ -73,9 +65,7 @@ public abstract class Animator {
     }
 
     public Animator setStartDelay(long startDelay) {
-        if (startDelay < 0) {
-            throw new IllegalArgumentException("Animators cannot have negative start delay: " + startDelay);
-        }
+        if (startDelay < 0) throw new IllegalArgumentException("Animators cannot have negative start delay: " + startDelay);
         this.startDelay = startDelay;
         return this;
     }

@@ -32,3 +32,17 @@ This project is licensed under the GPL-3.0, with the following additional restri
 ```
 ./gradlew build
 ```
+
+### IDEA Settings
+
+If you are using IntelliJ IDEA, I recommend adding or replacing the following section in your `.idea/misc.xml` file:
+
+```xml
+  <component name="EntryPointsManager">
+    <list size="5">
+      <item index="2" class="java.lang.String" itemvalue="org.academy.api.common.network.ReceiverConstructor" />
+      <item index="3" class="java.lang.String" itemvalue="org.academy.api.common.network.SubscribePacket" />
+      <item index="4" class="java.lang.String" itemvalue="org.academy.api.common.network.future.HandleFuture" />
+    </list>
+  </component>
+```

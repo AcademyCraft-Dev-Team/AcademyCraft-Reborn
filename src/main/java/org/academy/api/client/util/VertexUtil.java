@@ -3,7 +3,10 @@ package org.academy.api.client.util;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.common.util.MathUtil;
 
-public class VertexUtil {
+public final class VertexUtil {
+    private VertexUtil() {
+    }
+
     public static final class Ring {
         public static float[][][] getRingVertexBuffer(float radius, int segments, float yBottom, float yTop) {
             var vertexBuffer = new float[segments][4][4];
@@ -45,71 +48,149 @@ public class VertexUtil {
                 final float radius,
                 final int faces,
                 final boolean capped) {
-            if (radius <= 0 || faces < 3) {
+            if (radius <= 0f || faces < 3) {
                 return new float[0][];
             }
 
-            int totalVertices = faces * 6;
-            if (capped) {
-                totalVertices += faces * 3 * 2;
+            var sideVertices = faces * 4;
+            var capVertices = capped ? faces * 4 * 2 : 0;
+            var totalVertices = sideVertices + capVertices;
+            var vertexComponents = 8;
+
+            var vertexBuffer = new float[totalVertices][vertexComponents];
+            var angleStepd = 2.0d * Math.PI / faces;
+            var vertexIndex = 0;
+
+            for (var i = 0; i < faces; i++) {
+                var angle1d = i * angleStepd;
+                var angle2d = (i + 1) * angleStepd;
+
+                var x1d = radius * Math.cos(angle1d);
+                var z1d = radius * Math.sin(angle1d);
+                var x2d = radius * Math.cos(angle2d);
+                var z2d = radius * Math.sin(angle2d);
+
+                var u1f = (float) i / faces;
+                var u2f = (float) (i + 1) / faces;
+                var vBottomf = 0.0f;
+                var vTopf = 1.0f;
+
+                var midAngled = (angle1d + angle2d) / 2.0d;
+                var faceNormalXd = Math.cos(midAngled);
+                var faceNormalZd = Math.sin(midAngled);
+
+                var nx = (float) faceNormalXd;
+                var nz = (float) faceNormalZd;
+
+                vertexBuffer[vertexIndex++] = new float[]{(float) x1d, yBottom, (float) z1d, u1f, vBottomf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yBottom, (float) z2d, u2f, vBottomf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yTop, (float) z2d, u2f, vTopf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{(float) x1d, yTop, (float) z1d, u1f, vTopf, nx, 0f, nz};
             }
 
-            var vertexBuffer = new float[totalVertices][3];
-            var angleStep = MathUtil.TWO_PI / faces;
-            int vertexIndex = 0;
+            if (capped) {
+                var centerXd = 0.0d;
+                var centerZd = 0.0d;
+                var uCenterf = 0.5f;
+                var vCenterf = 0.5f;
 
-            for (int i = 0; i < faces; i++) {
-                float angle1 = i * angleStep;
-                float angle2 = (i + 1) * angleStep;
+                for (var i = 0; i < faces; i++) {
+                    var angle1d = i * angleStepd;
+                    var angle2d = (i + 1) * angleStepd;
 
-                float x1 = (float) (radius * Math.cos(angle1));
-                float z1 = (float) (radius * Math.sin(angle1));
-                float x2 = (float) (radius * Math.cos(angle2));
-                float z2 = (float) (radius * Math.sin(angle2));
+                    var x1d = radius * Math.cos(angle1d);
+                    var z1d = radius * Math.sin(angle1d);
+                    var x2d = radius * Math.cos(angle2d);
+                    var z2d = radius * Math.sin(angle2d);
 
-                vertexBuffer[vertexIndex++] = new float[]{x1, yBottom, z1};
-                vertexBuffer[vertexIndex++] = new float[]{x2, yBottom, z2};
-                vertexBuffer[vertexIndex++] = new float[]{x2, yTop, z2};
+                    var u1f = (float) (x1d / (2.0d * radius) + 0.5d);
+                    var v1f = (float) (z1d / (2.0d * radius) + 0.5d);
+                    var u2f = (float) (x2d / (2.0d * radius) + 0.5d);
+                    var v2f = (float) (z2d / (2.0d * radius) + 0.5d);
 
-                vertexBuffer[vertexIndex++] = new float[]{x1, yBottom, z1};
-                vertexBuffer[vertexIndex++] = new float[]{x2, yTop, z2};
-                vertexBuffer[vertexIndex++] = new float[]{x1, yTop, z1};
+                    var topCapNormal = new float[]{0f, 1f, 0f};
+                    var v1 = new float[]{(float) centerXd, yTop, (float) centerZd, uCenterf, vCenterf, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
+                    var v2 = new float[]{(float) x1d, yTop, (float) z1d, u1f, v1f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
+                    var v3 = new float[]{(float) x2d, yTop, (float) z2d, u2f, v2f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
+
+                    vertexBuffer[vertexIndex++] = v1;
+                    vertexBuffer[vertexIndex++] = v2;
+                    vertexBuffer[vertexIndex++] = v3;
+                    vertexBuffer[vertexIndex++] = v3;
+                }
+
+                for (var i = 0; i < faces; i++) {
+                    var angle1d = i * angleStepd;
+                    var angle2d = (i + 1) * angleStepd;
+
+                    var x1d = radius * Math.cos(angle1d);
+                    var z1d = radius * Math.sin(angle1d);
+                    var x2d = radius * Math.cos(angle2d);
+                    var z2d = radius * Math.sin(angle2d);
+
+                    var u1f = (float) (x1d / (2.0d * radius) + 0.5d);
+                    var v1f = (float) (z1d / (2.0d * radius) + 0.5d);
+                    var u2f = (float) (x2d / (2.0d * radius) + 0.5d);
+                    var v2f = (float) (z2d / (2.0d * radius) + 0.5d);
+
+                    var bottomCapNormal = new float[]{0f, -1f, 0f};
+                    var v1 = new float[]{(float) centerXd, yBottom, (float) centerZd, uCenterf, vCenterf, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
+                    var v2 = new float[]{(float) x2d, yBottom, (float) z2d, u2f, v2f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
+                    var v3 = new float[]{(float) x1d, yBottom, (float) z1d, u1f, v1f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
+
+                    vertexBuffer[vertexIndex++] = v1;
+                    vertexBuffer[vertexIndex++] = v2;
+                    vertexBuffer[vertexIndex++] = v3;
+                    vertexBuffer[vertexIndex++] = v3;
+                }
             }
 
-            if (capped) {
-                float centerX_top = 0f;
-                float centerZ_top = 0f;
-                float centerX_bottom = 0f;
-                float centerZ_bottom = 0f;
+            return vertexBuffer;
+        }
 
+        public static float[][] getCylinderWireframeBuffer(
+                final float yBottom,
+                final float yTop,
+                final float radius,
+                final int faces) {
+            if (radius <= 0f || faces < 3) {
+                return new float[0][];
+            }
 
-                for (int i = 0; i < faces; i++) {
-                    float angle1 = i * angleStep;
-                    float angle2 = (i + 1) * angleStep;
+            var totalLines = faces * 3;
+            var totalVertices = totalLines * 2;
+            var vertexBuffer = new float[totalVertices][6];
+            var vertexIndex = 0;
 
-                    float x1 = (float) (radius * Math.cos(angle1));
-                    float z1 = (float) (radius * Math.sin(angle1));
-                    float x2 = (float) (radius * Math.cos(angle2));
-                    float z2 = (float) (radius * Math.sin(angle2));
+            var angleStepd = 2.0d * Math.PI / faces;
 
-                    vertexBuffer[vertexIndex++] = new float[]{centerX_top, yTop, centerZ_top};
-                    vertexBuffer[vertexIndex++] = new float[]{x1, yTop, z1};
-                    vertexBuffer[vertexIndex++] = new float[]{x2, yTop, z2};
-                }
+            for (var i = 0; i < faces; i++) {
+                var angle1d = i * angleStepd;
+                var angle2d = (i + 1) * angleStepd;
 
-                for (int i = 0; i < faces; i++) {
-                    float angle1 = i * angleStep;
-                    float angle2 = (i + 1) * angleStep;
+                var x1d = radius * Math.cos(angle1d);
+                var z1d = radius * Math.sin(angle1d);
+                var x2d = radius * Math.cos(angle2d);
+                var z2d = radius * Math.sin(angle2d);
 
-                    float x1 = (float) (radius * Math.cos(angle1));
-                    float z1 = (float) (radius * Math.sin(angle1));
-                    float x2 = (float) (radius * Math.cos(angle2));
-                    float z2 = (float) (radius * Math.sin(angle2));
+                var nx1f = (float) Math.cos(angle1d);
+                var nz1f = (float) Math.sin(angle1d);
+                var nx2f = (float) Math.cos(angle2d);
+                var nz2f = (float) Math.sin(angle2d);
 
-                    vertexBuffer[vertexIndex++] = new float[]{centerX_bottom, yBottom, centerZ_bottom};
-                    vertexBuffer[vertexIndex++] = new float[]{x2, yBottom, z2};
-                    vertexBuffer[vertexIndex++] = new float[]{x1, yBottom, z1};
-                }
+                var x1f = (float) x1d;
+                var z1f = (float) z1d;
+                var x2f = (float) x2d;
+                var z2f = (float) z2d;
+
+                vertexBuffer[vertexIndex++] = new float[]{x1f, yTop, z1f, nx1f, 0f, nz1f};
+                vertexBuffer[vertexIndex++] = new float[]{x2f, yTop, z2f, nx2f, 0f, nz2f};
+
+                vertexBuffer[vertexIndex++] = new float[]{x1f, yBottom, z1f, nx1f, 0f, nz1f};
+                vertexBuffer[vertexIndex++] = new float[]{x2f, yBottom, z2f, nx2f, 0f, nz2f};
+
+                vertexBuffer[vertexIndex++] = new float[]{x1f, yTop, z1f, nx1f, 0f, nz1f};
+                vertexBuffer[vertexIndex++] = new float[]{x1f, yBottom, z1f, nx1f, 0f, nz1f};
             }
 
             return vertexBuffer;
@@ -159,8 +240,5 @@ public class VertexUtil {
 
             return faces;
         }
-    }
-
-    private VertexUtil() {
     }
 }

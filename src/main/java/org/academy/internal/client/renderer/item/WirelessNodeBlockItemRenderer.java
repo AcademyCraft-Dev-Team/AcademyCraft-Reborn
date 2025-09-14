@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-import static org.academy.internal.client.renderer.blockentity.WirelessNodeBlockEntityRenderer.WIRELESS_NODE_MODEL;
+import static org.academy.internal.client.renderer.blockentity.WirelessNodeBlockEntityRenderer.MODEL;
 
 public class WirelessNodeBlockItemRenderer implements ItemRenderer {
     public static final ItemRenderer INSTANCE = new WirelessNodeBlockItemRenderer();
@@ -25,7 +25,7 @@ public class WirelessNodeBlockItemRenderer implements ItemRenderer {
         bakedModel.getTransforms().getTransform(displayContext).apply(leftHand, poseStack);
         poseStack.translate(0, -0.5f, 0);
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
-        WIRELESS_NODE_MODEL.render(poseStack, buffer, combinedLight, combinedOverlay);
+        MODEL.render(poseStack, buffer, combinedLight, combinedOverlay);
         poseStack.popPose();
     }
 }*/

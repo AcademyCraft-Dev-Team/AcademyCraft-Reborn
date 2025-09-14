@@ -37,17 +37,24 @@ public final class Render {
                 .withSampler("DiffuseSampler")
                 .withSampler("MaskSampler")
                 .withUniform("BlurInfo", UniformType.UNIFORM_BUFFER)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withoutBlend()
                 .withDepthWrite(false)
                 .withCull(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .build();
 
-        public static final RenderPipeline BLIT_SCREEN = builder(BLIT_SCREEN_SNIPPET)
+        public static final RenderPipeline BLIT_SCREEN_WITH_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
                 .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
                 .withSampler("DiffuseSampler")
                 .withBlend(BlendFunction.TRANSLUCENT)
+                .build();
+
+        public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND = builder(BLIT_SCREEN_SNIPPET)
+                .withLocation(academy("pipeline/blit_screen"))
+                .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
+                .withSampler("DiffuseSampler")
+                .withoutBlend()
                 .build();
 
         public static final RenderPipeline GAUSSIAN_BLUR = builder(BLIT_SCREEN_SNIPPET)

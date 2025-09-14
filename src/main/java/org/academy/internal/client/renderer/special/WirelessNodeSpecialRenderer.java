@@ -24,7 +24,7 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
         poseStack.pushPose();
         poseStack.translate(0.5f, 0, 0.5f);
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
-        WirelessNodeBlockEntityRenderer.WIRELESS_NODE_MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
+        WirelessNodeBlockEntityRenderer.MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
         poseStack.popPose();
     }
 
@@ -32,11 +32,12 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
     public void getExtents(Set<Vector3f> output) {
         var posestack = new PoseStack();
         posestack.scale(1.0F, -1.0F, -1.0F);
-        WirelessNodeBlockEntityRenderer.WIRELESS_NODE_MODEL.root().getExtentsForGui(posestack, output);
+        WirelessNodeBlockEntityRenderer.MODEL.root().getExtentsForGui(posestack, output);
     }
 
     public record Unbaked() implements SpecialModelRenderer.Unbaked {
-        public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(new Unbaked());
+        public static final Unbaked INSTANCE = new Unbaked();
+        public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(INSTANCE);
 
         @Override
         public MapCodec<Unbaked> type() {
@@ -45,7 +46,7 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
 
         @Override
         public SpecialModelRenderer<?> bake(EntityModelSet p_386553_) {
-            return INSTANCE;
+            return WirelessNodeSpecialRenderer.INSTANCE;
         }
     }
 }

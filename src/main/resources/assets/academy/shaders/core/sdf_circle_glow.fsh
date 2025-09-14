@@ -1,4 +1,4 @@
-#version 150
+#version 330
 
 layout (std140) uniform GlowUniforms {
     vec4 Color;

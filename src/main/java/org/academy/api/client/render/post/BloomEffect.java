@@ -12,9 +12,12 @@ import net.minecraft.client.renderer.RenderStateShard;
 import org.academy.api.client.Render;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
+import org.lwjgl.system.MemoryStack;
 
 import java.util.Collections;
 import java.util.Map;
+
+import static org.academy.api.client.render.post.PostEffect.MAIN_SCENE;
 
 public final class BloomEffect {
     private static final RenderTarget INPUT, OUTPUT, SWAP2A, SWAP4A, SWAP8A, SWAP2B, SWAP4B, SWAP8B;
@@ -118,7 +121,7 @@ public final class BloomEffect {
     }
 
     private static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, int radius) {
-        try (var memoryStack = org.lwjgl.system.MemoryStack.stackPush()) {
+        try (var memoryStack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(memoryStack, BlurUniforms.UBO_SIZE);
             new BlurUniforms(outSize, new Vector2f(dirX, dirY), radius).write(builder);
             var byteBuffer = builder.get();
@@ -127,7 +130,7 @@ public final class BloomEffect {
     }
 
     private static void writeBloomUniforms(float radius, float intensity) {
-        try (var memoryStack = org.lwjgl.system.MemoryStack.stackPush()) {
+        try (var memoryStack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(memoryStack, BloomUniforms.UBO_SIZE);
             new BloomUniforms(radius, intensity).write(builder);
             var byteBuffer = builder.get();
@@ -139,7 +142,7 @@ public final class BloomEffect {
         var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
         var blurUboSlice = blurUniformsBuffer.slice();
 
-        PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLIT_SCREEN, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Collections.emptyMap(), false);
+        PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Collections.emptyMap(), false);
 
         writeBlurUniforms(new Vector2f(SWAP2A.width, SWAP2A.height), 1.0f, 0.0f, 4);
         PostEffect.runBlitPass(SWAP2A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
@@ -161,12 +164,12 @@ public final class BloomEffect {
 
         writeBloomUniforms(1.0f, 1.0f);
         var blendSamplers = Map.of(
-                "DiffuseSampler", mainRenderTarget.getColorTextureView(),
+                "DiffuseSampler", MAIN_SCENE.getColorTextureView(),
                 "BlurTexture1", SWAP2B.getColorTextureView(),
                 "BlurTexture2", SWAP4B.getColorTextureView(),
                 "BlurTexture3", SWAP8B.getColorTextureView()
         );
-        PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLOOM_BLEND, blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()), false);
+        PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLOOM_BLEND, blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()), false);
         RenderSystem.getDevice().createCommandEncoder().clearColorTexture(INPUT.getColorTexture(), 0);
     }
 

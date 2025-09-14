@@ -10,15 +10,15 @@ import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEnt
 
 public class WirelessNodeBlockEntityRenderer implements BlockEntityRenderer<WirelessNodeBlockEntity> {
     public static final BlockEntityRenderer<WirelessNodeBlockEntity> INSTANCE = new WirelessNodeBlockEntityRenderer();
-    public static final WirelessNodeModel WIRELESS_NODE_MODEL = new WirelessNodeModel(WirelessNodeModel.createBodyLayer().bakeRoot());
+    public static final WirelessNodeModel MODEL = new WirelessNodeModel(WirelessNodeModel.createBodyLayer().bakeRoot());
 
     @Override
     public void render(WirelessNodeBlockEntity blockEntity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, Vec3 cameraPos) {
         poseStack.pushPose();
         poseStack.translate(0.5f, 0, 0.5f);
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
-        WIRELESS_NODE_MODEL.setupAnim(blockEntity, partialTick);
-        WIRELESS_NODE_MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
+        MODEL.setupAnim(blockEntity, partialTick);
+        MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
         poseStack.popPose();
     }
 

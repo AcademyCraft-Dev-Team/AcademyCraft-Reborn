@@ -36,9 +36,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     @Override
     public void dispatchEvent(InputEvent event) {
-        if (!isAbsoluteEnabled() || !isVisible()) {
-            return;
-        }
+        if (!isAbsoluteEnabled() || !isVisible()) return;
 
         if (AcademyCraft.DEBUG_UI && event instanceof MouseEvent) {
             AcademyCraft.LOGGER.debug("[UI Event] Dispatching {} to Container '{}'", event.getType(), getName());

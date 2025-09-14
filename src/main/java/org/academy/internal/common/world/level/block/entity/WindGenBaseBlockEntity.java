@@ -14,9 +14,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.client.animation.definitions.WindGenBaseAnimation;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
-import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.Nullable;
 
@@ -82,7 +82,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
 
     private void clientTick() {
         if (isMain()) {
-            if (this.setupState.isStarted() && this.setupState.getTimeInMillis(ticks) >= WindGenBaseModel.setup.lengthInSeconds() * 1000L) {
+            if (this.setupState.isStarted() && this.setupState.getTimeInMillis(ticks) >= WindGenBaseAnimation.SETUP.lengthInSeconds() * 1000L) {
                 this.isDisplayActive = true;
                 this.setupState.stop();
             }

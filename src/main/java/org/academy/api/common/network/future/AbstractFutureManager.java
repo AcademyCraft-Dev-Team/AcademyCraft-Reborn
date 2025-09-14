@@ -45,7 +45,7 @@ public abstract class AbstractFutureManager {
         int futureId = generateFutureId();
         int expectedResponsePayloadId = responsePayloadType.getPacketId();
         if (expectedResponsePayloadId == -1) {
-            AcademyCraft.LOGGER.error("FutureManager: Response payload type {} is not registered.", responsePayloadType.getPacketClass().getName());
+            AcademyCraft.LOGGER.error("FutureManager: Response payload type {} is not registered.", responsePayloadType.packetClass().getName());
             return -1;
         }
         long expireTime = System.currentTimeMillis() + timeoutMillis;
@@ -112,16 +112,14 @@ public abstract class AbstractFutureManager {
 
         var packetType = NetworkSystem.<PacketType<REQ_L, REQ_P>>getPacketTypeById(targetPacketTypeId);
 
-        var codec = packetType.getCodec();
+        var codec = packetType.codec();
 
         var instance = codec.decode(new FriendlyByteBuf(Unpooled.buffer()).writeByteArray(futureRequestPacket.getBytes()));
         instance.setPacketListener(packetListener);
 
         var responsePayload = invoker.invoke(instance);
 
-        if (responsePayload != null) {
-            responseSender.accept(responsePayload);
-        }
+        responseSender.accept(responsePayload);
     }
 
     protected <
@@ -142,7 +140,7 @@ public abstract class AbstractFutureManager {
             return;
         }
 
-        var codec = NetworkSystem.<PacketType<L, RES_P>>getPacketTypeById(targetPacketTypeId).getCodec();
+        var codec = NetworkSystem.<PacketType<L, RES_P>>getPacketTypeById(targetPacketTypeId).codec();
 
         try {
             var buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -158,12 +156,10 @@ public abstract class AbstractFutureManager {
     protected void executeCallback(int futureId, ResponsePacket<?, ?> payload) {
         var info = pendingFutures.remove(futureId);
         if (info != null) {
-            if (info.callback() != null) {
-                try {
-                    ((Consumer<ResponsePacket<?, ?>>) info.callback()).accept(payload);
-                } catch (Exception e) {
-                    AcademyCraft.LOGGER.error("Error executing callback for futureId {}: {}", futureId, e.getMessage(), e);
-                }
+            try {
+                ((Consumer<ResponsePacket<?, ?>>) info.callback()).accept(payload);
+            } catch (Exception e) {
+                AcademyCraft.LOGGER.error("Error executing callback for futureId {}: {}", futureId, e.getMessage(), e);
             }
         } else {
             AcademyCraft.LOGGER.warn("Response for futureId {} arrived, but future was already handled/timed out.", futureId);
@@ -175,7 +171,7 @@ public abstract class AbstractFutureManager {
         pendingFutures.forEach((id, info) -> {
             if (now > info.expireTime()) {
                 AcademyCraft.LOGGER.warn("Future {} timed out.", id);
-                if (pendingFutures.remove(id, info) && info.callback() != null) {
+                if (pendingFutures.remove(id, info)) {
                     try {
                         info.callback().accept(null);
                     } catch (Exception e) {

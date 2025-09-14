@@ -23,6 +23,6 @@ public abstract class MixinGameRenderer {
 
     @Inject(method = "render",at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
-        AnimationManager.getInstance().onFrameUpdate();
+        AnimationManager.onFrameUpdate();
     }
 }

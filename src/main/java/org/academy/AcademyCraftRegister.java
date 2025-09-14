@@ -31,7 +31,7 @@ import static org.academy.AcademyCraft.MODID;
 import static org.academy.AcademyCraft.MOD_NAME;
 import static org.academy.api.common.registries.Registries.*;
 
-public class AcademyCraftRegister {
+public final class AcademyCraftRegister {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     @SuppressWarnings("unused")
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CREATIVE_MODE_TAB = CREATIVE_MODE_TABS.register("all", () -> CreativeModeTab.builder().icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {

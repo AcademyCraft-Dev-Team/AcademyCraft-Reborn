@@ -32,21 +32,21 @@ public class WindGenTopBlockEntityRenderer implements BlockEntityRenderer<WindGe
 
             poseStack.translate(0.5f, 1.5f, 0.5f);
             poseStack.mulPose(Axis.XP.rotationDegrees(180));
-            poseStack.mulPose(Axis.YP.rotationDegrees(yRot - 90));
+            poseStack.mulPose(Axis.YP.rotationDegrees(yRot + 180));
+            poseStack.translate(0, 0, 0.25f);
 
             MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
 
             if (blockEntity.hasFan) {
                 poseStack.pushPose();
-                poseStack.mulPose(Axis.XP.rotationDegrees(-180));
-                poseStack.mulPose(Axis.YP.rotationDegrees(90));
+                poseStack.mulPose(Axis.XP.rotationDegrees(180));
+                poseStack.translate(0, -2.5f, 0.875f);
 
-                poseStack.translate(0, -0.85f, 1.25f);
+                poseStack.rotateAround(Axis.ZP.rotationDegrees((blockEntity.ticks + partialTick) * 5),0,1.6125f,0);
 
-                poseStack.mulPose(Axis.ZP.rotationDegrees((blockEntity.ticks + partialTick) * 5));
-                var windGenTurbineModel = new WindGenTurbineModel(WindGenTurbineModel.createBodyLayer().bakeRoot());
-                windGenTurbineModel.main.render(poseStack, bufferSource.getBuffer(entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN)), packedLight, packedOverlay);
-                windGenTurbineModel.tip_li.render(poseStack, bufferSource.getBuffer(entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                WindGenTurbineModel.INSTANCE.all.translateAndRotate(poseStack);
+                WindGenTurbineModel.INSTANCE.main.render(poseStack, bufferSource.getBuffer(entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN)), packedLight, packedOverlay);
+                WindGenTurbineModel.INSTANCE.tip_li.render(poseStack, bufferSource.getBuffer(entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN)), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
                 poseStack.popPose();
             }
             poseStack.popPose();

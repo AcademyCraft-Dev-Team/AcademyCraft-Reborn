@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "academy:block/wind_gen_top"
+    "all": "academy:block/break_w"
   }
 }

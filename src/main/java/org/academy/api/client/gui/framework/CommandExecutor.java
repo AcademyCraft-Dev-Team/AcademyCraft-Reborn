@@ -31,7 +31,7 @@ public final class CommandExecutor {
         var writeOffsets = new Object2IntOpenHashMap<VertexFormat>();
 
         for (var meshToDraw : meshesToDraw) {
-            var mesh = meshToDraw.getMesh();
+            var mesh = meshToDraw.mesh();
             var format = mesh.drawState().format();
             var ringBuffer = this.vertexBuffers.get(format);
             var vertexBufferData = mesh.vertexBuffer();
@@ -57,14 +57,14 @@ public final class CommandExecutor {
         )) {
             for (var i = 0; i < meshesToDraw.size(); i++) {
                 var meshToDraw = meshesToDraw.get(i);
-                var mesh = meshToDraw.getMesh();
+                var mesh = meshToDraw.mesh();
                 var baseVertex = baseVertices.getInt(i);
                 var ringBuffer = this.vertexBuffers.get(mesh.drawState().format());
 
                 {
-                    renderPass.setPipeline(meshToDraw.getPipeline());
+                    renderPass.setPipeline(meshToDraw.pipeline());
 
-                    var scissor = meshToDraw.getScissorArea();
+                    var scissor = meshToDraw.scissorArea();
                     if (scissor != null) {
                         var pos = scissor.getPosition();
                         var screenX = (int) (pos.x * guiScale);
@@ -80,10 +80,10 @@ public final class CommandExecutor {
                     renderPass.setUniform("Projection", projectionUbo);
                     renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo);
 
-                    for (var entry : meshToDraw.getSamplers().entrySet()) {
+                    for (var entry : meshToDraw.samplers().entrySet()) {
                         renderPass.bindSampler(entry.getKey(), entry.getValue());
                     }
-                    for (var entry : meshToDraw.getUniforms().entrySet()) {
+                    for (var entry : meshToDraw.uniforms().entrySet()) {
                         renderPass.setUniform(entry.getKey(), entry.getValue());
                     }
                 }
@@ -102,7 +102,7 @@ public final class CommandExecutor {
     private void ensureVertexBufferSizes(List<MeshToDraw> meshesToDraw) {
         var requiredSizes = new Object2IntOpenHashMap<VertexFormat>();
         for (var meshToDraw : meshesToDraw) {
-            var mesh = meshToDraw.getMesh();
+            var mesh = meshToDraw.mesh();
             var format = mesh.drawState().format();
             var vertexSize = mesh.vertexBuffer().remaining();
             requiredSizes.addTo(format, vertexSize);
@@ -127,7 +127,7 @@ public final class CommandExecutor {
     private int calculateMaxIndexCount(List<MeshToDraw> meshesToDraw) {
         var maxCount = 0;
         for (var meshToDraw : meshesToDraw) {
-            maxCount = Math.max(maxCount, meshToDraw.getMesh().drawState().indexCount());
+            maxCount = Math.max(maxCount, meshToDraw.mesh().drawState().indexCount());
         }
         return maxCount;
     }

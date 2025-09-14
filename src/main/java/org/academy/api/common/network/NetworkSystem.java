@@ -7,12 +7,12 @@ import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.asm.PacketListenerFactory;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.registries.Registries;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public final class NetworkSystem {
     private static final BiMap<Class<? extends Packet<?, ?>>, PacketType<?, ?>> CLASS_TO_TYPE = HashBiMap.create();
@@ -22,7 +22,7 @@ public final class NetworkSystem {
 
     public static void progressRegistry() {
         for (var type : Registries.PACKET_TYPES) {
-            CLASS_TO_TYPE.put(type.getPacketClass(), type);
+            CLASS_TO_TYPE.put(type.packetClass(), type);
         }
     }
 
@@ -33,11 +33,11 @@ public final class NetworkSystem {
 
     @SuppressWarnings("unchecked")
     public static <T extends PacketType<?, ?>> T getPacketType(Class<?> payloadClass) {
-        return (T) CLASS_TO_TYPE.get(payloadClass);
+        return (T) Objects.requireNonNull(CLASS_TO_TYPE.get(payloadClass));
     }
 
-    public static List<IPacketListener<?, ?>> findPacketListeners(@NotNull Class<?> clazz, @Nullable Object instance) {
-        var generatedHandlers = new ArrayList<IPacketListener<?, ?>>();
+    public static List<IPacketListener> findPacketListeners(Class<?> clazz, @Nullable Object instance) {
+        var generatedHandlers = new ArrayList<IPacketListener>();
         var foundAnnotation = false;
 
         if (!Modifier.isPublic(clazz.getModifiers())) {

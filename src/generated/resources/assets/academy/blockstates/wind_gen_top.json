@@ -1,21 +1,7 @@
 {
   "variants": {
-    "": [
-      {
-        "model": "academy:block/wind_gen_top"
-      },
-      {
-        "model": "academy:block/wind_gen_top",
-        "y": 90
-      },
-      {
-        "model": "academy:block/wind_gen_top",
-        "y": 180
-      },
-      {
-        "model": "academy:block/wind_gen_top",
-        "y": 270
-      }
-    ]
+    "": {
+      "model": "academy:block/wind_gen_top"
+    }
   }
 }

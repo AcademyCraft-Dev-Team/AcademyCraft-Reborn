@@ -127,7 +127,7 @@ public final class BlurEffect {
     }
 
     private static RenderTarget createRenderTarget(int width, int height) {
-        var renderTarget = new TextureTarget(null, width, height, true);
+        var renderTarget = new TextureTarget(null, width, height, false);
         renderTarget.setFilterMode(FilterMode.LINEAR);
         return renderTarget;
     }
@@ -144,11 +144,11 @@ public final class BlurEffect {
     private static void runBlitPass(RenderTarget target, RenderPipeline pipeline, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms) {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
-        commandEncoder.clearColorAndDepthTextures(target.getColorTexture(), 0, target.getDepthTexture(), 1);
+        commandEncoder.clearColorTexture(target.getColorTexture(), 0);
 
         try (
                 var renderPass = commandEncoder.createRenderPass(
-                        () -> "Blit Pass to " + target, target.getColorTextureView(), OptionalInt.empty(), target.getDepthTextureView(), OptionalDouble.empty()
+                        () -> "Blit Pass to " + target, target.getColorTextureView(), OptionalInt.empty()
                 )
         ) {
             renderPass.setPipeline(pipeline);

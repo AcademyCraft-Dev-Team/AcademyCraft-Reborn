@@ -1,19 +1,18 @@
 package org.academy.api.client.gui.event;
 
 import org.academy.api.client.gui.framework.Widget;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class InputEvent {
     private final EventType type;
     private boolean isConsumed = false;
+    @Nullable
     private Widget target;
 
-    protected InputEvent(@NotNull EventType type) {
+    protected InputEvent(EventType type) {
         this.type = type;
     }
 
-    @NotNull
     public EventType getType() {
         return type;
     }
@@ -31,7 +30,7 @@ public abstract class InputEvent {
         return target;
     }
 
-    public void setTarget(@NotNull Widget target) {
+    public void setTarget(Widget target) {
         this.target = target;
     }
 }

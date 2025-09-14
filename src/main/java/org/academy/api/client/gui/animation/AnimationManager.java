@@ -4,32 +4,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class AnimationManager {
-    private static final AnimationManager INSTANCE = new AnimationManager();
-    private final List<Animator> runningAnimations = new CopyOnWriteArrayList<>();
-    private final List<Animator> pendingAdditions = new CopyOnWriteArrayList<>();
+public final class AnimationManager {
+    private static final List<Animator> runningAnimations = new CopyOnWriteArrayList<>();
+    private static final List<Animator> pendingAdditions = new CopyOnWriteArrayList<>();
 
-    private AnimationManager() {}
-
-    public static AnimationManager getInstance() {
-        return INSTANCE;
+    private AnimationManager() {
     }
 
-    void startAnimation(Animator animator) {
+    static void startAnimation(Animator animator) {
         pendingAdditions.add(animator);
     }
 
-    void remove(Animator animator) {
+    static void remove(Animator animator) {
         runningAnimations.remove(animator);
         pendingAdditions.remove(animator);
     }
 
-    public long getCurrentTime() {
-        return System.nanoTime() / 1_000_000;
-    }
-
-    public void onFrameUpdate() {
-        var currentTime = getCurrentTime();
+    public static void onFrameUpdate() {
+        var currentTime = System.nanoTime() / 1_000_000;
 
         if (!pendingAdditions.isEmpty()) {
             for (var anim : pendingAdditions) {
@@ -40,9 +32,7 @@ public class AnimationManager {
             pendingAdditions.clear();
         }
 
-        if (runningAnimations.isEmpty()) {
-            return;
-        }
+        if (runningAnimations.isEmpty()) return;
 
         var toRemove = new ArrayList<Animator>();
         for (var anim : runningAnimations) {
@@ -51,8 +41,6 @@ public class AnimationManager {
             }
         }
 
-        if (!toRemove.isEmpty()) {
-            runningAnimations.removeAll(toRemove);
-        }
+        if (!toRemove.isEmpty()) runningAnimations.removeAll(toRemove);
     }
 }

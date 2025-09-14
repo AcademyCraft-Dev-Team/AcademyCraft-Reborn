@@ -33,7 +33,7 @@ public class FutureManagerClient extends AbstractFutureManager {
         if (futureId == -1) return;
         var requestTypeId = requestPacket.getPacketType().getPacketId();
         var buffer = new FriendlyByteBuf(Unpooled.buffer());
-        requestPacket.getPacketType().getCodec().encode(buffer, requestPacket);
+        requestPacket.getPacketType().codec().encode(buffer, requestPacket);
 
         var payload = new byte[buffer.readableBytes()];
         buffer.readBytes(payload);
@@ -61,7 +61,7 @@ public class FutureManagerClient extends AbstractFutureManager {
                 futureRequestPacket, futureRequestPacket.getPacketListener(), response -> {
                     var responseTypeId = response.getPacketType().getPacketId();
                     var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
-                    response.getPacketType().getCodec().encode(responseBuffer, response);
+                    response.getPacketType().codec().encode(responseBuffer, response);
 
                     var payload = new byte[responseBuffer.readableBytes()];
                     responseBuffer.readBytes(payload);

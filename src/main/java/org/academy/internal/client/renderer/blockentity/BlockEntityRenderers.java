@@ -8,9 +8,9 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 
 @EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
-public class BlockEntityRenderers {
+public final class BlockEntityRenderers {
     @SubscribeEvent
-    private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+    public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_TOP.get(),
                 context -> WindGenTopBlockEntityRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.ABILITY_DEVELOPER.get(),
@@ -23,6 +23,8 @@ public class BlockEntityRenderers {
                 context -> CatEngineBlockEntityRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_BASE.get(),
                 context -> WindGenBaseBlockEntityRenderer.INSTANCE);
+        event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_PILLAR.get(),
+                context -> WindGenPillarBlockEntityRenderer.INSTANCE);
     }
 
     private BlockEntityRenderers() {

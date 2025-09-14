@@ -1,15 +1,13 @@
 package org.academy.api.client.gui.event;
 
-import org.jetbrains.annotations.NotNull;
-
-public class MouseEvent extends InputEvent {
+public final class MouseEvent extends InputEvent {
     private final double x;
     private final double y;
     private final int button;
     private final double dragX;
     private final double dragY;
 
-    private MouseEvent(@NotNull EventType type, double x, double y, int button, double dragX, double dragY) {
+    private MouseEvent(EventType type, double x, double y, int button, double dragX, double dragY) {
         super(type);
         this.x = x;
         this.y = y;

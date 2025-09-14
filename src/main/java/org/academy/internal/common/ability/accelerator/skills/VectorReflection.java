@@ -200,7 +200,7 @@ public class VectorReflection extends Skill {
         }
 
         @Override
-        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.VECTOR_REFLECTION_TOGGLE.get();
         }
     }
