@@ -90,7 +90,7 @@ public class TextBoxWidget extends LabelWidget {
         var textHeight = font.lineHeight * finalScale * 0.85f;
         var alignmentOffsetY = (getHeight() - textHeight) / 2.0f;
 
-        var finalCaretX = getX() + 2 + caretXOffset;
+        var finalCaretX = getX() + caretXOffset;
         var finalCaretY = getY() + alignmentOffsetY;
 
         context.pose().pushPose();
@@ -140,9 +140,7 @@ public class TextBoxWidget extends LabelWidget {
 
     @Override
     public void tick() {
-        if (!isFocused()) {
-            return;
-        }
+        if (!isFocused()) return;
 
         var now = System.currentTimeMillis();
         if (now - lastBlinkTime >= 500) {
@@ -182,9 +180,7 @@ public class TextBoxWidget extends LabelWidget {
 
     @Override
     protected void onKeyPressed(KeyEvent event) {
-        if (!isFocused()) {
-            return;
-        }
+        if (!isFocused()) return;
 
         var handled = switch (event.getKeyCode()) {
             case GLFW.GLFW_KEY_BACKSPACE -> {
@@ -245,9 +241,7 @@ public class TextBoxWidget extends LabelWidget {
     public void onFocusGained() {
         var event = new FocusGainedEvent(this);
         NeoForge.EVENT_BUS.post(event);
-        if (event.isCanceled()) {
-            return;
-        }
+        if (event.isCanceled()) return;
 
         showCaret = true;
         lastBlinkTime = System.currentTimeMillis();
@@ -257,9 +251,7 @@ public class TextBoxWidget extends LabelWidget {
     public void onFocusLost() {
         var event = new FocusLostEvent(this);
         NeoForge.EVENT_BUS.post(event);
-        if (event.isCanceled()) {
-            return;
-        }
+        if (event.isCanceled()) return;
 
         showCaret = false;
         if (onFocusLostCallback != null) {

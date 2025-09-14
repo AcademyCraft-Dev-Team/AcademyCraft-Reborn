@@ -14,6 +14,7 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -24,6 +25,8 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.util.ServerPlayerUtil;
@@ -115,6 +118,16 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return state.getValue(TYPE) == MultiBlockType.SUBJECT ? Block.cube(6.4, 16, 6.4) : super.getShape(state, level, pos, context);
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return state.getValue(TYPE) == MultiBlockType.SUBJECT ? getShape(state, level, pos, context) : super.getCollisionShape(state, level, pos, context);
+    }
+
+    @Override
     public List<Vec3i> getSubBlocks() {
         return SUB_BLOCKS;
     }
@@ -163,5 +176,10 @@ public class WindGenBaseBlock extends MultiBlock {
                 }
             }
         };
+    }
+
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.INVISIBLE;
     }
 }

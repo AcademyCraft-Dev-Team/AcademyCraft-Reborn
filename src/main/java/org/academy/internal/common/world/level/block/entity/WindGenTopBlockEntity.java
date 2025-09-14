@@ -1,18 +1,17 @@
 package org.academy.internal.common.world.level.block.entity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.item.Items;
-import org.jetbrains.annotations.NotNull;
 
 public class WindGenTopBlockEntity extends MultiBlockEntity implements Container {
     public int ticks;
@@ -23,20 +22,18 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
         super(BlockEntityTypes.WIND_GEN_TOP.get(), pos, blockState);
     }
 
-/*
     @Override
-    protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(tag, items, registries);
+        ContainerHelper.loadAllItems(input, items);
     }
 
     @Override
-    protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.saveAdditional(tag, registries);
-        ContainerHelper.saveAllItems(tag, items, registries);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        ContainerHelper.saveAllItems(output, items);
     }
-*/
 
     @Override
     public int getContainerSize() {
@@ -49,12 +46,12 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
     }
 
     @Override
-    public @NotNull ItemStack getItem(int slot) {
+    public ItemStack getItem(int slot) {
         return items.get(slot);
     }
 
     @Override
-    public @NotNull ItemStack removeItem(int slot, int amount) {
+    public ItemStack removeItem(int slot, int amount) {
         ItemStack itemstack = ContainerHelper.removeItem(items, slot, amount);
         if (!itemstack.isEmpty()) {
             this.setChanged();
@@ -64,12 +61,12 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
     }
 
     @Override
-    public @NotNull ItemStack removeItemNoUpdate(int slot) {
+    public ItemStack removeItemNoUpdate(int slot) {
         return ContainerHelper.takeItem(this.items, slot);
     }
 
     @Override
-    public void setItem(int slot, @NotNull ItemStack stack) {
+    public void setItem(int slot, ItemStack stack) {
         this.items.set(slot, stack);
         if (stack.getCount() > this.getMaxStackSize()) {
             stack.setCount(this.getMaxStackSize());
@@ -81,7 +78,7 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
     }
 
     @Override
-    public boolean stillValid(@NotNull Player player) {
+    public boolean stillValid(Player player) {
         return Container.stillValidBlockEntity(this, player);
     }
 

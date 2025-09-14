@@ -13,9 +13,6 @@ public abstract class InstanceFutureHandlerInvoker<
     protected final Object instance;
 
     protected InstanceFutureHandlerInvoker(Object instance) {
-        if (instance == null) {
-            throw new IllegalArgumentException("Instance cannot be null for InstancePayloadHandlerInvoker");
-        }
         this.instance = instance;
     }
 }

@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import org.academy.api.common.network.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
 
 @ApiStatus.Internal
 public final class FutureResponsePacket<T extends PacketListener> extends FuturePacket<T, FutureResponsePacket<T>> {
@@ -27,7 +26,7 @@ public final class FutureResponsePacket<T extends PacketListener> extends Future
 
     @SuppressWarnings("unchecked")
     @Override
-    public @NotNull PacketType<T, FutureResponsePacket<T>> getPacketType() {
+    public PacketType<T, FutureResponsePacket<T>> getPacketType() {
         return (PacketType<T, FutureResponsePacket<T>>) PacketTypes.FUTURE_RESPONSE.get();
     }
 }

@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.event;
 
-public class ScrollEvent extends InputEvent {
+public final class ScrollEvent extends InputEvent {
     private final double x;
     private final double y;
     private final double delta;

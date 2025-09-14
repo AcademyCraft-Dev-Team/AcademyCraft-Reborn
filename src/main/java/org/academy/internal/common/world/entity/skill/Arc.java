@@ -19,7 +19,7 @@ import org.academy.internal.common.world.entity.EntityTypes;
 
 public class Arc extends Entity {
     public static final EntityDataAccessor<Float> ID_LENGTH = SynchedEntityData.defineId(Arc.class, EntityDataSerializers.FLOAT);
-    public static final int defaultLifetime = 8;
+    public static final int defaultLifetime = 12;
     public int currentLifetime = defaultLifetime;
     public ArcFactory.ArcRenderData renderData = new ArcFactory.ArcRenderData();
 

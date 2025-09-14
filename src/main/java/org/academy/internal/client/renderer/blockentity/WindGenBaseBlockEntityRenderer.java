@@ -2,11 +2,8 @@ package org.academy.internal.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.MatrixStack;
@@ -14,7 +11,6 @@ import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
-import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 
 public class WindGenBaseBlockEntityRenderer implements BlockEntityRenderer<WindGenBaseBlockEntity> {
@@ -61,12 +57,6 @@ public class WindGenBaseBlockEntityRenderer implements BlockEntityRenderer<WindG
             }
             poseStack.popPose();
 
-        } else {
-            var minecraft = Minecraft.getInstance();
-            var bakedModel = minecraft.getModelManager().getBlockModelShaper().getBlockModel(Blocks.WIND_GEN_PILLAR.get().defaultBlockState());
-            var randomSource = RandomSource.create();
-            randomSource.setSeed(42L);
-            ModelBlockRenderer.renderModel(poseStack.last(), bufferSource, bakedModel, 1, 1, 1, packedLight, packedOverlay, blockEntity.getLevel(), blockEntity.getBlockPos(), blockEntity.getBlockState());
         }
         poseStack.popPose();
     }

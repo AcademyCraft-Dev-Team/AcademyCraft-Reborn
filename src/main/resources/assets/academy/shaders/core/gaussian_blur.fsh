@@ -3,7 +3,7 @@
 // Licensed under GNU GPLv3, copyright Low-Drag-MC and contributors.
 // Modified for this project.
 
-#version 150
+#version 330
 
 uniform sampler2D DiffuseSampler;
 

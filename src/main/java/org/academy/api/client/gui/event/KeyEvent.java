@@ -1,13 +1,11 @@
 package org.academy.api.client.gui.event;
 
-import org.jetbrains.annotations.NotNull;
-
-public class KeyEvent extends InputEvent {
+public final class KeyEvent extends InputEvent {
     private final int keyCode;
     private final int scanCode;
     private final int modifiers;
 
-    public KeyEvent(@NotNull EventType type, int keyCode, int scanCode, int modifiers) {
+    public KeyEvent(EventType type, int keyCode, int scanCode, int modifiers) {
         super(type);
         if (type != EventType.KEY_PRESSED && type != EventType.KEY_RELEASED) {
             throw new IllegalArgumentException("This constructor is for KEY_PRESSED or KEY_RELEASED events.");

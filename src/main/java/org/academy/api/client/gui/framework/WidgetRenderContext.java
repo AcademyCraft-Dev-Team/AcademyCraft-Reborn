@@ -1,19 +1,15 @@
 package org.academy.api.client.gui.framework;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.Objects;
-import javax.annotation.Nullable;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.util.Mth;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 public final class WidgetRenderContext {
     private final List<SubmittedCommand> submittedCommands;
@@ -28,34 +24,34 @@ public final class WidgetRenderContext {
     }
 
     public WidgetRenderContext(UboFactory uboFactory) {
-        this.submittedCommands = new ArrayList<>();
-        this.alphaStack = new ArrayDeque<>();
-        this.pose = new PoseStack();
-        this.scissorStack = new ScissorStack();
+        submittedCommands = new ArrayList<>();
+        alphaStack = new ArrayDeque<>();
+        pose = new PoseStack();
+        scissorStack = new ScissorStack();
         this.uboFactory = uboFactory;
-        this.alphaStack.push(1.0F);
+        alphaStack.push(1.0F);
     }
 
     public void submit(DrawCommand command) {
-        var currentPose = this.pose.last().copy();
-        var currentScissor = this.scissorStack.peek();
-        this.submittedCommands.add(new SubmittedCommand(command, currentPose, currentScissor));
+        var currentPose = pose.last().copy();
+        var currentScissor = scissorStack.peek();
+        submittedCommands.add(new SubmittedCommand(command, currentPose, currentScissor));
     }
 
     public <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getDynamicUbo(Class<T> uboClass, int size) {
-        return this.uboFactory.getOrCreate(uboClass, size);
+        return uboFactory.getOrCreate(uboClass, size);
     }
 
     public PoseStack pose() {
-        return this.pose;
+        return pose;
     }
 
     public ScissorStack scissorStack() {
-        return this.scissorStack;
+        return scissorStack;
     }
 
     public void enableScissor(int minX, int minY, int maxX, int maxY) {
-        Matrix4f poseMatrix = this.pose.last().pose();
+        Matrix4f poseMatrix = pose.last().pose();
 
         var v0 = poseMatrix.transformPosition(minX, minY, 0, new Vector3f());
         var v1 = poseMatrix.transformPosition(maxX, minY, 0, new Vector3f());
@@ -73,64 +69,64 @@ public final class WidgetRenderContext {
                 Mth.ceil(finalMaxX - finalMinX),
                 Mth.ceil(finalMaxY - finalMinY)
         );
-        this.scissorStack.push(scissorRect);
+        scissorStack.push(scissorRect);
     }
 
     public void disableScissor() {
-        this.scissorStack.pop();
+        scissorStack.pop();
     }
 
     public List<SubmittedCommand> getCommands() {
-        return Collections.unmodifiableList(this.submittedCommands);
+        return Collections.unmodifiableList(submittedCommands);
     }
 
     public float getAccumulatedAlpha() {
-        return this.alphaStack.peek();
+        var alpha =  alphaStack.peek();
+        return alpha == null ? 1 : alpha;
     }
 
     public void pushAlpha(float alpha) {
-        this.alphaStack.push(this.getAccumulatedAlpha() * alpha);
+        alphaStack.push(getAccumulatedAlpha() * alpha);
     }
 
     public void popAlpha() {
-        if (this.alphaStack.size() > 1)
-            this.alphaStack.pop();
+        if (alphaStack.size() > 1) alphaStack.pop();
     }
 
     public void clear() {
-        this.submittedCommands.clear();
+        submittedCommands.clear();
     }
 
     public static final class ScissorStack {
         private final Deque<ScissorRect> stack = new ArrayDeque<>();
 
         public void push(ScissorRect scissor) {
-            var currentScissor = this.stack.peekLast();
+            var currentScissor = stack.peekLast();
             if (currentScissor != null) {
                 var intersection = scissor.intersection(currentScissor);
-                this.stack.addLast(Objects.requireNonNullElseGet(intersection, ScissorRect::empty));
+                stack.addLast(Objects.requireNonNullElseGet(intersection, ScissorRect::empty));
             } else {
-                this.stack.addLast(scissor);
+                stack.addLast(scissor);
             }
         }
 
         public void pop() {
-            if (this.stack.isEmpty())
+            if (stack.isEmpty())
                 throw new IllegalStateException("Scissor stack underflow");
 
-            this.stack.removeLast();
+            stack.removeLast();
         }
 
         @Nullable
         public ScissorRect peek() {
-            return this.stack.peekLast();
+            return stack.peekLast();
         }
 
         public boolean containsPoint(int x, int y) {
-            if (this.stack.isEmpty())
+            if (stack.isEmpty())
                 return true;
 
-            return this.stack.peekLast().containsPoint(x, y);
+            return stack.peekLast().containsPoint(x, y);
         }
     }
 }
