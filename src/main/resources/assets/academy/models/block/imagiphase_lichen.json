@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/glow_lichen",
+  "textures": {
+    "particle": "academy:block/imagiphase_lichen",
+    "glow_lichen": "academy:block/imagiphase_lichen"
+  }
+}

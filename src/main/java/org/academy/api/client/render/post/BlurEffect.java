@@ -18,10 +18,10 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.Render;
 import org.joml.Vector2f;
+import org.lwjgl.system.MemoryStack;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
 
@@ -68,7 +68,7 @@ public final class BlurEffect {
             fullscreenQuadVertexBuffer.close();
     }
 
-    public static void apply(Consumer<RenderPass> maskDrawer) {
+    public static void apply(Consumer<RenderPass> maskDrawer, RenderTarget samplerTarget, RenderTarget outputTarget) {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
         {
@@ -76,30 +76,27 @@ public final class BlurEffect {
                     var renderPass = commandEncoder.createRenderPass(
                             () -> "Blur Mask Pass",
                             maskInputRenderTarget.getColorTextureView(),
-                            OptionalInt.of(0),
-                            maskInputRenderTarget.getDepthTextureView(),
-                            OptionalDouble.of(1.0)
+                            OptionalInt.of(0)
                     )
             ) {
                 maskDrawer.accept(renderPass);
             }
         }
 
-        var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
         var blurUboSlice = blurUniformsBuffer.slice();
 
         {
             writeBlurUniforms(new Vector2f((float) swapTarget.width, (float) swapTarget.height), 1.0F, 0.0F);
-            var samplers = Map.of("DiffuseSampler", mainRenderTarget.getColorTextureView(), "MaskSampler", maskInputRenderTarget.getColorTextureView());
+            var samplers = Map.of("DiffuseSampler", samplerTarget.getColorTextureView(), "MaskSampler", maskInputRenderTarget.getColorTextureView());
             var uniforms = Map.of("BlurInfo", blurUboSlice);
-            runBlitPass(swapTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms);
+            runBlitPass(swapTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms, true);
         }
 
         {
-            writeBlurUniforms(new Vector2f((float) mainRenderTarget.width, (float) mainRenderTarget.height), 0.0F, 1.0F);
+            writeBlurUniforms(new Vector2f((float) samplerTarget.width, (float) samplerTarget.height), 0.0F, 1.0F);
             var samplers = Map.of("DiffuseSampler", swapTarget.getColorTextureView(), "MaskSampler", maskInputRenderTarget.getColorTextureView());
             var uniforms = Map.of("BlurInfo", blurUboSlice);
-            runBlitPass(mainRenderTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms);
+            runBlitPass(outputTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms, false);
         }
     }
 
@@ -133,7 +130,7 @@ public final class BlurEffect {
     }
 
     private static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY) {
-        try (var memoryStack = org.lwjgl.system.MemoryStack.stackPush()) {
+        try (var memoryStack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(memoryStack, BlurUniforms.UBO_SIZE);
             new BlurUniforms(outSize, new Vector2f(dirX, dirY), blurRadius).write(builder);
             var byteBuffer = builder.get();
@@ -141,10 +138,12 @@ public final class BlurEffect {
         }
     }
 
-    private static void runBlitPass(RenderTarget target, RenderPipeline pipeline, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms) {
+    private static void runBlitPass(RenderTarget target, RenderPipeline pipeline, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms, boolean clearColor) {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
-        commandEncoder.clearColorTexture(target.getColorTexture(), 0);
+        if (clearColor) {
+            commandEncoder.clearColorTexture(target.getColorTexture(), 0);
+        }
 
         try (
                 var renderPass = commandEncoder.createRenderPass(

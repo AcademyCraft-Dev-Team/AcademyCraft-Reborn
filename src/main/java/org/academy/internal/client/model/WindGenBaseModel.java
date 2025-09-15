@@ -99,11 +99,15 @@ public class WindGenBaseModel extends Model {
         shut.apply(windGenBaseBlockEntity.shutdownState, windGenBaseBlockEntity.ticks + partialTick);
     }
 
+    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay, int upPackedLight) {
+        render(poseStack, bufferSource, packedLight, packedOverlay, upPackedLight);
+    }
+
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         all.render(poseStack, bufferSource.getBuffer(BASE_RENDER_TYPE), packedLight, packedOverlay);
         poseStack.pushPose();
-        poseStack.translate(0, -0.5f, 0);
-        poseStack.scale(1, -31f / 16f, 1);
+        poseStack.translate(0, 0.5f, 0);
+        poseStack.scale(1, -15f / 16f, 1);
         renderPole(poseStack, bufferSource, packedLight, packedOverlay);
         poseStack.popPose();
     }

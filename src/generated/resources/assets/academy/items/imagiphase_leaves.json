@@ -1,12 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "academy:block/imagiphase_leaves",
-    "tints": [
-      {
-        "type": "minecraft:constant",
-        "value": -12012264
-      }
-    ]
+    "model": "academy:block/imagiphase_leaves"
   }
 }

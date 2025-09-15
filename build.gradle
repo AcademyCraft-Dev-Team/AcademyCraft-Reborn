@@ -15,8 +15,12 @@ repositories {
 base {
     archivesName = mod_id + "-" + minecraft_version
 }
+
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+        vendor = JvmVendorSpec.JETBRAINS
+    }
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

@@ -26,10 +26,6 @@ public class ClientUtil {
         return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks() / animationDuration;
     }
 
-    public static float magicAnimationFactor(float animationDuration) {
-        return 1 - (float) Math.exp(-Math.log(20) * Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks() / 20 / animationDuration);
-    }
-
     public static void playDownSound() {
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.SELECT, 1.0F));
     }

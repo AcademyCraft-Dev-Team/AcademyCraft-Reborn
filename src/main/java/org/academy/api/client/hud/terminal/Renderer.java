@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
-public class Renderer implements AutoCloseable {
+public final class Renderer implements AutoCloseable {
     private final Config config;
     private final UIManager uiManager;
     private final UIRenderContext internalUIRenderContext;
@@ -105,20 +105,20 @@ public class Renderer implements AutoCloseable {
 
         if (config.enableBlur) {
             updateAndUploadMaskGeometry();
-
+            var mainTarget = mc.getMainRenderTarget();
             if (maskIndexCount > 0 && maskVertexBuffer != null && maskIndexBuffer != null) {
                 var uniforms = Map.of(
                         "Projection", terminalTransformUbo.slice(),
                         "DynamicTransforms", dynamicTransformsSlice
                 );
                 BlurEffect.apply(renderPass -> {
-                    renderPass.setPipeline(Render.RenderPipelines.POS_COLOR);
+                    renderPass.setPipeline(Render.RenderPipelines.MASK_BRUSH);
                     uniforms.forEach(renderPass::setUniform);
                     renderPass.setVertexBuffer(0, maskVertexBuffer);
                     var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
                     renderPass.setIndexBuffer(maskIndexBuffer, sequentialBuffer.type());
                     renderPass.drawIndexed(0, 0, maskIndexCount, 1);
-                });
+                }, mainTarget, mainTarget);
             }
         }
 

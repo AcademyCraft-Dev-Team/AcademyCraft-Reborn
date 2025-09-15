@@ -7,7 +7,6 @@ import net.minecraft.client.data.models.model.*;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.level.FoliageColor;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
 import org.academy.internal.client.renderer.special.WindGenBaseSpecialRenderer;
@@ -42,20 +41,20 @@ public class AcademyCraftModelProvider extends ModelProvider {
 
         blockModels.createRotatedVariantBlock(Blocks.ABILITY_DEVELOPER.get());
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_PLASMA.get());
-        blockModels.createTrivialCube(Blocks.IMAGIPHASE_VEGETATION.get());
-        blockModels.createTrivialCube(Blocks.IMAGIPHASE_LICHEN.get());
+        blockModels.createTrivialBlock(Blocks.IMAGIPHASE_VEGETATION.get(), TexturedModel.COLUMN);
+        blockModels.createMultiface(Blocks.IMAGIPHASE_LICHEN.get());
         blockModels.createTrivialCube(Blocks.OMNI_CRAFTING_TABLE.get());
         blockModels.createTrivialBlock(Blocks.CAT_ENGINE.get(), createDefault(
                 block ->
                         new TextureMapping().put(
-                                TextureSlot.ALL, academy("cat_engine").withPrefix("block/")
+                                TextureSlot.ALL, academy("cat_engine").withPrefix("item/")
                         ), ModelTemplates.CUBE_ALL)
         );
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_AMETHYST_BLOCK.get());
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_METAL_BLOCK.get());
         blockModels.createAxisAlignedPillarBlock(Blocks.IMAGIPHASE_LOG.get(), TexturedModel.COLUMN);
 
-        blockModels.createTintedLeaves(Blocks.IMAGIPHASE_LEAVES.get(), TexturedModel.LEAVES, FoliageColor.FOLIAGE_DEFAULT);
+        blockModels.createTrivialBlock(Blocks.IMAGIPHASE_LEAVES.get(), TexturedModel.LEAVES);
 
         itemModels.generateFlatItem(Items.ICON.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.CAT_ENGINE.get(), ModelTemplates.FLAT_ITEM);

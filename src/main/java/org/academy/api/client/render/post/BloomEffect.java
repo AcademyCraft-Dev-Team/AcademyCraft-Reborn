@@ -142,7 +142,7 @@ public final class BloomEffect {
         var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
         var blurUboSlice = blurUniformsBuffer.slice();
 
-        PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Collections.emptyMap(), false);
+        PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Collections.emptyMap(), false);
 
         writeBlurUniforms(new Vector2f(SWAP2A.width, SWAP2A.height), 1.0f, 0.0f, 4);
         PostEffect.runBlitPass(SWAP2A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
@@ -164,12 +164,13 @@ public final class BloomEffect {
 
         writeBloomUniforms(1.0f, 1.0f);
         var blendSamplers = Map.of(
-                "DiffuseSampler", MAIN_SCENE.getColorTextureView(),
+                "DiffuseSampler", mainRenderTarget.getColorTextureView(),
                 "BlurTexture1", SWAP2B.getColorTextureView(),
                 "BlurTexture2", SWAP4B.getColorTextureView(),
                 "BlurTexture3", SWAP8B.getColorTextureView()
         );
-        PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLOOM_BLEND, blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()), false);
+        PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLOOM_BLEND, blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()), false);
+        PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND, Map.of("DiffuseSampler", mainRenderTarget.getColorTextureView()), Collections.emptyMap(), false);
         RenderSystem.getDevice().createCommandEncoder().clearColorTexture(INPUT.getColorTexture(), 0);
     }
 
