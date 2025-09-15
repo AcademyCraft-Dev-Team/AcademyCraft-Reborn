@@ -37,10 +37,21 @@ public final class Render {
                 .withSampler("DiffuseSampler")
                 .withSampler("MaskSampler")
                 .withUniform("BlurInfo", UniformType.UNIFORM_BUFFER)
-                .withoutBlend()
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withBlend(BlendFunction.TRANSLUCENT)
                 .withDepthWrite(false)
                 .withCull(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                .build();
+
+        public static final RenderPipeline MASK_BRUSH = RenderPipeline.builder(MATRICES_PROJECTION_SNIPPET)
+                .withLocation(academy("pipeline/pos_color"))
+                .withVertexShader(Resource.Shaders.POS_COLOR)
+                .withFragmentShader(Resource.Shaders.POS_COLOR)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthWrite(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITH_BLEND = builder(BLIT_SCREEN_SNIPPET)

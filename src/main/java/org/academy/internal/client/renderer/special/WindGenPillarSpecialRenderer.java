@@ -1,7 +1,6 @@
 package org.academy.internal.client.renderer.special;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -23,7 +22,7 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
     public void render(ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, boolean hasFoilType) {
         poseStack.pushPose();
         poseStack.translate(0.5f, 0, 0.5f);
-        poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
+        poseStack.scale(1, -1, 1);
         WindGenBaseBlockEntityRenderer.MODEL.renderPole(poseStack, bufferSource, packedLight, packedOverlay);
         poseStack.popPose();
     }

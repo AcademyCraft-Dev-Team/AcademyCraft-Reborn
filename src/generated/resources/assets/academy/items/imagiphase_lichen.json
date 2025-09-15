@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "academy:block/imagiphase_lichen"
+    "model": "academy:item/imagiphase_lichen"
   }
 }

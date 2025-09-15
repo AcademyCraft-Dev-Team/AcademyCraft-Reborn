@@ -36,6 +36,13 @@ public class WindGenTopBlockEntityRenderer implements BlockEntityRenderer<WindGe
             poseStack.translate(0, 0, 0.25f);
 
             MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
+            poseStack.pushPose();
+            poseStack.translate(0, 1.5f, -0.25f);
+            poseStack.scale(1, -1f / 16f, 1);
+            poseStack.mulPose(Axis.XP.rotationDegrees(180));
+
+            WindGenBaseBlockEntityRenderer.MODEL.renderPole(poseStack, bufferSource, packedLight, packedOverlay);
+            poseStack.popPose();
 
             if (blockEntity.hasFan) {
                 poseStack.pushPose();
