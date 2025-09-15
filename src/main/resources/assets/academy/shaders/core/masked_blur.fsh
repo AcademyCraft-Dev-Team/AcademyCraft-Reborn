@@ -15,13 +15,13 @@ out vec4 fragColor;
 
 void main() {
     if (radius < 0.1) {
-        fragColor = texture(DiffuseSampler, texCoord);
+        fragColor = vec4(0.0, 0.0, 0.0, 0.0);
         return;
     }
 
     float maskAlpha = texture(MaskSampler, texCoord).a;
     if (maskAlpha == 0.0) {
-        fragColor = texture(DiffuseSampler, texCoord);
+        fragColor = vec4(0.0, 0.0, 0.0, 0.0);
         return;
     }
 

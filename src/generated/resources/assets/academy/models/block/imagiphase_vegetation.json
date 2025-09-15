@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube_column",
   "textures": {
-    "all": "academy:block/imagiphase_vegetation"
+    "end": "academy:block/imagiphase_vegetation_top",
+    "side": "academy:block/imagiphase_vegetation_side"
   }
 }

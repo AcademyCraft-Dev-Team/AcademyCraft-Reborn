@@ -56,7 +56,14 @@ public class WindGenBaseBlockEntityRenderer implements BlockEntityRenderer<WindG
                 poseStack.popPose();
             }
             poseStack.popPose();
+        } else {
+            poseStack.pushPose();
+            poseStack.translate(0.5f, 1, 0.5f);
+            poseStack.scale(1, -1, 1);
+            poseStack.mulPose(Axis.XP.rotationDegrees(180));
 
+            MODEL.renderPole(poseStack, bufferSource, packedLight, packedOverlay);
+            poseStack.popPose();
         }
         poseStack.popPose();
     }

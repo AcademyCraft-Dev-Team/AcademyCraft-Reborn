@@ -36,14 +36,22 @@ public abstract class MixinLevelRenderer {
 
     @Inject(method = "renderHitOutline", at = @At("HEAD"), cancellable = true)
     private void renderHitOutline(PoseStack poseStack, VertexConsumer buffer, Entity entity, double camX, double camY, double camZ, BlockPos pos, BlockState state, int color, CallbackInfo ci) {
-        if (state.getBlock() == Blocks.WIND_GEN_PILLAR.get() || (state.getBlock() == Blocks.WIND_GEN_BASE.get() && state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT)) {
+        var pillar = state.getBlock() == Blocks.WIND_GEN_PILLAR.get();
+        var base = state.getBlock() == Blocks.WIND_GEN_BASE.get();
+        var top = state.getBlock() == Blocks.WIND_GEN_TOP.get();
+        if (pillar || base || top) {
             poseStack.pushPose();
-            poseStack.translate(pos.getX() - camX, pos.getY() - camY, pos.getZ() - camZ);
-            poseStack.translate(0.5f, 0, 0.5f);
-            poseStack.rotateAround(Axis.YN.rotationDegrees(22.5f), 0, 0, 0);
+            poseStack.translate(pos.getX() - camX + 0.5f, pos.getY() - camY, pos.getZ() - camZ + 0.5f);
+            if (top){
+                poseStack.scale(1, 1f / 16f, 1);
+                if (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT) {
+                    poseStack.translate(state.getValue(MultiBlock.FACING).getUnitVec3().scale(-1));
+                }
+            }
+            poseStack.mulPose(Axis.YN.rotationDegrees(22.5f));
             CylinderRenderer.renderCylinderWireframe(poseStack, buffer, WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER, ARGB.red(color), ARGB.green(color), ARGB.blue(color), ARGB.alpha(color));
             poseStack.popPose();
-            ci.cancel();
+            if (pillar) ci.cancel();
         }
     }
 }

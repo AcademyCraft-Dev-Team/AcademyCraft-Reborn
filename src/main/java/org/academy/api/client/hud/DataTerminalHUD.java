@@ -275,14 +275,6 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
                         "Projection", terminalTransformUbo.slice(),
                         "DynamicTransforms", dynamicTransformsSlice
                 );
-                BlurEffect.apply(renderPass -> {
-                    renderPass.setPipeline(Render.RenderPipelines.POS_COLOR);
-                    uniforms.forEach(renderPass::setUniform);
-                    renderPass.setVertexBuffer(0, maskVertexBuffer);
-                    var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-                    renderPass.setIndexBuffer(maskIndexBuffer, sequentialBuffer.type());
-                    renderPass.drawIndexed(0, 0, maskIndexCount, 1);
-                });
             }
         }
 
