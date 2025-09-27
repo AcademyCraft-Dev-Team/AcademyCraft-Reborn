@@ -16,6 +16,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 
@@ -130,7 +131,7 @@ public final class AcademyCraftCommand {
             learnedSkills.clear();
             var playerData = AbilitySystemServer.getPlayerData(playerUuid);
             if (playerData != null) playerData.markDirty();
-            AbilitySystemServer.schedulePlayerSync(playerUuid, AbilitySystemServer.SyncType.SKILLS);
+            AbilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_LIST);
         }
 
         context.getSource().sendSuccess(() -> Component.literal("Ability category set to: " + categoryResourceLocation + ". All previous skills have been cleared."), true);

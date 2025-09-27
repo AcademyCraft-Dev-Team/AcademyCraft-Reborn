@@ -31,10 +31,9 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.annotation.PacketTarget;
+import org.academy.api.common.network.packet.PacketType;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -123,7 +122,7 @@ public final class SelfTeleport extends Skill {
                 Vec3 finalTargetPos = currentContext.currentRenderPos;
                 currentContext.cleanup();
                 if (ClientUtil.hasScreen()) return;
-                AcademyCraftClient.sendPacket(new C2SPacket(new SelfTeleportPacket(finalTargetPos)));
+                AcademyCraftClient.sendPacket(new SelfTeleportPacket(finalTargetPos));
             }
         }
 

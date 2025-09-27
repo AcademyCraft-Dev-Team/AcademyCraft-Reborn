@@ -1,6 +1,6 @@
 package org.academy.api.common.util;
 
-import net.minecraft.client.Minecraft;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.academy.api.common.vanilla.EnvType;
 import org.academy.api.common.vanilla.ThreadType;
 
@@ -8,16 +8,15 @@ public class GameUtil {
     private GameUtil() {
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static EnvType getEnvType() {
-        try {
-            Minecraft.class.getClass();
-            return EnvType.CLIENT;
-        } catch (Throwable ignored) {
-            return EnvType.DEDICATED_SERVER;
-        }
+        return FMLEnvironment.dist.isClient() ? EnvType.CLIENT : EnvType.DEDICATED_SERVER;
     }
 
+    /**
+     * 只用于区分 CS 喵
+     * 调用时小心点喵
+     * 其他线程请 catch 处理喵
+     */
     public static ThreadType getThreadType() {
         var thread = Thread.currentThread();
         var threadName = thread.getName();

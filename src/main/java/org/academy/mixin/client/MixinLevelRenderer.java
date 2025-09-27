@@ -51,7 +51,7 @@ public abstract class MixinLevelRenderer {
             poseStack.mulPose(Axis.YN.rotationDegrees(22.5f));
             CylinderRenderer.renderCylinderWireframe(poseStack, buffer, WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER, ARGB.red(color), ARGB.green(color), ARGB.blue(color), ARGB.alpha(color));
             poseStack.popPose();
-            if (pillar) ci.cancel();
+            if (pillar || (base && (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT))) ci.cancel();
         }
     }
 }

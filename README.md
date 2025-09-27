@@ -39,10 +39,9 @@ If you are using IntelliJ IDEA, I recommend adding or replacing the following se
 
 ```xml
   <component name="EntryPointsManager">
-    <list size="5">
-      <item index="2" class="java.lang.String" itemvalue="org.academy.api.common.network.ReceiverConstructor" />
-      <item index="3" class="java.lang.String" itemvalue="org.academy.api.common.network.SubscribePacket" />
-      <item index="4" class="java.lang.String" itemvalue="org.academy.api.common.network.future.HandleFuture" />
+    <list size="2">
+        <item index="0" class="java.lang.String" itemvalue="org.academy.api.common.network.annotation.SubscribePacket" />
+        <item index="1" class="java.lang.String" itemvalue="org.academy.api.common.network.future.annotation.HandleFuture" />
     </list>
-  </component>
+</component>
 ```

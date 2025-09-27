@@ -10,7 +10,8 @@ import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.PlayerSyncPacket;
-import org.academy.api.common.network.PacketType;
+import org.academy.api.common.ability.packet.sync.s2c.*;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.future.packet.FutureRequestPacket;
 import org.academy.api.common.network.future.packet.FutureResponsePacket;
 import org.academy.api.common.registries.Registries;
@@ -29,6 +30,24 @@ public final class PacketTypes {
     public static final DeferredRegister<PacketType<?, ?>> PACKET_TYPES =
             DeferredRegister.create(Registries.Keys.PACKET_TYPES, AcademyCraft.MOD_ID);
 
+    /**
+     * Sync
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncLevelPacket>>
+            SYNC_LEVEL = PACKET_TYPES.register("sync_level",
+            () -> new PacketType<>(SyncLevelPacket.class, SyncLevelPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncSkillsPacket>>
+            SYNC_SKILLS = PACKET_TYPES.register("sync_skills",
+            () -> new PacketType<>(SyncSkillsPacket.class, SyncSkillsPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncAbilityCategoryPacket>>
+            SYNC_ABILITY_CATEGORY = PACKET_TYPES.register("sync_ability_category",
+            () -> new PacketType<>(SyncAbilityCategoryPacket.class, SyncAbilityCategoryPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncComputingPowerPacket>>
+            SYNC_COMPUTING_POWER = PACKET_TYPES.register("sync_computing_power",
+            () -> new PacketType<>(SyncComputingPowerPacket.class, SyncComputingPowerPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncMaxComputingPowerPacket>>
+            SYNC_MAX_COMPUTING_POWER = PACKET_TYPES.register("sync_max_computing_power",
+            () -> new PacketType<>(SyncMaxComputingPowerPacket.class, SyncMaxComputingPowerPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, PlayerSyncPacket>>
             PLAYER_SYNC = PACKET_TYPES.register("player_sync",
             () -> new PacketType<>(PlayerSyncPacket.class, PlayerSyncPacket.CODEC));

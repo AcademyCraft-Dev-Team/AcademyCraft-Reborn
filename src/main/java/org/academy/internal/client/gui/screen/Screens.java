@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.world.entity.player.Inventory;
 import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.SubscribePacket;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;

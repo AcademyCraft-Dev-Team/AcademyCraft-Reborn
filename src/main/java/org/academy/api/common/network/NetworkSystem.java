@@ -3,19 +3,23 @@ package org.academy.api.common.network;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import org.academy.AcademyCraft;
+import org.academy.api.common.network.annotation.PacketTarget;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.asm.IPacketListener;
 import org.academy.api.common.network.asm.PacketListenerFactory;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.common.vanilla.ThreadType;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public final class NetworkSystem {
+    public static volatile boolean debugInfo = false;
     private static final BiMap<Class<? extends Packet<?, ?>>, PacketType<?, ?>> CLASS_TO_TYPE = HashBiMap.create();
+    private static final Map<Class<? extends Packet<?, ?>>, ThreadType> THREAD_TYPE_MAP = new HashMap<>();
 
     private NetworkSystem() {
     }
@@ -23,6 +27,11 @@ public final class NetworkSystem {
     public static void progressRegistry() {
         for (var type : Registries.PACKET_TYPES) {
             CLASS_TO_TYPE.put(type.packetClass(), type);
+            var clazz = type.packetClass();
+            if (clazz.isAnnotationPresent(PacketTarget.class)) {
+                var targetType = clazz.getAnnotation(PacketTarget.class).value();
+                THREAD_TYPE_MAP.put(clazz, targetType);
+            }
         }
     }
 
@@ -76,5 +85,14 @@ public final class NetworkSystem {
         }
 
         return generatedHandlers;
+    }
+
+    /**
+     * 老实说这个报错很烦喵
+     */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public static <P extends Packet<?, ?>> boolean shouldReceive(Class<P> clazz, ThreadType currentThreadType) {
+        var targetType = THREAD_TYPE_MAP.get(clazz);
+        return targetType == null || targetType == currentThreadType;
     }
 }

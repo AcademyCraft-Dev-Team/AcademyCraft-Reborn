@@ -11,7 +11,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 
 @SuppressWarnings("unchecked")
-public class PacketListenerFactory {
+public final class PacketListenerFactory {
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
     private static final String IPACKET_DESCRIPTOR = Type.getDescriptor(Packet.class);
     private static final String STATIC_HANDLER_PARENT_INTERNAL_NAME = Type.getInternalName(StaticPacketListener.class);

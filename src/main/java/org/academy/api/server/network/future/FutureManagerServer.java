@@ -7,7 +7,7 @@ import net.minecraft.network.ServerboundPacketListener;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.SubscribePacket;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.future.AbstractFutureManager;
 import org.academy.api.common.network.future.packet.FutureRequestPacket;
 import org.academy.api.common.network.future.packet.FutureResponsePacket;

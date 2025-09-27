@@ -1,7 +1,6 @@
 package org.academy.api.common.network.packet;
 
 import net.minecraft.network.PacketListener;
-import org.academy.api.common.network.PacketType;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class Packet<T extends PacketListener, P extends Packet<T, P>> {

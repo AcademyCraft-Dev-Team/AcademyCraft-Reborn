@@ -1,6 +1,5 @@
 package org.academy.api.client.ability;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
@@ -10,10 +9,10 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.ExpSyncPacket;
-import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.packet.sync.s2c.*;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.SubscribePacket;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.jetbrains.annotations.Nullable;
@@ -34,7 +33,7 @@ public final class AbilitySystemClient {
     public static AbilityCategory category;
     private static boolean activeHUD = false;
     private static float computingPower;
-    private static float maximumComputingPower;
+    private static float maxComputingPower;
     private static int level;
 
     static {
@@ -69,7 +68,7 @@ public final class AbilitySystemClient {
     }
 
     @SubscribePacket
-    public static void handleExpSync(ExpSyncPacket packet) {
+    public static void handleSync(ExpSyncPacket packet) {
         var skillKey = ResourceLocation.parse(packet.getSkillName());
         var exp = packet.getExp();
         var skill = Registries.SKILLS.get(skillKey);
@@ -77,10 +76,29 @@ public final class AbilitySystemClient {
     }
 
     @SubscribePacket
-    public static void handleSync(PlayerSyncPacket packet) {
+    public static void handleSync(SyncAbilityCategoryPacket packet) {
+        category = packet.getAbilityCategory();
+    }
+
+    @SubscribePacket
+    public static void handleSync(SyncLevelPacket packet) {
         setLevel(packet.getLevel());
-        setMaximumComputingPower(packet.getMaxComputingPower());
-        setComputingPower(packet.getCurrentComputingPower());
+    }
+
+    @SubscribePacket
+    public static void handleSync(SyncComputingPowerPacket packet) {
+        setComputingPower(packet.getComputingPower());
+    }
+
+    @SubscribePacket
+    public static void handleSync(SyncMaxComputingPowerPacket packet) {
+        setMaxComputingPower(packet.getMaxComputingPower());
+    }
+
+    @SubscribePacket
+    public static void handleSync(SyncSkillsPacket packet) {
+        LEARNED_SKILLS.clear();
+        LEARNED_SKILLS.addAll(packet.getSkills());
     }
 
     public static float getSkillExp(Skill skill) {
@@ -96,15 +114,15 @@ public final class AbilitySystemClient {
     }
 
     public static void setComputingPower(float computingPower) {
-        Minecraft.getInstance().execute(() -> AbilitySystemClient.computingPower = computingPower);
+        AbilitySystemClient.computingPower = computingPower;
     }
 
-    public static float getMaximumComputingPower() {
-        return maximumComputingPower;
+    public static float getMaxComputingPower() {
+        return maxComputingPower;
     }
 
-    public static void setMaximumComputingPower(float maximumComputingPower) {
-        Minecraft.getInstance().execute(() -> AbilitySystemClient.maximumComputingPower = maximumComputingPower);
+    public static void setMaxComputingPower(float maximumComputingPower) {
+        AbilitySystemClient.maxComputingPower = maximumComputingPower;
     }
 
     public static int getLevel() {
@@ -112,7 +130,7 @@ public final class AbilitySystemClient {
     }
 
     public static void setLevel(int level) {
-        Minecraft.getInstance().execute(() -> AbilitySystemClient.level = level);
+        AbilitySystemClient.level = level;
     }
 
     public static boolean isActiveHUD() {
@@ -120,7 +138,7 @@ public final class AbilitySystemClient {
     }
 
     public static void setActiveHUD(boolean activeHUD) {
-        Minecraft.getInstance().execute(() -> AbilitySystemClient.activeHUD = activeHUD);
+        AbilitySystemClient.activeHUD = activeHUD;
     }
 
     public static AbilityCategory getCategory() {

@@ -3,8 +3,8 @@ package org.academy;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.Packet;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -24,6 +24,8 @@ import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.network.NetworkManager;
+import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.packet.Packet;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.particle.ParticleRenderTypes;
@@ -126,10 +128,14 @@ public final class AcademyCraftClient {
         Config.INSTANCE.save();
     }
 
-    public static void sendPacket(Packet<?> packet) {
+    public static void sendPacket(net.minecraft.network.protocol.Packet<?> packet) {
         if (connection != null) {
             connection.send(packet);
         }
+    }
+
+    public static <P extends Packet<ServerGamePacketListenerImpl, P>> void sendPacket(P packet) {
+        sendPacket(new C2SPacket(packet));
     }
 
     public static final class Config {

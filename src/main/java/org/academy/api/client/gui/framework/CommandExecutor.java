@@ -7,6 +7,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -25,7 +26,13 @@ public final class CommandExecutor {
         if (meshesToDraw.isEmpty())
             return;
 
-        this.ensureVertexBufferSizes(meshesToDraw);
+        ensureVertexBufferSizes(meshesToDraw);
+
+        var safeVertexBuffers = new Object2ObjectOpenHashMap<VertexFormat, GpuBuffer>();
+        for (var entry : vertexBuffers.entrySet()) {
+            safeVertexBuffers.put(entry.getKey(), entry.getValue().currentBuffer());
+        }
+
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         var baseVertices = new IntArrayList(meshesToDraw.size());
         var writeOffsets = new Object2IntOpenHashMap<VertexFormat>();
@@ -33,19 +40,18 @@ public final class CommandExecutor {
         for (var meshToDraw : meshesToDraw) {
             var mesh = meshToDraw.mesh();
             var format = mesh.drawState().format();
-            var ringBuffer = this.vertexBuffers.get(format);
             var vertexBufferData = mesh.vertexBuffer();
             var vertexDataSize = vertexBufferData.remaining();
             var currentOffset = writeOffsets.getOrDefault(format, 0);
             var baseVertex = currentOffset / format.getVertexSize();
-            var gpuBuffer = ringBuffer.currentBuffer();
+            var gpuBuffer = safeVertexBuffers.get(format);
 
             commandEncoder.writeToBuffer(gpuBuffer.slice(currentOffset, vertexDataSize), vertexBufferData);
             writeOffsets.put(format, currentOffset + vertexDataSize);
             baseVertices.add(baseVertex);
         }
 
-        var maxIndexCount = this.calculateMaxIndexCount(meshesToDraw);
+        var maxIndexCount = calculateMaxIndexCount(meshesToDraw);
         var sequentialIndexBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
         var indexBuffer = sequentialIndexBuffer.getBuffer(maxIndexCount);
         var indexType = sequentialIndexBuffer.type();
@@ -58,8 +64,9 @@ public final class CommandExecutor {
             for (var i = 0; i < meshesToDraw.size(); i++) {
                 var meshToDraw = meshesToDraw.get(i);
                 var mesh = meshToDraw.mesh();
+                var format = mesh.drawState().format();
                 var baseVertex = baseVertices.getInt(i);
-                var ringBuffer = this.vertexBuffers.get(mesh.drawState().format());
+                var safeBuffer = safeVertexBuffers.get(format);
 
                 {
                     renderPass.setPipeline(meshToDraw.pipeline());
@@ -89,13 +96,17 @@ public final class CommandExecutor {
                 }
 
                 {
-                    renderPass.setVertexBuffer(0, ringBuffer.currentBuffer());
+                    renderPass.setVertexBuffer(0, safeBuffer);
                     renderPass.setIndexBuffer(indexBuffer, indexType);
                     renderPass.drawIndexed(baseVertex, 0, mesh.drawState().indexCount(), 1);
                 }
 
                 meshToDraw.close();
             }
+        }
+
+        for (var ringBuffer : vertexBuffers.values()) {
+            ringBuffer.rotate();
         }
     }
 
@@ -111,7 +122,7 @@ public final class CommandExecutor {
         for (var entry : requiredSizes.object2IntEntrySet()) {
             var format = entry.getKey();
             var requiredSize = entry.getIntValue();
-            var ringBuffer = this.vertexBuffers.get(format);
+            var ringBuffer = vertexBuffers.get(format);
 
             if (ringBuffer == null || ringBuffer.size() < requiredSize) {
                 if (ringBuffer != null) {
@@ -119,7 +130,7 @@ public final class CommandExecutor {
                 }
                 var usage = GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_WRITE;
                 var newBuffer = new MappableRingBuffer(() -> "AC_UI_VB_" + format.toString(), usage, requiredSize);
-                this.vertexBuffers.put(format, newBuffer);
+                vertexBuffers.put(format, newBuffer);
             }
         }
     }

@@ -1,11 +1,17 @@
 package org.academy;
 
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.academy.api.common.network.NetworkManager;
+import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.network.future.FutureManagerServer;
 import org.academy.api.server.wireless.WirelessManager;
@@ -91,5 +97,17 @@ public final class AcademyCraftServer {
         if (serverConfig != null) {
             serverConfig.save();
         }
+    }
+
+    public static <P extends Packet<ClientGamePacketListener, P>> void sendPacket(ServerPlayer player, P packet) {
+        player.connection.send(new S2CPacket(packet));
+    }
+
+    public static <P extends Packet<ClientGamePacketListener, P>> void sendPacket(Connection connection, P packet) {
+        connection.send(new S2CPacket(packet));
+    }
+
+    public static <P extends Packet<ClientGamePacketListener, P>> void sendPacket(ServerGamePacketListenerImpl listener, P packet) {
+        listener.send(new S2CPacket(packet));
     }
 }
