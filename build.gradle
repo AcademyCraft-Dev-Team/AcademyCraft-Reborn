@@ -8,10 +8,6 @@ plugins {
 version = mod_version
 group = mod_group_id
 
-repositories {
-    mavenLocal()
-}
-
 base {
     archivesName = mod_id + "-" + minecraft_version
 }
@@ -163,6 +159,13 @@ repositories {
             includeGroup "dev.kosmx.player-anim"
         }
     }
+    maven {
+        name 'IzzelAliz Maven'
+        url 'https://maven.izzel.io/releases/'
+        content {
+            includeGroup "icyllis.modernui"
+        }
+    }
 }
 
 dependencies {
@@ -173,6 +176,29 @@ dependencies {
     implementation "maven.modrinth:iris:1.9.1+1.21.7-neoforge"
     runtimeOnly "maven.modrinth:sodium-extra:mc1.21.6-0.6.6+neoforge"
     runtimeOnly "maven.modrinth:lithium:mc1.21.8-0.18.0-neoforge"
+
+    // Modern UI
+    implementation("icyllis.modernui:ModernUI-NeoForge:${minecraft_version}-${modernui_version}.+")
+    additionalRuntimeClasspath(compileOnly("icyllis.modernui:ModernUI-Core:${modernui_version}")) {
+        exclude group: "org.slf4j", module: "slf4j-api"
+        exclude group: "org.apache.logging.log4j", module: "log4j-core"
+        exclude group: "org.apache.logging.log4j", module: "log4j-api"
+        exclude group: "com.google.code.findbugs", module: "jsr305"
+        exclude group: "org.jetbrains", module: "annotations"
+        exclude group: "com.ibm.icu", module: "icu4j"
+        exclude group: "it.unimi.dsi", module: "fastutil"
+    }
+    // Modern UI core extensions
+    // Markdown (<=3.11.1) / Markflow (>=3.12.0) is required, others are optional
+    additionalRuntimeClasspath(compileOnly("icyllis.modernui:ModernUI-Markflow:${modernui_version}")) {
+        exclude group: "org.slf4j", module: "slf4j-api"
+        exclude group: "org.apache.logging.log4j", module: "log4j-core"
+        exclude group: "org.apache.logging.log4j", module: "log4j-api"
+        exclude group: "com.google.code.findbugs", module: "jsr305"
+        exclude group: "org.jetbrains", module: "annotations"
+        exclude group: "com.ibm.icu", module: "icu4j"
+        exclude group: "it.unimi.dsi", module: "fastutil"
+    }
 }
 
 // Example configuration to allow publishing using the maven-publish plugin

@@ -2,7 +2,6 @@ package org.academy.internal.server.ability;
 
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.ability.level0.Level0;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 
@@ -28,7 +27,8 @@ public final class PlayerDataManager {
         AcademyCraft.LOGGER.debug("Creating new data entry for player {}", uuid);
         Player newPlayerData = new Player();
         newPlayerData.setLevel(0);
-     //   newPlayerData.setAbilityCategory(Level0.INSTANCE);
+        newPlayerData.setComputingPower(100);
+        newPlayerData.setMaxComputingPower(100);
         newPlayerData.markDirty();
         return newPlayerData;
     }

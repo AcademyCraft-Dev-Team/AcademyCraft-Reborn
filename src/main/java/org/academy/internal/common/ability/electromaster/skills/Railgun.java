@@ -33,10 +33,9 @@ import org.academy.api.client.renderer.ArcStyles;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.annotation.PacketTarget;
+import org.academy.api.common.network.packet.PacketType;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.LevelUtil;
@@ -59,7 +58,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
-public class Railgun extends Skill {
+public final class Railgun extends Skill {
     public static final long MAX_CHARGE_TIME_NANO = 2_000_000_000L;
 
     public Railgun() {
@@ -110,7 +109,7 @@ public class Railgun extends Skill {
                 if (hasCoin) {
                     currentContext = new Context(player);
                     AbilitySystemClient.registerContext(currentContext);
-                    AcademyCraftClient.sendPacket(new C2SPacket(StartChargePacket.INSTANCE));
+                    AcademyCraftClient.sendPacket(StartChargePacket.INSTANCE);
                 }
             }
         }
@@ -159,7 +158,7 @@ public class Railgun extends Skill {
             }
 
             public void release() {
-                AcademyCraftClient.sendPacket(new C2SPacket(ShootPacket.INSTANCE));
+                AcademyCraftClient.sendPacket(ShootPacket.INSTANCE);
                 cleanup();
             }
 

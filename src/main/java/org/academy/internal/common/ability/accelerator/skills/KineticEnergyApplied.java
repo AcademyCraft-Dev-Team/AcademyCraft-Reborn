@@ -16,10 +16,9 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.annotation.PacketTarget;
+import org.academy.api.common.network.packet.PacketType;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -68,7 +67,7 @@ public class KineticEnergyApplied extends Skill {
         public static KineticEnergyAppliedConfig CONFIG = new KineticEnergyAppliedConfig();
 
         public static void toggle() {
-            AcademyCraftClient.sendPacket(new C2SPacket(TogglePacket.INSTANCE));
+            AcademyCraftClient.sendPacket(TogglePacket.INSTANCE);
         }
 
         public static class KineticEnergyAppliedConfig extends KeyBindingConfig {

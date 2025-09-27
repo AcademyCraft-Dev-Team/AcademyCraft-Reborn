@@ -1,26 +1,16 @@
 package org.academy.internal.client.particle;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.particle.ParticleRenderType;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.renderer.texture.TextureManager;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.SubscribePacket;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 

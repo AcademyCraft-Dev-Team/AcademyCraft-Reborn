@@ -8,13 +8,12 @@ import net.minecraft.network.ServerboundPacketListener;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.SubscribePacket;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.future.AbstractFutureManager;
 import org.academy.api.common.network.future.packet.FutureRequestPacket;
 import org.academy.api.common.network.future.packet.FutureResponsePacket;
 import org.academy.api.common.network.future.packet.RequestPacket;
 import org.academy.api.common.network.future.packet.ResponsePacket;
-import org.academy.api.common.network.packet.C2SPacket;
 
 import java.util.function.Consumer;
 
@@ -39,7 +38,7 @@ public class FutureManagerClient extends AbstractFutureManager {
         buffer.readBytes(payload);
 
         var packet = new FutureRequestPacket<ServerGamePacketListenerImpl>(futureId, requestTypeId, payload);
-        AcademyCraftClient.sendPacket(new C2SPacket(packet));
+        AcademyCraftClient.sendPacket(packet);
     }
 
     public <
@@ -69,7 +68,7 @@ public class FutureManagerClient extends AbstractFutureManager {
                     var responsePkt = new FutureResponsePacket<ServerGamePacketListenerImpl>(
                             futureRequestPacket.getFutureId(), responseTypeId, payload
                     );
-                    AcademyCraftClient.sendPacket(new C2SPacket(responsePkt));
+                    AcademyCraftClient.sendPacket(responsePkt);
                 }
         );
     }

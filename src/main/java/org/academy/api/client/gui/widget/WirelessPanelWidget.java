@@ -1,23 +1,19 @@
 package org.academy.api.client.gui.widget;
 
-import static org.academy.api.client.Resource.Textures.ICON_CONNECTED;
-import static org.academy.api.client.Resource.Textures.ICON_NODE;
-import static org.academy.api.client.Resource.Textures.ICON_OPEN_WIRELESS_PANEL;
-import static org.academy.api.client.Resource.Textures.ICON_UNCONNECTED;
-import static org.academy.api.client.Resource.Textures.UI_BACKGROUND_LIGHT;
-
-import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.Event;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.framework.Widget;
-import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.ConnectNodePacket;
 import org.academy.api.common.wireless.DisconnectNodePacket;
 import org.academy.api.common.wireless.GetAvailableNodesPacket;
 import org.academy.api.common.wireless.GetCurrentNodePacket;
+
+import java.util.function.Consumer;
+
+import static org.academy.api.client.Resource.Textures.*;
 
 public class WirelessPanelWidget extends PanelWidget {
     public static final float PANEL_WIDTH = 176.0f;
@@ -116,7 +112,7 @@ public class WirelessPanelWidget extends PanelWidget {
 
         if (!isConnected) {
             Consumer<String> connectAction = password -> {
-                AcademyCraftClient.sendPacket(new C2SPacket(new ConnectNodePacket(position, nodeName, password)));
+                AcademyCraftClient.sendPacket(new ConnectNodePacket(position, nodeName, password));
                 requestCurrentNodeStatus();
             };
             var inputBox = new TextBoxWidget(12, 68.0f, 3.0f, 46.0f, 10.0f);
@@ -132,7 +128,7 @@ public class WirelessPanelWidget extends PanelWidget {
             nodeViewPanel.addChild("button", buttonWidget);
         } else if (!isNull) {
             var buttonWidget = new ImageButtonWidget(118.0f, 1.0f, 14.0f, 14.0f, ICON_CONNECTED, () -> {
-                AcademyCraftClient.sendPacket(new C2SPacket(new DisconnectNodePacket(position)));
+                AcademyCraftClient.sendPacket(new DisconnectNodePacket(position));
                 requestCurrentNodeStatus();
             });
             nodeViewPanel.addChild("button", buttonWidget);

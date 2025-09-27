@@ -6,7 +6,7 @@ import net.neoforged.neoforge.registries.RegistryBuilder;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.network.PacketType;
+import org.academy.api.common.network.packet.PacketType;
 
 public final class Registries {
     public static final Registry<AbilityCategory> ABILITY_CATEGORIES = new RegistryBuilder<>(Keys.ABILITY_CATEGORIES).sync(true).create();

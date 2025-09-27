@@ -1,6 +1,7 @@
-package org.academy.api.common.network.packet;
+package org.academy.api.common.network.event;
 
 import net.neoforged.bus.api.Event;
+import org.academy.api.common.network.packet.C2SPacket;
 
 public final class C2SPacketEvent extends Event {
     private final C2SPacket packet;

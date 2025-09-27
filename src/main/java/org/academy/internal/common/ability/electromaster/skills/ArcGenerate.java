@@ -13,10 +13,9 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.annotation.PacketTarget;
+import org.academy.api.common.network.packet.PacketType;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.vanilla.ThreadType;
@@ -64,7 +63,7 @@ public final class ArcGenerate extends Skill {
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
-            AcademyCraftClient.sendPacket(new C2SPacket(GeneratePacket.INSTANCE));
+            AcademyCraftClient.sendPacket(GeneratePacket.INSTANCE);
         }
 
         public static class ArcGenerateConfig extends KeyBindingConfig {

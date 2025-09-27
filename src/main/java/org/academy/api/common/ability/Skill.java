@@ -1,8 +1,13 @@
 package org.academy.api.common.ability;
 
 import com.google.common.collect.ImmutableSet;
+import com.mojang.serialization.Codec;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.Util;
 import net.minecraft.locale.Language;
+import net.minecraft.network.VarInt;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -11,15 +16,34 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.server.world.level.storage.Player;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public abstract class Skill {
+    public static final Codec<Skill> CODEC =
+            Codec.INT.xmap(Registries.SKILLS::byId, Registries.SKILLS::getId);
+    public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = new StreamCodec<>() {
+        @Override
+        public Skill decode(ByteBuf buffer) {
+            return Registries.SKILLS.byIdOrThrow(VarInt.read(buffer));
+        }
+
+        @Override
+        public void encode(ByteBuf buffer, Skill value) {
+            VarInt.write(buffer, Registries.SKILLS.getId(value));
+        }
+    };
+    public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
+            (StreamCodec.CodecOperation<ByteBuf, Skill, Set<Skill>>)
+            codec -> ByteBufCodecs.collection(HashSet::new, codec)
+    );
+
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
     private final AbilityCategory category;
-    private Set<Skill> dependencies;
+    private Set<Skill> dependencies = new HashSet<>();
 
     protected Skill(Builder builder) {
         recommendedLevel = builder.recommendedLevel;
@@ -65,7 +89,6 @@ public abstract class Skill {
         };
     }
 
-    @NotNull
     public ResourceLocation getKey() {
         ResourceLocation key = Registries.SKILLS.getKey(this);
         if (key == null) {
@@ -74,22 +97,18 @@ public abstract class Skill {
         return key;
     }
 
-    @NotNull
     public String getKeyString() {
         return getKey().toString();
     }
 
-    @NotNull
     public String getDescriptionId() {
         return Util.makeDescriptionId("skill", getKey());
     }
 
-    @NotNull
     public String getTranslatedName() {
         return Language.getInstance().getOrDefault(getDescriptionId());
     }
 
-    @NotNull
     public String getKeyBindingKeyName(String name) {
         var key = getKey();
         var skillName = Util.makeDescriptionId("key", key);

@@ -217,12 +217,12 @@ public final class StormWingEffectRenderer implements EffectRenderer {
 
     @Override
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, PlayerRenderState renderState, float yRot, float xRot) {
-        if (IrisCompat.isShadowRendererActive() || !renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
+        if ( !renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
 
         poseStack.pushPose();
         poseStack.mulPose(BASE_MATRIX);
 
-        var vertexConsumer = PostEffect.BUFFER_SOURCE_PRE.getBuffer(RENDER_TYPE);
+        var vertexConsumer = bufferSource.getBuffer(RENDER_TYPE);
 
         var time = renderState.ageInTicks;
 
