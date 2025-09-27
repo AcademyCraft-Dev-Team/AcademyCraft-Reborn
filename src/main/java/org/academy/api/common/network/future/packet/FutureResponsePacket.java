@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.PacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import org.academy.api.common.network.PacketType;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.ApiStatus;
 

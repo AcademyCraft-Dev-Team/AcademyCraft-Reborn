@@ -14,7 +14,6 @@ import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ScreenAnimationUtil;
-import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.wireless.SetNodeNamePacket;
 import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
@@ -170,7 +169,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 var nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
                 nameTextBox.setWhenEnter(s -> {
                     if (this.wirelessNodeBlockEntity != null) {
-                        AcademyCraftClient.sendPacket(new C2SPacket(new SetNodeNamePacket(this.wirelessNodeBlockEntity.getBlockPos(), s)));
+                        AcademyCraftClient.sendPacket(new SetNodeNamePacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
                     }
                 });
                 infoTextArea.addChild("label_name_text_box", nameTextBox);
@@ -190,7 +189,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 var passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
                 passTextBox.setWhenEnter(s -> {
                     if (this.wirelessNodeBlockEntity != null) {
-                        AcademyCraftClient.sendPacket(new C2SPacket(new SetNodePassPacket(this.wirelessNodeBlockEntity.getBlockPos(), s)));
+                        AcademyCraftClient.sendPacket(new SetNodePassPacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
                     }
                 });
                 infoTextArea.addChild("label_pass_text_box", passTextBox);

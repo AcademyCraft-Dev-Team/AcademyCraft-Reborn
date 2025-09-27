@@ -35,10 +35,9 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.SubscribePacket;
-import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.annotation.PacketTarget;
+import org.academy.api.common.network.packet.PacketType;
+import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.vanilla.ThreadType;
@@ -158,7 +157,7 @@ public final class VectorAccel extends Skill {
             public void release() {
                 if (released) return;
                 released = true;
-                AcademyCraftClient.sendPacket(new C2SPacket(new DashPacket(chargeRatio, lastCalculatedDirection)));
+                AcademyCraftClient.sendPacket(new DashPacket(chargeRatio, lastCalculatedDirection));
                 cleanup();
             }
 

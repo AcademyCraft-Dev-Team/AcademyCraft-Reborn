@@ -163,8 +163,9 @@ public final class HUDManager implements IAnimationScreen {
 
         {
             var computingPower = AbilitySystemClient.getComputingPower();
-            var maximumComputingPower = AbilitySystemClient.getMaximumComputingPower();
-            var progress = (computingPower > 0.0F && maximumComputingPower > 0.0F) ? (computingPower / maximumComputingPower) : 0.0f;
+            var maximumComputingPower = AbilitySystemClient.getMaxComputingPower();
+            var progress =computingPower / maximumComputingPower;
+            if (Float.isNaN(progress) || Float.isInfinite(progress)) progress = 0;
             smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, animFactor);
             if (Float.isNaN(smoothProgress)) {
                 smoothProgress = 0.0f;

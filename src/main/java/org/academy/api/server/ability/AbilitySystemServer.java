@@ -3,6 +3,7 @@ package org.academy.api.server.ability;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -13,7 +14,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.*;
-import org.academy.api.common.network.future.HandleFuture;
+import org.academy.api.common.ability.packet.sync.s2c.*;
+import org.academy.api.common.network.future.annotation.HandleFuture;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
@@ -25,13 +27,15 @@ import org.academy.internal.server.world.level.storage.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.academy.api.server.ability.AbilitySystemServer.SyncType.COMPUTING_POWER;
 
-public class AbilitySystemServer {
+public final class AbilitySystemServer {
     public static final Map<UUID, LivePlayer> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
     private static final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
     private static PlayerDataManager playerDataManager;
@@ -153,13 +157,6 @@ public class AbilitySystemServer {
         return new LearnSkillPacket.Response(false);
     }
 
-    public static void scheduleFullPlayerSync(final UUID uuid) {
-        var syncType = SyncType.values();
-        for (var type : syncType) {
-            schedulePlayerSync(uuid, type);
-        }
-    }
-
     public static AbilityCategory getPlayerAbilityCategory(UUID uuid) {
         var abilityCategory = getPlayerData(uuid).getAbilityCategory();
         AbilityCategory category;
@@ -177,7 +174,7 @@ public class AbilitySystemServer {
         var categoryKey = Registries.ABILITY_CATEGORIES.getKey(abilityCategory);
         if (categoryKey != null) {
             getPlayerData(uuid).setAbilityCategory(categoryKey.toString());
-            schedulePlayerSync(uuid, SyncType.ABILITY_CATEGORY);
+            schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
         }
     }
 
@@ -191,7 +188,7 @@ public class AbilitySystemServer {
             var skill = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
             skill.ifPresent(skillReference -> addPlayerSkillData(uuid, skillKey, skillReference.value().getDefaultSkillData()));
             playerData.markDirty();
-            schedulePlayerSync(uuid, SyncType.SKILLS);
+            schedulePlayerSync(uuid, SyncTypes.SKILL_LIST);
         }
     }
 
@@ -208,7 +205,7 @@ public class AbilitySystemServer {
         if (playerData.getSkills().remove(skillKey)) {
             playerData.getSkillData().remove(skillKey);
             playerData.markDirty();
-            schedulePlayerSync(uuid, SyncType.SKILLS);
+            schedulePlayerSync(uuid, SyncTypes.SKILL_LIST);
         }
     }
 
@@ -252,7 +249,7 @@ public class AbilitySystemServer {
 
     public static void setPlayerComputingPower(UUID uuid, float power) {
         getPlayerData(uuid).setComputingPower(power);
-        schedulePlayerSync(uuid, COMPUTING_POWER);
+        schedulePlayerSync(uuid, SyncTypes.COMPUTING_POWER);
     }
 
     public static float getPlayerMaxComputingPower(UUID uuid) {
@@ -261,7 +258,7 @@ public class AbilitySystemServer {
 
     public static void setPlayerMaxComputingPower(UUID uuid, float power) {
         getPlayerData(uuid).setMaxComputingPower(power);
-        schedulePlayerSync(uuid, SyncType.MAX_COMPUTING_POWER);
+        schedulePlayerSync(uuid, SyncTypes.MAX_COMPUTING_POWER);
     }
 
     public static float getPlayerComputingPowerRecoverySpeed(UUID uuid) {
@@ -297,7 +294,7 @@ public class AbilitySystemServer {
                 : AcademyCraftServer.abilityConfig.damageMultiplier;
     }
 
-    public static void schedulePlayerSync(final UUID uuid, final SyncType syncType) {
+    public static void schedulePlayerSync(final UUID uuid, final ResourceLocation syncType) {
         if (LIVE_PLAYER_MAP.containsKey(uuid)) {
             LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
         }
@@ -307,12 +304,17 @@ public class AbilitySystemServer {
         pendingTasks.add(runnable);
     }
 
-    public enum SyncType {
-        LEVEL,
-        COMPUTING_POWER,
-        MAX_COMPUTING_POWER,
-        ABILITY_CATEGORY,
-        SKILLS,
+    public static void onPlayerLogin(ServerPlayer player) {
+        if (playerDataManager != null) {
+            playerDataManager.onPlayerLogin(player);
+        }
+        var uuid = player.getUUID();
+        LIVE_PLAYER_MAP.put(uuid, new LivePlayer(uuid, player.connection));
+        schedulePlayerSync(uuid, SyncTypes.LEVEL);
+        schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
+        schedulePlayerSync(uuid, SyncTypes.COMPUTING_POWER);
+        schedulePlayerSync(uuid, SyncTypes.MAX_COMPUTING_POWER);
+        schedulePlayerSync(uuid, SyncTypes.SKILL_LIST);
     }
 
     public static final class AbilitySystemTicker {
@@ -329,21 +331,38 @@ public class AbilitySystemServer {
             final var connection = player.connection;
             final var uuid = player.uuid;
             var syncQueue = player.syncQueue;
-            var levelChanged = syncQueue.contains(SyncType.LEVEL);
-            var currentComputingPowerChanged = syncQueue.contains(SyncType.COMPUTING_POWER);
-            var maxComputingPowerChanged = syncQueue.contains(SyncType.MAX_COMPUTING_POWER);
-            var abilityCategoryChanged = syncQueue.contains(SyncType.ABILITY_CATEGORY);
-            var skillsChanged = syncQueue.contains(SyncType.SKILLS);
+            var levelChanged = syncQueue.contains(SyncTypes.LEVEL);
+            var currentComputingPowerChanged = syncQueue.contains(SyncTypes.COMPUTING_POWER);
+            var maxComputingPowerChanged = syncQueue.contains(SyncTypes.MAX_COMPUTING_POWER);
+            var abilityCategoryChanged = syncQueue.contains(SyncTypes.ABILITY_CATEGORY);
+            var skillsChanged = syncQueue.contains(SyncTypes.SKILL_LIST);
 
-            var playerCategory = getPlayerAbilityCategory(uuid);
-            var categoryKey = Registries.ABILITY_CATEGORIES.getKey(playerCategory);
-
-            var packet = new PlayerSyncPacket(
-                    getPlayerLevel(uuid),
-                    getPlayerComputingPower(uuid),
-                    getPlayerMaxComputingPower(uuid)
-            );
-            connection.send(new S2CPacket(packet));
+            if (levelChanged) {
+                var packet = new SyncLevelPacket(getPlayerLevel(uuid));
+                AcademyCraftServer.sendPacket(connection, packet);
+            }
+            if (currentComputingPowerChanged) {
+                var packet = new SyncComputingPowerPacket(getPlayerComputingPower(uuid));
+                AcademyCraftServer.sendPacket(connection, packet);
+            }
+            if (maxComputingPowerChanged) {
+                var packet = new SyncMaxComputingPowerPacket(getPlayerMaxComputingPower(uuid));
+                AcademyCraftServer.sendPacket(connection, packet);
+            }
+            if (abilityCategoryChanged) {
+                var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
+                AcademyCraftServer.sendPacket(connection, packet);
+            }
+            if (skillsChanged) {
+                var skills = getPlayerSkills(uuid);
+                var set = new HashSet<Skill>();
+                for (var s : skills) {
+                    var skill = Registries.SKILLS.getValue(ResourceLocation.parse(s));
+                    set.add(skill);
+                }
+                var packet = new SyncSkillsPacket(set);
+                AcademyCraftServer.sendPacket(connection, packet);
+            }
             player.syncQueue.clear();
 
             final var currentComputingPower = getPlayerComputingPower(uuid);
@@ -352,12 +371,6 @@ public class AbilitySystemServer {
             if (currentComputingPower < maxComputingPower) {
                 setPlayerComputingPower(uuid, Math.min(maxComputingPower, currentComputingPower + computingPowerRecoverySpeed));
             }
-
-            var learned = getPlayerSkills(uuid).size();
-            var all = playerCategory.getSkills().size();
-            float progress;
-            if (all == 0) progress = 100.0f;
-            else progress = (float) learned / all;
         }
     }
 
@@ -366,17 +379,6 @@ public class AbilitySystemServer {
         @SubscribeEvent
         public static void tickMinecraftServerThread(ServerTickEvent.Pre event) {
             var server = event.getServer();
-            server.getPlayerList().getPlayers().forEach(serverPlayer -> {
-                final var uuid = serverPlayer.getUUID();
-                if (!LIVE_PLAYER_MAP.containsKey(uuid)) {
-                    AcademyCraftServer.playerDataManager.onPlayerLogin(serverPlayer);
-                    LIVE_PLAYER_MAP.put(uuid, new LivePlayer(
-                            uuid, serverPlayer.connection
-                            )
-                    );
-                    scheduleFullPlayerSync(uuid);
-                }
-            });
             var onlinePlayerUUIDs = server.getPlayerList().getPlayers().stream()
                     .map(Entity::getUUID)
                     .collect(Collectors.toSet());
@@ -387,7 +389,7 @@ public class AbilitySystemServer {
 
     public static class LivePlayer {
         public final UUID uuid;
-        public final ConcurrentLinkedQueue<SyncType> syncQueue = new ConcurrentLinkedQueue<>();
+        public final Set<ResourceLocation> syncQueue = ConcurrentHashMap.newKeySet();
         private final ServerGamePacketListenerImpl connection;
         public float additionalComputingPower;
 

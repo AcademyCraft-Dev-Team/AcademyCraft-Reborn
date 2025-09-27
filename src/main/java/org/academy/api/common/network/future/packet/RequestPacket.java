@@ -1,7 +1,7 @@
 package org.academy.api.common.network.future.packet;
 
 import net.minecraft.network.PacketListener;
-import org.academy.api.common.network.PacketType;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.packet.Packet;
 
 public abstract class RequestPacket<

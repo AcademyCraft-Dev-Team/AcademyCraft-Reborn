@@ -22,16 +22,21 @@ public final class WindGenBaseSpecialRenderer implements NoDataSpecialModelRende
     @Override
     public void render(ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, boolean hasFoilType) {
         poseStack.pushPose();
-        poseStack.translate(0.5f, 0.875f, 0.5f);
-        poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
-        poseStack.rotateAround(Axis.YP.rotationDegrees(25), 0, 0, 0);
-        poseStack.scale(0.625f, 0.625f, 0.625f);
+        var matrix4f = poseStack.last().pose();
+        matrix4f.translate(0.5f, 0.875f, 0.5f);
+        matrix4f.rotate(Axis.XP.rotationDegrees(180));
+        matrix4f.rotate(Axis.YP.rotationDegrees(25));
+        matrix4f.scale(0.625f, 0.625f, 0.625f);
         if (displayContext != ItemDisplayContext.GUI){
-            poseStack.translate(0, -0.5f, 0);
-            poseStack.rotateAround(Axis.YP.rotationDegrees(-90), 0, 0, 0);
+            matrix4f.translate(0, -0.5f, 0);
+            matrix4f.rotate(Axis.YP.rotationDegrees(-90));
         }
         WindGenBaseBlockEntityRenderer.MODEL.resetPose();
         WindGenBaseBlockEntityRenderer.MODEL.render(poseStack, bufferSource, packedLight, packedOverlay);
+        matrix4f.translate(0, -0.5f, 0);
+        matrix4f.scale(1, -1, 1);
+        matrix4f.rotate(Axis.YP.rotationDegrees(90));
+        WindGenBaseBlockEntityRenderer.MODEL.renderPole(poseStack, bufferSource, packedLight, packedOverlay);
         poseStack.popPose();
     }
 

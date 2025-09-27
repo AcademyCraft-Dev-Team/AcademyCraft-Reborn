@@ -119,7 +119,7 @@ public class WindGenBaseBlock extends MultiBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(TYPE) == MultiBlockType.SUBJECT ? Block.cube(6.4, 16, 6.4) : super.getShape(state, level, pos, context);
+        return state.getValue(TYPE) == MultiBlockType.SUBJECT ? Block.cube(8.8692435136, 16, 8.8692435136) : super.getShape(state, level, pos, context);
     }
 
     @Override

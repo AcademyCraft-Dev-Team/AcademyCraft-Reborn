@@ -11,9 +11,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.PacketTarget;
-import org.academy.api.common.network.PacketType;
-import org.academy.api.common.network.packet.C2SPacket;
+import org.academy.api.common.network.annotation.PacketTarget;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
@@ -35,9 +34,9 @@ public class CoinItem extends Item {
                     :
                     player.getDeltaMovement().multiply(1.5, 0, 1.5);
 
-            AcademyCraftClient.sendPacket(new C2SPacket(new ThrowCoinPacket(
+            AcademyCraftClient.sendPacket(new ThrowCoinPacket(
                     initialVelocity.add(0, 0.5, 0),
-                    player.getYRot(), player.getXRot())));
+                    player.getYRot(), player.getXRot()));
 
             if (!player.getAbilities().instabuild) {
                 itemStack.shrink(1);
