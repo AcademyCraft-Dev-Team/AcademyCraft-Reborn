@@ -234,7 +234,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     public boolean charTyped(CharacterEvent e) {
-        var event = new CharTypedEvent((char) (e.codepoint() + '0'), e.modifiers());
+        var event = new CharTypedEvent(e.codepoint(), e.modifiers());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
         return shouldHandleContainer() && super.charTyped(e);

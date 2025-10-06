@@ -1,21 +1,7 @@
 {
   "variants": {
-    "": [
-      {
-        "model": "academy:block/ability_developer"
-      },
-      {
-        "model": "academy:block/ability_developer",
-        "y": 90
-      },
-      {
-        "model": "academy:block/ability_developer",
-        "y": 180
-      },
-      {
-        "model": "academy:block/ability_developer",
-        "y": 270
-      }
-    ]
+    "": {
+      "model": "academy:block/ability_developer"
+    }
   }
 }

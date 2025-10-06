@@ -10,7 +10,7 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 
 /**
- * @author 这里没有Badd
+ * @author MapleBadd
  */
 public class CleaningRobotModel extends EntityModel<EntityRenderState> {
     private final ModelPart all;

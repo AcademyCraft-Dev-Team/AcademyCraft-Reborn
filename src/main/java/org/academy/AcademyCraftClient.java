@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.network.Connection;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -103,7 +104,7 @@ public final class AcademyCraftClient {
                 if (top) {
                     poseStack.scale(1, 1f / 16f, 1);
                     if (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT) {
-                        poseStack.translate(state.getValue(MultiBlock.FACING).getUnitVec3().scale(-1));
+                        poseStack.translate(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getUnitVec3().scale(-1));
                     }
                 }
                 if (base && state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.MAIN) {
@@ -171,6 +172,7 @@ public final class AcademyCraftClient {
             event.register(AcademyCraft.academy("ability_developer"), AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC);
             event.register(AcademyCraft.academy("omni_crafting_table"), OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC);
             event.register(AcademyCraft.academy("imagiphase_dowsing_rod"), ImagiphaseDowsingRodSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(AcademyCraft.academy("solar_gen"), SolarGenSpecialRenderer.Unbaked.MAP_CODEC);
         }
 
         @SubscribeEvent

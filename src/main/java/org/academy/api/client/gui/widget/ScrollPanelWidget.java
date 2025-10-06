@@ -88,14 +88,14 @@ public class ScrollPanelWidget extends AbstractContainerWidget {
         context.pushAlpha(getAlpha());
 
         var scissor = new ScissorRect(getAbsoluteX(), getAbsoluteY(), getWidth(), getHeight());
-        context.scissorStack().push(scissor);
+        context.enableScissor(scissor);
 
         context.pose().pushPose();
         context.pose().translate(-getScrollX(), -getScrollY(), 0);
         renderChildren(context, mouseX, mouseY, partialTick);
         context.pose().popPose();
 
-        context.scissorStack().pop();
+        context.disableScissor();
         context.popAlpha();
         context.pose().popPose();
     }

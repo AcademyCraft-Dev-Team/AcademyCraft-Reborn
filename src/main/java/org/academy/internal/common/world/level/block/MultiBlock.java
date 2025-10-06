@@ -10,9 +10,11 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.redstone.Orientation;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
@@ -24,7 +26,6 @@ import java.util.List;
 import java.util.Objects;
 
 public abstract class MultiBlock extends BaseEntityBlock {
-    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     public static final EnumProperty<MultiBlockType> TYPE = EnumProperty.create("type", MultiBlockType.class);
 
     protected MultiBlock(Properties properties) {
@@ -60,19 +61,19 @@ public abstract class MultiBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
-        builder.add(TYPE, FACING);
+        builder.add(TYPE, BlockStateProperties.HORIZONTAL_FACING);
     }
 
     @Nullable
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection());
+        return this.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection());
     }
 
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, @Nullable Orientation orientation, boolean movedByPiston) {
         var blockEntity = level.getBlockEntity(pos);
         if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
-            var blockPosList = getRotatedSubjectBlocks(Objects.requireNonNull(multiBlockEntity.mainPos), state.getValue(FACING), getSubBlocks());
+            var blockPosList = getRotatedSubjectBlocks(Objects.requireNonNull(multiBlockEntity.mainPos), state.getValue(BlockStateProperties.HORIZONTAL_FACING), getSubBlocks());
             blockPosList.add(multiBlockEntity.mainPos);
             var broken = blockPosList.stream().anyMatch(blockPos -> level.getBlockState(blockPos).isAir() || !(level.getBlockEntity(blockPos) instanceof MultiBlockEntity));
             if (broken) {
@@ -84,8 +85,18 @@ public abstract class MultiBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected BlockState rotate(BlockState state, Rotation rot) {
+        return state.setValue(BlockStateProperties.HORIZONTAL_FACING, rot.rotate(state.getValue(BlockStateProperties.HORIZONTAL_FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(BlockStateProperties.HORIZONTAL_FACING)));
+    }
+
+    @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
-        var subjectBlocks = getRotatedSubjectBlocks(pos, state.getValue(FACING), getSubBlocks());
+        var subjectBlocks = getRotatedSubjectBlocks(pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING), getSubBlocks());
         setSubBlocks(level, pos, state, subjectBlocks);
     }
 

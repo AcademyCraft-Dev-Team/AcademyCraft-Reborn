@@ -10,7 +10,7 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.RenderType;
 
 /**
- * @author 这里没有Badd
+ * @author MapleBadd
  */
 public class WindGenTurbineModel extends Model<Void> {
     public static final WindGenTurbineModel INSTANCE = new WindGenTurbineModel(createBodyLayer().bakeRoot());

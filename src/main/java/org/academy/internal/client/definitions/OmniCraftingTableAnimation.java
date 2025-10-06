@@ -5,6 +5,9 @@ import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
 
+/**
+ * @author MapleBadd
+ */
 public final class OmniCraftingTableAnimation {
     public static final AnimationDefinition UNFOLDING = AnimationDefinition.Builder.withLength(2.25F)
             .addAnimation("tabletop", new AnimationChannel(AnimationChannel.Targets.POSITION,

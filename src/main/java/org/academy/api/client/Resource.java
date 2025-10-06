@@ -94,6 +94,10 @@ public final class Resource {
          */
         public static final ResourceLocation OMNI_CRAFTING_UI = academy("textures/gui/omni_crafting/ui_omni_crafting.png");
         /**
+         * Solar Gen
+         */
+        public static final ResourceLocation SOLAR_GEN_MODEL = academy("textures/model/solar_gen.png");
+        /**
          * Common
          */
         public static final ResourceLocation INVENTORY = academy("textures/gui/element/ui_inventory.png");

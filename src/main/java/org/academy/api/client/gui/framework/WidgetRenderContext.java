@@ -49,25 +49,7 @@ public final class WidgetRenderContext {
         return scissorStack;
     }
 
-    public void enableScissor(int minX, int minY, int maxX, int maxY) {
-        var poseMatrix = pose.last().pose();
-
-        var v0 = poseMatrix.transformPosition(minX, minY, 0, new Vector3f());
-        var v1 = poseMatrix.transformPosition(maxX, minY, 0, new Vector3f());
-        var v2 = poseMatrix.transformPosition(minX, maxY, 0, new Vector3f());
-        var v3 = poseMatrix.transformPosition(maxX, maxY, 0, new Vector3f());
-
-        float finalMinX = Math.min(Math.min(v0.x(), v2.x()), Math.min(v1.x(), v3.x()));
-        float finalMaxX = Math.max(Math.max(v0.x(), v2.x()), Math.max(v1.x(), v3.x()));
-        float finalMinY = Math.min(Math.min(v0.y(), v2.y()), Math.min(v1.y(), v3.y()));
-        float finalMaxY = Math.max(Math.max(v0.y(), v2.y()), Math.max(v1.y(), v3.y()));
-
-        var scissorRect = new ScissorRect(
-                Mth.floor(finalMinX),
-                Mth.floor(finalMinY),
-                Mth.ceil(finalMaxX - finalMinX),
-                Mth.ceil(finalMaxY - finalMinY)
-        );
+    public void enableScissor(ScissorRect scissorRect) {
         scissorStack.push(scissorRect);
     }
 

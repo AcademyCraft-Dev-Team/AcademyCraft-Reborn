@@ -21,6 +21,9 @@ import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEnti
 import static org.academy.api.client.Resource.Textures.BLOCK_WIND_GEN_PILLAR;
 import static org.academy.api.client.Resource.Textures.MODEL_WIND_GEN;
 
+/**
+ * @author MapleBadd
+ */
 @SuppressWarnings({"unused", "SpellCheckingInspection"})
 public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
     public static final float[][] PILLAR_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.3f, 8, true);

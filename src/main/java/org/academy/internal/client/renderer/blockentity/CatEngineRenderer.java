@@ -69,5 +69,6 @@ public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlo
             vertexConsumer.addVertex(matrix, sizeHalf, 0, sizeHalf).setColor(255, 255, 255, 255).setUv(1, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(vector3f.x(), vector3f.y(), vector3f.z());
             vertexConsumer.addVertex(matrix, -sizeHalf, 0, sizeHalf).setColor(255, 255, 255, 255).setUv(0, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(vector3f.x(), vector3f.y(), vector3f.z());
         });
+        poseStack.popPose();
     }
 }

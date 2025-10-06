@@ -179,8 +179,6 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         }
     }
 
-    // For Forge
-    @SuppressWarnings("unused")
     public AABB getRenderBoundingBox() {
         var pos = this.getBlockPos().getCenter();
         var radius = 5d;

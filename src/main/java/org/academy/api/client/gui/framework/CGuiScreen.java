@@ -152,7 +152,7 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean charTyped(CharacterEvent e) {
-        var event = new CharTypedEvent((char) (e.codepoint() + '0'), e.modifiers());
+        var event = new CharTypedEvent(e.codepoint(), e.modifiers());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
 

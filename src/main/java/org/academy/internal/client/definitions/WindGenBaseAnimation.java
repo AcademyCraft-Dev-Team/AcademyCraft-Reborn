@@ -5,7 +5,10 @@ import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
 
-public class WindGenBaseAnimation {
+/**
+ * @author MapleBadd
+ */
+public final class WindGenBaseAnimation {
     public static final AnimationDefinition SETUP = AnimationDefinition.Builder.withLength(1.2917F)
             .addAnimation("rods", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                     new Keyframe(0.0F, KeyframeAnimations.degreeVec(-27.5F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
@@ -89,4 +92,7 @@ public class WindGenBaseAnimation {
                     new Keyframe(1.0F, KeyframeAnimations.posVec(-4.0F, -0.3007F, -0.9537F), AnimationChannel.Interpolations.LINEAR)
             ))
             .build();
+
+    private WindGenBaseAnimation() {
+    }
 }
