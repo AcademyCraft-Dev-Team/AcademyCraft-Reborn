@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,13 +15,15 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -45,7 +46,6 @@ public final class WindGenBaseBlock extends MultiBlock {
     public static final List<Vec3i> SUB_BLOCKS = List.of(
             new Vec3i(0, 1, 0)
     );
-    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
 
     public WindGenBaseBlock(Properties properties) {
         super(properties.noOcclusion());
@@ -72,7 +72,7 @@ public final class WindGenBaseBlock extends MultiBlock {
                 poseStack.translate(0.5f, 1.5f, 0.5f);
                 poseStack.mulPose(Axis.XP.rotationDegrees(180));
 
-                var yRot = state.getValue(WindGenBaseBlock.FACING).getOpposite().toYRot();
+                var yRot = state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite().toYRot();
                 poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
                 poseStack.translate(0, 0.3075f, 0.625f);
@@ -132,23 +132,18 @@ public final class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(TYPE, FACING);
-    }
-
-    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new WindGenBaseBlockEntity(pos, state);
     }
 
     @Override
     public BlockState rotate(BlockState pState, Rotation pRotation) {
-        return pState.setValue(FACING, pRotation.rotate(pState.getValue(FACING)));
+        return pState.setValue(BlockStateProperties.HORIZONTAL_FACING, pRotation.rotate(pState.getValue(BlockStateProperties.HORIZONTAL_FACING)));
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
+        return this.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
     @Override

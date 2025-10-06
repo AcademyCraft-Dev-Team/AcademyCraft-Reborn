@@ -20,6 +20,9 @@ import org.academy.internal.client.renderer.blockentity.state.OmniCraftingTableR
 
 import static net.minecraft.client.renderer.blockentity.TheEndPortalRenderer.END_PORTAL_LOCATION;
 
+/**
+ * @author MapleBadd
+ */
 @SuppressWarnings({"FieldCanBeLocal", "unused"})
 public class OmniCraftingTableModel extends Model<OmniCraftingTableRenderState> {
     private final ModelPart all;

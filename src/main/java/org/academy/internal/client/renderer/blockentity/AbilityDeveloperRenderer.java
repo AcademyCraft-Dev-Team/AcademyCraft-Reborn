@@ -7,11 +7,12 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.RenderTypes;
 import org.academy.internal.client.model.AbilityDeveloperModel;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
-import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +36,7 @@ public final class AbilityDeveloperRenderer implements BlockEntityRenderer<Abili
         renderState.liedownState = blockEntity.liedownState;
         renderState.standState = blockEntity.standState;
         renderState.ageInTicks = blockEntity.ticks + partialTick;
-        renderState.facing = blockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
+        renderState.facing = blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
         renderState.isMain = blockEntity.isMain();
     }
 
@@ -55,5 +56,10 @@ public final class AbilityDeveloperRenderer implements BlockEntityRenderer<Abili
 
             poseStack.popPose();
         }
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(AbilityDeveloperBlockEntity blockEntity) {
+        return blockEntity.getRenderBoundingBox();
     }
 }

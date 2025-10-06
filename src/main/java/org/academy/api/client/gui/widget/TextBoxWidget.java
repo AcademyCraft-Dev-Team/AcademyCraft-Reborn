@@ -170,7 +170,7 @@ public class TextBoxWidget extends LabelWidget {
         var potentialText = new StringBuilder(text).insert(caretPos, event.getCodePoint()).toString();
 
         if (inputValidator == null || inputValidator.test(potentialText)) {
-            text.insert(caretPos, event.getCodePoint());
+            text.insert(caretPos, Character.toChars(event.getCodePoint()));
             caretPos++;
             super.setText(text.toString());
             updateScale();

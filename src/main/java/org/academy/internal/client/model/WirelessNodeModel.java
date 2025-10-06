@@ -21,7 +21,7 @@ import org.academy.internal.client.renderer.blockentity.state.WirelessNodeRender
 import static net.minecraft.client.renderer.blockentity.TheEndPortalRenderer.END_PORTAL_LOCATION;
 
 /**
- * @author 这里没有Badd
+ * @author MapleBadd
  */
 public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
     private final ModelPart all;

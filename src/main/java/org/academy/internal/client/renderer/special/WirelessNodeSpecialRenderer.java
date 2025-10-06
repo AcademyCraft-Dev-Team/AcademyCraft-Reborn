@@ -30,6 +30,7 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
         poseStack.pushPose();
         poseStack.translate(0.5f, 0, 0.5f);
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
+        WirelessNodeRenderer.MODEL.resetPose();
         WirelessNodeRenderer.MODEL.render(poseStack, submitNodeCollector, packedLight, packedOverlay);
         poseStack.popPose();
     }
@@ -39,7 +40,7 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
         public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public SpecialModelRenderer<?> bake(BakingContext p_433472_) {
+        public SpecialModelRenderer<?> bake(BakingContext context) {
             return WirelessNodeSpecialRenderer.INSTANCE;
         }
 

@@ -25,6 +25,8 @@ public final class BlockEntityRenderers {
                 context -> WindGenBaseRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_PILLAR.get(),
                 context -> WindGenPillarRenderer.INSTANCE);
+        event.registerBlockEntityRenderer(BlockEntityTypes.SOLAR_GEN.get(),
+                context -> SolarGenRenderer.INSTANCE);
     }
 
     private BlockEntityRenderers() {

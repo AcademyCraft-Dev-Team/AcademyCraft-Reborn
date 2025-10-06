@@ -9,12 +9,12 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.Resource;
 import org.academy.internal.client.model.WindGenTopModel;
 import org.academy.internal.client.model.WindGenTurbineModel;
 import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderState;
-import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.WindGenTopBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +36,7 @@ public final class WindGenTopRenderer implements BlockEntityRenderer<WindGenTopB
     public void extractRenderState(WindGenTopBlockEntity blockEntity, WindGenTopRenderState renderState, float partialTick, Vec3 cameraPosition, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPosition, breakProgress);
         renderState.ageInTicks = blockEntity.ticks + partialTick;
-        renderState.facing = blockEntity.getBlockState().getValue(AbilityDeveloperBlock.FACING);
+        renderState.facing = blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
         renderState.isMain = blockEntity.isMain();
         renderState.hasFan = blockEntity.hasFan;
     }

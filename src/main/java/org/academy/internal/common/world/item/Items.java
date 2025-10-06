@@ -63,6 +63,8 @@ public final class Items {
             ITEMS.registerItem("imagiphase_amethyst", Item::new);
     public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_AMETHYST_BLOCK =
             ITEMS.registerSimpleBlockItem("imagiphase_amethyst_block", Blocks.IMAGIPHASE_AMETHYST_BLOCK, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> SOLAR_GEN =
+            ITEMS.registerSimpleBlockItem("solar_gen", Blocks.SOLAR_GEN, new Item.Properties());
 
     private Items() {
     }

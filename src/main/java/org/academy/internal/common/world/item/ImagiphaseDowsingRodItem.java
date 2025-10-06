@@ -23,7 +23,6 @@ import org.academy.api.common.network.future.packet.ResponsePacket;
 import org.academy.api.common.network.packet.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.level.material.Fluids;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -37,7 +36,7 @@ public class ImagiphaseDowsingRodItem extends Item {
     }
 
     @Override
-    public void inventoryTick(@NotNull ItemStack stack, ServerLevel level, @NotNull Entity entity, @Nullable EquipmentSlot slot) {
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
         if (level.isClientSide()) {
             if (entity instanceof LocalPlayer localPlayer) {
                 if (!(localPlayer.getMainHandItem() == stack || localPlayer.getOffhandItem() == stack)) {
@@ -48,7 +47,7 @@ public class ImagiphaseDowsingRodItem extends Item {
     }
 
     @Override
-    public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (level.isClientSide()) {
             RENDER_TARGET_POSITIONS.clear();
             var packet = new GetLevelChunkSectionsPacket(player.blockPosition());
@@ -79,12 +78,12 @@ public class ImagiphaseDowsingRodItem extends Item {
         }
 
         @Override
-        public @NotNull PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
+        public PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
             return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
         }
 
         @Override
-        public @NotNull PacketType<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket> getPacketType() {
+        public PacketType<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket> getPacketType() {
             return PacketTypes.GET_LEVEL_CHUNK_SECTIONS.get();
         }
 
@@ -106,7 +105,7 @@ public class ImagiphaseDowsingRodItem extends Item {
             }
 
             @Override
-            public @NotNull PacketType<ClientGamePacketListener, Response> getPacketType() {
+            public PacketType<ClientGamePacketListener, Response> getPacketType() {
                 return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
             }
         }

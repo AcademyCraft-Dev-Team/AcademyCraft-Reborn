@@ -5,6 +5,9 @@ import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
 
+/**
+ * @author MapleBadd
+ */
 public final class AbilityDeveloperAnimation {
     public static final AnimationDefinition OPEN = AnimationDefinition.Builder.withLength(2.25F)
             .addAnimation("rside", new AnimationChannel(AnimationChannel.Targets.ROTATION,
