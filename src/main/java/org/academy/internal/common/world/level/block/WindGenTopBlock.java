@@ -2,7 +2,6 @@ package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -18,7 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -33,7 +32,6 @@ import java.util.function.Function;
 
 public final class WindGenTopBlock extends MultiBlock {
     public static final MapCodec<WindGenTopBlock> CODEC = simpleCodec(WindGenTopBlock::new);
-    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     public static final List<Vec3i> SUB_BLOCKS = List.of(
             new Vec3i(0, 0, -1)
     );
@@ -69,7 +67,7 @@ public final class WindGenTopBlock extends MultiBlock {
                 Shapes.rotateHorizontal(all)
         );
 
-        return getShapeForEachState((blockState) -> map.get(blockState.getValue(TYPE)).get(blockState.getValue(FACING)));
+        return getShapeForEachState((blockState) -> map.get(blockState.getValue(TYPE)).get(blockState.getValue(BlockStateProperties.HORIZONTAL_FACING)));
     }
 
     @Override
@@ -126,12 +124,12 @@ public final class WindGenTopBlock extends MultiBlock {
 
     @Override
     public BlockState rotate(BlockState pState, Rotation pRotation) {
-        return pState.setValue(FACING, pRotation.rotate(pState.getValue(FACING)));
+        return pState.setValue(BlockStateProperties.HORIZONTAL_FACING, pRotation.rotate(pState.getValue(BlockStateProperties.HORIZONTAL_FACING)));
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
+        return this.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
     @Override
@@ -146,7 +144,7 @@ public final class WindGenTopBlock extends MultiBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
-        builder.add(FACING, TYPE);
+        builder.add(BlockStateProperties.HORIZONTAL_FACING, TYPE);
     }
 
     @Override

@@ -111,6 +111,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 PANEL_RIGHT_SKILL_BACK_X + 5, PANEL_RIGHT_SKILL_BACK_Y + 5, PANEL_RIGHT_WIDTH - 32, 132);
         outputList.setEnabled(bootFailed);
         outputList.setVisible(bootFailed);
+        outputList.setZ(1);
         rightPanel.addChild("output_list", outputList);
         var welcome = setupTerminal(outputList);
 
@@ -165,6 +166,8 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         invalid.setOnAnimationFinished(hint::startAnimation);
         hint.setOnAnimationFinished(() -> {
             var os = new LabelWidget("OS >", hint.getX(), hint.getY() + hint.getHeight());
+            os.setAlignment(LabelWidget.Alignment.CENTER);
+            os.setVerticalAlignment(LabelWidget.VerticalAlignment.MIDDLE);
             addOutput("os", os, outputList);
 
             var textBox = new TextBoxWidget(32, os.getX() + os.getWidth(), os.getY(), PANEL_RIGHT_WIDTH - 24, hint.getHeight());

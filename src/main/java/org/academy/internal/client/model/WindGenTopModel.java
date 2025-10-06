@@ -16,7 +16,7 @@ import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderSt
 import static net.minecraft.client.renderer.RenderType.ENTITY_SOLID;
 
 /**
- * @author 这里没有Badd
+ * @author MapleBadd
  */
 public class WindGenTopModel extends Model<WindGenTopRenderState> {
     private final ModelPart all;

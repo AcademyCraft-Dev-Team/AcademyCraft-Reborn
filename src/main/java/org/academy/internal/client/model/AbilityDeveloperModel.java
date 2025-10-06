@@ -13,7 +13,7 @@ import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 
 /**
- * @author 这里没有Badd
+ * @author MapleBadd
  */
 public class AbilityDeveloperModel extends Model<AbilityDeveloperRenderState> {
     private final KeyframeAnimation open;

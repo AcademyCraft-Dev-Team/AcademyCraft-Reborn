@@ -10,6 +10,9 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.Unit;
 
+/**
+ * @author MapleBadd
+ */
 public class ImagiphaseDowsingRodModel extends Model<Unit> {
     private final ModelPart all;
     private final ModelPart handle;

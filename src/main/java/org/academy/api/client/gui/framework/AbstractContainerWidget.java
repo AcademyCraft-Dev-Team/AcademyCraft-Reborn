@@ -133,6 +133,19 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
                 child.render(renderContext, mouseX, mouseY, partialTick);
             }
         }
+
+        if (AcademyCraft.DEBUG_UI) {
+            for (var child : children.values()) {
+                if (child.isVisible() && !(child instanceof AbstractContainerWidget)) {
+                    renderContext.pose().pushPose();
+                    {
+                        renderContext.pose().translate(child.getX(), child.getY(), child.getZ() + 0.1f);
+                        renderDebugLayoutBounds(child, renderContext);
+                    }
+                    renderContext.pose().popPose();
+                }
+            }
+        }
     }
 
     private void renderDebugLayoutBounds(Widget widget, WidgetRenderContext context) {
@@ -147,21 +160,17 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         var green = ARGB.green(outlineColor) / 255.0f;
         var blue = ARGB.blue(outlineColor) / 255.0f;
         var alpha = 0.8f;
-        var thickness = 1.0f;
+        var thickness = 0.5f;
 
         var width = widget.getWidth();
         var height = widget.getHeight();
 
-        // Top border
         context.submit(new FillRectDrawCommand(width, thickness, red, green, blue, alpha));
-        // Bottom border
         context.pose().pushPose();
         context.pose().translate(0, height - thickness, 0);
         context.submit(new FillRectDrawCommand(width, thickness, red, green, blue, alpha));
         context.pose().popPose();
-        // Left border
         context.submit(new FillRectDrawCommand(thickness, height, red, green, blue, alpha));
-        // Right border
         context.pose().pushPose();
         context.pose().translate(width - thickness, 0, 0);
         context.submit(new FillRectDrawCommand(thickness, height, red, green, blue, alpha));

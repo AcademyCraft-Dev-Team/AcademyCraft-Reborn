@@ -47,6 +47,8 @@ public final class Blocks {
     public static final DeferredHolder<Block, Block> IMAGIPHASE_METAL_BLOCK =
             BLOCKS.registerBlock("imagiphase_metal_block",
                     properties -> new Block(properties.noOcclusion()));
+    public static final DeferredHolder<Block, SolarGenBlock> SOLAR_GEN =
+            BLOCKS.registerBlock("solar_gen", SolarGenBlock::new);
 
     private Blocks() {
     }

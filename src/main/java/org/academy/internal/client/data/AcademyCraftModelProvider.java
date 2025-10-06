@@ -20,7 +20,7 @@ import static net.minecraft.client.data.models.model.TexturedModel.createDefault
 import static org.academy.AcademyCraft.academy;
 import static org.academy.api.client.Resource.Models.COIN_ITEM_MODEL_ID;
 
-public class AcademyCraftModelProvider extends ModelProvider {
+public final class AcademyCraftModelProvider extends ModelProvider {
     public AcademyCraftModelProvider(PackOutput output) {
         super(output, AcademyCraft.MOD_ID);
     }
@@ -40,21 +40,13 @@ public class AcademyCraftModelProvider extends ModelProvider {
 
 
         blockModels.createTrivialBlock(Blocks.WIRELESS_NODE.get(), providerW);
-        blockModels.createTrivialBlock(Blocks.WIND_GEN_BASE.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.WIND_GEN_BASE.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.WIND_GEN_TOP.get(), providerW);
         blockModels.createTrivialBlock(Blocks.WIND_GEN_PILLAR.get(), providerW);
         blockModels.createTrivialBlock(Blocks.OMNI_CRAFTING_TABLE.get(), providerDB);
+        blockModels.createTrivialBlock(Blocks.SOLAR_GEN.get(), providerDB);
+        blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
 
-        blockModels.blockStateOutput.accept(
-                MultiVariantGenerator.dispatch(
-                        Blocks.ABILITY_DEVELOPER.get(),
-                        BlockModelGenerators.createRotatedVariants(
-                                BlockModelGenerators.plainModel(
-                                        providerDB.create(Blocks.ABILITY_DEVELOPER.get(), blockModels.modelOutput)
-                                )
-                        )
-                )
-        );
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_PLASMA.get());
         blockModels.createTrivialBlock(Blocks.IMAGIPHASE_VEGETATION.get(), TexturedModel.COLUMN);
         blockModels.createMultiface(Blocks.IMAGIPHASE_LICHEN.get());
@@ -177,6 +169,13 @@ public class AcademyCraftModelProvider extends ModelProvider {
                 ItemModelUtils.specialModel(
                         AcademyCraft.vanilla("block").withPrefix("block/"),
                         WindGenTopSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.SOLAR_GEN.get(),
+                ItemModelUtils.specialModel(
+                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        SolarGenSpecialRenderer.Unbaked.INSTANCE
                 )
         );
     }
