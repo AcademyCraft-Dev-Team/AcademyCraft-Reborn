@@ -90,7 +90,7 @@ public abstract class Skill {
     }
 
     public ResourceLocation getKey() {
-        ResourceLocation key = Registries.SKILLS.getKey(this);
+        var key = Registries.SKILLS.getKey(this);
         if (key == null) {
             throw new IllegalStateException("This skill has not been registered: " + this);
         }

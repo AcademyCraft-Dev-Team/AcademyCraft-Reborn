@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * @author cnlimiter
  */
-public class CatEngineBlock extends BaseEntityBlock {
+public final class CatEngineBlock extends BaseEntityBlock {
     public static final MapCodec<CatEngineBlock> CODEC = simpleCodec(CatEngineBlock::new);
 
     public CatEngineBlock(Properties properties) {
@@ -32,7 +32,7 @@ public class CatEngineBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
+    public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
         return new CatEngineBlockEntity(blockPos, blockState);
     }
 

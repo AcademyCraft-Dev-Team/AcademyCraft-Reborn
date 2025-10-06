@@ -4,8 +4,8 @@ import net.minecraft.client.Minecraft;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 
 import java.util.ArrayList;
 import java.util.Collections;

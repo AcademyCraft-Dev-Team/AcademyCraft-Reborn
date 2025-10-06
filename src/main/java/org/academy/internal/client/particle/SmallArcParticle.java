@@ -9,7 +9,7 @@ public class SmallArcParticle extends SuspendedParticle {
     private final SpriteSet sprites;
 
     public SmallArcParticle(ClientLevel level, SpriteSet newSprites, double x, double y, double z) {
-        super(level, newSprites, x, y, z);
+        super(level, x, y, z, newSprites.first());
         sprites = newSprites;
         quadSize *= 2;
         lifetime /= 4;
@@ -18,7 +18,7 @@ public class SmallArcParticle extends SuspendedParticle {
     @Override
     public void tick() {
         super.tick();
-        setSprite(sprites.get(age % 4, 3));
+        setSpriteFromAge(sprites);
     }
 
     @Override

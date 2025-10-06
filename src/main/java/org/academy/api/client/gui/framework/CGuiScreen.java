@@ -6,6 +6,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
@@ -98,31 +100,31 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        var event = MouseEvent.createPressEvent(mouseX, mouseY, button);
+    public boolean mouseClicked(MouseButtonEvent e, boolean isDoubleClick) {
+        var event = MouseEvent.createPressEvent(e.x(), e.y(), e.button());
         rootContainer.dispatchEvent(event);
 
         if (event.isConsumed()) return true;
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(e, isDoubleClick);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        var event = MouseEvent.createReleaseEvent(mouseX, mouseY, button);
+    public boolean mouseReleased(MouseButtonEvent e) {
+        var event = MouseEvent.createReleaseEvent(e.x(), e.y(), e.button());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
 
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(e);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        var event = MouseEvent.createDragEvent(mouseX, mouseY, button, dragX, dragY);
+    public boolean mouseDragged(MouseButtonEvent e, double mouseX, double mouseY) {
+        var event = MouseEvent.createDragEvent(e.x(), e.y(), e.button(), mouseX, mouseY);
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
 
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(e, mouseX, mouseY);
     }
 
     @Override
@@ -135,24 +137,25 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_F12) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+        if (e.key() == GLFW.GLFW_KEY_F12) {
             AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
             return true;
         }
-        var event = new KeyEvent(EventType.KEY_PRESSED, keyCode, scanCode, modifiers);
+
+        var event = new KeyEvent(EventType.KEY_PRESSED, e.key(), e.scancode(), e.modifiers());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
 
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(e);
     }
 
     @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        var event = new CharTypedEvent(codePoint, modifiers);
+    public boolean charTyped(CharacterEvent e) {
+        var event = new CharTypedEvent((char) (e.codepoint() + '0'), e.modifiers());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
 
-        return super.charTyped(codePoint, modifiers);
+        return super.charTyped(e);
     }
 }

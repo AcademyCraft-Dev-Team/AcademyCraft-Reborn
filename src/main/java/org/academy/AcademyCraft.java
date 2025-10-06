@@ -1,11 +1,12 @@
 package org.academy;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import org.academy.internal.client.data.AcademyCraftData;
+import org.academy.internal.client.data.AcademyCraftClientData;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,15 +16,16 @@ import java.util.concurrent.ScheduledExecutorService;
 @Mod(AcademyCraft.MODID)
 public final class AcademyCraft {
     public static final String MODID = "academy";
-    public static final Logger LOGGER = LogUtils.getLogger();
     public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static boolean DEBUG_UI = false;
+    public static final String LOGGER_PREFIX = MODID + "/";
+    public static final Logger LOGGER = LoggerFactory.getLogger(LOGGER_PREFIX + "Common");
 
-    public AcademyCraft(IEventBus modEventBus) {
+    public AcademyCraft(IEventBus modEventBus, ModContainer modContainer) {
         AcademyCraftRegister.register(modEventBus);
-        modEventBus.addListener(AcademyCraftData::dataSetup);
+        modEventBus.addListener(AcademyCraftClientData::dataSetup);
     }
 
     public static void checkFile(File file) {

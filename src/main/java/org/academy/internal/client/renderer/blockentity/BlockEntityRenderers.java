@@ -12,19 +12,19 @@ public final class BlockEntityRenderers {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_TOP.get(),
-                context -> WindGenTopBlockEntityRenderer.INSTANCE);
+                context -> WindGenTopRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.ABILITY_DEVELOPER.get(),
-                context -> AbilityDeveloperBlockEntityRenderer.INSTANCE);
+                context -> AbilityDeveloperRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.WIRELESS_NODE.get(),
-                context -> WirelessNodeBlockEntityRenderer.INSTANCE);
+                context -> WirelessNodeRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.OMNI_CRAFTING_TABLE.get(),
-                context -> OmniCraftingTableBlockEntityRenderer.INSTANCE);
+                context -> OmniCraftingTableRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.CAT_ENGINE.get(),
-                context -> CatEngineBlockEntityRenderer.INSTANCE);
+                context -> CatEngineRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_BASE.get(),
-                context -> WindGenBaseBlockEntityRenderer.INSTANCE);
+                context -> WindGenBaseRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_PILLAR.get(),
-                context -> WindGenPillarBlockEntityRenderer.INSTANCE);
+                context -> WindGenPillarRenderer.INSTANCE);
     }
 
     private BlockEntityRenderers() {

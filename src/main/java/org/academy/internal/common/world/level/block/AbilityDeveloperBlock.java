@@ -22,12 +22,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class AbilityDeveloperBlock extends MultiBlock {
+public final class AbilityDeveloperBlock extends MultiBlock {
     public static final MapCodec<AbilityDeveloperBlock> CODEC = simpleCodec(AbilityDeveloperBlock::new);
 
     public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
@@ -46,7 +45,7 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext pContext) {
+    public BlockState getStateForPlacement(BlockPlaceContext pContext) {
         return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
@@ -88,19 +87,18 @@ public class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new AbilityDeveloperBlockEntity(pos, state);
     }
 
     @Override
-    @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level,
-                                                                  BlockState state,
-                                                                  BlockEntityType<T> blockEntityType) {
+                                                                           BlockState state,
+                                                                           BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof AbilityDeveloperBlockEntity abe) {
                 if (abe.isMain()) {
-                    if (level1.isClientSide) {
+                    if (level1.isClientSide()) {
                         abe.clientTick();
                     } else {
                         if (level1 instanceof ServerLevel serverLevel) {

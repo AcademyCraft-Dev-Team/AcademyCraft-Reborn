@@ -1,0 +1,15 @@
+{
+  "type": "academy:imag_phase_lake",
+  "config": {
+    "depth": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 10,
+      "min_inclusive": 5
+    },
+    "radius": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 10,
+      "min_inclusive": 5
+    }
+  }
+}

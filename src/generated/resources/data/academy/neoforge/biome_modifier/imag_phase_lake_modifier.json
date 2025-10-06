@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "minecraft:deep_dark",
+  "features": "academy:imag_phase_lake",
+  "step": "lakes"
+}

@@ -22,9 +22,9 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -141,26 +141,26 @@ public final class StormWing extends Skill {
 
         @SubscribePacket
         public static void handleControl(ControlPacket packet) {
-            State state = packet.getState();
-            ServerPlayer player = packet.getPacketListener().getPlayer();
+            var state = packet.getState();
+            var player = packet.getPacketListener().getPlayer();
             if (isActive(player)) {
                 switch (state) {
                     case FRONT -> {
-                        Vec3 vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
+                        var vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
                         player.push(vec3.x, vec3.y * 1.5, vec3.z);
                     }
                     case BACK -> {
-                        Vec3 vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
+                        var vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
                         player.push(vec3.x, vec3.y, vec3.z);
                     }
                     case LEFT -> {
-                        Vec3 look = player.getLookAngle();
-                        Vec3 left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2);
+                        var look = player.getLookAngle();
+                        var left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2);
                         player.push(left.x, left.y, left.z);
                     }
                     case RIGHT -> {
-                        Vec3 look = player.getLookAngle();
-                        Vec3 right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2);
+                        var look = player.getLookAngle();
+                        var right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2);
                         player.push(right.x, right.y, right.z);
                     }
                     case KEEP -> {

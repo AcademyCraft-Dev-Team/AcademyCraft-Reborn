@@ -121,7 +121,7 @@ public class LevelUtil {
     private static void processBlockForDestruction(Level level, BlockPos currentPos, Vec3 start, Vec3 end, float radius,
                                                    int miningLevel, boolean canBlock, List<BlockPos> breakableBlocks, List<BlockPos> unbreakableBlocks) {
         if (isBlockIntersectingCylinder(currentPos, start, end, radius)) {
-            BlockState blockState = level.getBlockState(currentPos);
+            var blockState = level.getBlockState(currentPos);
             if (!blockState.isAir()) {
                 if (canBreakBlock(blockState, miningLevel)) {
                     breakableBlocks.add(currentPos.immutable());

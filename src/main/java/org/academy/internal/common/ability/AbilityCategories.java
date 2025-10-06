@@ -11,9 +11,6 @@ import org.academy.internal.common.ability.level0.Level0;
 import org.academy.internal.common.ability.meltdowner.Meltdowner;
 import org.academy.internal.common.ability.teleport.Teleport;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public final class AbilityCategories {
     public static final DeferredRegister<AbilityCategory> ABILITY_CATEGORIES = DeferredRegister.create(Registries.Keys.ABILITY_CATEGORIES, AcademyCraft.MOD_ID);
     public static final DeferredHolder<AbilityCategory, Level0> LEVEL0 = ABILITY_CATEGORIES.register(AbilityCategoryNames.LEVEL0, Level0::new);

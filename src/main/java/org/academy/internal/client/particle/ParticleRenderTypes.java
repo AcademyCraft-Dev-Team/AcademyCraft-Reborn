@@ -57,51 +57,24 @@ public final class ParticleRenderTypes {
 
     @SubscribeEvent
     public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(ParticleTypes.IMAG_PHASE_FLUID.get(), spriteSet -> (type, level, x, y, z, xSpeed, ySpeed, zSpeed) -> {
+        event.registerSpriteSet(ParticleTypes.IMAG_PHASE_FLUID.get(), spriteSet -> (particleType, level, x, y, z, xSpeed, ySpeed, zSpeed, random) -> {
             var particle = new ImagiphaseFluidParticle(level, spriteSet, x, y, z);
-            var random = MathUtil.RANDOM;
-            particle.scale(random.nextFloat(0.5f, 0.75f));
+            var rd = MathUtil.RANDOM;
+            particle.scale(rd.nextFloat(0.5f, 0.75f));
 
-            var baseHexColor = IMAG_PHASE_HEX_COLORS.get(random.nextInt(IMAG_PHASE_HEX_COLORS.size()));
-
-            var baseR = Integer.parseInt(baseHexColor.substring(0, 2), 16);
-            var baseG = Integer.parseInt(baseHexColor.substring(2, 4), 16);
-            var baseB = Integer.parseInt(baseHexColor.substring(4, 6), 16);
-
-            var finalR = MathUtil.clamp(baseR + random.nextInt(-20, 20), 0, 255) / 255.0f;
-            var finalG = MathUtil.clamp(baseG + random.nextInt(-20, 20), 0, 255) / 255.0f;
-            var finalB = MathUtil.clamp(baseB + random.nextInt(-20, 20), 0, 255) / 255.0f;
-
-            particle.setColor(finalR, finalG, finalB);
-            return particle;
-        });
-
-        event.registerSpriteSet(ParticleTypes.IMAG_PHASE_LEAVES.get(), spriteSet -> (type, level, x, y, z, xSpeed, ySpeed, zSpeed) -> {
-            var particle = new ImagiphaseLeavesParticle(level, x, y, z, spriteSet);
-            var random = MathUtil.RANDOM;
-            particle.scale(random.nextFloat(0.5f, 0.75f));
-
-            var baseHexColor = IMAG_PHASE_HEX_COLORS.get(random.nextInt(IMAG_PHASE_HEX_COLORS.size()));
+            var baseHexColor = IMAG_PHASE_HEX_COLORS.get(rd.nextInt(IMAG_PHASE_HEX_COLORS.size()));
 
             var baseR = Integer.parseInt(baseHexColor.substring(0, 2), 16);
             var baseG = Integer.parseInt(baseHexColor.substring(2, 4), 16);
             var baseB = Integer.parseInt(baseHexColor.substring(4, 6), 16);
 
-            var finalR = MathUtil.clamp(baseR + random.nextInt(-20, 20), 0, 255) / 255.0f;
-            var finalG = MathUtil.clamp(baseG + random.nextInt(-20, 20), 0, 255) / 255.0f;
-            var finalB = MathUtil.clamp(baseB + random.nextInt(-20, 20), 0, 255) / 255.0f;
+            var finalR = MathUtil.clamp(baseR + rd.nextInt(-20, 20), 0, 255) / 255.0f;
+            var finalG = MathUtil.clamp(baseG + rd.nextInt(-20, 20), 0, 255) / 255.0f;
+            var finalB = MathUtil.clamp(baseB + rd.nextInt(-20, 20), 0, 255) / 255.0f;
 
             particle.setColor(finalR, finalG, finalB);
             return particle;
         });
-
-        event.registerSpriteSet(ParticleTypes.ARC_SMALL.get(), spriteSet -> (type, level, x, y, z, xSpeed, ySpeed, zSpeed) ->
-                new SmallArcParticle(level, spriteSet, x, y, z)
-        );
-
-        event.registerSpriteSet(ParticleTypes.ARC_MEDIUM.get(), spriteSet -> (type, level, x, y, z, yaw, pitch, zSpeed) ->
-                new MediumArcParticle(level, x, y, z, (float) yaw, (float) pitch, spriteSet)
-        );
     }
 
     private ParticleRenderTypes() {

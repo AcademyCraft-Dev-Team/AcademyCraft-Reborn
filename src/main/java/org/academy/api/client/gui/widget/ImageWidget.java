@@ -1,13 +1,14 @@
 package org.academy.api.client.gui.widget;
 
 import com.mojang.blaze3d.textures.GpuTextureView;
-import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ARGB;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.WidgetRenderContext;
+
+import javax.annotation.Nullable;
 
 public class ImageWidget extends AbstractWidget {
     @Nullable

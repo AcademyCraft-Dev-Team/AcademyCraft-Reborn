@@ -1,7 +1,8 @@
 package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.util.MathUtil;
 import org.joml.Vector3f;
@@ -21,23 +22,24 @@ public final class ArcFactory {
         PostEffect.addFixedBuffer(RenderTypes.ARC);
     }
 
-    public static void render(PoseStack ps, MultiBufferSource bufferSource, ArcRenderData data) {
-        render(ps, bufferSource, data, 1, 1, 1, 1);
+    public static void render(PoseStack ps, SubmitNodeCollector submitNodeCollector, ArcRenderData data) {
+        render(ps, submitNodeCollector, data, 1, 1, 1, 1);
     }
 
-    public static void render(PoseStack ps, MultiBufferSource bufferSource, ArcRenderData data, float r, float g, float b, float a) {
-        var vc = bufferSource.getBuffer(RenderTypes.ARC);
-        var matrix = ps.last();
+    public static void render(PoseStack ps, SubmitNodeCollector submitNodeCollector, ArcRenderData data, float r, float g, float b, float a) {
+        submitNodeCollector.submitCustomGeometry(ps, RenderTypes.ARC, (pose, vc) -> renderRecursive(pose, vc, data, r, g, b, a));
+    }
 
+    private static void renderRecursive(PoseStack.Pose pose, VertexConsumer vc, ArcRenderData data, float r, float g, float b, float a) {
         for (var quad : data.quads) {
-            vc.addVertex(matrix, quad.v1.pos.x(), quad.v1.pos.y(), quad.v1.pos.z()).setUv(quad.v1.u, quad.v1.v).setColor(r, g, b, a);
-            vc.addVertex(matrix, quad.v2.pos.x(), quad.v2.pos.y(), quad.v2.pos.z()).setUv(quad.v2.u, quad.v2.v).setColor(r, g, b, a);
-            vc.addVertex(matrix, quad.v3.pos.x(), quad.v3.pos.y(), quad.v3.pos.z()).setUv(quad.v3.u, quad.v3.v).setColor(r, g, b, a);
-            vc.addVertex(matrix, quad.v4.pos.x(), quad.v4.pos.y(), quad.v4.pos.z()).setUv(quad.v4.u, quad.v4.v).setColor(r, g, b, a);
+            vc.addVertex(pose, quad.v1.pos.x(), quad.v1.pos.y(), quad.v1.pos.z()).setUv(quad.v1.u, quad.v1.v).setColor(r, g, b, a);
+            vc.addVertex(pose, quad.v2.pos.x(), quad.v2.pos.y(), quad.v2.pos.z()).setUv(quad.v2.u, quad.v2.v).setColor(r, g, b, a);
+            vc.addVertex(pose, quad.v3.pos.x(), quad.v3.pos.y(), quad.v3.pos.z()).setUv(quad.v3.u, quad.v3.v).setColor(r, g, b, a);
+            vc.addVertex(pose, quad.v4.pos.x(), quad.v4.pos.y(), quad.v4.pos.z()).setUv(quad.v4.u, quad.v4.v).setColor(r, g, b, a);
         }
 
         for (var branch : data.branches) {
-            render(ps, bufferSource, branch, r, g, b, a);
+            renderRecursive(pose, vc, branch, r, g, b, a);
         }
     }
 
@@ -187,7 +189,7 @@ public final class ArcFactory {
                 var u0 = (float) (i - 1) / segments;
                 var u1 = (float) i / segments;
 
-                Quad quad = new Quad();
+                var quad = new Quad();
                 quad.v1 = new Vertex(new Vector3f(prevLX, prevLY, prevLZ), u0, 0);
                 quad.v2 = new Vertex(new Vector3f(prevRX, prevRY, prevRZ), u0, 1);
                 quad.v3 = new Vertex(new Vector3f(currentRX, currentRY, currentRZ), u1, 1);
@@ -208,10 +210,10 @@ public final class ArcFactory {
                     var branchEndY = currentPosY + segDirY * branchLength;
                     var branchEndZ = currentPosZ + branchDirZ * branchLength;
 
-                    ArcRenderData branchData = new ArcRenderData();
+                    var branchData = new ArcRenderData();
                     parentData.branches.add(branchData);
 
-                    ArcStyle branchStyle = new ArcStyle();
+                    var branchStyle = new ArcStyle();
                     branchStyle.start = new Vector3f(currentPosX, currentPosY, currentPosZ);
                     branchStyle.end = new Vector3f(branchEndX, branchEndY, branchEndZ);
                     branchStyle.thickness = thickness * style.branchThicknessFactor;

@@ -2,12 +2,11 @@ package org.academy.internal.client.renderer.special;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.client.model.geom.EntityModelSet;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.world.item.ItemDisplayContext;
-import org.academy.internal.client.renderer.blockentity.WindGenBaseBlockEntityRenderer;
+import org.academy.internal.client.renderer.blockentity.WindGenBaseRenderer;
 import org.joml.Vector3f;
 
 import java.util.Set;
@@ -19,16 +18,19 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
     }
 
     @Override
-    public void render(ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, boolean hasFoilType) {
-        poseStack.pushPose();
-        poseStack.translate(0.5f, 0, 0.5f);
-        poseStack.scale(1, -1, 1);
-        WindGenBaseBlockEntityRenderer.MODEL.renderPole(poseStack, bufferSource, packedLight, packedOverlay);
-        poseStack.popPose();
+    public void getExtents(Set<Vector3f> output) {
     }
 
     @Override
-    public void getExtents(Set<Vector3f> output) {
+    public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+        poseStack.pushPose();
+        if (displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND) {
+            poseStack.translate(0.25f, 0.25f, 0.75f);
+        } else {
+            poseStack.translate(0.5f, 0, 0.5f);
+        }
+        WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
+        poseStack.popPose();
     }
 
     public record Unbaked() implements SpecialModelRenderer.Unbaked {
@@ -41,7 +43,7 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
         }
 
         @Override
-        public SpecialModelRenderer<?> bake(EntityModelSet p_386553_) {
+        public SpecialModelRenderer<?> bake(BakingContext context) {
             return WindGenPillarSpecialRenderer.INSTANCE;
         }
     }

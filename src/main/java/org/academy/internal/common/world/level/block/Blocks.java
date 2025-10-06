@@ -10,7 +10,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import static org.academy.AcademyCraft.MODID;
 
 @SuppressWarnings("unused")
-public class Blocks {
+public final class Blocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     public static final DeferredHolder<Block, WirelessNodeBlock> WIRELESS_NODE =
             BLOCKS.registerBlock("wireless_node", WirelessNodeBlock::new);

@@ -8,12 +8,7 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import org.academy.api.client.gui.command.SubmittedCommand;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public final class BatchProcessor {
     private final ByteBufferBuilder sharedByteBufferBuilder;
