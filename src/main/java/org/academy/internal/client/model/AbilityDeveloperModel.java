@@ -4,22 +4,18 @@ import net.minecraft.client.animation.KeyframeAnimation;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.*;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.RenderType;
-import org.academy.api.client.animation.definitions.AbilityDeveloperAnimation;
-import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
+import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 
 /**
  * @author 这里没有Badd
  */
-public class AbilityDeveloperModel extends Model {
-    private final ModelPart up;
-    private final ModelPart rside;
-    private final ModelPart lside;
-    private final ModelPart middle;
-    private final ModelPart m1;
-    private final ModelPart m2;
-    private final ModelPart m3;
+public class AbilityDeveloperModel extends Model<AbilityDeveloperRenderState> {
     private final KeyframeAnimation open;
     private final KeyframeAnimation close;
     private final KeyframeAnimation liedown;
@@ -27,21 +23,15 @@ public class AbilityDeveloperModel extends Model {
 
     public AbilityDeveloperModel(ModelPart root) {
         super(root.getChild("all"), RenderType::entityTranslucent);
-        ModelPart all = root.getChild("all");
-        this.up = all.getChild("up");
-        ModelPart glass = this.up.getChild("glass");
-        this.rside = glass.getChild("rside");
-        this.lside = glass.getChild("lside");
+        var all = root.getChild("all");
+        ModelPart up = all.getChild("up");
+        var glass = up.getChild("glass");
         glass.getChild("lsidebars");
-        ModelPart base = this.up.getChild("base");
+        var base = up.getChild("base");
         base.getChild("light_li");
         base.getChild("logo_li");
         base.getChild("lwheel");
         base.getChild("rwheel");
-        this.middle = all.getChild("middle");
-        this.m1 = this.middle.getChild("m1");
-        this.m2 = this.middle.getChild("m2");
-        this.m3 = this.middle.getChild("m3");
         all.getChild("bottom");
         this.open = AbilityDeveloperAnimation.OPEN.bake(root);
         this.close = AbilityDeveloperAnimation.CLOSE.bake(root);
@@ -50,28 +40,28 @@ public class AbilityDeveloperModel extends Model {
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
+        var meshdefinition = new MeshDefinition();
+        var partdefinition = meshdefinition.getRoot();
 
-        PartDefinition all = partdefinition.addOrReplaceChild("all", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 16.0F));
+        var all = partdefinition.addOrReplaceChild("all", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 16.0F));
 
-        PartDefinition up = all.addOrReplaceChild("up", CubeListBuilder.create(), PartPose.offsetAndRotation(0.0F, -22.174F, -13.5346F, -1.0472F, 0.0F, 0.0F));
+        var up = all.addOrReplaceChild("up", CubeListBuilder.create(), PartPose.offsetAndRotation(0.0F, -22.174F, -13.5346F, -1.0472F, 0.0F, 0.0F));
 
-        PartDefinition glass = up.addOrReplaceChild("glass", CubeListBuilder.create(), PartPose.offset(0.0F, 9.174F, 0.5346F));
+        var glass = up.addOrReplaceChild("glass", CubeListBuilder.create(), PartPose.offset(0.0F, 9.174F, 0.5346F));
 
-        PartDefinition rside = glass.addOrReplaceChild("rside", CubeListBuilder.create().texOffs(0, 125).addBox(2.3013F, 0.1297F, -18.0F, 0.0F, 5.0F, 36.0F, new CubeDeformation(0.0F))
+        var rside = glass.addOrReplaceChild("rside", CubeListBuilder.create().texOffs(0, 125).addBox(2.3013F, 0.1297F, -18.0F, 0.0F, 5.0F, 36.0F, new CubeDeformation(0.0F))
                 .texOffs(5, 101).addBox(5.1297F, -2.6987F, -18.0F, 6.0F, 0.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offset(-11.1297F, -13.3013F, -1.0F));
 
         rside.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(0, 119).addBox(-0.5F, -2.0F, -2.0F, 0.0F, 4.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(4.069F, -0.931F, -16.0F, 0.0F, 0.0F, 0.7854F));
 
-        PartDefinition lside = glass.addOrReplaceChild("lside", CubeListBuilder.create().texOffs(24, 107).addBox(-2.3013F, 0.1297F, -18.0F, 0.0F, 5.0F, 36.0F, new CubeDeformation(0.0F))
+        var lside = glass.addOrReplaceChild("lside", CubeListBuilder.create().texOffs(24, 107).addBox(-2.3013F, 0.1297F, -18.0F, 0.0F, 5.0F, 36.0F, new CubeDeformation(0.0F))
                 .texOffs(48, 79).addBox(-11.1297F, -2.6987F, -18.0F, 6.0F, 0.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offset(11.1297F, -13.3013F, -1.0F));
 
         lside.addOrReplaceChild("cube_r2", CubeListBuilder.create().texOffs(24, 113).addBox(0.5F, -2.0F, -2.0F, 0.0F, 4.0F, 36.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-4.069F, -0.931F, -16.0F, 0.0F, 0.0F, -0.7854F));
 
         glass.addOrReplaceChild("lsidebars", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        PartDefinition base = up.addOrReplaceChild("base", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, 3.174F, -18.4654F, 16.0F, 2.0F, 36.0F, new CubeDeformation(0.0F))
+        var base = up.addOrReplaceChild("base", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, 3.174F, -18.4654F, 16.0F, 2.0F, 36.0F, new CubeDeformation(0.0F))
                 .texOffs(154, 6).addBox(-4.0F, 2.174F, -13.4654F, 8.0F, 2.0F, 5.0F, new CubeDeformation(0.0F))
                 .texOffs(69, 39).addBox(-4.0F, -7.826F, 16.5346F, 8.0F, 12.0F, 6.0F, new CubeDeformation(0.0F))
                 .texOffs(69, 25).addBox(-7.0F, -3.826F, 17.5346F, 3.0F, 8.0F, 2.0F, new CubeDeformation(0.0F))
@@ -118,7 +108,7 @@ public class AbilityDeveloperModel extends Model {
                 .texOffs(107, 115).addBox(10.0F, 3.49F, -17.75F, 2.0F, 3.0F, 33.0F, new CubeDeformation(0.0F))
                 .texOffs(155, 124).addBox(-2.0F, -1.5F, -16.74F, 4.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -2.326F, -0.7154F));
 
-        PartDefinition logo_li = base.addOrReplaceChild("logo_li", CubeListBuilder.create(), PartPose.offset(0.0F, -8.326F, 19.4346F));
+        var logo_li = base.addOrReplaceChild("logo_li", CubeListBuilder.create(), PartPose.offset(0.0F, -8.326F, 19.4346F));
 
         logo_li.addOrReplaceChild("cube_r11", CubeListBuilder.create().texOffs(146, 3).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 2.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F, 1.0584F, 0.4558F, 0.664F));
 
@@ -130,21 +120,21 @@ public class AbilityDeveloperModel extends Model {
                 .texOffs(70, 61).addBox(-2.2F, -3.0F, -2.0F, 2.0F, 6.0F, 4.0F, new CubeDeformation(0.0F))
                 .texOffs(85, 61).addBox(-2.2F, -2.0F, 2.0F, 3.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offset(-8.7F, 0.174F, 17.5346F));
 
-        PartDefinition middle = all.addOrReplaceChild("middle", CubeListBuilder.create(), PartPose.offset(0.0F, -3.0F, -29.0F));
+        var middle = all.addOrReplaceChild("middle", CubeListBuilder.create(), PartPose.offset(0.0F, -3.0F, -29.0F));
 
-        PartDefinition m1 = middle.addOrReplaceChild("m1", CubeListBuilder.create(), PartPose.offset(0.0F, -21.3671F, 3.4194F));
+        var m1 = middle.addOrReplaceChild("m1", CubeListBuilder.create(), PartPose.offset(0.0F, -21.3671F, 3.4194F));
 
         m1.addOrReplaceChild("cube_r12", CubeListBuilder.create().texOffs(116, 128).addBox(-1.0F, -13.25F, -1.0F, 2.0F, 9.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, 8.6171F, -1.5194F, -0.1745F, 0.0F, 0.0F));
 
-        PartDefinition m2 = middle.addOrReplaceChild("m2", CubeListBuilder.create(), PartPose.offset(0.0F, -12.5038F, 1.8566F));
+        var m2 = middle.addOrReplaceChild("m2", CubeListBuilder.create(), PartPose.offset(0.0F, -12.5038F, 1.8566F));
 
         m2.addOrReplaceChild("cube_r13", CubeListBuilder.create().texOffs(116, 128).addBox(-1.0F, -4.25F, -1.0F, 2.0F, 9.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -0.2462F, 0.0434F, -0.1745F, 0.0F, 0.0F));
 
-        PartDefinition m3 = middle.addOrReplaceChild("m3", CubeListBuilder.create(), PartPose.offset(0.0F, -3.6405F, 0.2937F));
+        var m3 = middle.addOrReplaceChild("m3", CubeListBuilder.create(), PartPose.offset(0.0F, -3.6405F, 0.2937F));
 
         m3.addOrReplaceChild("cube_r14", CubeListBuilder.create().texOffs(116, 128).addBox(-1.0F, 4.75F, -1.0F, 2.0F, 9.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -9.1095F, 1.6063F, -0.1745F, 0.0F, 0.0F));
 
-        PartDefinition bottom = all.addOrReplaceChild("bottom", CubeListBuilder.create().texOffs(0, 218).addBox(-11.0F, 17.0F, -28.0F, 22.0F, 2.0F, 36.0F, new CubeDeformation(0.0F))
+        var bottom = all.addOrReplaceChild("bottom", CubeListBuilder.create().texOffs(0, 218).addBox(-11.0F, 17.0F, -28.0F, 22.0F, 2.0F, 36.0F, new CubeDeformation(0.0F))
                 .texOffs(17, 178).addBox(-11.0F, 17.0F, 8.0F, 22.0F, 2.0F, 10.0F, new CubeDeformation(0.0F))
                 .texOffs(83, 208).addBox(10.0F, 15.0F, -29.0F, 1.0F, 2.0F, 37.0F, new CubeDeformation(0.0F))
                 .texOffs(60, 170).addBox(10.0F, 13.0F, -30.0F, 1.0F, 2.0F, 23.0F, new CubeDeformation(0.0F))
@@ -167,18 +157,12 @@ public class AbilityDeveloperModel extends Model {
         return LayerDefinition.create(meshdefinition, 256, 256);
     }
 
-    public void setupAnim(AbilityDeveloperBlockEntity abilityDeveloperBlockEntity, float partialTick) {
-        lside.resetPose();
-        rside.resetPose();
-        up.resetPose();
-        m1.resetPose();
-        m2.resetPose();
-        m3.resetPose();
-        middle.resetPose();
-
-        open.apply(abilityDeveloperBlockEntity.openState, abilityDeveloperBlockEntity.ticks + partialTick);
-        close.apply(abilityDeveloperBlockEntity.closingState, abilityDeveloperBlockEntity.ticks + partialTick);
-        stand.apply(abilityDeveloperBlockEntity.standState, abilityDeveloperBlockEntity.ticks + partialTick);
-        liedown.apply(abilityDeveloperBlockEntity.liedownState, abilityDeveloperBlockEntity.ticks + partialTick);
+    @Override
+    public void setupAnim(AbilityDeveloperRenderState renderState) {
+        super.setupAnim(renderState);
+        open.apply(renderState.openState, renderState.ageInTicks);
+        close.apply(renderState.closingState, renderState.ageInTicks);
+        stand.apply(renderState.standState, renderState.ageInTicks);
+        liedown.apply(renderState.liedownState, renderState.ageInTicks);
     }
 }

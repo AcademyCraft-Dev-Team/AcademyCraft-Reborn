@@ -2,7 +2,6 @@ package org.academy.internal.common.world.level.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -15,7 +14,7 @@ import java.util.Objects;
 /**
  * @author cnlimiter
  */
-public class CatEngineBlockEntity extends BlockEntity implements WirelessUser {
+public final class CatEngineBlockEntity extends BlockEntity implements WirelessUser {
     public int time;
     public float rot;
     public float oRot;
@@ -30,7 +29,7 @@ public class CatEngineBlockEntity extends BlockEntity implements WirelessUser {
 
     public static void tickAnim(Level level, BlockPos blockPos, BlockState blockState, CatEngineBlockEntity e) {
         e.oRot = e.rot;
-        Player player = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 3, false);
+        var player = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 3, false);
         if (player != null) {
             double d0 = player.getX() - ((double) blockPos.getX() + 0.5D);
             double d1 = player.getZ() - ((double) blockPos.getZ() + 0.5D);
@@ -76,7 +75,7 @@ public class CatEngineBlockEntity extends BlockEntity implements WirelessUser {
         if (!Objects.equals(this.connectedNodePos, nodePos)) {
             this.connectedNodePos = nodePos;
             setChanged();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }

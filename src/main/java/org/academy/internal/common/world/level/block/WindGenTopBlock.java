@@ -26,13 +26,12 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.entity.WindGenTopBlockEntity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-public class WindGenTopBlock extends MultiBlock {
+public final class WindGenTopBlock extends MultiBlock {
     public static final MapCodec<WindGenTopBlock> CODEC = simpleCodec(WindGenTopBlock::new);
     public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     public static final List<Vec3i> SUB_BLOCKS = List.of(
@@ -102,8 +101,8 @@ public class WindGenTopBlock extends MultiBlock {
             }
 
             if (getMainBlockEntity(level, pos) instanceof WindGenTopBlockEntity windGenTopBlockEntity) {
-                ItemStack stackInHand = player.getItemInHand(hand);
-                ItemStack stackInSlot = windGenTopBlockEntity.getItem(0);
+                var stackInHand = player.getItemInHand(hand);
+                var stackInSlot = windGenTopBlockEntity.getItem(0);
 
                 if (stackInSlot.isEmpty() && stackInHand.getItem() == Items.WIND_GEN_FAN_ITEM.get()) {
                     windGenTopBlockEntity.setItem(0, stackInHand.copyWithCount(1));
@@ -131,7 +130,7 @@ public class WindGenTopBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext pContext) {
+    public BlockState getStateForPlacement(BlockPlaceContext pContext) {
         return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
@@ -151,12 +150,12 @@ public class WindGenTopBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new WindGenTopBlockEntity(pos, state);
     }
 
     @Override
-    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+    public <T extends BlockEntity> @NotNull BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof WindGenTopBlockEntity windGenTopBlockEntity) {
                 windGenTopBlockEntity.tick();

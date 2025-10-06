@@ -59,7 +59,7 @@ public class FutureManagerServer extends AbstractFutureManager {
         var packetListener = futureRequestPacket.getPacketListener();
         var player = packetListener.getPlayer();
 
-        super.<ServerGamePacketListenerImpl, FutureRequestPacket<ServerGamePacketListenerImpl>, ClientGamePacketListener, RES_P, REQ_P>handleRequest(
+        super.<ServerGamePacketListenerImpl, ClientGamePacketListener, RES_P, REQ_P>handleRequest(
                 futureRequestPacket, futureRequestPacket.getPacketListener(), response -> {
                     var responseTypeId = response.getPacketType().getPacketId();
                     var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());

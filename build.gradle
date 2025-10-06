@@ -2,13 +2,13 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.107'
+    id 'net.neoforged.moddev' version 'latest.release'
+    id 'org.openrewrite.rewrite' version 'latest.release'
 }
 
-version = mod_version
-group = mod_group_id
-
 base {
+    version = mod_version
+    group = mod_group_id
     archivesName = mod_id + "-" + minecraft_version
 }
 
@@ -131,6 +131,9 @@ neoForge {
 }
 
 repositories {
+    flatDir {
+        dirs 'libs'
+    }
     maven {
         name = "Jared's maven"
         url = "https://maven.blamejared.com/"
@@ -170,13 +173,14 @@ repositories {
 
 dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
-    runtimeOnly "maven.modrinth:sodium:mc1.21.6-0.6.13-neoforge"
-    implementation "maven.modrinth:iris:1.9.1+1.21.7-neoforge"
-    runtimeOnly "maven.modrinth:sodium-extra:mc1.21.6-0.6.6+neoforge"
-    runtimeOnly "maven.modrinth:lithium:mc1.21.8-0.18.0-neoforge"
+    compileOnly "maven.modrinth:sodium:mc1.21.8-0.7.0-neoforge"
+    compileOnly "maven.modrinth:iris:1.9.2+1.21.8-neoforge"
+    compileOnly "maven.modrinth:sodium-extra:mc1.21.8-0.7.0+neoforge"
+    compileOnly "maven.modrinth:lithium:mc1.21.9-0.19.0-neoforge"
 
+/*
     // Modern UI
     implementation("icyllis.modernui:ModernUI-NeoForge:${minecraft_version}-${modernui_version}.+")
     additionalRuntimeClasspath(compileOnly("icyllis.modernui:ModernUI-Core:${modernui_version}")) {
@@ -199,6 +203,14 @@ dependencies {
         exclude group: "com.ibm.icu", module: "icu4j"
         exclude group: "it.unimi.dsi", module: "fastutil"
     }
+*/
+
+    rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
+    rewrite("org.openrewrite.recipe:rewrite-migrate-java")
+}
+
+rewrite {
+    activeRecipe("org.openrewrite.java.migrate.lang.var.UseVarForObject")
 }
 
 // Example configuration to allow publishing using the maven-publish plugin

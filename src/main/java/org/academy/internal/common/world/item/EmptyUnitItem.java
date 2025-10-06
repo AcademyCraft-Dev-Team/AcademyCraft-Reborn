@@ -43,7 +43,7 @@ public class EmptyUnitItem extends Item {
                         itemstack.shrink(1);
                     }
 
-                    if (!level.isClientSide) {
+                    if (!level.isClientSide()) {
                         CriteriaTriggers.FILLED_BUCKET.trigger((ServerPlayer) player, result);
                     }
 

@@ -21,7 +21,7 @@ public class GenericConfig {
 
         @Override
         public @NotNull GenericConfig getDefault() {
-            GenericConfig defaultConfig = new GenericConfig();
+            var defaultConfig = new GenericConfig();
             defaultConfig.booleanMap.put("attackPlayer", true);
             defaultConfig.booleanMap.put("destroyBlocks", true);
             defaultConfig.booleanMap.put("genOres", true);

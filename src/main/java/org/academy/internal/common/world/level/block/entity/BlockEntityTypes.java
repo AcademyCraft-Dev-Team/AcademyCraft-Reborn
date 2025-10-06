@@ -8,7 +8,7 @@ import org.academy.internal.common.world.level.block.Blocks;
 
 import static org.academy.AcademyCraft.MODID;
 
-public class BlockEntityTypes {
+public final class BlockEntityTypes {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(BuiltInRegistries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WirelessNodeBlockEntity>> WIRELESS_NODE = BLOCK_ENTITY_TYPES.register(
             "wireless_node",

@@ -62,7 +62,7 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
+        if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
             var nodeName = "Node_" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ();
             var password = "";
             int radius = 32;
@@ -85,12 +85,12 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         } else {
             if (player instanceof ServerPlayer serverPlayer) {
                 if (level.getBlockEntity(pos) instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
-                    MenuProvider menuProvider = getMenuProvider(state, level, pos);
+                    var menuProvider = getMenuProvider(state, level, pos);
                     ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIRELESS_NODE_SCREEN,
                             buf -> buf.writeBlockPos(wirelessNodeBlockEntity.getBlockPos()));
                 }

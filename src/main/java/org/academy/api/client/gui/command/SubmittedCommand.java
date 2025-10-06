@@ -3,8 +3,8 @@ package org.academy.api.client.gui.command;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.academy.api.client.gui.framework.ScissorRect;
 
-import java.util.Objects;
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public final class SubmittedCommand {
     private final DrawCommand command;

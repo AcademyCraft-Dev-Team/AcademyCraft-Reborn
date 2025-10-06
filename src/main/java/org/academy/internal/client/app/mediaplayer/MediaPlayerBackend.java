@@ -19,8 +19,6 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-import java.nio.ShortBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -256,7 +254,7 @@ public final class MediaPlayerBackend {
             audioDataBuffer = mediaInfo.source().getData();
 
             try (var stack = MemoryStack.stackPush()) {
-                IntBuffer error = stack.mallocInt(1);
+                var error = stack.mallocInt(1);
                 stbVorbisHandle = STBVorbis.stb_vorbis_open_memory(audioDataBuffer, error, null);
                 if (stbVorbisHandle == 0) {
                     throw new IOException("Failed to open Ogg Vorbis stream, error: " + error.get(0));
@@ -475,7 +473,7 @@ public final class MediaPlayerBackend {
 
         pcmBuffer.clear();
         pcmBuffer.order(ByteOrder.nativeOrder());
-        ShortBuffer shortBuffer = pcmBuffer.asShortBuffer();
+        var shortBuffer = pcmBuffer.asShortBuffer();
 
         var framesToRead = pcmBuffer.capacity() / (channels * 2);
         var maxSamplesPerChannel = Math.min(framesToRead, shortBuffer.capacity() / channels);

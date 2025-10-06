@@ -94,18 +94,23 @@ public final class SettingsApp implements App {
             var generalButton = createTabButton("General", 0, 90);
             var keybindingsButton = createTabButton("Keybindings", 95, 95);
 
-            Runnable showGeneral = () -> {
-                generalPanel.setVisible(true);
-                keybindingsPanel.setVisible(false);
-                generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
-                keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
+            var showGeneral = new Runnable() {
+                @Override
+                public void run() {
+                    generalPanel.setVisible(true);
+                    keybindingsPanel.setVisible(false);
+                    generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
+                    keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
+                }
             };
-
-            Runnable showKeybindings = () -> {
+            var showKeybindings = new Runnable() {
+                @Override
+                public void run() {
                 generalPanel.setVisible(false);
                 keybindingsPanel.setVisible(true);
                 generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
                 keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
+                }
             };
 
             generalButton.<ImageButtonWidget>getChildUnSafe("button_logic").onPress = showGeneral;
@@ -162,9 +167,12 @@ public final class SettingsApp implements App {
             currentY += 20;
 
             Supplier<Boolean> blurStateSupplier = () -> config.enableBlur;
-            Runnable blurToggleAction = () -> {
+            var blurToggleAction = new Runnable() {
+                @Override
+                public void run() {
                 config.enableBlur = !config.enableBlur;
                 AcademyCraftClient.Config.INSTANCE.save();
+                }
             };
             panel.addChild("blur_toggle_button", createToggleButton(currentY, blurStateSupplier, blurToggleAction));
 
@@ -192,9 +200,12 @@ public final class SettingsApp implements App {
         private PanelWidget createToggleButton(float y, Supplier<Boolean> stateSupplier, Runnable onPress) {
             var buttonPanel = new PanelWidget(5f, y, 180f, 20f);
             var text = new AutoScaleLabelWidget(stateSupplier.get() ? "On" : "Off", 0, 0, 180f);
-            Runnable toggleAction = () -> {
-                onPress.run();
-                text.setText(stateSupplier.get() ? "On" : "Off");
+            var toggleAction = new Runnable() {
+                @Override
+                public void run() {
+                    onPress.run();
+                    text.setText(stateSupplier.get() ? "On" : "Off");
+                }
             };
             var logic = new ImageButtonWidget(0, 0, 180f, 20f, null, toggleAction);
             buttonPanel.addChild("button_logic", logic);
@@ -254,10 +265,13 @@ public final class SettingsApp implements App {
             layered.addChild("title", title);
 
             var closeButtonPanel = new PanelWidget(keySelectionPanel.getWidth() - 25, 5, 20, 15);
-            Runnable closeAction = () -> {
+            var closeAction = new Runnable() {
+                @Override
+                public void run() {
                 setBackgroundControlsEnabled(true);
                 keySelectionPanel.setVisible(false);
                 keySelectionPanel.setEnabled(false);
+                }
             };
             var closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, null, closeAction);
             closeButtonPanel.addChild("button_logic", closeButtonLogic);
@@ -276,12 +290,15 @@ public final class SettingsApp implements App {
             scrollBar.setZ(scrollBar.getZ() + 1);
 
             var listenBtnPanel = new PanelWidget(5, 165, 170, 20);
-            Runnable listenAction = () -> {
+            var listenAction = new Runnable() {
+                @Override
+                public void run() {
                 isListeningForKey = true;
                 setBackgroundControlsEnabled(true);
                 keySelectionPanel.setVisible(false);
                 keySelectionPanel.setEnabled(false);
                 keySelectionButton.<PanelWidget>getChildUnSafe("layered").<AutoScaleLabelWidget>getChildUnSafe("text").setText("> ... <");
+                }
             };
             var listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
             listenBtnPanel.addChild("button_logic", listenButtonLogic);
@@ -502,10 +519,13 @@ public final class SettingsApp implements App {
             var inputTypePanel = new PanelWidget(50, 5, 125, 20);
             controlPanel.addChild("input_type", inputTypePanel);
 
-            Runnable keyboardAction = () -> {
+            var keyboardAction = new Runnable() {
+                @Override
+                public void run() {
                 updateModifierButtonState(keyboardBtn, true);
                 updateModifierButtonState(mouseBtn, false);
                 updateBindingFromControls(true);
+                }
             };
             keyboardBtn = new PanelWidget(0, 0, 60, 15);
             var keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, null, keyboardAction);
@@ -521,10 +541,13 @@ public final class SettingsApp implements App {
             keyboardBtnLayered.addChild("label", keyboardLabel);
             inputTypePanel.addChild("keyboard", keyboardBtn);
 
-            Runnable mouseAction = () -> {
+            var mouseAction = new Runnable() {
+                @Override
+                public void run() {
                 updateModifierButtonState(keyboardBtn, false);
                 updateModifierButtonState(mouseBtn, true);
                 updateBindingFromControls(true);
+                }
             };
             mouseBtn = new PanelWidget(65, 0, 60, 15);
             var mouseLogic = new ImageButtonWidget(0, 0, 60, 15, null, mouseAction);
@@ -542,11 +565,14 @@ public final class SettingsApp implements App {
 
             keySelectionButton = new PanelWidget(50, 30, 125, 20);
             controlPanel.addChild("key_select", keySelectionButton);
-            Runnable keySelectAction = () -> {
-                setBackgroundControlsEnabled(false);
-                keySelectionPanel.setVisible(true);
-                keySelectionPanel.setEnabled(true);
-                updateKeySelectionHighlights();
+            var keySelectAction = new Runnable() {
+                @Override
+                public void run() {
+                    setBackgroundControlsEnabled(false);
+                    keySelectionPanel.setVisible(true);
+                    keySelectionPanel.setEnabled(true);
+                    updateKeySelectionHighlights();
+                }
             };
             var keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, null, keySelectAction);
             keySelectionButton.addChild("button_logic", keySelectionLogic);

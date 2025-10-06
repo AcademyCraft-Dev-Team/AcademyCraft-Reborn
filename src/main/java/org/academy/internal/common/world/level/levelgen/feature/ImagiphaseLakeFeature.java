@@ -21,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class ImagiphaseLakeFeature extends Feature<ImagiphaseLakeFeature.Configuration> {
+public final class ImagiphaseLakeFeature extends Feature<ImagiphaseLakeFeature.Configuration> {
     public ImagiphaseLakeFeature(Codec<Configuration> codec) {
         super(codec);
     }
@@ -369,7 +369,7 @@ public class ImagiphaseLakeFeature extends Feature<ImagiphaseLakeFeature.Configu
                     int leafIndex = toIndex(leafX, leafY, leafZ, totalMaskHeight, maskSizeZ);
                     if (leafIndex < 0 || leafIndex >= finalBlockStates.length) continue;
 
-                    BlockState existingState = finalBlockStates[leafIndex];
+                    var existingState = finalBlockStates[leafIndex];
                     if (existingState == null || existingState.isAir() || existingState.getBlock() == leavesState.getBlock()) {
                         int minDistance = LeavesBlock.DECAY_DISTANCE;
 
@@ -383,7 +383,7 @@ public class ImagiphaseLakeFeature extends Feature<ImagiphaseLakeFeature.Configu
                                     neighborZ >= 0 && neighborZ < maskSizeZ) {
 
                                 int neighborInternalIndex = toIndex(neighborX, neighborY, neighborZ, totalMaskHeight, maskSizeZ);
-                                BlockState neighborState = finalBlockStates[neighborInternalIndex];
+                                var neighborState = finalBlockStates[neighborInternalIndex];
 
                                 if (neighborState != null) {
                                     if (neighborState.is(logState.getBlock())) {

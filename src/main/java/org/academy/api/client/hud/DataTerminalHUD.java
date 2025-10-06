@@ -35,7 +35,6 @@ import org.academy.api.client.gui.event.ScrollEvent;
 import org.academy.api.client.gui.framework.*;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
-import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
@@ -182,7 +181,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         infoBar.addChild("icon", icon);
 
         var player = Minecraft.getInstance().player;
-        var playerName = player != null ? player.getGameProfile().getName() : "N/A";
+        var playerName = player != null ? player.getGameProfile().name() : "N/A";
         var playerNameLabel = new LabelWidget(Component.literal(playerName), padding, padding, barWidth - padding * 2.0F, iconSize);
         playerNameLabel.setAlignment(LabelWidget.Alignment.RIGHT);
         playerNameLabel.setVerticalAlignment(LabelWidget.VerticalAlignment.MIDDLE);
@@ -382,7 +381,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             var nameLabel = (LabelWidget) infoBar.getChildUnSafe("player_name");
             var player = Minecraft.getInstance().player;
             if (player != null) {
-                nameLabel.setText(player.getGameProfile().getName());
+                nameLabel.setText(player.getGameProfile().name());
             }
         }
     }
@@ -538,12 +537,12 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             var options = Minecraft.getInstance().options;
             var key = event.key;
             var scanCode = event.scanCode;
-            var isMovementKey = options.keyUp.matches(key, scanCode) || options.keyDown.matches(key, scanCode) || options.keyLeft.matches(key, scanCode) || options.keyRight.matches(key, scanCode) || options.keyJump.matches(key, scanCode) || options.keyShift.matches(key, scanCode) || options.keySprint.matches(key, scanCode);
+            var mcKeyEvent = new net.minecraft.client.input.KeyEvent(key, scanCode, event.modifiers);
+            var isMovementKey = options.keyUp.matches(mcKeyEvent) || options.keyDown.matches(mcKeyEvent) || options.keyLeft.matches(mcKeyEvent) || options.keyRight.matches(mcKeyEvent) || options.keyJump.matches(mcKeyEvent) || options.keyShift.matches(mcKeyEvent) || options.keySprint.matches(mcKeyEvent);
             var isHotbarKey = false;
-            var var7 = options.keyHotbarSlots;
 
-            for (var hotbarKey : var7) {
-                if (hotbarKey.matches(key, scanCode)) {
+            for (var hotbarKey : options.keyHotbarSlots) {
+                if (hotbarKey.matches(mcKeyEvent)) {
                     isHotbarKey = true;
                     break;
                 }

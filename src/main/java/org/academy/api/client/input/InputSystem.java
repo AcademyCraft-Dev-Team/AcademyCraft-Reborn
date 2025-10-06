@@ -1,5 +1,7 @@
 package org.academy.api.client.input;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
@@ -47,7 +49,7 @@ public final class InputSystem {
 
         if (event.isCanceled()) {
             if (action == GLFW.GLFW_RELEASE) {
-                net.minecraft.client.KeyMapping.set(com.mojang.blaze3d.platform.InputConstants.getKey(key, scanCode), false);
+                KeyMapping.set(key == -1 ? InputConstants.Type.SCANCODE.getOrCreate(scanCode) : InputConstants.Type.KEYSYM.getOrCreate(key), false);
             }
             ci.cancel();
             return;

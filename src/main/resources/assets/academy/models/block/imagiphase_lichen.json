@@ -1,5 +1,6 @@
 {
   "parent": "minecraft:block/glow_lichen",
+  "render_type": "cutout",
   "textures": {
     "particle": "academy:block/imagiphase_lichen",
     "glow_lichen": "academy:block/imagiphase_lichen"

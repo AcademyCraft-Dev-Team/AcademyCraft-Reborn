@@ -11,7 +11,7 @@
     "common.MixinProjectile",
     "common.MixinProtocolInfoBuilder"
   ],
-  "client": ["client.MixinClientPacketListener", "client.MixinGameRenderer", "client.MixinIntegratedServer", "client.MixinItemBlockRenderTypes", "client.MixinItemRenderer", "client.MixinKeyboardHandler", "client.MixinLevelRenderer", "client.MixinMinecraft", "client.MixinModelBakerImpl", "client.MixinModelBakery", "client.MixinModelManager", "client.MixinMouseHandler", "client.MixinPlayerRenderer", "client.MixinSoundEngine"],
+  "client": ["client.MixinAvatarRenderer", "client.MixinClientPacketListener", "client.MixinGameRenderer", "client.MixinIntegratedServer", "client.MixinItemBlockRenderTypes", "client.MixinItemRenderer", "client.MixinKeyboardHandler", "client.MixinLevelRenderer", "client.MixinMinecraft", "client.MixinModelBakerImpl", "client.MixinModelBakery", "client.MixinModelManager", "client.MixinMouseHandler", "client.MixinSoundEngine"],
   "injectors": {
     "defaultRequire": 1
   }

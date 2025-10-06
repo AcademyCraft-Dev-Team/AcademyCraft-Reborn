@@ -1,7 +1,10 @@
 package org.academy;
 
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.network.Connection;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -9,12 +12,11 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
-import net.neoforged.neoforge.client.event.RegisterSpecialBlockModelRendererEvent;
-import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
+import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
+import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.hud.terminal.HUDController;
@@ -22,21 +24,20 @@ import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.network.NetworkManager;
 import org.academy.api.common.network.packet.C2SPacket;
 import org.academy.api.common.network.packet.Packet;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
+import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.particle.ParticleRenderTypes;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
-import org.academy.internal.client.renderer.item.ItemRenderers;
-import org.academy.internal.client.renderer.special.WindGenBaseSpecialRenderer;
-import org.academy.internal.client.renderer.special.WindGenPillarSpecialRenderer;
-import org.academy.internal.client.renderer.special.WindGenTopSpecialRenderer;
-import org.academy.internal.client.renderer.special.WirelessNodeSpecialRenderer;
+import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.level.block.Blocks;
+import org.academy.internal.common.world.level.block.MultiBlock;
 import org.academy.internal.common.world.level.material.ImagiphasePlasma;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,17 +51,13 @@ public final class AcademyCraftClient {
     public static final FutureManagerClient CLIENT_FUTURE_MANAGER = new FutureManagerClient();
 
     public AcademyCraftClient(IEventBus modEventBus) {
-        modEventBus.addListener(AcademyCraftClient::onRegisterClientExtensions);
-        modEventBus.addListener(AcademyCraftClient::onRegisterRenderStateModifiers);
-        modEventBus.addListener(AcademyCraftClient::onRegisterSpecialModelRenderer);
-        modEventBus.addListener(AcademyCraftClient::onRegisterSpecialBlockModelRenderer);
+        modEventBus.register(ModBusSubscriber.class);
     }
 
     public static void init() {
         CLIENT_NETWORK_MANAGER.clear();
         CLIENT_FUTURE_MANAGER.clear();
         CLIENT_NETWORK_MANAGER.registerPacketListener(CLIENT_FUTURE_MANAGER);
-        ItemRenderers.init();
         Screens.register();
         HUDManager.init();
         Apps.register();
@@ -83,49 +80,42 @@ public final class AcademyCraftClient {
         HUDController.INSTANCE.resize(width, height);
     }
 
-    public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
-        event.registerEntityModifier(PlayerRenderer.class,
-                (abstractClientPlayer, playerRenderState) ->
-                        playerRenderState.setRenderData(
-                                StormWingEffectRenderer.CONTEXT_KEY,
-                                abstractClientPlayer.getData(AttachmentTypes.ACTIVATED_STORM_WING)
-                        )
-        );
-    }
-
-    public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
-        event.register(AcademyCraft.academy("wireless_node"), WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(AcademyCraft.academy("wind_gen_base"), WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(AcademyCraft.academy("wind_gen_pillar"), WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(AcademyCraft.academy("wind_gen_top"), WindGenTopSpecialRenderer.Unbaked.MAP_CODEC);
-    }
-
-    public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
-        event.register(Blocks.WIND_GEN_PILLAR.get(), WindGenPillarSpecialRenderer.Unbaked.INSTANCE);
-    }
-
-    public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
-        event.registerFluidType(new IClientFluidTypeExtensions() {
-            @Override
-            public int getTintColor() {
-                return 0XFF000000;
-            }
-
-            @Override
-            public ResourceLocation getStillTexture() {
-                return ImagiphasePlasma.TEXTURE;
-            }
-
-            @Override
-            public ResourceLocation getFlowingTexture() {
-                return ImagiphasePlasma.TEXTURE;
-            }
-        }, ImagiphasePlasma.FLUID_TYPE);
-    }
-
     @SubscribeEvent
     public static void onClientPauseChange(ClientPauseChangeEvent.Post event) {
         Config.INSTANCE.save();
+    }
+
+    @SubscribeEvent
+    public static void onExtractBlockOutlineRenderState(ExtractBlockOutlineRenderStateEvent event) {
+        var state = event.getBlockState();
+        var pillar = state.getBlock() == Blocks.WIND_GEN_PILLAR.get();
+        var base = state.getBlock() == Blocks.WIND_GEN_BASE.get();
+        var top = state.getBlock() == Blocks.WIND_GEN_TOP.get();
+        if (pillar || base || top) {
+            event.addCustomRenderer((blockOutlineRenderState, bufferSource, poseStack, b, levelRenderState) -> {
+                poseStack.pushPose();
+                var pos = blockOutlineRenderState.pos();
+                var cam = levelRenderState.cameraRenderState.pos;
+                var camX = cam.x;
+                var camY = cam.y;
+                var camZ = cam.z;
+                poseStack.translate(pos.getX() - camX + 0.5f, pos.getY() - camY, pos.getZ() - camZ + 0.5f);
+                if (top) {
+                    poseStack.scale(1, 1f / 16f, 1);
+                    if (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT) {
+                        poseStack.translate(state.getValue(MultiBlock.FACING).getUnitVec3().scale(-1));
+                    }
+                }
+                if (base && state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.MAIN) {
+                    poseStack.scale(1, 15 / 16f, 1);
+                    poseStack.translate(0, 1 / 16f, 0);
+                }
+                poseStack.mulPose(Axis.YN.rotationDegrees(22.5f));
+                CylinderRenderer.renderCylinderWireframe(poseStack, bufferSource.getBuffer(RenderType.lines()), WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER, 0, 0, 0, 0.4f);
+                poseStack.popPose();
+                return pillar || (base && (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT));
+            });
+        }
     }
 
     public static void sendPacket(net.minecraft.network.protocol.Packet<?> packet) {
@@ -149,6 +139,63 @@ public final class AcademyCraftClient {
         }
 
         private Config() {
+        }
+    }
+
+    private static final class ModBusSubscriber {
+        private ModBusSubscriber() {
+        }
+
+        @SuppressWarnings("unchecked")
+        @SubscribeEvent
+        public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
+            event.registerEntityModifier(
+                    (Class<AvatarRenderer<AbstractClientPlayer>>) (Object) AvatarRenderer.class, (abstractClientPlayer, avatarRenderState) -> avatarRenderState.setRenderData(
+                            StormWingEffectRenderer.CONTEXT_KEY,
+                            abstractClientPlayer.getData(AttachmentTypes.ACTIVATED_STORM_WING)
+                    )
+            );
+        }
+
+        @SubscribeEvent
+        public static void onRegisterRenderPipelines(RegisterRenderPipelinesEvent event) {
+            event.registerPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
+            event.register(AcademyCraft.academy("wireless_node"), WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(AcademyCraft.academy("wind_gen_base"), WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(AcademyCraft.academy("wind_gen_pillar"), WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(AcademyCraft.academy("wind_gen_top"), WindGenTopSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(AcademyCraft.academy("ability_developer"), AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(AcademyCraft.academy("omni_crafting_table"), OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(AcademyCraft.academy("imagiphase_dowsing_rod"), ImagiphaseDowsingRodSpecialRenderer.Unbaked.MAP_CODEC);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
+            event.register(Blocks.WIND_GEN_PILLAR.get(), WindGenPillarSpecialRenderer.Unbaked.INSTANCE);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
+            event.registerFluidType(new IClientFluidTypeExtensions() {
+                @Override
+                public int getTintColor() {
+                    return 0XFF000000;
+                }
+
+                @Override
+                public ResourceLocation getStillTexture() {
+                    return ImagiphasePlasma.TEXTURE;
+                }
+
+                @Override
+                public ResourceLocation getFlowingTexture() {
+                    return ImagiphasePlasma.TEXTURE;
+                }
+            }, ImagiphasePlasma.FLUID_TYPE);
         }
     }
 }

@@ -1,6 +1,5 @@
 package org.academy.internal.client.app;
 
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -14,7 +13,6 @@ import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.KeyInputEvent;
 import org.academy.api.client.input.MouseButtonEvent;
-import org.academy.api.client.render.RenderTypes;
 import org.academy.api.client.util.ClientUtil;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
@@ -72,22 +70,28 @@ public final class Settings implements DataTerminalHUD.App {
         var generalButton = createTabButton("General", 0, 90);
         var keybindingsButton = createTabButton("Keybindings", 95, 95);
 
-        Runnable showGeneral = () -> {
+        var showGeneral = new Runnable() {
+            @Override
+            public void run() {
             generalPanel.setVisible(true);
             generalPanel.setEnabled(true);
             keybindingsPanel.setVisible(false);
             keybindingsPanel.setEnabled(false);
             generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
             keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
+            }
         };
 
-        Runnable showKeybindings = () -> {
-            generalPanel.setVisible(false);
-            generalPanel.setEnabled(false);
-            keybindingsPanel.setVisible(true);
-            keybindingsPanel.setEnabled(true);
-            generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
-            keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
+        var showKeybindings = new Runnable() {
+            @Override
+            public void run() {
+                generalPanel.setVisible(false);
+                generalPanel.setEnabled(false);
+                keybindingsPanel.setVisible(true);
+                keybindingsPanel.setEnabled(true);
+                generalButton.<FillWidget>getChildUnSafe("back").setAlpha(0.3f);
+                keybindingsButton.<FillWidget>getChildUnSafe("back").setAlpha(0.6f);
+            }
         };
 
         generalButton.<ImageButtonWidget>getChildUnSafe("button_logic").onPress = showGeneral;
@@ -152,9 +156,12 @@ public final class Settings implements DataTerminalHUD.App {
         currentY += 20;
 
         Supplier<Boolean> blurStateSupplier = () -> DataTerminalHUD.config.enableBlur;
-        Runnable blurToggleAction = () -> {
-            DataTerminalHUD.config.enableBlur = !DataTerminalHUD.config.enableBlur;
-            AcademyCraftClient.Config.INSTANCE.save();
+        var blurToggleAction = new Runnable() {
+            @Override
+            public void run() {
+                DataTerminalHUD.config.enableBlur = !DataTerminalHUD.config.enableBlur;
+                AcademyCraftClient.Config.INSTANCE.save();
+            }
         };
         panel.addChild("blur_toggle_button", createToggleButton(currentY, blurStateSupplier, blurToggleAction));
 
@@ -183,9 +190,12 @@ public final class Settings implements DataTerminalHUD.App {
         var buttonPanel = new PanelWidget(5f, y, 180f, 20f);
 
         var text = new AutoScaleLabelWidget(stateSupplier.get() ? "On" : "Off", 0, 0, 180f);
-        Runnable toggleAction = () -> {
-            onPress.run();
-            text.setText(stateSupplier.get() ? "On" : "Off");
+        var toggleAction = new Runnable() {
+            @Override
+            public void run() {
+                onPress.run();
+                text.setText(stateSupplier.get() ? "On" : "Off");
+            }
         };
 
         var logic = new ImageButtonWidget(0, 0, 180f, 20f, null, toggleAction);
@@ -290,10 +300,13 @@ public final class Settings implements DataTerminalHUD.App {
             }
 
             var closeButtonPanel = new PanelWidget(keySelectionPanel.getWidth() - 25, 5, 20, 15);
-            Runnable closeAction = () -> {
-                setBackgroundControlsEnabled(true);
-                keySelectionPanel.setVisible(false);
-                keySelectionPanel.setEnabled(false);
+            var closeAction = new Runnable() {
+                @Override
+                public void run() {
+                    setBackgroundControlsEnabled(true);
+                    keySelectionPanel.setVisible(false);
+                    keySelectionPanel.setEnabled(false);
+                }
             };
             var closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, null, closeAction);
             closeButtonPanel.addChild("button_logic", closeButtonLogic);
@@ -313,12 +326,15 @@ public final class Settings implements DataTerminalHUD.App {
             scrollBar.setZ(scrollBar.getZ() + 1);
 
             var listenBtnPanel = new PanelWidget(5, 165, 170, 20);
-            Runnable listenAction = () -> {
+            var listenAction = new Runnable() {
+                @Override
+                public void run() {
                 isListeningForKey = true;
                 setBackgroundControlsEnabled(true);
                 keySelectionPanel.setVisible(false);
                 keySelectionPanel.setEnabled(false);
                 keySelectionButton.<PanelWidget>getChildUnSafe("layered").<AutoScaleLabelWidget>getChildUnSafe("text").setText("> ... <");
+                }
             };
             var listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
             listenBtnPanel.addChild("button_logic", listenButtonLogic);
@@ -504,10 +520,13 @@ public final class Settings implements DataTerminalHUD.App {
         var inputTypePanel = new PanelWidget(50, 5, 125, 20);
         controlPanel.addChild("input_type", inputTypePanel);
 
-        Runnable keyboardAction = () -> {
-            updateModifierButtonState(keyboardBtn, true);
-            updateModifierButtonState(mouseBtn, false);
-            updateBindingFromControls(true);
+        var keyboardAction = new Runnable() {
+            @Override
+            public void run() {
+                updateModifierButtonState(keyboardBtn, true);
+                updateModifierButtonState(mouseBtn, false);
+                updateBindingFromControls(true);
+            }
         };
         keyboardBtn = new PanelWidget(0, 0, 60, 15);
         var keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, null, keyboardAction);
@@ -528,10 +547,13 @@ public final class Settings implements DataTerminalHUD.App {
 
         inputTypePanel.addChild("keyboard", keyboardBtn);
 
-        Runnable mouseAction = () -> {
+        var mouseAction = new Runnable() {
+            @Override
+            public void run() {
             updateModifierButtonState(keyboardBtn, false);
             updateModifierButtonState(mouseBtn, true);
             updateBindingFromControls(true);
+            }
         };
         mouseBtn = new PanelWidget(65, 0, 60, 15);
         var mouseLogic = new ImageButtonWidget(0, 0, 60, 15, null, mouseAction);
@@ -555,11 +577,14 @@ public final class Settings implements DataTerminalHUD.App {
         keySelectionButton = new PanelWidget(50, 30, 125, 20);
         controlPanel.addChild("key_select", keySelectionButton);
         {
-            Runnable keySelectAction = () -> {
-                setBackgroundControlsEnabled(false);
-                keySelectionPanel.setVisible(true);
-                keySelectionPanel.setEnabled(true);
-                updateKeySelectionHighlights();
+            var keySelectAction = new Runnable() {
+                @Override
+                public void run() {
+                    setBackgroundControlsEnabled(false);
+                    keySelectionPanel.setVisible(true);
+                    keySelectionPanel.setEnabled(true);
+                    updateKeySelectionHighlights();
+                }
             };
             var keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, null, keySelectAction);
             keySelectionButton.addChild("button_logic", keySelectionLogic);

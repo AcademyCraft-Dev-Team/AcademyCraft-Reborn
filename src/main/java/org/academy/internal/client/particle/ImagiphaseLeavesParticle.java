@@ -1,26 +1,23 @@
 package org.academy.internal.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
-import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.client.renderer.LightTexture;
-import org.jetbrains.annotations.NotNull;
 
-public class ImagiphaseLeavesParticle extends TextureSheetParticle {
+public class ImagiphaseLeavesParticle extends SingleQuadParticle {
     protected final SpriteSet sprites;
     private boolean hasStartedFalling = false;
     private final int hangingTicks = 40;
 
     public ImagiphaseLeavesParticle(ClientLevel level, double x, double y, double z, SpriteSet newSpriteSet) {
-        super(level, x, y, z);
+        super(level, x, y, z, newSpriteSet.first());
         sprites = newSpriteSet;
         setSize(0.1F, 0.1F);
         quadSize = 0.3f;
         var totalFallingStateDuration = 40;
         lifetime = hangingTicks + totalFallingStateDuration;
 
-        pickSprite(newSpriteSet);
         setSprite(sprites.get(0, 6));
     }
 
@@ -54,7 +51,7 @@ public class ImagiphaseLeavesParticle extends TextureSheetParticle {
             xd *= 0.98D;
             zd *= 0.98D;
 
-            if (!removed && sprites != null) {
+            if (!removed) {
                 setSprite(sprites.get(age % 7, 6));
             }
         }
@@ -65,7 +62,7 @@ public class ImagiphaseLeavesParticle extends TextureSheetParticle {
     }
 
     @Override
-    public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_OPAQUE;
+    protected Layer getLayer() {
+        return Layer.OPAQUE;
     }
 }

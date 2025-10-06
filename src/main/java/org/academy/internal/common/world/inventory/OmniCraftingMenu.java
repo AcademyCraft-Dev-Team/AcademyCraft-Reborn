@@ -8,7 +8,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -56,10 +55,10 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
 
     @Override
     public @NotNull ItemStack quickMoveStack(@NotNull Player player, int index) {
-        ItemStack itemStack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(index);
+        var itemStack = ItemStack.EMPTY;
+        var slot = this.slots.get(index);
         if (slot.hasItem()) {
-            ItemStack itemStack1 = slot.getItem();
+            var itemStack1 = slot.getItem();
             itemStack = itemStack1.copy();
 
             if (index == 1) {
@@ -109,16 +108,16 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
             CraftingContainer craftSlots,
             ResultContainer resultSlots
     ) {
-        if (!level.isClientSide) {
-            CraftingInput craftinginput = craftSlots.asCraftInput();
-            ServerPlayer serverplayer = (ServerPlayer) player;
-            ItemStack itemstack = ItemStack.EMPTY;
+        if (!level.isClientSide()) {
+            var craftinginput = craftSlots.asCraftInput();
+            var serverplayer = (ServerPlayer) player;
+            var itemstack = ItemStack.EMPTY;
             Optional<RecipeHolder<CraftingRecipe>> optional = level.getServer()
                     .getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, craftinginput, level, (RecipeHolder<CraftingRecipe>) null);
             if (optional.isPresent()) {
                 RecipeHolder<CraftingRecipe> recipeholder = optional.get();
-                CraftingRecipe craftingrecipe = recipeholder.value();
+                var craftingrecipe = recipeholder.value();
               /*  if (resultSlots.setRecipeUsed(level, serverplayer, recipeholder)) {
                     ItemStack itemstack1 = craftingrecipe.assemble(craftinginput, level.registryAccess());
                     if (itemstack1.isItemEnabled(level.enabledFeatures())) {

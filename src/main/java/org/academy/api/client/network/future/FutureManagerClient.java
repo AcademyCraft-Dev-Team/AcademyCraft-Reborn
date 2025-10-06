@@ -7,6 +7,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.ServerboundPacketListener;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.future.AbstractFutureManager;
@@ -15,9 +16,10 @@ import org.academy.api.common.network.future.packet.FutureResponsePacket;
 import org.academy.api.common.network.future.packet.RequestPacket;
 import org.academy.api.common.network.future.packet.ResponsePacket;
 
+import java.util.Arrays;
 import java.util.function.Consumer;
 
-public class FutureManagerClient extends AbstractFutureManager {
+public final class FutureManagerClient extends AbstractFutureManager {
     public FutureManagerClient() {
     }
 
@@ -56,14 +58,16 @@ public class FutureManagerClient extends AbstractFutureManager {
             RES_P extends ResponsePacket<ServerGamePacketListenerImpl, RES_P>,
             REQ_P extends RequestPacket<ClientGamePacketListener, REQ_P, ServerGamePacketListenerImpl, RES_P>
             > void handleFutureRequestFromServer(FutureRequestPacket<ClientGamePacketListener> futureRequestPacket) {
-        super.<ClientGamePacketListener, FutureRequestPacket<ClientGamePacketListener>, ServerGamePacketListenerImpl, RES_P, REQ_P>handleRequest(
+        super.<ClientGamePacketListener, ServerGamePacketListenerImpl, RES_P, REQ_P>handleRequest(
                 futureRequestPacket, futureRequestPacket.getPacketListener(), response -> {
                     var responseTypeId = response.getPacketType().getPacketId();
-                    var responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
+                    var responseBuffer = Unpooled.buffer();
                     response.getPacketType().codec().encode(responseBuffer, response);
 
                     var payload = new byte[responseBuffer.readableBytes()];
                     responseBuffer.readBytes(payload);
+
+                    AcademyCraft.LOGGER.info(Arrays.toString(payload));
 
                     var responsePkt = new FutureResponsePacket<ServerGamePacketListenerImpl>(
                             futureRequestPacket.getFutureId(), responseTypeId, payload

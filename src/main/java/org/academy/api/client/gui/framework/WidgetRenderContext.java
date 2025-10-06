@@ -5,7 +5,6 @@ import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.util.Mth;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.SubmittedCommand;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
@@ -51,7 +50,7 @@ public final class WidgetRenderContext {
     }
 
     public void enableScissor(int minX, int minY, int maxX, int maxY) {
-        Matrix4f poseMatrix = pose.last().pose();
+        var poseMatrix = pose.last().pose();
 
         var v0 = poseMatrix.transformPosition(minX, minY, 0, new Vector3f());
         var v1 = poseMatrix.transformPosition(maxX, minY, 0, new Vector3f());

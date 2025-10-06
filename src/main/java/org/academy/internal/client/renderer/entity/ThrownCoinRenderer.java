@@ -4,9 +4,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.util.ClientUtil;
@@ -16,13 +19,15 @@ import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.item.Items;
 import org.joml.Matrix4f;
 
+import java.util.List;
+
 public class ThrownCoinRenderer extends EntityRenderer<ThrownCoin, ThrownCoinRenderState> {
     public ThrownCoinRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
 
     @Override
-    public void render(ThrownCoinRenderState renderState, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+    public void submit(ThrownCoinRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         if (renderState.thrownCoin != null) {
             poseStack.pushPose();
             var matrix4f = new Matrix4f();
@@ -32,7 +37,7 @@ public class ThrownCoinRenderer extends EntityRenderer<ThrownCoin, ThrownCoinRen
             matrix4f.rotateX(renderState.thrownCoin.renderAngle);
             matrix4f.translate(0, -0.125f, 0);
             poseStack.mulPose(matrix4f);
-            Minecraft.getInstance().getItemRenderer().renderStatic(Items.COIN.get().getDefaultInstance(), ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+      //      ItemRenderer.renderItem(Items.COIN.get().getDefaultInstance(), ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, List.of(), 0);
             poseStack.popPose();
         }
     }
