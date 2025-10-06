@@ -1,21 +1,21 @@
 package org.academy.api.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.neoforged.bus.api.Event;
 
 public final class EffectRenderEvent extends Event {
     private final PoseStack poseStack;
-    private final MultiBufferSource bufferSource;
+    private final SubmitNodeCollector submitNodeCollector;
     private final int packedLight;
-    private final PlayerRenderState renderState;
+    private final AvatarRenderState renderState;
     private final float yRot;
     private final float xRot;
 
-    public EffectRenderEvent(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, PlayerRenderState renderState, float yRot, float xRot) {
+    public EffectRenderEvent(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
         this.poseStack = poseStack;
-        this.bufferSource = bufferSource;
+        this.submitNodeCollector = submitNodeCollector;
         this.packedLight = packedLight;
         this.renderState = renderState;
         this.yRot = yRot;
@@ -26,15 +26,15 @@ public final class EffectRenderEvent extends Event {
         return poseStack;
     }
 
-    public MultiBufferSource getBufferSource() {
-        return bufferSource;
+    public SubmitNodeCollector getSubmitNodeCollector() {
+        return submitNodeCollector;
     }
 
     public int getPackedLight() {
         return packedLight;
     }
 
-    public PlayerRenderState getRenderState() {
+    public AvatarRenderState getRenderState() {
         return renderState;
     }
 

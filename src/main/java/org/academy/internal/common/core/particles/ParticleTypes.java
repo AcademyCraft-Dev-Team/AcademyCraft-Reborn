@@ -11,7 +11,7 @@ import static org.academy.AcademyCraft.MODID;
 public class ParticleTypes {
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES = DeferredRegister.create(BuiltInRegistries.PARTICLE_TYPE, MODID);
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> IMAG_PHASE_FLUID = PARTICLE_TYPES.register("imag_phase_fluid",
-            () -> new SimpleParticleType(false));
+            () -> new SimpleParticleType(true));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> IMAG_PHASE_LEAVES = PARTICLE_TYPES.register("imag_phase_leaves",
             () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ARC_SMALL = PARTICLE_TYPES.register("arc_small",

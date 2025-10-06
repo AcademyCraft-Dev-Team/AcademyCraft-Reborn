@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.entity.vehicle;
 
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -48,7 +47,7 @@ public class CleaningRobot extends Entity {
     public @NotNull InteractionResult interact(Player player, @NotNull InteractionHand hand) {
         if (player.isSecondaryUseActive()) {
             return InteractionResult.PASS;
-        } else if (!this.level().isClientSide) {
+        } else if (!this.level().isClientSide()) {
             return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
         } else {
             return InteractionResult.SUCCESS;
@@ -67,7 +66,7 @@ public class CleaningRobot extends Entity {
     @Nullable
     @Override
     public LivingEntity getControllingPassenger() {
-        Entity passenger = this.getFirstPassenger();
+        var passenger = this.getFirstPassenger();
         return passenger instanceof LivingEntity ? (LivingEntity) passenger : null;
     }
 
@@ -77,7 +76,7 @@ public class CleaningRobot extends Entity {
             return;
         }
 
-        LivingEntity livingPassenger = this.getControllingPassenger();
+        var livingPassenger = this.getControllingPassenger();
         if (livingPassenger == null) {
             this.setDeltaMovement(this.getDeltaMovement().scale(0.98));
             return;
@@ -94,7 +93,7 @@ public class CleaningRobot extends Entity {
         }
 
         float speed = 0.35F;
-        Vec3 moveVec = new Vec3(
+        var moveVec = new Vec3(
                 -speed * forwardInput * Mth.sin(this.getYRot() * ((float)Math.PI / 180F)),
                 this.getDeltaMovement().y,
                 speed * forwardInput * Mth.cos(this.getYRot() * ((float)Math.PI / 180F))

@@ -1,10 +1,8 @@
 package org.academy.internal.common.ability.teleport.skills;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
@@ -12,7 +10,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -25,16 +22,15 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -109,7 +105,7 @@ public final class SelfTeleport extends Skill {
 
         private static void start() {
             if (ClientUtil.hasScreen()) return;
-            LocalPlayer player = Minecraft.getInstance().player;
+            var player = Minecraft.getInstance().player;
             if (player == null) return;
             if (currentContext != null) return;
 
@@ -119,7 +115,7 @@ public final class SelfTeleport extends Skill {
 
         private static void end() {
             if (currentContext != null) {
-                Vec3 finalTargetPos = currentContext.currentRenderPos;
+                var finalTargetPos = currentContext.currentRenderPos;
                 currentContext.cleanup();
                 if (ClientUtil.hasScreen()) return;
                 AcademyCraftClient.sendPacket(new SelfTeleportPacket(finalTargetPos));
@@ -146,8 +142,8 @@ public final class SelfTeleport extends Skill {
             }
 
             private Vec3 calculateIdealTargetCenterPosFromEyes() {
-                Vec3 eyePos = player.getEyePosition();
-                Vec3 lookVec = player.getViewVector(1.0f);
+                var eyePos = player.getEyePosition();
+                var lookVec = player.getViewVector(1.0f);
                 return eyePos.add(lookVec.scale(distance));
             }
 
@@ -176,16 +172,16 @@ public final class SelfTeleport extends Skill {
                     return;
                 }
 
-                Level level = player.level();
-                Vec3 eyePos = player.getEyePosition(event.getPartialTick());
-                Vec3 lookVec = player.getViewVector(event.getPartialTick());
+                var level = player.level();
+                var eyePos = player.getEyePosition(event.getPartialTick());
+                var lookVec = player.getViewVector(event.getPartialTick());
 
-                Vec3 logicalTargetPos = this.currentRenderPos;
+                var logicalTargetPos = this.currentRenderPos;
                 boolean foundSafeSpotThisFrame = false;
 
                 for (double d = distance; d >= 0; d -= RAY_TRACE_STEP) {
-                    Vec3 testCenterPos = eyePos.add(lookVec.scale(d));
-                    AABB testAABB = calculateAABBFromCenter(testCenterPos);
+                    var testCenterPos = eyePos.add(lookVec.scale(d));
+                    var testAABB = calculateAABBFromCenter(testCenterPos);
 
                     if (level.noCollision(null, testAABB)) {
                         logicalTargetPos = testCenterPos;
@@ -198,13 +194,13 @@ public final class SelfTeleport extends Skill {
                     logicalTargetPos = eyePos.add(lookVec.scale(0.1));
                 }
 
-                AABB currentAABB = calculateAABBFromCenter(logicalTargetPos);
+                var currentAABB = calculateAABBFromCenter(logicalTargetPos);
                 if (!level.noCollision(player, currentAABB)) {
-                    Vec3 upwardAdjustedPos = logicalTargetPos;
+                    var upwardAdjustedPos = logicalTargetPos;
                     boolean foundUpwardSpot = false;
                     for (int i = 0; i < MAX_UPWARD_CHECKS; i++) {
                         upwardAdjustedPos = upwardAdjustedPos.add(0, STEP_HEIGHT, 0);
-                        AABB upwardAABB = calculateAABBFromCenter(upwardAdjustedPos);
+                        var upwardAABB = calculateAABBFromCenter(upwardAdjustedPos);
                         if (level.noCollision(player, upwardAABB)) {
                             logicalTargetPos = upwardAdjustedPos;
                             foundUpwardSpot = true;
@@ -221,10 +217,10 @@ public final class SelfTeleport extends Skill {
                 this.visualRenderPos = this.visualRenderPos.lerp(this.currentRenderPos, factor);
                 this.previewBoxWorld = calculateAABBFromCenter(this.visualRenderPos);
 
-                MatrixStack matrixStack = event.getMatrixStack();
-                Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-                MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-                Vec3 camPos = camera.getPosition();
+                var matrixStack = event.getMatrixStack();
+                var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+                var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+                var camPos = camera.getPosition();
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);

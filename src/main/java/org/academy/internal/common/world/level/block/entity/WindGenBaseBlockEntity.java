@@ -13,8 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.animation.definitions.WindGenBaseAnimation;
+import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -23,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Objects;
 
-public class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
+public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
     public int ticks;
     public int energyStored;
     public final AnimationState setupState = new AnimationState();
@@ -53,7 +52,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
     public void tick() {
         ticks++;
         if (this.level != null) {
-            if (this.level.isClientSide) {
+            if (this.level.isClientSide()) {
                 clientTick();
             } else {
                 serverTick();
@@ -68,7 +67,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
     private void serverTick() {
         updateState();
 
-        if (isMain()) {
+        if (isMain() && level != null) {
             List<Player> nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
             var wasNearby = this.playerNearby;
             playerNearby = !nearbyPlayers.isEmpty();
@@ -111,16 +110,16 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
         if (level != null) {
             int pillars = 0;
             boolean hasTop = false;
-            BlockPos p = getBlockPos();
-            Completeness calculatedCompleteness = Completeness.BASE_ONLY;
+            var p = getBlockPos();
+            var calculatedCompleteness = Completeness.BASE_ONLY;
 
             for (var y = p.getY() + 2; y < level.getMaxY(); ++y) {
-                BlockPos pos = new BlockPos(p.getX(), y, p.getZ());
-                BlockState currentState = level.getBlockState(pos);
+                var pos = new BlockPos(p.getX(), y, p.getZ());
+                var currentState = level.getBlockState(pos);
                 if (currentState.isAir()) {
                     y = level.getMaxY();
                 }
-                Block block = currentState.getBlock();
+                var block = currentState.getBlock();
 
                 if (block == Blocks.WIND_GEN_PILLAR.get()) {
                     ++pillars;
@@ -188,7 +187,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
             var oldPlayerNearby = playerNearby;
             playerNearby = input.getBooleanOr("playerNearby", false);
 
-            if (level != null && level.isClientSide) {
+            if (level != null && level.isClientSide()) {
                 handleStateChangeOnClient(oldPlayerNearby, playerNearby);
             }
         }
@@ -241,7 +240,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
             stack.setCount(getMaxStackSize());
         }
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
@@ -280,7 +279,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
         if (!Objects.equals(this.connectedNodePos, nodePos)) {
             this.connectedNodePos = nodePos;
             setChanged();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
@@ -319,7 +318,7 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
         if (clamped != this.energyStored) {
             energyStored = clamped;
             setChanged();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
             }
         }
@@ -327,12 +326,5 @@ public class WindGenBaseBlockEntity extends MultiBlockEntity implements Containe
 
     public enum Completeness {
         BASE_ONLY, NO_TOP, COMPLETE, COMPLETE_NOT_WORKING
-    }
-
-    @SuppressWarnings("unused")
-    public AABB getRenderBoundingBox() {
-        Vec3 pos = this.getBlockPos().getCenter();
-        double radius = 2.0;
-        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }

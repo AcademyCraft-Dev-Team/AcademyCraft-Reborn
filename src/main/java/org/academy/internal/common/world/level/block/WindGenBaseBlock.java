@@ -33,14 +33,13 @@ import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.List;
 
-public class WindGenBaseBlock extends MultiBlock {
+public final class WindGenBaseBlock extends MultiBlock {
     public static final MapCodec<WindGenBaseBlock> CODEC = simpleCodec(WindGenBaseBlock::new);
     public static final String WIND_GEN_SCREEN = "wind_gen_screen";
     public static final List<Vec3i> SUB_BLOCKS = List.of(
@@ -59,13 +58,13 @@ public class WindGenBaseBlock extends MultiBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             if (player.isShiftKeyDown()) {
-                Vector3f startPos = player.getEyePosition().toVector3f();
-                Vector3f endPos = new Vector3f();
+                var startPos = player.getEyePosition().toVector3f();
+                var endPos = new Vector3f();
                 startPos.add(player.getLookAngle().scale(10).toVector3f(), endPos);
 
-                AABB aabb = new AABB(-0.5, -5.0 / 16.0, -0.05, 0.5, 5.0 / 16.0, 0.05);
+                var aabb = new AABB(-0.5, -5.0 / 16.0, -0.05, 0.5, 5.0 / 16.0, 0.05);
 
                 var poseStack = new PoseStack();
                 var mainPos = getMainBlockEntity(level, pos).mainPos;
@@ -79,13 +78,13 @@ public class WindGenBaseBlock extends MultiBlock {
                 poseStack.translate(0, 0.3075f, 0.625f);
                 poseStack.mulPose(Axis.XP.rotationDegrees(17.5f));
 
-                Matrix4f matrix = poseStack.last().pose();
+                var matrix = poseStack.last().pose();
 
-                Vector3f result = new Vector3f();
+                var result = new Vector3f();
                 var b = MathUtil.RayUtil.intersectRayTransformedAABB(startPos, endPos, aabb, matrix, result);
                 if (b) {
-                    Matrix4f worldToAABB = new Matrix4f(matrix).invert();
-                    Vector3f localIntersectionPoint = worldToAABB.transformPosition(result, new Vector3f());
+                    var worldToAABB = new Matrix4f(matrix).invert();
+                    var localIntersectionPoint = worldToAABB.transformPosition(result, new Vector3f());
 
                     float aabbWidth = (float) (aabb.maxX - aabb.minX);
                     float aabbHeight = (float) (aabb.maxY - aabb.minY);
@@ -107,7 +106,7 @@ public class WindGenBaseBlock extends MultiBlock {
             if (player instanceof ServerPlayer serverPlayer) {
                 if (!serverPlayer.isShiftKeyDown() && level.getBlockEntity(pos) instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
                     if (windGenBaseBlockEntity.getMain() instanceof WindGenBaseBlockEntity windGenBaseBlock) {
-                        MenuProvider menuProvider = getMenuProvider(state, level, pos);
+                        var menuProvider = getMenuProvider(state, level, pos);
                         ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIND_GEN_SCREEN,
                                 buf -> buf.writeBlockPos(windGenBaseBlock.getBlockPos()));
                     }
@@ -133,12 +132,12 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(TYPE, FACING);
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new WindGenBaseBlockEntity(pos, state);
     }
 
@@ -148,7 +147,7 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext pContext) {
+    public BlockState getStateForPlacement(BlockPlaceContext pContext) {
         return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
@@ -168,7 +167,7 @@ public class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
-    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
                 if (windGenBaseBlockEntity.isMain()) {

@@ -6,12 +6,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import org.academy.api.client.animation.definitions.AbilityDeveloperAnimation;
+import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser {
+public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser {
     @Nullable
     public String name;
     public int energyStored;
@@ -63,7 +62,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     @Override
     public BlockPos getConnectedNodePosition() {
         if (!isMain() && level != null && mainPos != null) {
-            BlockEntity mainBE = getMain();
+            var mainBE = getMain();
             if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
                 return mainDevBE.getConnectedNodePosition();
             }
@@ -75,7 +74,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
     @Override
     public void setConnectedNodePosition(@Nullable BlockPos nodePos) {
         if (!isMain() && level != null && mainPos != null) {
-            BlockEntity mainBE = getMain();
+            var mainBE = getMain();
             if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
                 mainDevBE.setConnectedNodePosition(nodePos);
             }
@@ -84,7 +83,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         if (!Objects.equals(this.connectedNodePos, nodePos)) {
             this.connectedNodePos = nodePos;
             setChanged();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
@@ -111,7 +110,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
             }
         }
@@ -148,8 +147,8 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
             isOpen = input.getBooleanOr("is_open", false);
         } else {
             connectedNodePos = null;
-            if (level != null && mainPos != null && level.isClientSide) {
-                BlockEntity mainBE = level.getBlockEntity(mainPos);
+            if (level != null && mainPos != null && level.isClientSide()) {
+                var mainBE = level.getBlockEntity(mainPos);
                 if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
                     isOpen = mainDevBE.isOpen;
                     energyStored = mainDevBE.getEnergyStored();
@@ -173,7 +172,7 @@ public class AbilityDeveloperBlockEntity extends MultiBlockEntity implements Wir
         if (connectedNodePos == null) {
             setConnectedNodePosition(null);
         } else {
-            BlockEntity nodeBE = level.getBlockEntity(connectedNodePos);
+            var nodeBE = level.getBlockEntity(connectedNodePos);
             if (!(nodeBE instanceof WirelessNode)) {
                 setConnectedNodePosition(null);
             }

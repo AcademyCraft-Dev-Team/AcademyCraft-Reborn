@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
+public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
     private static final int MAX_ENERGY = 2_400_000;
     private static final int TRANSFER_RATE = 20000;
 
@@ -65,8 +65,8 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         List<BlockPos> toRemove = new ArrayList<>();
 
         for (Map.Entry<BlockPos, WirelessNetworkData.UserConfig> entry : cachedConfig.connectedUsers.entrySet()) {
-            BlockPos userPos = entry.getKey();
-            BlockEntity userBE = serverLevel.getBlockEntity(userPos);
+            var userPos = entry.getKey();
+            var userBE = serverLevel.getBlockEntity(userPos);
             if (!(userBE instanceof WirelessUser user)) {
                 toRemove.add(userPos);
             } else {
@@ -95,7 +95,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         } else {
             AcademyCraft.LOGGER.warn("Failed request to disconnect user {} from node {} in SavedData.", userPos, worldPosition);
         }
-        BlockEntity userBE = level.getBlockEntity(userPos);
+        var userBE = level.getBlockEntity(userPos);
         if (userBE instanceof WirelessUser user) {
             try {
                 user.setConnectedNodePosition(null);
@@ -116,7 +116,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         this.energyStored = Math.max(0, Math.min(energy, getMaxEnergyStorage()));
         if (oldEnergy != this.energyStored) {
             setChanged();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
@@ -152,7 +152,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         if (!Objects.equals(this.connectedNodePos, nodePos)) {
             this.connectedNodePos = nodePos;
             setChanged();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
@@ -228,7 +228,7 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         items.set(slot, stack);
         if (stack.getCount() > getMaxStackSize()) stack.setCount(getMaxStackSize());
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
@@ -248,7 +248,6 @@ public class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode
         return saveWithoutMetadata(registries);
     }
 
-    @Nullable
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);

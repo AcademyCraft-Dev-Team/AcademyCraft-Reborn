@@ -1,8 +1,8 @@
 package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +21,9 @@ public final class RendererManager {
         }
     }
 
-    public static void renderEffect(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, PlayerRenderState renderState, float yRot, float xRot) {
+    public static void renderEffect(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
         for (var renderer : EFFECT_RENDERERS) {
-            renderer.render(poseStack, bufferSource, packedLight, renderState, yRot, xRot);
+            renderer.render(poseStack, submitNodeCollector, packedLight, renderState, yRot, xRot);
         }
     }
 }

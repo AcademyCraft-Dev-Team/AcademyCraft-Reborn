@@ -1,9 +1,10 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.ClientUtil;
@@ -17,7 +18,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
     public static final float[][] BUFFERED_VERTEX = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 16, true);
 
     @Override
-    public void render(RailgunRayRenderState renderState, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+    public void submit(RailgunRayRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
 
         renderState.renderProgress = MathUtil.lerpStartEndFactor(renderState.renderProgress, renderState.progress, ClientUtil.animationFactor(MathUtil.PI / 2));

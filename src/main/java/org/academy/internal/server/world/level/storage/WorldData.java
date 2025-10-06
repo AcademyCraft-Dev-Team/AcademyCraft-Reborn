@@ -23,7 +23,7 @@ public final class WorldData {
     private static boolean isValidFile(File file) {
         final var gson = new GsonBuilder().create();
 
-        try (FileReader fileReader = new FileReader(file)) {
+        try (var fileReader = new FileReader(file)) {
             final JsonObject jsonObject;
 
             try {

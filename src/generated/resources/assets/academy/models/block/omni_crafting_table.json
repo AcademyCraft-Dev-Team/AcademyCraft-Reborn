@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "academy:block/omni_crafting_table"
+    "all": "academy:block/break_db"
   }
 }

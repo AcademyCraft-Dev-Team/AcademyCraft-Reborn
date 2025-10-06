@@ -7,7 +7,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
@@ -20,9 +19,9 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -112,7 +111,7 @@ public class VectorReflection extends Skill {
             if (player.isCreative() || player.isSpectator()) {
                 return false;
             }
-            final UUID uuid = player.getUUID();
+            final var uuid = player.getUUID();
             if (ACTIVE_REFLECTION_MAP.containsKey(uuid)) {
                 return ACTIVE_REFLECTION_MAP.get(uuid);
             }
@@ -156,23 +155,23 @@ public class VectorReflection extends Skill {
 
         @SuppressWarnings("resource")
         private static void applyReflection(Player player, DamageSource source, float reflectedDamage) {
-            Entity sourceEntity = source.getEntity();
-            Entity directEntity = source.getDirectEntity();
+            var sourceEntity = source.getEntity();
+            var directEntity = source.getDirectEntity();
 
             if (sourceEntity == null || sourceEntity == player) return;
 
             boolean isProjectile = directEntity instanceof Projectile;
 
-            Vec3 vec3 = player.getLookAngle().normalize().scale(1);
+            var vec3 = player.getLookAngle().normalize().scale(1);
 
             Vec3 spawnPos = isProjectile
                     ? directEntity.position()
                     : player.getPosition(1.0F).add(vec3.x, vec3.y + 1.5, vec3.z);
 
-            GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
+            var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
             glowCircle.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
 
-            Vec3 dir = sourceEntity.position().subtract(player.getPosition(1)).normalize();
+            var dir = sourceEntity.position().subtract(player.getPosition(1)).normalize();
 
             float yaw = (float) (Math.toDegrees(Math.atan2(dir.z, dir.x))) - 90.0F;
             float pitch = (float) (-Math.toDegrees(Math.asin(dir.y)));

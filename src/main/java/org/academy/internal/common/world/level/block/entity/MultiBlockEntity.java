@@ -31,7 +31,7 @@ public abstract class MultiBlockEntity extends BlockEntity {
     public void setMainPos(BlockPos pos) {
         mainPos = pos;
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
         }
     }

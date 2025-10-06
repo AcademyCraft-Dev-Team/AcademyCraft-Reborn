@@ -1,37 +1,37 @@
 package org.academy.internal.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.irisshaders.iris.shaderpack.materialmap.WorldRenderingSettings;
 import net.irisshaders.iris.uniforms.CapturedRenderingState;
-import net.minecraft.client.animation.AnimationChannel;
-import net.minecraft.client.animation.AnimationDefinition;
-import net.minecraft.client.animation.Keyframe;
-import net.minecraft.client.animation.KeyframeAnimations;
+import net.minecraft.client.animation.*;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.level.block.Blocks;
 import org.academy.api.client.Resource;
 import org.academy.api.client.compatibility.IrisCompat;
-import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
-import org.jetbrains.annotations.NotNull;
+import org.academy.internal.client.renderer.blockentity.state.WirelessNodeRenderState;
 
 import static net.minecraft.client.renderer.blockentity.TheEndPortalRenderer.END_PORTAL_LOCATION;
 
 /**
  * @author 这里没有Badd
  */
-public class WirelessNodeModel extends Model {
+public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
     private final ModelPart all;
     private final ModelPart core_li;
     private final ModelPart base2;
     private final ModelPart innner_ef;
+    private final KeyframeAnimation quarter;
+    private final KeyframeAnimation half;
+    private final KeyframeAnimation quarters;
+    private final KeyframeAnimation full;
 
     public WirelessNodeModel(ModelPart root) {
         super(root.getChild("all"), RenderType::entityTranslucent);
@@ -39,12 +39,16 @@ public class WirelessNodeModel extends Model {
         this.core_li = this.all.getChild("core_li");
         this.base2 = this.all.getChild("base2");
         this.innner_ef = this.all.getChild("innner_ef");
+        quarter = QUARTER.bake(root);
+        half = HALF.bake(root);
+        quarters = QUARTERS.bake(root);
+        full = FULL.bake(root);
     }
 
-    public static final AnimationDefinition empty = AnimationDefinition.Builder.withLength(0.0F).looping()
+    public static final AnimationDefinition EMPTY = AnimationDefinition.Builder.withLength(0.0F).looping()
             .build();
 
-    public static final AnimationDefinition quarter = AnimationDefinition.Builder.withLength(4.0F).looping()
+    public static final AnimationDefinition QUARTER = AnimationDefinition.Builder.withLength(4.0F).looping()
             .addAnimation("core_li", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                     new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
                     new Keyframe(2.0F, KeyframeAnimations.degreeVec(0.0F, -180.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
@@ -58,7 +62,7 @@ public class WirelessNodeModel extends Model {
             ))
             .build();
 
-    public static final AnimationDefinition half = AnimationDefinition.Builder.withLength(2.5F).looping()
+    public static final AnimationDefinition HALF = AnimationDefinition.Builder.withLength(2.5F).looping()
             .addAnimation("core_li", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                     new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
                     new Keyframe(1.25F, KeyframeAnimations.degreeVec(0.0F, -180.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
@@ -72,7 +76,7 @@ public class WirelessNodeModel extends Model {
             ))
             .build();
 
-    public static final AnimationDefinition quarters = AnimationDefinition.Builder.withLength(1.5F).looping()
+    public static final AnimationDefinition QUARTERS = AnimationDefinition.Builder.withLength(1.5F).looping()
             .addAnimation("core_li", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                     new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
                     new Keyframe(0.75F, KeyframeAnimations.degreeVec(0.0F, -180.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
@@ -86,7 +90,7 @@ public class WirelessNodeModel extends Model {
             ))
             .build();
 
-    public static final AnimationDefinition full = AnimationDefinition.Builder.withLength(1.0F).looping()
+    public static final AnimationDefinition FULL = AnimationDefinition.Builder.withLength(1.0F).looping()
             .addAnimation("core_li", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                     new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
                     new Keyframe(1.0F, KeyframeAnimations.degreeVec(0.0F, -360.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
@@ -100,18 +104,18 @@ public class WirelessNodeModel extends Model {
             .build();
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
+        var meshdefinition = new MeshDefinition();
+        var partdefinition = meshdefinition.getRoot();
 
-        PartDefinition all = partdefinition.addOrReplaceChild("all", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 0.0F));
+        var all = partdefinition.addOrReplaceChild("all", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 0.0F));
 
-        PartDefinition core_li = all.addOrReplaceChild("core_li", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
+        var core_li = all.addOrReplaceChild("core_li", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        PartDefinition cube_r1 = core_li.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(0, 32).addBox(-3.0F, -3.0F, -3.0F, 6.0F, 6.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -8.0F, 0.0F, -0.4656F, 0.422F, 0.6799F));
+        var cube_r1 = core_li.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(0, 32).addBox(-3.0F, -3.0F, -3.0F, 6.0F, 6.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -8.0F, 0.0F, -0.4656F, 0.422F, 0.6799F));
 
-        PartDefinition base2 = all.addOrReplaceChild("base2", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
+        var base2 = all.addOrReplaceChild("base2", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        PartDefinition innner_ef = all.addOrReplaceChild("innner_ef", CubeListBuilder.create().texOffs(2, 60).addBox(-10.0F, -9.0F, 7.9F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F))
+        var innner_ef = all.addOrReplaceChild("innner_ef", CubeListBuilder.create().texOffs(2, 60).addBox(-10.0F, -9.0F, 7.9F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(2, 60).addBox(-11.0F, -10.0F, 7.9F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(0, 56).addBox(-15.0F, -12.0F, 7.9F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(2, 56).addBox(-3.0F, -12.0F, 7.9F, 4.0F, 8.0F, 0.0F, new CubeDeformation(0.0F))
@@ -155,7 +159,7 @@ public class WirelessNodeModel extends Model {
                 .texOffs(-3, 61).addBox(-11.0F, -15.9F, 5.0F, 8.0F, 0.0F, 3.0F, new CubeDeformation(0.0F))
                 .texOffs(-16, 48).addBox(-15.0F, -0.1F, -8.0F, 16.0F, 0.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(7.0F, 0.0F, 0.0F));
 
-        PartDefinition cube_r2 = innner_ef.addOrReplaceChild("cube_r2", CubeListBuilder.create().texOffs(2, 60).addBox(3.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+        var cube_r2 = innner_ef.addOrReplaceChild("cube_r2", CubeListBuilder.create().texOffs(2, 60).addBox(3.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(0, 60).addBox(-8.0F, -8.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(0, 60).addBox(-8.0F, 4.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(1, 56).addBox(-2.0F, 3.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
@@ -168,7 +172,7 @@ public class WirelessNodeModel extends Model {
                 .texOffs(2, 60).addBox(-4.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(2, 60).addBox(-3.0F, -1.0F, 0.0F, 1.0F, 2.0F, 0.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.9F, -8.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
 
-        PartDefinition cube_r3 = innner_ef.addOrReplaceChild("cube_r3", CubeListBuilder.create().texOffs(2, 60).addBox(3.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
+        var cube_r3 = innner_ef.addOrReplaceChild("cube_r3", CubeListBuilder.create().texOffs(2, 60).addBox(3.0F, -2.0F, 0.0F, 1.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(0, 60).addBox(-8.0F, -8.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(0, 60).addBox(-8.0F, 4.0F, 0.0F, 16.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
                 .texOffs(1, 56).addBox(-2.0F, 3.0F, 0.0F, 4.0F, 1.0F, 0.0F, new CubeDeformation(0.0F))
@@ -184,43 +188,43 @@ public class WirelessNodeModel extends Model {
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
 
-    public void setupAnim(@NotNull WirelessNodeBlockEntity wirelessNodeBlockEntity, float partialTick) {
-       /* core_li.resetPose();
-
-        if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
-            animate(wirelessNodeBlockEntity.coreState, empty, wirelessNodeBlockEntity.ticks + partialTick);
+    @Override
+    public void setupAnim(WirelessNodeRenderState renderState) {
+        super.setupAnim(renderState);
+        if (renderState.connectedUsersCount == 0) {
+            resetPose();
         } else {
-            int ratio100 = wirelessNodeBlockEntity.connectedUsersCount * 100 / wirelessNodeBlockEntity.maxConnectedUsers;
+            int ratio100 = renderState.connectedUsersCount * 100 / renderState.maxConnectedUsers;
             int level = (ratio100 - 1) / 25 + 1;
             int progress = Math.min(level, 4);
             switch (progress) {
                 case 1: {
-                    animate(wirelessNodeBlockEntity.coreState, quarter, wirelessNodeBlockEntity.ticks + partialTick);
+                    quarter.apply(renderState.coreState, renderState.ageInTicks);
                     break;
                 }
                 case 2: {
-                    animate(wirelessNodeBlockEntity.coreState, half, wirelessNodeBlockEntity.ticks + partialTick);
+                    half.apply(renderState.coreState, renderState.ageInTicks);
                     break;
                 }
                 case 3: {
-                    animate(wirelessNodeBlockEntity.coreState, quarters, wirelessNodeBlockEntity.ticks + partialTick);
+                    quarters.apply(renderState.coreState, renderState.ageInTicks);
                     break;
                 }
                 case 4: {
-                    animate(wirelessNodeBlockEntity.coreState, full, wirelessNodeBlockEntity.ticks + partialTick);
+                    full.apply(renderState.coreState, renderState.ageInTicks);
                     break;
                 }
             }
-        }*/
+        }
     }
 
-    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        var vertexConsumer = bufferSource.getBuffer(renderType(Resource.Textures.WIRELESS_NODE_MODEL));
-        base2.render(poseStack, vertexConsumer, packedLight, packedOverlay);
-        core_li.render(poseStack, vertexConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
-        VertexConsumer effect;
+    public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, int packedOverlay) {
+        submitNodeCollector.submitModelPart(base2, poseStack, renderType(Resource.Textures.WIRELESS_NODE_MODEL), packedLight, packedOverlay, null);
+        submitNodeCollector.submitModelPart(core_li, poseStack, renderType(Resource.Textures.WIRELESS_NODE_MODEL), packedLight, packedOverlay, null);
+
+        RenderType type;
         if (!IrisCompat.isShaderPackInUse()) {
-            effect = bufferSource.getBuffer(RenderType.endGateway());
+            type = RenderType.endGateway();
         } else {
             var blockStateIds = WorldRenderingSettings.INSTANCE.getBlockStateIds();
 
@@ -229,8 +233,9 @@ public class WirelessNodeModel extends Model {
                 CapturedRenderingState.INSTANCE.setCurrentBlockEntity(intId);
             }
 
-            effect = bufferSource.getBuffer(RenderType.entitySolid(END_PORTAL_LOCATION));
+            type = RenderType.entitySolid(END_PORTAL_LOCATION);
         }
-        innner_ef.render(poseStack, effect, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+
+        submitNodeCollector.submitModelPart(innner_ef, poseStack, type, packedLight, packedOverlay, null);
     }
 }

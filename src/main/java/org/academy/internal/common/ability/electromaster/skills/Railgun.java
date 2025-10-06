@@ -14,7 +14,6 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -34,9 +33,9 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.vanilla.ThreadType;
@@ -87,9 +86,9 @@ public final class Railgun extends Skill {
     }
 
     public static Vec3 getHandPosition(Player player) {
-        Vec3 eyePos = player.getEyePosition();
-        Vec3 lookVec = player.getLookAngle();
-        Vec3 rightVec = lookVec.cross(new Vec3(0, 1, 0)).normalize();
+        var eyePos = player.getEyePosition();
+        var lookVec = player.getLookAngle();
+        var rightVec = lookVec.cross(new Vec3(0, 1, 0)).normalize();
         return eyePos.add(rightVec.scale(0.4)).add(lookVec.scale(0.5)).add(0, -0.2, 0);
     }
 
@@ -103,7 +102,7 @@ public final class Railgun extends Skill {
             if (currentContext != null) {
                 currentContext.release();
             } else {
-                LocalPlayer player = Minecraft.getInstance().player;
+                var player = Minecraft.getInstance().player;
                 if (player == null) return;
                 boolean hasCoin = player.getItemInHand(InteractionHand.MAIN_HAND).is(Items.COIN) || player.getItemInHand(InteractionHand.OFF_HAND).is(Items.COIN);
                 if (hasCoin) {
@@ -197,7 +196,7 @@ public final class Railgun extends Skill {
                 float startOffsetX = (float) (Math.random() * 2 - 1) * 0.05f;
                 float startOffsetY = (float) (Math.random() * 2 - 1) * 0.05f;
                 float startOffsetZ = (float) (Math.random() * 2 - 1) * 0.05f; // Small random Z offset for start
-                Vector3f start = new Vector3f(startOffsetX, startOffsetY, startOffsetZ);
+                var start = new Vector3f(startOffsetX, startOffsetY, startOffsetZ);
 
                 ArcStyle style = ArcStyles.classic();
                 style.start = new Vector3f((float) (Math.random() - 0.5), (float) (Math.random() - 0.5), (float) (Math.random() - 0.5)).normalize().mul(0.4f);
@@ -220,7 +219,7 @@ public final class Railgun extends Skill {
                 event.getPoseStack().last().pose().rotateY((float) Math.toRadians(player.yBodyRot));
 
                 for (ArcEffect effect : activeArcs) {
-                    ArcFactory.render(event.getPoseStack(), event.getBufferSource(), effect.data, 1.0f, 1.0f, 1.0f, 1.0f);
+                    ArcFactory.render(event.getPoseStack(), event.getSubmitNodeCollector(), effect.data, 1.0f, 1.0f, 1.0f, 1.0f);
                 }
 
                 event.getPoseStack().popPose();
@@ -276,9 +275,9 @@ public final class Railgun extends Skill {
 
         @SubscribePacket
         public static void onThrowCoin(CoinItem.ThrowCoinPacket packet) {
-            ServerPlayer player = packet.getPacketListener().getPlayer();
-            Level level = player.level();
-            ThrownCoin thrownCoin = new ThrownCoin(level, player);
+            var player = packet.getPacketListener().getPlayer();
+            var level = player.level();
+            var thrownCoin = new ThrownCoin(level, player);
             thrownCoin.setPos(player.getX(), player.getEyeY() - 0.1D, player.getZ());
             thrownCoin.setDeltaMovement(packet.getInitialVelocity());
             thrownCoin.setRot(packet.getYRot(), packet.getXRot());
@@ -288,7 +287,7 @@ public final class Railgun extends Skill {
         }
 
         public static void fire(ServerPlayer player, Entity coin) {
-            final UUID uuid = player.getUUID();
+            final var uuid = player.getUUID();
             final float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
             if (computingPower < 100) {
                 return;
@@ -299,12 +298,12 @@ public final class Railgun extends Skill {
             }
             coin.discard();
 
-            RailgunRay railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
+            var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
             float length = 50;
-            Vec3 lookDir = player.getLookAngle();
-            Vec3 startPos = coin.position();
+            var lookDir = player.getLookAngle();
+            var startPos = coin.position();
 
-            Vec3 endPos = startPos.add(lookDir.scale(length));
+            var endPos = startPos.add(lookDir.scale(length));
             railgunRay.setPos(startPos);
             railgunRay.setYRot(player.getYRot());
             railgunRay.setXRot(player.getXRot());
@@ -334,7 +333,7 @@ public final class Railgun extends Skill {
             @SubscribeEvent
             public void onTick(ServerTickEvent.Pre event) {
                 ticksExisted++;
-                Entity coin = player.level().getEntity(coinEntityId);
+                var coin = player.level().getEntity(coinEntityId);
 
                 if (player.isRemoved() || coin == null || coin.isRemoved()) {
                     cleanup();
@@ -347,7 +346,7 @@ public final class Railgun extends Skill {
             }
 
             public void fire() {
-                Entity coin = player.level().getEntity(coinEntityId);
+                var coin = player.level().getEntity(coinEntityId);
                 if (coin == null) {
                     cleanup();
                     return;
@@ -360,7 +359,7 @@ public final class Railgun extends Skill {
             public void cleanup() {
                 CONTEXT_MAP.remove(player.getUUID());
                 AbilitySystemServer.unregisterContext(this);
-                Entity coin = player.level().getEntity(coinEntityId);
+                var coin = player.level().getEntity(coinEntityId);
                 if (coin != null) {
                     coin.discard();
                 }

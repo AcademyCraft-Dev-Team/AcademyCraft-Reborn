@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.api.client.render.post.PostEffect;
@@ -21,6 +22,13 @@ import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 
 public final class Render {
     public static final class RenderPipelines extends net.minecraft.client.renderer.RenderPipelines {
+        public static final RenderPipeline NO_DEPTH_OPAQUE_PARTICLE = RenderPipeline.builder(PARTICLE_SNIPPET)
+                .withLocation("pipeline/opaque_particle")
+                .withCull(false)
+                .withDepthWrite(false)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .build();
+
         public static final RenderPipeline.Snippet BLIT_SCREEN_SNIPPET = builder()
                 .withLocation(academy("pipeline/blit_screen"))
                 .withVertexShader(Resource.Shaders.SCREEN_BLIT)
@@ -127,6 +135,7 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
                 .withCull(false)
+                .withSampler("Sampler0")
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
@@ -179,13 +188,7 @@ public final class Render {
         }
 
         public static EmptyTextureStateShard blur(ResourceLocation texture) {
-            return new EmptyTextureStateShard(() -> {
-                var texturemanager = Minecraft.getInstance().getTextureManager();
-                var abstracttexture = texturemanager.getTexture(texture);
-                abstracttexture.setFilter(true, true);
-                RenderSystem.setShaderTexture(0, abstracttexture.getTextureView());
-            }, () -> {
-            });
+            return new RenderStateShard.TextureStateShard(texture, true);
         }
     }
 
@@ -197,6 +200,8 @@ public final class Render {
                 CompositeState.builder()
                         .setTextureState(TextureStateShards.ARC)
                         .setOutputState(BLOOM_TARGET)
+                        .setLightmapState(LIGHTMAP)
+                        .setOverlayState(OVERLAY)
                         .createCompositeState(false)
         );
 

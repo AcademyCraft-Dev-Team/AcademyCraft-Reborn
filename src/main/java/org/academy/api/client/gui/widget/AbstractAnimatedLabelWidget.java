@@ -1,11 +1,12 @@
 package org.academy.api.client.gui.widget;
 
-import javax.annotation.Nullable;
 import net.minecraft.network.chat.Component;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.animation.TimeInterpolator;
 import org.academy.api.client.gui.animation.ValueAnimator;
+
+import javax.annotation.Nullable;
 
 public abstract class AbstractAnimatedLabelWidget extends LabelWidget {
     @Nullable

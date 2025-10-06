@@ -23,7 +23,7 @@ import org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlo
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class OmniCraftingTableBlock extends BaseEntityBlock {
+public final class OmniCraftingTableBlock extends BaseEntityBlock {
     public static final MapCodec<OmniCraftingTableBlock> CODEC = simpleCodec(OmniCraftingTableBlock::new);
     public static final String OMNI_CRAFTING_TABLE_SCREEN = "omni_crafting_table_screen";
 
@@ -32,18 +32,18 @@ public class OmniCraftingTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NotNull MapCodec<? extends BaseEntityBlock> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
     @Override
-    public @NotNull RenderShape getRenderShape(@NotNull BlockState state) {
-        return RenderShape.MODEL;
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.INVISIBLE;
     }
 
     @Override
-    protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hitResult) {
-        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             var menuProvider = getMenuProvider(state, level, pos);
             ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, OMNI_CRAFTING_TABLE_SCREEN,
                     buf -> buf.writeBlockPos(pos));
@@ -54,7 +54,7 @@ public class OmniCraftingTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> blockEntityType) {
+    public <T extends BlockEntity> @NotNull BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof OmniCraftingTableBlockEntity omniCraftingTableBlockEntity) {
                 omniCraftingTableBlockEntity.tick();
@@ -63,12 +63,12 @@ public class OmniCraftingTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new OmniCraftingTableBlockEntity(pos, state);
     }
 
     @Override
-    public @Nullable MenuProvider getMenuProvider(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos) {
+    public @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof OmniCraftingTableBlockEntity container) {
             return new SimpleMenuProvider((containerId, playerInventory, player)
                     -> new OmniCraftingMenu(
@@ -82,6 +82,5 @@ public class OmniCraftingTableBlock extends BaseEntityBlock {
         } else {
             return null;
         }
-
     }
 }

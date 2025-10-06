@@ -16,12 +16,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.chunk.LevelChunkSection;
 import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.future.annotation.HandleFuture;
 import org.academy.api.common.network.future.packet.RequestPacket;
 import org.academy.api.common.network.future.packet.ResponsePacket;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +38,7 @@ public class ImagiphaseDowsingRodItem extends Item {
 
     @Override
     public void inventoryTick(@NotNull ItemStack stack, ServerLevel level, @NotNull Entity entity, @Nullable EquipmentSlot slot) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             if (entity instanceof LocalPlayer localPlayer) {
                 if (!(localPlayer.getMainHandItem() == stack || localPlayer.getOffhandItem() == stack)) {
                     RENDER_TARGET_POSITIONS.clear();
@@ -63,8 +62,11 @@ public class ImagiphaseDowsingRodItem extends Item {
     }
 
     public static final class GetLevelChunkSectionsPacket extends RequestPacket<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket, ClientGamePacketListener, GetLevelChunkSectionsPacket.Response> {
-        public static final StreamCodec<ByteBuf, GetLevelChunkSectionsPacket> CODEC = BlockPos.STREAM_CODEC
-                .map(GetLevelChunkSectionsPacket::new, GetLevelChunkSectionsPacket::getPlayerPos);
+        public static final StreamCodec<ByteBuf, GetLevelChunkSectionsPacket> CODEC = StreamCodec.composite(
+                BlockPos.STREAM_CODEC,
+                GetLevelChunkSectionsPacket::getPlayerPos,
+                GetLevelChunkSectionsPacket::new
+        );
 
         private final BlockPos playerPos;
 
@@ -77,19 +79,21 @@ public class ImagiphaseDowsingRodItem extends Item {
         }
 
         @Override
-        public PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
+        public @NotNull PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
             return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
         }
 
         @Override
-        public PacketType<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket> getPacketType() {
+        public @NotNull PacketType<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket> getPacketType() {
             return PacketTypes.GET_LEVEL_CHUNK_SECTIONS.get();
         }
 
         public static final class Response extends ResponsePacket<ClientGamePacketListener, Response> {
-            public static final StreamCodec<ByteBuf, Response> CODEC = BlockPos.STREAM_CODEC
-                    .apply(ByteBufCodecs.list())
-                    .map(Response::new, Response::getSectionsWithImagPhase);
+            public static final StreamCodec<ByteBuf, Response> CODEC = StreamCodec.composite(
+                    BlockPos.STREAM_CODEC.apply(ByteBufCodecs.list()),
+                    Response::getSectionsWithImagPhase,
+                    Response::new
+            );
 
             private final List<BlockPos> sectionsWithImagPhase;
 
@@ -102,7 +106,7 @@ public class ImagiphaseDowsingRodItem extends Item {
             }
 
             @Override
-            public PacketType<ClientGamePacketListener, Response> getPacketType() {
+            public @NotNull PacketType<ClientGamePacketListener, Response> getPacketType() {
                 return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
             }
         }
@@ -116,19 +120,19 @@ public class ImagiphaseDowsingRodItem extends Item {
         var chunkCache = serverLevel.getChunkSource();
         var sectionsWithImagPhase = new ArrayList<BlockPos>();
 
-        chunkCache.chunkMap.getChunks().forEach(chunkHolder -> {
+        for (var chunkHolder : chunkCache.chunkMap.visibleChunkMap.values()) {
             var chunk = chunkHolder.getTickingChunk();
             if (chunk != null) {
-                LevelChunkSection[] sections = chunk.getSections();
+                var sections = chunk.getSections();
                 for (var i = 0; i < sections.length; i++) {
-                    LevelChunkSection section = sections[i];
+                    var section = sections[i];
                     if (section != null && !section.hasOnlyAir() && section.maybeHas(blockState -> blockState.getFluidState().is(Fluids.IMAGIPHASE_PLASMA.get()))) {
                         int sectionBottomY = chunk.getSectionYFromSectionIndex(i);
                         sectionsWithImagPhase.add(new BlockPos(chunk.getPos().getMinBlockX(), sectionBottomY, chunk.getPos().getMinBlockZ()));
                     }
                 }
             }
-        });
+        }
         return new ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response(sectionsWithImagPhase);
     }
 }

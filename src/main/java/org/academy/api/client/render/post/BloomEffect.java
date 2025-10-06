@@ -42,8 +42,6 @@ public final class BloomEffect {
                 var gpudevice = RenderSystem.getDevice();
                 var i = gpudevice.getMaxTextureSize();
                 if (width > 0 && width <= i && height > 0 && height <= i) {
-                    this.viewWidth = width;
-                    this.viewHeight = height;
                     this.width = width;
                     this.height = height;
 

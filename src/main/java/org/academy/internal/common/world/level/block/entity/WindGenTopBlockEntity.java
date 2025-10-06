@@ -10,10 +10,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.item.Items;
 
-public class WindGenTopBlockEntity extends MultiBlockEntity implements Container {
+public final class WindGenTopBlockEntity extends MultiBlockEntity implements Container {
     public int ticks;
     public boolean hasFan = false;
     public NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
@@ -72,7 +71,7 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
             stack.setCount(this.getMaxStackSize());
         }
         this.setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
@@ -97,7 +96,7 @@ public class WindGenTopBlockEntity extends MultiBlockEntity implements Container
     // For Forge
     @SuppressWarnings("unused")
     public AABB getRenderBoundingBox() {
-        Vec3 pos = this.getBlockPos().getCenter();
+        var pos = this.getBlockPos().getCenter();
         double radius = 20.0;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

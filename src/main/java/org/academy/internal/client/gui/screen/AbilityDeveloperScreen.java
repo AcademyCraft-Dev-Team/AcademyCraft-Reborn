@@ -112,7 +112,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         outputList.setEnabled(bootFailed);
         outputList.setVisible(bootFailed);
         rightPanel.addChild("output_list", outputList);
-        TypewriterLabelWidget welcome = setupTerminal(outputList);
+        var welcome = setupTerminal(outputList);
 
         setupSkillArea(rightPanel, !bootFailed);
 
@@ -144,7 +144,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     private TypewriterLabelWidget setupTerminal(ScrollPanelWidget outputList) {
         var welcome = new TypewriterLabelWidget("Welcome to Academy OS, Ver 0.0.1", 0, 0);
         addOutput("welcome", welcome, outputList);
-        String userName = "None";
+        var userName = "None";
         if (minecraft != null && minecraft.player != null)
             userName = minecraft.player.getName().getString();
 

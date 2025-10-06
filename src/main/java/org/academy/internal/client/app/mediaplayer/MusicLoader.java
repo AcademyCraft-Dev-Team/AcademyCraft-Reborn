@@ -3,7 +3,6 @@ package org.academy.internal.client.app.mediaplayer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
-import net.minecraft.server.packs.resources.ResourceManager;
 import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,7 +18,8 @@ public class MusicLoader implements PreparableReloadListener {
     private static final String FILE_PATH = "musics/music_player.json";
 
     @Override
-    public @NotNull CompletableFuture<Void> reload(PreparationBarrier barrier, @NotNull ResourceManager manager, @NotNull Executor backgroundExecutor, @NotNull Executor gameExecutor) {
+    public @NotNull CompletableFuture<Void> reload(SharedState sharedState, @NotNull Executor backgroundExecutor, PreparationBarrier barrier, @NotNull Executor gameExecutor) {
+        var manager = sharedState.resourceManager();
         var future = CompletableFuture.supplyAsync(() -> {
             var combinedMap = new HashMap<String, MusicData>();
 

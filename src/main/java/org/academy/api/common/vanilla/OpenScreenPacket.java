@@ -5,8 +5,8 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 
 @PacketTarget(ThreadType.CLIENT)

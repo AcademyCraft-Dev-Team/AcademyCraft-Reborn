@@ -3,20 +3,19 @@ package org.academy.internal.client.data;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.ModelProvider;
+import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
 import net.minecraft.client.data.models.model.*;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
-import org.academy.internal.client.renderer.special.WindGenBaseSpecialRenderer;
-import org.academy.internal.client.renderer.special.WindGenPillarSpecialRenderer;
-import org.academy.internal.client.renderer.special.WindGenTopSpecialRenderer;
-import org.academy.internal.client.renderer.special.WirelessNodeSpecialRenderer;
+import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
+import static net.minecraft.client.data.models.BlockModelGenerators.plainVariant;
 import static net.minecraft.client.data.models.model.TexturedModel.createDefault;
 import static org.academy.AcademyCraft.academy;
 import static org.academy.api.client.Resource.Models.COIN_ITEM_MODEL_ID;
@@ -33,17 +32,32 @@ public class AcademyCraftModelProvider extends ModelProvider {
                         new TextureMapping().put(
                                 TextureSlot.ALL, academy("break_w").withPrefix("block/")
                         ), ModelTemplates.CUBE_ALL);
+        var providerDB = createDefault(
+                block ->
+                        new TextureMapping().put(
+                                TextureSlot.ALL, academy("break_db").withPrefix("block/")
+                        ), ModelTemplates.CUBE_ALL);
+
 
         blockModels.createTrivialBlock(Blocks.WIRELESS_NODE.get(), providerW);
         blockModels.createTrivialBlock(Blocks.WIND_GEN_BASE.get(), providerW);
         blockModels.createTrivialBlock(Blocks.WIND_GEN_TOP.get(), providerW);
         blockModels.createTrivialBlock(Blocks.WIND_GEN_PILLAR.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.OMNI_CRAFTING_TABLE.get(), providerDB);
 
-        blockModels.createRotatedVariantBlock(Blocks.ABILITY_DEVELOPER.get());
+        blockModels.blockStateOutput.accept(
+                MultiVariantGenerator.dispatch(
+                        Blocks.ABILITY_DEVELOPER.get(),
+                        BlockModelGenerators.createRotatedVariants(
+                                BlockModelGenerators.plainModel(
+                                        providerDB.create(Blocks.ABILITY_DEVELOPER.get(), blockModels.modelOutput)
+                                )
+                        )
+                )
+        );
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_PLASMA.get());
         blockModels.createTrivialBlock(Blocks.IMAGIPHASE_VEGETATION.get(), TexturedModel.COLUMN);
         blockModels.createMultiface(Blocks.IMAGIPHASE_LICHEN.get());
-        blockModels.createTrivialCube(Blocks.OMNI_CRAFTING_TABLE.get());
         blockModels.createTrivialBlock(Blocks.CAT_ENGINE.get(), createDefault(
                 block ->
                         new TextureMapping().put(
@@ -51,7 +65,13 @@ public class AcademyCraftModelProvider extends ModelProvider {
                         ), ModelTemplates.CUBE_ALL)
         );
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_AMETHYST_BLOCK.get());
-        blockModels.createTrivialCube(Blocks.IMAGIPHASE_METAL_BLOCK.get());
+        blockModels.blockStateOutput
+                .accept(
+                        MultiVariantGenerator.dispatch(
+                                Blocks.IMAGIPHASE_METAL_BLOCK.get(),
+                                plainVariant(ModelLocationUtils.getModelLocation(Blocks.IMAGIPHASE_METAL_BLOCK.get()))
+                        )
+                );
         blockModels.createAxisAlignedPillarBlock(Blocks.IMAGIPHASE_LOG.get(), TexturedModel.COLUMN);
 
         blockModels.createTrivialBlock(Blocks.IMAGIPHASE_LEAVES.get(), TexturedModel.LEAVES);
@@ -109,13 +129,33 @@ public class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.IMAGIPHASE_CIRCUIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAGIPHASE_POLYMER.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAGIPHASE_PLATE.get(), ModelTemplates.FLAT_ITEM);
-        itemModels.generateFlatItem(Items.IMAGIPHASE_DOWSING_ROD.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAGIPHASE_AMETHYST.get(), ModelTemplates.FLAT_ITEM);
         itemModels.itemModelOutput.accept(
                 Items.WIRELESS_NODE.get(),
                 ItemModelUtils.specialModel(
                         AcademyCraft.vanilla("block").withPrefix("block/"),
                         WirelessNodeSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.IMAGIPHASE_DOWSING_ROD.get(),
+                ItemModelUtils.specialModel(
+                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        ImagiphaseDowsingRodSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.ABILITY_DEVELOPER.get(),
+                ItemModelUtils.specialModel(
+                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        AbilityDeveloperSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.OMNI_CRAFTING_TABLE.get(),
+                ItemModelUtils.specialModel(
+                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        OmniCraftingTableSpecialRenderer.Unbaked.INSTANCE
                 )
         );
         itemModels.itemModelOutput.accept(

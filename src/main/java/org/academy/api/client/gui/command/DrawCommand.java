@@ -4,7 +4,6 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import org.joml.Matrix4f;
 
 import java.util.Map;
@@ -18,7 +17,7 @@ public abstract class DrawCommand {
     }
 
     private static void validatePipelineMode(RenderPipeline pipeline) {
-        VertexFormat.Mode mode = pipeline.getVertexFormatMode();
+        var mode = pipeline.getVertexFormatMode();
         if (mode.connectedPrimitives)
             throw new IllegalArgumentException(
                     "Connected primitive modes (e.g., TRIANGLE_STRIP, LINE_STRIP) are forbidden in DrawCommands. "

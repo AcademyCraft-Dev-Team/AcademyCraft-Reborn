@@ -6,21 +6,43 @@ import net.minecraft.network.PacketListener;
 import org.academy.AcademyCraft;
 import org.academy.api.common.network.NetworkSystem;
 import org.academy.api.common.network.future.annotation.HandleFuture;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.future.asm.IFutureHandlerInvoker;
 import org.academy.api.common.network.future.asm.PayloadHandlerInvokerFactory;
 import org.academy.api.common.network.future.packet.FuturePacket;
+import org.academy.api.common.network.future.packet.FutureRequestPacket;
 import org.academy.api.common.network.future.packet.RequestPacket;
 import org.academy.api.common.network.future.packet.ResponsePacket;
+import org.academy.api.common.network.packet.PacketType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static org.academy.AcademyCraft.LOGGER_PREFIX;
+
+/**
+ * 发送端发送一个 FutureRequestPacket 后由各端的 FutureManager 的 IPacketListener 处理喵
+ * <br>
+ * 发送端 S, 目标端 R, 目标端 IPacketListener H
+ * <br>
+ * ****Send
+ * <br>
+ * 1. S ------> R
+ * <br>
+ * *****************Send
+ * <br>
+ * ****Consume
+ * <br>
+ * 2. R -----------> H ------> S
+ */
 public abstract class AbstractFutureManager {
+    public static final Logger LOGGER = LoggerFactory.getLogger(LOGGER_PREFIX + "Future");
     protected final Map<Integer, PendingFutureInfo> pendingFutures = new ConcurrentHashMap<>();
     protected final Map<Integer, IFutureHandlerInvoker<?, ?, ?, ?>> requestHandlers = new ConcurrentHashMap<>();
     private final AtomicInteger nextFutureId = new AtomicInteger(0);
@@ -55,7 +77,7 @@ public abstract class AbstractFutureManager {
     }
 
     @SuppressWarnings({"unchecked"})
-    public void registerPayloadHandler(Object owner) {
+    public final void registerPayloadHandler(Object owner) {
         var clazz = owner.getClass();
         if (owner instanceof Class) {
             clazz = (Class<?>) owner;
@@ -94,17 +116,30 @@ public abstract class AbstractFutureManager {
         }
     }
 
+    /**
+     * 处理 FutureRequestPacket 喵
+     * <br>
+     * Request 发送过来后, 由带有 HandleFuture 注解的方法处理并返回 ResponsePacket 喵, 随后后将 Response 发送回去喵
+     *
+     * @param futureRequestPacket 各端 FutureManager 传来的实例喵
+     * @param packetListener 当前端的 PacketListener 喵
+     * @param responseSender 用于当前端发送 ResponsePacket 喵
+     * @param <REQ_L> 当前端的 PacketListener 的泛型喵
+     * @param <RES_L> 目标端的 PacketListener 喵, 只是泛型占位而已喵, 没有使用喵
+     * @param <RES_P> RequestPacket 期望的 ResponsePacket 的泛型喵, responsePacket 的类型喵
+     * @param <REQ_P> RequestPacket 的泛型喵, instance 的类型喵
+     */
     @SuppressWarnings({"unchecked"})
     protected <
             REQ_L extends PacketListener,
-            F_P extends FuturePacket<REQ_L, F_P>,
             RES_L extends PacketListener,
             RES_P extends ResponsePacket<RES_L, RES_P>,
             REQ_P extends RequestPacket<REQ_L, REQ_P, RES_L, RES_P>
-            > void handleRequest(F_P futureRequestPacket, REQ_L packetListener, Consumer<RES_P> responseSender) {
+            > void handleRequest(FutureRequestPacket<REQ_L> futureRequestPacket, REQ_L packetListener, Consumer<RES_P> responseSender) {
         var targetPacketTypeId = futureRequestPacket.getTargetPacketTypeId();
 
-        if (!requestHandlers.containsKey(targetPacketTypeId)) {
+        var requestHandler = requestHandlers.get(targetPacketTypeId);
+        if (requestHandler == null) {
             AcademyCraft.LOGGER.error("No handler for request payload ID {}", targetPacketTypeId);
             return;
         }
@@ -114,13 +149,17 @@ public abstract class AbstractFutureManager {
         var packetType = NetworkSystem.<PacketType<REQ_L, REQ_P>>getPacketTypeById(targetPacketTypeId);
 
         var codec = packetType.codec();
+        var bytes = futureRequestPacket.getBytes();
 
-        var instance = codec.decode(new FriendlyByteBuf(Unpooled.buffer()).writeByteArray(futureRequestPacket.getBytes()));
+        // 有 debugInfo 就够了喵, 所以 info 不需要改喵
+        if (NetworkSystem.debugInfo) AcademyCraft.LOGGER.info(Arrays.toString(bytes));
+
+        var instance = codec.decode(Unpooled.buffer().writeBytes(bytes));
         instance.setPacketListener(packetListener);
 
-        var responsePayload = invoker.invoke(instance);
+        var responsePacket = invoker.invoke(instance);
 
-        responseSender.accept(responsePayload);
+        responseSender.accept(responsePacket);
     }
 
     protected <
@@ -145,7 +184,9 @@ public abstract class AbstractFutureManager {
 
         try {
             var buffer = new FriendlyByteBuf(Unpooled.buffer());
-            var responsePayload = codec.decode(buffer.writeByteArray(responsePacket.getBytes()));
+            var bytes = responsePacket.getBytes();
+            AcademyCraft.LOGGER.info(Arrays.toString(bytes));
+            var responsePayload = codec.decode(buffer.writeBytes(bytes));
             responsePayload.setPacketListener(responsePacket.getPacketListener());
             callbackExecutor.accept(responsePayload);
         } catch (Exception e) {

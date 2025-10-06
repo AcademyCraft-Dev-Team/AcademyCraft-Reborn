@@ -2,6 +2,7 @@ package org.academy.mixin.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
+import net.minecraft.client.input.MouseButtonInfo;
 import org.academy.api.client.input.InputSystem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,14 +19,14 @@ public abstract class MixinMouseHandler {
         InputSystem.handleMouseScroll(windowPointer, xOffset, yOffset, ci);
     }
 
-    @Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
-    private void onPress(long windowPointer, int button, int action, int modifiers, CallbackInfo ci) {
-        InputSystem.handleMouseButton(button, action, modifiers, ci);
+    @Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
+    private void onButton(long windowPointer, MouseButtonInfo buttonInfo, int action, CallbackInfo ci) {
+        InputSystem.handleMouseButton(buttonInfo.button(), action, buttonInfo.modifiers(), ci);
     }
 
     @Inject(method = "onMove", at = @At("HEAD"), cancellable = true)
     private void onMove(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
-        if (windowPointer == Minecraft.getInstance().getWindow().getWindow()) {
+        if (windowPointer == Minecraft.getInstance().getWindow().handle()) {
             InputSystem.handleMouseMove(xOffset, yOffset, ci);
         }
     }

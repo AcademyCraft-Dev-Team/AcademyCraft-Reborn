@@ -2,7 +2,6 @@ package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -12,9 +11,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.internal.common.world.level.block.entity.WindGenPillarBlockEntity;
-import org.jetbrains.annotations.Nullable;
 
-public class WindGenPillarBlock extends BaseEntityBlock {
+public final class WindGenPillarBlock extends BaseEntityBlock {
     public static final MapCodec<WindGenPillarBlock> CODEC = simpleCodec(WindGenPillarBlock::new);
 
     public WindGenPillarBlock(Properties properties) {
@@ -42,7 +40,7 @@ public class WindGenPillarBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
+    public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
         return new WindGenPillarBlockEntity(blockPos, blockState);
     }
 }

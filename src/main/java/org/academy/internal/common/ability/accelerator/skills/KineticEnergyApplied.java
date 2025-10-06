@@ -3,11 +3,9 @@ package org.academy.internal.common.ability.accelerator.skills;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.AcademyCraftServer;
@@ -17,9 +15,9 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -95,14 +93,14 @@ public class KineticEnergyApplied extends Skill {
 
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
-            ServerPlayer player = packet.getPacketListener().getPlayer();
+            var player = packet.getPacketListener().getPlayer();
             SKILL_STATS.compute(player.getUUID(), (uuid, aBoolean) -> aBoolean == null || !aBoolean);
         }
 
         @SuppressWarnings("resource")
         public static float onProjectileShoot(Projectile projectile, Entity shooter, float velocity) {
-            GlowCircle glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), shooter.level());
-            Vec3 vec3 = shooter.getLookAngle().scale(1);
+            var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), shooter.level());
+            var vec3 = shooter.getLookAngle().scale(1);
             glowCircle.setPos(projectile.getX() + vec3.x, projectile.getY() + vec3.y, projectile.getZ() + vec3.z);
             glowCircle.setYRot(shooter.getYRot());
             glowCircle.setXRot(shooter.getXRot());

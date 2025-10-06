@@ -4,8 +4,9 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import java.util.Map;
 import org.joml.Matrix4f;
+
+import java.util.Map;
 
 public abstract class PosColorRectDrawCommand extends DrawCommand {
     protected final float width;

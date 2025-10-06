@@ -1,7 +1,6 @@
 package org.academy.mixin.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.neoforge.common.NeoForge;
@@ -27,7 +26,7 @@ public abstract class MixinMinecraft {
     }
 
     @Inject(method = "setLevel", at = @At("TAIL"))
-    private void setLevel(ClientLevel level, ReceivingLevelScreen.Reason reason, CallbackInfo ci) {
+    private void setLevel(ClientLevel clientLevel, CallbackInfo ci) {
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
         var width = mainRenderTarget.width;

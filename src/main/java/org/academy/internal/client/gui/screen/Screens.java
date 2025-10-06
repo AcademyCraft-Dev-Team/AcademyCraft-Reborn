@@ -5,7 +5,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.world.entity.player.Inventory;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
@@ -51,7 +50,7 @@ public final class Screens {
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();
                     if (Minecraft.getInstance().player != null) {
-                        Inventory inventory = Minecraft.getInstance().player.getInventory();
+                        var inventory = Minecraft.getInstance().player.getInventory();
                         var menu = MenuTypes.NODE_MENU.get().create(containerId, inventory);
                         Minecraft.getInstance().player.containerMenu = menu;
                         Minecraft.getInstance().setScreen(new WirelessNodeScreen(menu, inventory, Component.literal(title), pos));
@@ -63,7 +62,7 @@ public final class Screens {
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();
                     if (Minecraft.getInstance().player != null) {
-                        Inventory inventory = Minecraft.getInstance().player.getInventory();
+                        var inventory = Minecraft.getInstance().player.getInventory();
                         var menu = MenuTypes.OMNI_CRAFTING_TABLE_MENU.get().create(containerId, inventory);
                         Minecraft.getInstance().player.containerMenu = menu;
                         Minecraft.getInstance().setScreen(new OmniCraftingTableScreen(menu, inventory, Component.literal(title), pos));

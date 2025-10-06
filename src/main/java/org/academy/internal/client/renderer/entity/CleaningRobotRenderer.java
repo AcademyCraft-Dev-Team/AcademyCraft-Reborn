@@ -2,10 +2,11 @@ package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import org.academy.api.client.render.RenderTypes;
 import org.academy.internal.client.model.CleaningRobotModel;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
@@ -16,10 +17,10 @@ public class CleaningRobotRenderer extends EntityRenderer<CleaningRobot, EntityR
     public static final CleaningRobotModel CLEANING_ROBOT_MODEL = new CleaningRobotModel(CleaningRobotModel.createBodyLayer().bakeRoot());
 
     @Override
-    public void render(EntityRenderState renderState, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+    public void submit(EntityRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0.75f, 0);
-        CLEANING_ROBOT_MODEL.renderToBuffer(poseStack, bufferSource.getBuffer(RenderTypes.CLEANING_ROBOT), packedLight, NO_OVERLAY);
+        nodeCollector.submitModel(CLEANING_ROBOT_MODEL, renderState, poseStack, RenderTypes.CLEANING_ROBOT, renderState.lightCoords, NO_OVERLAY, 0, null);
         poseStack.popPose();
     }
 

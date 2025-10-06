@@ -90,7 +90,7 @@ public final class C2SPacket implements net.minecraft.network.protocol.Packet<Se
                         "Exception processing C2S packet. Class: {}, ID: {}. Player: {}. Error: {}",
                         packetClass.getSimpleName(),
                         id,
-                        handler.player.getGameProfile().getName(),
+                        handler.player.getGameProfile().name(),
                         e.getMessage(),
                         e
                 );

@@ -2,7 +2,6 @@ package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -37,7 +36,7 @@ public final class CylinderRenderer {
         }
     }
 
-    public static void renderCylinder(PoseStack poseStack, VertexConsumer vertexConsumer, float[][] vertexBuffer,
+    public static void renderCylinder(PoseStack.Pose pose, VertexConsumer vertexConsumer, float[][] vertexBuffer,
                                       float red, float green, float blue, float alpha, int packedLight, int packedOverlay) {
         for (var vertexData : vertexBuffer) {
             var x = vertexData[0];
@@ -49,12 +48,12 @@ public final class CylinderRenderer {
             var ny = vertexData[6];
             var nz = vertexData[7];
 
-            vertexConsumer.addVertex(poseStack.last().pose(), x, y, z)
+            vertexConsumer.addVertex(pose.pose(), x, y, z)
                     .setColor(red, green, blue, alpha)
                     .setUv(u, v)
                     .setOverlay(packedOverlay)
                     .setLight(packedLight)
-                    .setNormal(poseStack.last(), nx, ny, nz);
+                    .setNormal(pose, nx, ny, nz);
         }
     }
 

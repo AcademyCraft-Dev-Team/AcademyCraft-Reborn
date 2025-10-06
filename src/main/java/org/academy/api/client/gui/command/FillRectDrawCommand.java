@@ -2,9 +2,10 @@ package org.academy.api.client.gui.command;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import org.academy.api.client.Render;
+
 import java.util.Collections;
 import java.util.Map;
-import org.academy.api.client.Render;
 
 public class FillRectDrawCommand extends PosColorRectDrawCommand {
     public FillRectDrawCommand(

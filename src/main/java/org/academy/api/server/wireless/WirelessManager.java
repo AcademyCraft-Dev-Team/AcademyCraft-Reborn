@@ -13,7 +13,10 @@ import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class WirelessManager {
     public static void initServer() {
@@ -86,14 +89,14 @@ public class WirelessManager {
         var oldCfg = data.getNodeConfig(nodePos);
         if (oldCfg == null) {
             AcademyCraft.LOGGER.warn("Player {} tried to rename nonexistent node at {}",
-                    player.getGameProfile().getName(), nodePos);
+                    player.getGameProfile().name(), nodePos);
             return;
         }
 
         var newNodePos = data.findNodePositionByName(newName);
         if (newNodePos != null && !newNodePos.equals(nodePos)) {
             AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken by node at {}",
-                    player.getGameProfile().getName(), nodePos, newName, newNodePos);
+                    player.getGameProfile().name(), nodePos, newName, newNodePos);
             return;
         }
 
@@ -104,7 +107,7 @@ public class WirelessManager {
 
         data.setDirty();
         AcademyCraft.LOGGER.debug("Player {} renamed node at {} from '{}' to '{}'",
-                player.getGameProfile().getName(), nodePos, oldNameForMap, newName);
+                player.getGameProfile().name(), nodePos, oldNameForMap, newName);
     }
 
     public static void setNodePass(ServerPlayer player,
@@ -119,14 +122,14 @@ public class WirelessManager {
         var cfg = data.getNodeConfig(nodePos);
         if (cfg == null) {
             AcademyCraft.LOGGER.warn("Player {} tried to change password of nonexistent node at {}",
-                    player.getGameProfile().getName(), nodePos);
+                    player.getGameProfile().name(), nodePos);
             return;
         }
 
         cfg.password = newPass;
         data.setDirty();
         AcademyCraft.LOGGER.debug("Player {} changed password of node '{}' at {}",
-                player.getGameProfile().getName(), cfg.name, nodePos);
+                player.getGameProfile().name(), cfg.name, nodePos);
     }
 
     public static void handleConnect(ServerPlayer player, ServerLevel level, BlockPos userPos, String targetNodeName, String passwordAttempt) {
@@ -134,7 +137,7 @@ public class WirelessManager {
 
         var nodePos = networkData.findNodePositionByName(targetNodeName);
         if (nodePos == null) {
-            AcademyCraft.LOGGER.warn("Player {} failed connecting user at {}: Node '{}' not found.", player.getGameProfile().getName(), userPos, targetNodeName);
+            AcademyCraft.LOGGER.warn("Player {} failed connecting user at {}: Node '{}' not found.", player.getGameProfile().name(), userPos, targetNodeName);
             return;
         }
 
@@ -152,7 +155,7 @@ public class WirelessManager {
 
         var userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
-            AcademyCraft.LOGGER.warn("Player {} tried to connect invalid block at {} to node '{}'. Block is not a WirelessUser.", player.getGameProfile().getName(), userPos, targetNodeName);
+            AcademyCraft.LOGGER.warn("Player {} tried to connect invalid block at {} to node '{}'. Block is not a WirelessUser.", player.getGameProfile().name(), userPos, targetNodeName);
             return;
         }
 
@@ -162,7 +165,7 @@ public class WirelessManager {
         }
 
         if (!nodeConfig.checkPassword(passwordAttempt)) {
-            AcademyCraft.LOGGER.warn("Incorrect password provided by {} for node '{}' from user at {}.", player.getGameProfile().getName(), targetNodeName, userPos);
+            AcademyCraft.LOGGER.warn("Incorrect password provided by {} for node '{}' from user at {}.", player.getGameProfile().name(), targetNodeName, userPos);
             return;
         }
 
@@ -177,7 +180,7 @@ public class WirelessManager {
     public static void handleDisconnect(@Nullable ServerPlayer player, ServerLevel level, BlockPos userPos) {
         var userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
-            var playerName = (player != null) ? player.getGameProfile().getName() : "System";
+            var playerName = (player != null) ? player.getGameProfile().name() : "System";
             AcademyCraft.LOGGER.warn("{} tried to disconnect invalid block at {}.", playerName, userPos);
             return;
         }

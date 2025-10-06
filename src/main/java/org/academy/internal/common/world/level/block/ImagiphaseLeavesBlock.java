@@ -11,9 +11,8 @@ import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.material.PushReaction;
 import org.academy.internal.common.core.particles.ParticleTypes;
-import org.jetbrains.annotations.NotNull;
 
-public class ImagiphaseLeavesBlock extends LeavesBlock {
+public final class ImagiphaseLeavesBlock extends LeavesBlock {
     public static final MapCodec<ImagiphaseLeavesBlock> CODEC = simpleCodec(ImagiphaseLeavesBlock::new);
 
     public ImagiphaseLeavesBlock(Properties properties) {
@@ -32,12 +31,12 @@ public class ImagiphaseLeavesBlock extends LeavesBlock {
     }
 
     @Override
-    public @NotNull MapCodec<? extends LeavesBlock> codec() {
+    public MapCodec<? extends LeavesBlock> codec() {
         return CODEC;
     }
 
     @Override
-    protected void spawnFallingLeavesParticle(@NotNull Level level, @NotNull BlockPos pos, @NotNull RandomSource random) {
+    protected void spawnFallingLeavesParticle(Level level, BlockPos pos, RandomSource random) {
         var blockpos = pos.below();
         var blockstate = level.getBlockState(blockpos);
         if (!isFaceFull(blockstate.getCollisionShape(level, blockpos), Direction.UP)) {

@@ -12,12 +12,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.network.packet.Packet;
+import org.academy.api.common.network.packet.PacketType;
 import org.academy.api.common.vanilla.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.jetbrains.annotations.NotNull;
 
 public class CoinItem extends Item {
     public CoinItem(Properties properties) {
@@ -25,10 +24,10 @@ public class CoinItem extends Item {
     }
 
     @Override
-    public @NotNull InteractionResult use(Level level, Player player, @NotNull InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         var itemStack = player.getItemInHand(hand);
 
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             var initialVelocity = player.onGround() ?
                     player.getDeltaMovement().multiply(2.25, 0, 2.25)
                     :

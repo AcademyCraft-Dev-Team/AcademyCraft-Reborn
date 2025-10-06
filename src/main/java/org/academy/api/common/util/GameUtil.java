@@ -9,7 +9,7 @@ public class GameUtil {
     }
 
     public static EnvType getEnvType() {
-        return FMLEnvironment.dist.isClient() ? EnvType.CLIENT : EnvType.DEDICATED_SERVER;
+        return FMLEnvironment.getDist().isClient() ? EnvType.CLIENT : EnvType.DEDICATED_SERVER;
     }
 
     /**

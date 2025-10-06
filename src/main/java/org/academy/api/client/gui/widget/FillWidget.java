@@ -2,8 +2,8 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 
 public class FillWidget extends AbstractWidget {
     protected int color;

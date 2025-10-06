@@ -1,11 +1,11 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import org.academy.api.client.compatibility.IrisCompat;
-import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.ArcFactory;
 import org.academy.internal.client.renderer.entity.state.ArcRenderState;
 import org.academy.internal.common.world.entity.skill.Arc;
@@ -17,7 +17,7 @@ public class ArcRenderer extends EntityRenderer<Arc, ArcRenderState> {
     }
 
     @Override
-    public void render(ArcRenderState renderState, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+    public void submit(ArcRenderState renderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState) {
         if (IrisCompat.isShadowRendererActive()) return;
 
         poseStack.pushPose();
@@ -27,7 +27,7 @@ public class ArcRenderer extends EntityRenderer<Arc, ArcRenderState> {
         poseStack.mulPose(matrix4f);
 
         if (renderState.renderData != null) {
-            ArcFactory.render(poseStack, PostEffect.BUFFER_SOURCE_PRE, renderState.renderData);
+            ArcFactory.render(poseStack, submitNodeCollector, renderState.renderData);
         }
 
         poseStack.popPose();

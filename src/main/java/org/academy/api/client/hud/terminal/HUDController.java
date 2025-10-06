@@ -98,7 +98,7 @@ public final class HUDController implements HUDRenderer {
         } else {
             var window = Minecraft.getInstance().getWindow();
             var mouseHandler = Minecraft.getInstance().mouseHandler;
-            GLFW.glfwSetCursorPos(window.getWindow(), mouseHandler.xpos(), mouseHandler.ypos());
+            GLFW.glfwSetCursorPos(window.handle(), mouseHandler.xpos(), mouseHandler.ypos());
         }
     }
 
@@ -109,7 +109,7 @@ public final class HUDController implements HUDRenderer {
         var y = window.getHeight() / 2d;
         xpos = x / window.getGuiScale();
         ypos = y / window.getGuiScale();
-        GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().getWindow(), x, y);
+        GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().handle(), x, y);
     }
 
     public boolean isActive() {
@@ -209,15 +209,16 @@ public final class HUDController implements HUDRenderer {
             var options = Minecraft.getInstance().options;
             var key = event.key;
             var scanCode = event.scanCode;
+            var mcKeyEvent = new net.minecraft.client.input.KeyEvent(key, scanCode, event.modifiers);
 
-            boolean isMovementKey = options.keyUp.matches(key, scanCode) || options.keyDown.matches(key, scanCode)
-                    || options.keyLeft.matches(key, scanCode) || options.keyRight.matches(key, scanCode)
-                    || options.keyJump.matches(key, scanCode) || options.keyShift.matches(key, scanCode)
-                    || options.keySprint.matches(key, scanCode);
+            boolean isMovementKey = options.keyUp.matches(mcKeyEvent) || options.keyDown.matches(mcKeyEvent)
+                    || options.keyLeft.matches(mcKeyEvent) || options.keyRight.matches(mcKeyEvent)
+                    || options.keyJump.matches(mcKeyEvent) || options.keyShift.matches(mcKeyEvent)
+                    || options.keySprint.matches(mcKeyEvent);
 
             var isHotbarKey = false;
             for (var hotbarKey : options.keyHotbarSlots) {
-                if (hotbarKey.matches(key, scanCode)) {
+                if (hotbarKey.matches(mcKeyEvent)) {
                     isHotbarKey = true;
                     break;
                 }

@@ -1,6 +1,9 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "academy:block/omni_crafting_table"
+    "type": "minecraft:special",
+    "base": "minecraft:block/block",
+    "model": {
+      "type": "academy:omni_crafting_table"
+    }
   }
 }

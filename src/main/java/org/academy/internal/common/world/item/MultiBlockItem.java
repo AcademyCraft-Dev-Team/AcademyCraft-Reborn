@@ -5,7 +5,6 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -26,17 +25,17 @@ public class MultiBlockItem extends BlockItem {
 
     @Override
     protected boolean canPlace(BlockPlaceContext context, @NotNull BlockState state) {
-        BlockPos basePos = context.getClickedPos();
-        Level level = context.getLevel();
+        var basePos = context.getClickedPos();
+        var level = context.getLevel();
         CollisionContext collisionContext = context.getPlayer() == null ? CollisionContext.empty() : CollisionContext.of(context.getPlayer());
 
         List<BlockPos> requiredPositions = MultiBlock.getRotatedSubjectBlocks(basePos, state.getValue(FACING), subBlocks);
         requiredPositions.add(basePos);
 
         for (BlockPos pos : requiredPositions) {
-            BlockState existingState = level.getBlockState(pos);
+            var existingState = level.getBlockState(pos);
 
-            BlockPlaceContext simulatedContext = new BlockPlaceContext(new UseOnContext(
+            var simulatedContext = new BlockPlaceContext(new UseOnContext(
                     context.getLevel(),
                     context.getPlayer(),
                     context.getHand(),

@@ -2,14 +2,13 @@ package org.academy.internal.client.renderer.effect;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.context.ContextKey;
 import org.academy.AcademyCraft;
-import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.renderer.RingRenderer;
@@ -195,57 +194,54 @@ public final class StormWingEffectRenderer implements EffectRenderer {
             );
             poseStack.popPose();
 
-            if (RAND.nextFloat() < NESTED_RING_PROBABILITY) {
-                var nestedBaseRadiusRaw = rWithExtra * NESTED_RADIUS_FACTOR;
-                var nestedJitter = calculateRadiusJitter(i + NUM_RINGS, tJitter + 0.5);
-                var finalRadiusNested = (float) Math.max(0.01 * SIZE, (nestedBaseRadiusRaw + nestedJitter) * SIZE);
-                var nestedWidth = Math.max(0.01f * SIZE, ringWidth * NESTED_WIDTH_FACTOR);
+            var nestedBaseRadiusRaw = rWithExtra * NESTED_RADIUS_FACTOR;
+            var nestedJitter = calculateRadiusJitter(i + NUM_RINGS, tJitter + 0.5);
+            var finalRadiusNested = (float) Math.max(0.01 * SIZE, (nestedBaseRadiusRaw + nestedJitter) * SIZE);
+            var nestedWidth = Math.max(0.01f * SIZE, ringWidth * NESTED_WIDTH_FACTOR);
 
-                poseStack.pushPose();
-                poseStack.scale(finalRadiusNested, nestedWidth, finalRadiusNested);
-                RingRenderer.renderRing(
-                        poseStack.last().pose(), vertexConsumer,
-                        RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER,
-                        1, 1, 1, 1
-                );
-                poseStack.popPose();
-            }
+            poseStack.pushPose();
+            poseStack.scale(finalRadiusNested, nestedWidth, finalRadiusNested);
+            RingRenderer.renderRing(
+                    poseStack.last().pose(), vertexConsumer,
+                    RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER,
+                    1, 1, 1, 1
+            );
+            poseStack.popPose();
 
             poseStack.popPose();
         }
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, PlayerRenderState renderState, float yRot, float xRot) {
+    public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
         if ( !renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
 
         poseStack.pushPose();
         poseStack.mulPose(BASE_MATRIX);
+        submitNodeCollector.submitCustomGeometry(poseStack, RENDER_TYPE, (pose, vertexConsumer) -> {
+            var time = renderState.ageInTicks;
+            var poseStack1 = new PoseStack();
+            poseStack1.last().set(pose);
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
+            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_1);
+            poseStack1.popPose();
 
-        var vertexConsumer = bufferSource.getBuffer(RENDER_TYPE);
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
+            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_2);
+            poseStack1.popPose();
 
-        var time = renderState.ageInTicks;
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_3);
+            poseStack1.popPose();
 
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_1);
-        poseStack.popPose();
-
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_2);
-        poseStack.popPose();
-
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_3);
-        poseStack.popPose();
-
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_4);
-        poseStack.popPose();
-
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_4);
+            poseStack1.popPose();
+        });
         poseStack.popPose();
     }
 }

@@ -126,13 +126,13 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         menuBar.addChild("icon", icon);
 
         var player = Minecraft.getInstance().player;
-        var playerName = player != null ? player.getGameProfile().getName() : "N/A";
+        var playerName = player != null ? player.getGameProfile().name() : "N/A";
         var playerNameLabel = new LabelWidget(Component.literal(playerName), padding, padding, barWidth - padding * 2.0F, iconSize) {
             @Override
             public void tick() {
                 var player = Minecraft.getInstance().player;
                 if (player != null) {
-                    setText(player.getGameProfile().getName());
+                    setText(player.getGameProfile().name());
                 }
             }
         };
@@ -181,13 +181,16 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         titleLabel.setVerticalAlignment(LabelWidget.VerticalAlignment.MIDDLE);
         titleBar.addChild("title_label", titleLabel);
 
-        Runnable closeAction = () -> {
+        var closeAction = new Runnable() {
+            @Override
+            public void run() {
             var currentWindow = rootContainer.getChildren().get("app_window");
             if (currentWindow != null) {
                 currentWindow.setVisible(false);
             }
             rootContainer.removeChild("app_window");
             rootContainer.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
+            }
         };
         var closeButton = new ImageButtonWidget(windowWidth - titleBarSize, 0.0F, titleBarSize, titleBarSize, Resource.Textures.ICON_RANDOM, closeAction);
         closeButton.setDefaultHoverEffect(true);

@@ -37,7 +37,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public void tick() {
         super.tick();
 
-        if (!level().isClientSide) {
+        if (!level().isClientSide()) {
             float frequency = 0.25f;
             float amplitude = 0.00075f;
 
@@ -81,13 +81,13 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
 
         boolean rayShouldBeActive = !isCharging;
         if (rayShouldBeActive && progress > 0.01f && !fired) {
-            Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.25f, 3, false, true, true, level().isClientSide);
+            Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.25f, 3, false, true, true, level().isClientSide());
             if (result.getKey()) {
                 double d = result.getValue();
                 length = (float) d;
             }
 
-            if (!level().isClientSide) {
+            if (!level().isClientSide()) {
                 LevelUtil.attackEntitiesAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.125f, new DamageSource(level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK), this), 100);
             }
             fired = true;

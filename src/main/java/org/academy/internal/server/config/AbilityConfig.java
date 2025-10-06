@@ -39,7 +39,7 @@ public class AbilityConfig {
 
         @Override
         public @NotNull AbilityConfig getDefault() {
-            AbilityConfig defaultConfig = new AbilityConfig();
+            var defaultConfig = new AbilityConfig();
 
             List<String> minecraftMetalBlocks = new ArrayList<>();
             minecraftMetalBlocks.add("iron_block");
@@ -58,7 +58,7 @@ public class AbilityConfig {
             defaultConfig.metalEntities.put("minecraft", minecraftMetalEntities);
             defaultConfig.metalEntities.put("academy", academyMetalEntities);
 
-            SkillSettings railgunSettings = new SkillSettings();
+            var railgunSettings = new SkillSettings();
             railgunSettings.booleanMap.put("enabled", true);
             railgunSettings.booleanMap.put("destroyBlock", true);
             railgunSettings.floatMap.put("damageScale", 1.0f);

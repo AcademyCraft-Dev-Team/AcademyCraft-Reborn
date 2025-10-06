@@ -1,10 +1,11 @@
 package org.academy.api.client.gui.framework;
 
-import java.util.Objects;
-import javax.annotation.Nullable;
 import net.minecraft.util.Mth;
 import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 import static org.academy.api.common.util.MathUtil.Axis2D;
 import static org.academy.api.common.util.MathUtil.Direction2D;
@@ -133,8 +134,8 @@ public final class ScissorRect implements Comparable<ScissorRect> {
     }
 
     public ScissorRect transformAxisAligned(Matrix3x2f pPos) {
-        Vector2f vector2f = pPos.transformPosition(this.getLeft(), this.getTop(), new Vector2f());
-        Vector2f vector2f1 = pPos.transformPosition(this.getRight(), this.getBottom(), new Vector2f());
+        var vector2f = pPos.transformPosition(this.getLeft(), this.getTop(), new Vector2f());
+        var vector2f1 = pPos.transformPosition(this.getRight(), this.getBottom(), new Vector2f());
         return new ScissorRect(
                 Mth.floor(vector2f.x), Mth.floor(vector2f.y), Mth.floor(vector2f1.x - vector2f.x), Mth.floor(vector2f1.y - vector2f.y)
         );
@@ -172,7 +173,7 @@ public final class ScissorRect implements Comparable<ScissorRect> {
             return true;
         if (o == null || getClass() != o.getClass())
             return false;
-        ScissorRect that = (ScissorRect) o;
+        var that = (ScissorRect) o;
         return Float.compare(that.width, this.width) == 0
                 && Float.compare(that.height, this.height) == 0
                 && Objects.equals(this.position, that.position);
