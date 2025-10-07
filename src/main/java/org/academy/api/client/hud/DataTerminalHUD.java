@@ -44,6 +44,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.system.MemoryStack;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -365,7 +366,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     }
 
     private static void updateTransformUBO(Matrix4f projectionMatrix) {
-        try (var memoryStack = org.lwjgl.system.MemoryStack.stackPush()) {
+        try (var memoryStack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(memoryStack, TransformUniforms.UBO_SIZE);
             new TransformUniforms(projectionMatrix).write(builder);
             var byteBuffer = builder.get();

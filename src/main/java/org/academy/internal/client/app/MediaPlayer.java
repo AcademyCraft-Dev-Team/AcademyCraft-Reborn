@@ -279,7 +279,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private static class GeometricButtonWidget extends AbstractButtonWidget {
 /*        private static final RenderType RENDER_TYPE = RenderType.create(
                 "geometric_button",
-                DefaultVertexFormat.POS_COLOR,
+                DefaultVertexFormat.POS_COLOR_QUADS,
                 VertexFormat.Mode.TRIANGLES,
                 32,
                 false,

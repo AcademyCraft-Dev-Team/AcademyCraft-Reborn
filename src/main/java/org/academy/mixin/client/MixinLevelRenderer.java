@@ -2,9 +2,16 @@ package org.academy.mixin.client;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.LevelRenderState;
+import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.render.LevelRenderEvent;
+import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
@@ -21,5 +28,11 @@ public abstract class MixinLevelRenderer {
         PostEffect.pre();
         BloomEffect.process();
         PostEffect.post();
+    }
+
+    @Inject(method = "submitEntities", at = @At("HEAD"))
+    private void submitEntities(PoseStack poseStack, LevelRenderState renderState, SubmitNodeCollector nodeCollector, CallbackInfo ci) {
+        var event = new LevelRenderEvent(Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks(), new MatrixStack().setFrom(poseStack.last()));
+        NeoForge.EVENT_BUS.post(event);
     }
 }

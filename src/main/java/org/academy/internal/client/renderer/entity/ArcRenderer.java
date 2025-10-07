@@ -45,4 +45,9 @@ public class ArcRenderer extends EntityRenderer<Arc, ArcRenderState> {
     public ArcRenderState createRenderState() {
         return new ArcRenderState();
     }
+
+    @Override
+    protected boolean affectedByCulling(Arc display) {
+        return false;
+    }
 }
