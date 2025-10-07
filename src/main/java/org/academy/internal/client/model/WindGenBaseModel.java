@@ -35,13 +35,13 @@ public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
 
     public WindGenBaseModel(ModelPart root) {
         super(root, RenderType::entityCutoutNoCull);
-        ModelPart all = root.getChild("all");
-        ModelPart parts = all.getChild("parts");
-        ModelPart screen = parts.getChild("screen");
-        ModelPart rhalf = screen.getChild("rhalf");
-        ModelPart lhalf = screen.getChild("lhalf");
-        ModelPart rods = parts.getChild("rods");
-        ModelPart base = parts.getChild("base");
+        var all = root.getChild("all");
+        var parts = all.getChild("parts");
+        var screen = parts.getChild("screen");
+        var rhalf = screen.getChild("rhalf");
+        var lhalf = screen.getChild("lhalf");
+        var rods = parts.getChild("rods");
+        var base = parts.getChild("base");
         this.setup = WindGenBaseAnimation.SETUP.bake(root);
         this.shut = WindGenBaseAnimation.SHUT.bake(root);
     }

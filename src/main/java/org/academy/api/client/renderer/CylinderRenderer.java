@@ -8,11 +8,11 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
 
-import static org.academy.api.client.Render.RenderTypes.BOX;
+import static org.academy.api.client.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
 
 public final class CylinderRenderer {
     static {
-        PostEffect.addFixedBuffer(BOX);
+        PostEffect.addFixedBuffer(POS_COLOR_QUADS_BLOOM);
     }
 
     private CylinderRenderer() {
@@ -22,7 +22,7 @@ public final class CylinderRenderer {
                                       float red, float green, float blue, float alpha) {
         var pose = poseStack.last();
         var matrix = pose.pose();
-        var vertexConsumer = buffer.getBuffer(BOX);
+        var vertexConsumer = buffer.getBuffer(POS_COLOR_QUADS_BLOOM);
         renderCylinder(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
     }
 

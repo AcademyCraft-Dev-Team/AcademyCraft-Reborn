@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 
 import static com.mojang.blaze3d.pipeline.RenderPipeline.builder;
@@ -140,13 +141,32 @@ public final class Render {
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
-        public static final RenderPipeline LEVEL_POS_COLOR = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+        public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color"))
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
+                .build();
+
+        public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_color"))
+                .withFragmentShader(Resource.Shaders.POS_COLOR)
+                .withVertexShader(Resource.Shaders.POS_COLOR)
+                .withCull(false)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
+                .build();
+
+        public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES_NO_DEPTH = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_color"))
+                .withFragmentShader(Resource.Shaders.POS_COLOR)
+                .withVertexShader(Resource.Shaders.POS_COLOR)
+                .withCull(false)
+                .withDepthWrite(false)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
                 .build();
 
         public static final RenderPipeline DISTORTION_RING = builder(MATRICES_PROJECTION_SNIPPET)
@@ -192,7 +212,7 @@ public final class Render {
         }
     }
 
-    public abstract static class RenderTypes extends net.minecraft.client.renderer.RenderType {
+    public abstract static class RenderTypes extends RenderType {
         public static final RenderType ARC = create(
                 "arc",
                 1536,
@@ -205,10 +225,67 @@ public final class Render {
                         .createCompositeState(false)
         );
 
-        public static final RenderType BOX = create(
-                "box",
+        public static final RenderType POS_COLOR_QUADS = create(
+                "pos_color_quads",
                 1536,
-                RenderPipelines.LEVEL_POS_COLOR,
+                RenderPipelines.LEVEL_POS_COLOR_QUADS,
+                CompositeState.builder()
+                        .createCompositeState(false)
+        );
+
+        public static final RenderType POS_COLOR_TRANGLES = create(
+                "pos_color_trangles",
+                1536,
+                RenderPipelines.LEVEL_POS_COLOR_TRANGLES,
+                CompositeState.builder()
+                        .createCompositeState(false)
+        );
+
+        // 记得使用对应的 BufferSource 喵
+
+        /**
+         * 同时输出到 Main 与 INPUT
+         */
+        public static final RenderType POS_COLOR_QUADS_BLOOM = create(
+                "pos_color_quads_bloom",
+                1536,
+                RenderPipelines.LEVEL_POS_COLOR_QUADS,
+                CompositeState.builder()
+                        .setOutputState(BLOOM_TARGET)
+                        .createCompositeState(false)
+        );
+
+        /**
+         * 同时输出到 Main 与 INPUT
+         */
+        public static final RenderType POS_COLOR_TRANGLES_BLOOM = create(
+                "pos_color_trangles_bloom",
+                1536,
+                RenderPipelines.LEVEL_POS_COLOR_TRANGLES,
+                CompositeState.builder()
+                        .setOutputState(BLOOM_TARGET)
+                        .createCompositeState(false)
+        );
+
+        /**
+         * 只输出到 INPUT
+         */
+        public static final RenderType POS_COLOR_QUADS_BLOOM_POST = create(
+                "pos_color_quads_bloom_post",
+                1536,
+                RenderPipelines.LEVEL_POS_COLOR_QUADS,
+                CompositeState.builder()
+                        .setOutputState(BLOOM_TARGET)
+                        .createCompositeState(false)
+        );
+
+        /**
+         * 只输出到 INPUT
+         */
+        public static final RenderType POS_COLOR_TRANGLES_BLOOM_POST = create(
+                "pos_color_trangles_bloom_post",
+                1536,
+                RenderPipelines.LEVEL_POS_COLOR_TRANGLES,
                 CompositeState.builder()
                         .setOutputState(BLOOM_TARGET)
                         .createCompositeState(false)
@@ -222,6 +299,15 @@ public final class Render {
                         .setTextureState(TextureStateShards.MAIN_SCENE)
                         .createCompositeState(false)
         );
+
+        static {
+            PostEffect.addFixedBuffer(POS_COLOR_QUADS);
+            PostEffect.addFixedBuffer(POS_COLOR_TRANGLES);
+            PostEffect.addFixedBuffer(POS_COLOR_QUADS_BLOOM);
+            PostEffect.addFixedBuffer(POS_COLOR_TRANGLES_BLOOM);
+            BloomEffect.addFixedBuffer(POS_COLOR_QUADS_BLOOM_POST);
+            BloomEffect.addFixedBuffer(POS_COLOR_TRANGLES_BLOOM_POST);
+        }
 
         private RenderTypes(Runnable a, Runnable b) {
             super("", -1, false, false, a, b);

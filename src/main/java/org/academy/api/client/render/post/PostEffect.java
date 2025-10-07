@@ -2,6 +2,7 @@ package org.academy.api.client.render.post;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -73,7 +74,7 @@ public final class PostEffect {
         BUFFER_SOURCE_POST.endBatch();
     }
 
-    public static void runBlitPass(RenderTarget target, com.mojang.blaze3d.pipeline.RenderPipeline pipeline,
+    public static void runBlitPass(RenderTarget target, RenderPipeline pipeline,
                                    Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms, boolean clear) {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         var clearColor = clear ? OptionalInt.of(0) : OptionalInt.empty();
@@ -88,6 +89,19 @@ public final class PostEffect {
             renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
             renderPass.drawIndexed(0, 0, 6, 1);
         }
+    }
+
+    /**
+     * 我也不知道怎么命名好喵
+     * <br>
+     * 用途为创建一个 BufferSource 用于后处理的某个阶段喵
+     * <br>
+     * 可以参考 BloomEffect 喵
+     * <br>
+     * 共享 BYTE_BUFFER_BUILDER 喵
+     */
+    public static MultiBufferSource.BufferSource createPostEffectPassBuffer(SequencedMap<RenderType, ByteBufferBuilder> fixedBuffers) {
+        return MultiBufferSource.immediateWithBuffers(fixedBuffers, BYTE_BUFFER_BUILDER);
     }
 
     private PostEffect() {

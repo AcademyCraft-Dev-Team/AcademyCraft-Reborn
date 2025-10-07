@@ -7,8 +7,12 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.Render;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
@@ -16,6 +20,7 @@ import org.lwjgl.system.MemoryStack;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.SequencedMap;
 
 import static org.academy.api.client.render.post.PostEffect.MAIN_SCENE;
 
@@ -23,6 +28,8 @@ public final class BloomEffect {
     private static final RenderTarget INPUT, OUTPUT, SWAP2A, SWAP4A, SWAP8A, SWAP2B, SWAP4B, SWAP8B;
     private static final GpuBuffer blurUniformsBuffer;
     private static final GpuBuffer bloomUniformsBuffer;
+    public static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS = new Object2ObjectLinkedOpenHashMap<>();
+    public static final MultiBufferSource.BufferSource BLIT_TO_MAIN_POST = PostEffect.createPostEffectPassBuffer(FIXED_BUFFERS);
 
     public static final RenderStateShard.OutputStateShard BLOOM_TARGET = new RenderStateShard.OutputStateShard(
             "bloom_target",
@@ -77,6 +84,10 @@ public final class BloomEffect {
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
         blurUniformsBuffer = device.createBuffer(() -> "Bloom Blur UBO", uboUsage, BlurUniforms.UBO_SIZE);
         bloomUniformsBuffer = device.createBuffer(() -> "Bloom Blend UBO", uboUsage, BloomUniforms.UBO_SIZE);
+    }
+
+    public static void addFixedBuffer(RenderType type) {
+        FIXED_BUFFERS.put(type, new ByteBufferBuilder(type.bufferSize()));
     }
 
     public static void close() {
@@ -141,6 +152,8 @@ public final class BloomEffect {
         var blurUboSlice = blurUniformsBuffer.slice();
 
         PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Collections.emptyMap(), false);
+
+        BLIT_TO_MAIN_POST.endBatch();
 
         writeBlurUniforms(new Vector2f(SWAP2A.width, SWAP2A.height), 1.0f, 0.0f, 4);
         PostEffect.runBlitPass(SWAP2A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);

@@ -27,6 +27,7 @@ import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBloc
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -322,7 +323,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                 var learnProgress = new ProgressBarWidget(leftPanelInfoPanel.getHeight(), 16,
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4, 2,
                         () -> progressRatio);
-                learnProgress.setProgressBarColor(java.awt.Color.WHITE.hashCode());
+                learnProgress.setProgressBarColor(Color.WHITE.hashCode());
                 leftPanelInfoPanel.addChild("learn_progress", learnProgress);
                 var progress = new AutoScaleLabelWidget("LEARNED " + percentage + "%", leftPanelInfoPanel.getHeight(), 18,
                         learnProgress.getWidth() * 0.5f);

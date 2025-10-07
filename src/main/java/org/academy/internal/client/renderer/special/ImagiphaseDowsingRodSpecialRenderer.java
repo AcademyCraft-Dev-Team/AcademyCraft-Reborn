@@ -121,13 +121,18 @@ public final class ImagiphaseDowsingRodSpecialRenderer implements NoDataSpecialM
             poseStack.mulPose(Axis.YP.rotationDegrees(90));
             poseStack.scale(1.5f, 1.5f, 1.5f);
         } else {
-            if (displayContext.firstPerson()) {
+            if (displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND) {
+                poseStack.translate(1.5f, -1.5f, -1);
+                poseStack.mulPose(Axis.YP.rotationDegrees(235));
+            }
+            if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND) {
                 poseStack.translate(1.5f, -1.5f, 0);
                 poseStack.mulPose(Axis.YP.rotationDegrees(125));
             }
             if (displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND) {
                 poseStack.mulPose(Axis.YP.rotationDegrees(25));
                 poseStack.mulPose(Axis.ZP.rotationDegrees(-75));
+                poseStack.translate(0.75f, 0, -0.125f);
             }
             if (displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND) {
                 poseStack.mulPose(Axis.YP.rotationDegrees(145));
@@ -138,7 +143,7 @@ public final class ImagiphaseDowsingRodSpecialRenderer implements NoDataSpecialM
 
         nodeCollector.submitModel(MODEL, Unit.INSTANCE, poseStack, MODEL.renderType(Resource.Textures.IMAG_PHASE_DOWSING_ROD), packedLight, packedOverlay, outlineColor, null);
         if (displayContext.firstPerson()) {
-            nodeCollector.submitCustomGeometry(poseStack, Render.RenderTypes.BOX, (pose, consumer) -> render3DMap(new PoseStack(), consumer));
+            nodeCollector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM, (pose, consumer) -> render3DMap(new PoseStack(), consumer));
         }
         poseStack.popPose();
     }

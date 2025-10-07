@@ -69,7 +69,7 @@ public final class InputSystem {
 
         if (event.isCanceled()) {
             if (action == GLFW.GLFW_RELEASE) {
-                net.minecraft.client.KeyMapping.set(com.mojang.blaze3d.platform.InputConstants.Type.MOUSE.getOrCreate(button), false);
+                KeyMapping.set(InputConstants.Type.MOUSE.getOrCreate(button), false);
             }
             ci.cancel();
             return;

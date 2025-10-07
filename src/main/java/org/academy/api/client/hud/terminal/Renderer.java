@@ -20,6 +20,7 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.lwjgl.system.MemoryStack;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -194,7 +195,7 @@ public final class Renderer implements AutoCloseable {
     }
 
     private void updateTransformUBO(Matrix4f projectionMatrix) {
-        try (var memoryStack = org.lwjgl.system.MemoryStack.stackPush()) {
+        try (var memoryStack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(memoryStack, TransformUniforms.UBO_SIZE);
             new TransformUniforms(projectionMatrix).write(builder);
             var byteBuffer = builder.get();
