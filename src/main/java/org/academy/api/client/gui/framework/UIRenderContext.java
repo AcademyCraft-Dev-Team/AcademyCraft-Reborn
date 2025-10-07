@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.client.renderer.MappableRingBuffer;
 import org.joml.Matrix4f;
+import org.lwjgl.system.MemoryStack;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,7 +48,7 @@ public final class UIRenderContext {
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
 
-        try (var memoryStack = org.lwjgl.system.MemoryStack.stackPush()) {
+        try (var memoryStack = MemoryStack.stackPush()) {
             var size = new Std140SizeCalculator().putMat4f().putVec4().putVec3().putMat4f().putFloat().get();
             var builder = Std140Builder.onStack(memoryStack, size);
             var identityMatrix = new Matrix4f();

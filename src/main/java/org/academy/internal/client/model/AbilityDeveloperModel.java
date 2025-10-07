@@ -24,7 +24,7 @@ public class AbilityDeveloperModel extends Model<AbilityDeveloperRenderState> {
     public AbilityDeveloperModel(ModelPart root) {
         super(root.getChild("all"), RenderType::entityTranslucent);
         var all = root.getChild("all");
-        ModelPart up = all.getChild("up");
+        var up = all.getChild("up");
         var glass = up.getChild("glass");
         glass.getChild("lsidebars");
         var base = up.getChild("base");
