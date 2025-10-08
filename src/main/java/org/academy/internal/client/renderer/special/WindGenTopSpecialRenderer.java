@@ -31,23 +31,14 @@ public final class WindGenTopSpecialRenderer implements NoDataSpecialModelRender
     @Override
     public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
-        poseStack.translate(0.5f, 1.5f, 0);
-        poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
-        poseStack.rotateAround(Axis.YP.rotationDegrees(90), 0, 0, 0);
-        if (displayContext.firstPerson()) {
-            poseStack.translate(0.5f, -0.25f, 0);
-        }
-        if (displayContext == ItemDisplayContext.FIXED) {
-            poseStack.translate(0.5f, 0, 0);
-        }
-        if (displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND) {
-            poseStack.translate(0.5f, 0, 0);
-            poseStack.rotateAround(Axis.YP.rotationDegrees(90), 0, 0, 0);
-        }
+        poseStack.translate(0.5f, 1.5f, 0.5f);
+        poseStack.mulPose(Axis.XP.rotationDegrees(180));
         if (displayContext == ItemDisplayContext.GUI) {
-            poseStack.translate(0.7f, 0.125f, 0);
-            poseStack.rotateAround(Axis.YP.rotationDegrees(90), 0, 0, 0);
+            poseStack.translate(0.075f, 0.075f, 0);
             poseStack.scale(0.85f, 0.85f, 0.85f);
+        }
+        if (displayContext.firstPerson()){
+            poseStack.mulPose(Axis.YN.rotationDegrees(90));
         }
         nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderType.entityTranslucent(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, outlineColor, null);
         poseStack.popPose();

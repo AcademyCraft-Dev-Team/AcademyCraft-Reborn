@@ -5,14 +5,17 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
+import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
+import org.academy.internal.common.world.level.block.MultiBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,29 +26,52 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     public String name;
     public int energyStored;
     public int ticks;
-    public final AnimationState openState = new AnimationState();
+    public final AnimationState openingState = new AnimationState();
     public final AnimationState closingState = new AnimationState();
-    public final AnimationState standState = new AnimationState();
-    public final AnimationState liedownState = new AnimationState();
+    public final AnimationState standingState = new AnimationState();
+    public final AnimationState lyingDownState = new AnimationState();
     public boolean isOpen = false;
     @Nullable
     private BlockPos connectedNodePos = null;
+    private boolean playerNearby = false;
 
     public AbilityDeveloperBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.ABILITY_DEVELOPER.get(), pos, blockState);
-        standState.start(ticks);
+        if (isMain()) {
+            lyingDownState.start(ticks);
+        }
     }
 
     public void setOpen(boolean open) {
         var previousIsOpen = isOpen;
         isOpen = open;
-        openState.animateWhen(isOpen, ticks);
-        closingState.animateWhen(!isOpen, ticks);
-        var currentAnimationState = previousIsOpen ? openState : closingState;
-        var targetAnimationState = open ? openState : closingState;
-        var targetAnimationDefinition = open ? AbilityDeveloperAnimation.OPEN : AbilityDeveloperAnimation.CLOSE;
+        var currentAnimationState = previousIsOpen ? openingState : closingState;
+        var targetAnimationState = open ? openingState : closingState;
+        var targetAnimationDefinition = open ? AbilityDeveloperAnimation.OPENING : AbilityDeveloperAnimation.CLOSING;
         var elapsedMillis = currentAnimationState.getTimeInMillis(ticks);
         currentAnimationState.stop();
+        if (elapsedMillis > 0) {
+            var elapsedSeconds = elapsedMillis / 1000.0f;
+            var totalDuration = targetAnimationDefinition.lengthInSeconds();
+            var targetStartSeconds = Math.max(0.0f, Math.min(totalDuration, totalDuration - elapsedSeconds));
+            var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
+            var adjustedStartTick = ticks - targetElapsedTicks;
+            targetAnimationState.start((int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, adjustedStartTick)));
+        } else {
+            targetAnimationState.start(ticks);
+        }
+    }
+
+    private void handleStateChangeOnClient(boolean wasNearby, boolean isNearby) {
+        if (wasNearby == isNearby) return;
+
+        var currentAnimationState = wasNearby ? standingState : lyingDownState;
+        var targetAnimationState = isNearby ? standingState : lyingDownState;
+        var targetAnimationDefinition = isNearby ? AbilityDeveloperAnimation.STANDING : AbilityDeveloperAnimation.LYING_DOWN;
+
+        var elapsedMillis = currentAnimationState.getTimeInMillis(ticks);
+        currentAnimationState.stop();
+
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
@@ -165,16 +191,28 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
 
     public void clientTick() {
         this.ticks++;
+
+        if (isMain() && level != null) {
+            var wasNearby = this.playerNearby;
+            var nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
+            this.playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;
+
+            if (wasNearby != this.playerNearby) {
+                handleStateChangeOnClient(wasNearby, this.playerNearby);
+            }
+        }
     }
 
     public void serverTick(ServerLevel level) {
         this.ticks++;
-        if (connectedNodePos == null) {
-            setConnectedNodePosition(null);
-        } else {
-            var nodeBE = level.getBlockEntity(connectedNodePos);
-            if (!(nodeBE instanceof WirelessNode)) {
+        if (isMain()) {
+            if (connectedNodePos == null) {
                 setConnectedNodePosition(null);
+            } else {
+                var nodeBE = level.getBlockEntity(connectedNodePos);
+                if (!(nodeBE instanceof WirelessNode)) {
+                    setConnectedNodePosition(null);
+                }
             }
         }
     }

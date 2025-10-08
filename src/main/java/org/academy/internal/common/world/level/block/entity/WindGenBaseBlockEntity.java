@@ -13,13 +13,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Objects;
 
 public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
@@ -45,7 +44,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         if (isMain()) {
             windGenWorldGUI = new WindGenWorldGUI();
             windGenWorldGUI.onInit();
-            setupState.start(ticks);
+            shutdownState.start(ticks);
         }
     }
 
@@ -66,28 +65,16 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
 
     private void serverTick() {
         updateState();
-
-        if (isMain() && level != null) {
-            List<Player> nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
-            var wasNearby = this.playerNearby;
-            playerNearby = !nearbyPlayers.isEmpty();
-
-            if (wasNearby != this.playerNearby) {
-                setChanged();
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL_IMMEDIATE);
-            }
-        }
     }
 
     private void clientTick() {
-        if (isMain()) {
-            if (this.setupState.isStarted() && this.setupState.getTimeInMillis(ticks) >= WindGenBaseAnimation.SETUP.lengthInSeconds() * 1000L) {
-                this.isDisplayActive = true;
-                this.setupState.stop();
-            }
+        if (isMain() && level != null) {
+            var wasNearby = this.playerNearby;
+            var nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
+            this.playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;
 
-            if (this.shutdownState.isStarted()) {
-                this.isDisplayActive = false;
+            if (wasNearby != this.playerNearby) {
+                handleStateChangeOnClient(wasNearby, this.playerNearby);
             }
         }
     }
@@ -95,14 +82,26 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     private void handleStateChangeOnClient(boolean wasNearby, boolean isNearby) {
         if (wasNearby == isNearby) return;
 
-        setupState.stop();
-        shutdownState.stop();
+        var currentAnimationState = wasNearby ? setupState : shutdownState;
+        var targetAnimationState = isNearby ? setupState : shutdownState;
+        var targetAnimationDefinition = isNearby ? WindGenBaseAnimation.SETUP : WindGenBaseAnimation.SHUT;
 
-        if (isNearby) {
-            setupState.start(this.ticks);
-        } else {
-            shutdownState.start(this.ticks);
+        if (!isNearby) {
             isDisplayActive = false;
+        }
+
+        var elapsedMillis = currentAnimationState.getTimeInMillis(ticks);
+        currentAnimationState.stop();
+
+        if (elapsedMillis > 0) {
+            var elapsedSeconds = elapsedMillis / 1000.0f;
+            var totalDuration = targetAnimationDefinition.lengthInSeconds();
+            var targetStartSeconds = Math.max(0.0f, Math.min(totalDuration, totalDuration - elapsedSeconds));
+            var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
+            var adjustedStartTick = ticks - targetElapsedTicks;
+            targetAnimationState.start((int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, adjustedStartTick)));
+        } else {
+            targetAnimationState.start(ticks);
         }
     }
 
@@ -128,7 +127,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
                     }
                 } else if (block == Blocks.WIND_GEN_TOP.get()) {
                     if (currentState.hasBlockEntity()) {
-                        if (level.getBlockEntity(pos) instanceof WindGenTopBlockEntity windGenTopBlockEntity && windGenTopBlockEntity.isMain()) {
+                        if (level.getBlockEntity(pos) instanceof WindGenTopBlockEntity windGenTopBlockEntity) {
                             topBlockEntity = windGenTopBlockEntity;
                             hasTop = true;
                         }
@@ -167,7 +166,6 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
                 output.putLong("connected_node_pos", connectedNodePos.asLong());
             }
             output.putInt("altitude", altitude);
-            output.putBoolean("playerNearby", this.playerNearby);
         }
     }
 
@@ -180,16 +178,8 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
 
         if (isMain()) {
             energyStored = input.getIntOr("energy_stored", 0);
-
             input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
             altitude = input.getIntOr("altitude", 0);
-
-            var oldPlayerNearby = playerNearby;
-            playerNearby = input.getBooleanOr("playerNearby", false);
-
-            if (level != null && level.isClientSide()) {
-                handleStateChangeOnClient(oldPlayerNearby, playerNearby);
-            }
         }
     }
 

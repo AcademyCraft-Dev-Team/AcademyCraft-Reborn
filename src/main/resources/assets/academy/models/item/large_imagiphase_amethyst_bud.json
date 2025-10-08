@@ -1,0 +1,11 @@
+{
+  "parent": "item/amethyst_bud",
+  "textures": {
+    "layer0": "academy:block/large_imagiphase_amethyst_bud"
+  },
+  "display": {
+    "fixed": {
+      "translation": [ 0, 4, 0 ]
+    }
+  }
+}
