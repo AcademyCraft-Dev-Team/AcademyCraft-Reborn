@@ -20,7 +20,6 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
-import org.academy.AcademyCraftServer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -32,13 +31,7 @@ import org.academy.api.client.renderer.ArcStyles;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.annotation.SubscribePacket;
-import org.academy.api.common.network.packet.Packet;
-import org.academy.api.common.network.packet.PacketType;
-import org.academy.api.common.network.packet.S2CPacket;
 import org.academy.api.common.util.LevelUtil;
-import org.academy.api.common.vanilla.ThreadType;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -54,6 +47,14 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.ThreadType;
+import org.misaka.api.common.network.annotation.PacketTarget;
+import org.misaka.api.common.network.annotation.SubscribePacket;
+import org.misaka.api.common.network.packet.Packet;
+import org.misaka.api.common.network.packet.PacketType;
+import org.misaka.api.common.network.packet.S2CPacket;
 
 import java.util.*;
 
@@ -66,7 +67,7 @@ public final class Railgun extends Skill {
 
     @Override
     public void initServer(MinecraftServer server) {
-        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     @Override
@@ -108,7 +109,7 @@ public final class Railgun extends Skill {
                 if (hasCoin) {
                     currentContext = new Context(player);
                     AbilitySystemClient.registerContext(currentContext);
-                    AcademyCraftClient.sendPacket(StartChargePacket.INSTANCE);
+                    MisakaNetworkClient.sendPacket(StartChargePacket.INSTANCE);
                 }
             }
         }
@@ -157,7 +158,7 @@ public final class Railgun extends Skill {
             }
 
             public void release() {
-                AcademyCraftClient.sendPacket(ShootPacket.INSTANCE);
+                MisakaNetworkClient.sendPacket(ShootPacket.INSTANCE);
                 cleanup();
             }
 

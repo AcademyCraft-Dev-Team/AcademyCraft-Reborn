@@ -6,9 +6,9 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.future.packet.RequestPacket;
-import org.academy.api.common.network.future.packet.ResponsePacket;
-import org.academy.api.common.network.packet.PacketType;
+import org.misaka.api.common.network.future.packet.RequestPacket;
+import org.misaka.api.common.network.future.packet.ResponsePacket;
+import org.misaka.api.common.network.packet.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 
 import java.util.List;

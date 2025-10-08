@@ -80,14 +80,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
         var finalHeight = 187f;
 
-        back = new BlendQuadWidget(leftPos, topPos - 22, imageWidth, finalHeight) {
-            @Override
-            public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
-                if (shouldRenderInventory()) {
-                    super.render(renderContext, mouseX, mouseY, partialTick);
-                }
-            }
-        };
+        back = new BlendQuadWidget(leftPos, topPos - 22, imageWidth, finalHeight);
         back.setHeight(0);
         back.setAlpha(0.5f);
         rootContainer.addChild("back", back);

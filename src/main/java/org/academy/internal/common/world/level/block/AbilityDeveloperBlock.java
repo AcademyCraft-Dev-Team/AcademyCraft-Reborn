@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.api.common.network.packet.S2CPacket;
+import org.misaka.api.common.network.packet.S2CPacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 

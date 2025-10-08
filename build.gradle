@@ -131,8 +131,8 @@ neoForge {
 }
 
 repositories {
-    flatDir {
-        dirs 'libs'
+    maven {
+        url = uri('D:/Project/maven-repo')
     }
     maven {
         name = "Jared's maven"
@@ -172,8 +172,10 @@ repositories {
 }
 
 dependencies {
+    jarJar(implementation "org.academy:misaka-network:21.10.1")
+
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    implementation "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
     compileOnly "maven.modrinth:sodium:mc1.21.8-0.7.0-neoforge"
     compileOnly "maven.modrinth:iris:1.9.2+1.21.8-neoforge"

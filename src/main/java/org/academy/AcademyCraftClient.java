@@ -7,8 +7,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.network.Connection;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -21,15 +19,11 @@ import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.hud.terminal.HUDController;
-import org.academy.api.client.network.future.FutureManagerClient;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
-import org.academy.api.common.network.NetworkManager;
-import org.academy.api.common.network.packet.C2SPacket;
-import org.academy.api.common.network.packet.Packet;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.model.WindGenBaseModel;
@@ -39,6 +33,7 @@ import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
+import org.academy.internal.common.world.level.material.FluidTypes;
 import org.academy.internal.common.world.level.material.ImagiphasePlasma;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,19 +41,11 @@ import java.io.File;
 
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 public final class AcademyCraftClient {
-    @Nullable
-    public static Connection connection;
-    public static final NetworkManager CLIENT_NETWORK_MANAGER = new NetworkManager();
-    public static final FutureManagerClient CLIENT_FUTURE_MANAGER = new FutureManagerClient();
-
     public AcademyCraftClient(IEventBus modEventBus) {
         modEventBus.register(ModBusSubscriber.class);
     }
 
     public static void init() {
-        CLIENT_NETWORK_MANAGER.clear();
-        CLIENT_FUTURE_MANAGER.clear();
-        CLIENT_NETWORK_MANAGER.registerPacketListener(CLIENT_FUTURE_MANAGER);
         Screens.register();
         HUDManager.init();
         Apps.register();
@@ -114,16 +101,6 @@ public final class AcademyCraftClient {
                 return pillar || (base && (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT));
             });
         }
-    }
-
-    public static void sendPacket(net.minecraft.network.protocol.Packet<?> packet) {
-        if (connection != null) {
-            connection.send(packet);
-        }
-    }
-
-    public static <P extends Packet<ServerGamePacketListenerImpl, P>> void sendPacket(P packet) {
-        sendPacket(new C2SPacket(packet));
     }
 
     public static final class Config {
@@ -194,7 +171,7 @@ public final class AcademyCraftClient {
                 public ResourceLocation getFlowingTexture() {
                     return ImagiphasePlasma.TEXTURE;
                 }
-            }, ImagiphasePlasma.FLUID_TYPE);
+            }, FluidTypes.IMAGIPHASE_PLASMA.get());
         }
     }
 }

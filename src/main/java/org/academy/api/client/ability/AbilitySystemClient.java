@@ -12,11 +12,12 @@ import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.packet.sync.s2c.*;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.api.common.network.annotation.SubscribePacket;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,7 +53,7 @@ public final class AbilitySystemClient {
     }
 
     public static void init() {
-        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(AbilitySystemClient.class);
+        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(AbilitySystemClient.class);
         InputSystem.addKeyBinding(KEY_NAME_ACTIVATE_HUD, ACTIVATE_HUD_KEY, () -> {
             if (ClientUtil.hasScreen()) return;
             setActiveHUD(!activeHUD);
@@ -147,12 +148,12 @@ public final class AbilitySystemClient {
 
     public static void registerContext(ClientContext clientContext) {
         NeoForge.EVENT_BUS.register(clientContext);
-        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(clientContext);
+        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(clientContext);
     }
 
     public static void unregisterContext(ClientContext clientContext) {
         NeoForge.EVENT_BUS.unregister(clientContext);
-        AcademyCraftClient.CLIENT_NETWORK_MANAGER.unregisterPacketListener(clientContext);
+        MisakaNetworkClient.NETWORK_MANAGER.unregisterPacketListener(clientContext);
     }
 
     public static class Config extends KeyBindingConfig {

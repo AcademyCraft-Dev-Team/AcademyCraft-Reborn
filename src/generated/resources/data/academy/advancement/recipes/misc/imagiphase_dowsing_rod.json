@@ -1,0 +1,76 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_comparator": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:comparator"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_compass": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:compass"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_imagiphase_metal": {
+      "conditions": {
+        "items": [
+          {
+            "items": "academy:imagiphase_metal"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_lightning_rod": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:lightning_rod"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_screen": {
+      "conditions": {
+        "items": [
+          {
+            "items": "academy:screen"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "academy:imagiphase_dowsing_rod"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_comparator",
+      "has_lightning_rod",
+      "has_compass",
+      "has_screen",
+      "has_imagiphase_metal"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "academy:imagiphase_dowsing_rod"
+    ]
+  }
+}

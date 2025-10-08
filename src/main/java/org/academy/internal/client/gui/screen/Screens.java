@@ -5,14 +5,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.OmniCraftingTableBlock;
 import org.academy.internal.common.world.level.block.WindGenBaseBlock;
 import org.academy.internal.common.world.level.block.WirelessNodeBlock;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.api.common.network.annotation.SubscribePacket;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -75,7 +75,7 @@ public final class Screens {
     }
 
     public static void register() {
-        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(Screens.class);
+        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(Screens.class);
     }
 
     @SubscribePacket

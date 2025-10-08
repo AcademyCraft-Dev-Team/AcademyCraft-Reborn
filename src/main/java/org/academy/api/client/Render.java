@@ -244,7 +244,7 @@ public final class Render {
         // 记得使用对应的 BufferSource 喵
 
         /**
-         * 同时输出到 Main 与 INPUT
+         * 同时输出到 Main 与 INPUT 喵
          */
         public static final RenderType POS_COLOR_QUADS_BLOOM = create(
                 "pos_color_quads_bloom",
@@ -256,7 +256,7 @@ public final class Render {
         );
 
         /**
-         * 同时输出到 Main 与 INPUT
+         * 同时输出到 Main 与 INPUT 喵
          */
         public static final RenderType POS_COLOR_TRANGLES_BLOOM = create(
                 "pos_color_trangles_bloom",
@@ -268,7 +268,7 @@ public final class Render {
         );
 
         /**
-         * 只输出到 INPUT
+         * 只输出到 INPUT 喵
          */
         public static final RenderType POS_COLOR_QUADS_BLOOM_POST = create(
                 "pos_color_quads_bloom_post",
@@ -280,7 +280,7 @@ public final class Render {
         );
 
         /**
-         * 只输出到 INPUT
+         * 只输出到 INPUT 喵
          */
         public static final RenderType POS_COLOR_TRANGLES_BLOOM_POST = create(
                 "pos_color_trangles_bloom_post",

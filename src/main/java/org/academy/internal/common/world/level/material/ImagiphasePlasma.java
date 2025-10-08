@@ -16,7 +16,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.pathfinder.PathType;
 import net.neoforged.neoforge.fluids.FluidType;
 import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
@@ -27,15 +26,6 @@ import org.jetbrains.annotations.NotNull;
 
 public abstract class ImagiphasePlasma extends FlowingFluid {
     public static final ResourceLocation TEXTURE = AcademyCraft.academy("block/black");
-    public static FluidType FLUID_TYPE = new FluidType(
-            FluidType.Properties.create()
-                    .canSwim(false)
-                    .adjacentPathType(PathType.BLOCKED)
-                    .canConvertToSource(false)
-                    .fallDistanceModifier(1f)
-                    .canPushEntity(false)
-                    .temperature(0)
-    );
 
     @Override
     protected void animateTick(@NotNull Level level, @NotNull BlockPos pos, @NotNull FluidState state, @NotNull RandomSource random) {
@@ -62,7 +52,7 @@ public abstract class ImagiphasePlasma extends FlowingFluid {
 
     @Override
     public @NotNull FluidType getFluidType() {
-        return FLUID_TYPE;
+        return FluidTypes.IMAGIPHASE_PLASMA.get();
     }
 
     @Override

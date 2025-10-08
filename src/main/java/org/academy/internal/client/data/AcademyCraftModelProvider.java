@@ -14,7 +14,6 @@ import org.academy.AcademyCraft;
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
-import org.jetbrains.annotations.NotNull;
 
 import static net.minecraft.client.data.models.BlockModelGenerators.ROTATIONS_COLUMN_WITH_FACING;
 import static net.minecraft.client.data.models.BlockModelGenerators.plainVariant;
@@ -28,7 +27,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
     }
 
     @Override
-    protected void registerModels(@NotNull BlockModelGenerators blockModels, @NotNull ItemModelGenerators itemModels) {
+    protected void registerModels(BlockModelGenerators blockModels, ItemModelGenerators itemModels) {
         var providerW = createDefault(
                 block ->
                         new TextureMapping().put(
@@ -132,7 +131,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.IMAGIPHASE_METAL.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAGIPHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
-        itemModels.generateFlatItem(Items.WIND_GEN_BASE_SCREEN.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.SCREEN.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAGIPHASE_CIRCUIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAGIPHASE_POLYMER.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAGIPHASE_PLATE.get(), ModelTemplates.FLAT_ITEM);

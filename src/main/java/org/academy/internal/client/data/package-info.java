@@ -1,7 +1,7 @@
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 @FieldsAreNonnullByDefault
-package org.academy.api.common.network.future;
+package org.academy.internal.client.data;
 
 import net.minecraft.FieldsAreNonnullByDefault;
 import net.minecraft.MethodsReturnNonnullByDefault;

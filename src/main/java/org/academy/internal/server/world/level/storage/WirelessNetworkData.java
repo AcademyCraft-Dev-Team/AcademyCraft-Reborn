@@ -1,7 +1,7 @@
 package org.academy.internal.server.world.level.storage;
 
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -11,21 +11,37 @@ import org.academy.AcademyCraft;
 import org.academy.api.server.wireless.WirelessManager;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.function.Function;
 
-public class WirelessNetworkData extends SavedData {
-
-    private static final Codec<Pair<BlockPos, NodeConfig>> NODE_ENTRY_CODEC =
-            RecordCodecBuilder.create(instance -> instance.group(
-                    BlockPos.CODEC.fieldOf("pos").forGetter(Pair::getFirst),
-                    NodeConfig.CODEC.fieldOf("config").forGetter(Pair::getSecond)
-            ).apply(instance, Pair::new));
+public final class WirelessNetworkData extends SavedData {
+    private static final Codec<BlockPos> BLOCKPOS_AS_STRING_CODEC = Codec.STRING.flatXmap(
+            s -> {
+                try {
+                    var parts = s.split(",");
+                    if (parts.length != 3) {
+                        return DataResult.error(() -> "Invalid BlockPos string format: " + s);
+                    }
+                    var x = Integer.parseInt(parts[0].trim());
+                    var y = Integer.parseInt(parts[1].trim());
+                    var z = Integer.parseInt(parts[2].trim());
+                    return DataResult.success(new BlockPos(x, y, z));
+                } catch (NumberFormatException e) {
+                    return DataResult.error(() -> "Failed to parse BlockPos from string: " + s);
+                }
+            },
+            pos -> DataResult.success(pos.getX() + ", " + pos.getY() + ", " + pos.getZ())
+    ).stable();
 
     public static final Codec<WirelessNetworkData> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                    Codec.list(NODE_ENTRY_CODEC).fieldOf("nodes").forGetter(WirelessNetworkData::toNodeList)
-            ).apply(instance, WirelessNetworkData::fromNodeList)
+                    Codec.unboundedMap(BLOCKPOS_AS_STRING_CODEC, NodeConfig.CODEC)
+                            .fieldOf("nodes")
+                            .forGetter(data -> data.nodes.getPrimaryMap())
+            ).apply(instance, WirelessNetworkData::new)
     );
 
     public static final SavedDataType<WirelessNetworkData> SAVED_DATA_TYPE = new SavedDataType<>(
@@ -34,84 +50,87 @@ public class WirelessNetworkData extends SavedData {
             CODEC
     );
 
-    public final Map<BlockPos, NodeConfig> nodeConfigurations = new HashMap<>();
-    public final Map<String, BlockPos> nodeNameMap = new HashMap<>();
+    private final DualKeyMap<BlockPos, String, NodeConfig> nodes =
+            new DualKeyMap<>(nodeConfig -> nodeConfig.name);
+
+    public WirelessNetworkData() {}
+
+    private WirelessNetworkData(Map<BlockPos, NodeConfig> initialNodes) {
+        initialNodes.forEach(this.nodes::put);
+    }
 
     public static WirelessNetworkData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
     }
 
-    private static WirelessNetworkData fromNodeList(List<Pair<BlockPos, NodeConfig>> nodes) {
-        var data = new WirelessNetworkData();
-        for (var pair : nodes) {
-            var pos = pair.getFirst();
-            var config = pair.getSecond();
-            if (pos == null || config == null || config.name == null)
-                continue;
-
-            data.nodeConfigurations.put(pos, config);
-            data.nodeNameMap.put(config.name, pos);
-        }
-        return data;
-    }
-
-    private List<Pair<BlockPos, NodeConfig>> toNodeList() {
-        return this.nodeConfigurations.entrySet()
-                .stream()
-                .map(entry -> Pair.of(entry.getKey(), entry.getValue()))
-                .collect(Collectors.toList());
-    }
-
     public boolean registerNode(BlockPos pos, String name, String password, int radius, int maxConnections) {
-        if (nodeConfigurations.containsKey(pos) || nodeNameMap.containsKey(name)) {
+        if (nodes.containsPrimary(pos) || nodes.containsSecondary(name)) {
             AcademyCraft.LOGGER.warn("Register failed: Node at {} or name '{}' already exists.", pos, name);
             return false;
         }
 
         var config = new NodeConfig(name, password, radius, maxConnections);
-        nodeConfigurations.put(pos, config);
-        nodeNameMap.put(name, pos);
+        nodes.put(pos, config);
         setDirty();
         AcademyCraft.LOGGER.debug("Registered node '{}' at {}", name, pos);
         return true;
     }
 
     public void unregisterNode(BlockPos pos, ServerLevel level) {
-        var config = nodeConfigurations.get(pos);
+        var config = nodes.removeByPrimary(pos);
         if (config == null) {
             AcademyCraft.LOGGER.warn("Attempted to unregister a node at {} but it was not found in configurations.", pos);
             return;
         }
 
-        var usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
-        var nodeName = config.name;
-
-        nodeNameMap.remove(nodeName);
-        nodeConfigurations.remove(pos);
         setDirty();
+        AcademyCraft.LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", config.name, pos);
 
-        AcademyCraft.LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", nodeName, pos);
-
-        for (var userPos : usersToDisconnect)
+        var usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
+        for (var userPos : usersToDisconnect) {
             WirelessManager.handleDisconnect(null, level, userPos);
+        }
+    }
+
+    public boolean renameNode(BlockPos pos, String newName) {
+        var existingPos = nodes.getPrimaryBySecondary(newName);
+        if (existingPos != null && !existingPos.equals(pos)) {
+            return false;
+        }
+
+        var config = nodes.getByPrimary(pos);
+        if (config == null) {
+            return false;
+        }
+
+        nodes.removeByPrimary(pos);
+        config.name = newName;
+        nodes.put(pos, config);
+        setDirty();
+        return true;
     }
 
     @Nullable
     public NodeConfig getNodeConfig(BlockPos pos) {
-        return nodeConfigurations.get(pos);
+        return nodes.getByPrimary(pos);
+    }
+
+    @Nullable
+    public NodeConfig getNodeConfigByName(String name) {
+        return nodes.getBySecondary(name);
     }
 
     @Nullable
     public BlockPos findNodePositionByName(String name) {
-        return nodeNameMap.get(name);
+        return nodes.getPrimaryBySecondary(name);
     }
 
-    public Map<BlockPos, NodeConfig> getNodeEntries() {
-        return Collections.unmodifiableMap(this.nodeConfigurations);
+    public Map<BlockPos, NodeConfig> getAllNodes() {
+        return nodes.getPrimaryMap();
     }
 
     public boolean connectUserToNode(BlockPos nodePos, BlockPos userPos) {
-        var config = nodeConfigurations.get(nodePos);
+        var config = getNodeConfig(nodePos);
         if (config == null) {
             AcademyCraft.LOGGER.warn("Connect failed: Node at {} not found.", nodePos);
             return false;
@@ -134,14 +153,17 @@ public class WirelessNetworkData extends SavedData {
     }
 
     public boolean disconnectUserFromNode(BlockPos nodePos, BlockPos userPos) {
-        var config = nodeConfigurations.get(nodePos);
-        if (config == null)
+        var config = getNodeConfig(nodePos);
+        if (config == null) {
             return false;
+        }
 
-        config.connectedUsers.remove(userPos);
-        AcademyCraft.LOGGER.debug("Disconnected user {} from node '{}'", userPos, config.name);
-        setDirty();
-        return true;
+        if (config.connectedUsers.remove(userPos) != null) {
+            AcademyCraft.LOGGER.debug("Disconnected user {} from node '{}'", userPos, config.name);
+            setDirty();
+            return true;
+        }
+        return false;
     }
 
     public static class NodeConfig {
@@ -156,7 +178,9 @@ public class WirelessNetworkData extends SavedData {
                 Codec.STRING.fieldOf("password").forGetter(config -> config.password),
                 Codec.INT.fieldOf("radius").forGetter(config -> config.radius),
                 Codec.INT.fieldOf("max_connections").forGetter(config -> config.maxConnections),
-                Codec.unboundedMap(BlockPos.CODEC, UserConfig.CODEC).fieldOf("users").forGetter(config -> config.connectedUsers)
+                Codec.unboundedMap(BLOCKPOS_AS_STRING_CODEC, UserConfig.CODEC)
+                        .fieldOf("users")
+                        .forGetter(config -> config.connectedUsers)
         ).apply(instance, (name, password, radius, maxConnections, users) -> {
             var config = new NodeConfig(name, password, radius, maxConnections);
             config.connectedUsers.putAll(users);
@@ -199,6 +223,71 @@ public class WirelessNetworkData extends SavedData {
 
         public double getSendWeight() {
             return sendWeight;
+        }
+    }
+
+    private static class DualKeyMap<K1, K2, V> {
+        private final Map<K1, V> primaryMap = new HashMap<>();
+        private final Map<K2, K1> secondaryIndex = new HashMap<>();
+        private final Function<V, K2> secondaryKeyExtractor;
+
+        public DualKeyMap(Function<V, K2> secondaryKeyExtractor) {
+            this.secondaryKeyExtractor = secondaryKeyExtractor;
+        }
+
+        public void put(K1 key1, V value) {
+            var key2 = secondaryKeyExtractor.apply(value);
+            if (secondaryIndex.containsKey(key2) && !secondaryIndex.get(key2).equals(key1)) {
+                throw new IllegalArgumentException("Secondary key '" + key2 + "' is already associated with a different primary key.");
+            }
+
+            var oldValue = primaryMap.get(key1);
+            if (oldValue != null) {
+                secondaryIndex.remove(secondaryKeyExtractor.apply(oldValue));
+            }
+
+            primaryMap.put(key1, value);
+            secondaryIndex.put(key2, key1);
+        }
+
+        @Nullable
+        public V getByPrimary(K1 key1) {
+            return primaryMap.get(key1);
+        }
+
+        @Nullable
+        public V getBySecondary(K2 key2) {
+            var key1 = secondaryIndex.get(key2);
+            if (key1 == null) {
+                return null;
+            }
+            return primaryMap.get(key1);
+        }
+
+        @Nullable
+        public K1 getPrimaryBySecondary(K2 key2) {
+            return secondaryIndex.get(key2);
+        }
+
+        @Nullable
+        public V removeByPrimary(K1 key1) {
+            var removedValue = primaryMap.remove(key1);
+            if (removedValue != null) {
+                secondaryIndex.remove(secondaryKeyExtractor.apply(removedValue));
+            }
+            return removedValue;
+        }
+
+        public boolean containsPrimary(K1 key1) {
+            return primaryMap.containsKey(key1);
+        }
+
+        public boolean containsSecondary(K2 key2) {
+            return secondaryIndex.containsKey(key2);
+        }
+
+        public Map<K1, V> getPrimaryMap() {
+            return Collections.unmodifiableMap(primaryMap);
         }
     }
 }

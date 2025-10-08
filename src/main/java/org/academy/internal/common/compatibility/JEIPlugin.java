@@ -3,36 +3,47 @@ package org.academy.internal.common.compatibility;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
+import mezz.jei.api.helpers.IPlatformFluidHelper;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
+import mezz.jei.api.registration.ISubtypeRegistration;
+import mezz.jei.library.plugins.debug.FluidSubtypeHandlerTest;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.AcademyCraft;
 import org.academy.internal.client.gui.screen.WindGenScreen;
 import org.academy.internal.client.gui.screen.WirelessNodeScreen;
-import org.jetbrains.annotations.NotNull;
+import org.academy.internal.common.world.level.material.Fluids;
 
 import java.util.List;
 
 @JeiPlugin
 public final class JEIPlugin implements IModPlugin {
     @Override
-    public @NotNull ResourceLocation getPluginUid() {
+    public ResourceLocation getPluginUid() {
         return AcademyCraft.academy("jei_plugin");
     }
 
     @Override
-    public void registerGuiHandlers(@NotNull IGuiHandlerRegistration registration) {
+    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         registration.addGuiContainerHandler(WindGenScreen.class, new IGuiContainerHandler<>() {
             @Override
-            public @NotNull List<Rect2i> getGuiExtraAreas(@NotNull WindGenScreen containerScreen) {
+            public List<Rect2i> getGuiExtraAreas(WindGenScreen containerScreen) {
                 return List.of(new Rect2i(0, 0, containerScreen.width, containerScreen.height));
             }
         });
         registration.addGuiContainerHandler(WirelessNodeScreen.class, new IGuiContainerHandler<>() {
             @Override
-            public @NotNull List<Rect2i> getGuiExtraAreas(@NotNull WirelessNodeScreen containerScreen) {
+            public List<Rect2i> getGuiExtraAreas(WirelessNodeScreen containerScreen) {
                 return List.of(new Rect2i(0, 0, containerScreen.width, containerScreen.height));
             }
         });
+    }
+
+    @Override
+    public <T> void registerFluidSubtypes(ISubtypeRegistration registration, IPlatformFluidHelper<T> platformFluidHelper) {
+        var plasma = Fluids.IMAGIPHASE_PLASMA.get();
+        var ingredientType = platformFluidHelper.getFluidIngredientType();
+        var subtype = new FluidSubtypeHandlerTest<>(ingredientType);
+        registration.registerSubtypeInterpreter(ingredientType, plasma, subtype);
     }
 }

@@ -2,7 +2,7 @@ package org.academy.api.common.util;
 
 import net.neoforged.fml.loading.FMLEnvironment;
 import org.academy.api.common.vanilla.EnvType;
-import org.academy.api.common.vanilla.ThreadType;
+import org.misaka.api.common.network.ThreadType;
 
 public class GameUtil {
     private GameUtil() {

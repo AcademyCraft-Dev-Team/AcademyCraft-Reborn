@@ -3,7 +3,7 @@ package org.academy.api.client.gui.widget;
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.Event;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.AcademyCraftClient;
+import org.misaka.MisakaNetworkClient;
 import org.academy.api.client.gui.framework.Orientation;
 import org.academy.api.client.gui.framework.Widget;
 import org.academy.api.common.wireless.ConnectNodePacket;
@@ -35,10 +35,6 @@ public class WirelessPanelWidget extends PanelWidget {
         this.position = position;
 
         var currentY = MARGIN_VERTICAL;
-
-        var back = new BlendQuadWidget(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
-        back.setAlpha(0.5f);
-        addChild("back", back);
 
         var icon = new ImageWidget(MARGIN_HORIZONTAL, currentY, 16.0f, 16.0f, ICON_OPEN_WIRELESS_PANEL);
         icon.setZ(1);
@@ -80,7 +76,7 @@ public class WirelessPanelWidget extends PanelWidget {
 
     private void requestAvailableNodes() {
         var requestPayload = new GetAvailableNodesPacket(position);
-        AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
+        MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(
                 requestPayload,
                response -> {
                     if (response != null && response.getAvailableNodeNames() != null) {
@@ -112,7 +108,7 @@ public class WirelessPanelWidget extends PanelWidget {
 
         if (!isConnected) {
             Consumer<String> connectAction = password -> {
-                AcademyCraftClient.sendPacket(new ConnectNodePacket(position, nodeName, password));
+                MisakaNetworkClient.sendPacket(new ConnectNodePacket(position, nodeName, password));
                 requestCurrentNodeStatus();
             };
             var inputBox = new TextBoxWidget(12, 68.0f, 3.0f, 46.0f, 10.0f);
@@ -128,7 +124,7 @@ public class WirelessPanelWidget extends PanelWidget {
             nodeViewPanel.addChild("button", buttonWidget);
         } else if (!isNull) {
             var buttonWidget = new ImageButtonWidget(118.0f, 1.0f, 14.0f, 14.0f, ICON_CONNECTED, () -> {
-                AcademyCraftClient.sendPacket(new DisconnectNodePacket(position));
+                MisakaNetworkClient.sendPacket(new DisconnectNodePacket(position));
                 requestCurrentNodeStatus();
             });
             nodeViewPanel.addChild("button", buttonWidget);
@@ -138,7 +134,7 @@ public class WirelessPanelWidget extends PanelWidget {
 
     private void requestCurrentNodeStatus() {
         var requestPayload = new GetCurrentNodePacket(position);
-        AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(
+        MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(
                 requestPayload,
                 (GetCurrentNodePacket.Response response) -> {
                     if (response != null)
