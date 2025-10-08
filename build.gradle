@@ -132,7 +132,7 @@ neoForge {
 
 repositories {
     maven {
-        url = uri('D:/Project/maven-repo')
+        url = "https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/"
     }
     maven {
         name = "Jared's maven"
