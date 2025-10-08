@@ -33,7 +33,7 @@ public final class SolarGenRenderer implements BlockEntityRenderer<SolarGenBlock
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPosition, breakProgress);
         renderState.ageInTicks = blockEntity.ticks + partialTick;
         renderState.facing = blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
-        renderState.idleState = blockEntity.idleState;
+        renderState.foldingState = blockEntity.foldingState;
         renderState.unfoldingState = blockEntity.unfoldingState;
     }
 

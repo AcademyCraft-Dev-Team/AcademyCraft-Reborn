@@ -40,8 +40,9 @@ public final class WindGenBaseSpecialRenderer implements NoDataSpecialModelRende
             matrix4f.translate(0, -1.35f, 0);
         }
         WindGenBaseRenderer.MODEL.resetPose();
+        poseStack.mulPose(Axis.XP.rotationDegrees(180));
         WindGenBaseRenderer.MODEL.render(poseStack, nodeCollector, packedLight, packedOverlay);
-        matrix4f.translate(0, 1, 0);
+        matrix4f.translate(0, -2, 0);
         WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
         poseStack.popPose();
     }

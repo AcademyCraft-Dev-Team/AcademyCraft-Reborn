@@ -103,9 +103,6 @@ public final class AcademyCraftClient {
                 poseStack.translate(pos.getX() - camX + 0.5f, pos.getY() - camY, pos.getZ() - camZ + 0.5f);
                 if (top) {
                     poseStack.scale(1, 1f / 16f, 1);
-                    if (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT) {
-                        poseStack.translate(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getUnitVec3().scale(-1));
-                    }
                 }
                 if (base && state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.MAIN) {
                     poseStack.scale(1, 15 / 16f, 1);

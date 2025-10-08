@@ -10,7 +10,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessUser;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,7 +22,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
     @Nullable
     private BlockPos connectedNodePos = null;
 
-    public final AnimationState idleState = new AnimationState();
+    public final AnimationState foldingState = new AnimationState();
     public final AnimationState unfoldingState = new AnimationState();
 
     private static final int MAX_ENERGY_STORAGE = 100_000;
@@ -42,7 +41,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         brightness = Math.round(brightness * Mth.cos(sunAngle));
         brightness = Math.clamp(brightness, 0, 15);
         var hasBrightness = brightness != 0;
-        blockEntity.idleState.animateWhen(!hasBrightness, blockEntity.ticks);
+        blockEntity.foldingState.animateWhen(!hasBrightness, blockEntity.ticks);
         blockEntity.unfoldingState.animateWhen(hasBrightness, blockEntity.ticks);
         blockEntity.setEnergyStored(blockEntity.energyStored + brightness * GENERATION_RATE);
     }

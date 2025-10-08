@@ -12,11 +12,10 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.VertexUtil;
+import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.internal.client.renderer.blockentity.state.WindGenBaseRenderState;
-import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 
 import static org.academy.api.client.Resource.Textures.BLOCK_WIND_GEN_PILLAR;
 import static org.academy.api.client.Resource.Textures.MODEL_WIND_GEN;
@@ -91,13 +90,6 @@ public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
         return LayerDefinition.create(meshdefinition, 128, 128);
     }
 
-    public void setupAnim(WindGenBaseBlockEntity windGenBaseBlockEntity, float partialTick) {
-        resetPose();
-
-        setup.apply(windGenBaseBlockEntity.setupState, windGenBaseBlockEntity.ticks + partialTick);
-        shut.apply(windGenBaseBlockEntity.shutdownState, windGenBaseBlockEntity.ticks + partialTick);
-    }
-
     @Override
     public void setupAnim(WindGenBaseRenderState renderState) {
         super.setupAnim(renderState);
@@ -107,13 +99,17 @@ public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
     }
 
     public void render(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay) {
+        render(poseStack, new WindGenBaseRenderState(), nodeCollector, packedLight, packedOverlay);
+    }
+
+    public void render(PoseStack poseStack, WindGenBaseRenderState renderState, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay) {
         poseStack.pushPose();
         poseStack.translate(0, -1.5f, 0);
-        nodeCollector.submitModel(this, new WindGenBaseRenderState(), poseStack, BASE_RENDER_TYPE, packedLight, packedOverlay, 0, null);
+        nodeCollector.submitModel(this, renderState, poseStack, BASE_RENDER_TYPE, packedLight, packedOverlay, 0, null);
         poseStack.popPose();
         poseStack.pushPose();
         poseStack.scale(1, 15 / 16f, 1);
-        poseStack.translate(0, 1 / 16f, 0);
+        poseStack.translate(0, -17 / 16f, 0);
         renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
         poseStack.popPose();
     }

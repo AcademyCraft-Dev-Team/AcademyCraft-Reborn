@@ -32,9 +32,9 @@ public final class AbilityDeveloperRenderer implements BlockEntityRenderer<Abili
     public void extractRenderState(AbilityDeveloperBlockEntity blockEntity, AbilityDeveloperRenderState renderState, float partialTick, Vec3 cameraPos, @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPos, crumblingOverlay);
         renderState.closingState = blockEntity.closingState;
-        renderState.openState = blockEntity.openState;
-        renderState.liedownState = blockEntity.liedownState;
-        renderState.standState = blockEntity.standState;
+        renderState.openingState = blockEntity.openingState;
+        renderState.lyingDownState = blockEntity.lyingDownState;
+        renderState.standingState = blockEntity.standingState;
         renderState.ageInTicks = blockEntity.ticks + partialTick;
         renderState.facing = blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
         renderState.isMain = blockEntity.isMain();

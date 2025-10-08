@@ -8,6 +8,7 @@ import net.minecraft.client.data.models.model.*;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
 import org.academy.internal.client.renderer.special.*;
@@ -15,6 +16,7 @@ import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
+import static net.minecraft.client.data.models.BlockModelGenerators.ROTATIONS_COLUMN_WITH_FACING;
 import static net.minecraft.client.data.models.BlockModelGenerators.plainVariant;
 import static net.minecraft.client.data.models.model.TexturedModel.createDefault;
 import static org.academy.AcademyCraft.academy;
@@ -56,7 +58,20 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                                 TextureSlot.ALL, academy("cat_engine").withPrefix("item/")
                         ), ModelTemplates.CUBE_ALL)
         );
+
         blockModels.createTrivialCube(Blocks.IMAGIPHASE_AMETHYST_BLOCK.get());
+        blockModels.createTrivialCube(Blocks.BUDDING_IMAGIPHASE_AMETHYST.get());
+
+        createAmethystCluster(Blocks.SMALL_IMAGIPHASE_AMETHYST_BUD.get(), blockModels);
+        createAmethystCluster(Blocks.MEDIUM_IMAGIPHASE_AMETHYST_BUD.get(), blockModels);
+        createAmethystCluster(Blocks.LARGE_IMAGIPHASE_AMETHYST_BUD.get(), blockModels);
+        createAmethystCluster(Blocks.IMAGIPHASE_AMETHYST_CLUSTER.get(), blockModels);
+
+        itemModels.declareCustomModelItem(Items.IMAGIPHASE_AMETHYST_CLUSTER.get());
+        itemModels.declareCustomModelItem(Items.SMALL_IMAGIPHASE_AMETHYST_BUD.get());
+        itemModels.declareCustomModelItem(Items.MEDIUM_IMAGIPHASE_AMETHYST_BUD.get());
+        itemModels.declareCustomModelItem(Items.LARGE_IMAGIPHASE_AMETHYST_BUD.get());
+
         blockModels.blockStateOutput
                 .accept(
                         MultiVariantGenerator.dispatch(
@@ -178,5 +193,11 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         SolarGenSpecialRenderer.Unbaked.INSTANCE
                 )
         );
+    }
+
+    public void createAmethystCluster(Block amethystBlock, BlockModelGenerators blockModelGenerators) {
+        var multivariant = plainVariant(ModelTemplates.CROSS.extend().renderType("cutout").build()
+                .create(amethystBlock, TextureMapping.cross(amethystBlock), blockModelGenerators.modelOutput));
+        blockModelGenerators.blockStateOutput.accept(MultiVariantGenerator.dispatch(amethystBlock, multivariant).with(ROTATIONS_COLUMN_WITH_FACING));
     }
 }

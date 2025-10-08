@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MappableRingBuffer;
+import org.academy.AcademyCraft;
 
 import java.util.List;
 import java.util.Map;
@@ -89,7 +90,12 @@ public final class CommandExecutor {
                     renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo);
 
                     for (var entry : meshToDraw.samplers().entrySet()) {
-                        renderPass.bindSampler(entry.getKey(), entry.getValue());
+                        var value = entry.getValue();
+                        if (value.isClosed()) {
+                            AcademyCraft.LOGGER.error("Sampler {} has been closed", entry.getKey());
+                            continue;
+                        }
+                        renderPass.bindSampler(entry.getKey(), value);
                     }
                     for (var entry : meshToDraw.uniforms().entrySet()) {
                         renderPass.setUniform(entry.getKey(), entry.getValue());

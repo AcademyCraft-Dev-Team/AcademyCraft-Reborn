@@ -73,8 +73,7 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
             poseStack.mulPose(Axis.XP.rotationDegrees(180));
             poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
-            MODEL.setupAnim(renderState);
-            MODEL.render(poseStack, nodeCollector, renderState.lightCoords, OverlayTexture.NO_OVERLAY);
+            MODEL.render(poseStack, renderState, nodeCollector, renderState.lightCoords, OverlayTexture.NO_OVERLAY);
 
             poseStack.popPose();
         } else {
