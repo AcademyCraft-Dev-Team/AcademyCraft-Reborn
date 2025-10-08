@@ -6,13 +6,14 @@ import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import org.academy.internal.common.world.item.Items;
 
-public final class WindGenTopBlockEntity extends MultiBlockEntity implements Container {
+public final class WindGenTopBlockEntity extends BlockEntity implements Container {
     public int ticks;
     public boolean hasFan = false;
     public NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
@@ -87,10 +88,8 @@ public final class WindGenTopBlockEntity extends MultiBlockEntity implements Con
     }
 
     public void tick() {
-        if (isMain()) {
-            ticks++;
-            hasFan = getItem(0).getItem() == Items.WIND_GEN_FAN_ITEM.get();
-        }
+        ticks++;
+        hasFan = getItem(0).getItem() == Items.WIND_GEN_FAN_ITEM.get();
     }
 
     // For Forge

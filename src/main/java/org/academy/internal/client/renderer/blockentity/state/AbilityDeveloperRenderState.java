@@ -8,8 +8,8 @@ public final class AbilityDeveloperRenderState extends BlockEntityRenderState {
     public boolean isMain;
     public Direction facing = Direction.NORTH;
     public float ageInTicks;
-    public AnimationState openState = new AnimationState();
+    public AnimationState openingState = new AnimationState();
     public AnimationState closingState = new AnimationState();
-    public AnimationState standState = new AnimationState();
-    public AnimationState liedownState = new AnimationState();
+    public AnimationState standingState = new AnimationState();
+    public AnimationState lyingDownState = new AnimationState();
 }

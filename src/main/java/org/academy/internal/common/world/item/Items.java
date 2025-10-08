@@ -21,8 +21,8 @@ public final class Items {
             ITEMS.registerSimpleBlockItem("wireless_node", Blocks.WIRELESS_NODE, new Item.Properties());
     public static final DeferredHolder<Item, BlockItem> WIND_GEN_BASE =
             ITEMS.registerSimpleBlockItem("wind_gen_base", Blocks.WIND_GEN_BASE, new Item.Properties());
-    public static final DeferredHolder<Item, MultiBlockItem> WIND_GEN_TOP =
-            ITEMS.registerItem("wind_gen_top", properties -> new MultiBlockItem(Blocks.WIND_GEN_TOP.get(), properties));
+    public static final DeferredHolder<Item, BlockItem> WIND_GEN_TOP =
+            ITEMS.registerSimpleBlockItem("wind_gen_top", Blocks.WIND_GEN_TOP, new Item.Properties());
     public static final DeferredHolder<Item, BlockItem> WIND_GEN_PILLAR =
             ITEMS.registerSimpleBlockItem("wind_gen_pillar", Blocks.WIND_GEN_PILLAR, new Item.Properties());
     public static final DeferredHolder<Item, MultiBlockItem> ABILITY_DEVELOPER =
@@ -63,6 +63,16 @@ public final class Items {
             ITEMS.registerItem("imagiphase_amethyst", Item::new);
     public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_AMETHYST_BLOCK =
             ITEMS.registerSimpleBlockItem("imagiphase_amethyst_block", Blocks.IMAGIPHASE_AMETHYST_BLOCK, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> IMAGIPHASE_AMETHYST_CLUSTER =
+            ITEMS.registerSimpleBlockItem("imagiphase_amethyst_cluster", Blocks.IMAGIPHASE_AMETHYST_CLUSTER, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> BUDDING_IMAGIPHASE_AMETHYST =
+            ITEMS.registerSimpleBlockItem("budding_imagiphase_amethyst", Blocks.BUDDING_IMAGIPHASE_AMETHYST, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> LARGE_IMAGIPHASE_AMETHYST_BUD =
+            ITEMS.registerSimpleBlockItem("large_imagiphase_amethyst_bud", Blocks.LARGE_IMAGIPHASE_AMETHYST_BUD, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> MEDIUM_IMAGIPHASE_AMETHYST_BUD =
+            ITEMS.registerSimpleBlockItem("medium_imagiphase_amethyst_bud", Blocks.MEDIUM_IMAGIPHASE_AMETHYST_BUD, new Item.Properties());
+    public static final DeferredHolder<Item, BlockItem> SMALL_IMAGIPHASE_AMETHYST_BUD =
+            ITEMS.registerSimpleBlockItem("small_imagiphase_amethyst_bud", Blocks.SMALL_IMAGIPHASE_AMETHYST_BUD, new Item.Properties());
     public static final DeferredHolder<Item, BlockItem> SOLAR_GEN =
             ITEMS.registerSimpleBlockItem("solar_gen", Blocks.SOLAR_GEN, new Item.Properties());
 

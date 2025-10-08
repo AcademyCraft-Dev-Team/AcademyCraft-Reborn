@@ -7,6 +7,6 @@ import net.minecraft.world.entity.AnimationState;
 public final class SolarGenRenderState extends BlockEntityRenderState {
     public float ageInTicks;
     public Direction facing = Direction.NORTH;
-    public AnimationState idleState = new AnimationState();
+    public AnimationState foldingState = new AnimationState();
     public AnimationState unfoldingState = new AnimationState();
 }
