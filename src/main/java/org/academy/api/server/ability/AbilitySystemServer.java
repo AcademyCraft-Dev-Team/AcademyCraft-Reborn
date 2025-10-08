@@ -13,10 +13,11 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
+import org.misaka.MisakaNetworkServer;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.packet.sync.s2c.*;
-import org.academy.api.common.network.future.annotation.HandleFuture;
-import org.academy.api.common.network.packet.S2CPacket;
+import org.misaka.api.common.network.future.annotation.HandleFuture;
+import org.misaka.api.common.network.packet.S2CPacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
@@ -45,7 +46,7 @@ public final class AbilitySystemServer {
 
     public static void init(final MinecraftServer server, PlayerDataManager manager) {
         playerDataManager = manager;
-        AcademyCraftServer.FUTURE_MANAGER.registerPayloadHandler(AbilitySystemServer.class);
+        MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
         minecraftServer = server;
 
         for (var category : Registries.ABILITY_CATEGORIES) {
@@ -339,19 +340,19 @@ public final class AbilitySystemServer {
 
             if (levelChanged) {
                 var packet = new SyncLevelPacket(getPlayerLevel(uuid));
-                AcademyCraftServer.sendPacket(connection, packet);
+                MisakaNetworkServer.sendPacket(connection, packet);
             }
             if (currentComputingPowerChanged) {
                 var packet = new SyncComputingPowerPacket(getPlayerComputingPower(uuid));
-                AcademyCraftServer.sendPacket(connection, packet);
+                MisakaNetworkServer.sendPacket(connection, packet);
             }
             if (maxComputingPowerChanged) {
                 var packet = new SyncMaxComputingPowerPacket(getPlayerMaxComputingPower(uuid));
-                AcademyCraftServer.sendPacket(connection, packet);
+                MisakaNetworkServer.sendPacket(connection, packet);
             }
             if (abilityCategoryChanged) {
                 var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
-                AcademyCraftServer.sendPacket(connection, packet);
+                MisakaNetworkServer.sendPacket(connection, packet);
             }
             if (skillsChanged) {
                 var skills = getPlayerSkills(uuid);
@@ -361,7 +362,7 @@ public final class AbilitySystemServer {
                     set.add(skill);
                 }
                 var packet = new SyncSkillsPacket(set);
-                AcademyCraftServer.sendPacket(connection, packet);
+                MisakaNetworkServer.sendPacket(connection, packet);
             }
             player.syncQueue.clear();
 
@@ -401,11 +402,11 @@ public final class AbilitySystemServer {
 
     public static void registerContext(ServerContext serverContext) {
         NeoForge.EVENT_BUS.register(serverContext);
-        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(serverContext);
+        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
         NeoForge.EVENT_BUS.unregister(serverContext);
-        AcademyCraftServer.NETWORK_MANAGER.unregisterPacketListener(serverContext);
+        MisakaNetworkServer.NETWORK_MANAGER.unregisterPacketListener(serverContext);
     }
 }

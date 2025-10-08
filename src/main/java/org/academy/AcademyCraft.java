@@ -2,7 +2,6 @@ package org.academy;
 
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import org.academy.internal.client.data.AcademyCraftClientData;
 import org.slf4j.Logger;
@@ -23,7 +22,7 @@ public final class AcademyCraft {
     public static final String LOGGER_PREFIX = MODID + "/";
     public static final Logger LOGGER = LoggerFactory.getLogger(LOGGER_PREFIX + "Common");
 
-    public AcademyCraft(IEventBus modEventBus, ModContainer modContainer) {
+    public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
         modEventBus.addListener(AcademyCraftClientData::dataSetup);
     }

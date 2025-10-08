@@ -6,11 +6,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import org.academy.AcademyCraft;
-import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.annotation.SubscribePacket;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.api.common.network.annotation.SubscribePacket;
 
 import java.util.List;
 
@@ -21,31 +21,8 @@ public final class ParticleRenderTypes {
     );
 
     public static void init() {
-        AcademyCraftClient.CLIENT_NETWORK_MANAGER.registerPacketListener(ParticleRenderTypes.class);
+        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(ParticleRenderTypes.class);
     }
-/*
-    public static final ParticleRenderType PARTICLE_IMAG_PHASE = new ParticleRenderType() {
-        @SuppressWarnings("deprecation")
-        @Override
-        public BufferBuilder begin(Tesselator tesselator, @NotNull TextureManager textureManager) {
-            RenderSystem.disableBlend();
-            RenderSystem.depthMask(false);
-            RenderSystem.depthFunc(519);
-            RenderSystem.setShader(GameRenderer::getParticleShader);
-            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
-            return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
-        }
-
-        @Override
-        public String toString() {
-            return "PARTICLE_IMAG_PHASE";
-        }
-
-        @Override
-        public boolean isTranslucent() {
-            return false;
-        }
-    };*/
 
     @SubscribePacket
     public static void handleSpawnArcMediumParticle(SpawnArcMediumParticlePacket packet) {

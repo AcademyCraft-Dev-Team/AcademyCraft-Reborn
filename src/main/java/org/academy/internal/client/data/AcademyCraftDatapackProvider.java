@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public class AcademyCraftDatapackProvider extends DatapackBuiltinEntriesProvider {
+public final class AcademyCraftDatapackProvider extends DatapackBuiltinEntriesProvider {
     public static final ResourceKey<ConfiguredFeature<?, ?>> IMAG_PHASE_LAKE = ResourceKey.create(Registries.CONFIGURED_FEATURE, AcademyCraft.academy("imag_phase_lake"));
     public static final ResourceKey<PlacedFeature> IMAG_PHASE_LAKE_PLACE = ResourceKey.create(Registries.PLACED_FEATURE, AcademyCraft.academy("imag_phase_lake"));
     public static final ResourceKey<BiomeModifier> IMAG_PHASE_LAKE_MODIFIER = ResourceKey.create(

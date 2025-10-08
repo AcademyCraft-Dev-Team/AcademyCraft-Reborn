@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.AcademyCraftClient;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
@@ -18,6 +17,7 @@ import org.academy.api.common.wireless.SetNodeNamePacket;
 import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
+import org.misaka.MisakaNetworkClient;
 
 import javax.annotation.Nullable;
 
@@ -78,7 +78,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
 
         var radioGroupWidget = new RadioGroupWidget(leftPos - 16, topPos - 22, 16, 40);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
-            var showInv = "inv".equals(imageRadioButtonWidget.getName());
+            var showInv = imageRadioButtonWidget.getId() == 0;
             var panelY = getTopPos() - 22;
             if (showInv) {
                 renderInventory = true;
@@ -169,7 +169,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 var nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
                 nameTextBox.setWhenEnter(s -> {
                     if (this.wirelessNodeBlockEntity != null) {
-                        AcademyCraftClient.sendPacket(new SetNodeNamePacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
+                        MisakaNetworkClient.sendPacket(new SetNodeNamePacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
                     }
                 });
                 infoTextArea.addChild("label_name_text_box", nameTextBox);
@@ -189,7 +189,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 var passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
                 passTextBox.setWhenEnter(s -> {
                     if (this.wirelessNodeBlockEntity != null) {
-                        AcademyCraftClient.sendPacket(new SetNodePassPacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
+                        MisakaNetworkClient.sendPacket(new SetNodePassPacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
                     }
                 });
                 infoTextArea.addChild("label_pass_text_box", passTextBox);

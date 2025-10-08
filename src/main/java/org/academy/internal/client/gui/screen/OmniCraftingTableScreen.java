@@ -27,12 +27,12 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
         var childDuration = duration - 100;
 
         var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
+        invPage.setZ(1);
         rootContainer.addChild("page_inv", invPage);
         {
             var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.OMNI_CRAFTING_UI);
             invPage.addChild("ui", ui);
         }
-        invPage.setY(getTopPos() - 22);
 
         var wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos);
         wirelessPanel.setZ(100);

@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "academy:item/wind_gen_base_screen"
+    "model": "academy:item/screen"
   }
 }

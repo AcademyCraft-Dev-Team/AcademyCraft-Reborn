@@ -20,6 +20,7 @@ public class RadioGroupWidget extends AbstractContainerWidget {
     @Nullable
     private Consumer<ImageRadioButtonWidget> onSelectionChanged = null;
     private boolean allowReselect = false;
+    public int idCounter = 0;
 
     public RadioGroupWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
@@ -77,6 +78,7 @@ public class RadioGroupWidget extends AbstractContainerWidget {
         super.addChild(name, child);
         if (child instanceof ImageRadioButtonWidget radioButton) {
             radioButton.setRadioGroup(this);
+            radioButton.setId(idCounter++);
         }
     }
 
