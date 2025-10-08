@@ -3,6 +3,7 @@ package org.academy.api.client.gui.widget;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.DynamicUniformStorage;
@@ -80,22 +81,24 @@ public class BlendQuadWidget extends AbstractWidget {
 
     private void renderLines(WidgetRenderContext context, float finalAlpha) {
         var textureManager = Minecraft.getInstance().getTextureManager();
-        var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE_TEXTURE).getTextureView();
+        var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE_TEXTURE).getTexture();
+        lineTexture.setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, false);
+        var lineTextureView = textureManager.getTexture(Resource.Textures.ELEMENT_LINE_TEXTURE).getTextureView();
         var lineW = getWidth() - 2.0f;
         var lineH = 4.0f;
 
         {
             context.pose().pushPose();
-            context.pose().translate(1.0f, 0.0f, 0.1f);
-            var topLineCommand = new ImageDrawCommand(lineTexture, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            context.pose().translate(1.0f, 0, 0.1f);
+            var topLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(topLineCommand);
             context.pose().popPose();
         }
         {
             context.pose().pushPose();
-            var bottomLineY = getHeight() - marginTop / 2.0f;
+            var bottomLineY = getHeight() - marginBottom;
             context.pose().translate(1.0f, bottomLineY, 0.1f);
-            var bottomLineCommand = new ImageDrawCommand(lineTexture, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            var bottomLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(bottomLineCommand);
             context.pose().popPose();
         }

@@ -37,8 +37,8 @@ public final class Items {
             ITEMS.registerItem("empty_unit", EmptyUnitItem::new);
     public static final DeferredHolder<Item, ImagiphaseUnitItem> IMAGIPHASE_UNIT =
             ITEMS.registerItem("imagiphase_unit", ImagiphaseUnitItem::new);
-    public static final DeferredHolder<Item, Item> WIND_GEN_BASE_SCREEN =
-            ITEMS.registerItem("wind_gen_base_screen", Item::new);
+    public static final DeferredHolder<Item, Item> SCREEN =
+            ITEMS.registerItem("screen", Item::new);
     public static final DeferredHolder<Item, Item> IMAGIPHASE_CIRCUIT =
             ITEMS.registerItem("imagiphase_circuit", Item::new);
     public static final DeferredHolder<Item, Item> IMAGIPHASE_POLYMER =

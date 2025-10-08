@@ -1,6 +1,5 @@
 package org.academy.internal.common.network;
 
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -11,10 +10,6 @@ import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.packet.sync.s2c.*;
-import org.academy.api.common.network.future.packet.FutureRequestPacket;
-import org.academy.api.common.network.future.packet.FutureResponsePacket;
-import org.academy.api.common.network.packet.PacketType;
-import org.academy.api.common.registries.Registries;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.common.ability.accelerator.skills.*;
@@ -25,10 +20,12 @@ import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
+import org.misaka.MisakaNetworkRegistries;
+import org.misaka.api.common.network.packet.PacketType;
 
 public final class PacketTypes {
     public static final DeferredRegister<PacketType<?, ?>> PACKET_TYPES =
-            DeferredRegister.create(Registries.Keys.PACKET_TYPES, AcademyCraft.MOD_ID);
+            DeferredRegister.create(MisakaNetworkRegistries.Keys.PACKET_TYPES, AcademyCraft.MOD_ID);
 
     /**
      * Sync
@@ -72,20 +69,9 @@ public final class PacketTypes {
             SET_NODE_PASS = PACKET_TYPES.register("set_node_pass",
             () -> new PacketType<>(SetNodePassPacket.class, SetNodePassPacket.CODEC));
 
-
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, OpenScreenPacket>>
             OPEN_SCREEN = PACKET_TYPES.register("open_screen",
             () -> new PacketType<>(OpenScreenPacket.class, OpenScreenPacket.CODEC));
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<?, ?>>
-            FUTURE_REQUEST = PACKET_TYPES.register("future_request",
-            () -> new PacketType<>(FutureRequestPacket.class, (StreamCodec) FutureRequestPacket.CODEC));
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<?, ?>>
-            FUTURE_RESPONSE = PACKET_TYPES.register("future_response",
-            () -> new PacketType<>(FutureResponsePacket.class, (StreamCodec) FutureResponsePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CoinItem.ThrowCoinPacket>>
             THROW_COIN_WITH_VELOCITY = PACKET_TYPES.register("throw_coin_with_velocity",

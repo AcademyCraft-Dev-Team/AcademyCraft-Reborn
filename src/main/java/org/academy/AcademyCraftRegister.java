@@ -6,13 +6,13 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
-import org.academy.api.common.network.NetworkSystem;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -21,11 +21,14 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.inventory.MenuTypes;
+import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.levelgen.feature.Features;
+import org.academy.internal.common.world.level.material.FluidTypes;
 import org.academy.internal.common.world.level.material.Fluids;
+import org.misaka.MisakaNetworkServer;
 
 import static org.academy.AcademyCraft.MODID;
 import static org.academy.AcademyCraft.MOD_NAME;
@@ -54,6 +57,7 @@ public final class AcademyCraftRegister {
         SoundEvents.SOUND_EVENTS.register(modEventBus);
         MenuTypes.MENU_TYPES.register(modEventBus);
         Fluids.FLUIDS.register(modEventBus);
+        FluidTypes.FLUID_TYPES.register(modEventBus);
         ParticleTypes.PARTICLE_TYPES.register(modEventBus);
         Features.FEATURES.register(modEventBus);
 
@@ -67,11 +71,11 @@ public final class AcademyCraftRegister {
 
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
+        modEventBus.addListener(AcademyCraftRegister::onFMLLoadComplete);
     }
 
     private static void onNewRegistry(NewRegistryEvent event) {
         event.register(ABILITY_CATEGORIES);
-        event.register(PACKET_TYPES);
         event.register(SKILLS);
     }
 
@@ -79,7 +83,11 @@ public final class AcademyCraftRegister {
         event.enqueueWork(() -> {
             NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
             ABILITY_CATEGORIES.forEach(AbilityCategory::seal);
-            NetworkSystem.progressRegistry();
         });
+    }
+
+    private static void onFMLLoadComplete(final FMLLoadCompleteEvent event) {
+        event.enqueueWork(() ->
+                MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(ImagiphaseDowsingRodItem.class));
     }
 }

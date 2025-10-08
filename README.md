@@ -41,9 +41,9 @@ If you are using IntelliJ IDEA, I recommend adding or replacing the following se
 <component name="EntryPointsManager">
     <list size="2">
         <item index="0" class="java.lang.String"
-              itemvalue="org.academy.api.common.network.annotation.SubscribePacket"/>
+              itemvalue="org.misaka.api.common.network.annotation.SubscribePacket"/>
         <item index="1" class="java.lang.String"
-              itemvalue="org.academy.api.common.network.future.annotation.HandleFuture"/>
+              itemvalue="org.misaka.api.common.network.future.annotation.HandleFuture"/>
     </list>
 </component>
 ```

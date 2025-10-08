@@ -8,6 +8,9 @@ import org.joml.Matrix4f;
 
 import java.util.Map;
 
+/**
+ * 看情况选择内部类或外部类喵, 独占选择内部类喵, 可复用选择外部类喵
+ */
 public abstract class DrawCommand {
     protected final RenderPipeline pipeline;
 

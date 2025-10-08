@@ -4,10 +4,10 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.api.common.network.annotation.PacketTarget;
-import org.academy.api.common.network.packet.Packet;
-import org.academy.api.common.network.packet.PacketType;
-import org.academy.api.common.vanilla.ThreadType;
+import org.misaka.api.common.network.annotation.PacketTarget;
+import org.misaka.api.common.network.packet.Packet;
+import org.misaka.api.common.network.packet.PacketType;
+import org.misaka.api.common.network.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
 
 @PacketTarget(ThreadType.SERVER)

@@ -9,19 +9,24 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
+import org.jetbrains.annotations.Nullable;
 
 public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
     public final BlockPos mainPos;
     public final WindGenBaseBlockEntity windGenBaseBlockEntity;
+    @Nullable
     public ImageWidget topIcon;
+    @Nullable
     public ImageWidget pillarIcon;
+    @Nullable
     public ImageWidget baseIcon;
     public static final String AF = "%d AF";
-    private PanelWidget wirelessPanel;
+    @Nullable
     private LabelWidget bufferValueLabel;
     private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
             37f / 255f, 247f / 255f, 1, 1);
@@ -32,6 +37,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
         windGenBaseBlockEntity = newWindGenBaseBlockEntity;
     }
 
+    @Nullable
     public static WindGenScreen create(WindGenMenu menu, Inventory playerInventory, Component title, BlockPos mainPos) {
         if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(mainPos) instanceof WindGenBaseBlockEntity blockEntity) {
             return new WindGenScreen(menu, playerInventory, title, blockEntity);
@@ -48,11 +54,12 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
         var childDuration = duration - 100;
 
         var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
+        invPage.setZ(1);
         rootContainer.addChild("page_inv", invPage);
         {
             var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.WIND_GEN_UI);
             invPage.addChild("ui", ui);
-            var statePanel = new PanelWidget(0, 0, imageWidth, 187);
+            var statePanel = new PanelWidget((imageWidth - 24) / 2f, 0, imageWidth, 187);
             invPage.addChild("panel_state", statePanel);
             {
                 topIcon = new ImageWidget(0, 13, 24, 24, Resource.Textures.ICON_WIND_GEN_TOP);
@@ -63,10 +70,14 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
                 statePanel.addChild("icon_base", baseIcon);
             }
         }
-        invPage.setY(getTopPos() - 22);
 
-        wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos);
-        wirelessPanel.setZ(100);
+        var wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos){
+            @Override
+            public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+                if (renderInventory) return;
+                super.render(renderContext, mouseX, mouseY, partialTick);
+            }
+        };
         wirelessPanel.setVisible(false);
         wirelessPanel.setEnabled(false);
         rootContainer.addChild("panel_wireless", wirelessPanel);
@@ -108,36 +119,39 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
             back.setAlpha(0.5f);
             infoArea.addChild("back", back);
 
-            var histogramWidget = new HistogramWidget(0, 0, 84, 84);
-            histogramWidget.addValue(histogramValue);
-            infoArea.addChild("histogram", histogramWidget);
+            var info = new PanelWidget(0,0,infoArea.getWidth(),infoArea.getHeight());
+            info.setZ(1);
+            infoArea.addChild("info", info);
+            {
+                var histogramWidget = new HistogramWidget(0, 0, 84, 84);
+                histogramWidget.addValue(histogramValue);
+                info.addChild("histogram", histogramWidget);
 
-            var bufferIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25F7FF);
-            infoArea.addChild("icon_buffer", bufferIcon);
+                var bufferIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25F7FF);
+                info.addChild("icon_buffer", bufferIcon);
 
-            var bufferLabel = new LabelWidget("BUFFER", 15, 72);
-            bufferLabel.setScale(0.75f);
-            infoArea.addChild("label_buffer", bufferLabel);
+                var bufferLabel = new LabelWidget("BUFFER", 15, 72);
+                bufferLabel.setScale(0.75f);
+                info.addChild("label_buffer", bufferLabel);
 
-            bufferValueLabel = new LabelWidget(AF, 50, 72);
-            bufferValueLabel.setScale(0.75f);
-            infoArea.addChild("label_buffer_value", bufferValueLabel);
+                bufferValueLabel = new LabelWidget(AF, 50, 72);
+                bufferValueLabel.setScale(0.75f);
+                info.addChild("label_buffer_value", bufferValueLabel);
 
-            var infoLabel = new LabelWidget("Information", 8, 82);
-            infoLabel.setScale(0.75f);
-            infoArea.addChild("label_info", infoLabel);
+                var infoLabel = new LabelWidget("Information", 8, 82);
+                infoLabel.setScale(0.75f);
+                info.addChild("label_info", infoLabel);
 
-            var altitudeLabel = new LabelWidget("Altitude", 10, 90);
-            altitudeLabel.setScale(0.75f);
-            infoArea.addChild("label_altitude", altitudeLabel);
+                var altitudeLabel = new LabelWidget("Altitude", 10, 90);
+                altitudeLabel.setScale(0.75f);
+                info.addChild("label_altitude", altitudeLabel);
 
-            var altitudeValue = "N/A";
-            if (windGenBaseBlockEntity != null) {
+                var altitudeValue = "N/A";
                 altitudeValue = windGenBaseBlockEntity.altitude + "";
+                var altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
+                altitudeValueLabel.setScale(0.75f);
+                info.addChild("label_altitude_value", altitudeValueLabel);
             }
-            var altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
-            altitudeValueLabel.setScale(0.75f);
-            infoArea.addChild("label_altitude_value", altitudeValueLabel);
         }
 
         var radioFinalY = radioGroupWidget.getY();

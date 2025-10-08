@@ -16,19 +16,19 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import org.academy.AcademyCraftClient;
-import org.academy.api.common.network.future.annotation.HandleFuture;
-import org.academy.api.common.network.future.packet.RequestPacket;
-import org.academy.api.common.network.future.packet.ResponsePacket;
-import org.academy.api.common.network.packet.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.jetbrains.annotations.Nullable;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.api.common.network.future.annotation.HandleFuture;
+import org.misaka.api.common.network.future.packet.RequestPacket;
+import org.misaka.api.common.network.future.packet.ResponsePacket;
+import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ImagiphaseDowsingRodItem extends Item {
+public final class ImagiphaseDowsingRodItem extends Item {
     public static List<BlockPos> RENDER_TARGET_POSITIONS = new ArrayList<>();
 
     public ImagiphaseDowsingRodItem(Properties properties) {
@@ -51,7 +51,7 @@ public class ImagiphaseDowsingRodItem extends Item {
         if (level.isClientSide()) {
             RENDER_TARGET_POSITIONS.clear();
             var packet = new GetLevelChunkSectionsPacket(player.blockPosition());
-            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(packet, response -> {
+            MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(packet, response -> {
                 if (response != null) {
                     RENDER_TARGET_POSITIONS.addAll(response.getSectionsWithImagPhase());
                 }

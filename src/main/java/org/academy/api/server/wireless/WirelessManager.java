@@ -5,13 +5,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
-import org.academy.AcademyCraftServer;
-import org.academy.api.common.network.annotation.SubscribePacket;
-import org.academy.api.common.network.future.annotation.HandleFuture;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.annotation.SubscribePacket;
+import org.misaka.api.common.network.future.annotation.HandleFuture;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,8 +20,8 @@ import java.util.Map;
 
 public class WirelessManager {
     public static void initServer() {
-        AcademyCraftServer.NETWORK_MANAGER.registerPacketListener(WirelessManager.class);
-        AcademyCraftServer.FUTURE_MANAGER.registerPayloadHandler(WirelessManager.class);
+        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(WirelessManager.class);
+        MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(WirelessManager.class);
     }
 
     @HandleFuture
@@ -93,21 +93,16 @@ public class WirelessManager {
             return;
         }
 
-        var newNodePos = data.findNodePositionByName(newName);
-        if (newNodePos != null && !newNodePos.equals(nodePos)) {
+        var oldName = oldCfg.name;
+        if (!data.renameNode(nodePos, newName)) {
+            var existingNodePos = data.findNodePositionByName(newName);
             AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken by node at {}",
-                    player.getGameProfile().name(), nodePos, newName, newNodePos);
+                    player.getGameProfile().name(), nodePos, newName, existingNodePos);
             return;
         }
 
-        var oldNameForMap = oldCfg.name;
-        oldCfg.name = newName;
-        data.nodeNameMap.remove(oldNameForMap);
-        data.nodeNameMap.put(newName, nodePos);
-
-        data.setDirty();
         AcademyCraft.LOGGER.debug("Player {} renamed node at {} from '{}' to '{}'",
-                player.getGameProfile().name(), nodePos, oldNameForMap, newName);
+                player.getGameProfile().name(), nodePos, oldName, newName);
     }
 
     public static void setNodePass(ServerPlayer player,
@@ -206,7 +201,7 @@ public class WirelessManager {
     public static List<String> getAvailableNodes(ServerLevel level, BlockPos requesterPos) {
         var data = WirelessNetworkData.get(level);
         var nodeNamesInRange = new ArrayList<String>();
-        for (var entry : data.getNodeEntries().entrySet()) {
+        for (var entry : data.getAllNodes().entrySet()) {
             var nodePos = entry.getKey();
             var config = entry.getValue();
             if (nodePos.distSqr(requesterPos) <= (double) config.radius * config.radius) {

@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.AcademyCraftClient;
 import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.animation.Animator;
@@ -26,8 +25,9 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.misaka.MisakaNetworkClient;
 
-import java.awt.Color;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -186,7 +186,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                     if (!learned) {
                         if (abilityDeveloperBlockEntity != null && abilityDeveloperBlockEntity.getEnergyStored() >= 10_000) {
                             var request = new AcquireCategoryPacket(mainPos.asLong());
-                            AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
+                            MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(request,
                                     response -> {
                                         if (response != null && response.getMessages() != null) {
                                             var lastWidget = outputCommand;
@@ -453,7 +453,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                     return;
 
                 var request = new LearnSkillPacket(skillInfo.skill().getKey().toString(), mainPos.asLong());
-                AcademyCraftClient.CLIENT_FUTURE_MANAGER.sendRequestToServer(request,
+                MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(request,
                         response -> {
                             if (response != null && response.isSuccess())
                                 onInit();
