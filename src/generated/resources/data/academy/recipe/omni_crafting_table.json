@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "academy:imagiphase_amethyst_block",
+    "B": "minecraft:chiseled_bookshelf",
+    "C": "minecraft:clock",
+    "M": "academy:imagiphase_metal_block",
+    "O": "minecraft:observer",
+    "S": "academy:screen",
+    "T": "minecraft:crafter"
+  },
+  "pattern": [
+    "BSB",
+    "OTC",
+    "AMA"
+  ],
+  "result": {
+    "count": 1,
+    "id": "academy:omni_crafting_table"
+  }
+}
