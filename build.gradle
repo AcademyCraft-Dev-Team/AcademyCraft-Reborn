@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
     id 'idea'
     id 'net.neoforged.moddev' version 'latest.release'
-  //  id 'org.openrewrite.rewrite' version 'latest.release'
+    id 'org.openrewrite.rewrite' version 'latest.release'
 }
 
 base {
@@ -200,17 +200,14 @@ dependencies {
         exclude group: "it.unimi.dsi", module: "fastutil"
     }
 */
-/*
     rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
-    rewrite("org.openrewrite.recipe:rewrite-migrate-java")*/
+    rewrite("org.openrewrite.recipe:rewrite-migrate-java")
 }
-/*
 
 rewrite {
     activeRecipe("org.openrewrite.java.migrate.lang.var.UseVarForObject")
     activeRecipe("org.openrewrite.java.ShortenFullyQualifiedTypeReferences")
 }
-*/
 
 // Example configuration to allow publishing using the maven-publish plugin
 publishing {
