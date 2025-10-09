@@ -12,13 +12,6 @@ base {
     archivesName = mod_id + "-" + minecraft_version
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-        vendor = JvmVendorSpec.JETBRAINS
-    }
-}
-
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
     var replaceProperties = [minecraft_version      : minecraft_version,
                              minecraft_version_range: minecraft_version_range,
