@@ -174,13 +174,14 @@ repositories {
 dependencies {
     jarJar(implementation "org.academy:misaka-network:21.10.1")
 
-    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    implementation "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    compileOnly "mezz.jei:jei-1.21.9-neoforge-api:${jei_version}"
+    compileOnly "mezz.jei:jei-1.21.9-neoforge:${jei_version}"
 
+    implementation "maven.modrinth:jade:20.0.5+neoforge"
     compileOnly "maven.modrinth:sodium:mc1.21.8-0.7.0-neoforge"
     compileOnly "maven.modrinth:iris:1.9.2+1.21.8-neoforge"
     compileOnly "maven.modrinth:sodium-extra:mc1.21.8-0.7.0+neoforge"
-    compileOnly "maven.modrinth:lithium:mc1.21.9-0.19.0-neoforge"
+    implementation "maven.modrinth:lithium:mc1.21.10-0.20.0-neoforge"
 
 /*
     // Modern UI
