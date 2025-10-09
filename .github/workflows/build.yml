@@ -27,6 +27,9 @@ jobs:
           gradle-version: wrapper
           cache-read-only: false
 
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
       - name: Build
         run: ./gradlew build --no-daemon
 
