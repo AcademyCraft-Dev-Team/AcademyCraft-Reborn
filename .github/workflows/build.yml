@@ -6,31 +6,29 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
+          distribution: 'zulu'
           java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          gradle-version: wrapper
+          cache-read-only: false
 
       - name: Build
-        run: ./gradlew build
+        run: ./gradlew build --no-daemon
 
       - name: Upload
         uses: actions/upload-artifact@v4
