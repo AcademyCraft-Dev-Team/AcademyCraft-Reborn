@@ -3,7 +3,6 @@ package org.academy.internal.common.world.level.block;
 import com.mojang.serialization.MapCodec;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
@@ -11,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -20,9 +20,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
-import org.misaka.api.common.network.packet.S2CPacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import org.misaka.api.common.network.packet.S2CPacket;
 
 import java.util.Arrays;
 import java.util.List;
@@ -58,6 +58,11 @@ public final class AbilityDeveloperBlock extends MultiBlock {
     @Override
     public List<Vec3i> getSubBlocks() {
         return SUBJECT_BLOCKS;
+    }
+
+    @Override
+    protected float getShadeBrightness(BlockState p_308911_, BlockGetter p_308952_, BlockPos p_308918_) {
+        return 1.0F;
     }
 
     @Override
@@ -109,11 +114,6 @@ public final class AbilityDeveloperBlock extends MultiBlock {
                 }
             }
         };
-    }
-
-    @Override
-    public boolean skipRendering(BlockState state, BlockState adjacentState, Direction direction) {
-        return false;
     }
 
     @Override
