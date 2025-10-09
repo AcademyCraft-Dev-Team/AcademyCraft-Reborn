@@ -59,64 +59,45 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
             solar.save(output);
         }
         {
-            var dowsingRod = shaped(RecipeCategory.MISC, Items.IMAGIPHASE_DOWSING_ROD.get());
+            var omni = shaped(RecipeCategory.MISC, Items.OMNI_CRAFTING_TABLE.get());
 
-            dowsingRod.define('C', net.minecraft.world.item.Items.COMPARATOR);
-            dowsingRod.define('L', net.minecraft.world.item.Items.LIGHTNING_ROD);
-            dowsingRod.define('P', net.minecraft.world.item.Items.COMPASS);
-            dowsingRod.define('S', Items.SCREEN.get());
-            dowsingRod.define('M', Items.IMAGIPHASE_METAL.get());
-            dowsingRod.pattern(" C ");
-            dowsingRod.pattern("LPS");
-            dowsingRod.pattern(" M ");
+            omni.define('B', net.minecraft.world.item.Items.CHISELED_BOOKSHELF);
+            omni.define('O', net.minecraft.world.item.Items.OBSERVER);
+            omni.define('T', net.minecraft.world.item.Items.CRAFTER);
+            omni.define('C', net.minecraft.world.item.Items.CLOCK);
+            omni.define('A', Items.IMAGIPHASE_AMETHYST_BLOCK.get());
+            omni.define('M', Items.IMAGIPHASE_METAL_BLOCK.get());
+            omni.define('S', Items.SCREEN.get());
+            omni.pattern("BSB");
+            omni.pattern("OTC");
+            omni.pattern("AMA");
 
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.COMPARATOR);
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.LIGHTNING_ROD);
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.COMPASS);
-            unlockedByHas(dowsingRod, Items.SCREEN.get());
-            unlockedByHas(dowsingRod, Items.IMAGIPHASE_METAL.get());
+            unlockedByHas(omni, net.minecraft.world.item.Items.COMPARATOR);
+            unlockedByHas(omni, net.minecraft.world.item.Items.LIGHTNING_ROD);
+            unlockedByHas(omni, net.minecraft.world.item.Items.COMPASS);
+            unlockedByHas(omni, Items.SCREEN.get());
+            unlockedByHas(omni, Items.IMAGIPHASE_METAL.get());
 
-            dowsingRod.save(output);
+            omni.save(output);
         }
         {
-            var dowsingRod = shaped(RecipeCategory.MISC, Items.IMAGIPHASE_DOWSING_ROD.get());
+            var screen = shaped(RecipeCategory.MISC, Items.SCREEN.get());
 
-            dowsingRod.define('C', net.minecraft.world.item.Items.COMPARATOR);
-            dowsingRod.define('L', net.minecraft.world.item.Items.LIGHTNING_ROD);
-            dowsingRod.define('P', net.minecraft.world.item.Items.COMPASS);
-            dowsingRod.define('S', Items.SCREEN.get());
-            dowsingRod.define('M', Items.IMAGIPHASE_METAL.get());
-            dowsingRod.pattern(" C ");
-            dowsingRod.pattern("LPS");
-            dowsingRod.pattern(" M ");
+            screen.define('P', net.minecraft.world.item.Items.GLASS_PANE);
+            screen.define('G', net.minecraft.world.item.Items.GLOWSTONE);
+            screen.define('C', net.minecraft.world.item.Items.COMPARATOR);
+            screen.define('M', Items.IMAGIPHASE_METAL.get());
+            screen.pattern("PPP");
+            screen.pattern("MGM");
+            screen.pattern(" C ");
 
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.COMPARATOR);
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.LIGHTNING_ROD);
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.COMPASS);
-            unlockedByHas(dowsingRod, Items.SCREEN.get());
-            unlockedByHas(dowsingRod, Items.IMAGIPHASE_METAL.get());
+            unlockedByHas(screen, net.minecraft.world.item.Items.COMPARATOR);
+            unlockedByHas(screen, net.minecraft.world.item.Items.LIGHTNING_ROD);
+            unlockedByHas(screen, net.minecraft.world.item.Items.COMPASS);
+            unlockedByHas(screen, Items.SCREEN.get());
+            unlockedByHas(screen, Items.IMAGIPHASE_METAL.get());
 
-            dowsingRod.save(output);
-        }
-        {
-            var dowsingRod = shaped(RecipeCategory.MISC, Items.IMAGIPHASE_DOWSING_ROD.get());
-
-            dowsingRod.define('C', net.minecraft.world.item.Items.COMPARATOR);
-            dowsingRod.define('L', net.minecraft.world.item.Items.LIGHTNING_ROD);
-            dowsingRod.define('P', net.minecraft.world.item.Items.COMPASS);
-            dowsingRod.define('S', Items.SCREEN.get());
-            dowsingRod.define('M', Items.IMAGIPHASE_METAL.get());
-            dowsingRod.pattern(" C ");
-            dowsingRod.pattern("LPS");
-            dowsingRod.pattern(" M ");
-
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.COMPARATOR);
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.LIGHTNING_ROD);
-            unlockedByHas(dowsingRod, net.minecraft.world.item.Items.COMPASS);
-            unlockedByHas(dowsingRod, Items.SCREEN.get());
-            unlockedByHas(dowsingRod, Items.IMAGIPHASE_METAL.get());
-
-            dowsingRod.save(output);
+            screen.save(output);
         }
     }
 

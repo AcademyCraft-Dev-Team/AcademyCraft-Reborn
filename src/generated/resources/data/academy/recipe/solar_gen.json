@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "academy:imagiphase_amethyst",
+    "G": "minecraft:glass_pane",
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:repeater",
+    "T": "minecraft:iron_trapdoor"
+  },
+  "pattern": [
+    "GGG",
+    "TAT",
+    "IRI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "academy:solar_gen"
+  }
+}
