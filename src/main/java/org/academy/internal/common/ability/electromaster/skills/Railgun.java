@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -400,7 +400,7 @@ public final class Railgun extends Skill {
     }
 
     @PacketTarget(ThreadType.CLIENT)
-    public static final class ConfirmChargePacket extends Packet<ClientGamePacketListener, ConfirmChargePacket> {
+    public static final class ConfirmChargePacket extends Packet<ClientPacketListener, ConfirmChargePacket> {
         public static final StreamCodec<ByteBuf, ConfirmChargePacket> CODEC = ByteBufCodecs.VAR_INT.map(ConfirmChargePacket::new, ConfirmChargePacket::getCoinEntityId);
 
         private final int coinEntityId;
@@ -414,13 +414,13 @@ public final class Railgun extends Skill {
         }
 
         @Override
-        public PacketType<ClientGamePacketListener, ConfirmChargePacket> getPacketType() {
+        public PacketType<ClientPacketListener, ConfirmChargePacket> getPacketType() {
             return PacketTypes.RAILGUN_CONFIRM_CHARGE.get();
         }
     }
 
     @PacketTarget(ThreadType.CLIENT)
-    public static final class ChargeEndPacket extends Packet<ClientGamePacketListener, ChargeEndPacket> {
+    public static final class ChargeEndPacket extends Packet<ClientPacketListener, ChargeEndPacket> {
         public static final ChargeEndPacket INSTANCE = new ChargeEndPacket();
         public static final StreamCodec<ByteBuf, ChargeEndPacket> CODEC = StreamCodec.unit(INSTANCE);
 
@@ -428,7 +428,7 @@ public final class Railgun extends Skill {
         }
 
         @Override
-        public PacketType<ClientGamePacketListener, ChargeEndPacket> getPacketType() {
+        public PacketType<ClientPacketListener, ChargeEndPacket> getPacketType() {
             return PacketTypes.RAILGUN_CHARGE_END.get();
         }
     }

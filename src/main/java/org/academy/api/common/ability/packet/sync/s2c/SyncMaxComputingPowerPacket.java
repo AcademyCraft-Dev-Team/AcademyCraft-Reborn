@@ -1,17 +1,17 @@
 package org.academy.api.common.ability.packet.sync.s2c;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import org.academy.internal.common.network.PacketTypes;
+import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.misaka.api.common.network.ThreadType;
-import org.academy.internal.common.network.PacketTypes;
 
 @PacketTarget(ThreadType.CLIENT)
-public final class SyncMaxComputingPowerPacket extends Packet<ClientGamePacketListener, SyncMaxComputingPowerPacket> {
+public final class SyncMaxComputingPowerPacket extends Packet<ClientPacketListener, SyncMaxComputingPowerPacket> {
     public static final StreamCodec<ByteBuf, SyncMaxComputingPowerPacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.FLOAT,
             SyncMaxComputingPowerPacket::getMaxComputingPower,
@@ -29,7 +29,7 @@ public final class SyncMaxComputingPowerPacket extends Packet<ClientGamePacketLi
     }
 
     @Override
-    public PacketType<ClientGamePacketListener, SyncMaxComputingPowerPacket> getPacketType() {
+    public PacketType<ClientPacketListener, SyncMaxComputingPowerPacket> getPacketType() {
         return PacketTypes.SYNC_MAX_COMPUTING_POWER.get();
     }
 }

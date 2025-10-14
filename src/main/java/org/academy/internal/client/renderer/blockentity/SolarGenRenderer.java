@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.Resource;
 import org.academy.internal.client.model.SolarGenModel;
@@ -53,5 +54,10 @@ public final class SolarGenRenderer implements BlockEntityRenderer<SolarGenBlock
         nodeCollector.submitModel(MODEL, renderState, poseStack, RenderType.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, renderState.breakProgress);
 
         poseStack.popPose();
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(SolarGenBlockEntity blockEntity) {
+        return blockEntity.getRenderBoundingBox();
     }
 }

@@ -3,7 +3,7 @@ package org.academy.internal.common.core.particles;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
@@ -11,7 +11,7 @@ import org.misaka.api.common.network.ThreadType;
 import org.academy.internal.common.network.PacketTypes;
 
 @PacketTarget(ThreadType.CLIENT)
-public class SpawnArcMediumParticlePacket extends Packet<ClientGamePacketListener, SpawnArcMediumParticlePacket> {
+public class SpawnArcMediumParticlePacket extends Packet<ClientPacketListener, SpawnArcMediumParticlePacket> {
     public static final StreamCodec<ByteBuf, SpawnArcMediumParticlePacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.DOUBLE,
             SpawnArcMediumParticlePacket::getX,
@@ -61,7 +61,7 @@ public class SpawnArcMediumParticlePacket extends Packet<ClientGamePacketListene
     }
 
     @Override
-    public PacketType<ClientGamePacketListener, SpawnArcMediumParticlePacket> getPacketType() {
+    public PacketType<ClientPacketListener, SpawnArcMediumParticlePacket> getPacketType() {
         return PacketTypes.SPAWN_ARC_MEDIUM_PARTICLE.get();
     }
 }

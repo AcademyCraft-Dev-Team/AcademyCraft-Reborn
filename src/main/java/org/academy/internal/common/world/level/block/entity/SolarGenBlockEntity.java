@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import org.academy.api.common.wireless.WirelessUser;
 import org.jetbrains.annotations.Nullable;
 
@@ -114,5 +115,11 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         super.loadAdditional(input);
         this.energyStored = input.getIntOr("energy_stored", 0);
         input.getLong("connected_node_pos").ifPresent(nodePos -> this.connectedNodePos = BlockPos.of(nodePos));
+    }
+
+    public AABB getRenderBoundingBox() {
+        var pos = this.getBlockPos().getCenter();
+        var radius = 0.8;
+        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }

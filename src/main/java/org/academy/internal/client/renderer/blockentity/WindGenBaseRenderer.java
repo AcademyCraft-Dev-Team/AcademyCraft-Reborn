@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.renderer.blockentity.state.WindGenBaseRenderState;
@@ -81,5 +82,10 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
             MODEL.renderPole(poseStack, nodeCollector, renderState.lightCoords, OverlayTexture.NO_OVERLAY);
         }
         poseStack.popPose();
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(WindGenBaseBlockEntity blockEntity) {
+        return blockEntity.getRenderBoundingBox();
     }
 }
