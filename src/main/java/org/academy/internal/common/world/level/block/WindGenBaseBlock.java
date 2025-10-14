@@ -33,6 +33,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
 import org.academy.internal.common.world.inventory.WindGenMenu;
+import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -162,14 +163,9 @@ public final class WindGenBaseBlock extends MultiBlock {
     }
 
     @Override
+    @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return (level1, pos, state1, blockEntity) -> {
-            if (blockEntity instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
-                if (windGenBaseBlockEntity.isMain()) {
-                    windGenBaseBlockEntity.tick();
-                }
-            }
-        };
+        return createTickerHelper(blockEntityType, BlockEntityTypes.WIND_GEN_BASE.get(), WindGenBaseBlockEntity::tick);
     }
 
     @Override

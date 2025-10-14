@@ -6,7 +6,7 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.*;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
@@ -14,7 +14,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.Render;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.lwjgl.system.MemoryStack;
 
@@ -42,35 +41,7 @@ public final class BloomEffect {
         var width = mainRenderTarget.width;
         var height = mainRenderTarget.height;
 
-        INPUT = new TextureTarget(null, width, height, true) {
-            @Override
-            public void createBuffers(int width, int height) {
-                RenderSystem.assertOnRenderThread();
-                var gpudevice = RenderSystem.getDevice();
-                var i = gpudevice.getMaxTextureSize();
-                if (width > 0 && width <= i && height > 0 && height <= i) {
-                    this.width = width;
-                    this.height = height;
-
-                    colorTexture = gpudevice.createTexture(() -> label + " / Color", 15, TextureFormat.RGBA8, width, height, 1, 1);
-                    colorTextureView = gpudevice.createTextureView(colorTexture);
-                    colorTexture.setAddressMode(AddressMode.CLAMP_TO_EDGE);
-                    setFilterMode(FilterMode.LINEAR);
-                } else {
-                    throw new IllegalArgumentException("Window " + width + "x" + height + " size out of bounds (max. size: " + i + ")");
-                }
-            }
-
-            @Override
-            public @Nullable GpuTextureView getDepthTextureView() {
-                return Minecraft.getInstance().getMainRenderTarget().getDepthTextureView();
-            }
-
-            @Override
-            public @Nullable GpuTexture getDepthTexture() {
-                return Minecraft.getInstance().getMainRenderTarget().getDepthTexture();
-            }
-        };
+        INPUT = new TextureTarget(null, width, height, true);
         OUTPUT = getRenderTarget(width, height);
 
         SWAP2A = getRenderTarget(width / 2, height / 2);
@@ -150,6 +121,8 @@ public final class BloomEffect {
     public static void process() {
         var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
         var blurUboSlice = blurUniformsBuffer.slice();
+
+        INPUT.copyDepthFrom(mainRenderTarget);
 
         PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Collections.emptyMap(), false);
 

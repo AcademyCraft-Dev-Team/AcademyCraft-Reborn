@@ -1,6 +1,6 @@
 package org.academy.internal.common.network;
 
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -20,7 +20,7 @@ import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
-import org.misaka.MisakaNetworkRegistries;
+import org.misaka.api.common.registries.MisakaNetworkRegistries;
 import org.misaka.api.common.network.packet.PacketType;
 
 public final class PacketTypes {
@@ -30,26 +30,26 @@ public final class PacketTypes {
     /**
      * Sync
      */
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncLevelPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncLevelPacket>>
             SYNC_LEVEL = PACKET_TYPES.register("sync_level",
             () -> new PacketType<>(SyncLevelPacket.class, SyncLevelPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncSkillsPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillsPacket>>
             SYNC_SKILLS = PACKET_TYPES.register("sync_skills",
             () -> new PacketType<>(SyncSkillsPacket.class, SyncSkillsPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncAbilityCategoryPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncAbilityCategoryPacket>>
             SYNC_ABILITY_CATEGORY = PACKET_TYPES.register("sync_ability_category",
             () -> new PacketType<>(SyncAbilityCategoryPacket.class, SyncAbilityCategoryPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncComputingPowerPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncComputingPowerPacket>>
             SYNC_COMPUTING_POWER = PACKET_TYPES.register("sync_computing_power",
             () -> new PacketType<>(SyncComputingPowerPacket.class, SyncComputingPowerPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SyncMaxComputingPowerPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncMaxComputingPowerPacket>>
             SYNC_MAX_COMPUTING_POWER = PACKET_TYPES.register("sync_max_computing_power",
             () -> new PacketType<>(SyncMaxComputingPowerPacket.class, SyncMaxComputingPowerPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, PlayerSyncPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerSyncPacket>>
             PLAYER_SYNC = PACKET_TYPES.register("player_sync",
             () -> new PacketType<>(PlayerSyncPacket.class, PlayerSyncPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, ExpSyncPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ExpSyncPacket>>
             EXP_SYNC = PACKET_TYPES.register("exp_sync",
             () -> new PacketType<>(ExpSyncPacket.class, ExpSyncPacket.CODEC));
 
@@ -69,7 +69,7 @@ public final class PacketTypes {
             SET_NODE_PASS = PACKET_TYPES.register("set_node_pass",
             () -> new PacketType<>(SetNodePassPacket.class, SetNodePassPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, OpenScreenPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, OpenScreenPacket>>
             OPEN_SCREEN = PACKET_TYPES.register("open_screen",
             () -> new PacketType<>(OpenScreenPacket.class, OpenScreenPacket.CODEC));
 
@@ -101,11 +101,11 @@ public final class PacketTypes {
             RAILGUN_START_CHARGE = PACKET_TYPES.register("railgun_start_charge",
             () -> new PacketType<>(Railgun.StartChargePacket.class, Railgun.StartChargePacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, Railgun.ConfirmChargePacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, Railgun.ConfirmChargePacket>>
             RAILGUN_CONFIRM_CHARGE = PACKET_TYPES.register("railgun_confirm_charge",
             () -> new PacketType<>(Railgun.ConfirmChargePacket.class, Railgun.ConfirmChargePacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, Railgun.ChargeEndPacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, Railgun.ChargeEndPacket>>
             RAILGUN_CHARGE_END = PACKET_TYPES.register("railgun_charge_end",
             () -> new PacketType<>(Railgun.ChargeEndPacket.class, Railgun.ChargeEndPacket.CODEC));
 
@@ -133,7 +133,7 @@ public final class PacketTypes {
             REVERSE_BLOODFLOW = PACKET_TYPES.register("reverse_bloodflow",
             () -> new PacketType<>(BloodflowReverse.ReverseBloodflowPacket.class, BloodflowReverse.ReverseBloodflowPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, SpawnArcMediumParticlePacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpawnArcMediumParticlePacket>>
             SPAWN_ARC_MEDIUM_PARTICLE = PACKET_TYPES.register("spawn_arc_medium_particle",
             () -> new PacketType<>(SpawnArcMediumParticlePacket.class, SpawnArcMediumParticlePacket.CODEC));
 
@@ -141,7 +141,7 @@ public final class PacketTypes {
             ACQUIRE_CATEGORY = PACKET_TYPES.register("acquire_category",
             () -> new PacketType<>(AcquireCategoryPacket.class, AcquireCategoryPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, AcquireCategoryPacket.Response>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AcquireCategoryPacket.Response>>
             ACQUIRE_CATEGORY_RESPONSE = PACKET_TYPES.register("acquire_category_response",
             () -> new PacketType<>(AcquireCategoryPacket.Response.class, AcquireCategoryPacket.Response.CODEC));
 
@@ -149,7 +149,7 @@ public final class PacketTypes {
             LEARN_SKILL = PACKET_TYPES.register("learn_skill",
             () -> new PacketType<>(LearnSkillPacket.class, LearnSkillPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, LearnSkillPacket.Response>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, LearnSkillPacket.Response>>
             LEARN_SKILL_RESPONSE = PACKET_TYPES.register("learn_skill_response",
             () -> new PacketType<>(LearnSkillPacket.Response.class, LearnSkillPacket.Response.CODEC));
 
@@ -157,7 +157,7 @@ public final class PacketTypes {
             GET_AVAILABLE_NODES = PACKET_TYPES.register("get_available_nodes",
             () -> new PacketType<>(GetAvailableNodesPacket.class, GetAvailableNodesPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, GetAvailableNodesPacket.Response>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, GetAvailableNodesPacket.Response>>
             GET_AVAILABLE_NODES_RESPONSE = PACKET_TYPES.register("get_available_nodes_response",
             () -> new PacketType<>(GetAvailableNodesPacket.Response.class, GetAvailableNodesPacket.Response.CODEC));
 
@@ -165,7 +165,7 @@ public final class PacketTypes {
             GET_CURRENT_NODE = PACKET_TYPES.register("get_current_node",
             () -> new PacketType<>(GetCurrentNodePacket.class, GetCurrentNodePacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, GetCurrentNodePacket.Response>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, GetCurrentNodePacket.Response>>
             GET_CURRENT_NODE_RESPONSE = PACKET_TYPES.register("get_current_node_response",
             () -> new PacketType<>(GetCurrentNodePacket.Response.class, GetCurrentNodePacket.Response.CODEC));
 
@@ -173,7 +173,7 @@ public final class PacketTypes {
             GET_LEVEL_CHUNK_SECTIONS = PACKET_TYPES.register("get_level_chunk_sections",
             () -> new PacketType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientGamePacketListener, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response>>
             GET_LEVEL_CHUNK_SECTIONS_RESPONSE = PACKET_TYPES.register("get_level_chunk_sections_response",
             () -> new PacketType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response.CODEC));
 

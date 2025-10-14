@@ -25,8 +25,9 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.internal.common.world.item.Items;
+import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.block.entity.WindGenTopBlockEntity;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Function;
 
@@ -123,7 +124,7 @@ public final class WindGenTopBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(BlockStateProperties.HORIZONTAL_FACING);
     }
 
@@ -133,11 +134,8 @@ public final class WindGenTopBlock extends BaseEntityBlock {
     }
 
     @Override
-    public <T extends BlockEntity> @NotNull BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return (level1, pos, state1, blockEntity) -> {
-            if (blockEntity instanceof WindGenTopBlockEntity windGenTopBlockEntity) {
-                windGenTopBlockEntity.tick();
-            }
-        };
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+        return createTickerHelper(blockEntityType, BlockEntityTypes.WIND_GEN_TOP.get(), WindGenTopBlockEntity::tick);
     }
 }

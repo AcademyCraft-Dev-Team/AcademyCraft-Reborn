@@ -18,6 +18,8 @@ import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.event.*;
+import org.academy.api.client.gui.framework.imgui.ImGuiUIDebugger;
+import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.widget.BlendQuadWidget;
 import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.PanelWidget;
@@ -45,6 +47,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     {
         var window = Minecraft.getInstance().getWindow();
         renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
+        ImGuiUtilApi.clearEventsQueue();
     }
 
     protected CGuiContainerScreen(T menu, Inventory playerInventory, Component title) {
@@ -119,6 +122,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
         commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1);
 
         uiRenderContext.renderFrame(rootContainer, renderTarget, mouseX, mouseY, partialTick);
+        ImGuiUIDebugger.render(renderTarget, rootContainer);
         guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
 
         if (shouldRenderInventory()) {

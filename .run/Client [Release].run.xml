@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="Client [Release]" type="Application" factoryName="Application">
+        <envs>
+            <env name="IS_DEV" value="false"/>
+        </envs>
+        <option name="MAIN_CLASS_NAME" value="net.neoforged.devlaunch.Main"/>
+        <module name="AcademyCraft-Reborn.main"/>
+        <option name="PROGRAM_PARAMETERS"
+                value="@$PROJECT_DIR$/build/moddev/clientRunProgramArgs.txt"/>
+        <option name="VM_PARAMETERS"
+                value="@$PROJECT_DIR$/build/moddev/clientRunVmArgs.txt -Dfml.modFolders=academy%%$PROJECT_DIR$/build/classes/java/main;academy%%$PROJECT_DIR$/build/resources/main"/>
+        <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/run"/>
+        <method v="2">
+            <option name="Make" enabled="true"/>
+        </method>
+    </configuration>
+</component>

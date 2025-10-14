@@ -1,18 +1,17 @@
 package org.academy.api.common.ability;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import org.academy.internal.common.network.PacketTypes;
+import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.misaka.api.common.network.ThreadType;
-import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
-public final class ExpSyncPacket extends Packet<ClientGamePacketListener,ExpSyncPacket> {
+public final class ExpSyncPacket extends Packet<ClientPacketListener, ExpSyncPacket> {
     public static final StreamCodec<ByteBuf,ExpSyncPacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8,
             ExpSyncPacket::getSkillName,
@@ -37,7 +36,7 @@ public final class ExpSyncPacket extends Packet<ClientGamePacketListener,ExpSync
     }
 
     @Override
-    public @NotNull PacketType<ClientGamePacketListener, ExpSyncPacket> getPacketType() {
+    public PacketType<ClientPacketListener, ExpSyncPacket> getPacketType() {
         return PacketTypes.EXP_SYNC.get();
     }
 }

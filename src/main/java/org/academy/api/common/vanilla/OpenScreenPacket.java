@@ -3,7 +3,7 @@ package org.academy.api.common.vanilla;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;
@@ -11,7 +11,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import org.academy.internal.common.network.PacketTypes;
 
 @PacketTarget(ThreadType.CLIENT)
-public class OpenScreenPacket extends Packet<ClientGamePacketListener, OpenScreenPacket> {
+public class OpenScreenPacket extends Packet<ClientPacketListener, OpenScreenPacket> {
     public static final StreamCodec<ByteBuf, OpenScreenPacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8,
             OpenScreenPacket::getScreenName,
@@ -41,7 +41,7 @@ public class OpenScreenPacket extends Packet<ClientGamePacketListener, OpenScree
     }
 
     @Override
-    public PacketType<ClientGamePacketListener, OpenScreenPacket> getPacketType() {
+    public PacketType<ClientPacketListener, OpenScreenPacket> getPacketType() {
         return PacketTypes.OPEN_SCREEN.get();
     }
 }

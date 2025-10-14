@@ -13,6 +13,8 @@ import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.event.*;
+import org.academy.api.client.gui.framework.imgui.ImGuiUIDebugger;
+import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.widget.PanelWidget;
 import org.lwjgl.glfw.GLFW;
 
@@ -31,6 +33,7 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
     {
         var window = Minecraft.getInstance().getWindow();
         renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
+        ImGuiUtilApi.clearEventsQueue();
     }
 
     protected CGuiScreen(Component title) {
@@ -77,6 +80,7 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
         commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1);
 
         uiRenderContext.renderFrame(rootContainer, renderTarget, mouseX, mouseY, partialTick);
+        ImGuiUIDebugger.render(renderTarget, rootContainer);
         guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
     }
 

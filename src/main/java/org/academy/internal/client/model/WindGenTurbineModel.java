@@ -1,5 +1,6 @@
 package org.academy.internal.client.model;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -7,12 +8,19 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.Unit;
+import org.academy.api.client.Resource;
+
+import static net.minecraft.client.renderer.RenderType.entityCutoutNoCull;
 
 /**
  * @author MapleBadd
  */
-public class WindGenTurbineModel extends Model<Void> {
+public class WindGenTurbineModel extends Model<Unit> {
     public static final WindGenTurbineModel INSTANCE = new WindGenTurbineModel(createBodyLayer().bakeRoot());
 
     public final ModelPart all;
@@ -53,5 +61,13 @@ public class WindGenTurbineModel extends Model<Void> {
         var li_r3 = tip_li.addOrReplaceChild("li_r3", CubeListBuilder.create().texOffs(1, 49).addBox(-2.0F, -14.0F, -1.0F, 5.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.366F, -116.0F, 0.5F, 0.0F, -0.3927F, 0.0F));
 
         return LayerDefinition.create(meshdefinition, 128, 128);
+    }
+
+    public void render(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay) {
+        poseStack.pushPose();
+        all.translateAndRotate(poseStack);
+        nodeCollector.submitModelPart(main, poseStack, entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN), packedLight, packedOverlay, null);
+        nodeCollector.submitModelPart(tip_li, poseStack, entityCutoutNoCull(Resource.Textures.MODEL_WIND_GEN), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
+        poseStack.popPose();
     }
 }

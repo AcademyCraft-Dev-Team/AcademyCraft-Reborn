@@ -12,6 +12,7 @@ public interface WidgetContainer extends Widget {
 
     Map<String, Widget> getChildren();
 
+    @Deprecated(forRemoval = true)
     @SuppressWarnings("unchecked")
     default <T extends Widget> T getChildUnSafe(String name) {
         if (!getChildren().containsKey(name)) {

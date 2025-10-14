@@ -3,7 +3,7 @@ package org.academy.api.common.ability;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
@@ -12,7 +12,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
-public final class PlayerSyncPacket extends Packet<ClientGamePacketListener, PlayerSyncPacket> {
+public final class PlayerSyncPacket extends Packet<ClientPacketListener, PlayerSyncPacket> {
     public static final StreamCodec<ByteBuf, PlayerSyncPacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.FLOAT,
             PlayerSyncPacket::getMaxComputingPower,
@@ -38,7 +38,7 @@ public final class PlayerSyncPacket extends Packet<ClientGamePacketListener, Pla
     }
 
     @Override
-    public @NotNull PacketType<ClientGamePacketListener, PlayerSyncPacket> getPacketType() {
+    public @NotNull PacketType<ClientPacketListener, PlayerSyncPacket> getPacketType() {
         return PacketTypes.PLAYER_SYNC.get();
     }
 }

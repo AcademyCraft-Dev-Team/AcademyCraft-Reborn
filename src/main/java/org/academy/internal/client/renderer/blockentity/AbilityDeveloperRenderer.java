@@ -47,10 +47,10 @@ public final class AbilityDeveloperRenderer implements BlockEntityRenderer<Abili
             var facing = renderState.facing;
             var yRot = facing.getOpposite().toYRot();
 
-            poseStack.translate(0, 1.5f, 1);
+            poseStack.translate(0.5f, 1.5f, 0.5f);
             poseStack.mulPose(Axis.XP.rotationDegrees(180));
-            poseStack.rotateAround(Axis.YP.rotationDegrees(yRot), 0.5f, 0, 0.5f);
-            poseStack.translate(0.5f, 0, 0);
+            poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
+            poseStack.translate(0, 0, -1);
 
             submitNodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.ABILITY_DEVELOPER, renderState.lightCoords, OverlayTexture.NO_OVERLAY, 0, renderState.breakProgress);
 

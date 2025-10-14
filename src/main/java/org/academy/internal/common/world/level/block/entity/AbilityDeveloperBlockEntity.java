@@ -1,8 +1,6 @@
 package org.academy.internal.common.world.level.block.entity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.player.Player;
@@ -11,12 +9,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
-import org.academy.internal.common.world.level.block.MultiBlock;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -182,11 +177,6 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
                 }
             }
         }
-    }
-
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.@NotNull Provider registries) {
-        return super.getUpdateTag(registries);
     }
 
     public void clientTick() {

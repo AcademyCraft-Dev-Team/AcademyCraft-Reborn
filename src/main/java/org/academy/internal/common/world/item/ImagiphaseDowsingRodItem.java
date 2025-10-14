@@ -5,7 +5,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
@@ -60,7 +60,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
         return InteractionResult.SUCCESS;
     }
 
-    public static final class GetLevelChunkSectionsPacket extends RequestPacket<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket, ClientGamePacketListener, GetLevelChunkSectionsPacket.Response> {
+    public static final class GetLevelChunkSectionsPacket extends RequestPacket<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket, ClientPacketListener, GetLevelChunkSectionsPacket.Response> {
         public static final StreamCodec<ByteBuf, GetLevelChunkSectionsPacket> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC,
                 GetLevelChunkSectionsPacket::getPlayerPos,
@@ -78,7 +78,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
         }
 
         @Override
-        public PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
+        public PacketType<ClientPacketListener, Response> getResponsePacketType() {
             return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
         }
 
@@ -87,7 +87,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
             return PacketTypes.GET_LEVEL_CHUNK_SECTIONS.get();
         }
 
-        public static final class Response extends ResponsePacket<ClientGamePacketListener, Response> {
+        public static final class Response extends ResponsePacket<ClientPacketListener, Response> {
             public static final StreamCodec<ByteBuf, Response> CODEC = StreamCodec.composite(
                     BlockPos.STREAM_CODEC.apply(ByteBufCodecs.list()),
                     Response::getSectionsWithImagPhase,
@@ -105,7 +105,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
             }
 
             @Override
-            public PacketType<ClientGamePacketListener, Response> getPacketType() {
+            public PacketType<ClientPacketListener, Response> getPacketType() {
                 return PacketTypes.GET_LEVEL_CHUNK_SECTIONS_RESPONSE.get();
             }
         }

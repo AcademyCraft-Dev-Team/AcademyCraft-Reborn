@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import org.academy.AcademyCraftClient;
+import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,6 +21,7 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void init(CallbackInfo ci) {
+        ImGuiUtilApi.init();
         AcademyCraftClient.init();
     }
 
@@ -30,5 +32,10 @@ public abstract class MixinMinecraft {
         var width = mainRenderTarget.width;
         var height = mainRenderTarget.height;
         AcademyCraftClient.resize(width, height);
+    }
+
+    @Inject(method = "close", at = @At("HEAD"))
+    private void onClose(CallbackInfo ci) {
+        ImGuiUtilApi.close();
     }
 }
