@@ -1,20 +1,20 @@
 package org.academy.api.common.ability;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.internal.common.network.PacketTypes;
+import org.jetbrains.annotations.NotNull;
 import org.misaka.api.common.network.future.packet.RequestPacket;
 import org.misaka.api.common.network.future.packet.ResponsePacket;
 import org.misaka.api.common.network.packet.PacketType;
-import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class AcquireCategoryPacket extends RequestPacket<ServerGamePacketListenerImpl, AcquireCategoryPacket, ClientGamePacketListener, AcquireCategoryPacket.Response> {
+public class AcquireCategoryPacket extends RequestPacket<ServerGamePacketListenerImpl, AcquireCategoryPacket, ClientPacketListener, AcquireCategoryPacket.Response> {
     public static final StreamCodec<ByteBuf, AcquireCategoryPacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.LONG,
             AcquireCategoryPacket::getUserPos,
@@ -32,7 +32,7 @@ public class AcquireCategoryPacket extends RequestPacket<ServerGamePacketListene
     }
 
     @Override
-    public PacketType<ClientGamePacketListener, Response> getResponsePacketType() {
+    public PacketType<ClientPacketListener, Response> getResponsePacketType() {
         return PacketTypes.ACQUIRE_CATEGORY_RESPONSE.get();
     }
 
@@ -41,7 +41,7 @@ public class AcquireCategoryPacket extends RequestPacket<ServerGamePacketListene
         return PacketTypes.ACQUIRE_CATEGORY.get();
     }
 
-    public static class Response extends ResponsePacket<ClientGamePacketListener, Response> {
+    public static class Response extends ResponsePacket<ClientPacketListener, Response> {
         public static final StreamCodec<ByteBuf, Response> CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()),
                 Response::getMessages,
@@ -58,7 +58,7 @@ public class AcquireCategoryPacket extends RequestPacket<ServerGamePacketListene
         }
 
         @Override
-        public @NotNull PacketType<ClientGamePacketListener, Response> getPacketType() {
+        public @NotNull PacketType<ClientPacketListener, Response> getPacketType() {
             return PacketTypes.ACQUIRE_CATEGORY_RESPONSE.get();
         }
     }

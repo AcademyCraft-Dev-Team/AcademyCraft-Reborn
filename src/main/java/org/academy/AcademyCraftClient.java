@@ -5,7 +5,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
-import net.minecraft.network.Connection;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -35,7 +34,6 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
 import org.academy.internal.common.world.level.material.FluidTypes;
 import org.academy.internal.common.world.level.material.ImagiphasePlasma;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 
