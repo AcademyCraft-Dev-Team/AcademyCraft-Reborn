@@ -20,6 +20,9 @@ public final class ImGuiUtilInternal {
     private static final ImGuiImplGl3 IM_GUI_IMPL_GL_3 = new ImGuiImplGl3();
     private static final ImGuiImplGlfw IM_GUI_IMPL_GLFW = new ImGuiImplGlfw();
 
+    private ImGuiUtilInternal() {
+    }
+
     public static ImGuiImplGl3 getImGuiImplGl3() {
         return IM_GUI_IMPL_GL_3;
     }
@@ -66,14 +69,19 @@ public final class ImGuiUtilInternal {
         ImGui.getIO().clearEventsQueue();
     }
 
+    public static boolean wantCaptureMouse() {
+        return ImGui.getIO().getWantCaptureMouse();
+    }
+
+    public static boolean wantCaptureKeyboard() {
+        return ImGui.getIO().getWantCaptureKeyboard();
+    }
+
     public static void dispose() {
         getImGuiImplGl3().shutdown();
         getImGuiImplGlfw().shutdown();
 
         ImPlot.destroyContext();
         ImGui.destroyContext();
-    }
-
-    private ImGuiUtilInternal() {
     }
 }

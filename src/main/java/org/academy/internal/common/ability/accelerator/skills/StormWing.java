@@ -14,6 +14,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.Resource;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
@@ -36,10 +38,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -63,8 +62,8 @@ public final class StormWing extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_B)),
-                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW_KEY_B)),
+                                GLFW_RELEASE,
                                 new LinkedHashSet<>()
                         )
                 )
@@ -78,19 +77,29 @@ public final class StormWing extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.STORM_WING.get(),
+                        List.of(VectorReflection.Client.SKILL_INFO),
+                        Resource.Textures.STORM_WING_ICON,
+                        100, 50
+                )
+        );
+
         public static final String KEY_NAME_TOGGLE = SkillNames.STORM_WING + "_toggle";
         public static Config CONFIG = new Config();
 
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
-            Minecraft mc = Minecraft.getInstance();
+            var mc = Minecraft.getInstance();
             if (mc.player != null && mc.screen == null && mc.player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())) {
-                Map<Integer, Integer> keyStates = InputSystem.KEYBOARD_STATE;
+                var keyStates = InputSystem.KEYBOARD_STATE;
 
-                boolean front = keyStates.getOrDefault(GLFW_KEY_W, GLFW_RELEASE) != GLFW_RELEASE;
-                boolean back = keyStates.getOrDefault(GLFW_KEY_S, GLFW_RELEASE) != GLFW_RELEASE;
-                boolean left = keyStates.getOrDefault(GLFW_KEY_A, GLFW_RELEASE) != GLFW_RELEASE;
-                boolean right = keyStates.getOrDefault(GLFW_KEY_D, GLFW_RELEASE) != GLFW_RELEASE;
+                var front = keyStates.getOrDefault(GLFW_KEY_W, GLFW_RELEASE) != GLFW_RELEASE;
+                var back = keyStates.getOrDefault(GLFW_KEY_S, GLFW_RELEASE) != GLFW_RELEASE;
+                var left = keyStates.getOrDefault(GLFW_KEY_A, GLFW_RELEASE) != GLFW_RELEASE;
+                var right = keyStates.getOrDefault(GLFW_KEY_D, GLFW_RELEASE) != GLFW_RELEASE;
 
                 Set<State> states = new HashSet<>();
 
@@ -102,7 +111,7 @@ public final class StormWing extends Skill {
 
                 if (states.isEmpty()) states.add(State.KEEP);
 
-                for (State state : states) MisakaNetworkClient.sendPacket(new ControlPacket(state));
+                for (var state : states) MisakaNetworkClient.sendPacket(new ControlPacket(state));
             }
         }
 

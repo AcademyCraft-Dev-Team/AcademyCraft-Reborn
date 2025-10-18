@@ -10,13 +10,11 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import org.academy.AcademyCraft;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.framework.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.widget.PanelWidget;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,9 +58,12 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     protected void init() {
-        rootContainer.clearChildren();
+        var window = Minecraft.getInstance().getWindow();
+        renderTarget.resize(window.getWidth(), window.getHeight());
+        rootContainer.setName("root");
         rootContainer.setWidth(width);
         rootContainer.setHeight(height);
+        rootContainer.clearChildren();
         onInit();
     }
 
@@ -98,6 +99,8 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
+        if (ImGuiUtilApi.wantCaptureMouse()) return;
+
         var event = MouseEvent.createMoveEvent(mouseX, mouseY);
         rootContainer.dispatchEvent(event);
         super.mouseMoved(mouseX, mouseY);
@@ -105,6 +108,8 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean isDoubleClick) {
+        if (ImGuiUtilApi.wantCaptureMouse()) return true;
+
         var event = MouseEvent.createPressEvent(e.x(), e.y(), e.button());
         rootContainer.dispatchEvent(event);
 
@@ -115,6 +120,8 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent e) {
+        if (ImGuiUtilApi.wantCaptureMouse()) return true;
+
         var event = MouseEvent.createReleaseEvent(e.x(), e.y(), e.button());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
@@ -124,6 +131,8 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent e, double mouseX, double mouseY) {
+        if (ImGuiUtilApi.wantCaptureMouse()) return true;
+
         var event = MouseEvent.createDragEvent(e.x(), e.y(), e.button(), mouseX, mouseY);
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
@@ -133,6 +142,8 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (ImGuiUtilApi.wantCaptureMouse()) return true;
+
         var event = new ScrollEvent(mouseX, mouseY, scrollY);
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
@@ -142,10 +153,7 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
-        if (e.key() == GLFW.GLFW_KEY_F12) {
-            AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
-            return true;
-        }
+        if (ImGuiUtilApi.wantCaptureKeyboard()) return true;
 
         var event = new KeyEvent(EventType.KEY_PRESSED, e.key(), e.scancode(), e.modifiers());
         rootContainer.dispatchEvent(event);
@@ -156,6 +164,8 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
 
     @Override
     public boolean charTyped(CharacterEvent e) {
+        if (ImGuiUtilApi.wantCaptureKeyboard()) return true;
+
         var event = new CharTypedEvent(e.codepoint(), e.modifiers());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;

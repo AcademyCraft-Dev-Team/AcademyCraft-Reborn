@@ -19,7 +19,7 @@ public class WindGenTopModel extends Model<WindGenTopRenderState> {
 
     public WindGenTopModel(ModelPart root) {
         super(root, ENTITY_SOLID);
-        this.all = root.getChild("all");
+        all = root.getChild("all");
     }
 
     public static LayerDefinition createBodyLayer() {

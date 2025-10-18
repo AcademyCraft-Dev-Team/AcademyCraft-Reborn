@@ -23,10 +23,10 @@ public class GlowCircle extends RenderOnlyEntity {
     public void tick() {
         super.tick();
 
-        if (this.ticks > LIFE_TICKS) {
-            this.discard();
+        if (ticks > LIFE_TICKS) {
+            discard();
         }
 
-        this.ticks++;
+        ticks++;
     }
 }

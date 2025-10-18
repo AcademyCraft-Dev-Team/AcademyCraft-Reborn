@@ -2,14 +2,16 @@
 
 in vec2 texCoord0;
 
-uniform vec2 RingCenter;
-uniform float InnerRadius;
-uniform float OuterRadius;
-uniform float InnerGlowRadius;
-uniform float OuterGlowRadius;
-uniform float Progress;
-uniform vec4 RingColor;
-uniform float StartAngle;
+layout (std140) uniform Uniforms {
+    vec2 RingCenter;
+    float InnerRadius;
+    float OuterRadius;
+    float InnerGlowRadius;
+    float OuterGlowRadius;
+    float Progress;
+    vec4 RingColor;
+    float StartAngle;
+};
 
 out vec4 fragColor;
 

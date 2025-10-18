@@ -24,7 +24,7 @@ public class TypewriterLabelWidget extends AbstractAnimatedLabelWidget {
         }
 
         var fraction = animator.getAnimatedValue();
-        int currentLength = (int) Math.floor(fraction * fullTextString.length());
+        var currentLength = (int) Math.floor(fraction * fullTextString.length());
         currentLength = Math.min(currentLength, fullTextString.length());
 
         if (currentLength == lastRenderedLength)
@@ -42,7 +42,7 @@ public class TypewriterLabelWidget extends AbstractAnimatedLabelWidget {
         lastRenderedLength = -1;
         var textLength = newTarget.getString().length();
         if (textLength > 0 && charactersPerSecond > 0.0f) {
-            long newDuration = (long) (textLength / charactersPerSecond * 1000.0f);
+            var newDuration = (long) (textLength / charactersPerSecond * 1000.0f);
             setDuration(newDuration);
         } else {
             setDuration(0);

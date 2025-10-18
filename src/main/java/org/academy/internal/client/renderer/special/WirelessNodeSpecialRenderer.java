@@ -40,7 +40,7 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
         public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public SpecialModelRenderer<?> bake(BakingContext context) {
+        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
             return WirelessNodeSpecialRenderer.INSTANCE;
         }
 

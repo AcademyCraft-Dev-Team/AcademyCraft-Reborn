@@ -1,18 +1,12 @@
 plugins {
     id 'java-library'
-    id 'maven-publish'
     id 'idea'
     id 'net.neoforged.moddev' version 'latest.release'
-    id 'org.openrewrite.rewrite' version 'latest.release'
 }
 
 def isDev = project.hasProperty('isDev')
-        ? project.getProperty('isDev').toBoolean()
+        ? Boolean.valueOf(project.property('isDev').toString())
         : (System.getenv("IS_DEV") ?: "true").toBoolean()
-
-base {
-    version = mod_version + (isDev ? "-dev" : "-release")
-}
 
 base {
     version = mod_version + (isDev ? "-dev" : "-release")
@@ -40,9 +34,9 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 
 sourceSets {
     main {
-        resources.srcDir generateModMetadata
         resources {
             srcDir 'src/generated/resources'
+            srcDir generateModMetadata
             exclude '.cache/**'
         }
     }
@@ -66,11 +60,6 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-
-        gameTestServer {
-            type = "gameTestServer"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -98,7 +87,12 @@ neoForge {
 
 repositories {
     maven {
+        name = "AC Dev Team's maven"
+        // url = uri('D:/Project/maven-repo')
         url = "https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/"
+        content {
+            includeGroup "org.academy"
+        }
     }
     maven {
         name = "Jared's maven"
@@ -135,14 +129,13 @@ repositories {
             includeGroup "icyllis.modernui"
         }
     }
-    mavenCentral()
 }
 
 dependencies {
-    jarJar implementation("org.academy:misaka-network:21.10.1")
+    jarJar annotationProcessor(implementation("org.academy:misaka-network:21.10.1"))
 
-    compileOnly "mezz.jei:jei-1.21.9-neoforge-api:${jei_version}"
-    compileOnly "mezz.jei:jei-1.21.9-neoforge:${jei_version}"
+    compileOnly "mezz.jei:jei-1.21.10-neoforge-api:${jei_version}"
+    implementation "mezz.jei:jei-1.21.10-neoforge:${jei_version}"
 
     implementation "maven.modrinth:jade:20.0.5+neoforge"
     compileOnly "maven.modrinth:sodium:mc1.21.8-0.7.0-neoforge"
@@ -156,10 +149,7 @@ dependencies {
     def imguiLinux = "io.github.spair:imgui-java-natives-linux:${project.imgui_version}"
     def imguiMacos = "io.github.spair:imgui-java-natives-macos:${project.imgui_version}"
     compileOnly(imguiBinding)
-    compileOnly(imguiLwjgl3) { exclude group: "org.lwjgl" }
-    compileOnly(imguiWindows)
-    compileOnly(imguiLinux)
-    compileOnly(imguiMacos)
+    compileOnly(imguiLwjgl3)
 
     if (isDev) {
         implementation(imguiBinding)
@@ -167,37 +157,20 @@ dependencies {
         implementation(imguiWindows)
         implementation(imguiLinux)
         implementation(imguiMacos)
+
         jarJar(imguiBinding)
-        jarJar(imguiLwjgl3) { exclude group: "org.lwjgl" }
+        jarJar(imguiLwjgl3)
         jarJar(imguiWindows)
         jarJar(imguiLinux)
         jarJar(imguiMacos)
-    }
-
-    rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
-    rewrite("org.openrewrite.recipe:rewrite-migrate-java")
-}
-
-rewrite {
-    activeRecipe("org.openrewrite.java.migrate.lang.var.UseVarForObject")
-    activeRecipe("org.openrewrite.java.ShortenFullyQualifiedTypeReferences")
-}
-
-publishing {
-    publications {
-        register('mavenJava', MavenPublication) {
-            from components.java
-        }
-    }
-    repositories {
-        maven {
-            url "file://${project.projectDir}/repo"
-        }
     }
 }
 
 idea {
     module {
+        def buildDirFile = layout.buildDirectory.get().asFile
+        def generatedSourceDir = file("${buildDirFile}/generated/sources/annotationProcessor/java/main")
+        generatedSourceDirs += generatedSourceDir
         downloadSources = true
         downloadJavadoc = true
     }
@@ -205,4 +178,5 @@ idea {
 
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.addAll(['-Xmaxerrs', '10000'])
+    options.compilerArgs.add("-Amisaka.provider.fqcn=org.academy.MisakaHandlersProviderImpl")
 }

@@ -164,7 +164,7 @@ public class MathUtil {
         }
 
         public Direction2D getDirection(boolean isPositive) {
-            return isPositive ? this.getPositive() : this.getNegative();
+            return isPositive ? getPositive() : getNegative();
         }
     }
 
@@ -176,7 +176,7 @@ public class MathUtil {
 
         private final IntComparator coordinateValueComparator = (first, second) -> first == second
                 ? 0
-                : (this.isBefore(first, second) ? -1 : 1);
+                : (isBefore(first, second) ? -1 : 1);
 
         public Axis2D getAxis() {
             return switch (this) {
@@ -202,15 +202,15 @@ public class MathUtil {
         }
 
         public boolean isAfter(int first, int second) {
-            return this.isPositive() ? first > second : second > first;
+            return isPositive() ? first > second : second > first;
         }
 
         public boolean isBefore(int first, int second) {
-            return this.isPositive() ? first < second : second < first;
+            return isPositive() ? first < second : second < first;
         }
 
         public IntComparator coordinateValueComparator() {
-            return this.coordinateValueComparator;
+            return coordinateValueComparator;
         }
     }
 }

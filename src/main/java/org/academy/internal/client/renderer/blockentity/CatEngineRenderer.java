@@ -50,7 +50,7 @@ public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlo
         if (f1 < -(float) Math.PI) {
             f1 += MathUtil.TWO_PI;
         }
-        float f2 = renderState.oRot + f1 * renderState.partialTick;
+        var f2 = renderState.oRot + f1 * renderState.partialTick;
         poseStack.rotateAround(Axis.YN.rotation(f2), 0.5f, 0.5f, 0.5f);
         poseStack.rotateAround(Axis.YN.rotation(90), 0.5f, 0.5f, 0.5f);
         if (renderState.enable) {

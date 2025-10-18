@@ -22,12 +22,12 @@ public class CleaningRobotModel extends EntityModel<EntityRenderState> {
 
     public CleaningRobotModel(ModelPart root) {
         super(root);
-        this.all = root.getChild("all");
-        this.top = this.all.getChild("top");
-        this.bottom = this.all.getChild("bottom");
-        this.rleg = this.bottom.getChild("rleg");
-        this.lleg = this.bottom.getChild("lleg");
-        this.bleg = this.bottom.getChild("bleg");
+        all = root.getChild("all");
+        top = all.getChild("top");
+        bottom = all.getChild("bottom");
+        rleg = bottom.getChild("rleg");
+        lleg = bottom.getChild("lleg");
+        bleg = bottom.getChild("bleg");
     }
 
     public static LayerDefinition createBodyLayer() {

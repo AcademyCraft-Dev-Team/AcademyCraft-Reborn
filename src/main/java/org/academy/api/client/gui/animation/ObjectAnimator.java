@@ -10,6 +10,7 @@ public class ObjectAnimator extends ValueAnimator {
         var anim = new ObjectAnimator();
         anim.setFloatValues(startValue, endValue);
         anim.addUpdateListener(animation -> target.accept(animation.getAnimatedValue()));
+        target.accept(startValue);
         return anim;
     }
 

@@ -13,11 +13,11 @@ public class HoverLabelWidget extends LabelWidget {
 
     public HoverLabelWidget(String text, float x, float y, float maxWidth) {
         super(Component.empty(), x, y, maxWidth, Minecraft.getInstance().font.lineHeight);
-        this.originalComponent = Component.literal(text);
+        originalComponent = Component.literal(text);
         this.maxWidth = maxWidth;
-        this.truncatedComponent = truncate(originalComponent, maxWidth);
-        this.setText(this.truncatedComponent);
-        this.setVerticalAlignment(VerticalAlignment.MIDDLE);
+        truncatedComponent = truncate(originalComponent, maxWidth);
+        setText(truncatedComponent);
+        setVerticalAlignment(VerticalAlignment.MIDDLE);
     }
 
     private static Component truncate(Component source, float maxWidth) {
@@ -26,39 +26,39 @@ public class HoverLabelWidget extends LabelWidget {
             return source;
         }
         var originalText = source.getString();
-        int ellipsisWidth = font.width(ELLIPSIS);
+        var ellipsisWidth = font.width(ELLIPSIS);
         var trimmedText = font.plainSubstrByWidth(originalText, (int) (maxWidth - ellipsisWidth));
         return Component.literal(trimmedText + ELLIPSIS);
     }
 
     @Override
     public void setHovered(boolean hovered) {
-        if (this.isHovered() == hovered) {
+        if (isHovered() == hovered) {
             return;
         }
         super.setHovered(hovered);
 
         if (hovered) {
-            super.setText(this.originalComponent);
+            setText(originalComponent);
 
             var font = Minecraft.getInstance().font;
-            var textWidth = font.width(this.originalComponent);
+            var textWidth = font.width(originalComponent);
 
-            if (textWidth > this.maxWidth) {
-                super.setScale(this.maxWidth / (float) textWidth);
+            if (textWidth > maxWidth) {
+                setScale(maxWidth / (float) textWidth);
             } else {
-                super.setScale(1.0f);
+                setScale(1.0f);
             }
         } else {
-            super.setText(this.truncatedComponent);
-            super.setScale(this.baseScale);
+            setText(truncatedComponent);
+            setScale(baseScale);
         }
     }
 
     public HoverLabelWidget setBaseScale(float scale) {
-        this.baseScale = scale;
-        if (!this.isHovered()) {
-            this.setScale(scale);
+        baseScale = scale;
+        if (!isHovered()) {
+            setScale(scale);
         }
         return this;
     }

@@ -15,30 +15,28 @@ public class FillWidget extends AbstractWidget {
 
     @Override
     public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible())
-            return;
+        if (!isVisible()) return;
 
-        var colorAlpha = ARGB.alpha(this.color) / 255.0f;
+        var colorAlpha = ARGB.alpha(color) / 255.0f * getAlpha();
         var finalAlpha = colorAlpha * context.getAccumulatedAlpha();
 
-        if (finalAlpha <= 1.0f / 255.0f)
-            return;
+        if (finalAlpha <= 1.0f / 255.0f) return;
 
         context.pose().pushPose();
-        context.pose().translate(this.getX(), this.getY(), this.getZ());
+        context.pose().translate(getX(), getY(), getZ());
 
-        var red = ARGB.red(this.color) / 255.0f;
-        var green = ARGB.green(this.color) / 255.0f;
-        var blue = ARGB.blue(this.color) / 255.0f;
+        var red = ARGB.red(color) / 255.0f;
+        var green = ARGB.green(color) / 255.0f;
+        var blue = ARGB.blue(color) / 255.0f;
 
-        var command = new FillRectDrawCommand(this.getWidth(), this.getHeight(), red, green, blue, finalAlpha);
+        var command = new FillRectDrawCommand(getWidth(), getHeight(), red, green, blue, finalAlpha);
         context.submit(command);
 
         context.pose().popPose();
     }
 
     public int getColor() {
-        return this.color;
+        return color;
     }
 
     public FillWidget setColor(int color) {

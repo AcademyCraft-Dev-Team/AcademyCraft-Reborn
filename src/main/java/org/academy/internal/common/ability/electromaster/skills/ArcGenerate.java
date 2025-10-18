@@ -5,6 +5,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -64,6 +65,7 @@ public final class ArcGenerate extends Skill {
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
+            AcademyCraft.LOGGER.info("Start: " + System.nanoTime());
             MisakaNetworkClient.sendPacket(GeneratePacket.INSTANCE);
         }
 
@@ -90,9 +92,11 @@ public final class ArcGenerate extends Skill {
     public static final class Server {
         @SubscribePacket
         public static void handle(GeneratePacket packet) {
+            AcademyCraft.LOGGER.info("End: " + System.nanoTime());
+
             var player = packet.getPacketListener().getPlayer();
             var level = player.level();
-            float currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
+            var currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower <= 10) return;
             AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentComputingPower - 10);
 

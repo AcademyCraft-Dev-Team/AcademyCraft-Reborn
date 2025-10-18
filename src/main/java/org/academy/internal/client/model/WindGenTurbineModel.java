@@ -29,9 +29,9 @@ public class WindGenTurbineModel extends Model<Unit> {
 
     private WindGenTurbineModel(ModelPart root) {
         super(root.getChild("all"), RenderType::entityCutoutNoCull);
-        this.all = root.getChild("all");
-        this.main = this.all.getChild("main");
-        this.tip_li = this.all.getChild("tip_li");
+        all = root.getChild("all");
+        main = all.getChild("main");
+        tip_li = all.getChild("tip_li");
     }
 
     public static LayerDefinition createBodyLayer() {

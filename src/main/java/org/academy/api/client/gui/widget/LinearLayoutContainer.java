@@ -48,10 +48,10 @@ public class LinearLayoutContainer extends AbstractContainerWidget {
 
     public void setSpacing(float spacing) {
         this.spacing = spacing;
-        this.doLayout();
+        doLayout();
     }
 
     public float getSpacing() {
-        return this.spacing;
+        return spacing;
     }
 }

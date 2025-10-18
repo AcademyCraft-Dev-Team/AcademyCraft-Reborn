@@ -23,35 +23,35 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     public ImageRadioButtonWidget(float x, float y, float width, float height,
                                   ResourceLocation texture, Runnable onPress) {
         super(x, y, width, height, texture, onPress);
-        this.updateVisualState();
+        updateVisualState();
     }
 
     public int getId() {
-        return this.id;
+        return id;
     }
 
     public boolean isSelected() {
-        return this.selected;
+        return selected;
     }
 
     @Override
     protected void onMousePressed(MouseEvent event) {
         super.onMousePressed(event);
-        if (event.isConsumed() && this.radioGroup != null) {
-            this.radioGroup.selectButton(this);
+        if (event.isConsumed() && radioGroup != null) {
+            radioGroup.selectButton(this);
         }
     }
 
     @Override
     public void setHovered(boolean hovered) {
         super.setHovered(hovered);
-        this.updateVisualState();
+        updateVisualState();
     }
 
     @Override
     public ImageButtonWidget setEnabled(boolean enabled) {
         super.setEnabled(enabled);
-        this.updateVisualState();
+        updateVisualState();
         return this;
     }
 
@@ -68,17 +68,17 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     public ImageRadioButtonWidget setSelected(boolean selected) {
         if (this.selected != selected) {
             this.selected = selected;
-            this.updateVisualState();
+            updateVisualState();
         }
         return this;
     }
 
     public ImageRadioButtonWidget setVisualAlphas(float selected, float unselected, float hover, float disabled) {
-        this.selectedAlpha = selected;
-        this.unselectedAlpha = unselected;
-        this.hoverAlpha = hover;
-        this.disabledAlpha = disabled;
-        this.updateVisualState();
+        selectedAlpha = selected;
+        unselectedAlpha = unselected;
+        hoverAlpha = hover;
+        disabledAlpha = disabled;
+        updateVisualState();
         return this;
     }
 
@@ -87,14 +87,14 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
      * disabled -> hovered -> selected -> unselected.
      */
     public void updateVisualState() {
-        if (!this.isEnabled()) {
-            this.setAlpha(this.disabledAlpha);
-        } else if (this.isHovered()) {
-            this.setAlpha(this.hoverAlpha);
-        } else if (this.isSelected()) {
-            this.setAlpha(this.selectedAlpha);
+        if (!isEnabled()) {
+            setAlpha(disabledAlpha);
+        } else if (isHovered()) {
+            setAlpha(hoverAlpha);
+        } else if (isSelected()) {
+            setAlpha(selectedAlpha);
         } else {
-            this.setAlpha(this.unselectedAlpha);
+            setAlpha(unselectedAlpha);
         }
     }
 }

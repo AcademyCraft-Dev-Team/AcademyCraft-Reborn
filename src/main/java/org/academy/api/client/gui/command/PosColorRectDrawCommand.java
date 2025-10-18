@@ -36,10 +36,10 @@ public abstract class PosColorRectDrawCommand extends DrawCommand {
 
     @Override
     public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
-        consumer.addVertex(pose, 0.0F, 0.0F, 0.0F).setColor(this.red, this.green, this.blue, this.alpha);
-        consumer.addVertex(pose, 0.0F, this.height, 0.0F).setColor(this.red, this.green, this.blue, this.alpha);
-        consumer.addVertex(pose, this.width, this.height, 0.0F).setColor(this.red, this.green, this.blue, this.alpha);
-        consumer.addVertex(pose, this.width, 0.0F, 0.0F).setColor(this.red, this.green, this.blue, this.alpha);
+        consumer.addVertex(pose, 0.0F, 0.0F, 0.0F).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, 0.0F, height, 0.0F).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, width, height, 0.0F).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, width, 0.0F, 0.0F).setColor(red, green, blue, alpha);
     }
 
     @Override

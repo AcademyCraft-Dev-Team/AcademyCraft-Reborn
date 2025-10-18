@@ -9,7 +9,7 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.WindGenMenu;
@@ -17,8 +17,8 @@ import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEnti
 import org.jetbrains.annotations.Nullable;
 
 public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
-    public final BlockPos mainPos;
-    public final WindGenBaseBlockEntity windGenBaseBlockEntity;
+    private final BlockPos mainPos;
+    public final WindGenBaseBlockEntity blockEntity;
     @Nullable
     public ImageWidget topIcon;
     @Nullable
@@ -31,10 +31,10 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
     private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
             37f / 255f, 247f / 255f, 1, 1);
 
-    public WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, WindGenBaseBlockEntity newWindGenBaseBlockEntity) {
+    public WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, WindGenBaseBlockEntity blockEntity) {
         super(menu, playerInventory, title);
-        mainPos = newWindGenBaseBlockEntity.getBlockPos();
-        windGenBaseBlockEntity = newWindGenBaseBlockEntity;
+        mainPos = blockEntity.getBlockPos();
+        this.blockEntity = blockEntity;
     }
 
     @Nullable
@@ -47,7 +47,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
     }
 
     @Override
-    protected void onInit() {
+    protected void onInit(PanelWidget main, PanelWidget invContent) {
         var startYOffset = 20f;
         var duration = 600L;
         var delay = 250L;
@@ -57,7 +57,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
         invPage.setZ(1);
         rootContainer.addChild("page_inv", invPage);
         {
-            var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.WIND_GEN_UI);
+            var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.UI_GEN);
             invPage.addChild("ui", ui);
             var statePanel = new PanelWidget((imageWidth - 24) / 2f, 0, imageWidth, 187);
             invPage.addChild("panel_state", statePanel);
@@ -71,13 +71,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
             }
         }
 
-        var wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos){
-            @Override
-            public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
-                if (renderInventory) return;
-                super.render(renderContext, mouseX, mouseY, partialTick);
-            }
-        };
+        var wirelessPanel =  WirelessPanelUtil.create(leftPos, topPos - 22, mainPos, false);
         wirelessPanel.setVisible(false);
         wirelessPanel.setEnabled(false);
         rootContainer.addChild("panel_wireless", wirelessPanel);
@@ -85,13 +79,13 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
         var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
             var showInv = imageRadioButtonWidget.getId() == 0;
-            var panelY = getTopPos() - 22;
+            var panelY = topPos - 22;
             if (showInv) {
-                renderInventory = true;
+                setRenderInventory(true);
                 ScreenAnimationUtil.show(this, invPage, panelY);
                 ScreenAnimationUtil.hide(this, wirelessPanel, panelY);
             } else {
-                renderInventory = false;
+                setRenderInventory(false);
                 ScreenAnimationUtil.show(this, wirelessPanel, panelY);
                 ScreenAnimationUtil.hide(this, invPage, panelY);
             }
@@ -147,7 +141,7 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
                 info.addChild("label_altitude", altitudeLabel);
 
                 var altitudeValue = "N/A";
-                altitudeValue = windGenBaseBlockEntity.altitude + "";
+                altitudeValue = blockEntity.altitude + "";
                 var altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
                 altitudeValueLabel.setScale(0.75f);
                 info.addChild("label_altitude_value", altitudeValueLabel);
@@ -170,14 +164,14 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
     protected void containerTick() {
         super.containerTick();
         if (baseIcon != null && pillarIcon != null && topIcon != null && bufferValueLabel != null) {
-            bufferValueLabel.setText(String.format(AF, windGenBaseBlockEntity.energyStored));
-            var progress = (float) windGenBaseBlockEntity.energyStored / (float) windGenBaseBlockEntity.getMaxEnergyStorage();
+            bufferValueLabel.setText(String.format(AF, blockEntity.energyStored));
+            var progress = (float) blockEntity.energyStored / (float) blockEntity.getMaxEnergyStorage();
             if (Float.isNaN(progress)) {
                 progress = 0;
             }
             histogramValue.height = progress * 60;
 
-            switch (windGenBaseBlockEntity.completeness) {
+            switch (blockEntity.completeness) {
                 case NO_TOP -> {
                     baseIcon.setAlpha(1f);
                     pillarIcon.setAlpha(1f);
@@ -204,11 +198,11 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
 
     @SubscribeEvent
     public void onFocusGainedEvent(TextBoxWidget.FocusGainedEvent event) {
-        handleContainer = false;
+        setHandleContainer(false);
     }
 
     @SubscribeEvent
     public void onFocusLostEvent(TextBoxWidget.FocusLostEvent event) {
-        handleContainer = true;
+        setHandleContainer(true);
     }
 }

@@ -11,6 +11,7 @@ import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
 import org.academy.api.client.gui.framework.Orientation;
+import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.api.common.wireless.SetNodeNamePacket;
@@ -38,17 +39,17 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
 
     public WirelessNodeScreen(WirelessNodeMenu menu, Inventory playerInventory, Component title, BlockPos newMainPos) {
         super(menu, playerInventory, title);
-        this.mainPos = newMainPos;
+        mainPos = newMainPos;
         assert Minecraft.getInstance().level != null;
         if (Minecraft.getInstance().level.getBlockEntity(newMainPos) instanceof WirelessNodeBlockEntity blockEntity) {
-            this.wirelessNodeBlockEntity = blockEntity;
+            wirelessNodeBlockEntity = blockEntity;
         } else {
-            this.onClose();
+            onClose();
         }
     }
 
     @Override
-    protected void onInit() {
+    protected void onInit(PanelWidget main, PanelWidget invContent) {
         var startYOffset = 20f;
         var duration = 600L;
         var delay = 250L;
@@ -68,9 +69,9 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                     186, 750, 186, 75, 10);
             invPage.addChild("state", state);
         }
-        invPage.setY(getTopPos() - 22);
+        invPage.setY(topPos - 22);
 
-        wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos);
+        wirelessPanel = WirelessPanelUtil.create(leftPos, topPos - 22, mainPos, false);
         wirelessPanel.setZ(100);
         wirelessPanel.setVisible(false);
         wirelessPanel.setEnabled(false);
@@ -79,13 +80,13 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
         var radioGroupWidget = new RadioGroupWidget(leftPos - 16, topPos - 22, 16, 40);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
             var showInv = imageRadioButtonWidget.getId() == 0;
-            var panelY = getTopPos() - 22;
+            var panelY = topPos - 22;
             if (showInv) {
-                renderInventory = true;
+                setRenderInventory(true);
                 ScreenAnimationUtil.show(this, invPage, panelY);
                 ScreenAnimationUtil.hide(this, wirelessPanel, panelY);
             } else {
-                renderInventory = false;
+                setRenderInventory(false);
                 ScreenAnimationUtil.show(this, wirelessPanel, panelY);
                 ScreenAnimationUtil.hide(this, invPage, panelY);
             }
@@ -116,8 +117,8 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
             infoArea.addChild("area_info_text", infoTextArea);
             {
                 var histogramWidget = new HistogramWidget(0, 0, 84, 84);
-                histogramWidget.addValue(this.histogramEnergyValue);
-                histogramWidget.addValue(this.histogramCapacityValue);
+                histogramWidget.addValue(histogramEnergyValue);
+                histogramWidget.addValue(histogramCapacityValue);
                 infoTextArea.addChild("histogram", histogramWidget);
 
                 var energyIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25C4FF);
@@ -138,9 +139,9 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 capacityLabel.setScale(0.75f);
                 infoTextArea.addChild("label_capacity", capacityLabel);
 
-                this.capacityValueLabel = new LabelWidget("0 / 0", 50, 81);
-                this.capacityValueLabel.setScale(0.75f);
-                infoTextArea.addChild("label_capacity_value", this.capacityValueLabel);
+                capacityValueLabel = new LabelWidget("0 / 0", 50, 81);
+                capacityValueLabel.setScale(0.75f);
+                infoTextArea.addChild("label_capacity_value", capacityValueLabel);
 
                 var infoLabel = new LabelWidget("Information", 8, 92);
                 infoLabel.setScale(0.75f);
@@ -150,15 +151,17 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 rangeLabel.setScale(0.65f);
                 infoTextArea.addChild("label_range", rangeLabel);
 
-                this.rangeValueLabel = new LabelWidget("0", 60, 102);
-                this.rangeValueLabel.setScale(0.65f);
-                infoTextArea.addChild("label_range_value", this.rangeValueLabel);
+                rangeValueLabel = new LabelWidget("0", 60, 102);
+                rangeValueLabel.setScale(0.65f);
+                infoTextArea.addChild("label_range_value", rangeValueLabel);
 
                 var nameLabel = new LabelWidget("Node Name", 10, 112);
                 nameLabel.setScale(0.65f);
                 infoTextArea.addChild("label_name", nameLabel);
 
-                var inputNameLabelLeft = new LabelWidget("[", 50, 112);
+                var leftBracketWidth = font.width("[");
+
+                var inputNameLabelLeft = new LabelWidget("[", 50 - leftBracketWidth, 112);
                 inputNameLabelLeft.setScale(0.85f);
                 infoTextArea.addChild("label_input_name_left", inputNameLabelLeft);
 
@@ -166,10 +169,10 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 inputNameLabelRight.setScale(0.85f);
                 infoTextArea.addChild("label_input_name_right", inputNameLabelRight);
 
-                var nameTextBox = new TextBoxWidget(12, 53, 110, 45, inputNameLabelLeft.getHeight());
+                var nameTextBox = new TextBoxWidget(12, inputNameLabelLeft.getX() + font.width(inputNameLabelLeft.getComponent()), 110, 50, inputNameLabelLeft.getHeight());
                 nameTextBox.setWhenEnter(s -> {
-                    if (this.wirelessNodeBlockEntity != null) {
-                        MisakaNetworkClient.sendPacket(new SetNodeNamePacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
+                    if (wirelessNodeBlockEntity != null) {
+                        MisakaNetworkClient.sendPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s));
                     }
                 });
                 infoTextArea.addChild("label_name_text_box", nameTextBox);
@@ -178,7 +181,7 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 passLabel.setScale(0.6f);
                 infoTextArea.addChild("label_pass", passLabel);
 
-                var inputPassLabelLeft = new LabelWidget("[", 50, 122);
+                var inputPassLabelLeft = new LabelWidget("[", 50 - leftBracketWidth, 122);
                 inputPassLabelLeft.setScale(0.85f);
                 infoTextArea.addChild("label_input_pass_left", inputPassLabelLeft);
 
@@ -186,10 +189,10 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 inputPassLabelRight.setScale(0.85f);
                 infoTextArea.addChild("label_input_pass_right", inputPassLabelRight);
 
-                var passTextBox = new TextBoxWidget(12, 53, 120, 45, inputPassLabelLeft.getHeight());
+                var passTextBox = new TextBoxWidget(12, inputPassLabelLeft.getX() + font.width(inputPassLabelLeft.getComponent()), 120, 50, inputPassLabelLeft.getHeight());
                 passTextBox.setWhenEnter(s -> {
-                    if (this.wirelessNodeBlockEntity != null) {
-                        MisakaNetworkClient.sendPacket(new SetNodePassPacket(this.wirelessNodeBlockEntity.getBlockPos(), s));
+                    if (wirelessNodeBlockEntity != null) {
+                        MisakaNetworkClient.sendPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s));
                     }
                 });
                 infoTextArea.addChild("label_pass_text_box", passTextBox);
@@ -213,28 +216,28 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (this.wirelessNodeBlockEntity != null) {
-            this.ticks++;
+        if (wirelessNodeBlockEntity != null) {
+            ticks++;
 
-            if (this.capacityValueLabel != null) {
-                this.capacityValueLabel.setText(this.wirelessNodeBlockEntity.connectedUsersCount + " / " + this.wirelessNodeBlockEntity.maxConnectedUsers);
+            if (capacityValueLabel != null) {
+                capacityValueLabel.setText(wirelessNodeBlockEntity.connectedUsersCount + " / " + wirelessNodeBlockEntity.maxConnectedUsers);
             }
-            if (this.energyValueLabel != null) {
-                this.energyValueLabel.setText(WindGenScreen.AF.formatted(this.wirelessNodeBlockEntity.getEnergyStored()));
+            if (energyValueLabel != null) {
+                energyValueLabel.setText(WindGenScreen.AF.formatted(wirelessNodeBlockEntity.getEnergyStored()));
             }
-            if (this.rangeValueLabel != null) {
-                this.rangeValueLabel.setText(this.wirelessNodeBlockEntity.radius + "");
+            if (rangeValueLabel != null) {
+                rangeValueLabel.setText(wirelessNodeBlockEntity.radius + "");
             }
 
             var progressCapacity =
-                    (float) this.wirelessNodeBlockEntity.connectedUsersCount
+                    (float) wirelessNodeBlockEntity.connectedUsersCount
                             /
-                            (float) this.wirelessNodeBlockEntity.maxConnectedUsers;
+                            (float) wirelessNodeBlockEntity.maxConnectedUsers;
 
             var progressEnergy =
-                    (float) this.wirelessNodeBlockEntity.getEnergyStored()
+                    (float) wirelessNodeBlockEntity.getEnergyStored()
                             /
-                            (float) this.wirelessNodeBlockEntity.getMaxEnergyStorage();
+                            (float) wirelessNodeBlockEntity.getMaxEnergyStorage();
 
             if (Float.isNaN(progressCapacity)) {
                 progressCapacity = 0;
@@ -243,28 +246,28 @@ public final class WirelessNodeScreen extends CGuiContainerScreen<WirelessNodeMe
                 progressEnergy = 0;
             }
 
-            this.histogramCapacityValue.height = progressCapacity * 60;
-            this.histogramEnergyValue.height = progressEnergy * 60;
+            histogramCapacityValue.height = progressCapacity * 60;
+            histogramEnergyValue.height = progressEnergy * 60;
 
             int index;
-            if (this.wirelessNodeBlockEntity.connectedUsersCount == 0) {
-                index = (this.ticks / 20) % 2 == 0 ? 8 : 9;
+            if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
+                index = (ticks / 20) % 2 == 0 ? 8 : 9;
             } else {
                 index = Math.max(0, Math.min((int) (progressCapacity * 8 - 1), 7));
             }
 
-            this.state.setFrameIndex(index);
+            state.setFrameIndex(index);
         }
     }
 
     @SubscribeEvent
     public void onFocusGainedEvent(TextBoxWidget.FocusGainedEvent event) {
-        this.handleContainer = false;
+        setHandleContainer(false);
     }
 
     @SubscribeEvent
     public void onFocusLostEvent(TextBoxWidget.FocusLostEvent event) {
-        this.handleContainer = true;
+        setHandleContainer(true);
     }
 
     @Override

@@ -44,7 +44,8 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         var targetAnimationState = open ? openingState : closingState;
         var targetAnimationDefinition = open ? AbilityDeveloperAnimation.OPENING : AbilityDeveloperAnimation.CLOSING;
         var elapsedMillis = currentAnimationState.getTimeInMillis(ticks);
-        currentAnimationState.stop();
+        openingState.stop();
+        closingState.stop();
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
@@ -89,7 +90,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
             }
             return null;
         }
-        return this.connectedNodePos;
+        return connectedNodePos;
     }
 
     @Override
@@ -101,8 +102,8 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
             }
             return;
         }
-        if (!Objects.equals(this.connectedNodePos, nodePos)) {
-            this.connectedNodePos = nodePos;
+        if (!Objects.equals(connectedNodePos, nodePos)) {
+            connectedNodePos = nodePos;
             setChanged();
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -117,17 +118,17 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
 
     @Override
     public int receiveEnergy(int maxReceive, boolean simulate) {
-        int maxEnergyCanStore = getMaxEnergyStorage();
-        int energyStoredDouble = getEnergyStored();
-        int maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
-        int energyToReceive = Math.min(maxReceive, maxCanReceive);
+        var maxEnergyCanStore = getMaxEnergyStorage();
+        var energyStoredDouble = getEnergyStored();
+        var maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
+        var energyToReceive = Math.min(maxReceive, maxCanReceive);
         if (energyToReceive <= 0) return 0;
         if (!simulate) setEnergyStored(getEnergyStored() + energyToReceive);
         return energyToReceive;
     }
 
     public void setEnergyStored(int newEnergy) {
-        int clamped = Math.max(0, Math.min(newEnergy, getMaxEnergyStorage()));
+        var clamped = Math.max(0, Math.min(newEnergy, getMaxEnergyStorage()));
         if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();
@@ -180,21 +181,21 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     }
 
     public void clientTick() {
-        this.ticks++;
+        ticks++;
 
         if (isMain() && level != null) {
-            var wasNearby = this.playerNearby;
+            var wasNearby = playerNearby;
             var nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
-            this.playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;
+            playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;
 
-            if (wasNearby != this.playerNearby) {
-                handleStateChangeOnClient(wasNearby, this.playerNearby);
+            if (wasNearby != playerNearby) {
+                handleStateChangeOnClient(wasNearby, playerNearby);
             }
         }
     }
 
     public void serverTick(ServerLevel level) {
-        this.ticks++;
+        ticks++;
         if (isMain()) {
             if (connectedNodePos == null) {
                 setConnectedNodePosition(null);
@@ -208,7 +209,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     }
 
     public AABB getRenderBoundingBox() {
-        var pos = this.getBlockPos().getCenter();
+        var pos = getBlockPos().getCenter();
         var radius = 5d;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

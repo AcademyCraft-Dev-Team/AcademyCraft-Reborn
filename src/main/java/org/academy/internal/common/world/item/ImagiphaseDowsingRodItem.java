@@ -1,11 +1,12 @@
 package org.academy.internal.common.world.item;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
@@ -16,7 +17,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.level.block.BuddingImagiphaseAmethystBlock;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.jetbrains.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -25,8 +29,7 @@ import org.misaka.api.common.network.future.packet.RequestPacket;
 import org.misaka.api.common.network.future.packet.ResponsePacket;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public final class ImagiphaseDowsingRodItem extends Item {
     public static List<BlockPos> RENDER_TARGET_POSITIONS = new ArrayList<>();
@@ -56,7 +59,59 @@ public final class ImagiphaseDowsingRodItem extends Item {
                     RENDER_TARGET_POSITIONS.addAll(response.getSectionsWithImagPhase());
                 }
             });
+        } else if (player.isShiftKeyDown() && level instanceof ServerLevel serverLevel) {
+            var playerPos = player.getEyePosition();
+            var lookVec = player.getLookAngle().normalize();
+            var step = 0.125;
+            var maxSteps = (int) (10 / step);
+
+            Set<BlockPos> catalyzed = new HashSet<>();
+
+            for (var i = 0; i < maxSteps; i++) {
+                var pos = playerPos.add(lookVec.scale(i * step));
+                var blockPos = BlockPos.containing(pos);
+                var blockState = serverLevel.getBlockState(blockPos);
+
+                if (blockState.getBlock() instanceof BuddingImagiphaseAmethystBlock
+                        && !catalyzed.contains(blockPos)) {
+
+                    var queue = new ArrayDeque<BlockPos>();
+                    queue.add(blockPos);
+                    catalyzed.add(blockPos);
+
+                    while (!queue.isEmpty()) {
+                        var current = queue.poll();
+                        var currentState = serverLevel.getBlockState(current);
+
+                        if (currentState.getBlock() instanceof BuddingImagiphaseAmethystBlock
+                                && !currentState.getValue(BuddingImagiphaseAmethystBlock.CATALYZING)) {
+
+                            serverLevel.setBlock(current,
+                                    currentState.setValue(BuddingImagiphaseAmethystBlock.CATALYZING, true),
+                                    Block.UPDATE_CLIENTS
+                            );
+
+                            for (var dir : Direction.values()) {
+                                var neighbor = current.relative(dir);
+                                if (!catalyzed.contains(neighbor)) {
+                                    var neighborState = serverLevel.getBlockState(neighbor);
+                                    if (neighborState.getBlock() instanceof BuddingImagiphaseAmethystBlock) {
+                                        queue.add(neighbor);
+                                        catalyzed.add(neighbor);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                serverLevel.sendParticles(ParticleTypes.IMAG_PHASE_FLUID.get(),
+                        pos.x, pos.y, pos.z,
+                        2, 0.05, 0.05, 0.05, 0
+                );
+            }
         }
+
         return InteractionResult.SUCCESS;
     }
 
@@ -97,7 +152,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
             private final List<BlockPos> sectionsWithImagPhase;
 
             public Response(List<BlockPos> sections) {
-                this.sectionsWithImagPhase = sections;
+                sectionsWithImagPhase = sections;
             }
 
             public List<BlockPos> getSectionsWithImagPhase() {
@@ -126,7 +181,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
                 for (var i = 0; i < sections.length; i++) {
                     var section = sections[i];
                     if (section != null && !section.hasOnlyAir() && section.maybeHas(blockState -> blockState.getFluidState().is(Fluids.IMAGIPHASE_PLASMA.get()))) {
-                        int sectionBottomY = chunk.getSectionYFromSectionIndex(i);
+                        var sectionBottomY = chunk.getSectionYFromSectionIndex(i);
                         sectionsWithImagPhase.add(new BlockPos(chunk.getPos().getMinBlockX(), sectionBottomY, chunk.getPos().getMinBlockZ()));
                     }
                 }

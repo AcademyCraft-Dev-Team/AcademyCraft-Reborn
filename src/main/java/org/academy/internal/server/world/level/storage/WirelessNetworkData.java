@@ -56,7 +56,7 @@ public final class WirelessNetworkData extends SavedData {
     public WirelessNetworkData() {}
 
     private WirelessNetworkData(Map<BlockPos, NodeConfig> initialNodes) {
-        initialNodes.forEach(this.nodes::put);
+        initialNodes.forEach(nodes::put);
     }
 
     public static WirelessNetworkData get(ServerLevel level) {
@@ -195,7 +195,7 @@ public final class WirelessNetworkData extends SavedData {
         }
 
         public boolean checkPassword(String attempt) {
-            return this.password.equals(attempt);
+            return password.equals(attempt);
         }
     }
 

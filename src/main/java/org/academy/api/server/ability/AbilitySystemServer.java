@@ -184,7 +184,7 @@ public final class AbilitySystemServer {
     }
 
     public static void addPlayerSkill(UUID uuid, String skillKey) {
-        Player playerData = getPlayerData(uuid);
+        var playerData = getPlayerData(uuid);
         if (playerData.getSkills().add(skillKey)) {
             var skill = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
             skill.ifPresent(skillReference -> addPlayerSkillData(uuid, skillKey, skillReference.value().getDefaultSkillData()));
@@ -194,7 +194,7 @@ public final class AbilitySystemServer {
     }
 
     public static void addPlayerSkillData(UUID uuid, String skillKey, Player.SkillData skillData) {
-        Player playerData = getPlayerData(uuid);
+        var playerData = getPlayerData(uuid);
         var oldValue = playerData.getSkillData().put(skillKey, skillData);
         if (!Objects.equals(oldValue, skillData)) {
             playerData.markDirty();
@@ -202,7 +202,7 @@ public final class AbilitySystemServer {
     }
 
     public static void removePlayerSkill(UUID uuid, String skillKey) {
-        Player playerData = getPlayerData(uuid);
+        var playerData = getPlayerData(uuid);
         if (playerData.getSkills().remove(skillKey)) {
             playerData.getSkillData().remove(skillKey);
             playerData.markDirty();
@@ -271,7 +271,7 @@ public final class AbilitySystemServer {
     }
 
     public static float getPlayerAdditionalComputingPower(UUID uuid) {
-        Player playerData = getPlayerData(uuid);
+        var playerData = getPlayerData(uuid);
         if (playerData == null) {
             return -1;
         } else {

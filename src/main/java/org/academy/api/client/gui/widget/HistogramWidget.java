@@ -47,7 +47,7 @@ public class HistogramWidget extends AbstractWidget {
             context.pose().translate(5.0f, -15.0f, 0.0f);
 
             var textureManager = Minecraft.getInstance().getTextureManager();
-            var texture = textureManager.getTexture(Resource.Textures.HISTOGRAM_TEXTURE).getTextureView();
+            var texture = textureManager.getTexture(Resource.Textures.HISTOGRAM).getTextureView();
             var command = new ImageDrawCommand(texture, getWidth(), getHeight(), 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(command);
         }

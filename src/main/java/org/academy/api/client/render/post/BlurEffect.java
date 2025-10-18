@@ -185,11 +185,11 @@ public final class BlurEffect {
         }
 
         public void write(Std140Builder builder) {
-            builder.putVec2(this.outSize).putVec2(this.blurDir).putFloat(this.radius);
+            builder.putVec2(outSize).putVec2(blurDir).putFloat(radius);
         }
 
         public Vector2f getOutSize() {
-            return this.outSize;
+            return outSize;
         }
 
         public void setOutSize(Vector2f outSize) {
@@ -197,7 +197,7 @@ public final class BlurEffect {
         }
 
         public Vector2f getBlurDir() {
-            return this.blurDir;
+            return blurDir;
         }
 
         public void setBlurDir(Vector2f blurDir) {
@@ -205,7 +205,7 @@ public final class BlurEffect {
         }
 
         public float getRadius() {
-            return this.radius;
+            return radius;
         }
 
         public void setRadius(float radius) {

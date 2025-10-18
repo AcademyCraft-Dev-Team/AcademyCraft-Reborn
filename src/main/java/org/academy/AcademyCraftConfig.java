@@ -23,7 +23,7 @@ public final class AcademyCraftConfig {
 
     public AcademyCraftConfig(File configFile) {
         this.configFile = configFile;
-        this.load();
+        load();
     }
 
     public static void registerTypeHandler(String configKey, TypeHandler<?> handler) {
@@ -99,7 +99,7 @@ public final class AcademyCraftConfig {
 
         if (jsonElement == null || jsonElement.isJsonNull()) {
             configInstance = handler.getDefault();
-            this.dirty = true;
+            dirty = true;
         } else {
             configInstance = handler.getAdapter(GSON).fromJsonTree(jsonElement);
         }
@@ -132,6 +132,6 @@ public final class AcademyCraftConfig {
         }
 
         runtimeConfigCache.put(configKey, configInstance);
-        this.dirty = true;
+        dirty = true;
     }
 }
