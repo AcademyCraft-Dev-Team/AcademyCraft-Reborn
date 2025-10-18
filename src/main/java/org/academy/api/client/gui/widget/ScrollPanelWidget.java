@@ -22,13 +22,13 @@ public class ScrollPanelWidget extends AbstractContainerWidget {
     public ScrollPanelWidget(float x, float y, float width, float height, Orientation orientation) {
         super(x, y, width, height);
         this.orientation = orientation;
-        this.scrollTarget = 0f;
+        scrollTarget = 0f;
     }
 
     public ScrollPanelWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
-        this.orientation = Orientation.VERTICAL;
-        this.scrollTarget = 0f;
+        orientation = Orientation.VERTICAL;
+        scrollTarget = 0f;
     }
 
     @Override

@@ -22,7 +22,7 @@ public class GlyphDrawCommand extends DrawCommand {
 
     @Override
     public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
-        this.renderable.render(pose, consumer, LightTexture.FULL_BRIGHT, true);
+        renderable.render(pose, consumer, LightTexture.FULL_BRIGHT, true);
     }
 
     @Override

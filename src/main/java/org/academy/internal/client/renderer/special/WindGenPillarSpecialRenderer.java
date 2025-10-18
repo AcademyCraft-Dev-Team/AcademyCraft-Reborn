@@ -43,7 +43,7 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
         }
 
         @Override
-        public SpecialModelRenderer<?> bake(BakingContext context) {
+        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
             return WindGenPillarSpecialRenderer.INSTANCE;
         }
     }

@@ -22,7 +22,7 @@ public class LabelWidget extends AbstractWidget {
 
     protected Component component;
     protected int color = 0xFFFFFFFF;
-    protected boolean dropShadow = true;
+    protected boolean dropShadow = false;
     public static float globalScale = 1.0f;
     protected float scale = 1.0f;
     protected Alignment alignment = Alignment.LEFT;
@@ -111,6 +111,10 @@ public class LabelWidget extends AbstractWidget {
 
     public Alignment getAlignment() {
         return alignment;
+    }
+
+    public VerticalAlignment getVerticalAlignment() {
+        return verticalAlignment;
     }
 
     public LabelWidget setText(String text) {

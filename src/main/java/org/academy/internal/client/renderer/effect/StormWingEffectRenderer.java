@@ -214,7 +214,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
 
     @Override
     public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
-        if ( !renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
+        if (!renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
 
         poseStack.pushPose();
         poseStack.mulPose(BASE_MATRIX);

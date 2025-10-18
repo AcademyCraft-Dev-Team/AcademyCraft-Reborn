@@ -18,8 +18,8 @@ public final class MatrixStack {
     }
 
     public MatrixStack setFrom(PoseStack.Pose pose) {
-        this.matrixStack.getLast().set(pose.pose());
-        this.normalStack.getLast().set(pose.normal());
+        matrixStack.getLast().set(pose.pose());
+        normalStack.getLast().set(pose.normal());
         return this;
     }
 

@@ -1,0 +1,60 @@
+[🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md)
+
+# AcademyCraft-Reborn
+
+一个关于学园都市的 Minecraft 模组，适用于 NeoForge。
+
+## 下载与社区
+
+* **最新构建**: [GitHub Actions](https://github.com/AcademyCraft-Dev-Team/AcademyCraft-Reborn/actions) (推荐)
+* **社区 (QQ 群)**: `217327418`
+
+## 开发者指南
+
+### 如何构建？
+
+```bash
+
+./gradlew build
+```
+
+### IDEA 设置
+
+如果你正在使用 IntelliJ IDEA，建议在你的 `.idea/misc.xml` 文件中添加或替换以下部分：
+
+```xml
+
+<component name="EntryPointsManager">
+    <list size="2">
+        <item index="0" class="java.lang.String"
+              itemvalue="org.misaka.api.common.network.annotation.SubscribePacket"/>
+        <item index="1" class="java.lang.String"
+              itemvalue="org.misaka.api.common.network.future.annotation.HandleFuture"/>
+    </list>
+</component>
+```
+
+## 许可证
+
+本项目基于 **GPL-3.0** 许可证，并附加以下限制条款。项目由 **AcademyCraft Dev Team** 管理和维护。
+
+1. **分发与转载**: 所有形式的分发与转载，都必须提供指向官方项目页面（如 GitHub 仓库、官方 CurseForge/Modrinth
+   页面）的直接链接。禁止将模组文件重新上传到其他网站或服务。
+
+2. **盈利**: 严禁任何形式的商业使用。但在满足以下条件时，允许特定的非商业性赞助。
+
+    * **a. 服务器**:
+      本模组不得用于任何通过出售游戏内优势、物品、货币、访问权限或任何服务来获取现实收益的服务器。非营利性社区服务器可以接受自愿捐赠，但捐赠必须仅用于覆盖服务器的直接运营成本（如托管费用），且不能为捐赠者提供任何游戏内优势。纯粹的装饰性奖励（如聊天前缀）是允许的。
+
+    * **b. 贡献者**: **本项目的贡献者，包括 AcademyCraft Dev Team 成员**，可以接受个人捐赠。但此类捐赠不能被表述为对本模组、其功能或后续开发的付款。
+
+3. **衍生作品**: 这些限制条款同样适用于所有衍生作品，包括但不限于复刻、修改，或任何包含了部分或全部原作的软件。
+
+4. **背书与商标**: “AcademyCraft-Reborn” 名称、其徽标和其他品牌资产，均为 **AcademyCraft Dev Team**
+   的独家财产。未经我们书面许可，你不得使用这些资产来暗示你的项目、服务器或服务得到了官方认可或与我们存在关联。
+
+5. **平台限制**: 禁止将本模组移植、复制或改编至 Minecraft: Java 版与 NeoForge 模组加载器以外的任何平台。这包括但不限于微软
+   Minecraft（基岩版）和网易我的世界。
+
+6. **免责声明**: 本软件按“原样”提供，不附带任何明示或暗示的保证。作为项目维护方，**AcademyCraft Dev Team**
+   不对因使用本软件而导致的任何索赔、损害或其他责任负责，包括但不限于数据丢失或存档损坏。

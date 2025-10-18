@@ -16,6 +16,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
@@ -49,7 +51,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     public void serverTick(ServerLevel serverLevel, BlockPos pos) {
         if (cachedConfig == null) {
-            WirelessNetworkData networkData = WirelessNetworkData.get(serverLevel);
+            var networkData = WirelessNetworkData.get(serverLevel);
             cachedConfig = networkData.getNodeConfig(pos);
             if (cachedConfig == null && level != null && level.getGameTime() > 1) {
                 AcademyCraft.LOGGER.warn("Wireless Node BE at {} ticking but not (yet?) registered in SavedData!", pos);
@@ -64,7 +66,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         Map<WirelessUser, WirelessNetworkData.UserConfig> userMap = new HashMap<>(connectedUsersCount);
         List<BlockPos> toRemove = new ArrayList<>();
 
-        for (Map.Entry<BlockPos, WirelessNetworkData.UserConfig> entry : cachedConfig.connectedUsers.entrySet()) {
+        for (var entry : cachedConfig.connectedUsers.entrySet()) {
             var userPos = entry.getKey();
             var userBE = serverLevel.getBlockEntity(userPos);
             if (!(userBE instanceof WirelessUser user)) {
@@ -74,7 +76,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
             }
         }
 
-        for (BlockPos blockPos : toRemove) {
+        for (var blockPos : toRemove) {
             handleUserDisconnect(serverLevel, blockPos);
             cachedConfig.connectedUsers.remove(blockPos);
         }
@@ -87,10 +89,10 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     private void handleUserDisconnect(ServerLevel level, BlockPos userPos) {
         AcademyCraft.LOGGER.warn("Node at {} detected invalid or missing user at {}. Requesting disconnect from SavedData.", worldPosition, userPos);
-        WirelessNetworkData networkData = WirelessNetworkData.get(level);
-        boolean removed = networkData.disconnectUserFromNode(this.worldPosition, userPos);
+        var networkData = WirelessNetworkData.get(level);
+        var removed = networkData.disconnectUserFromNode(worldPosition, userPos);
         if (removed) {
-            cachedConfig = networkData.getNodeConfig(this.worldPosition);
+            cachedConfig = networkData.getNodeConfig(worldPosition);
             AcademyCraft.LOGGER.debug("Successfully disconnected user {} from node {} in SavedData.", userPos, worldPosition);
         } else {
             AcademyCraft.LOGGER.warn("Failed request to disconnect user {} from node {} in SavedData.", userPos, worldPosition);
@@ -107,14 +109,14 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     @Override
     public int getEnergyStored() {
-        return this.energyStored;
+        return energyStored;
     }
 
     @Override
     public void setEnergyStored(int energy) {
-        double oldEnergy = this.energyStored;
-        this.energyStored = Math.max(0, Math.min(energy, getMaxEnergyStorage()));
-        if (oldEnergy != this.energyStored) {
+        double oldEnergy = energyStored;
+        energyStored = Math.max(0, Math.min(energy, getMaxEnergyStorage()));
+        if (oldEnergy != energyStored) {
             setChanged();
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -149,8 +151,8 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     @Override
     public void setConnectedNodePosition(@Nullable BlockPos nodePos) {
-        if (!Objects.equals(this.connectedNodePos, nodePos)) {
-            this.connectedNodePos = nodePos;
+        if (!Objects.equals(connectedNodePos, nodePos)) {
+            connectedNodePos = nodePos;
             setChanged();
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -165,36 +167,36 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     @Override
     public int receiveEnergy(int maxReceive, boolean simulate) {
-        int maxEnergyCanStore = getMaxEnergyStorage();
-        int energyStoredDouble = getEnergyStored();
-        int maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
-        int energyToReceive = Math.min(maxReceive, maxCanReceive);
+        var maxEnergyCanStore = getMaxEnergyStorage();
+        var energyStoredDouble = getEnergyStored();
+        var maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
+        var energyToReceive = Math.min(maxReceive, maxCanReceive);
         if (energyToReceive <= 0) return 0;
         if (!simulate) setEnergyStored(getEnergyStored() + energyToReceive);
         return energyToReceive;
     }
-/*
+
     @Override
-    protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.saveAdditional(tag, registries);
-        ContainerHelper.saveAllItems(tag, this.items, registries);
-        tag.putInt("energy_stored", energyStored);
-        tag.putInt("connected_users_count", connectedUsersCount);
-        tag.putInt("max_connected_users", maxConnectedUsers);
-        tag.putInt("radius", radius);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        ContainerHelper.saveAllItems(output, items);
+        output.putInt("energy_stored", energyStored);
+        output.putInt("connected_users_count", connectedUsersCount);
+        output.putInt("max_connected_users", maxConnectedUsers);
+        output.putInt("radius", radius);
     }
 
     @Override
-    protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.loadAdditional(tag, registries);
-        items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(tag, this.items, registries);
-        energyStored = tag.getInt("energy_stored");
-        connectedUsersCount = tag.getInt("connected_users_count");
-        maxConnectedUsers = tag.getInt("max_connected_users");
-        radius = tag.getInt("radius");
-        this.cachedConfig = null;
-    }*/
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
+        ContainerHelper.loadAllItems(input, items);
+        energyStored = input.getIntOr("energy_stored", 0);
+        connectedUsersCount = input.getIntOr("connected_users_count", 0);
+        maxConnectedUsers = input.getIntOr("max_connected_users", 0);
+        radius = input.getIntOr("radius", 0);
+        cachedConfig = null;
+    }
 
     @Override
     public int getContainerSize() {
@@ -213,7 +215,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack itemstack = ContainerHelper.removeItem(items, slot, amount);
+        var itemstack = ContainerHelper.removeItem(items, slot, amount);
         if (!itemstack.isEmpty()) setChanged();
         return itemstack;
     }

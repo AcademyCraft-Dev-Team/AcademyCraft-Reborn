@@ -18,12 +18,11 @@ import org.academy.api.client.render.post.PostEffect;
 import static com.mojang.blaze3d.pipeline.RenderPipeline.builder;
 import static net.minecraft.client.renderer.RenderStateShard.EmptyTextureStateShard;
 import static org.academy.AcademyCraft.academy;
-import static org.academy.api.client.Resource.Textures.ARC_TEXTURE;
 import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 
 public final class Render {
     public static final class RenderPipelines extends net.minecraft.client.renderer.RenderPipelines {
-        public static final RenderPipeline NO_DEPTH_OPAQUE_PARTICLE = RenderPipeline.builder(PARTICLE_SNIPPET)
+        public static final RenderPipeline NO_DEPTH_OPAQUE_PARTICLE = builder(PARTICLE_SNIPPET)
                 .withLocation("pipeline/opaque_particle")
                 .withCull(false)
                 .withDepthWrite(false)
@@ -39,7 +38,7 @@ public final class Render {
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .buildSnippet();
 
-        public static final RenderPipeline MASKED_BLUR_SHADER = RenderPipeline.builder()
+        public static final RenderPipeline MASKED_BLUR_SHADER = builder()
                 .withLocation(academy("masked_blur_shader"))
                 .withVertexShader(Resource.Shaders.SCREEN_BLIT)
                 .withFragmentShader(Resource.Shaders.Fragment.MASKED_BLUR)
@@ -53,7 +52,7 @@ public final class Render {
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .build();
 
-        public static final RenderPipeline MASK_BRUSH = RenderPipeline.builder(MATRICES_PROJECTION_SNIPPET)
+        public static final RenderPipeline MASK_BRUSH = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/pos_color"))
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
@@ -116,6 +115,16 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.Fragment.SDF_SHARP_MARGIN)
                 .withVertexShader(Resource.Shaders.POS_TEX)
                 .withUniform("SdfUniforms", UniformType.UNIFORM_BUFFER)
+                .withCull(false)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                .build();
+
+        public static final RenderPipeline GLOW_CIRCLE = builder(MATRICES_PROJECTION_SNIPPET)
+                .withLocation(academy("pipeline/glow_circle"))
+                .withFragmentShader(Resource.Shaders.Fragment.GLOW_CIRCLE)
+                .withVertexShader(Resource.Shaders.POS_TEX)
+                .withUniform("Uniforms", UniformType.UNIFORM_BUFFER)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
@@ -189,16 +198,16 @@ public final class Render {
     }
 
     public static final class TextureStateShards {
-        public static final EmptyTextureStateShard ARC = blur(ARC_TEXTURE);
+        public static final RenderStateShard.EmptyTextureStateShard ARC = blur(Resource.Textures.ARC);
 
-        public static final EmptyTextureStateShard MAIN_SCENE = new EmptyTextureStateShard(
+        public static final RenderStateShard.EmptyTextureStateShard MAIN_SCENE = new RenderStateShard.EmptyTextureStateShard(
                 () -> RenderSystem.setShaderTexture(0, PostEffect.MAIN_SCENE.getColorTextureView()),
                 () -> {
                 }
         );
 
-        public static EmptyTextureStateShard pixel(ResourceLocation texture) {
-            return new EmptyTextureStateShard(() -> {
+        public static RenderStateShard.EmptyTextureStateShard pixel(ResourceLocation texture) {
+            return new RenderStateShard.EmptyTextureStateShard(() -> {
                 var texturemanager = Minecraft.getInstance().getTextureManager();
                 var abstracttexture = texturemanager.getTexture(texture);
                 abstracttexture.setFilter(false, false);
@@ -207,7 +216,7 @@ public final class Render {
             });
         }
 
-        public static EmptyTextureStateShard blur(ResourceLocation texture) {
+        public static RenderStateShard.EmptyTextureStateShard blur(ResourceLocation texture) {
             return new RenderStateShard.TextureStateShard(texture, true);
         }
     }

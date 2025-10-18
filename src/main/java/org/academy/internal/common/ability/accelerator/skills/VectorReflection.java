@@ -12,6 +12,8 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.Resource;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
@@ -43,7 +45,6 @@ public class VectorReflection extends Skill {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL2)
-                .dependsOn(Skills.VECTOR_REFLECTION)
         );
     }
 
@@ -72,6 +73,16 @@ public class VectorReflection extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.VECTOR_REFLECTION.get(),
+                        List.of(),
+                        Resource.Textures.VECTOR_REFLECTION_ICON,
+                        20, 75
+                )
+        );
+
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
         public static Config CONFIG = new Config();
 
@@ -129,8 +140,8 @@ public class VectorReflection extends Skill {
                 return Pair.of(true, originalDamage);
             }
 
-            float requiredPower = originalDamage * 10f;
-            float currentPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
+            var requiredPower = originalDamage * 10f;
+            var currentPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
 
             if (currentPower > 0) {
                 player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(), SoundSource.BLOCKS, 1, 1);
@@ -145,8 +156,8 @@ public class VectorReflection extends Skill {
                 return Pair.of(false, 0f);
             }
 
-            float reflectedDamage = currentPower / 10f;
-            float remainingDamage = Math.max(0f, originalDamage - reflectedDamage);
+            var reflectedDamage = currentPower / 10f;
+            var remainingDamage = Math.max(0f, originalDamage - reflectedDamage);
             AbilitySystemServer.setPlayerComputingPower(player.getUUID(), 0);
 
             applyReflection(player, source, reflectedDamage);
@@ -161,11 +172,11 @@ public class VectorReflection extends Skill {
 
             if (sourceEntity == null || sourceEntity == player) return;
 
-            boolean isProjectile = directEntity instanceof Projectile;
+            var isProjectile = directEntity instanceof Projectile;
 
             var vec3 = player.getLookAngle().normalize().scale(1);
 
-            Vec3 spawnPos = isProjectile
+            var spawnPos = isProjectile
                     ? directEntity.position()
                     : player.getPosition(1.0F).add(vec3.x, vec3.y + 1.5, vec3.z);
 
@@ -174,8 +185,8 @@ public class VectorReflection extends Skill {
 
             var dir = sourceEntity.position().subtract(player.getPosition(1)).normalize();
 
-            float yaw = (float) (Math.toDegrees(Math.atan2(dir.z, dir.x))) - 90.0F;
-            float pitch = (float) (-Math.toDegrees(Math.asin(dir.y)));
+            var yaw = (float) (Math.toDegrees(Math.atan2(dir.z, dir.x))) - 90.0F;
+            var pitch = (float) (-Math.toDegrees(Math.asin(dir.y)));
 
             glowCircle.setYRot(yaw);
             glowCircle.setXRot(pitch);

@@ -107,16 +107,16 @@ public final class VectorAccel extends Skill {
 
         public static void onChargeStart() {
             var player = Minecraft.getInstance().player;
-            if (player == null || Client.currentContext != null || Minecraft.getInstance().screen != null) {
+            if (player == null || currentContext != null || Minecraft.getInstance().screen != null) {
                 return;
             }
-            Client.currentContext = new Context(player);
-            AbilitySystemClient.registerContext(Client.currentContext);
+            currentContext = new Context(player);
+            AbilitySystemClient.registerContext(currentContext);
         }
 
         public static void onChargeRelease() {
-            if (Client.currentContext != null) {
-                Client.currentContext.release();
+            if (currentContext != null) {
+                currentContext.release();
             }
         }
 
@@ -152,7 +152,7 @@ public final class VectorAccel extends Skill {
 
             public Context(LocalPlayer player) {
                 this.player = player;
-                this.chargeStartTime = System.nanoTime();
+                chargeStartTime = System.nanoTime();
             }
 
             public void release() {
@@ -164,8 +164,8 @@ public final class VectorAccel extends Skill {
 
             private void cleanup() {
                 AbilitySystemClient.unregisterContext(this);
-                if (Client.currentContext == this) {
-                    Client.currentContext = null;
+                if (currentContext == this) {
+                    currentContext = null;
                 }
             }
 
@@ -182,7 +182,7 @@ public final class VectorAccel extends Skill {
                 var trajectoryStartPos = player.getPosition(partialTick);
                 var direction = targetPoint.subtract(trajectoryStartPos).normalize();
 
-                final double maxDownwardY = -0.5;
+                final var maxDownwardY = -0.5;
                 if (direction.y < maxDownwardY) {
                     direction = new Vec3(direction.x, maxDownwardY, direction.z).normalize();
                 }
@@ -247,9 +247,9 @@ public final class VectorAccel extends Skill {
                 if (pShapes.isEmpty()) {
                     return pDeltaMovement;
                 } else {
-                    double d0 = pDeltaMovement.x;
-                    double d1 = pDeltaMovement.y;
-                    double d2 = pDeltaMovement.z;
+                    var d0 = pDeltaMovement.x;
+                    var d1 = pDeltaMovement.y;
+                    var d2 = pDeltaMovement.z;
                     if (d1 != 0.0D) {
                         d1 = Shapes.collide(Direction.Axis.Y, pEntityBB, pShapes, d1);
                         if (d1 != 0.0D) {
@@ -257,7 +257,7 @@ public final class VectorAccel extends Skill {
                         }
                     }
 
-                    boolean flag = Math.abs(d0) < Math.abs(d2);
+                    var flag = Math.abs(d0) < Math.abs(d2);
                     if (flag && d2 != 0.0D) {
                         d2 = Shapes.collide(Direction.Axis.Z, pEntityBB, pShapes, d2);
                         if (d2 != 0.0D) {
@@ -315,7 +315,7 @@ public final class VectorAccel extends Skill {
                     var normal = Vec3.atLowerCornerOf(blockHitResult.getDirection().getUnitVec3i());
 
                     var lerpFactor = ClientUtil.animationFactor(1.5f);
-                    final float ringRadius = 0.4f;
+                    final var ringRadius = 0.4f;
                     var targetAlpha = 0.5f + 0.5f * chargeRatio;
                     ringAlpha = MathUtil.lerpStartEndFactor(ringAlpha, targetAlpha, lerpFactor);
 

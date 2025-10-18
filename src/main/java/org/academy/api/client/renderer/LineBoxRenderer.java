@@ -64,7 +64,7 @@ public final class LineBoxRenderer {
         var matrix4f = poseStack.lastMatrix();
         var matrix3f = poseStack.lastNormal();
 
-        for (int i = 0; i < faceIndices.length; i++) {
+        for (var i = 0; i < faceIndices.length; i++) {
             var v1 = vertices[faceIndices[i]];
             var v2 = vertices[faceIndices[(i + 1) % faceIndices.length]];
             drawLine(vertexConsumer, matrix4f, matrix3f, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], r, g, b, a);

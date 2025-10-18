@@ -33,38 +33,38 @@ public class SpriteSheetWidget extends ImageWidget {
         this.frameHeight = frameHeight;
         this.frameCount = frameCount;
 
-        this.setFrameIndex(0);
+        setFrameIndex(0);
     }
 
     public int getFrameIndex() {
-        return this.currentFrame;
+        return currentFrame;
     }
 
     public void setFrameIndex(int index) {
-        if (index < 0 || index >= this.frameCount) {
-            throw new IllegalArgumentException("Frame index " + index + " is out of bounds for frame count " + this.frameCount);
+        if (index < 0 || index >= frameCount) {
+            throw new IllegalArgumentException("Frame index " + index + " is out of bounds for frame count " + frameCount);
         }
-        this.currentFrame = index;
-        this.computeUV(index);
+        currentFrame = index;
+        computeUV(index);
     }
 
     protected void computeUV(int index) {
         float newU0, newU1, newV0, newV1;
 
-        if (this.orientation == Orientation.HORIZONTAL) {
-            var x = index * this.frameWidth;
-            newU0 = (float) x / this.sheetWidth;
-            newU1 = (float) (x + this.frameWidth) / this.sheetWidth;
+        if (orientation == Orientation.HORIZONTAL) {
+            var x = index * frameWidth;
+            newU0 = (float) x / sheetWidth;
+            newU1 = (float) (x + frameWidth) / sheetWidth;
             newV0 = 0f;
-            newV1 = (float) this.frameHeight / this.sheetHeight;
+            newV1 = (float) frameHeight / sheetHeight;
         } else {
-            var y = index * this.frameHeight;
+            var y = index * frameHeight;
             newU0 = 0f;
-            newU1 = (float) this.frameWidth / this.sheetWidth;
-            newV0 = (float) y / this.sheetHeight;
-            newV1 = (float) (y + this.frameHeight) / this.sheetHeight;
+            newU1 = (float) frameWidth / sheetWidth;
+            newV0 = (float) y / sheetHeight;
+            newV1 = (float) (y + frameHeight) / sheetHeight;
         }
 
-        this.setTextureCoords(newU0, newV0, newU1, newV1);
+        setUv(newU0, newV0, newU1, newV1);
     }
 }

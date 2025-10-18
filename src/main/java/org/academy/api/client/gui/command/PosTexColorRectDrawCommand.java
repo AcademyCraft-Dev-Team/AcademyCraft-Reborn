@@ -44,9 +44,9 @@ public abstract class PosTexColorRectDrawCommand extends DrawCommand {
 
     @Override
     public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
-        consumer.addVertex(pose, 0.0F, 0.0F, 0.0F).setUv(this.u0, this.v0).setColor(this.red, this.green, this.blue, this.alpha);
-        consumer.addVertex(pose, 0.0F, this.height, 0.0F).setUv(this.u0, this.v1).setColor(this.red, this.green, this.blue, this.alpha);
-        consumer.addVertex(pose, this.width, this.height, 0.0F).setUv(this.u1, this.v1).setColor(this.red, this.green, this.blue, this.alpha);
-        consumer.addVertex(pose, this.width, 0.0F, 0.0F).setUv(this.u1, this.v0).setColor(this.red, this.green, this.blue, this.alpha);
+        consumer.addVertex(pose, 0.0F, 0.0F, 0.0F).setUv(u0, v0).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, 0.0F, height, 0.0F).setUv(u0, v1).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, width, height, 0.0F).setUv(u1, v1).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, width, 0.0F, 0.0F).setUv(u1, v0).setColor(red, green, blue, alpha);
     }
 }

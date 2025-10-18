@@ -1,6 +1,7 @@
 package org.academy.internal.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
@@ -25,5 +26,15 @@ public final class WindGenPillarRenderer implements BlockEntityRenderer<WindGenP
         poseStack.translate(0.5f, 0, 0.5f);
         WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, renderState.lightCoords, OverlayTexture.NO_OVERLAY);
         poseStack.popPose();
+    }
+
+    @Override
+    public boolean shouldRenderOffScreen() {
+        return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return Minecraft.getInstance().options.getEffectiveRenderDistance() * 16;
     }
 }

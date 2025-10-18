@@ -33,7 +33,7 @@ public final class ImagiphaseLichenBlock extends MultifaceSpreadeableBlock imple
 
     @Override
     public boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state) {
-        return Direction.stream().anyMatch(p_153316_ -> this.spreader.canSpreadInAnyDirection(state, level, pos, p_153316_.getOpposite()));
+        return Direction.stream().anyMatch(p_153316_ -> spreader.canSpreadInAnyDirection(state, level, pos, p_153316_.getOpposite()));
     }
 
     @Override
@@ -43,7 +43,7 @@ public final class ImagiphaseLichenBlock extends MultifaceSpreadeableBlock imple
 
     @Override
     public void performBonemeal(ServerLevel level, RandomSource random, BlockPos pos, BlockState state) {
-        this.spreader.spreadFromRandomFaceTowardRandomDirection(state, level, pos, random);
+        spreader.spreadFromRandomFaceTowardRandomDirection(state, level, pos, random);
     }
 
     @Override
@@ -53,6 +53,6 @@ public final class ImagiphaseLichenBlock extends MultifaceSpreadeableBlock imple
 
     @Override
     public MultifaceSpreader getSpreader() {
-        return this.spreader;
+        return spreader;
     }
 }

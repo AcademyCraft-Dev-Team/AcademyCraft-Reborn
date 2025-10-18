@@ -29,9 +29,9 @@ public abstract class ImagiphasePlasma extends FlowingFluid {
 
     @Override
     protected void animateTick(@NotNull Level level, @NotNull BlockPos pos, @NotNull FluidState state, @NotNull RandomSource random) {
-        int amount = state.hasProperty(LEVEL) ? state.getValue(LEVEL) : 8;
-        int particleCount = MathUtil.RANDOM.nextInt(2, 5);
-        for (int i = 0; i < particleCount; i++) {
+        var amount = state.hasProperty(LEVEL) ? state.getValue(LEVEL) : 8;
+        var particleCount = MathUtil.RANDOM.nextInt(2, 5);
+        for (var i = 0; i < particleCount; i++) {
             level.addParticle(ParticleTypes.IMAG_PHASE_FLUID.get(),
                     pos.getX() + random.nextDouble(),
                     pos.getY() + MathUtil.RANDOM.nextDouble(0, amount * 0.125),

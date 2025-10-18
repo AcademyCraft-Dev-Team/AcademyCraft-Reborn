@@ -13,14 +13,14 @@ public class BracketProgressBarWidget extends AbstractAnimatedLabelWidget {
         super(Component.empty(), x, y);
         this.fillChar = fillChar;
         this.totalSlots = totalSlots;
-        this.targetComponent = Component.literal("[" + String.valueOf(fillChar).repeat(totalSlots) + "]");
+        targetComponent = Component.literal("[" + String.valueOf(fillChar).repeat(totalSlots) + "]");
     }
 
     @Override
     protected void onAnimationUpdate(ValueAnimator animator) {
         var totalAnimationSteps = totalSlots + 2;
         var fraction = animator.getAnimatedValue();
-        int currentStep = Math.min((int) Math.floor(fraction * totalAnimationSteps), totalAnimationSteps);
+        var currentStep = Math.min((int) Math.floor(fraction * totalAnimationSteps), totalAnimationSteps);
 
         if (currentStep == lastRenderedStep)
             return;
@@ -31,7 +31,7 @@ public class BracketProgressBarWidget extends AbstractAnimatedLabelWidget {
         if (currentStep > 0)
             builder.append('[');
 
-        int filledSlots = Math.max(0, currentStep - 1);
+        var filledSlots = Math.max(0, currentStep - 1);
         if (filledSlots > 0)
             builder.append(String.valueOf(fillChar).repeat(Math.min(filledSlots, totalSlots)));
 
@@ -44,7 +44,7 @@ public class BracketProgressBarWidget extends AbstractAnimatedLabelWidget {
     public void startAnimation() {
         var totalAnimationSteps = totalSlots + 2;
         if (totalAnimationSteps > 0 && stepsPerSecond > 0.0f) {
-            long newDuration = (long) (totalAnimationSteps / stepsPerSecond * 1000.0f);
+            var newDuration = (long) (totalAnimationSteps / stepsPerSecond * 1000.0f);
             setDuration(newDuration);
         } else {
             setDuration(0);

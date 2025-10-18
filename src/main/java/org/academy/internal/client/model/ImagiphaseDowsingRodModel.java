@@ -21,10 +21,10 @@ public class ImagiphaseDowsingRodModel extends Model<Unit> {
 
     public ImagiphaseDowsingRodModel(ModelPart root) {
         super(root.getChild("all"), RenderType::entityCutout);
-        this.all = root.getChild("all");
-        this.handle = this.all.getChild("handle");
-        this.pointer = this.handle.getChild("pointer");
-        this.main = this.all.getChild("main");
+        all = root.getChild("all");
+        handle = all.getChild("handle");
+        pointer = handle.getChild("pointer");
+        main = all.getChild("main");
     }
 
     public static LayerDefinition createBodyLayer() {

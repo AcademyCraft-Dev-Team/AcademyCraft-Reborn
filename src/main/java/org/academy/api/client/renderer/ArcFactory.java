@@ -3,6 +3,7 @@ package org.academy.api.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import org.academy.api.client.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.util.MathUtil;
 import org.joml.Vector3f;
@@ -19,7 +20,7 @@ public final class ArcFactory {
     private static final float MIN_THICKNESS_FACTOR = 0.1f;
 
     static {
-        PostEffect.addFixedBuffer(RenderTypes.ARC);
+        PostEffect.addFixedBuffer(Render.RenderTypes.ARC);
     }
 
     public static void render(PoseStack ps, SubmitNodeCollector submitNodeCollector, ArcRenderData data) {
@@ -27,7 +28,7 @@ public final class ArcFactory {
     }
 
     public static void render(PoseStack ps, SubmitNodeCollector submitNodeCollector, ArcRenderData data, float r, float g, float b, float a) {
-        submitNodeCollector.submitCustomGeometry(ps, RenderTypes.ARC, (pose, vc) -> renderRecursive(pose, vc, data, r, g, b, a));
+        submitNodeCollector.submitCustomGeometry(ps, Render.RenderTypes.ARC, (pose, vc) -> renderRecursive(pose, vc, data, r, g, b, a));
     }
 
     private static void renderRecursive(PoseStack.Pose pose, VertexConsumer vc, ArcRenderData data, float r, float g, float b, float a) {
@@ -74,8 +75,8 @@ public final class ArcFactory {
         private static void generateRecursive(ArcRenderData parentData, Random rnd, ArcStyle style, int depth) {
             float startX = style.start.x, startY = style.start.y, startZ = style.start.z;
             float endX = style.end.x, endY = style.end.y, endZ = style.end.z;
-            float thickness = style.thickness;
-            int segments = style.segments;
+            var thickness = style.thickness;
+            var segments = style.segments;
 
             var distSq = style.start.distanceSquared(style.end);
             if (depth >= style.maxBranchDepth || distSq < EPSILON * EPSILON) {

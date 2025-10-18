@@ -35,10 +35,10 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
 
     public WirelessNodeModel(ModelPart root) {
         super(root.getChild("all"), RenderType::entityTranslucent);
-        this.all = root.getChild("all");
-        this.core_li = this.all.getChild("core_li");
-        this.base2 = this.all.getChild("base2");
-        this.innner_ef = this.all.getChild("innner_ef");
+        all = root.getChild("all");
+        core_li = all.getChild("core_li");
+        base2 = all.getChild("base2");
+        innner_ef = all.getChild("innner_ef");
         quarter = QUARTER.bake(root);
         half = HALF.bake(root);
         quarters = QUARTERS.bake(root);
@@ -194,9 +194,9 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
         if (renderState.connectedUsersCount == 0) {
             resetPose();
         } else {
-            int ratio100 = renderState.connectedUsersCount * 100 / renderState.maxConnectedUsers;
-            int level = (ratio100 - 1) / 25 + 1;
-            int progress = Math.min(level, 4);
+            var ratio100 = renderState.connectedUsersCount * 100 / renderState.maxConnectedUsers;
+            var level = (ratio100 - 1) / 25 + 1;
+            var progress = Math.min(level, 4);
             switch (progress) {
                 case 1: {
                     quarter.apply(renderState.coreState, renderState.ageInTicks);

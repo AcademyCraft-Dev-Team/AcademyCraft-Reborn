@@ -32,7 +32,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     @Nullable
     public WindGenWorldGUI windGenWorldGUI;
     public Completeness completeness = Completeness.BASE_ONLY;
-    public NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
+    private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     @Nullable
     public WindGenTopBlockEntity topBlockEntity;
     private static final String NBT_COMPLETENESS = "Completeness";
@@ -80,12 +80,12 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
 
     private void clientTick() {
         if (isMain() && level != null) {
-            var wasNearby = this.playerNearby;
+            var wasNearby = playerNearby;
             var nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
-            this.playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;
+            playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;
 
-            if (wasNearby != this.playerNearby) {
-                handleStateChangeOnClient(wasNearby, this.playerNearby);
+            if (wasNearby != playerNearby) {
+                handleStateChangeOnClient(wasNearby, playerNearby);
             }
         }
     }
@@ -118,8 +118,8 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
 
     private void updateState() {
         if (level != null) {
-            int pillars = 0;
-            boolean hasTop = false;
+            var pillars = 0;
+            var hasTop = false;
             var p = getBlockPos();
             var calculatedCompleteness = Completeness.BASE_ONLY;
 
@@ -158,8 +158,8 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
                     calculatedCompleteness = Completeness.NO_TOP;
                 }
             }
-            if (calculatedCompleteness != this.completeness) {
-                this.completeness = calculatedCompleteness;
+            if (calculatedCompleteness != completeness) {
+                completeness = calculatedCompleteness;
                 setChanged();
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
             }
@@ -226,7 +226,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     public ItemStack removeItem(int slot, int amount) {
         var itemstack = ContainerHelper.removeItem(items, slot, amount);
         if (!itemstack.isEmpty()) {
-            this.setChanged();
+            setChanged();
         }
 
         return itemstack;
@@ -280,8 +280,8 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
             }
             return;
         }
-        if (!Objects.equals(this.connectedNodePos, nodePos)) {
-            this.connectedNodePos = nodePos;
+        if (!Objects.equals(connectedNodePos, nodePos)) {
+            connectedNodePos = nodePos;
             setChanged();
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -319,7 +319,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
 
     public void setEnergyStorage(int energyStorage) {
         var clamped = Math.max(0, Math.min(energyStorage, getMaxEnergyStorage()));
-        if (clamped != this.energyStored) {
+        if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();
             if (level != null && !level.isClientSide()) {
@@ -333,7 +333,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     }
 
     public AABB getRenderBoundingBox() {
-        var pos = this.getBlockPos().getCenter();
+        var pos = getBlockPos().getCenter();
         var radius = 1.5f;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

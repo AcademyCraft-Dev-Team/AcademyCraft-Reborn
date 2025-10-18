@@ -4,6 +4,6 @@ public abstract class Curriculum {
     public final String name;
 
     protected Curriculum(String newName) {
-        this.name = newName;
+        name = newName;
     }
 }

@@ -123,7 +123,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             @Override
                             protected void onMouseReleased(@NotNull MouseEvent event) {
                                 if (isProgressBarDragging) {
-                                    MediaPlayerBackend.seek(this.getValue());
+                                    MediaPlayerBackend.seek(getValue());
                                     isProgressBarDragging = false;
                                 }
                                 super.onMouseReleased(event);
@@ -134,7 +134,6 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                         var timeLabelY = progressBar.getY() + progressBar.getHeight() + 2f;
                         timeLabel = new AutoScaleLabelWidget("00:00 / 00:00", 0, timeLabelY, layered.getWidth());
                         timeLabel.setScale(0.7f);
-                        timeLabel.setDropShadow(false);
                         layered.addChild("time_label", timeLabel);
 
                         var controlsY = timeLabel.getY() + timeLabel.getHeight() + 5f;
@@ -160,7 +159,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             controlPanel.addChild("next", nextButton);
                             currentX += btnSize + bigGap;
 
-                            modeButton = new ImageButtonWidget(currentX, 0, btnSize, btnSize, null, MediaPlayer::cyclePlaybackMode);
+                            modeButton = new ImageButtonWidget(currentX, 0, btnSize, btnSize, (ResourceLocation) null, MediaPlayer::cyclePlaybackMode);
                             modeButton.setDefaultHoverEffect(true);
                             controlPanel.addChild("mode_button", modeButton);
                             currentX += btnSize + bigGap;
@@ -201,7 +200,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private PanelWidget createMediaWidget(MediaInfo mediaInfo, float y, Runnable onClick) {
         var root = new PanelWidget(0, y, 150f - 6f, MEDIA_HEIGHT);
         {
-            var button = new ImageButtonWidget(0, 0, root.getWidth(), root.getHeight(), null, onClick);
+            var button = new ImageButtonWidget(0, 0, root.getWidth(), root.getHeight(), (ResourceLocation) null, onClick);
             root.addChild("button", button);
 
             var back = new FillWidget(0, 0, root.getWidth(), root.getHeight(), 0xFF000000);
@@ -224,7 +223,6 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                         80f
                 );
                 name.setScale(0.8f);
-                name.setDropShadow(false);
                 main.addChild("name", name);
 
                 var info = new AutoScaleLabelWidget(
@@ -232,7 +230,6 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                         icon.getX() + MEDIA_ICON_SIZE + 5, 16,
                         80f
                 );
-                info.setDropShadow(false);
                 info.setScale(0.6f);
                 main.addChild("info", info);
             }
@@ -300,7 +297,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
 
         public GeometricButtonWidget(float x, float y, float width, float height, ButtonShape newShape, Runnable onPress) {
             super(x, y, width, height, onPress);
-            this.shape = newShape;
+            shape = newShape;
         }
 
         @Override

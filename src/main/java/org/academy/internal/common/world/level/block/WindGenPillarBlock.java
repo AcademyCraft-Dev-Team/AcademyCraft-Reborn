@@ -21,7 +21,7 @@ public final class WindGenPillarBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Block.cube(8.8692435136, 16, 8.8692435136);
+        return cube(8.8692435136, 16, 8.8692435136);
     }
 
     @Override

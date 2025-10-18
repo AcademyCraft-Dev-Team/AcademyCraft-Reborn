@@ -17,7 +17,7 @@ import java.util.*;
  */
 public abstract class AbilityCategory {
     /**
-     * CODEC 因为性能开销不适合用在网络数据传输中, 请使用 STREAM_CODEC
+     * CODEC 因性能开销并不适合用于网络数据传输喵, 请使用 STREAM_CODEC 喵
      */
     public static final Codec<AbilityCategory> CODEC =
             Codec.INT.xmap(Registries.ABILITY_CATEGORIES::byId, Registries.ABILITY_CATEGORIES::getId);
@@ -49,7 +49,7 @@ public abstract class AbilityCategory {
     }
 
     public final void seal() {
-        skills = Collections.unmodifiableMap(this.skills);
+        skills = Collections.unmodifiableMap(skills);
     }
 
     public final Collection<Skill> getSkills() {

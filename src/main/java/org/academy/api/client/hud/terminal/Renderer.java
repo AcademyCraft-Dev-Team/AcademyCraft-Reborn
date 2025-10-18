@@ -48,7 +48,7 @@ public final class Renderer implements AutoCloseable {
     public Renderer(Config config, UIManager uiManager) {
         this.config = config;
         this.uiManager = uiManager;
-        this.internalUIRenderContext = new UIRenderContext();
+        internalUIRenderContext = new UIRenderContext();
 
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
@@ -79,7 +79,7 @@ public final class Renderer implements AutoCloseable {
         var guiHeight = (float) window.getGuiScaledHeight();
         var aspectRatio = (float) window.getWidth() / (float) window.getHeight();
         float fov = 80;
-        float fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspectRatio);
+        var fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspectRatio);
 
         var projectionMatrix = new Matrix4f().perspective(fovY, aspectRatio, 1.0F, 1000.0F);
         var viewMatrix = new Matrix4f().identity();
@@ -261,7 +261,7 @@ public final class Renderer implements AutoCloseable {
         }
 
         public void write(Std140Builder builder) {
-            builder.putMat4f(this.mvp);
+            builder.putMat4f(mvp);
         }
     }
 }

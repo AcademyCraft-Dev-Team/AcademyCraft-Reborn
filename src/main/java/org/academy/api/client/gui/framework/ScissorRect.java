@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.framework;
 
 import net.minecraft.util.Mth;
+import org.academy.api.common.util.MathUtil;
 import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 
@@ -31,7 +32,7 @@ public final class ScissorRect implements Comparable<ScissorRect> {
         return EMPTY;
     }
 
-    public static ScissorRect of(Axis2D pAxis, float pPrimaryPosition, float pSecondaryPosition, float pPrimaryLength, float pSecondaryLength) {
+    public static ScissorRect of(MathUtil.Axis2D pAxis, float pPrimaryPosition, float pSecondaryPosition, float pPrimaryLength, float pSecondaryLength) {
         return switch (pAxis) {
             case HORIZONTAL -> new ScissorRect(pPrimaryPosition, pSecondaryPosition, pPrimaryLength, pSecondaryLength);
             case VERTICAL -> new ScissorRect(pSecondaryPosition, pPrimaryPosition, pSecondaryLength, pPrimaryLength);
@@ -39,113 +40,113 @@ public final class ScissorRect implements Comparable<ScissorRect> {
     }
 
     public Position2D getPosition() {
-        return this.position;
+        return position;
     }
 
     public float getWidth() {
-        return this.width;
+        return width;
     }
 
     public float getHeight() {
-        return this.height;
+        return height;
     }
 
-    public ScissorRect step(Direction2D pDirection) {
-        return new ScissorRect(this.position.step(pDirection), this.width, this.height);
+    public ScissorRect step(MathUtil.Direction2D pDirection) {
+        return new ScissorRect(position.step(pDirection), width, height);
     }
 
-    public float getLength(Axis2D axis) {
+    public float getLength(MathUtil.Axis2D axis) {
         return switch (axis) {
-            case HORIZONTAL -> this.width;
-            case VERTICAL -> this.height;
+            case HORIZONTAL -> width;
+            case VERTICAL -> height;
         };
     }
 
-    public float getBoundInDirection(Direction2D pDirection) {
+    public float getBoundInDirection(MathUtil.Direction2D pDirection) {
         var screenaxis = pDirection.getAxis();
-        return pDirection.isPositive() ? this.position.getCoordinate(screenaxis) + this.getLength(screenaxis) - 1 : this.position.getCoordinate(screenaxis);
+        return pDirection.isPositive() ? position.getCoordinate(screenaxis) + getLength(screenaxis) - 1 : position.getCoordinate(screenaxis);
     }
 
-    public ScissorRect getBorder(Direction2D pDirection) {
-        var i = this.getBoundInDirection(pDirection);
+    public ScissorRect getBorder(MathUtil.Direction2D pDirection) {
+        var i = getBoundInDirection(pDirection);
         var screenaxis = pDirection.getAxis().orthogonal();
-        var j = this.getBoundInDirection(screenaxis.getNegative());
-        var k = this.getLength(screenaxis);
+        var j = getBoundInDirection(screenaxis.getNegative());
+        var k = getLength(screenaxis);
         return of(pDirection.getAxis(), i, j, 1, k).step(pDirection);
     }
 
     public boolean overlaps(ScissorRect pRectangle) {
-        return this.overlapsInAxis(pRectangle, Axis2D.HORIZONTAL) && this.overlapsInAxis(pRectangle, Axis2D.VERTICAL);
+        return overlapsInAxis(pRectangle, MathUtil.Axis2D.HORIZONTAL) && overlapsInAxis(pRectangle, MathUtil.Axis2D.VERTICAL);
     }
 
-    public boolean overlapsInAxis(ScissorRect pRectangle, Axis2D pAxis) {
-        var i = this.getBoundInDirection(pAxis.getNegative());
+    public boolean overlapsInAxis(ScissorRect pRectangle, MathUtil.Axis2D pAxis) {
+        var i = getBoundInDirection(pAxis.getNegative());
         var j = pRectangle.getBoundInDirection(pAxis.getNegative());
-        var k = this.getBoundInDirection(pAxis.getPositive());
+        var k = getBoundInDirection(pAxis.getPositive());
         var l = pRectangle.getBoundInDirection(pAxis.getPositive());
         return Math.max(i, j) <= Math.min(k, l);
     }
 
-    public float getCenterInAxis(Axis2D pAxis) {
-        return (this.getBoundInDirection(pAxis.getPositive()) + this.getBoundInDirection(pAxis.getNegative())) / 2;
+    public float getCenterInAxis(MathUtil.Axis2D pAxis) {
+        return (getBoundInDirection(pAxis.getPositive()) + getBoundInDirection(pAxis.getNegative())) / 2;
     }
 
     @Nullable
     public ScissorRect intersection(ScissorRect pRectangle) {
-        var i = Math.max(this.getLeft(), pRectangle.getLeft());
-        var j = Math.max(this.getTop(), pRectangle.getTop());
-        var k = Math.min(this.getRight(), pRectangle.getRight());
-        var l = Math.min(this.getBottom(), pRectangle.getBottom());
+        var i = Math.max(getLeft(), pRectangle.getLeft());
+        var j = Math.max(getTop(), pRectangle.getTop());
+        var k = Math.min(getRight(), pRectangle.getRight());
+        var l = Math.min(getBottom(), pRectangle.getBottom());
         return i < k && j < l ? new ScissorRect(i, j, k - i, l - j) : null;
     }
 
     public boolean intersects(ScissorRect pRectangle) {
-        return this.getLeft() < pRectangle.getRight()
-                && this.getRight() > pRectangle.getLeft()
-                && this.getTop() < pRectangle.getBottom()
-                && this.getBottom() > pRectangle.getTop();
+        return getLeft() < pRectangle.getRight()
+                && getRight() > pRectangle.getLeft()
+                && getTop() < pRectangle.getBottom()
+                && getBottom() > pRectangle.getTop();
     }
 
     public boolean encompasses(ScissorRect pRectangle) {
-        return pRectangle.getLeft() >= this.getLeft()
-                && pRectangle.getTop() >= this.getTop()
-                && pRectangle.getRight() <= this.getRight()
-                && pRectangle.getBottom() <= this.getBottom();
+        return pRectangle.getLeft() >= getLeft()
+                && pRectangle.getTop() >= getTop()
+                && pRectangle.getRight() <= getRight()
+                && pRectangle.getBottom() <= getBottom();
     }
 
     public float getTop() {
-        return this.position.y;
+        return position.y;
     }
 
     public float getBottom() {
-        return this.position.y + this.height;
+        return position.y + height;
     }
 
     public float getLeft() {
-        return this.position.x;
+        return position.x;
     }
 
     public float getRight() {
-        return this.position.x + this.width;
+        return position.x + width;
     }
 
     public boolean containsPoint(int pX, int pY) {
-        return pX >= this.getLeft() && pX < this.getRight() && pY >= this.getTop() && pY < this.getBottom();
+        return pX >= getLeft() && pX < getRight() && pY >= getTop() && pY < getBottom();
     }
 
     public ScissorRect transformAxisAligned(Matrix3x2f pPos) {
-        var vector2f = pPos.transformPosition(this.getLeft(), this.getTop(), new Vector2f());
-        var vector2f1 = pPos.transformPosition(this.getRight(), this.getBottom(), new Vector2f());
+        var vector2f = pPos.transformPosition(getLeft(), getTop(), new Vector2f());
+        var vector2f1 = pPos.transformPosition(getRight(), getBottom(), new Vector2f());
         return new ScissorRect(
                 Mth.floor(vector2f.x), Mth.floor(vector2f.y), Mth.floor(vector2f1.x - vector2f.x), Mth.floor(vector2f1.y - vector2f.y)
         );
     }
 
     public ScissorRect transformMaxBounds(Matrix3x2f pPos) {
-        var vector2f = pPos.transformPosition(this.getLeft(), this.getTop(), new Vector2f());
-        var vector2f1 = pPos.transformPosition(this.getRight(), this.getTop(), new Vector2f());
-        var vector2f2 = pPos.transformPosition(this.getLeft(), this.getBottom(), new Vector2f());
-        var vector2f3 = pPos.transformPosition(this.getRight(), this.getBottom(), new Vector2f());
+        var vector2f = pPos.transformPosition(getLeft(), getTop(), new Vector2f());
+        var vector2f1 = pPos.transformPosition(getRight(), getTop(), new Vector2f());
+        var vector2f2 = pPos.transformPosition(getLeft(), getBottom(), new Vector2f());
+        var vector2f3 = pPos.transformPosition(getRight(), getBottom(), new Vector2f());
         var f = Math.min(Math.min(vector2f.x(), vector2f2.x()), Math.min(vector2f1.x(), vector2f3.x()));
         var f1 = Math.max(Math.max(vector2f.x(), vector2f2.x()), Math.max(vector2f1.x(), vector2f3.x()));
         var f2 = Math.min(Math.min(vector2f.y(), vector2f2.y()), Math.min(vector2f1.y(), vector2f3.y()));
@@ -155,16 +156,16 @@ public final class ScissorRect implements Comparable<ScissorRect> {
 
     @Override
     public int compareTo(ScissorRect other) {
-        int cmp = Float.compare(this.position.y, other.position.y);
+        var cmp = Float.compare(position.y, other.position.y);
         if (cmp != 0)
             return cmp;
-        cmp = Float.compare(this.position.x, other.position.x);
+        cmp = Float.compare(position.x, other.position.x);
         if (cmp != 0)
             return cmp;
-        cmp = Float.compare(this.height, other.height);
+        cmp = Float.compare(height, other.height);
         if (cmp != 0)
             return cmp;
-        return Float.compare(this.width, other.width);
+        return Float.compare(width, other.width);
     }
 
     @Override
@@ -174,18 +175,18 @@ public final class ScissorRect implements Comparable<ScissorRect> {
         if (o == null || getClass() != o.getClass())
             return false;
         var that = (ScissorRect) o;
-        return Float.compare(that.width, this.width) == 0
-                && Float.compare(that.height, this.height) == 0
-                && Objects.equals(this.position, that.position);
+        return Float.compare(that.width, width) == 0
+                && Float.compare(that.height, height) == 0
+                && Objects.equals(position, that.position);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.position, this.width, this.height);
+        return Objects.hash(position, width, height);
     }
 
     @Override
     public String toString() {
-        return "ScissorRect[" + "position=" + this.position + ", " + "width=" + this.width + ", " + "height=" + this.height + ']';
+        return "ScissorRect[" + "position=" + position + ", " + "width=" + width + ", " + "height=" + height + ']';
     }
 }

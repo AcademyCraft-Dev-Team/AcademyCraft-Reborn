@@ -1,11 +1,9 @@
 package org.academy.api.client.hud;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -15,13 +13,12 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
-import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.command.DrawCommand;
+import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.framework.*;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.InputSystem;
@@ -41,7 +38,7 @@ public final class HUDManager implements IAnimationScreen {
     public static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
     public static final RenderTarget RENDER_TARGET;
     public static final PanelWidget ROOT;
-    public static final AbstractWidget CP_BAR_BACKGROUND_WIDGET;
+    public static final ImageWidget CP_BAR_BACKGROUND_WIDGET;
     public static final ImageWidget CP_BAR_WIDGET;
     private static final CPBarValueWidget CP_BAR_VALUE_WIDGET;
     public static final ImageWidget ABILITY_ICON_WIDGET;
@@ -75,18 +72,12 @@ public final class HUDManager implements IAnimationScreen {
         ROOT = new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F);
         ROOT.setAlpha(0.0F);
 
-        var backTexture = Minecraft.getInstance().getTextureManager().getTexture(Resource.Textures.CP_BAR_BACKGROUND);
-        backTexture.getTexture().setTextureFilter(FilterMode.NEAREST, false);
-        var backTextureView = backTexture.getTextureView();
-
-        CP_BAR_BACKGROUND_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, backTextureView);
+        CP_BAR_BACKGROUND_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, Resource.Textures.CP_BAR_BACKGROUND);
+        CP_BAR_BACKGROUND_WIDGET.setTextureFilter(FilterMode.NEAREST, false);
         ROOT.addChild("cp_bar_bg", CP_BAR_BACKGROUND_WIDGET);
 
-        var barTexture = Minecraft.getInstance().getTextureManager().getTexture(Resource.Textures.CP_BAR);
-        barTexture.getTexture().setTextureFilter(FilterMode.LINEAR, true);
-        var barTextureView = barTexture.getTextureView();
-
-        CP_BAR_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, barTextureView);
+        CP_BAR_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, Resource.Textures.CP_BAR);
+        CP_BAR_WIDGET.setTextureFilter(FilterMode.LINEAR, true);
         ROOT.addChild("cp_bar", CP_BAR_WIDGET);
 
         CP_BAR_VALUE_WIDGET = new CPBarValueWidget(0.0F, 0.0F, 0.0F, 0.0F);
@@ -303,14 +294,10 @@ public final class HUDManager implements IAnimationScreen {
         return trackedAnimations;
     }
 
-    private static class CPBarValueWidget extends AbstractWidget {
-        private final GpuTextureView valueTextureView;
-
+    private static class CPBarValueWidget extends ImageWidget {
         public CPBarValueWidget(float x, float y, float width, float height) {
-            super(x, y, width, height);
-            var texture = Minecraft.getInstance().getTextureManager().getTexture(Resource.Textures.CP_BAR_VALUE);
-            texture.getTexture().setTextureFilter(FilterMode.LINEAR, true);
-            this.valueTextureView = texture.getTextureView();
+            super(x, y, width, height, Resource.Textures.CP_BAR_VALUE);
+            setTextureFilter(FilterMode.LINEAR, true);
         }
 
         public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
@@ -322,7 +309,11 @@ public final class HUDManager implements IAnimationScreen {
             var b = CP_BAR_WIDGET.getBlue();
             var rootAlpha = ROOT.getAlpha();
 
-            var command = new DrawCommand(Render.RenderPipelines.IMAGE) {
+            resolveAndPrepareTexture();
+
+            if (textureView == null) return;
+
+            var command = new ImageDrawCommand(textureView, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) {
                 public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
                     var barWidthOffset = 148.54579F * (1.0F - smoothProgress);
                     var leftSafeZoneWidth = 3.2000003F;
@@ -346,14 +337,6 @@ public final class HUDManager implements IAnimationScreen {
                     consumer.addVertex(pose, rightTopX, CP_BAR_HEIGHT, 0.0F).setUv(1.0F, 1.0F).setColor(r, g, b, finalAlpha);
                     consumer.addVertex(pose, rightTopX, 0.0F, 0.0F).setUv(1.0F, 0.0F).setColor(r, g, b, finalAlpha);
                 }
-
-                public Map<String, GpuTextureView> getSamplers() {
-                    return Map.of("Sampler0", valueTextureView);
-                }
-
-                public Map<String, GpuBufferSlice> getUniforms() {
-                    return Collections.emptyMap();
-                }
             };
             context.submit(command);
         }
@@ -367,22 +350,22 @@ public final class HUDManager implements IAnimationScreen {
 
         public SkillWidget(Skill newSkill) {
             super(0.0F, 0.0F, DEFAULT_SKILL_WIDGET_WIDTH, DEFAULT_SKILL_WIDGET_HEIGHT);
-            this.skill = newSkill;
+            skill = newSkill;
             setName("skill_" + newSkill.getKey().toString().replace(":", "_"));
 
             var padding = 2.0F;
             var iconSize = 16.0F;
 
-            this.back = new FillWidget(0.0F, 0.0F, getWidth(), getHeight(), 1610612736);
-            this.label = new AutoScaleLabelWidget(skill.getTranslatedName(), padding, 0.0F, getWidth() - iconSize - padding * 3.0F);
-            this.label.setScale(0.7F);
-            this.icon = new ImageWidget(getWidth() - padding - iconSize, padding, iconSize, iconSize, skill.getKey());
-            this.icon.setWidthScale(0.8F);
-            this.icon.setHeightScale(0.8F);
+            back = new FillWidget(0.0F, 0.0F, getWidth(), getHeight(), 1610612736);
+            label = new AutoScaleLabelWidget(skill.getTranslatedName(), padding, 0.0F, getWidth() - iconSize - padding * 3.0F);
+            label.setScale(0.7F);
+            icon = new ImageWidget(getWidth() - padding - iconSize, padding, iconSize, iconSize, skill.getKey());
+            icon.setWidthScale(0.8F);
+            icon.setHeightScale(0.8F);
 
-            addChild("back", this.back);
-            addChild("label", this.label);
-            addChild("icon", this.icon);
+            addChild("back", back);
+            addChild("label", label);
+            addChild("icon", icon);
         }
 
         public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {

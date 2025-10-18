@@ -113,7 +113,7 @@ public final class HUDController implements HUDRenderer {
     }
 
     public boolean isActive() {
-        return this.active;
+        return active;
     }
 
     public void resize(int width, int height) {
@@ -149,8 +149,8 @@ public final class HUDController implements HUDRenderer {
     @SubscribeEvent
     public void onMouseButton(MouseButtonEvent event) {
         if (isActive() && Minecraft.getInstance().screen == null && uiManager != null) {
-            this.currentMouseButton = event.button;
-            this.currentMouseAction = event.action;
+            currentMouseButton = event.button;
+            currentMouseAction = event.action;
             var inputEvent = event.action == 1
                     ? MouseEvent.createPressEvent(xpos, ypos, event.button)
                     : MouseEvent.createReleaseEvent(xpos, ypos, event.button);
@@ -211,7 +211,7 @@ public final class HUDController implements HUDRenderer {
             var scanCode = event.scanCode;
             var mcKeyEvent = new net.minecraft.client.input.KeyEvent(key, scanCode, event.modifiers);
 
-            boolean isMovementKey = options.keyUp.matches(mcKeyEvent) || options.keyDown.matches(mcKeyEvent)
+            var isMovementKey = options.keyUp.matches(mcKeyEvent) || options.keyDown.matches(mcKeyEvent)
                     || options.keyLeft.matches(mcKeyEvent) || options.keyRight.matches(mcKeyEvent)
                     || options.keyJump.matches(mcKeyEvent) || options.keyShift.matches(mcKeyEvent)
                     || options.keySprint.matches(mcKeyEvent);

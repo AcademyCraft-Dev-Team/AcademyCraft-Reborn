@@ -32,7 +32,7 @@ public class ImagiphaseAmethystBlock extends Block {
     @Override
     protected void onProjectileHit(Level level, BlockState state, BlockHitResult hitResult, Projectile projectile) {
         if (!level.isClientSide()) {
-            BlockPos blockpos = hitResult.getBlockPos();
+            var blockpos = hitResult.getBlockPos();
             level.playSound(null, blockpos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 0.5F + level.random.nextFloat() * 1.2F);
         }
     }

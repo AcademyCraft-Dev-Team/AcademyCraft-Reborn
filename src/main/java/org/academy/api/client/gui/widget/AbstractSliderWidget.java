@@ -32,55 +32,55 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
         super(x, y, width, height, orientation);
         this.minValue = minValue;
         this.maxValue = maxValue;
-        this.currentValue = MathUtil.clamp(initialValue, this.minValue, this.maxValue);
+        currentValue = MathUtil.clamp(initialValue, this.minValue, this.maxValue);
     }
 
     public float getValue() {
-        return this.currentValue;
+        return currentValue;
     }
 
     public void setValue(float value) {
-        var newValue = MathUtil.clamp(value, this.minValue, this.maxValue);
-        if (this.currentValue != newValue) {
-            this.currentValue = newValue;
-            if (this.onValueChanged != null) {
-                this.onValueChanged.accept(this.currentValue);
+        var newValue = MathUtil.clamp(value, minValue, maxValue);
+        if (currentValue != newValue) {
+            currentValue = newValue;
+            if (onValueChanged != null) {
+                onValueChanged.accept(currentValue);
             }
         }
     }
 
     @Override
     protected float getThumbPosition() {
-        float range = this.maxValue - this.minValue;
+        var range = maxValue - minValue;
         if (range <= 0) {
             return 0;
         }
-        float valueFraction = (this.currentValue - this.minValue) / range;
+        var valueFraction = (currentValue - minValue) / range;
 
-        if (this.orientation == Orientation.VERTICAL && this.direction == Direction.BOTTOM_TO_TOP) {
+        if (orientation == Orientation.VERTICAL && direction == Direction.BOTTOM_TO_TOP) {
             valueFraction = 1.0f - valueFraction;
         }
 
-        float trackSize = this.getTrackSize() - this.getThumbSize();
+        var trackSize = getTrackSize() - getThumbSize();
         return valueFraction * trackSize;
     }
 
     @Override
     protected void updateTargetFromMouse(float mousePosition) {
-        float trackSize = this.getTrackSize() - this.getThumbSize();
+        var trackSize = getTrackSize() - getThumbSize();
         if (trackSize <= 0) {
             return;
         }
 
-        float position = mousePosition - this.dragOffset;
-        float positionFraction = MathUtil.clamp(position / trackSize, 0f, 1f);
+        var position = mousePosition - dragOffset;
+        var positionFraction = MathUtil.clamp(position / trackSize, 0f, 1f);
 
-        if (this.orientation == Orientation.VERTICAL && this.direction == Direction.BOTTOM_TO_TOP) {
+        if (orientation == Orientation.VERTICAL && direction == Direction.BOTTOM_TO_TOP) {
             positionFraction = 1.0f - positionFraction;
         }
 
-        float newValue = this.minValue + positionFraction * (this.maxValue - this.minValue);
-        this.setValue(newValue);
+        var newValue = minValue + positionFraction * (maxValue - minValue);
+        setValue(newValue);
     }
 
     public AbstractSliderWidget setDirection(Direction direction) {

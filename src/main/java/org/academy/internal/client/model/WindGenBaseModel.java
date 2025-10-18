@@ -41,8 +41,8 @@ public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
         var lhalf = screen.getChild("lhalf");
         var rods = parts.getChild("rods");
         var base = parts.getChild("base");
-        this.setup = WindGenBaseAnimation.SETUP.bake(root);
-        this.shut = WindGenBaseAnimation.SHUT.bake(root);
+        setup = WindGenBaseAnimation.SETUP.bake(root);
+        shut = WindGenBaseAnimation.SHUT.bake(root);
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -123,7 +123,7 @@ public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
         poseStack.mulPose(Axis.YN.rotationDegrees(22.5f));
         poseStack.scale(1, -1, 1);
 
-        nodeCollector.submitCustomGeometry(poseStack, WindGenBaseModel.PILLAR_RENDER_TYPE,
+        nodeCollector.submitCustomGeometry(poseStack, PILLAR_RENDER_TYPE,
                 (pose, consumer) ->
                         CylinderRenderer.renderCylinder(pose, consumer, PILLAR_VERTEX_BUFFER, 1, 1, 1, 1, packedLight, packedOverlay));
         poseStack.popPose();

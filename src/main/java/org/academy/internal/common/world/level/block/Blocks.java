@@ -44,9 +44,9 @@ public final class Blocks {
             BLOCKS.registerBlock("omni_crafting_table", OmniCraftingTableBlock::new);
     public static final DeferredHolder<Block, CatEngineBlock> CAT_ENGINE =
             BLOCKS.registerBlock("cat_engine", CatEngineBlock::new);
-    public static final DeferredHolder<Block, Block> IMAGIPHASE_AMETHYST_BLOCK =
+    public static final DeferredHolder<Block, ImagiphaseAmethystBlock> IMAGIPHASE_AMETHYST_BLOCK =
             BLOCKS.registerBlock("imagiphase_amethyst_block", ImagiphaseAmethystBlock::new);
-    public static final DeferredHolder<Block, Block> IMAGIPHASE_AMETHYST_CLUSTER =
+    public static final DeferredHolder<Block, ImagiphaseAmethystClusterBlock> IMAGIPHASE_AMETHYST_CLUSTER =
             BLOCKS.registerBlock("imagiphase_amethyst_cluster", properties ->
                     new ImagiphaseAmethystClusterBlock(7.0F, 10.0F,
                             properties
@@ -58,7 +58,7 @@ public final class Blocks {
                                     .sound(SoundType.AMETHYST_CLUSTER)
                                     .lightLevel(state -> 5)
                     ));
-    public static final DeferredHolder<Block, Block> BUDDING_IMAGIPHASE_AMETHYST =
+    public static final DeferredHolder<Block, BuddingImagiphaseAmethystBlock> BUDDING_IMAGIPHASE_AMETHYST =
             BLOCKS.registerBlock("budding_imagiphase_amethyst", BuddingImagiphaseAmethystBlock::new);
     public static final DeferredHolder<Block, Block> LARGE_IMAGIPHASE_AMETHYST_BUD =
             BLOCKS.registerBlock("large_imagiphase_amethyst_bud", properties ->
@@ -73,7 +73,7 @@ public final class Blocks {
                                     .lightLevel(state -> 4)
                     )
             );
-    public static final DeferredHolder<Block, Block> MEDIUM_IMAGIPHASE_AMETHYST_BUD =
+    public static final DeferredHolder<Block, ImagiphaseAmethystClusterBlock> MEDIUM_IMAGIPHASE_AMETHYST_BUD =
             BLOCKS.registerBlock("medium_imagiphase_amethyst_bud", properties ->
                     new ImagiphaseAmethystClusterBlock(4.0F, 10.0F,
                             properties
@@ -86,7 +86,7 @@ public final class Blocks {
                                     .lightLevel(state -> 2)
                     )
             );
-    public static final DeferredHolder<Block, Block> SMALL_IMAGIPHASE_AMETHYST_BUD =
+    public static final DeferredHolder<Block, ImagiphaseAmethystClusterBlock> SMALL_IMAGIPHASE_AMETHYST_BUD =
             BLOCKS.registerBlock("small_imagiphase_amethyst_bud", properties ->
                     new ImagiphaseAmethystClusterBlock(3.0F, 8.0F,
                             properties

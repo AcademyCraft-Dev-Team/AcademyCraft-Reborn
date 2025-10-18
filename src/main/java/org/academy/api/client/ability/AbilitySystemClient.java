@@ -29,7 +29,7 @@ public final class AbilitySystemClient {
     public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system";
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
     public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
-    public static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
+    private static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
     @Nullable
     public static AbilityCategory category;
     private static boolean activeHUD = false;
@@ -50,6 +50,18 @@ public final class AbilitySystemClient {
                         )
                 )
         );
+    }
+
+    public static SkillInfo addSkillInfo(AbilityCategory category, SkillInfo skillInfo) {
+        if (!SKILL_INFOS.containsKey(category)) {
+            SKILL_INFOS.put(category, new ArrayList<>());
+        }
+        SKILL_INFOS.get(category).add(skillInfo);
+        return skillInfo;
+    }
+
+    public static Map<AbilityCategory, List<SkillInfo>> getSkillInfos() {
+        return SKILL_INFOS;
     }
 
     public static void init() {
@@ -123,7 +135,7 @@ public final class AbilitySystemClient {
     }
 
     public static void setMaxComputingPower(float maximumComputingPower) {
-        AbilitySystemClient.maxComputingPower = maximumComputingPower;
+        maxComputingPower = maximumComputingPower;
     }
 
     public static int getLevel() {

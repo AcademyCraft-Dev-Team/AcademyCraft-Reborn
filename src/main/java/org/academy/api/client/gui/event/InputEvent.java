@@ -22,7 +22,7 @@ public abstract class InputEvent {
     }
 
     public void consume() {
-        this.isConsumed = true;
+        isConsumed = true;
     }
 
     @Nullable

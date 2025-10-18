@@ -54,7 +54,7 @@ public final class WindGenTopSpecialRenderer implements NoDataSpecialModelRender
         }
 
         @Override
-        public SpecialModelRenderer<?> bake(BakingContext context) {
+        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
             return WindGenTopSpecialRenderer.INSTANCE;
         }
     }

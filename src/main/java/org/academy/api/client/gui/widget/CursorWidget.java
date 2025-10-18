@@ -66,17 +66,9 @@ public class CursorWidget extends AbstractWidget {
         context.submit(glowCommand);
     }
 
-    public static class SDFData implements DynamicUniformStorage.DynamicUniform {
+    public record SDFData(Vector4f color, float radius,
+                          float softness) implements DynamicUniformStorage.DynamicUniform {
         public static final int UBO_SIZE = new Std140SizeCalculator().putVec4().putFloat().putFloat().get();
-        private Vector4f color;
-        private float radius;
-        private float softness;
-
-        public SDFData(Vector4f color, float radius, float softness) {
-            this.color = color;
-            this.radius = radius;
-            this.softness = softness;
-        }
 
         @Override
         public void write(ByteBuffer buffer) {
@@ -84,30 +76,6 @@ public class CursorWidget extends AbstractWidget {
                     .putVec4(color)
                     .putFloat(radius)
                     .putFloat(softness);
-        }
-
-        public Vector4f getColor() {
-            return color;
-        }
-
-        public void setColor(Vector4f color) {
-            this.color = color;
-        }
-
-        public float getRadius() {
-            return radius;
-        }
-
-        public void setRadius(float radius) {
-            this.radius = radius;
-        }
-
-        public float getSoftness() {
-            return softness;
-        }
-
-        public void setSoftness(float softness) {
-            this.softness = softness;
         }
     }
 }

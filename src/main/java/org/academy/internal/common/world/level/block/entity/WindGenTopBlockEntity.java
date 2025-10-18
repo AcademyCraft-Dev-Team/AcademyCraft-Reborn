@@ -59,9 +59,9 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack itemstack = ContainerHelper.removeItem(items, slot, amount);
+        var itemstack = ContainerHelper.removeItem(items, slot, amount);
         if (!itemstack.isEmpty()) {
-            this.setChanged();
+            setChanged();
         }
 
         return itemstack;
@@ -69,16 +69,16 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        return ContainerHelper.takeItem(this.items, slot);
+        return ContainerHelper.takeItem(items, slot);
     }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        this.items.set(slot, stack);
-        if (stack.getCount() > this.getMaxStackSize()) {
-            stack.setCount(this.getMaxStackSize());
+        items.set(slot, stack);
+        if (stack.getCount() > getMaxStackSize()) {
+            stack.setCount(getMaxStackSize());
         }
-        this.setChanged();
+        setChanged();
     }
 
     @Override
@@ -90,7 +90,6 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
     public void clearContent() {
         items.clear();
     }
-
 
     public static void tick(Level level, BlockPos pos, BlockState state, WindGenTopBlockEntity blockEntity) {
         blockEntity.ticks++;
@@ -108,7 +107,7 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
     }
 
     public AABB getRenderBoundingBox() {
-        var pos = this.getBlockPos().getCenter();
+        var pos = getBlockPos().getCenter();
         var radius = 9;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

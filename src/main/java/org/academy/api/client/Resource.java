@@ -53,9 +53,9 @@ public final class Resource {
     }
 
     public static final class Textures {
-        public static final ResourceLocation ARC_TEXTURE = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
-        public static final ResourceLocation ELEMENT_LINE_TEXTURE = academy("textures/gui/element/line.png");
-        public static final ResourceLocation HISTOGRAM_TEXTURE = academy("textures/gui/element/histogram.png");
+        public static final ResourceLocation ARC = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
+        public static final ResourceLocation ELEMENT_LINE = academy("textures/gui/element/line.png");
+        public static final ResourceLocation HISTOGRAM = academy("textures/gui/element/histogram.png");
 
         /**
          * Ability Developer
@@ -79,10 +79,9 @@ public final class Resource {
         public static final ResourceLocation MODEL_WIND_GEN = academy("textures/model/wind_gen.png");
         public static final ResourceLocation MODEL_WIND_GEN_TOP = academy("textures/model/wind_gen_top.png");
         public static final ResourceLocation BLOCK_WIND_GEN_PILLAR =  academy("textures/block/wind_gen_pillar.png");
-        public static final ResourceLocation WIND_GEN_UI = academy("textures/gui/wind_gen/ui_windgen.png");
-        public static final ResourceLocation ICON_WIND_GEN_BASE = academy("textures/gui/icon/icon_wind_base.png");
-        public static final ResourceLocation ICON_WIND_GEN_PILLAR = academy("textures/gui/icon/icon_wind_pillar.png");
-        public static final ResourceLocation ICON_WIND_GEN_TOP = academy("textures/gui/icon/icon_wind_top.png");
+        public static final ResourceLocation ICON_WIND_GEN_BASE = academy("textures/gui/wind_gen/icon_wind_base.png");
+        public static final ResourceLocation ICON_WIND_GEN_PILLAR = academy("textures/gui/wind_gen/icon_wind_pillar.png");
+        public static final ResourceLocation ICON_WIND_GEN_TOP = academy("textures/gui/wind_gen/icon_wind_top.png");
         /**
          * Wireless Node
          */
@@ -97,10 +96,14 @@ public final class Resource {
          * Solar Gen
          */
         public static final ResourceLocation SOLAR_GEN_MODEL = academy("textures/model/solar_gen.png");
+        public static final ResourceLocation ICON_SOLAR_GEN_NIGHT = academy("textures/gui/wind_gen/icon_solar_gen_night.png");
+        public static final ResourceLocation ICON_SOLAR_GEN_RAINY = academy("textures/gui/wind_gen/icon_solar_gen_rainy.png");
+        public static final ResourceLocation ICON_SOLAR_GEN_SUNNY = academy("textures/gui/wind_gen/icon_solar_gen_sunny.png");
         /**
          * Common
          */
-        public static final ResourceLocation INVENTORY = academy("textures/gui/element/ui_inventory.png");
+        public static final ResourceLocation UI_INVENTORY = academy("textures/gui/element/ui_inventory.png");
+        public static final ResourceLocation UI_GEN = academy("textures/gui/element/ui_gen.png");
         public static final ResourceLocation UI_BACKGROUND_LIGHT = academy("textures/gui/element/element_background_light.png");
         public static final ResourceLocation ICON_OPEN_WIRELESS_PANEL = academy("textures/gui/icon/icon_tonode.png");
         public static final ResourceLocation ICON_NODE = academy("textures/gui/icon/icon_node.png");

@@ -25,7 +25,7 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
 
     public UIManager(Config config) {
         this.config = config;
-        this.rootContainer = new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F);
+        rootContainer = new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F);
         var window = Minecraft.getInstance().getWindow();
         initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
     }
@@ -139,7 +139,6 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         playerNameLabel.setZ(1);
         playerNameLabel.setAlignment(LabelWidget.Alignment.RIGHT);
         playerNameLabel.setVerticalAlignment(LabelWidget.VerticalAlignment.MIDDLE);
-        playerNameLabel.setDropShadow(false);
         menuBar.addChild("player_name", playerNameLabel);
 
         return menuBar;
@@ -215,7 +214,7 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
     }
 
     public AbstractContainerWidget getRootContainer() {
-        return this.rootContainer;
+        return rootContainer;
     }
 
     @Override

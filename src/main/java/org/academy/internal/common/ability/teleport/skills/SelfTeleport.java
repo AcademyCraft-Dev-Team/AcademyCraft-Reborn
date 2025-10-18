@@ -136,10 +136,10 @@ public final class SelfTeleport extends Skill {
 
             public TeleportRenderContext(LocalPlayer player) {
                 this.player = player;
-                this.playerDimensions = player.getDimensions(Pose.STANDING);
-                this.currentRenderPos = calculateIdealTargetCenterPosFromEyes();
-                this.visualRenderPos = this.currentRenderPos;
-                this.previewBoxWorld = calculateAABBFromCenter(this.visualRenderPos);
+                playerDimensions = player.getDimensions(Pose.STANDING);
+                currentRenderPos = calculateIdealTargetCenterPosFromEyes();
+                visualRenderPos = currentRenderPos;
+                previewBoxWorld = calculateAABBFromCenter(visualRenderPos);
             }
 
             private Vec3 calculateIdealTargetCenterPosFromEyes() {
@@ -149,8 +149,8 @@ public final class SelfTeleport extends Skill {
             }
 
             private AABB calculateAABBFromCenter(Vec3 centerPos) {
-                float halfWidth = this.playerDimensions.width() / 2.0f;
-                float halfHeight = this.playerDimensions.height() / 2.0f;
+                var halfWidth = playerDimensions.width() / 2.0f;
+                var halfHeight = playerDimensions.height() / 2.0f;
                 return new AABB(centerPos.x - halfWidth,
                         centerPos.y - halfHeight,
                         centerPos.z - halfWidth,
@@ -177,10 +177,10 @@ public final class SelfTeleport extends Skill {
                 var eyePos = player.getEyePosition(event.getPartialTick());
                 var lookVec = player.getViewVector(event.getPartialTick());
 
-                var logicalTargetPos = this.currentRenderPos;
-                boolean foundSafeSpotThisFrame = false;
+                var logicalTargetPos = currentRenderPos;
+                var foundSafeSpotThisFrame = false;
 
-                for (double d = distance; d >= 0; d -= RAY_TRACE_STEP) {
+                for (var d = distance; d >= 0; d -= RAY_TRACE_STEP) {
                     var testCenterPos = eyePos.add(lookVec.scale(d));
                     var testAABB = calculateAABBFromCenter(testCenterPos);
 
@@ -198,8 +198,8 @@ public final class SelfTeleport extends Skill {
                 var currentAABB = calculateAABBFromCenter(logicalTargetPos);
                 if (!level.noCollision(player, currentAABB)) {
                     var upwardAdjustedPos = logicalTargetPos;
-                    boolean foundUpwardSpot = false;
-                    for (int i = 0; i < MAX_UPWARD_CHECKS; i++) {
+                    var foundUpwardSpot = false;
+                    for (var i = 0; i < MAX_UPWARD_CHECKS; i++) {
                         upwardAdjustedPos = upwardAdjustedPos.add(0, STEP_HEIGHT, 0);
                         var upwardAABB = calculateAABBFromCenter(upwardAdjustedPos);
                         if (level.noCollision(player, upwardAABB)) {
@@ -209,14 +209,14 @@ public final class SelfTeleport extends Skill {
                         }
                     }
                     if (!foundUpwardSpot) {
-                        logicalTargetPos = this.currentRenderPos;
+                        logicalTargetPos = currentRenderPos;
                     }
                 }
 
-                double factor = ClientUtil.animationFactor(1.25);
-                this.currentRenderPos = logicalTargetPos;
-                this.visualRenderPos = this.visualRenderPos.lerp(this.currentRenderPos, factor);
-                this.previewBoxWorld = calculateAABBFromCenter(this.visualRenderPos);
+                var factor = ClientUtil.animationFactor(1.25);
+                currentRenderPos = logicalTargetPos;
+                visualRenderPos = visualRenderPos.lerp(currentRenderPos, factor);
+                previewBoxWorld = calculateAABBFromCenter(visualRenderPos);
 
                 var matrixStack = event.getMatrixStack();
                 var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
@@ -225,14 +225,14 @@ public final class SelfTeleport extends Skill {
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
-                LineBoxRenderer.renderWireframeBox(matrixStack, bufferSource, this.previewBoxWorld, 1f, 1f, 1f, 1f);
+                LineBoxRenderer.renderWireframeBox(matrixStack, bufferSource, previewBoxWorld, 1f, 1f, 1f, 1f);
                 matrixStack.popPose();
             }
 
             public void cleanup() {
                 AbilitySystemClient.unregisterContext(this);
-                if (SelfTeleport.Client.currentContext == this) {
-                    SelfTeleport.Client.currentContext = null;
+                if (currentContext == this) {
+                    currentContext = null;
                 }
             }
         }

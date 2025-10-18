@@ -75,7 +75,7 @@ public final class BloomEffect {
     }
 
     public static void resize(int width, int height) {
-        INPUT.resize(width, height);
+        resize(INPUT, width, height);
         resize(OUTPUT, width, height);
         resize(SWAP2A, width / 2, height / 2);
         resize(SWAP4A, width / 4, height / 4);

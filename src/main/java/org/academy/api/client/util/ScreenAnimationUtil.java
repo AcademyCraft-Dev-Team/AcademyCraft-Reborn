@@ -80,6 +80,7 @@ public final class ScreenAnimationUtil {
 
     public static void hide(IAnimationScreen screen, PanelWidget panel, float startY) {
         screen.cancelAnimations(panel);
+        panel.setEnabled(false);
         moveYHide(screen, panel, startY);
         alphaHide(screen, panel, () -> panel.setY(startY));
     }
@@ -93,7 +94,6 @@ public final class ScreenAnimationUtil {
             @Override
             public void onAnimationEnd(Animator animation) {
                 widget.setVisible(false);
-                widget.setEnabled(false);
                 onEndCallback.run();
             }
         };

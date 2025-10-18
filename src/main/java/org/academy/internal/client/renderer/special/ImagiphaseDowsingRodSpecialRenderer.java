@@ -83,7 +83,7 @@ public final class ImagiphaseDowsingRodSpecialRenderer implements NoDataSpecialM
     }
 
     private static void addCube(VertexConsumer consumer, Matrix4f matrix, float x, float y, float z, float size, float r, float g, float b, float a) {
-        final float hs = size / 2;
+        final var hs = size / 2;
         addCuboid(consumer, matrix, x, y, z, hs, hs, hs, r, g, b, a);
     }
 
@@ -91,12 +91,12 @@ public final class ImagiphaseDowsingRodSpecialRenderer implements NoDataSpecialM
                                   float centerX, float centerY, float centerZ,
                                   float halfSizeX, float halfSizeY, float halfSizeZ,
                                   float r, float g, float b, float a) {
-        final float x0 = centerX - halfSizeX;
-        final float x1 = centerX + halfSizeX;
-        final float y0 = centerY - halfSizeY;
-        final float y1 = centerY + halfSizeY;
-        final float z0 = centerZ - halfSizeZ;
-        final float z1 = centerZ + halfSizeZ;
+        final var x0 = centerX - halfSizeX;
+        final var x1 = centerX + halfSizeX;
+        final var y0 = centerY - halfSizeY;
+        final var y1 = centerY + halfSizeY;
+        final var z0 = centerZ - halfSizeZ;
+        final var z1 = centerZ + halfSizeZ;
 
         fillQuad(consumer, matrix, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, r, g, b, a);
         fillQuad(consumer, matrix, x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0, r, g, b, a);
@@ -153,7 +153,7 @@ public final class ImagiphaseDowsingRodSpecialRenderer implements NoDataSpecialM
         public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public SpecialModelRenderer<?> bake(BakingContext context) {
+        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
             return ImagiphaseDowsingRodSpecialRenderer.INSTANCE;
         }
 

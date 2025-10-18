@@ -26,11 +26,11 @@ public final class Player {
     private transient volatile boolean isDirty = false;
 
     public void markDirty() {
-        this.isDirty = true;
+        isDirty = true;
     }
 
     public void clean() {
-        this.isDirty = false;
+        isDirty = false;
     }
 
     public boolean isDirty() {
@@ -72,7 +72,7 @@ public final class Player {
     }
 
     public void setComputingPower(float computingPower) {
-        float clampedPower = Math.min(this.maxComputingPower, computingPower);
+        var clampedPower = Math.min(maxComputingPower, computingPower);
         if (Float.isNaN(clampedPower) || Float.isInfinite(clampedPower)) {
             clampedPower = 0;
         }
@@ -89,7 +89,7 @@ public final class Player {
     public void setMaxComputingPower(float maxComputingPower) {
         if (Float.compare(this.maxComputingPower, maxComputingPower) != 0) {
             this.maxComputingPower = maxComputingPower;
-            setComputingPower(this.computingPower);
+            setComputingPower(computingPower);
             markDirty();
         }
     }

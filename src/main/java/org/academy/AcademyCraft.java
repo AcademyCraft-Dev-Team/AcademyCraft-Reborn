@@ -1,5 +1,6 @@
 package org.academy;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -19,8 +20,7 @@ public final class AcademyCraft {
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static boolean DEBUG_UI = false;
-    public static final String LOGGER_PREFIX = MODID + "/";
-    public static final Logger LOGGER = LoggerFactory.getLogger(LOGGER_PREFIX + "Common");
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
@@ -32,7 +32,7 @@ public final class AcademyCraft {
 
         try {
             if (file.exists()) {
-                AcademyCraft.LOGGER.debug("File already exists: {}", file.getAbsolutePath());
+                LOGGER.debug("File already exists: {}", file.getAbsolutePath());
                 return;
             }
 
@@ -42,7 +42,7 @@ public final class AcademyCraft {
             } else if (!file.createNewFile()) {
                 errorMessage = "Failed to create new file: " + file.getAbsolutePath();
             } else {
-                AcademyCraft.LOGGER.debug("Successfully created new file: {}", file.getAbsolutePath());
+                LOGGER.debug("Successfully created new file: {}", file.getAbsolutePath());
             }
         } catch (IOException e) {
             errorMessage = "An error occurred while creating the file: " + file.getAbsolutePath() + " - " + e.getMessage();

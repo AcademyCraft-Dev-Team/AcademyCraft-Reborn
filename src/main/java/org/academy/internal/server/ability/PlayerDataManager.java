@@ -12,7 +12,7 @@ public final class PlayerDataManager {
     private final Map<UUID, Player> playerDataMap;
 
     public PlayerDataManager(WorldData worldData) {
-        this.playerDataMap = worldData.getPlayers();
+        playerDataMap = worldData.getPlayers();
     }
 
     public void onPlayerLogin(ServerPlayer serverPlayer) {

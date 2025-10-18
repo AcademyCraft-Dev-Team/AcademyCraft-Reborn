@@ -12,35 +12,35 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
     public AbstractButtonWidget(float x, float y, float width, float height, Runnable onPress) {
         super(x, y, width, height);
         this.onPress = onPress;
-        this.clickable = true;
+        clickable = true;
     }
 
     @Override
     protected void onMousePressed(MouseEvent event) {
-        if (this.state == MouseButtonState.PRESSED
+        if (state == MouseButtonState.PRESSED
                 && event.getButton() == 0
-                && this.isMouseOver(event.getX(), event.getY())) {
-            this.handlePress(event);
+                && isMouseOver(event.getX(), event.getY())) {
+            handlePress(event);
         }
     }
 
     @Override
     protected void onMouseReleased(MouseEvent event) {
-        if (this.state == MouseButtonState.RELEASED
+        if (state == MouseButtonState.RELEASED
                 && event.getButton() == 0
-                && this.isMouseOver(event.getX(), event.getY())) {
-            this.handlePress(event);
+                && isMouseOver(event.getX(), event.getY())) {
+            handlePress(event);
         }
     }
 
     protected void handlePress(MouseEvent event) {
         ClientUtil.playDownSound();
-        this.onPress.run();
+        onPress.run();
         event.consume();
     }
 
     @Override
     public boolean canFocus() {
-        return this.isAbsoluteEnabled();
+        return isAbsoluteEnabled();
     }
 }

@@ -27,11 +27,11 @@ public class RadioGroupWidget extends AbstractContainerWidget {
     }
 
     public void selectButton(@Nullable ImageRadioButtonWidget buttonToSelect) {
-        if (!this.allowReselect && Objects.equals(buttonToSelect, this.selectedButton)) {
+        if (!allowReselect && Objects.equals(buttonToSelect, selectedButton)) {
             return;
         }
 
-        this.internalSelect(buttonToSelect, true);
+        internalSelect(buttonToSelect, true);
     }
 
     private void internalSelect(@Nullable ImageRadioButtonWidget buttonToSelect, boolean triggerCallback) {
@@ -39,34 +39,34 @@ public class RadioGroupWidget extends AbstractContainerWidget {
             return;
         }
 
-        var selectionChanged = !Objects.equals(this.selectedButton, buttonToSelect);
+        var selectionChanged = !Objects.equals(selectedButton, buttonToSelect);
 
-        if (this.selectedButton != null) {
-            this.selectedButton.setSelected(false);
+        if (selectedButton != null) {
+            selectedButton.setSelected(false);
         }
 
-        this.selectedButton = buttonToSelect;
-        if (this.selectedButton != null) {
-            this.selectedButton.setSelected(true);
+        selectedButton = buttonToSelect;
+        if (selectedButton != null) {
+            selectedButton.setSelected(true);
         }
 
-        if (triggerCallback && (selectionChanged || this.allowReselect) && this.onSelectionChanged != null) {
-            this.onSelectionChanged.accept(this.getSelectedButton());
+        if (triggerCallback && (selectionChanged || allowReselect) && onSelectionChanged != null) {
+            onSelectionChanged.accept(getSelectedButton());
         }
     }
 
     @Nullable
     public ImageRadioButtonWidget getSelectedButton() {
-        return this.selectedButton;
+        return selectedButton;
     }
 
     @Nullable
     public String getSelectedButtonName() {
-        if (this.selectedButton == null) {
+        if (selectedButton == null) {
             return null;
         }
-        for (var entry : this.getChildren().entrySet()) {
-            if (entry.getValue() == this.selectedButton) {
+        for (var entry : getChildren().entrySet()) {
+            if (entry.getValue() == selectedButton) {
                 return entry.getKey();
             }
         }
@@ -84,9 +84,9 @@ public class RadioGroupWidget extends AbstractContainerWidget {
 
     @Override
     public void removeChild(String name) {
-        var removedWidget = this.getChildren().get(name);
-        if (removedWidget == this.selectedButton) {
-            this.internalSelect(null, true);
+        var removedWidget = getChildren().get(name);
+        if (removedWidget == selectedButton) {
+            internalSelect(null, true);
         }
 
         super.removeChild(name);
@@ -98,14 +98,14 @@ public class RadioGroupWidget extends AbstractContainerWidget {
 
     @Override
     public void clearChildren() {
-        for (var child : this.getChildren().values()) {
+        for (var child : getChildren().values()) {
             if (child instanceof ImageRadioButtonWidget radioButton) {
                 radioButton.setRadioGroup(null);
             }
         }
         super.clearChildren();
-        if (this.selectedButton != null) {
-            this.internalSelect(null, true);
+        if (selectedButton != null) {
+            internalSelect(null, true);
         }
     }
 

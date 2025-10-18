@@ -30,7 +30,6 @@ public class TextBoxWidget extends LabelWidget {
     @Nullable
     protected Runnable onFocusLostCallback = null;
     protected boolean clearWhenEnter = true;
-    protected boolean forceScale = false;
     @Nullable
     protected Predicate<String> inputValidator = null;
 
@@ -261,13 +260,8 @@ public class TextBoxWidget extends LabelWidget {
 
     private void updateScale() {
         var font = Minecraft.getInstance().font;
-        if (forceScale) {
-            setScale(scale);
-            return;
-        }
-
         var textWidth = font.width(text.toString());
-        var availableWidth = getWidth() - 4;
+        var availableWidth = getWidth() - 1;
         if (textWidth > availableWidth && textWidth > 0) {
             setScale(availableWidth / textWidth);
         } else {
@@ -308,16 +302,6 @@ public class TextBoxWidget extends LabelWidget {
 
     public TextBoxWidget setClearWhenEnter(boolean clear) {
         clearWhenEnter = clear;
-        return this;
-    }
-
-    public TextBoxWidget setForceScale(boolean force, float scale) {
-        forceScale = force;
-        if (force) {
-            setScale(scale);
-        } else {
-            updateScale();
-        }
         return this;
     }
 

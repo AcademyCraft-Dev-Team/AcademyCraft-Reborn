@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.framework;
 
+import org.academy.api.common.util.MathUtil;
 import org.joml.Vector2f;
 
 import static org.academy.api.common.util.MathUtil.Axis2D;
@@ -13,14 +14,14 @@ public final class Position2D extends Vector2f {
     public Position2D() {
     }
 
-    public static Position2D of(Axis2D axis, float primaryPosition, float secondaryPosition) {
+    public static Position2D of(MathUtil.Axis2D axis, float primaryPosition, float secondaryPosition) {
         return switch (axis) {
             case HORIZONTAL -> new Position2D(primaryPosition, secondaryPosition);
             case VERTICAL -> new Position2D(secondaryPosition, primaryPosition);
         };
     }
 
-    public Position2D step(Direction2D direction) {
+    public Position2D step(MathUtil.Direction2D direction) {
         return switch (direction) {
             case DOWN -> new Position2D(x, y + 1);
             case UP -> new Position2D(x, y - 1);
@@ -29,7 +30,7 @@ public final class Position2D extends Vector2f {
         };
     }
 
-    public float getCoordinate(Axis2D axis) {
+    public float getCoordinate(MathUtil.Axis2D axis) {
         return switch (axis) {
             case HORIZONTAL -> x;
             case VERTICAL -> y;

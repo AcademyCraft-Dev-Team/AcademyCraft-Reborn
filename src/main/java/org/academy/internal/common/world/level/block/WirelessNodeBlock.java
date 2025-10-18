@@ -65,8 +65,8 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
         if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
             var nodeName = "Node_" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ();
             var password = "";
-            int radius = 32;
-            int maxConnections = 8;
+            var radius = 32;
+            var maxConnections = 8;
             if (WirelessNetworkData.get(serverLevel).registerNode(pos, nodeName, password, radius, maxConnections)) {
                 AcademyCraft.LOGGER.debug("Registered wireless node at {} with name '{}'.", pos, nodeName);
             } else {

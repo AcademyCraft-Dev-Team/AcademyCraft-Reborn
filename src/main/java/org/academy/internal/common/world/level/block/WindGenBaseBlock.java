@@ -87,14 +87,14 @@ public final class WindGenBaseBlock extends MultiBlock {
                     var worldToAABB = new Matrix4f(matrix).invert();
                     var localIntersectionPoint = worldToAABB.transformPosition(result, new Vector3f());
 
-                    float aabbWidth = (float) (aabb.maxX - aabb.minX);
-                    float aabbHeight = (float) (aabb.maxY - aabb.minY);
+                    var aabbWidth = (float) (aabb.maxX - aabb.minX);
+                    var aabbHeight = (float) (aabb.maxY - aabb.minY);
 
-                    float normX = (localIntersectionPoint.x - (float) aabb.minX) / aabbWidth;
-                    float normY = (localIntersectionPoint.y - (float) aabb.minY) / aabbHeight;
+                    var normX = (localIntersectionPoint.x - (float) aabb.minX) / aabbWidth;
+                    var normY = (localIntersectionPoint.y - (float) aabb.minY) / aabbHeight;
 
-                    float guiX = (1.0f - normX) * WindGenWorldGUI.WIDTH;
-                    float guiY = normY * WindGenWorldGUI.HEIGHT;
+                    var guiX = (1.0f - normX) * WindGenWorldGUI.WIDTH;
+                    var guiY = normY * WindGenWorldGUI.HEIGHT;
 
                     guiX = MathUtil.clamp(guiX, 0, WindGenWorldGUI.WIDTH);
                     guiY = MathUtil.clamp(guiY, 0, WindGenWorldGUI.HEIGHT);
@@ -119,7 +119,7 @@ public final class WindGenBaseBlock extends MultiBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(TYPE) == MultiBlockType.SUBJECT ? Block.cube(8.8692435136, 16, 8.8692435136) : super.getShape(state, level, pos, context);
+        return state.getValue(TYPE) == MultiBlockType.SUBJECT ? cube(8.8692435136, 16, 8.8692435136) : super.getShape(state, level, pos, context);
     }
 
     @Override
@@ -144,7 +144,7 @@ public final class WindGenBaseBlock extends MultiBlock {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
+        return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
     @Override

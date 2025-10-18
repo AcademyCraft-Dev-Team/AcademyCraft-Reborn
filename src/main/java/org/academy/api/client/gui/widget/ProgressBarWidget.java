@@ -1,7 +1,9 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
+import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.framework.AbstractWidget;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
 
 import java.util.function.Supplier;
 
@@ -19,36 +21,41 @@ public class ProgressBarWidget extends AbstractWidget {
         super(x, y, width, height);
         this.progressSupplier = progressSupplier;
     }
-/*
-    @Override
-    public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-        if (!this.isVisible()) return;
 
-        float progress = this.progressSupplier.get();
+    @Override
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible()) return;
+
+        var progress = progressSupplier.get();
         progress = Math.max(0.0f, Math.min(1.0f, progress));
 
-        stack.pushPose();
+        context.pose().pushPose();
+        context.pose().translate(getX(), getY(), getZ());
 
-        float absoluteAlpha = getAbsoluteAlpha();
+        var absoluteAlpha = context.getAccumulatedAlpha() * getAlpha();
 
-        if (this.backgroundVisible) {
-            int finalBackgroundColor = applyAlpha(this.backgroundColor, absoluteAlpha);
-            RenderUtil.fill(stack, bufferSource, 0, 0, this.getWidth(), this.getHeight(), finalBackgroundColor);
+        if (backgroundVisible) {
+            var command = new FillRectDrawCommand(getWidth(), getHeight(),
+                    ARGB.redFloat(backgroundColor),
+                    ARGB.greenFloat(backgroundColor),
+                    ARGB.blueFloat(backgroundColor),
+                    ARGB.alphaFloat(backgroundColor) * absoluteAlpha
+            );
+            context.submit(command);
         }
 
-        float progressWidth = this.getWidth() * progress;
-        if (progressWidth > 0) {
-            int finalProgressBarColor = applyAlpha(this.progressBarColor, absoluteAlpha);
-            RenderUtil.fill(stack, bufferSource, 0, 0, progressWidth, this.getHeight(), finalProgressBarColor);
-        }
+        var progressWidth = getWidth() * progress;
+        progressWidth = Math.max(0.0f, Math.min(getWidth(), progressWidth));
+        context.pose().translate(0, 0, 0.1f);
+        var command = new FillRectDrawCommand(progressWidth, getHeight(),
+                ARGB.redFloat(progressBarColor),
+                ARGB.greenFloat(progressBarColor),
+                ARGB.blueFloat(progressBarColor),
+                ARGB.alphaFloat(progressBarColor) * absoluteAlpha
+        );
+        context.submit(command);
 
-        stack.popPose();
-    }*/
-
-    private int applyAlpha(int color, float alpha) {
-        int baseAlpha = ARGB.alpha(color);
-        int finalAlpha = (int) (baseAlpha * alpha);
-        return (color & 0x00FFFFFF) | (finalAlpha << 24);
+        context.pose().popPose();
     }
 
     public void setProgressSupplier(Supplier<Float> progressSupplier) {
@@ -56,17 +63,17 @@ public class ProgressBarWidget extends AbstractWidget {
     }
 
     public ProgressBarWidget setBackgroundVisible(boolean visible) {
-        this.backgroundVisible = visible;
+        backgroundVisible = visible;
         return this;
     }
 
     public ProgressBarWidget setBackgroundColor(int color) {
-        this.backgroundColor = color;
+        backgroundColor = color;
         return this;
     }
 
     public ProgressBarWidget setProgressBarColor(int color) {
-        this.progressBarColor = color;
+        progressBarColor = color;
         return this;
     }
 }

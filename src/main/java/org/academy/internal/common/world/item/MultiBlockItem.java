@@ -19,19 +19,19 @@ public class MultiBlockItem extends BlockItem {
 
     public MultiBlockItem(MultiBlock block, Properties properties) {
         super(block, properties);
-        this.subBlocks = block.getSubBlocks();
+        subBlocks = block.getSubBlocks();
     }
 
     @Override
     protected boolean canPlace(BlockPlaceContext context, @NotNull BlockState state) {
         var basePos = context.getClickedPos();
         var level = context.getLevel();
-        CollisionContext collisionContext = context.getPlayer() == null ? CollisionContext.empty() : CollisionContext.of(context.getPlayer());
+        var collisionContext = context.getPlayer() == null ? CollisionContext.empty() : CollisionContext.of(context.getPlayer());
 
-        List<BlockPos> requiredPositions = MultiBlock.getRotatedSubjectBlocks(basePos, state.getValue(BlockStateProperties.HORIZONTAL_FACING), subBlocks);
+        var requiredPositions = MultiBlock.getRotatedSubjectBlocks(basePos, state.getValue(BlockStateProperties.HORIZONTAL_FACING), subBlocks);
         requiredPositions.add(basePos);
 
-        for (BlockPos pos : requiredPositions) {
+        for (var pos : requiredPositions) {
             var existingState = level.getBlockState(pos);
 
             var simulatedContext = new BlockPlaceContext(new UseOnContext(
@@ -47,7 +47,7 @@ public class MultiBlockItem extends BlockItem {
                     )
             ));
 
-            boolean canReplace = existingState.canBeReplaced(simulatedContext);
+            var canReplace = existingState.canBeReplaced(simulatedContext);
 
             if (!canReplace || !level.isUnobstructed(state, pos, collisionContext)) {
                 return false;

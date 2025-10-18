@@ -13,6 +13,6 @@ public record MeshToDraw(MeshData mesh, RenderPipeline pipeline, @Nullable Sciss
                          Map<String, GpuBufferSlice> uniforms) implements AutoCloseable {
     @Override
     public void close() {
-        this.mesh.close();
+        mesh.close();
     }
 }

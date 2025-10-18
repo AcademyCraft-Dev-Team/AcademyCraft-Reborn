@@ -1,10 +1,14 @@
 package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
@@ -16,12 +20,14 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.internal.client.gui.screen.SolarGenScreen;
+import org.academy.api.server.util.ServerPlayerUtil;
+import org.academy.internal.common.world.inventory.SolarGenMenu;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 public final class SolarGenBlock extends BaseEntityBlock {
+    public static final String SOLAR_GEN_SCREEN = "solar_gen_screen";
     public static final MapCodec<SolarGenBlock> CODEC = simpleCodec(SolarGenBlock::new);
 
     public SolarGenBlock(Properties properties) {
@@ -36,10 +42,14 @@ public final class SolarGenBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (level.isClientSide()) {
-            Minecraft.getInstance().setScreen(new SolarGenScreen());
+        if (player instanceof ServerPlayer serverPlayer) {
+            if (!serverPlayer.isShiftKeyDown() && level.getBlockEntity(pos) instanceof SolarGenBlockEntity blockEntity) {
+                var menuProvider = getMenuProvider(state, level, pos);
+                ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, SOLAR_GEN_SCREEN,
+                        buf -> buf.writeBlockPos(blockEntity.getBlockPos()));
+            }
         }
-        return super.useWithoutItem(state, level, pos, player, hitResult);
+        return InteractionResult.CONSUME;
     }
 
     @Override
@@ -58,7 +68,7 @@ public final class SolarGenBlock extends BaseEntityBlock {
     }
 
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection());
+        return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection());
     }
 
     @Override
@@ -79,5 +89,20 @@ public final class SolarGenBlock extends BaseEntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new SolarGenBlockEntity(pos, state);
+    }
+
+    @Override
+    protected @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof SolarGenBlockEntity blockEntity) {
+            return new SimpleMenuProvider((containerId, playerInventory, player) ->
+                    new SolarGenMenu(
+                            containerId,
+                            playerInventory,
+                            ContainerLevelAccess.create(level, pos),
+                            blockEntity
+                    ), Component.empty()
+            );
+        }
+        return super.getMenuProvider(state, level, pos);
     }
 }

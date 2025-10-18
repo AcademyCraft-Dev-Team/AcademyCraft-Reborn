@@ -8,7 +8,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.*;
@@ -57,21 +56,21 @@ public final class ImagiphaseAmethystClusterBlock extends ImagiphaseAmethystBloc
                 .strength(1.5F)
                 .lightLevel(p_152632_ -> 5)
                 .pushReaction(PushReaction.DESTROY));
-        this.registerDefaultState(this.defaultBlockState().setValue(WATERLOGGED, false).setValue(FACING, Direction.UP));
-        this.shapes = Shapes.rotateAll(Block.boxZ(aabbOffset, 16.0F - height, 16.0));
+        registerDefaultState(defaultBlockState().setValue(WATERLOGGED, false).setValue(FACING, Direction.UP));
+        shapes = Shapes.rotateAll(boxZ(aabbOffset, 16.0F - height, 16.0));
         this.height = height;
-        this.width = aabbOffset;
+        width = aabbOffset;
     }
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return this.shapes.get(state.getValue(FACING));
+        return shapes.get(state.getValue(FACING));
     }
 
     @Override
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-        Direction direction = state.getValue(FACING);
-        BlockPos blockpos = pos.relative(direction.getOpposite());
+        var direction = state.getValue(FACING);
+        var blockpos = pos.relative(direction.getOpposite());
         return level.getBlockState(blockpos).isFaceSturdy(level, blockpos, direction);
     }
 
@@ -97,9 +96,9 @@ public final class ImagiphaseAmethystClusterBlock extends ImagiphaseAmethystBloc
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        LevelAccessor levelaccessor = context.getLevel();
-        BlockPos blockpos = context.getClickedPos();
-        return this.defaultBlockState()
+        var levelaccessor = context.getLevel();
+        var blockpos = context.getClickedPos();
+        return defaultBlockState()
                 .setValue(WATERLOGGED, levelaccessor.getFluidState(blockpos).getType() == Fluids.WATER)
                 .setValue(FACING, context.getClickedFace());
     }

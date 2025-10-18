@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
@@ -38,6 +39,7 @@ import org.academy.internal.common.world.level.material.ImagiphasePlasma;
 import java.io.File;
 
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
+@EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class AcademyCraftClient {
     public AcademyCraftClient(IEventBus modEventBus) {
         modEventBus.register(ModBusSubscriber.class);

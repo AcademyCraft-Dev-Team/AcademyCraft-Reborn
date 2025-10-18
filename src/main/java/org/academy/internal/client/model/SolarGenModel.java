@@ -20,31 +20,31 @@ public final class SolarGenModel extends Model<SolarGenRenderState> {
 
     public SolarGenModel(ModelPart root) {
         super(root, RenderType::entityCutout);
-        this.all = root.getChild("all");
-        this.bottom = this.all.getChild("bottom");
-        this.pole = this.bottom.getChild("pole");
-        this.panel1 = this.all.getChild("panel1");
-        this.panel2 = this.all.getChild("panel2");
-        this.folding = SolarGenAnimation.FOLDING.bake(root);
-        this.unfolding = SolarGenAnimation.UNFOLDING.bake(root);
+        all = root.getChild("all");
+        bottom = all.getChild("bottom");
+        pole = bottom.getChild("pole");
+        panel1 = all.getChild("panel1");
+        panel2 = all.getChild("panel2");
+        folding = SolarGenAnimation.FOLDING.bake(root);
+        unfolding = SolarGenAnimation.UNFOLDING.bake(root);
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
+        var meshdefinition = new MeshDefinition();
+        var partdefinition = meshdefinition.getRoot();
 
-        PartDefinition all = partdefinition.addOrReplaceChild("all", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 0.0F));
+        var all = partdefinition.addOrReplaceChild("all", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 0.0F));
 
-        PartDefinition bottom = all.addOrReplaceChild("bottom", CubeListBuilder.create().texOffs(0, 0).addBox(-6.0F, -6.0F, -8.0F, 12.0F, 6.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
+        var bottom = all.addOrReplaceChild("bottom", CubeListBuilder.create().texOffs(0, 0).addBox(-6.0F, -6.0F, -8.0F, 12.0F, 6.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        PartDefinition pole = bottom.addOrReplaceChild("pole", CubeListBuilder.create().texOffs(44, 22).addBox(0.0F, -7.0F, -1.0F, 1.0F, 7.0F, 2.0F, new CubeDeformation(0.0F))
+        var pole = bottom.addOrReplaceChild("pole", CubeListBuilder.create().texOffs(44, 22).addBox(0.0F, -7.0F, -1.0F, 1.0F, 7.0F, 2.0F, new CubeDeformation(0.0F))
                 .texOffs(44, 22).addBox(0.0F, -7.0F, -9.0F, 1.0F, 7.0F, 2.0F, new CubeDeformation(0.0F))
                 .texOffs(44, 22).addBox(-13.0F, -7.0F, -9.0F, 1.0F, 7.0F, 2.0F, new CubeDeformation(0.0F))
                 .texOffs(44, 22).addBox(-13.0F, -7.0F, -1.0F, 1.0F, 7.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offset(6.0F, 0.0F, 4.0F));
 
-        PartDefinition panel1 = all.addOrReplaceChild("panel1", CubeListBuilder.create().texOffs(0, 22).addBox(0.0F, -2.0F, -8.0F, 6.0F, 2.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(-6.0F, -6.0F, 0.0F));
+        var panel1 = all.addOrReplaceChild("panel1", CubeListBuilder.create().texOffs(0, 22).addBox(0.0F, -2.0F, -8.0F, 6.0F, 2.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(-6.0F, -6.0F, 0.0F));
 
-        PartDefinition panel2 = all.addOrReplaceChild("panel2", CubeListBuilder.create().texOffs(0, 40).addBox(-6.0F, -2.0F, -8.0F, 6.0F, 2.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(6.0F, -6.0F, 0.0F));
+        var panel2 = all.addOrReplaceChild("panel2", CubeListBuilder.create().texOffs(0, 40).addBox(-6.0F, -2.0F, -8.0F, 6.0F, 2.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(6.0F, -6.0F, 0.0F));
 
         return LayerDefinition.create(meshdefinition, 64, 64);
     }

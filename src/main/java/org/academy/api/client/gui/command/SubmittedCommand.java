@@ -17,7 +17,7 @@ public final class SubmittedCommand {
         this.command = command;
         this.pose = pose;
         this.scissorRect = scissorRect;
-        this.resourceKey = calculateResourceKey(command);
+        resourceKey = calculateResourceKey(command);
     }
 
     private static long calculateResourceKey(DrawCommand command) {
@@ -25,19 +25,19 @@ public final class SubmittedCommand {
     }
 
     public DrawCommand getCommand() {
-        return this.command;
+        return command;
     }
 
     public PoseStack.Pose getPose() {
-        return this.pose;
+        return pose;
     }
 
     @Nullable
     public ScissorRect getScissorRect() {
-        return this.scissorRect;
+        return scissorRect;
     }
 
     public long getResourceKey() {
-        return this.resourceKey;
+        return resourceKey;
     }
 }
