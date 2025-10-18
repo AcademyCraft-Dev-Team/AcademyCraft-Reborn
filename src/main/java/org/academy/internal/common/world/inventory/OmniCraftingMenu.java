@@ -24,7 +24,7 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
     private final Player player;
 
     public OmniCraftingMenu(int containerId, Inventory playerInventory, ContainerLevelAccess levelAccess, Container container) {
-        super(MenuTypes.OMNI_CRAFTING_TABLE_MENU.get(), containerId);
+        super(MenuTypes.OMNI_CRAFTING_TABLE.get(), containerId);
         access = levelAccess;
         craftSlots = new TransientCraftingContainer(this, 3, 3);
         resultSlots = new ResultContainer();
@@ -56,30 +56,30 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
     @Override
     public @NotNull ItemStack quickMoveStack(@NotNull Player player, int index) {
         var itemStack = ItemStack.EMPTY;
-        var slot = this.slots.get(index);
+        var slot = slots.get(index);
         if (slot.hasItem()) {
             var itemStack1 = slot.getItem();
             itemStack = itemStack1.copy();
 
             if (index == 1) {
                // this.access.execute((level, pos) -> itemStack1.getItem().onCraftedBy(itemStack1, level, player));
-                if (!this.moveItemStackTo(itemStack1, 11, 47, true)) {
+                if (!moveItemStackTo(itemStack1, 11, 47, true)) {
                     return ItemStack.EMPTY;
                 }
                 slot.onQuickCraft(itemStack1, itemStack);
             } else if (index >= 11 && index < 47) {
-                if (!this.moveItemStackTo(itemStack1, 0, 1, false)) {
-                    if (!this.moveItemStackTo(itemStack1, 2, 11, false)) {
+                if (!moveItemStackTo(itemStack1, 0, 1, false)) {
+                    if (!moveItemStackTo(itemStack1, 2, 11, false)) {
                         if (index < 38) {
-                            if (!this.moveItemStackTo(itemStack1, 38, 47, false)) {
+                            if (!moveItemStackTo(itemStack1, 38, 47, false)) {
                                 return ItemStack.EMPTY;
                             }
-                        } else if (!this.moveItemStackTo(itemStack1, 11, 38, false)) {
+                        } else if (!moveItemStackTo(itemStack1, 11, 38, false)) {
                             return ItemStack.EMPTY;
                         }
                     }
                 }
-            } else if (!this.moveItemStackTo(itemStack1, 11, 47, false)) {
+            } else if (!moveItemStackTo(itemStack1, 11, 47, false)) {
                 return ItemStack.EMPTY;
             }
 
@@ -112,11 +112,11 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
             var craftinginput = craftSlots.asCraftInput();
             var serverplayer = (ServerPlayer) player;
             var itemstack = ItemStack.EMPTY;
-            Optional<RecipeHolder<CraftingRecipe>> optional = level.getServer()
+            var optional = level.getServer()
                     .getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, craftinginput, level, (RecipeHolder<CraftingRecipe>) null);
             if (optional.isPresent()) {
-                RecipeHolder<CraftingRecipe> recipeholder = optional.get();
+                var recipeholder = optional.get();
                 var craftingrecipe = recipeholder.value();
               /*  if (resultSlots.setRecipeUsed(level, serverplayer, recipeholder)) {
                     ItemStack itemstack1 = craftingrecipe.assemble(craftinginput, level.registryAccess());
@@ -145,7 +145,7 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
 
     @Override
     public void slotsChanged(@NotNull Container inventory) {
-        access.execute((p_344363_, p_344364_) -> slotChangedCraftingGrid(this, p_344363_, this.player, this.craftSlots, this.resultSlots));
+        access.execute((p_344363_, p_344364_) -> slotChangedCraftingGrid(this, p_344363_, player, craftSlots, resultSlots));
     }
 
     @Override

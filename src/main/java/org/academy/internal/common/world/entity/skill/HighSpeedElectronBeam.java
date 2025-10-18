@@ -36,10 +36,10 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         super.tick();
 
         if (!level().isClientSide()) {
-            float frequency = 0.25f;
-            float amplitude = 0.00075f;
+            var frequency = 0.25f;
+            var amplitude = 0.00075f;
 
-            var uuidHash = this.getUUID().hashCode();
+            var uuidHash = getUUID().hashCode();
             var phaseX = (uuidHash % 1000) / 1000.0f * (float) Math.PI * 2;
             var phaseY = (((float) uuidHash / 1000) % 1000) / 1000.0f * (float) Math.PI * 2;
             var phaseZ = (((float) uuidHash / 1000000) % 1000) / 1000.0f * (float) Math.PI * 2;
@@ -65,7 +65,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             }
         }
 
-        move(MoverType.SELF, this.getDeltaMovement());
+        move(MoverType.SELF, getDeltaMovement());
 
         if (!isCharging() && !fired) {
             var result = LevelUtil.destroyBlocksAlongPath(level(), position(), position().add(getLookAngle().scale(length)), 0.25f, 3, false, true, true, level().isClientSide());

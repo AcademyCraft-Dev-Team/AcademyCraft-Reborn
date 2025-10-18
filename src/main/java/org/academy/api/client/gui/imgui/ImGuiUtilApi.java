@@ -25,6 +25,8 @@ public final class ImGuiUtilApi {
     private static final BiConsumer<RenderTarget, Runnable> RENDER;
     private static final Supplier<Object> IM_GUI_IMPL_GL_3_GETTER;
     private static final Supplier<Object> IM_GUI_IMPL_GLFW_GETTER;
+    private static final Supplier<Boolean> WANT_CAPTURE_MOUSE_GETTER;
+    private static final Supplier<Boolean> WANT_CAPTURE_KEYBOARD_GETTER;
 
     static {
         var imGuiInit = EMPTY_RUNNABLE;
@@ -35,6 +37,8 @@ public final class ImGuiUtilApi {
 
         var imGuiImplGl3Getter = NULL_SUPPLIER;
         var imGuiImplGlfwGetter = NULL_SUPPLIER;
+        var wantCaptureMouseGetter = (Supplier<Boolean>) () -> false;
+        var wantCaptureKeyboardGetter = (Supplier<Boolean>) () -> false;
 
         if (Dev.HAS_IM_GUI) {
             imGuiInit = ImGuiUtilInternal::init;
@@ -44,6 +48,8 @@ public final class ImGuiUtilApi {
 
             imGuiImplGl3Getter = ImGuiUtilInternal::getImGuiImplGl3;
             imGuiImplGlfwGetter = ImGuiUtilInternal::getImGuiImplGlfw;
+            wantCaptureMouseGetter = ImGuiUtilInternal::wantCaptureMouse;
+            wantCaptureKeyboardGetter = ImGuiUtilInternal::wantCaptureKeyboard;
         }
 
         IM_GUI_INIT = imGuiInit;
@@ -52,6 +58,11 @@ public final class ImGuiUtilApi {
         RENDER = render;
         IM_GUI_IMPL_GL_3_GETTER = imGuiImplGl3Getter;
         IM_GUI_IMPL_GLFW_GETTER = imGuiImplGlfwGetter;
+        WANT_CAPTURE_MOUSE_GETTER = wantCaptureMouseGetter;
+        WANT_CAPTURE_KEYBOARD_GETTER = wantCaptureKeyboardGetter;
+    }
+
+    private ImGuiUtilApi() {
     }
 
     public static void init() {
@@ -70,6 +81,14 @@ public final class ImGuiUtilApi {
         RENDER.accept(renderTarget, renderCommand);
     }
 
+    public static boolean wantCaptureMouse() {
+        return WANT_CAPTURE_MOUSE_GETTER.get();
+    }
+
+    public static boolean wantCaptureKeyboard() {
+        return WANT_CAPTURE_KEYBOARD_GETTER.get();
+    }
+
     @Nullable
     public static ImGuiImplGl3 getImGuiImplGl3() {
         return (ImGuiImplGl3) IM_GUI_IMPL_GL_3_GETTER.get();
@@ -78,8 +97,5 @@ public final class ImGuiUtilApi {
     @Nullable
     public static ImGuiImplGlfw getImGuiImplGlfw() {
         return (ImGuiImplGlfw) IM_GUI_IMPL_GLFW_GETTER.get();
-    }
-
-    private ImGuiUtilApi() {
     }
 }

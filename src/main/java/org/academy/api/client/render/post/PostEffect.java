@@ -50,7 +50,7 @@ public final class PostEffect {
     }
 
     public static void close() {
-        PostEffect.BYTE_BUFFER_BUILDER.close();
+        BYTE_BUFFER_BUILDER.close();
         fullscreenQuadVertexBuffer.close();
     }
 
@@ -66,8 +66,8 @@ public final class PostEffect {
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
         RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(MAIN_SCENE.getColorTexture(), 0, MAIN_SCENE.getDepthTexture(), 1);
-        PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND, Map.of("DiffuseSampler", mainRenderTarget.getColorTextureView()), Collections.emptyMap(), false);
-        PostEffect.BUFFER_SOURCE_PRE.endBatch();
+        runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND, Map.of("DiffuseSampler", mainRenderTarget.getColorTextureView()), Collections.emptyMap(), false);
+        BUFFER_SOURCE_PRE.endBatch();
     }
 
     public static void post() {

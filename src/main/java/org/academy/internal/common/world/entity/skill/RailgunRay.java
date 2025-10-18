@@ -36,6 +36,6 @@ public class RailgunRay extends RenderOnlyEntity {
         } else {
             effectTicks--;
         }
-        this.progress = (float) currentLifetime / defaultLifeTicks;
+        progress = (float) currentLifetime / defaultLifeTicks;
     }
 }

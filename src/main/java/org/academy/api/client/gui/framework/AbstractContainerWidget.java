@@ -31,7 +31,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     public AbstractContainerWidget(float x, float y, float width, float height) {
         super(x, y, width, height);
-        this.clickable = true;
+        clickable = true;
     }
 
     @Override
@@ -106,25 +106,25 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
     }
 
     @Override
-    public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) {
             return;
         }
 
-        renderContext.pose().pushPose();
+        context.pose().pushPose();
         {
-            renderContext.pushAlpha(getAlpha());
-            renderContext.pose().translate(getX(), getY(), getZ());
+            context.pushAlpha(getAlpha());
+            context.pose().translate(getX(), getY(), getZ());
 
             if (AcademyCraft.DEBUG_UI) {
-                renderDebugLayoutBounds(this, renderContext);
+                renderDebugLayoutBounds(this, context);
             }
 
-            renderChildren(renderContext, mouseX, mouseY, partialTick);
+            renderChildren(context, mouseX, mouseY, partialTick);
 
-            renderContext.popAlpha();
+            context.popAlpha();
         }
-        renderContext.pose().popPose();
+        context.pose().popPose();
     }
 
     protected void renderChildren(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
@@ -362,7 +362,7 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         public Widget child;
 
         public ContainerSetFocusedChildEvent(@Nullable Widget widget) {
-            this.child = widget;
+            child = widget;
         }
     }
 }

@@ -65,7 +65,7 @@ public class WirelessManager {
         var level = player.level();
         var nodePos = packet.getNodePos();
         var newName = packet.getNewName();
-        WirelessManager.setNodeName(player, level, nodePos, newName);
+        setNodeName(player, level, nodePos, newName);
     }
 
     @SubscribePacket
@@ -74,7 +74,7 @@ public class WirelessManager {
         var level = player.level();
         var nodePos = packet.getNodePos();
         var newPass = packet.getNewPass();
-        WirelessManager.setNodePass(player, level, nodePos, newPass);
+        setNodePass(player, level, nodePos, newPass);
     }
 
     public static void setNodeName(ServerPlayer player,

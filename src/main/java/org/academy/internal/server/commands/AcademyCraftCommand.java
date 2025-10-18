@@ -77,7 +77,7 @@ public final class AcademyCraftCommand {
         if (learnedSkills.isEmpty()) {
             context.getSource().sendSuccess(() -> Component.literal("You have not learned any skills yet."), false);
         } else {
-            String skillsString = String.join(", ", learnedSkills);
+            var skillsString = String.join(", ", learnedSkills);
             context.getSource().sendSuccess(() -> Component.literal("Learned skills: " + skillsString), false);
         }
         return 1;

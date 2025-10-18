@@ -11,11 +11,11 @@ import net.minecraft.world.item.ItemStack;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
-public class WindGenMenu extends AbstractContainerMenu {
+public final class WindGenMenu extends AbstractContainerMenu {
     public final ContainerLevelAccess access;
 
     public WindGenMenu(int containerId, Inventory playerInventory, ContainerLevelAccess pAccess, Container windgenContainer) {
-        super(MenuTypes.WIND_GEN_MENU.get(), containerId);
+        super(MenuTypes.WIND_GEN.get(), containerId);
         access = pAccess;
         addSlot(new Slot(windgenContainer, 0, 44, 59));
         for (var i = 0; i < 3; ++i) {

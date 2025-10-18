@@ -47,7 +47,7 @@ public class CleaningRobot extends Entity {
     public @NotNull InteractionResult interact(Player player, @NotNull InteractionHand hand) {
         if (player.isSecondaryUseActive()) {
             return InteractionResult.PASS;
-        } else if (!this.level().isClientSide()) {
+        } else if (!level().isClientSide()) {
             return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
         } else {
             return InteractionResult.SUCCESS;
@@ -66,50 +66,50 @@ public class CleaningRobot extends Entity {
     @Nullable
     @Override
     public LivingEntity getControllingPassenger() {
-        var passenger = this.getFirstPassenger();
+        var passenger = getFirstPassenger();
         return passenger instanceof LivingEntity ? (LivingEntity) passenger : null;
     }
 
     private void updateMotion() {
-        if (!this.isVehicle()) {
-            this.setDeltaMovement(this.getDeltaMovement().scale(0.98));
+        if (!isVehicle()) {
+            setDeltaMovement(getDeltaMovement().scale(0.98));
             return;
         }
 
-        var livingPassenger = this.getControllingPassenger();
+        var livingPassenger = getControllingPassenger();
         if (livingPassenger == null) {
-            this.setDeltaMovement(this.getDeltaMovement().scale(0.98));
+            setDeltaMovement(getDeltaMovement().scale(0.98));
             return;
         }
 
-        this.setYRot(livingPassenger.getYRot());
-        this.yRotO = this.getYRot();
-        this.setXRot(0.0F);
+        setYRot(livingPassenger.getYRot());
+        yRotO = getYRot();
+        setXRot(0.0F);
 
-        float forwardInput = livingPassenger.zza;
+        var forwardInput = livingPassenger.zza;
 
         if (forwardInput <= 0.0F) {
             forwardInput *= 0.25F;
         }
 
-        float speed = 0.35F;
+        var speed = 0.35F;
         var moveVec = new Vec3(
-                -speed * forwardInput * Mth.sin(this.getYRot() * ((float)Math.PI / 180F)),
-                this.getDeltaMovement().y,
-                speed * forwardInput * Mth.cos(this.getYRot() * ((float)Math.PI / 180F))
+                -speed * forwardInput * Mth.sin(getYRot() * ((float)Math.PI / 180F)),
+                getDeltaMovement().y,
+                speed * forwardInput * Mth.cos(getYRot() * ((float)Math.PI / 180F))
         );
-        this.setDeltaMovement(moveVec);
+        setDeltaMovement(moveVec);
 
-        if (!this.onGround()) {
-            this.setDeltaMovement(this.getDeltaMovement().add(0, -0.04, 0));
+        if (!onGround()) {
+            setDeltaMovement(getDeltaMovement().add(0, -0.04, 0));
         }
     }
 
     @Override
     public void tick() {
         super.tick();
-        this.updateMotion();
-        this.move(MoverType.SELF, this.getDeltaMovement());
+        updateMotion();
+        move(MoverType.SELF, getDeltaMovement());
     }
 
     @Override

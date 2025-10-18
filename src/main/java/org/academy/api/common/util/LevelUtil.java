@@ -60,11 +60,11 @@ public class LevelUtil {
         final var direction = end.subtract(start).normalize();
         final var pathLength = start.distanceTo(end);
 
-        Pair<List<BlockPos>, List<BlockPos>> collectedBlocks = collectBlocksInCylinder(level, start, end, radius, miningLevel, canBlock);
-        List<BlockPos> breakableBlocks = collectedBlocks.getLeft();
-        List<BlockPos> unbreakableBlocks = collectedBlocks.getRight();
+        var collectedBlocks = collectBlocksInCylinder(level, start, end, radius, miningLevel, canBlock);
+        var breakableBlocks = collectedBlocks.getLeft();
+        var unbreakableBlocks = collectedBlocks.getRight();
 
-        double minBlockedDist = calculateMinBlockedDistance(unbreakableBlocks, start, direction, pathLength, canBlock);
+        var minBlockedDist = calculateMinBlockedDistance(unbreakableBlocks, start, direction, pathLength, canBlock);
 
         if (!simulate) {
             destroyBreakableBlocks(level, breakableBlocks, start, direction, pathLength, minBlockedDist, dropBlock, spawnParticles);
@@ -79,7 +79,7 @@ public class LevelUtil {
 
         final var overallAABB = new AABB(start, end).inflate(radius + 1.0);
 
-        for (BlockPos blockPos : BlockPos.betweenClosed(
+        for (var blockPos : BlockPos.betweenClosed(
                 Mth.floor(overallAABB.minX), Mth.floor(overallAABB.minY), Mth.floor(overallAABB.minZ),
                 Mth.floor(overallAABB.maxX), Mth.floor(overallAABB.maxY), Mth.floor(overallAABB.maxZ)
         )) {
@@ -94,8 +94,8 @@ public class LevelUtil {
             return pathLength;
         }
 
-        double minBlockedDist = pathLength;
-        for (BlockPos pos : unbreakableBlocks) {
+        var minBlockedDist = pathLength;
+        for (var pos : unbreakableBlocks) {
             minBlockedDist = Math.min(minBlockedDist, calculateDistanceToBlockIntersection(start, direction, pathLength, pos));
         }
         return minBlockedDist;
@@ -103,7 +103,7 @@ public class LevelUtil {
 
     private static void destroyBreakableBlocks(Level level, List<BlockPos> breakableBlocks, Vec3 start, Vec3 direction, double pathLength, double minBlockedDist, boolean dropBlock, boolean spawnParticles) {
         final var air = Blocks.AIR.defaultBlockState();
-        for (BlockPos pos : breakableBlocks) {
+        for (var pos : breakableBlocks) {
             if (calculateDistanceToBlockIntersection(start, direction, pathLength, pos) < minBlockedDist) {
                 var blockState = level.getBlockState(pos);
                 var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;

@@ -72,8 +72,8 @@ public class BlendQuadWidget extends AbstractWidget {
             };
             context.submit(sdfCommand);
 
-            if (this.drawLine) {
-                this.renderLines(context, context.getAccumulatedAlpha());
+            if (drawLine) {
+                renderLines(context, context.getAccumulatedAlpha());
             }
         }
         context.pose().popPose();
@@ -81,23 +81,22 @@ public class BlendQuadWidget extends AbstractWidget {
 
     private void renderLines(WidgetRenderContext context, float finalAlpha) {
         var textureManager = Minecraft.getInstance().getTextureManager();
-        var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE_TEXTURE).getTexture();
+        var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTexture();
         lineTexture.setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, false);
-        var lineTextureView = textureManager.getTexture(Resource.Textures.ELEMENT_LINE_TEXTURE).getTextureView();
-        var lineW = getWidth() - 2.0f;
+        var lineTextureView = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTextureView();
+        var lineW = getWidth();
         var lineH = 4.0f;
 
         {
             context.pose().pushPose();
-            context.pose().translate(1.0f, 0, 0.1f);
+            context.pose().translate(0, 0, 0.1f);
             var topLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(topLineCommand);
             context.pose().popPose();
         }
         {
             context.pose().pushPose();
-            var bottomLineY = getHeight() - marginBottom;
-            context.pose().translate(1.0f, bottomLineY, 0.1f);
+            context.pose().translate(0, getHeight() - marginBottom, 0.1f);
             var bottomLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(bottomLineCommand);
             context.pose().popPose();

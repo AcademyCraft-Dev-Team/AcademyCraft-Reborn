@@ -106,7 +106,7 @@ public final class Settings implements DataTerminalHUD.App {
     private static PanelWidget createTabButton(String text, float x, float width) {
         var panel = new PanelWidget(x, 0, width, 20);
         {
-            panel.addChild("button_logic", new ImageButtonWidget(0, 0, width, 20, null, () -> {
+            panel.addChild("button_logic", new ImageButtonWidget(0, 0, width, 20, (ResourceLocation) null, () -> {
             }));
 
             var back = new FillWidget(0, 0, width, 20, 0xFF000000);
@@ -118,7 +118,6 @@ public final class Settings implements DataTerminalHUD.App {
             panel.addChild("layered", layered);
             {
                 var label = new AutoScaleLabelWidget(text, 0, 0, width);
-                label.setDropShadow(false);
                 label.setY((20 - label.getHeight()) / 2f);
                 layered.addChild("text", label);
             }
@@ -174,7 +173,6 @@ public final class Settings implements DataTerminalHUD.App {
         container.addChild("slider", slider);
 
         var valueLabel = new AutoScaleLabelWidget(String.format("%.2f", initialValue), slider.getWidth() + 5, 0, 45);
-        valueLabel.setDropShadow(false);
         valueLabel.setScale(0.75f);
         valueLabel.setY((8f - valueLabel.getHeight() * valueLabel.getScale()) / 2f);
         container.addChild("label_value", valueLabel);
@@ -198,7 +196,7 @@ public final class Settings implements DataTerminalHUD.App {
             }
         };
 
-        var logic = new ImageButtonWidget(0, 0, 180f, 20f, null, toggleAction);
+        var logic = new ImageButtonWidget(0, 0, 180f, 20f, (ResourceLocation) null, toggleAction);
         buttonPanel.addChild("button_logic", logic);
 
         var back = new FillWidget(0, 0, 180f, 20f, 0xFF000000);
@@ -209,7 +207,6 @@ public final class Settings implements DataTerminalHUD.App {
         layered.setEnabled(false);
         buttonPanel.addChild("layered", layered);
         {
-            text.setDropShadow(false);
             text.setY((20f - text.getHeight() * text.getScale()) / 2f);
             layered.addChild("text", text);
         }
@@ -291,11 +288,9 @@ public final class Settings implements DataTerminalHUD.App {
             keySelectionPanel.addChild("key_selection_panel_layered", layered);
             {
                 var closeLabel = new AutoScaleLabelWidget("X", keySelectionPanel.getWidth() - 25, 10, 20);
-                closeLabel.setDropShadow(false);
                 layered.addChild("text", closeLabel);
 
                 var title = new AutoScaleLabelWidget("Select Key", 5, 5, keySelectionPanel.getWidth() - 10);
-                title.setDropShadow(false);
                 layered.addChild("title", title);
             }
 
@@ -308,7 +303,7 @@ public final class Settings implements DataTerminalHUD.App {
                     keySelectionPanel.setEnabled(false);
                 }
             };
-            var closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, null, closeAction);
+            var closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, (ResourceLocation) null, closeAction);
             closeButtonPanel.addChild("button_logic", closeButtonLogic);
 
             var closeBack = new FillWidget(0, 0, 20, 15, 0xFF000000);
@@ -336,13 +331,12 @@ public final class Settings implements DataTerminalHUD.App {
                 keySelectionButton.<PanelWidget>getChildUnSafe("layered").<AutoScaleLabelWidget>getChildUnSafe("text").setText("> ... <");
                 }
             };
-            var listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, null, listenAction);
+            var listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, (ResourceLocation) null, listenAction);
             listenBtnPanel.addChild("button_logic", listenButtonLogic);
             var listenBtnBack = new FillWidget(0, 0, 170, 20, 0xFF000000);
             listenBtnBack.setAlpha(0.5f);
             listenBtnPanel.addChild("back", listenBtnBack);
             var listenLabel = new AutoScaleLabelWidget("Listen for Input", 0, 6, listenBtnPanel.getWidth());
-            listenLabel.setDropShadow(false);
             listenLabel.setZ(listenLabel.getZ() + 1);
             listenBtnPanel.addChild("text", listenLabel);
             keySelectionPanel.addChild("listen_btn", listenBtnPanel);
@@ -372,7 +366,6 @@ public final class Settings implements DataTerminalHUD.App {
         var currentY = 5f;
 
         var keyboardLabel = new AutoScaleLabelWidget("Keyboard", 5, currentY, container.getWidth() - 10);
-        keyboardLabel.setDropShadow(false);
         keyboardLabel.setZ(keyboardLabel.getZ() + 1);
         container.addChild("keyboard_label", keyboardLabel);
         currentY += 15;
@@ -383,10 +376,10 @@ public final class Settings implements DataTerminalHUD.App {
         keyboardPanel.addChild("back", keyboardBack);
         container.addChild("keyboard_panel", keyboardPanel);
 
-        final float KEY_HEIGHT = 15f;
-        final float H_SPACING = 2f;
-        final float V_SPACING = 3f;
-        final float KEY_WIDTH_UNIT = (keyboardPanel.getWidth() - 14 * H_SPACING) / 15f;
+        final var KEY_HEIGHT = 15f;
+        final var H_SPACING = 2f;
+        final var V_SPACING = 3f;
+        final var KEY_WIDTH_UNIT = (keyboardPanel.getWidth() - 14 * H_SPACING) / 15f;
 
         float rowY;
         float rowX;
@@ -407,24 +400,24 @@ public final class Settings implements DataTerminalHUD.App {
 
         rowX = 0f;
         keyWidth = KEY_WIDTH_UNIT * 1.5f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "TAB", GLFW.GLFW_KEY_TAB, rowX, mainKeysY, keyWidth); rowX += keyWidth + H_SPACING;
-        String[] row3keys = {"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"};
-        int[] row3codes = {GLFW.GLFW_KEY_Q, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_E, GLFW.GLFW_KEY_R, GLFW.GLFW_KEY_T, GLFW.GLFW_KEY_Y, GLFW.GLFW_KEY_U, GLFW.GLFW_KEY_I, GLFW.GLFW_KEY_O, GLFW.GLFW_KEY_P, GLFW.GLFW_KEY_LEFT_BRACKET, GLFW.GLFW_KEY_RIGHT_BRACKET};
+        var row3keys = new String[]{"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"};
+        var row3codes = new int[]{GLFW.GLFW_KEY_Q, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_E, GLFW.GLFW_KEY_R, GLFW.GLFW_KEY_T, GLFW.GLFW_KEY_Y, GLFW.GLFW_KEY_U, GLFW.GLFW_KEY_I, GLFW.GLFW_KEY_O, GLFW.GLFW_KEY_P, GLFW.GLFW_KEY_LEFT_BRACKET, GLFW.GLFW_KEY_RIGHT_BRACKET};
         for(var i=0; i<row3keys.length; i++){ keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, row3keys[i], row3codes[i], rowX, mainKeysY, keyWidth); rowX += keyWidth + H_SPACING; }
         keyWidth = mainKeysPanel.getWidth() - rowX; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "\\", GLFW.GLFW_KEY_BACKSLASH, rowX, mainKeysY, keyWidth);
         mainKeysY += KEY_HEIGHT + V_SPACING;
 
         rowX = 0f;
         keyWidth = KEY_WIDTH_UNIT * 1.75f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "CAPS", GLFW.GLFW_KEY_CAPS_LOCK, rowX, mainKeysY, keyWidth); rowX += keyWidth + H_SPACING;
-        String[] row4keys = {"A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'"};
-        int[] row4codes = {GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_F, GLFW.GLFW_KEY_G, GLFW.GLFW_KEY_H, GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K, GLFW.GLFW_KEY_L, GLFW.GLFW_KEY_SEMICOLON, GLFW.GLFW_KEY_APOSTROPHE};
+        var row4keys = new String[]{"A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'"};
+        var row4codes = new int[]{GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_F, GLFW.GLFW_KEY_G, GLFW.GLFW_KEY_H, GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K, GLFW.GLFW_KEY_L, GLFW.GLFW_KEY_SEMICOLON, GLFW.GLFW_KEY_APOSTROPHE};
         for(var i=0; i<row4keys.length; i++){ keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, row4keys[i], row4codes[i], rowX, mainKeysY, keyWidth); rowX += keyWidth + H_SPACING; }
         keyWidth = mainKeysPanel.getWidth() - rowX; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "ENTER", GLFW.GLFW_KEY_ENTER, rowX, mainKeysY, keyWidth);
         mainKeysY += KEY_HEIGHT + V_SPACING;
 
         rowX = 0f;
         keyWidth = KEY_WIDTH_UNIT * 2.25f; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "LSHIFT", GLFW.GLFW_KEY_LEFT_SHIFT, rowX, mainKeysY, keyWidth); rowX += keyWidth + H_SPACING;
-        String[] row5keys = {"Z", "X", "C", "V", "B", "N", "M", ",", ".", "/"};
-        int[] row5codes = {GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_V, GLFW.GLFW_KEY_B, GLFW.GLFW_KEY_N, GLFW.GLFW_KEY_M, GLFW.GLFW_KEY_COMMA, GLFW.GLFW_KEY_PERIOD, GLFW.GLFW_KEY_SLASH};
+        var row5keys = new String[]{"Z", "X", "C", "V", "B", "N", "M", ",", ".", "/"};
+        var row5codes = new int[]{GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_V, GLFW.GLFW_KEY_B, GLFW.GLFW_KEY_N, GLFW.GLFW_KEY_M, GLFW.GLFW_KEY_COMMA, GLFW.GLFW_KEY_PERIOD, GLFW.GLFW_KEY_SLASH};
         for(var i=0; i<row5keys.length; i++){ keyWidth = KEY_WIDTH_UNIT; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, row5keys[i], row5codes[i], rowX, mainKeysY, keyWidth); rowX += keyWidth + H_SPACING; }
         keyWidth = mainKeysPanel.getWidth() - rowX; addKey(mainKeysPanel, keyboardButtonMap, InputSystem.InputType.KEYBOARD, "RSHIFT", GLFW.GLFW_KEY_RIGHT_SHIFT, rowX, mainKeysY, keyWidth);
         mainKeysY += KEY_HEIGHT + V_SPACING;
@@ -459,7 +452,6 @@ public final class Settings implements DataTerminalHUD.App {
         currentY += keyboardContentHeight + 10;
 
         var mouseLabel = new AutoScaleLabelWidget("Mouse", 5, currentY, container.getWidth() - 10);
-        mouseLabel.setDropShadow(false);
         mouseLabel.setZ(mouseLabel.getZ() + 1);
         container.addChild("mouse_label", mouseLabel);
         currentY += 15;
@@ -505,15 +497,12 @@ public final class Settings implements DataTerminalHUD.App {
         controlPanel.addChild("control_panel_layered", controlPanelLayered);
         {
             var typeLabel = new AutoScaleLabelWidget("Type:", 5, 8, 40);
-            typeLabel.setDropShadow(false);
             controlPanelLayered.addChild("type_label", typeLabel);
 
             var keyLabel = new AutoScaleLabelWidget("Key:", 5, 33, 40);
-            keyLabel.setDropShadow(false);
             controlPanelLayered.addChild("key_label", keyLabel);
 
             var modLabel = new AutoScaleLabelWidget("Mods:", 5, 63, 40);
-            modLabel.setDropShadow(false);
             controlPanelLayered.addChild("mod_label", modLabel);
         }
 
@@ -529,7 +518,7 @@ public final class Settings implements DataTerminalHUD.App {
             }
         };
         keyboardBtn = new PanelWidget(0, 0, 60, 15);
-        var keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, null, keyboardAction);
+        var keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, (ResourceLocation) null, keyboardAction);
         keyboardBtn.addChild("button_logic", keyboardLogic);
 
         var keyboardBtnBack = new FillWidget(0, 0, 60, 15, 0xFF000000);
@@ -541,7 +530,6 @@ public final class Settings implements DataTerminalHUD.App {
         keyboardBtn.addChild("keyboard_btn_layered", keyboardBtnLayered);
         {
             var keyboardLabel = new AutoScaleLabelWidget("Keyboard", 0, 4, keyboardBtn.getWidth());
-            keyboardLabel.setDropShadow(false);
             keyboardBtnLayered.addChild("label", keyboardLabel);
         }
 
@@ -556,7 +544,7 @@ public final class Settings implements DataTerminalHUD.App {
             }
         };
         mouseBtn = new PanelWidget(65, 0, 60, 15);
-        var mouseLogic = new ImageButtonWidget(0, 0, 60, 15, null, mouseAction);
+        var mouseLogic = new ImageButtonWidget(0, 0, 60, 15, (ResourceLocation) null, mouseAction);
         mouseBtn.addChild("button_logic", mouseLogic);
 
         var mouseBtnBack = new FillWidget(0, 0, 60, 15, 0xFF000000);
@@ -568,7 +556,6 @@ public final class Settings implements DataTerminalHUD.App {
         mouseBtn.addChild("mouse_btn_layered", mouseBtnLayered);
         {
             var mouseLabel = new AutoScaleLabelWidget("Mouse", 0, 4, mouseBtn.getWidth());
-            mouseLabel.setDropShadow(false);
             mouseBtnLayered.addChild("label", mouseLabel);
         }
 
@@ -586,7 +573,7 @@ public final class Settings implements DataTerminalHUD.App {
                     updateKeySelectionHighlights();
                 }
             };
-            var keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, null, keySelectAction);
+            var keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, (ResourceLocation) null, keySelectAction);
             keySelectionButton.addChild("button_logic", keySelectionLogic);
 
             var keySelectionButtonBack = new FillWidget(0, 0, 125, 20, 0xFF000000);
@@ -598,7 +585,6 @@ public final class Settings implements DataTerminalHUD.App {
             keySelectionButton.addChild("layered", keySelectionButtonLayered);
             {
                 var keySelectionButtonLabel = new AutoScaleLabelWidget("Set Key", 0, 0, keySelectionButton.getWidth());
-                keySelectionButtonLabel.setDropShadow(false);
                 keySelectionButtonLabel.setY((keySelectionButton.getHeight() - keySelectionButtonLabel.getHeight()) / 2f);
                 keySelectionButtonLayered.addChild("text", keySelectionButtonLabel);
             }
@@ -630,7 +616,7 @@ public final class Settings implements DataTerminalHUD.App {
     private static PanelWidget createModifierButton(String text, float x, Runnable onPress) {
         var panel = new PanelWidget(x, 0, 35, 15);
         {
-            var buttonLogic = new ImageButtonWidget(0, 0, 35, 15, null, onPress);
+            var buttonLogic = new ImageButtonWidget(0, 0, 35, 15, (ResourceLocation) null, onPress);
             panel.addChild("button_logic", buttonLogic);
 
             var back = new FillWidget(0, 0, 35, 15, 0xFF000000);
@@ -641,7 +627,6 @@ public final class Settings implements DataTerminalHUD.App {
             panel.addChild("layered", layered);
             {
                 var label = new AutoScaleLabelWidget(text, 0, 4, 35);
-                label.setDropShadow(false);
                 layered.addChild("label", label);
             }
         }
@@ -745,11 +730,10 @@ public final class Settings implements DataTerminalHUD.App {
         var panel = new PanelWidget(0, 0, 180, 20);
 
         var label = new HoverLabelWidget(displayName, 5, 5, 95);
-        label.setDropShadow(false);
         panel.addChild("label", label);
 
         var buttonPanel = new PanelWidget(105, 0, 75, 20);
-        var buttonLogic = new ImageButtonWidget(0, 0, 75, 20, null, () -> toggleKeybindingControls(panel, keyName));
+        var buttonLogic = new ImageButtonWidget(0, 0, 75, 20, (ResourceLocation) null, () -> toggleKeybindingControls(panel, keyName));
         buttonPanel.addChild("button_logic", buttonLogic);
         panel.addChild("button", buttonPanel);
 
@@ -764,7 +748,6 @@ public final class Settings implements DataTerminalHUD.App {
         buttonPanel.addChild("layered", layered);
         {
             var keyLabel = new AutoScaleLabelWidget(formatKeybinding(binding), 3, 0, buttonPanel.getWidth() - 6);
-            keyLabel.setDropShadow(false);
             keyLabel.setY((buttonPanel.getHeight() - keyLabel.getHeight()) / 2);
             layered.addChild("text", keyLabel);
         }
@@ -916,7 +899,7 @@ public final class Settings implements DataTerminalHUD.App {
 
     private static PanelWidget createSmallKeyButton(String text, float x, float y, float w, Runnable onPress) {
         var panel = new PanelWidget(x, y, w, 15);
-        var buttonLogic = new ImageButtonWidget(0, 0, w, 15, null, onPress);
+        var buttonLogic = new ImageButtonWidget(0, 0, w, 15, (ResourceLocation) null, onPress);
         panel.addChild("button_logic", buttonLogic);
 
         var back = new FillWidget(0, 0, w, 15, 0xFF000000);
@@ -928,7 +911,6 @@ public final class Settings implements DataTerminalHUD.App {
         panel.addChild("layered", layered);
         {
             var label = new AutoScaleLabelWidget(text, 0, 0, w * 0.5f);
-            label.setDropShadow(false);
             label.setY((15f - label.getHeight() * label.getScale()) / 2f);
             label.setX((w - label.getWidth()) / 2f);
             layered.addChild("label", label);

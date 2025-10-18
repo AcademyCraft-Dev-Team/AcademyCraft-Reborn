@@ -69,8 +69,7 @@ public final class WorldData {
             return;
         }
 
-        // 检查是否有任何玩家数据是脏的，如果没有，则不执行任何操作
-        boolean hasDirtyData = AcademyCraftServer.worldData.getPlayers().values().stream()
+        var hasDirtyData = AcademyCraftServer.worldData.getPlayers().values().stream()
                 .anyMatch(Player::isDirty);
 
         if (!hasDirtyData) {
@@ -89,7 +88,6 @@ public final class WorldData {
             return;
         }
 
-        // 保存成功后，清理所有玩家的脏标记
         AcademyCraftServer.worldData.getPlayers().values().forEach(Player::clean);
         AcademyCraft.LOGGER.debug("World data saved and dirty flags cleaned.");
     }

@@ -7,7 +7,11 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.framework.CGuiContainerScreen;
-import org.academy.api.client.gui.widget.*;
+import org.academy.api.client.gui.util.WirelessPanelUtil;
+import org.academy.api.client.gui.widget.ImageRadioButtonWidget;
+import org.academy.api.client.gui.widget.ImageWidget;
+import org.academy.api.client.gui.widget.PanelWidget;
+import org.academy.api.client.gui.widget.RadioGroupWidget;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.OmniCraftingMenu;
 
@@ -20,7 +24,7 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
     }
 
     @Override
-    protected void onInit() {
+    protected void onInit(PanelWidget main, PanelWidget invContent) {
         var startYOffset = 20f;
         var duration = 600L;
         var delay = 250L;
@@ -34,7 +38,7 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
             invPage.addChild("ui", ui);
         }
 
-        var wirelessPanel = new WirelessPanelWidget(leftPos, topPos - 22, mainPos);
+        var wirelessPanel = WirelessPanelUtil.create(leftPos, topPos - 22, mainPos, false);
         wirelessPanel.setZ(100);
         wirelessPanel.setVisible(false);
         wirelessPanel.setEnabled(false);
@@ -43,13 +47,13 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
         var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
         radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
             var showInv = imageRadioButtonWidget.getId() == 0;
-            var panelY = getTopPos() - 22;
+            var panelY = topPos - 22;
             if (showInv) {
-                renderInventory = true;
+                setHandleContainer(true);
                 ScreenAnimationUtil.show(this, invPage, panelY);
                 ScreenAnimationUtil.hide(this, wirelessPanel, panelY);
             } else {
-                renderInventory = false;
+                setHandleContainer(false);
                 ScreenAnimationUtil.show(this, wirelessPanel, panelY);
                 ScreenAnimationUtil.hide(this, invPage, panelY);
             }

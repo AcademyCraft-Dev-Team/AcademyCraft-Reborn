@@ -69,6 +69,7 @@ public final class CommandExecutor {
                 var format = mesh.drawState().format();
                 var baseVertex = baseVertices.getInt(i);
                 var safeBuffer = safeVertexBuffers.get(format);
+                var hasClosedSampler = false;
 
                 {
                     renderPass.setPipeline(meshToDraw.pipeline());
@@ -92,10 +93,15 @@ public final class CommandExecutor {
                     for (var entry : meshToDraw.samplers().entrySet()) {
                         var value = entry.getValue();
                         if (value.isClosed()) {
-                            AcademyCraft.LOGGER.error("Sampler {} has been closed", entry.getKey());
-                            continue;
+                            AcademyCraft.LOGGER.error("Sampler {} has been closed, skipping draw for this mesh.", entry.getKey());
+                            hasClosedSampler = true;
+                            break;
                         }
                         renderPass.bindSampler(entry.getKey(), value);
+                    }
+                    if (hasClosedSampler) {
+                        meshToDraw.close();
+                        continue;
                     }
                     for (var entry : meshToDraw.uniforms().entrySet()) {
                         renderPass.setUniform(entry.getKey(), entry.getValue());

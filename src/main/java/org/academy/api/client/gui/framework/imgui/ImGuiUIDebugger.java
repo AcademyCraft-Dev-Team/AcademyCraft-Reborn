@@ -2,6 +2,7 @@ package org.academy.api.client.gui.framework.imgui;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import imgui.ImGui;
+import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiTreeNodeFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImString;
@@ -10,26 +11,21 @@ import org.academy.api.client.gui.framework.WidgetContainer;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 
 public final class ImGuiUIDebugger {
-
     private ImGuiUIDebugger() {
     }
 
     public static void render(RenderTarget renderTarget, WidgetContainer root) {
         ImGuiUtilApi.render(renderTarget, () -> {
             if (ImGui.begin("ImGui UI Debugger")) {
-                ImGui.setWindowSize(800, 600, imgui.flag.ImGuiCond.FirstUseEver);
+                ImGui.setWindowSize(800, 600, ImGuiCond.FirstUseEver);
                 renderWidgetNode(root);
-                ImGui.end();
             }
+            ImGui.end();
         });
     }
 
     private static void renderWidgetNode(Widget widget) {
-        var flags = (widget instanceof WidgetContainer container && !container.getChildren().isEmpty())
-                ? ImGuiTreeNodeFlags.None
-                : ImGuiTreeNodeFlags.Leaf;
-
-        var nodeOpen = ImGui.treeNodeEx(widget.getName() + " (" + widget.getClass().getSimpleName() + ")", flags);
+        var nodeOpen = ImGui.treeNodeEx(widget.getName() + " (" + widget.getClass().getSimpleName() + ")", ImGuiTreeNodeFlags.None);
 
         if (nodeOpen) {
             renderWidgetProperties(widget);

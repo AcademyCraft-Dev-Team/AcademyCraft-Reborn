@@ -2,6 +2,7 @@ package org.academy.internal.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
@@ -87,5 +88,15 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
     @Override
     public AABB getRenderBoundingBox(WindGenBaseBlockEntity blockEntity) {
         return blockEntity.getRenderBoundingBox();
+    }
+
+    @Override
+    public boolean shouldRenderOffScreen() {
+        return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return Minecraft.getInstance().options.getEffectiveRenderDistance() * 16;
     }
 }

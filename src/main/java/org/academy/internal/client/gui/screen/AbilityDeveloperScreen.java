@@ -1,35 +1,49 @@
 package org.academy.internal.client.gui.screen;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.command.ImageDrawCommand;
+import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
-import org.academy.api.client.gui.framework.AbstractWidget;
 import org.academy.api.client.gui.framework.CGuiScreen;
+import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
+import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector2f;
+import org.joml.Vector4f;
 import org.misaka.MisakaNetworkClient;
 
 import java.awt.*;
-import java.util.ArrayList;
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public final class AbilityDeveloperScreen extends CGuiScreen {
@@ -44,19 +58,20 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     public static final float PANEL_RIGHT_SKILL_BACK_Y = 17.5f;
     public static final float PANEL_RIGHT_SKILL_BACK_WIDTH = 256;
     public static final float PANEL_RIGHT_SKILL_BACK_HEIGHT = 139.5f;
-    public static final float PANEL_RIGHT_SKILL_SIZE = 32f;
+    public static final float PANEL_RIGHT_SKILL_SIZE = 24f;
     public static final Function<AbilityCategory, ResourceLocation> ABILITY_ICON = abilityCategory ->
             ResourceLocation.fromNamespaceAndPath(abilityCategory.getKey().getNamespace(),
                     "textures/ability/" + abilityCategory.getKey().getPath() + "/icon_glow.png"
             );
-    private PanelWidget screenWirelessPanel;
+    private PanelWidget screenWirelessPanel = new PanelWidget(0, 0, 0, 0);
     private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
+    @Nullable
     private AutoScaleLabelWidget wirelessNameLabel;
 
-    public AbilityDeveloperScreen(BlockPos newMainPos) {
+    public AbilityDeveloperScreen(BlockPos mainPos) {
         super(Component.empty());
-        mainPos = newMainPos;
-        if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(newMainPos)
+        this.mainPos = mainPos;
+        if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(mainPos)
                 instanceof AbilityDeveloperBlockEntity entity) {
             abilityDeveloperBlockEntity = entity;
         } else {
@@ -79,7 +94,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         NeoForge.EVENT_BUS.unregister(this);
     }
 
-    @Override
+   /* @Override
     protected void onInit() {
         NeoForge.EVENT_BUS.register(this);
         final float startYOffset = 20f;
@@ -128,7 +143,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         playAnimation(ObjectAnimator.ofFloat(skillInfoPanel::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR));
         rightPanelAnimation.addListener(new AnimatorListener() {
             @Override
-            public void onAnimationEnd(@NotNull Animator animation) {
+            public void onAnimationEnd(Animator animation) {
                 welcome.startAnimation();
             }
         });
@@ -136,9 +151,36 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         setupWirelessPanel();
         setupSkillInfoPanel();
     }
+*/
+
+    @Override
+    protected void onInit() {
+        var duration = 500L;
+
+        var main = new PanelWidget((width - PANEL_MAIN_WIDTH) / 2f, (height - PANEL_MAIN_HEIGHT) / 2f, PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT);
+        rootContainer.addChild("main", main);
+        {
+            var back = new BlendQuadWidget(0, 0, main.getWidth(), main.getHeight());
+            back.setAlpha(0.5f);
+            main.addChild("back", back);
+
+            var content = new PanelWidget(0, 0, main.getWidth(), main.getHeight());
+            content.setZ(1);
+            main.addChild("content", content);
+            {
+
+            }
+
+            playAnimation(ObjectAnimator.ofFloat(back::setX, back.getWidth() / 2, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
+            playAnimation(ObjectAnimator.ofFloat(back::setWidth, 0, back.getWidth()).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
+
+            playAnimation(ObjectAnimator.ofFloat(back::setY, back.getHeight() / 2, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO).setStartDelay(duration));
+            playAnimation(ObjectAnimator.ofFloat(back::setHeight, 0, back.getHeight()).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO).setStartDelay(duration));
+        }
+    }
 
     @SubscribeEvent
-    public void onConnectionStatusChanged(WirelessPanelWidget.ConnectionStatusChangedEvent event) {
+    public void onConnectionStatusChanged(WirelessPanelUtil.ConnectionStatusChangedEvent event) {
         if (wirelessNameLabel != null)
             wirelessNameLabel.setText(event.nodeName);
     }
@@ -172,13 +214,11 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             addOutput("os", os, outputList);
 
             var textBox = new TextBoxWidget(32, os.getX() + os.getWidth(), os.getY(), PANEL_RIGHT_WIDTH - 24, hint.getHeight());
-            textBox.setForceScale(true, 0.75f);
 
             textBox.setWhenEnter(s -> {
                 var learned = AbilitySystemClient.getCategory() != AbilityCategories.LEVEL0.get();
                 var outputCommand = new LabelWidget("OS >" + s, 0, textBox.getY());
-                addOutput("output_command_" + s + outputCommand.hashCode(), outputCommand, outputList);
-
+                addOSOutput("output_command_" + s + outputCommand.hashCode(), os, textBox, outputList);
                 final var outputStartY = outputCommand.getY() + outputCommand.getHeight();
                 String singleLineOutput;
 
@@ -188,7 +228,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                             var request = new AcquireCategoryPacket(mainPos.asLong());
                             MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(request,
                                     response -> {
-                                        if (response != null && response.getMessages() != null) {
+                                        if (response != null) {
                                             var lastWidget = outputCommand;
                                             for (var string : response.getMessages()) {
                                                 var newOutput = new LabelWidget(string, 0, lastWidget.getY() + lastWidget.getHeight());
@@ -234,14 +274,21 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         parent.addChild("skill_area_back", parallaxImageWidget);
 
         var abilityCategory = AbilitySystemClient.getCategory();
-        var skillInfos = AbilitySystemClient.SKILL_INFOS.get(abilityCategory);
+        var skillInfos = AbilitySystemClient.getSkillInfos().get(abilityCategory);
         if (skillInfos != null) {
+            var skillWidgetMap = new HashMap<ResourceLocation, SkillWidget>();
+
             for (var skillInfo : skillInfos) {
                 var skillWidget = new SkillWidget(skillInfo);
                 skillWidget.setVisible(visible);
                 skillWidget.setEnabled(visible);
                 skillWidget.setZ(1);
                 parent.addChild(skillInfo.skill().getKey().toString(), skillWidget);
+                skillWidgetMap.put(skillInfo.skill().getKey(), skillWidget);
+            }
+
+            for (var skillWidget : skillWidgetMap.values()) {
+                skillWidget.resolveDependencies(skillWidgetMap);
             }
         }
     }
@@ -249,7 +296,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     private void setupWirelessPanel() {
         screenWirelessPanel = new PanelWidget(0, 0, width, height) {
             @Override
-            protected void onMousePressed(@NotNull MouseEvent event) {
+            protected void onMousePressed(MouseEvent event) {
                 setVisible(false);
                 setEnabled(false);
                 event.consume();
@@ -264,11 +311,11 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         screenWirelessPanel.setEnabled(false);
         rootContainer.addChild("panel_screen_wireless", screenWirelessPanel);
 
-        var backgroundWidget = new AbstractWidget(0, 0, width, height) {
-        };
+        var backgroundWidget = new FillWidget(0, 0, width, height, 0xFF000000);
+        backgroundWidget.setAlpha(0.75f);
         screenWirelessPanel.addChild("screen_back", backgroundWidget);
 
-        var localWirelessPanel = new WirelessPanelWidget((width - WirelessPanelWidget.PANEL_WIDTH) / 2, (height - WirelessPanelWidget.PANEL_HEIGHT) / 2, mainPos);
+        var localWirelessPanel = WirelessPanelUtil.create((width - WirelessPanelUtil.PANEL_WIDTH) / 2, (height - WirelessPanelUtil.PANEL_HEIGHT) / 2, mainPos, true);
         localWirelessPanel.setZ(10);
         screenWirelessPanel.addChild("panel_wireless", localWirelessPanel);
 
@@ -276,14 +323,29 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     }
 
     private void setupSkillInfoPanel() {
-        rootContainer.addChild("panel_skill_info", skillInfoPanel);
         skillInfoPanel.setEnabled(false);
         skillInfoPanel.setVisible(false);
+        skillInfoPanel.setZ(100);
+        rootContainer.addChild("panel_skill_info", skillInfoPanel);
     }
 
     private static void addOutput(String name, LabelWidget labelWidget, AbstractContainerWidget abstractContainerWidget) {
         labelWidget.setScale(0.75f);
         abstractContainerWidget.addChild(name, labelWidget);
+    }
+
+    private static void addOSOutput(String name, LabelWidget osLabel, TextBoxWidget textBoxWidget, AbstractContainerWidget abstractContainerWidget) {
+        var os = new LabelWidget(osLabel.getText(), osLabel.getX(), osLabel.getY() + 1);
+        os.setAlignment(osLabel.getAlignment());
+        osLabel.setVerticalAlignment(osLabel.getVerticalAlignment());
+        os.setScale(osLabel.getScale());
+
+        var text = new LabelWidget(textBoxWidget.getText(), textBoxWidget.getX(), textBoxWidget.getY());
+        text.setAlignment(textBoxWidget.getAlignment());
+        osLabel.setVerticalAlignment(textBoxWidget.getVerticalAlignment());
+
+        abstractContainerWidget.addChild(name + "_os", os);
+        abstractContainerWidget.addChild(name, text);
     }
 
     private PanelWidget getLeftPanel() {
@@ -315,10 +377,10 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4);
                 leftPanelInfoPanel.addChild("name", name);
 
-                int learned = AbilitySystemClient.LEARNED_SKILLS.size();
-                int all = abilityCategory.getSkills().size();
-                float progressRatio = (all == 0) ? 1.0f : (float) learned / all;
-                int percentage = (int) (progressRatio * 100);
+                var learned = AbilitySystemClient.LEARNED_SKILLS.size();
+                var all = abilityCategory.getSkills().size();
+                var progressRatio = (all == 0) ? 1.0f : (float) learned / all;
+                var percentage = (int) (progressRatio * 100);
 
                 var learnProgress = new ProgressBarWidget(leftPanelInfoPanel.getHeight(), 16,
                         leftPanelInfoPanel.getWidth() - leftPanelInfoPanel.getHeight() - 4, 2,
@@ -342,7 +404,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             {
                 var button = new ImageButtonWidget(0, 0,
                         wirelessButtonPanel.getWidth(), wirelessButtonPanel.getHeight(),
-                        null, () -> {
+                        (ResourceLocation) null, () -> {
                     screenWirelessPanel.setVisible(true);
                     screenWirelessPanel.setEnabled(true);
                 });
@@ -362,7 +424,13 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             localLeftPanel.addChild("power_label", powerLabel);
 
             if (abilityDeveloperBlockEntity != null) {
-                var progressBarWidget = new ProgressBarWidget(9.25f, 157f, 90f, 9, () -> (float) abilityDeveloperBlockEntity.getEnergyStored() / abilityDeveloperBlockEntity.getMaxEnergyStorage());
+                var progressBarWidget = new ProgressBarWidget(
+                        9.25f,
+                        157f,
+                        90f,
+                        9,
+                        () -> (float) abilityDeveloperBlockEntity.getEnergyStored() / abilityDeveloperBlockEntity.getMaxEnergyStorage()
+                );
                 localLeftPanel.addChild("progress_bar", progressBarWidget);
             }
         }
@@ -372,8 +440,8 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     void openSkillViewPanel(AbilitySystemClient.SkillInfo skill) {
         skillInfoPanel.skillInfo = skill;
 
-        skillInfoPanel.background.setWidth(width);
-        skillInfoPanel.background.setHeight(height);
+        skillInfoPanel.closeBack.setWidth(width);
+        skillInfoPanel.closeBack.setHeight(height);
 
         skillInfoPanel.setWidth(width);
         skillInfoPanel.setHeight(height);
@@ -432,7 +500,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     final class SkillInfoPanel extends PanelWidget {
         @Nullable
         AbilitySystemClient.SkillInfo skillInfo;
-        final ImageButtonWidget background;
+        final ImageButtonWidget closeBack;
         final ImageWidget iconBack = new ImageWidget(0, 0, 65, 65, Resource.Textures.UI_DEVELOPER_SKILL_ICON_BG);
         final ImageWidget icon = new ImageWidget(0, 0, 32.5f, 32.5f, (ResourceLocation) null);
         final AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget("", 0, 0, 200);
@@ -443,7 +511,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
 
         public SkillInfoPanel() {
             super(0, 0, 0, 0);
-            background = new ImageButtonWidget(0, 0, AbilityDeveloperScreen.this.width, AbilityDeveloperScreen.this.height, null, () -> {
+            closeBack = new ImageButtonWidget(0, 0, AbilityDeveloperScreen.this.width, AbilityDeveloperScreen.this.height, (ResourceLocation) null, () -> {
                 setEnabled(false);
                 setVisible(false);
             });
@@ -460,7 +528,11 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                         });
             });
 
-            addChild("back", background);
+            var backgroundWidget = new FillWidget(0, 0, AbilityDeveloperScreen.this.width, AbilityDeveloperScreen.this.height, 0xFF000000);
+            backgroundWidget.setAlpha(0.75f);
+
+            addChild("back", backgroundWidget);
+            addChild("close_back", closeBack);
             addChild("icon_back", iconBack);
             addChild("icon", icon);
             addChild("name_label", nameLabel);
@@ -474,34 +546,31 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     final class SkillWidget extends ImageButtonWidget {
         public float targetScale = 1.0f;
         public float currentScale = 1.0f;
-        public boolean dynamicFollow = true;
-        public float xOffset, yOffset;
         public float targetProgress;
         public float progress;
-        public final List<AbilitySystemClient.SkillInfo> dependencies = new ArrayList<>();
         private final AbilitySystemClient.SkillInfo skillInfo;
+        private final List<SkillWidget> resolvedDependencies = new ArrayList<>();
 
         SkillWidget(AbilitySystemClient.SkillInfo skillInfo) {
             super(skillInfo.x(), skillInfo.y(), PANEL_RIGHT_SKILL_SIZE, PANEL_RIGHT_SKILL_SIZE,
                     skillInfo.texture(),
                     () -> openSkillViewPanel(skillInfo));
             this.skillInfo = skillInfo;
-            dependencies.addAll(skillInfo.dependencies());
+        }
+
+        public void resolveDependencies(Map<ResourceLocation, SkillWidget> allWidgets) {
+            resolvedDependencies.clear();
+            for (var depInfo : skillInfo.dependencies()) {
+                var depWidget = allWidgets.get(depInfo.skill().getKey());
+                if (depWidget != null) {
+                    resolvedDependencies.add(depWidget);
+                }
+            }
         }
 
         @Override
         public void tick() {
-            if (skillInfo != null)
-                targetProgress = AbilitySystemClient.getSkillExp(skillInfo.skill()) / 100f;
-        }
-
-        @Override
-        public void setHovered(boolean hovered) {
-            super.setHovered(hovered);
-            if (minecraft != null) {
-                xOffset = -(dynamicFollow ? ((float) minecraft.mouseHandler.xpos() / width) : 0f);
-                yOffset = -(dynamicFollow ? ((float) minecraft.mouseHandler.ypos() / height) : 0f);
-            }
+            targetProgress = AbilitySystemClient.getSkillExp(skillInfo.skill()) / 100f;
         }
 
         @Override
@@ -512,70 +581,148 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             var scaledHeight = getHeight() * currentScale;
             var cornerX = absX + (getWidth() - scaledWidth) / 2f;
             var cornerY = absY + (getHeight() - scaledHeight) / 2f;
-            return checkX >= cornerX && checkY >= cornerY && checkX < cornerX + scaledWidth && checkY < cornerY + scaledHeight;
+            return checkX >= cornerX && checkY >= cornerY && checkX < cornerX + scaledWidth && checkY < cornerY + scaledHeight && !skillInfoPanel.isVisible() && !screenWirelessPanel.isVisible();
         }
 
-       /* @Override
-        public void render(@NotNull MatrixStack stack, MultiBufferSource.@NotNull BufferSource bufferSource, double mouseX, double mouseY, float partialTick) {
-            if (!isVisible()) return;
-
-            stack.pushPose();
-            stack.translate(this.getX(), this.getY(), this.getZ());
-            stack.translate(xOffset, yOffset, 0f);
-
+        @Override
+        public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+            var oT = textureLocation;
+            setTexture(Resource.Textures.UI_DEVELOPER_SKILL_ICON_BG);
             targetScale = isHovered() ? 1.25f : 1.0f;
             currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
-            this.setScale(currentScale, currentScale, true);
 
-            final var cX = getWidth() / 2f;
-            final var cY = getHeight() / 2f;
+            context.pose().pushPose();
+            context.pose().translate(0, 0, 0.1f);
+            setScale(currentScale, currentScale, true);
+            super.render(context, mouseX, mouseY, partialTick);
+            context.pose().popPose();
 
-            var lineBuf = bufferSource.getBuffer(ELEMENT_LINE);
-            final var thickness = 5f;
-            for (var dep : dependencies) {
-                stack.pushPose();
-                var m = stack.lastMatrix();
-                var dX = dep.x() + PANEL_RIGHT_SKILL_SIZE / 2f - this.getX();
-                var dY = dep.y() + PANEL_RIGHT_SKILL_SIZE / 2f - this.getY();
-                float dx = dX - cX, dy = dY - cY;
-                var rawLen = (float) Math.hypot(dx, dy);
-                var length = rawLen - PANEL_RIGHT_SKILL_SIZE + thickness;
-                var angle = (float) Math.atan2(dy, dx);
-                stack.translate(cX, cY, 0);
-                stack.mulPose(Axis.ZP.rotation(angle));
-                stack.translate(PANEL_RIGHT_SKILL_SIZE / 2f - thickness / 2, -thickness / 2f, 0f);
-                stack.scale(length, thickness, 1f);
-                lineBuf.addVertex(m, 0f, 0f, 0f).setColor(1, 1, 1, 1f).setUv(0f, 0f);
-                lineBuf.addVertex(m, 0f, 1f, 0f).setColor(1, 1, 1, 1f).setUv(0f, 1f);
-                lineBuf.addVertex(m, 1f, 1f, 0f).setColor(1, 1, 1, 1f).setUv(1f, 1f);
-                lineBuf.addVertex(m, 1f, 0f, 0f).setColor(1, 1, 1, 1f).setUv(1f, 0f);
-                stack.popPose();
+            context.pose().pushPose();
+            {
+                context.pose().translate(0, 0, getZ());
+
+                var thisCenterX = getX() + getWidth() / 2f;
+                var thisCenterY = getY() + getHeight() / 2f;
+                var thisRadius = (PANEL_RIGHT_SKILL_SIZE / 2f) * currentScale * 0.9f;
+                var lineThickness = 4.0f;
+
+                for (var depWidget : resolvedDependencies) {
+                    var depCenterX = depWidget.getX() + depWidget.getWidth() / 2f;
+                    var depCenterY = depWidget.getY() + depWidget.getHeight() / 2f;
+                    var depRadius = (PANEL_RIGHT_SKILL_SIZE / 2f) * depWidget.currentScale * 0.9f;
+
+                    var vecX = depCenterX - thisCenterX;
+                    var vecY = depCenterY - thisCenterY;
+                    var distBetweenCenters = (float) Math.hypot(vecX, vecY);
+
+                    if (distBetweenCenters <= thisRadius + depRadius) continue;
+
+                    var dirX = vecX / distBetweenCenters;
+                    var dirY = vecY / distBetweenCenters;
+
+                    var lineStartX = thisCenterX + dirX * thisRadius;
+                    var lineStartY = thisCenterY + dirY * thisRadius;
+
+                    var lineLength = distBetweenCenters - thisRadius - depRadius;
+                    var angle = (float) Math.atan2(dirY, dirX);
+
+                    context.pose().pushPose();
+                    {
+                        context.pose().translate(lineStartX, lineStartY, 0);
+                        context.pose().mulPose(Axis.ZP.rotation(angle));
+                        context.pose().translate(0, -lineThickness / 2f, 0);
+                        context.pose().scale(lineLength, lineThickness, 1f);
+
+                        var textureManager = Minecraft.getInstance().getTextureManager();
+                        var texture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTextureView();
+                        var command = new ImageDrawCommand(texture, 1, 1, 0, 0, 1, 1, 1, 1, 1, context.getAccumulatedAlpha() * getAlpha());
+                        context.submit(command);
+                    }
+                    context.pose().popPose();
+                }
             }
+            context.pose().popPose();
 
-            var oldType = getRenderType();
-            setRenderType(PANEL_RIGHT_SKILL_ICON_BACK);
-            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+            setTexture(oT);
+            context.pose().pushPose();
+            {
+                context.pose().translate(0, 0, 0.2f);
+                setScale(currentScale * 0.6f, currentScale * 0.6f, true);
+                super.render(context, mouseX, mouseY, partialTick);
+            }
+            context.pose().popPose();
 
-            this.setColor(1f, 1f, 1f);
+            context.pose().pushPose();
+            {
+                context.pose().translate(getX(), getY(), getZ() + 0.3f);
+                context.pose().translate(getWidth() / 2, getHeight() / 2, 0);
+                context.pose().scale(widthScale * 2, heightScale * 2, 1);
+                context.pose().translate(-getWidth() / 2, -getHeight() / 2, 0);
 
-            setRenderType(oldType);
-            this.setScale(currentScale * 0.5f, currentScale * 0.5f, true);
-            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
+                progress = MathUtil.lerpStartEndFactor(progress, targetProgress,
+                        ClientUtil.animationFactor(MathUtil.PI / 2));
+                var data = new UniformData(
+                        new Vector2f(0.5f, 0.5f),
+                        0.35f,
+                        0.35f,
+                        0.275f,
+                        0.375f,
+                        0.75f,
+                        new Vector4f(1, 1, 1, getAlpha() * context.getAccumulatedAlpha()),
+                        -MathUtil.PI / 2
+                );
+                var command = new PosTexRectDrawCommand(
+                        Render.RenderPipelines.GLOW_CIRCLE,
+                        getWidth(),
+                        getHeight(),
+                        0,
+                        0,
+                        1,
+                        1
+                ) {
+                    @Override
+                    public Map<String, GpuTextureView> getSamplers() {
+                        return Collections.emptyMap();
+                    }
 
-            this.setScale(currentScale, currentScale, true);
+                    @Override
+                    public Map<String, GpuBufferSlice> getUniforms() {
+                        var uboStorage = context.getDynamicUbo(UniformData.class, UniformData.UBO_SIZE);
+                        var uboSlice = uboStorage.writeUniform(data);
+                        return Map.of("Uniforms", uboSlice);
+                    }
+                };
+                context.submit(command);
+            }
+            context.pose().popPose();
+        }
 
-            //  setRenderType(GLOW_CIRCLE);
-            progress = MathUtil.lerpStartEndFactor(progress, targetProgress,
-                    ClientUtil.animationFactor(MathUtil.PI / 2));
-*//*            var uniform = Shaders.GLOW_CIRCLE.getUniform("progress");
-            if (uniform != null) {
-                uniform.set(progress);
-            }*//*
-            super.render(stack, bufferSource, mouseX, mouseY, partialTick);
-            bufferSource.endBatch(GLOW_CIRCLE);
+        public record UniformData(Vector2f ringCenter, float innerRadius, float outerRadius, float innerGlowRadius,
+                                  float outerGlowRadius, float progress, Vector4f ringColor,
+                                  float startAngle) implements DynamicUniformStorage.DynamicUniform {
+            public static final int UBO_SIZE = new Std140SizeCalculator()
+                    .putVec2()
+                    .putFloat()
+                    .putFloat()
+                    .putFloat()
+                    .putFloat()
+                    .putFloat()
+                    .putVec4()
+                    .putFloat()
+                    .get();
 
-            setRenderType(oldType);
-            stack.popPose();
-        }*/
+            @Override
+            public void write(ByteBuffer buffer) {
+                Std140Builder.intoBuffer(buffer)
+                        .putVec2(ringCenter)
+                        .putFloat(innerRadius)
+                        .putFloat(outerRadius)
+                        .putFloat(innerGlowRadius)
+                        .putFloat(outerGlowRadius)
+                        .putFloat(progress)
+                        .putVec4(ringColor)
+                        .putFloat(startAngle);
+            }
+        }
     }
 }

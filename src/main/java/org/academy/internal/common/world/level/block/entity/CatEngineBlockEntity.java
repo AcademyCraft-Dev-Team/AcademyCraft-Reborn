@@ -31,8 +31,8 @@ public final class CatEngineBlockEntity extends BlockEntity implements WirelessU
         e.oRot = e.rot;
         var player = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 3, false);
         if (player != null) {
-            double d0 = player.getX() - ((double) blockPos.getX() + 0.5D);
-            double d1 = player.getZ() - ((double) blockPos.getZ() + 0.5D);
+            var d0 = player.getX() - ((double) blockPos.getX() + 0.5D);
+            var d1 = player.getZ() - ((double) blockPos.getZ() + 0.5D);
             e.tRot = (float) Mth.atan2(d1, d0);
         } else {
             e.tRot += 0.02F;
@@ -72,8 +72,8 @@ public final class CatEngineBlockEntity extends BlockEntity implements WirelessU
 
     @Override
     public void setConnectedNodePosition(@Nullable BlockPos nodePos) {
-        if (!Objects.equals(this.connectedNodePos, nodePos)) {
-            this.connectedNodePos = nodePos;
+        if (!Objects.equals(connectedNodePos, nodePos)) {
+            connectedNodePos = nodePos;
             setChanged();
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);

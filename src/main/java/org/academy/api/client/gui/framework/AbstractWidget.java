@@ -25,7 +25,7 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public void render(WidgetRenderContext renderContext, double mouseX, double mouseY, float partialTick) {
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
     }
 
     @Override
@@ -223,14 +223,14 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public void scrollTo(float x, float y) {
-        this.scrollX = x;
-        this.scrollY = y;
+        scrollX = x;
+        scrollY = y;
     }
 
     @Override
     public void scrollBy(float dx, float dy) {
-        this.scrollX += dx;
-        this.scrollY += dy;
+        scrollX += dx;
+        scrollY += dy;
     }
 
     @Override

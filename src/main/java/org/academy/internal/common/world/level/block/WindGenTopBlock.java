@@ -41,19 +41,19 @@ public final class WindGenTopBlock extends BaseEntityBlock {
     }
 
     private Function<BlockState, VoxelShape> makeShapes() {
-        var terminal = Block.box(4, 4, 6, 12, 12, 9);
-        var axon = Block.box(5, 5, 9, 11, 11, 12);
-        var main = Block.box(1, 1, 12, 15, 15, 29);
+        var terminal = box(4, 4, 6, 12, 12, 9);
+        var axon = box(5, 5, 9, 11, 11, 12);
+        var main = box(1, 1, 12, 15, 15, 29);
 
-        var mainLD = Block.box(0, 0, 14, 3, 3, 30);
-        var mainL = Block.box(0, 0, 11, 3, 16, 14);
-        var mainLT = Block.box(0, 13, 14, 3, 16, 30);
+        var mainLD = box(0, 0, 14, 3, 3, 30);
+        var mainL = box(0, 0, 11, 3, 16, 14);
+        var mainLT = box(0, 13, 14, 3, 16, 30);
 
-        var mainRD = Block.box(13, 0, 14, 16, 3, 30);
-        var mainR = Block.box(13, 0, 11, 16, 16, 14);
-        var mainRT = Block.box(13, 13, 14, 16, 16, 30);
+        var mainRD = box(13, 0, 14, 16, 3, 30);
+        var mainR = box(13, 0, 11, 16, 16, 14);
+        var mainRT = box(13, 13, 14, 16, 16, 30);
 
-        var tail = Block.box(2, 3, 29, 14, 13, 32);
+        var tail = box(2, 3, 29, 14, 13, 32);
 
         var all = Shapes.or(axon, terminal, main, mainLD, mainL, mainLT, mainRD, mainR, mainRT, tail).move(0, 0, 1 / 8f);
 
@@ -81,10 +81,6 @@ public final class WindGenTopBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-
         if (level.getBlockEntity(pos) instanceof WindGenTopBlockEntity windGenTopBlockEntity) {
             var stackInHand = player.getItemInHand(hand);
             var stackInSlot = windGenTopBlockEntity.getItem(0);
@@ -115,7 +111,7 @@ public final class WindGenTopBlock extends BaseEntityBlock {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
+        return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
     @Override

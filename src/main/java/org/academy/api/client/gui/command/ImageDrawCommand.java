@@ -24,12 +24,12 @@ public class ImageDrawCommand extends PosTexColorRectDrawCommand {
             float alpha
     ) {
         super(Render.RenderPipelines.IMAGE,width,height,u0,v0,u1,v1,red,green,blue,alpha);
-        this.textureView = gpuTextureView;
+        textureView = gpuTextureView;
     }
 
     @Override
     public Map<String, GpuTextureView> getSamplers() {
-        return Map.of("Sampler0", this.textureView);
+        return Map.of("Sampler0", textureView);
     }
 
     @Override

@@ -105,7 +105,7 @@ public final class Railgun extends Skill {
             } else {
                 var player = Minecraft.getInstance().player;
                 if (player == null) return;
-                boolean hasCoin = player.getItemInHand(InteractionHand.MAIN_HAND).is(Items.COIN) || player.getItemInHand(InteractionHand.OFF_HAND).is(Items.COIN);
+                var hasCoin = player.getItemInHand(InteractionHand.MAIN_HAND).is(Items.COIN) || player.getItemInHand(InteractionHand.OFF_HAND).is(Items.COIN);
                 if (hasCoin) {
                     currentContext = new Context(player);
                     AbilitySystemClient.registerContext(currentContext);
@@ -149,7 +149,7 @@ public final class Railgun extends Skill {
                 ArcEffect(ArcFactory.ArcRenderData data, int lifetime) {
                     this.data = data;
                     this.lifetime = lifetime;
-                    this.maxLifetime = lifetime;
+                    maxLifetime = lifetime;
                 }
             }
 
@@ -164,16 +164,16 @@ public final class Railgun extends Skill {
 
             private void cleanup() {
                 AbilitySystemClient.unregisterContext(this);
-                if (Client.currentContext == this) {
-                    Client.currentContext = null;
+                if (currentContext == this) {
+                    currentContext = null;
                 }
             }
 
             @SubscribePacket
             public void onConfirmCharge(ConfirmChargePacket packet) {
-                this.coinEntityId = packet.getCoinEntityId();
-                this.chargeStartTime = System.nanoTime();
-                this.active = true;
+                coinEntityId = packet.getCoinEntityId();
+                chargeStartTime = System.nanoTime();
+                active = true;
             }
 
             @SubscribePacket
@@ -194,12 +194,12 @@ public final class Railgun extends Skill {
                 chargeRatio = Math.min(1.0f, chargeRatio);
 
                 activeArcs.removeIf(arc -> --arc.lifetime <= 0);
-                float startOffsetX = (float) (Math.random() * 2 - 1) * 0.05f;
-                float startOffsetY = (float) (Math.random() * 2 - 1) * 0.05f;
-                float startOffsetZ = (float) (Math.random() * 2 - 1) * 0.05f; // Small random Z offset for start
+                var startOffsetX = (float) (Math.random() * 2 - 1) * 0.05f;
+                var startOffsetY = (float) (Math.random() * 2 - 1) * 0.05f;
+                var startOffsetZ = (float) (Math.random() * 2 - 1) * 0.05f; // Small random Z offset for start
                 var start = new Vector3f(startOffsetX, startOffsetY, startOffsetZ);
 
-                ArcStyle style = ArcStyles.classic();
+                var style = ArcStyles.classic();
                 style.start = new Vector3f((float) (Math.random() - 0.5), (float) (Math.random() - 0.5), (float) (Math.random() - 0.5)).normalize().mul(0.4f);
                 style.end = start;
                 style.seed = player.level().random.nextLong();
@@ -207,7 +207,7 @@ public final class Railgun extends Skill {
                 style.segments = 8;
                 style.branchChance = 0.0f;
 
-                ArcFactory.ArcRenderData data = ArcFactory.Generator.generate(style);
+                var data = ArcFactory.Generator.generate(style);
                 activeArcs.add(new ArcEffect(data, 8));
             }
 
@@ -219,7 +219,7 @@ public final class Railgun extends Skill {
                 event.getPoseStack().translate(-0.35f, 0.45f, -0.2f);
                 event.getPoseStack().last().pose().rotateY((float) Math.toRadians(player.yBodyRot));
 
-                for (ArcEffect effect : activeArcs) {
+                for (var effect : activeArcs) {
                     ArcFactory.render(event.getPoseStack(), event.getSubmitNodeCollector(), effect.data, 1.0f, 1.0f, 1.0f, 1.0f);
                 }
 
@@ -289,7 +289,7 @@ public final class Railgun extends Skill {
 
         public static void fire(ServerPlayer player, Entity coin) {
             final var uuid = player.getUUID();
-            final float computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
+            final var computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
             if (computingPower < 100) {
                 return;
             }
@@ -310,7 +310,7 @@ public final class Railgun extends Skill {
             railgunRay.setXRot(player.getXRot());
             player.level().addFreshEntity(railgunRay);
 
-            Pair<Boolean, Double> result = LevelUtil.destroyBlocksAlongPath(railgunRay.level(), startPos, endPos, 0.025f, 10, false, true, true, false);
+            var result = LevelUtil.destroyBlocksAlongPath(railgunRay.level(), startPos, endPos, 0.025f, 10, false, true, true, false);
             if (result.getKey()) {
                 double d = result.getValue();
                 length = (float) d;

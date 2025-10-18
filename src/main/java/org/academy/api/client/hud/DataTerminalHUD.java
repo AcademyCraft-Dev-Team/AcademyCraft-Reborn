@@ -186,7 +186,6 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var playerNameLabel = new LabelWidget(Component.literal(playerName), padding, padding, barWidth - padding * 2.0F, iconSize);
         playerNameLabel.setAlignment(LabelWidget.Alignment.RIGHT);
         playerNameLabel.setVerticalAlignment(LabelWidget.VerticalAlignment.MIDDLE);
-        playerNameLabel.setDropShadow(false);
         infoBar.addChild("player_name", playerNameLabel);
 
         return infoBar;
@@ -242,7 +241,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var guiHeight = (float) window.getGuiScaledHeight();
         var aspectRatio = (float) window.getWidth() / (float) window.getHeight();
         float fov = 80;
-        float fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspectRatio);
+        var fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspectRatio);
 
         var projectionMatrix = new Matrix4f().perspective(fovY, aspectRatio, 1.0F, 1000.0F);
         var viewMatrix = new Matrix4f().identity();
@@ -733,7 +732,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         }
 
         public Matrix4f getMvp() {
-            return this.mvp;
+            return mvp;
         }
 
         public void setMvp(Matrix4f mvp) {
@@ -741,7 +740,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         }
 
         public void write(Std140Builder builder) {
-            builder.putMat4f(this.mvp);
+            builder.putMat4f(mvp);
         }
     }
 }

@@ -42,7 +42,7 @@ public final class OmniCraftingTableSpecialRenderer implements NoDataSpecialMode
         }
 
         @Override
-        public SpecialModelRenderer<?> bake(BakingContext context) {
+        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
             return OmniCraftingTableSpecialRenderer.INSTANCE;
         }
     }

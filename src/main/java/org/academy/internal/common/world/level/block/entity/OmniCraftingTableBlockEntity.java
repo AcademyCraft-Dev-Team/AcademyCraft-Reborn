@@ -42,7 +42,7 @@ public final class OmniCraftingTableBlockEntity extends BlockEntity implements C
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack itemstack = ContainerHelper.removeItem(items, slot, amount);
+        var itemstack = ContainerHelper.removeItem(items, slot, amount);
         if (!itemstack.isEmpty()) setChanged();
         return itemstack;
     }

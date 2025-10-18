@@ -88,7 +88,7 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
     public void extractRenderState(GlowCircle entity, GlowCircleRenderState reusedState, float partialTick) {
         super.extractRenderState(entity, reusedState, partialTick);
         var progress = Math.min((entity.ticks + partialTick) / GlowCircle.LIFE_TICKS, 1.0f);
-        reusedState.alpha = this.alphaCurve(progress);
-        reusedState.radius = this.sizeCurve(progress);
+        reusedState.alpha = alphaCurve(progress);
+        reusedState.radius = sizeCurve(progress);
     }
 }

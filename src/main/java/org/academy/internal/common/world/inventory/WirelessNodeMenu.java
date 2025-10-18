@@ -15,7 +15,7 @@ public final class WirelessNodeMenu extends AbstractContainerMenu {
     public final Container container;
 
     public WirelessNodeMenu(int containerId, Inventory playerInventory, ContainerLevelAccess levelAccess, Container nodeContainer) {
-        super(MenuTypes.NODE_MENU.get(), containerId);
+        super(MenuTypes.NODE.get(), containerId);
         access = levelAccess;
         container = nodeContainer;
 
