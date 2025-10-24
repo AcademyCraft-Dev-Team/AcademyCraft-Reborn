@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.framework.render;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;

@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.event;
+package org.academy.api.client.gui.framework.event;
 
 public final class ScrollEvent extends InputEvent {
     private final double x;

@@ -1,20 +1,19 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.framework.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.DynamicUniformStorage;
-import net.minecraft.util.Mth;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.SubmittedCommand;
-import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
 import java.util.*;
 
 public final class WidgetRenderContext {
     private final List<SubmittedCommand> submittedCommands;
-    private final Deque<Float> alphaStack;
     private final PoseStack pose;
-    public final ScissorStack scissorStack;
+    private final ScissorStack scissorStack;
+    private final DrawOrderStack drawOrderStack;
+    private final AlphaStack alphaStack;
     private final UboFactory uboFactory;
 
     @FunctionalInterface
@@ -24,17 +23,18 @@ public final class WidgetRenderContext {
 
     public WidgetRenderContext(UboFactory uboFactory) {
         submittedCommands = new ArrayList<>();
-        alphaStack = new ArrayDeque<>();
         pose = new PoseStack();
         scissorStack = new ScissorStack();
+        drawOrderStack = new DrawOrderStack();
+        alphaStack = new AlphaStack();
         this.uboFactory = uboFactory;
-        alphaStack.push(1.0F);
     }
 
     public void submit(DrawCommand command) {
         var currentPose = pose.last().copy();
         var currentScissor = scissorStack.peek();
-        submittedCommands.add(new SubmittedCommand(command, currentPose, currentScissor));
+        var currentDrawOrder = drawOrderStack.peek();
+        submittedCommands.add(new SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder));
     }
 
     public <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getDynamicUbo(Class<T> uboClass, int size) {
@@ -45,8 +45,12 @@ public final class WidgetRenderContext {
         return pose;
     }
 
-    public ScissorStack scissorStack() {
-        return scissorStack;
+    public DrawOrderStack drawOrder() {
+        return drawOrderStack;
+    }
+
+    public AlphaStack alpha() {
+        return alphaStack;
     }
 
     public void enableScissor(ScissorRect scissorRect) {
@@ -62,20 +66,73 @@ public final class WidgetRenderContext {
     }
 
     public float getAccumulatedAlpha() {
-        var alpha =  alphaStack.peek();
-        return alpha == null ? 1 : alpha;
-    }
-
-    public void pushAlpha(float alpha) {
-        alphaStack.push(getAccumulatedAlpha() * alpha);
-    }
-
-    public void popAlpha() {
-        if (alphaStack.size() > 1) alphaStack.pop();
+        return alphaStack.peek();
     }
 
     public void clear() {
         submittedCommands.clear();
+        drawOrderStack.clear();
+        alphaStack.clear();
+    }
+
+    public static final class AlphaStack {
+        private final Deque<Float> stack = new ArrayDeque<>();
+
+        private AlphaStack() {
+            stack.push(1.0F);
+        }
+
+        public void push(float alpha) {
+            stack.push(peek() * alpha);
+        }
+
+        public void pop() {
+            if (stack.size() > 1) {
+                stack.pop();
+            }
+        }
+
+        public float peek() {
+            var value = stack.peek();
+            return value == null ? 1.0F : value;
+        }
+
+        public void clear() {
+            stack.clear();
+            stack.push(1.0F);
+        }
+    }
+
+    public static final class DrawOrderStack {
+        private final Deque<Integer> stack = new ArrayDeque<>();
+
+        private DrawOrderStack() {
+            stack.push(0);
+        }
+
+        public void push() {
+            stack.push(peek());
+        }
+
+        public void pop() {
+            if (stack.size() > 1) {
+                stack.pop();
+            }
+        }
+
+        public void advance() {
+            stack.push(stack.pop() + 1);
+        }
+
+        public int peek() {
+            var value = stack.peek();
+            return value == null ? 0 : value;
+        }
+
+        public void clear() {
+            stack.clear();
+            stack.push(0);
+        }
     }
 
     public static final class ScissorStack {

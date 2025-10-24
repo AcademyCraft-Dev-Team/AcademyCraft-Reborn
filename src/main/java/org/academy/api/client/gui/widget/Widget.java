@@ -1,6 +1,8 @@
 package org.academy.api.client.gui.framework;
 
-import org.academy.api.client.gui.event.InputEvent;
+import org.academy.api.client.gui.framework.event.InputEvent;
+import org.academy.api.client.gui.framework.layout.MeasureSpec;
+import org.academy.api.client.gui.framework.render.WidgetRenderContext;
 import org.academy.api.common.vanilla.Tickable;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,6 +16,20 @@ public interface Widget extends Tickable {
      * @param event The input event to be processed.
      */
     void dispatchEvent(InputEvent event);
+
+    void measure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec);
+
+    void layout(float left, float top, float right, float bottom);
+
+    void requestLayout();
+
+    WidgetContainer.LayoutParams getLayoutParams();
+
+    Widget setLayoutParams(WidgetContainer.LayoutParams params);
+
+    float getMeasuredWidth();
+
+    float getMeasuredHeight();
 
     String getName();
 
@@ -29,15 +45,19 @@ public interface Widget extends Tickable {
 
     float getHeight();
 
-    Widget setX(float x);
-
-    Widget setY(float y);
-
     Widget setZ(float z);
 
     Widget setWidth(float width);
 
     Widget setHeight(float height);
+
+    float getTranslationX();
+
+    Widget setTranslationX(float translationX);
+
+    float getTranslationY();
+
+    Widget setTranslationY(float translationY);
 
     boolean isVisible();
 
@@ -47,7 +67,8 @@ public interface Widget extends Tickable {
 
     Widget setEnabled(boolean enabled);
 
-    @Nullable WidgetContainer getParent();
+    @Nullable
+    WidgetContainer getParent();
 
     Widget setParent(@Nullable WidgetContainer parent);
 
@@ -78,6 +99,10 @@ public interface Widget extends Tickable {
     float getAbsoluteX();
 
     float getAbsoluteY();
+
+    float getAbsoluteTranslationX();
+
+    float getAbsoluteTranslationY();
 
     float getAbsoluteAlpha();
 
