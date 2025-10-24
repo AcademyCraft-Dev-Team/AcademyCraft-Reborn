@@ -55,8 +55,6 @@ public final class Resource {
     public static final class Textures {
         public static final ResourceLocation ARC = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
         public static final ResourceLocation ELEMENT_LINE = academy("textures/gui/element/line.png");
-        public static final ResourceLocation HISTOGRAM = academy("textures/gui/element/histogram.png");
-
         /**
          * Ability Developer
          */
