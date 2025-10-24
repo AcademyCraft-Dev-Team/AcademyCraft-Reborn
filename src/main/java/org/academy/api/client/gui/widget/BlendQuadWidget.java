@@ -11,8 +11,7 @@ import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
@@ -31,19 +30,14 @@ public class BlendQuadWidget extends AbstractWidget {
     public float green;
     public float blue;
 
-    public BlendQuadWidget(float x, float y, float width, float height) {
-        super(x, y, width, height);
-    }
-
     @Override
     public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible())
-            return;
+        if (!isVisible()) return;
 
         var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
 
         context.pose().pushPose();
-        context.pose().translate(getX(), getY(), getZ());
+        context.drawOrder().push();
         {
             var sdfCommand = new PosTexRectDrawCommand(
                     Render.RenderPipelines.SDF_SHARP_MARGIN,
@@ -73,9 +67,11 @@ public class BlendQuadWidget extends AbstractWidget {
             context.submit(sdfCommand);
 
             if (drawLine) {
+                context.drawOrder().advance();
                 renderLines(context, context.getAccumulatedAlpha());
             }
         }
+        context.drawOrder().pop();
         context.pose().popPose();
     }
 
@@ -89,14 +85,14 @@ public class BlendQuadWidget extends AbstractWidget {
 
         {
             context.pose().pushPose();
-            context.pose().translate(0, 0, 0.1f);
+            context.pose().translate(0, 0, 0);
             var topLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(topLineCommand);
             context.pose().popPose();
         }
         {
             context.pose().pushPose();
-            context.pose().translate(0, getHeight() - marginBottom, 0.1f);
+            context.pose().translate(0, getHeight() - marginBottom, 0);
             var bottomLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(bottomLineCommand);
             context.pose().popPose();

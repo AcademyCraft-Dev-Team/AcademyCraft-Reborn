@@ -12,17 +12,15 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.AcademyCraft;
 import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.animation.Animator;
-import org.academy.api.client.gui.animation.EasingFunctions;
-import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.framework.*;
+import org.academy.api.client.gui.render.UIRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.screen.IAnimationScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.common.ability.Skill;
 import org.academy.api.common.util.MathUtil;
 import org.joml.Matrix4f;
 
@@ -37,12 +35,12 @@ public final class HUDManager implements IAnimationScreen {
     public static final UIRenderContext UI_RENDER_CONTEXT = new UIRenderContext();
     public static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
     public static final RenderTarget RENDER_TARGET;
-    public static final PanelWidget ROOT;
+    public static final FrameLayoutWidget ROOT;
     public static final ImageWidget CP_BAR_BACKGROUND_WIDGET;
     public static final ImageWidget CP_BAR_WIDGET;
     private static final CPBarValueWidget CP_BAR_VALUE_WIDGET;
     public static final ImageWidget ABILITY_ICON_WIDGET;
-    public static final LinearLayoutContainer SKILL_LIST_CONTAINER;
+  //  public static final LinearLayoutContainer SKILL_LIST_CONTAINER;
 
     private static final float CP_BAR_WIDTH = 192.8F;
     private static final float CP_BAR_HEIGHT = 29.400002F;
@@ -69,26 +67,26 @@ public final class HUDManager implements IAnimationScreen {
         var window = Minecraft.getInstance().getWindow();
         RENDER_TARGET = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
 
-        ROOT = new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F);
+        ROOT = new FrameLayoutWidget();
         ROOT.setAlpha(0.0F);
 
-        CP_BAR_BACKGROUND_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, Resource.Textures.CP_BAR_BACKGROUND);
+        CP_BAR_BACKGROUND_WIDGET = new ImageWidget(Resource.Textures.CP_BAR_BACKGROUND);
         CP_BAR_BACKGROUND_WIDGET.setTextureFilter(FilterMode.NEAREST, false);
         ROOT.addChild("cp_bar_bg", CP_BAR_BACKGROUND_WIDGET);
 
-        CP_BAR_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, Resource.Textures.CP_BAR);
+        CP_BAR_WIDGET = new ImageWidget(Resource.Textures.CP_BAR);
         CP_BAR_WIDGET.setTextureFilter(FilterMode.LINEAR, true);
         ROOT.addChild("cp_bar", CP_BAR_WIDGET);
 
         CP_BAR_VALUE_WIDGET = new CPBarValueWidget(0.0F, 0.0F, 0.0F, 0.0F);
         ROOT.addChild("cp_bar_value", CP_BAR_VALUE_WIDGET);
 
-        ABILITY_ICON_WIDGET = new ImageWidget(0.0F, 0.0F, 0.0F, 0.0F, (ResourceLocation) null);
+        ABILITY_ICON_WIDGET = new ImageWidget((ResourceLocation) null);
         ROOT.addChild("ability_icon", ABILITY_ICON_WIDGET);
-
+/*
         SKILL_LIST_CONTAINER = new LinearLayoutContainer(0.0F, 0.0F, 0.0F, 0.0F, Orientation.VERTICAL);
         SKILL_LIST_CONTAINER.setSpacing(2.0F);
-        ROOT.addChild("skill_list", SKILL_LIST_CONTAINER);
+        ROOT.addChild("skill_list", SKILL_LIST_CONTAINER);*/
     }
 
     private HUDManager() {
@@ -173,7 +171,7 @@ public final class HUDManager implements IAnimationScreen {
         var mouseY = mouse.getScaledYPos(window);
 
         layoutWidgets((float) window.getGuiScaledWidth(), (float) window.getGuiScaledHeight());
-        UI_RENDER_CONTEXT.renderFrame(ROOT, RENDER_TARGET, mouseX, mouseY, partialTick);
+      //  UI_RENDER_CONTEXT.renderFrame(ROOT, RENDER_TARGET, mouseX, mouseY, partialTick);
 
         for (var renderer : HUD_RENDERERS)
             renderer.render(mouseX, mouseY, partialTick);
@@ -197,7 +195,7 @@ public final class HUDManager implements IAnimationScreen {
     }
 
     private static void layoutWidgets(float screenWidth, float screenHeight) {
-        ROOT.setWidth(screenWidth);
+        /*ROOT.setWidth(screenWidth);
         ROOT.setHeight(screenHeight);
 
         {
@@ -225,11 +223,11 @@ public final class HUDManager implements IAnimationScreen {
             var totalListHeight = children.stream().mapToDouble(Widget::getHeight).sum();
             totalListHeight += Math.max(0, children.size() - 1) * SKILL_LIST_CONTAINER.getSpacing();
             SKILL_LIST_CONTAINER.setY((float) ((screenHeight - totalListHeight) / 2.0F));
-        }
+        }*/
     }
 
     private static void updateSkillWidgetsList() {
-        var learnedSkills = AbilitySystemClient.LEARNED_SKILLS;
+/*        var learnedSkills = AbilitySystemClient.LEARNED_SKILLS;
         var currentWidgets = new HashMap<Skill, SkillWidget>();
 
         SKILL_LIST_CONTAINER.getChildren().values().stream()
@@ -257,32 +255,32 @@ public final class HUDManager implements IAnimationScreen {
         if (selectedSkillIndex >= SKILL_LIST_CONTAINER.getChildren().size())
             selectedSkillIndex = 0;
 
-        updateSelectionState(false);
+        updateSelectionState(false);*/
     }
 
     private static void selectNextSkill() {
-        if (!SKILL_LIST_CONTAINER.getChildren().isEmpty() && AbilitySystemClient.isActiveHUD()) {
+/*        if (!SKILL_LIST_CONTAINER.getChildren().isEmpty() && AbilitySystemClient.isActiveHUD()) {
             updateSelectionState(false);
             selectedSkillIndex = (selectedSkillIndex + 1) % SKILL_LIST_CONTAINER.getChildren().size();
             updateSelectionState(true);
-        }
+        }*/
     }
 
     private static void selectPreviousSkill() {
-        if (!SKILL_LIST_CONTAINER.getChildren().isEmpty() && AbilitySystemClient.isActiveHUD()) {
+/*        if (!SKILL_LIST_CONTAINER.getChildren().isEmpty() && AbilitySystemClient.isActiveHUD()) {
             updateSelectionState(false);
             selectedSkillIndex = (selectedSkillIndex - 1 + SKILL_LIST_CONTAINER.getChildren().size()) % SKILL_LIST_CONTAINER.getChildren().size();
             updateSelectionState(true);
-        }
+        }*/
     }
-
+/*
     private static void updateSelectionState(boolean selected) {
         var children = new ArrayList<>(SKILL_LIST_CONTAINER.getChildren().values());
         if (selectedSkillIndex < children.size()) {
             var widget = (SkillWidget) children.get(selectedSkillIndex);
             widget.animateSelection(selected);
         }
-    }
+    }*/
 
     @Override
     public List<Animator> getScreenAnimations() {
@@ -296,7 +294,7 @@ public final class HUDManager implements IAnimationScreen {
 
     private static class CPBarValueWidget extends ImageWidget {
         public CPBarValueWidget(float x, float y, float width, float height) {
-            super(x, y, width, height, Resource.Textures.CP_BAR_VALUE);
+            super(Resource.Textures.CP_BAR_VALUE);
             setTextureFilter(FilterMode.LINEAR, true);
         }
 
@@ -341,7 +339,7 @@ public final class HUDManager implements IAnimationScreen {
             context.submit(command);
         }
     }
-
+/*
     private static class SkillWidget extends PanelWidget {
         private final Skill skill;
         private final FillWidget back;
@@ -369,7 +367,7 @@ public final class HUDManager implements IAnimationScreen {
         }
 
         public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
-            back.setWidth(getWidth());
+          *//*  back.setWidth(getWidth());
             back.setHeight(getHeight());
             back.setColor(back.getColor() & 16777215 | (int) (112.0F * getAbsoluteAlpha() * context.getAccumulatedAlpha()) << 24);
             label.setColor(label.getColor() & 16777215 | (int) (255.0F * getAbsoluteAlpha() * context.getAccumulatedAlpha()) << 24);
@@ -387,11 +385,11 @@ public final class HUDManager implements IAnimationScreen {
             icon.setWidth(iconSize);
             icon.setHeight(iconSize);
 
-            super.render(context, mouseX, mouseY, partialTick);
+            super.render(context, mouseX, mouseY, partialTick);*//*
         }
 
         public void animateSelection(boolean selected) {
-            INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(alpha ->
+*//*            INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(alpha ->
                     setAlpha(alpha * (selected ? 1.0F : 0.65F) + (1.0F - alpha) * getAlpha()), 0.0F, 1.0F).setDuration(450L));
 
             var screenWidth = (float) Minecraft.getInstance().getWindow().getGuiScaledWidth();
@@ -415,7 +413,7 @@ public final class HUDManager implements IAnimationScreen {
             INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(this::setHeight, getHeight(), targetHeight)
                     .setDuration(450L).setInterpolator(EasingFunctions.EASE_OUT_BACK));
             INSTANCE.playTrackedAnimation(this, ObjectAnimator.ofFloat(this::setX, getX(), targetX)
-                    .setDuration(450L).setInterpolator(EasingFunctions.EASE_OUT_BACK));
+                    .setDuration(450L).setInterpolator(EasingFunctions.EASE_OUT_BACK));*//*
         }
-    }
+    }*/
 }

@@ -3,19 +3,11 @@ package org.academy.internal.client.gui.screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import org.academy.api.client.Resource;
-import org.academy.api.client.gui.animation.EasingFunctions;
-import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.framework.CGuiContainerScreen;
-import org.academy.api.client.gui.util.WirelessPanelUtil;
-import org.academy.api.client.gui.widget.ImageRadioButtonWidget;
-import org.academy.api.client.gui.widget.ImageWidget;
-import org.academy.api.client.gui.widget.PanelWidget;
-import org.academy.api.client.gui.widget.RadioGroupWidget;
-import org.academy.api.client.util.ScreenAnimationUtil;
+import org.academy.api.client.gui.screen.ContainerUIScreen;
+import org.academy.api.client.gui.widget.*;
 import org.academy.internal.common.world.inventory.OmniCraftingMenu;
 
-public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraftingMenu> {
+public final class OmniCraftingTableScreen extends ContainerUIScreen<OmniCraftingMenu> {
     private final BlockPos mainPos;
 
     public OmniCraftingTableScreen(OmniCraftingMenu menu, Inventory playerInventory, Component title, BlockPos blockPos) {
@@ -24,61 +16,63 @@ public final class OmniCraftingTableScreen extends CGuiContainerScreen<OmniCraft
     }
 
     @Override
-    protected void onInit(PanelWidget main, PanelWidget invContent) {
-        var startYOffset = 20f;
-        var duration = 600L;
+    protected void onInit(RadioGroupWidget pageButtons, ImageRadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage) {
+       /* var duration = 600L;
         var delay = 250L;
         var childDuration = duration - 100;
 
-        var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
-        invPage.setZ(1);
-        rootContainer.addChild("page_inv", invPage);
-        {
-            var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.OMNI_CRAFTING_UI);
-            invPage.addChild("ui", ui);
-        }
+        var mainLayout = new LinearLayoutWidget();
+        mainLayout.setOrientation(Orientation.HORIZONTAL);
+        mainLayout.setLayoutParams(new WidgetContainer.LayoutParams().gravity(Gravity.CENTER));
+        mainLayout.setSpacing(3.0f);
+        rootContainer.addChild("main_layout", mainLayout);
 
-        var wirelessPanel = WirelessPanelUtil.create(leftPos, topPos - 22, mainPos, false);
-        wirelessPanel.setZ(100);
-        wirelessPanel.setVisible(false);
-        wirelessPanel.setEnabled(false);
-        rootContainer.addChild("panel_wireless", wirelessPanel);
-
-        var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
-        radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
-            var showInv = imageRadioButtonWidget.getId() == 0;
-            var panelY = topPos - 22;
-            if (showInv) {
-                setHandleContainer(true);
-                ScreenAnimationUtil.show(this, invPage, panelY);
-                ScreenAnimationUtil.hide(this, wirelessPanel, panelY);
-            } else {
-                setHandleContainer(false);
-                ScreenAnimationUtil.show(this, wirelessPanel, panelY);
-                ScreenAnimationUtil.hide(this, invPage, panelY);
-            }
-        });
-        rootContainer.addChild("radio_group", radioGroupWidget);
+        var radioGroupWidget = new RadioGroupWidget();
+        radioGroupWidget.setSpacing(5.2f);
+        mainLayout.addChild("radio_group", radioGroupWidget);
         {
-            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f, Resource.Textures.ICON_INV, () -> {
-            });
+            var inv = new ImageRadioButtonWidget(Resource.Textures.ICON_INV, () -> {});
             radioGroupWidget.addChild("inv", inv);
             radioGroupWidget.selectButton(inv);
 
-            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f, Resource.Textures.ICON_WIRELESS, () -> {
-            });
+            var wireless = new ImageRadioButtonWidget(Resource.Textures.ICON_WIRELESS, () -> {});
             radioGroupWidget.addChild("wireless", wireless);
-            wireless.setSelected(false);
         }
 
-        var infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 22, 110, 140);
-        infoArea.setAlpha(0);
-        rootContainer.addChild("area_info", infoArea);
+        var centralArea = new PanelWidget();
+        mainLayout.addChild("central_area", centralArea);
 
-        var radioFinalY = radioGroupWidget.getY();
-        radioGroupWidget.setY(radioFinalY + startYOffset);
+        centralArea.addChild("page_inv", main);
+
+        var ui = new ImageWidget(Resource.Textures.OMNI_CRAFTING_UI);
+        ui.setLayoutParams(new WidgetContainer.LayoutParams().widthMode(SizeMode.MATCH_PARENT).heightMode(SizeMode.MATCH_PARENT));
+        invContent.addChild("ui", ui);
+
+        var wirelessPanel = WirelessPanelUtil.create(mainPos, false);
+        wirelessPanel.setLayoutParams(new WidgetContainer.LayoutParams().widthMode(SizeMode.MATCH_PARENT).heightMode(SizeMode.MATCH_PARENT));
+        wirelessPanel.setZ(100);
+        wirelessPanel.setVisible(false);
+        wirelessPanel.setEnabled(false);
+        centralArea.addChild("panel_wireless", wirelessPanel);
+
+        radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
+            var showInv = imageRadioButtonWidget.getName().equals("inv");
+            if (showInv) {
+                setHandleContainer(true);
+                ScreenAnimationUtil.show(this, main);
+                ScreenAnimationUtil.hide(this, wirelessPanel);
+            } else {
+                setHandleContainer(false);
+                ScreenAnimationUtil.show(this, wirelessPanel);
+                ScreenAnimationUtil.hide(this, main);
+            }
+        });
+
+        var infoArea = new PanelWidget();
+        mainLayout.addChild("area_info", infoArea);
+
         radioGroupWidget.setAlpha(0f);
-        playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setY, radioGroupWidget.getY(), radioFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
         playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay));
+*/
     }
 }

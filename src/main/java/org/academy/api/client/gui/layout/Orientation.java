@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework.layout;
+package org.academy.api.client.gui.layout;
 
 public enum Orientation {
     HORIZONTAL,

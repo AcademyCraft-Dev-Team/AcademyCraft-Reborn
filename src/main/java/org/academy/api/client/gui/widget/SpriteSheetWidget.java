@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.resources.ResourceLocation;
-import org.academy.api.client.gui.framework.Orientation;
+import org.academy.api.client.gui.layout.Orientation;
 
 public class SpriteSheetWidget extends ImageWidget {
     protected final int sheetWidth;
@@ -13,10 +13,6 @@ public class SpriteSheetWidget extends ImageWidget {
     protected final Orientation orientation;
 
     public SpriteSheetWidget(
-            float x,
-            float y,
-            float width,
-            float height,
             ResourceLocation texture,
             Orientation orientation,
             int sheetWidth,
@@ -25,7 +21,7 @@ public class SpriteSheetWidget extends ImageWidget {
             int frameHeight,
             int frameCount
     ) {
-        super(x, y, width, height, texture);
+        super(texture);
         this.orientation = orientation;
         this.sheetWidth = sheetWidth;
         this.sheetHeight = sheetHeight;
@@ -34,6 +30,14 @@ public class SpriteSheetWidget extends ImageWidget {
         this.frameCount = frameCount;
 
         setFrameIndex(0);
+    }
+
+    public void nextFrame() {
+        setFrameIndex((currentFrame + 1) % frameCount);
+    }
+
+    public void previousFrame() {
+        setFrameIndex((currentFrame - 1 + frameCount) % frameCount);
     }
 
     public int getFrameIndex() {

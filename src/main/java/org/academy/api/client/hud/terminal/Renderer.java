@@ -12,8 +12,8 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.Render;
-import org.academy.api.client.gui.framework.UIRenderContext;
-import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.gui.render.UIRenderContext;
+import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.client.gui.widget.CursorWidget;
 import org.academy.api.client.render.post.BlurEffect;
 import org.joml.Matrix4f;
@@ -68,7 +68,7 @@ public final class Renderer implements AutoCloseable {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         commandEncoder.clearColorAndDepthTextures(uiRenderTarget.getColorTexture(), 0, uiRenderTarget.getDepthTexture(), 1);
 
-        internalUIRenderContext.renderFrame(uiManager.getRootContainer(), uiRenderTarget, mouseX, mouseY, partialTick);
+      //  internalUIRenderContext.renderFrame(uiManager.getRootContainer(), uiRenderTarget, mouseX, mouseY, partialTick);
         renderUIWith3DEffect(mouseX, mouseY);
     }
 

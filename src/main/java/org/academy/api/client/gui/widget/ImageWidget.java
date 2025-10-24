@@ -7,8 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ARGB;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.jetbrains.annotations.Nullable;
 
 public class ImageWidget extends AbstractWidget {
@@ -30,22 +29,18 @@ public class ImageWidget extends AbstractWidget {
     protected float heightScale = 1.0F;
     protected boolean centerScale = true;
 
-    public ImageWidget(float x, float y, float width, float height, @Nullable GpuTextureView textureView) {
-        super(x, y, width, height);
+    public ImageWidget(@Nullable GpuTextureView textureView) {
         this.textureView = textureView;
         textureLocation = null;
     }
 
-    public ImageWidget(float x, float y, float width, float height, @Nullable ResourceLocation textureLocation) {
-        super(x, y, width, height);
+    public ImageWidget(@Nullable ResourceLocation textureLocation) {
         this.textureLocation = textureLocation;
         textureView = null;
     }
 
     public void resolveAndPrepareTexture() {
-        if (textureView != null && !textureView.isClosed()) {
-            return;
-        }
+        if (textureView != null && !textureView.isClosed()) return;
 
         if (textureLocation == null) {
             textureView = null;
@@ -69,19 +64,24 @@ public class ImageWidget extends AbstractWidget {
         if (!isVisible()) return;
 
         resolveAndPrepareTexture();
-
         if (textureView == null) return;
 
-        var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
+        var lp = getLayoutParams();
+        var paddedWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
+        var paddedHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
 
-        var scaledWidth = getWidth() * widthScale;
-        var scaledHeight = getHeight() * heightScale;
+        if (paddedWidth <= 0 || paddedHeight <= 0) return;
+
+        var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
+        var scaledWidth = paddedWidth * widthScale;
+        var scaledHeight = paddedHeight * heightScale;
 
         context.pose().pushPose();
         {
-            context.pose().translate(getX(), getY(), getZ());
+            context.pose().translate(lp.paddingLeft, lp.paddingTop, 0);
+
             if (centerScale) {
-                context.pose().translate((getWidth() - scaledWidth) / 2.0F, (getHeight() - scaledHeight) / 2.0F, 0.0F);
+                context.pose().translate((paddedWidth - scaledWidth) / 2.0F, (paddedHeight - scaledHeight) / 2.0F, 0.0F);
             }
 
             var command = new ImageDrawCommand(textureView, scaledWidth, scaledHeight, u0, v0, u1, v1, red, green, blue, finalAlpha);
@@ -127,12 +127,14 @@ public class ImageWidget extends AbstractWidget {
     public ImageWidget setTexture(@Nullable GpuTextureView textureView) {
         this.textureView = textureView;
         textureLocation = null;
+        requestLayout();
         return this;
     }
 
     public ImageWidget setTexture(@Nullable ResourceLocation textureLocation) {
         this.textureLocation = textureLocation;
         textureView = null;
+        requestLayout();
         return this;
     }
 

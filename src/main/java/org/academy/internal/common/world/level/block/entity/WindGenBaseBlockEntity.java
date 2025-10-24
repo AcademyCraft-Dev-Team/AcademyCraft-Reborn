@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.level.block.entity;
 
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerLevel;
@@ -54,15 +53,15 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     public static void tick(Level level, BlockPos pos, BlockState state, WindGenBaseBlockEntity blockEntity) {
         blockEntity.ticks++;
 
-        if (level instanceof ClientLevel clientLevel) {
-            tickClient(clientLevel, pos, state, blockEntity);
+        if (level.isClientSide()) {
+            tickClient(level, pos, state, blockEntity);
         }
         if (level instanceof ServerLevel serverLevel) {
             tickServer(serverLevel, pos, state, blockEntity);
         }
     }
 
-    public static void tickClient(ClientLevel level, BlockPos pos, BlockState state, WindGenBaseBlockEntity blockEntity) {
+    public static void tickClient(Level level, BlockPos pos, BlockState state, WindGenBaseBlockEntity blockEntity) {
         blockEntity.clientTick();
     }
 

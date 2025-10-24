@@ -3,46 +3,52 @@ package org.academy.api.client.gui.widget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import net.minecraft.util.FormattedCharSequence;
+import org.academy.api.client.gui.command.DrawCommand;
+import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.util.GlyphCommandGenerator;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LabelWidget extends AbstractWidget {
-    public enum Alignment {
-        LEFT,
-        CENTER,
-        RIGHT
-    }
-
-    public enum VerticalAlignment {
-        TOP,
-        MIDDLE,
-        BOTTOM
-    }
-
     protected Component component;
     protected int color = 0xFFFFFFFF;
     protected boolean dropShadow = false;
     public static float globalScale = 1.0f;
     protected float scale = 1.0f;
-    protected Alignment alignment = Alignment.LEFT;
-    protected VerticalAlignment verticalAlignment = VerticalAlignment.TOP;
+    protected float lastFinalColor;
+    @Nullable
+    protected FormattedCharSequence lastText = null;
+    protected List<DrawCommand> drawCommands = new ArrayList<>();
 
-    public LabelWidget(String text, float x, float y) {
-        this(Component.literal(text), x, y);
+    public LabelWidget(String text) {
+        this(Component.literal(text));
     }
 
-    public LabelWidget(Component component, float x, float y) {
-        super(x, y, 0, 0);
+    public LabelWidget(Component component) {
         this.component = component;
+    }
+
+    @Override
+    protected void onMeasure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
         var font = Minecraft.getInstance().font;
-        setWidth(font.width(component));
-        setHeight(font.lineHeight);
-    }
+        var finalScale = scale * globalScale;
 
-    public LabelWidget(Component component, float x, float y, float width, float height) {
-        super(x, y, width, height);
-        this.component = component;
+        var desiredWidth = font.width(component) * finalScale;
+        var desiredHeight = font.lineHeight * finalScale;
+
+        var lp = getLayoutParams();
+        desiredWidth += lp.paddingLeft + lp.paddingRight;
+        desiredHeight += lp.paddingTop + lp.paddingBottom;
+
+        setMeasuredDimension(
+                resolveSize(desiredWidth, widthMeasureSpec),
+                resolveSize(desiredHeight, heightMeasureSpec)
+        );
     }
 
     @Override
@@ -51,42 +57,51 @@ public class LabelWidget extends AbstractWidget {
             return;
         }
 
+        var lp = getLayoutParams();
         var font = Minecraft.getInstance().font;
         var textToRender = component.getVisualOrderText();
 
-        var totalWidth = font.width(textToRender);
         var finalScale = scale * globalScale;
-        var visualTextWidth = totalWidth * finalScale;
+        var visualTextWidth = font.width(textToRender) * finalScale;
         var visualTextHeight = font.lineHeight * finalScale;
 
+        var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
+        var availableHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
+
         var alignmentOffsetX = 0f;
-        if (alignment == Alignment.CENTER) {
-            alignmentOffsetX = (getWidth() - visualTextWidth) / 2.0f;
-        } else if (alignment == Alignment.RIGHT) {
-            alignmentOffsetX = getWidth() - visualTextWidth;
+        var horizontalGravity = (lp.gravity >> Gravity.AXIS_X_SHIFT) & 0x7;
+        if (horizontalGravity == Gravity.AXIS_SPECIFIED) {
+            alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f;
+        } else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+            alignmentOffsetX = availableWidth - visualTextWidth;
         }
 
         var alignmentOffsetY = 0f;
-        if (verticalAlignment == VerticalAlignment.MIDDLE) {
-            alignmentOffsetY = (getHeight() - visualTextHeight) / 2.0f;
-        } else if (verticalAlignment == VerticalAlignment.BOTTOM) {
-            alignmentOffsetY = getHeight() - visualTextHeight;
+        var verticalGravity = (lp.gravity >> Gravity.AXIS_Y_SHIFT) & 0x7;
+        if (verticalGravity == Gravity.AXIS_SPECIFIED) {
+            alignmentOffsetY = (availableHeight - visualTextHeight) / 2.0f;
+        } else if ((verticalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+            alignmentOffsetY = availableHeight - visualTextHeight;
         }
 
         var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
 
         context.pose().pushPose();
         {
-            context.pose().translate(getX() + alignmentOffsetX, getY() + alignmentOffsetY, getZ());
+            context.pose().translate(lp.paddingLeft + alignmentOffsetX, lp.paddingTop + alignmentOffsetY + 1, 0);
             context.pose().scale(finalScale, finalScale, 1.0f);
 
             var baseAlphaComponent = ARGB.alpha(color);
             var effectiveAlpha = (int) (baseAlphaComponent * finalAlpha);
             var finalColor = (color & 0x00FFFFFF) | (effectiveAlpha << 24);
 
-            var commands = GlyphCommandGenerator.generate(font, textToRender, 0, 0, finalColor, dropShadow);
+            if (finalColor != lastFinalColor || !textToRender.equals(lastText)) {
+                drawCommands = GlyphCommandGenerator.generate(font, textToRender, 0, 0, finalColor, dropShadow);
+                lastFinalColor = finalColor;
+                lastText = textToRender;
+            }
 
-            for (var command : commands) {
+            for (var command : drawCommands) {
                 context.submit(command);
             }
         }
@@ -109,20 +124,15 @@ public class LabelWidget extends AbstractWidget {
         return scale;
     }
 
-    public Alignment getAlignment() {
-        return alignment;
-    }
-
-    public VerticalAlignment getVerticalAlignment() {
-        return verticalAlignment;
-    }
-
     public LabelWidget setText(String text) {
         return setText(Component.literal(text));
     }
 
     public LabelWidget setText(Component component) {
-        this.component = component;
+        if (!this.component.equals(component)) {
+            this.component = component;
+            requestLayout();
+        }
         return this;
     }
 
@@ -137,17 +147,10 @@ public class LabelWidget extends AbstractWidget {
     }
 
     public LabelWidget setScale(float scale) {
-        this.scale = scale;
-        return this;
-    }
-
-    public LabelWidget setAlignment(Alignment alignment) {
-        this.alignment = alignment;
-        return this;
-    }
-
-    public LabelWidget setVerticalAlignment(VerticalAlignment verticalAlignment) {
-        this.verticalAlignment = verticalAlignment;
+        if (this.scale != scale) {
+            this.scale = scale;
+            requestLayout();
+        }
         return this;
     }
 }

@@ -1,8 +1,7 @@
 package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.Orientation;
+import org.academy.api.client.gui.layout.Orientation;
 
 public abstract class DragBarWidget extends AbstractWidget {
     protected boolean showBackground = true;
@@ -12,10 +11,9 @@ public abstract class DragBarWidget extends AbstractWidget {
     protected final Orientation orientation;
     private boolean isDragging = false;
 
-    public DragBarWidget(float x, float y, float width, float height, Orientation orientation) {
-        super(x, y, width, height);
+    public DragBarWidget(Orientation orientation) {
         this.orientation = orientation;
-        clickable = true;
+        setClickable(true);
     }
 
     protected abstract float getThumbSize();

@@ -1,23 +1,29 @@
 package org.academy.api.client.gui.widget;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.SimpleTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.layout.MeasureSpec;
+import org.academy.api.client.gui.layout.SizeMode;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.IOException;
 
 public class ImageButtonWidget extends AbstractButtonWidget {
     @Nullable
     protected ResourceLocation textureLocation;
     @Nullable
     protected transient GpuTextureView textureView;
+    private int intrinsicWidth = 0;
+    private int intrinsicHeight = 0;
     @Nullable
     private FilterMode filterMode;
     private boolean useMipmap = false;
@@ -33,8 +39,8 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     protected boolean centerScale = true;
     protected boolean defaultHoverEffect = true;
 
-    public ImageButtonWidget(float x, float y, float width, float height, @Nullable GpuTextureView textureView, Runnable onPress) {
-        super(x, y, width, height, onPress);
+    public ImageButtonWidget(@Nullable GpuTextureView textureView, Runnable onPress) {
+        super(onPress);
         textureLocation = null;
         this.textureView = textureView;
         red = 0.75F;
@@ -42,13 +48,51 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         blue = 0.75F;
     }
 
-    public ImageButtonWidget(float x, float y, float width, float height, @Nullable ResourceLocation textureLocation, Runnable onPress) {
-        super(x, y, width, height, onPress);
+    public ImageButtonWidget(@Nullable ResourceLocation textureLocation, Runnable onPress) {
+        super(onPress);
         this.textureLocation = textureLocation;
         textureView = null;
         red = 0.75F;
         green = 0.75F;
         blue = 0.75F;
+        resolveIntrinsicSize();
+        setLayoutParams(new WidgetContainer.LayoutParams()
+                .size(intrinsicWidth, intrinsicHeight)
+                .widthMode(SizeMode.WRAP_CONTENT)
+                .heightMode(SizeMode.WRAP_CONTENT));
+    }
+
+    private void resolveIntrinsicSize() {
+        if (textureLocation == null) {
+            intrinsicWidth = 0;
+            intrinsicHeight = 0;
+            return;
+        }
+        try {
+            var resource = Minecraft.getInstance().getResourceManager().getResourceOrThrow(textureLocation);
+            try (var inputStream = resource.open()) {
+                var nativeImage = NativeImage.read(inputStream);
+                intrinsicWidth = nativeImage.getWidth();
+                intrinsicHeight = nativeImage.getHeight();
+                nativeImage.close();
+            }
+        } catch (IOException e) {
+            AcademyCraft.LOGGER.error("Failed to resolve intrinsic size for texture {}", textureLocation, e);
+            intrinsicWidth = 0;
+            intrinsicHeight = 0;
+        }
+    }
+
+    @Override
+    protected void onMeasure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
+        var lp = getLayoutParams();
+        var desiredWidth = (float) intrinsicWidth + lp.paddingLeft + lp.paddingRight;
+        var desiredHeight = (float) intrinsicHeight + lp.paddingTop + lp.paddingBottom;
+
+        setMeasuredDimension(
+                resolveSize(desiredWidth, widthMeasureSpec),
+                resolveSize(desiredHeight, heightMeasureSpec)
+        );
     }
 
     public void resolveAndPrepareTexture() {
@@ -63,8 +107,8 @@ public class ImageButtonWidget extends AbstractButtonWidget {
 
         try {
             var texture = Minecraft.getInstance().getTextureManager().getTexture(textureLocation);
-            if (filterMode != null && texture instanceof SimpleTexture simpleTexture) {
-                simpleTexture.setFilter(useMipmap, filterMode == FilterMode.LINEAR);
+            if (filterMode != null) {
+                texture.setFilter(useMipmap, filterMode == FilterMode.LINEAR);
             }
             textureView = texture.getTextureView();
         } catch (Exception e) {
@@ -88,7 +132,6 @@ public class ImageButtonWidget extends AbstractButtonWidget {
 
         context.pose().pushPose();
         {
-            context.pose().translate(getX(), getY(), getZ());
             if (centerScale) {
                 context.pose().translate((getWidth() - scaledWidth) / 2.0f, (getHeight() - scaledHeight) / 2.0f, 0.0f);
             }
@@ -128,7 +171,6 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         NeoForge.EVENT_BUS.post(post);
     }
 
-
     public ImageButtonWidget setTextureFilter(FilterMode mode, boolean useMipmap) {
         filterMode = mode;
         this.useMipmap = useMipmap;
@@ -139,12 +181,17 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     public ImageButtonWidget setTexture(@Nullable GpuTextureView textureView) {
         this.textureView = textureView;
         textureLocation = null;
+        intrinsicWidth = 0;
+        intrinsicHeight = 0;
+        requestLayout();
         return this;
     }
 
     public ImageButtonWidget setTexture(@Nullable ResourceLocation textureLocation) {
         this.textureLocation = textureLocation;
         textureView = null;
+        resolveIntrinsicSize();
+        requestLayout();
         return this;
     }
 

@@ -198,16 +198,16 @@ public final class Render {
     }
 
     public static final class TextureStateShards {
-        public static final RenderStateShard.EmptyTextureStateShard ARC = blur(Resource.Textures.ARC);
+        public static final EmptyTextureStateShard ARC = blur(Resource.Textures.ARC);
 
-        public static final RenderStateShard.EmptyTextureStateShard MAIN_SCENE = new RenderStateShard.EmptyTextureStateShard(
+        public static final EmptyTextureStateShard MAIN_SCENE = new EmptyTextureStateShard(
                 () -> RenderSystem.setShaderTexture(0, PostEffect.MAIN_SCENE.getColorTextureView()),
                 () -> {
                 }
         );
 
-        public static RenderStateShard.EmptyTextureStateShard pixel(ResourceLocation texture) {
-            return new RenderStateShard.EmptyTextureStateShard(() -> {
+        public static EmptyTextureStateShard pixel(ResourceLocation texture) {
+            return new EmptyTextureStateShard(() -> {
                 var texturemanager = Minecraft.getInstance().getTextureManager();
                 var abstracttexture = texturemanager.getTexture(texture);
                 abstracttexture.setFilter(false, false);
@@ -216,7 +216,7 @@ public final class Render {
             });
         }
 
-        public static RenderStateShard.EmptyTextureStateShard blur(ResourceLocation texture) {
+        public static EmptyTextureStateShard blur(ResourceLocation texture) {
             return new RenderStateShard.TextureStateShard(texture, true);
         }
     }

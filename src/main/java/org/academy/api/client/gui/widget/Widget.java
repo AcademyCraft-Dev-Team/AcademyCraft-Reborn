@@ -1,8 +1,8 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.framework.event.InputEvent;
-import org.academy.api.client.gui.framework.layout.MeasureSpec;
-import org.academy.api.client.gui.framework.render.WidgetRenderContext;
+import org.academy.api.client.gui.event.InputEvent;
+import org.academy.api.client.gui.layout.MeasureSpec;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.academy.api.common.vanilla.Tickable;
 import org.jetbrains.annotations.Nullable;
 

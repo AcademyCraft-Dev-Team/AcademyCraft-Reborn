@@ -1,6 +1,7 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.screen;
 
 import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.widget.Widget;
 
 import java.util.ArrayList;
 import java.util.List;

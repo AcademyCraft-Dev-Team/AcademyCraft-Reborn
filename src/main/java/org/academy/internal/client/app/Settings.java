@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.app;
 
 import net.minecraft.resources.ResourceLocation;
@@ -6,8 +7,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
-import org.academy.api.client.gui.framework.Orientation;
-import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.gui.layout.Orientation;
+import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.api.client.input.InputSystem;
@@ -917,4 +918,4 @@ public final class Settings implements DataTerminalHUD.App {
         }
         return panel;
     }
-}
+}*/

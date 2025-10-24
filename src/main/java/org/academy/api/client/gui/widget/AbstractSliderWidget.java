@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.framework.Orientation;
+import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,7 +29,7 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
 
     public AbstractSliderWidget(float x, float y, float width, float height, Orientation orientation,
                                 float minValue, float maxValue, float initialValue) {
-        super(x, y, width, height, orientation);
+        super(orientation);
         this.minValue = minValue;
         this.maxValue = maxValue;
         currentValue = MathUtil.clamp(initialValue, this.minValue, this.maxValue);

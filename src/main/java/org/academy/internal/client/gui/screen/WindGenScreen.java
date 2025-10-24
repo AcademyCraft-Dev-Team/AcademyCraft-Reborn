@@ -8,7 +8,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.framework.CGuiContainerScreen;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.screen.ContainerUIScreen;
+import org.academy.api.client.gui.util.InfoAreaUtil;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ScreenAnimationUtil;
@@ -16,20 +19,23 @@ import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
-public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
+import java.util.function.Consumer;
+
+import static org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow;
+import static org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow;
+
+public final class WindGenScreen extends ContainerUIScreen<WindGenMenu> {
     private final BlockPos mainPos;
     public final WindGenBaseBlockEntity blockEntity;
-    @Nullable
-    public ImageWidget topIcon;
-    @Nullable
-    public ImageWidget pillarIcon;
-    @Nullable
-    public ImageWidget baseIcon;
+    private Consumer<Float> topAlphaSetter = ignored -> {
+    };
+    private Consumer<Float> pillarAlphaSetter = ignored -> {
+    };
+    private Consumer<Float> baseAlphaSetter = ignored -> {
+    };
     public static final String AF = "%d AF";
-    @Nullable
-    private LabelWidget bufferValueLabel;
-    private final HistogramWidget.Value histogramValue = new HistogramWidget.Value(25, 5, 0,
-            37f / 255f, 247f / 255f, 1, 1);
+    private Consumer<String> bufferValueSetter = ignored -> {
+    };
 
     public WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, WindGenBaseBlockEntity blockEntity) {
         super(menu, playerInventory, title);
@@ -47,153 +53,144 @@ public final class WindGenScreen extends CGuiContainerScreen<WindGenMenu> {
     }
 
     @Override
-    protected void onInit(PanelWidget main, PanelWidget invContent) {
-        var startYOffset = 20f;
+    protected void onInit(RadioGroupWidget pageButtons, ImageRadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage) {
         var duration = 600L;
-        var delay = 250L;
         var childDuration = duration - 100;
 
-        var invPage = new PanelWidget(leftPos, topPos - 22, imageWidth, 187);
-        invPage.setZ(1);
-        rootContainer.addChild("page_inv", invPage);
+        var ui = new ImageWidget(Resource.Textures.UI_GEN);
+        ui.setLayoutParams(
+                new FrameLayoutWidget.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT)
+        );
+        invPage.addChild("ui", ui);
+
+        var effect = new FrameLayoutWidget();
+        effect.setLayoutParams(
+                new FrameLayoutWidget.LayoutParams()
+                        .heightMode(SizeMode.MATCH_PARENT)
+                        .width(24)
+                        .gravity(Gravity.CENTER_HORIZONTAL)
+                        .padding(0, 12, 0, 103)
+        );
+        invPage.addChild("effect", effect);
         {
-            var ui = new ImageWidget(0, 0, imageWidth, 187, Resource.Textures.UI_GEN);
-            invPage.addChild("ui", ui);
-            var statePanel = new PanelWidget((imageWidth - 24) / 2f, 0, imageWidth, 187);
-            invPage.addChild("panel_state", statePanel);
-            {
-                topIcon = new ImageWidget(0, 13, 24, 24, Resource.Textures.ICON_WIND_GEN_TOP);
-                statePanel.addChild("icon_top", topIcon);
-                pillarIcon = new ImageWidget(0, 31, 24, 24, Resource.Textures.ICON_WIND_GEN_PILLAR);
-                statePanel.addChild("icon_pillar", pillarIcon);
-                baseIcon = new ImageWidget(0, 49, 24, 24, Resource.Textures.ICON_WIND_GEN_BASE);
-                statePanel.addChild("icon_base", baseIcon);
-            }
+            var topIcon = new ImageWidget(Resource.Textures.ICON_WIND_GEN_TOP);
+            topAlphaSetter = topIcon::setAlpha;
+            topIcon.setLayoutParams(
+                    new FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
+                            .padding(0, 0, 0, 48)
+            );
+            effect.addChild("icon_top", topIcon);
+
+            var pillarIcon = new ImageWidget(Resource.Textures.ICON_WIND_GEN_PILLAR);
+            pillarAlphaSetter = pillarIcon::setAlpha;
+            pillarIcon.setLayoutParams(
+                    new FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
+                            .padding(0, 18, 0, 30)
+            );
+            effect.addChild("icon_pillar", pillarIcon);
+
+            var baseIcon = new ImageWidget(Resource.Textures.ICON_WIND_GEN_BASE);
+            baseAlphaSetter = baseIcon::setAlpha;
+            baseIcon.setLayoutParams(
+                    new FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
+                            .padding(0, 36, 0, 12)
+            );
+            effect.addChild("icon_base", baseIcon);
         }
 
-        var wirelessPanel =  WirelessPanelUtil.create(leftPos, topPos - 22, mainPos, false);
-        wirelessPanel.setVisible(false);
-        wirelessPanel.setEnabled(false);
-        rootContainer.addChild("panel_wireless", wirelessPanel);
+        var wirelessPage = WirelessPanelUtil.create(mainPos, true);
+        wirelessPage.setVisible(false);
+        wirelessPage.setEnabled(false);
+        content.addChild("page_wireless", wirelessPage);
 
-        var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
-        radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
-            var showInv = imageRadioButtonWidget.getId() == 0;
-            var panelY = topPos - 22;
-            if (showInv) {
-                setRenderInventory(true);
-                ScreenAnimationUtil.show(this, invPage, panelY);
-                ScreenAnimationUtil.hide(this, wirelessPanel, panelY);
-            } else {
-                setRenderInventory(false);
-                ScreenAnimationUtil.show(this, wirelessPanel, panelY);
-                ScreenAnimationUtil.hide(this, invPage, panelY);
+        var wirelessButton = new ImageRadioButtonWidget(Resource.Textures.ICON_WIRELESS);
+        wirelessButton.setLayoutParams(
+                new WidgetContainer.LayoutParams()
+                        .widthMode(SizeMode.WRAP_CONTENT)
+                        .height(16)
+        );
+        pageButtons.addChild("wireless", wirelessButton);
+        pageButtons.setOnSelectionChanged(button -> {
+            switch (button.getName()) {
+                case "inv":
+                    ScreenAnimationUtil.hide(this, wirelessPage);
+                    ScreenAnimationUtil.show(this, invPage);
+                    setHandleContainer(true);
+                    setRenderInventory(true);
+                    break;
+                case "wireless":
+                    ScreenAnimationUtil.hide(this, invPage);
+                    ScreenAnimationUtil.show(this, wirelessPage);
+                    setHandleContainer(false);
+                    setRenderInventory(false);
+                    break;
             }
         });
-        rootContainer.addChild("radio_group", radioGroupWidget);
-        {
-            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
-                    Resource.Textures.ICON_INV, () -> {
-            });
-            radioGroupWidget.addChild("inv", inv);
-            radioGroupWidget.selectButton(inv);
+        pageButtons.selectButton(invButton);
 
-            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
-                    Resource.Textures.ICON_WIRELESS, () -> {
-            });
-            radioGroupWidget.addChild("wireless", wireless);
-            wireless.setSelected(false);
+        var info = InfoAreaUtil.create(this, this, leftPos + imageWidth, topPos - 22);
+        {
+            var bufferValueLabel = new LabelWidget("0 AF");
+            bufferValueSetter = bufferValueLabel::setText;
+            var bufferLayout = createInfoRow("BUFFER", "icon_buffer", 0xFF25C4FF, bufferValueLabel);
+            info.addChild("energy_layout", bufferLayout);
+
+            var infoLabel = new LabelWidget("Information");
+            infoLabel.setLayoutParams(
+                    new LinearLayoutWidget.LayoutParams()
+                            .padding(6.5f, 0, 0, 0)
+            );
+            infoLabel.setScale(0.75f);
+            info.addChild("label_info", infoLabel);
+
+            var altitudeValue = blockEntity.altitude + "";
+            var altitudeValueLabel = new LabelWidget(altitudeValue);
+            altitudeValueLabel.setScale(0.75f);
+            var altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel, 0.65f);
+            info.addChild("altitude_layout", altitudeLayout);
         }
 
-        var infoArea = new PanelWidget(leftPos + imageWidth + 3, topPos - 22, 110, 105);
-        infoArea.setAlpha(0);
-        rootContainer.addChild("area_info", infoArea);
-        {
-            var back = new BlendQuadWidget(0, 0, infoArea.getWidth(), infoArea.getHeight());
-            back.setAlpha(0.5f);
-            infoArea.addChild("back", back);
+        playAnimation(ObjectAnimator.ofFloat(pageButtons::setAlpha, 0f, 1f).setDuration(childDuration));
+        playAnimation(ObjectAnimator.ofFloat(pageButtons::setTranslationY, 20, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
 
-            var info = new PanelWidget(0,0,infoArea.getWidth(),infoArea.getHeight());
-            info.setZ(1);
-            infoArea.addChild("info", info);
-            {
-                var histogramWidget = new HistogramWidget(0, 0, 84, 84);
-                histogramWidget.addValue(histogramValue);
-                info.addChild("histogram", histogramWidget);
+        updateInfo();
+    }
 
-                var bufferIcon = new FillWidget(6.5f, 73, 6.5f, 6.5f, 0xFF25F7FF);
-                info.addChild("icon_buffer", bufferIcon);
+    private void updateInfo() {
+        bufferValueSetter.accept(String.format(AF, blockEntity.energyStored));
 
-                var bufferLabel = new LabelWidget("BUFFER", 15, 72);
-                bufferLabel.setScale(0.75f);
-                info.addChild("label_buffer", bufferLabel);
-
-                bufferValueLabel = new LabelWidget(AF, 50, 72);
-                bufferValueLabel.setScale(0.75f);
-                info.addChild("label_buffer_value", bufferValueLabel);
-
-                var infoLabel = new LabelWidget("Information", 8, 82);
-                infoLabel.setScale(0.75f);
-                info.addChild("label_info", infoLabel);
-
-                var altitudeLabel = new LabelWidget("Altitude", 10, 90);
-                altitudeLabel.setScale(0.75f);
-                info.addChild("label_altitude", altitudeLabel);
-
-                var altitudeValue = "N/A";
-                altitudeValue = blockEntity.altitude + "";
-                var altitudeValueLabel = new LabelWidget(altitudeValue, 50, 90);
-                altitudeValueLabel.setScale(0.75f);
-                info.addChild("label_altitude_value", altitudeValueLabel);
+        switch (blockEntity.completeness) {
+            case NO_TOP -> {
+                baseAlphaSetter.accept(1f);
+                pillarAlphaSetter.accept(1f);
+                topAlphaSetter.accept(0.2f);
+            }
+            case BASE_ONLY -> {
+                baseAlphaSetter.accept(1f);
+                pillarAlphaSetter.accept(0.2f);
+                topAlphaSetter.accept(0.2f);
+            }
+            case COMPLETE -> {
+                baseAlphaSetter.accept(1f);
+                pillarAlphaSetter.accept(1f);
+                topAlphaSetter.accept(1f);
+            }
+            case COMPLETE_NOT_WORKING -> {
+                baseAlphaSetter.accept(1f);
+                pillarAlphaSetter.accept(1f);
+                topAlphaSetter.accept(0.6f);
             }
         }
-
-        var radioFinalY = radioGroupWidget.getY();
-        radioGroupWidget.setY(radioFinalY + startYOffset);
-        radioGroupWidget.setAlpha(0f);
-        playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setY, radioGroupWidget.getY(), radioFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
-        playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR).setStartDelay(delay));
-
-        var infoFinalY = infoArea.getY();
-        infoArea.setY(infoFinalY + startYOffset);
-        playAnimation(ObjectAnimator.ofFloat(infoArea::setY, infoArea.getY(), infoFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC).setStartDelay(delay));
-        playAnimation(ObjectAnimator.ofFloat(infoArea::setAlpha, 0, 1).setStartDelay(delay).setDuration(duration));
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (baseIcon != null && pillarIcon != null && topIcon != null && bufferValueLabel != null) {
-            bufferValueLabel.setText(String.format(AF, blockEntity.energyStored));
-            var progress = (float) blockEntity.energyStored / (float) blockEntity.getMaxEnergyStorage();
-            if (Float.isNaN(progress)) {
-                progress = 0;
-            }
-            histogramValue.height = progress * 60;
-
-            switch (blockEntity.completeness) {
-                case NO_TOP -> {
-                    baseIcon.setAlpha(1f);
-                    pillarIcon.setAlpha(1f);
-                    topIcon.setAlpha(0.2f);
-                }
-                case BASE_ONLY -> {
-                    baseIcon.setAlpha(1f);
-                    pillarIcon.setAlpha(0.2f);
-                    topIcon.setAlpha(0.2f);
-                }
-                case COMPLETE -> {
-                    baseIcon.setAlpha(1f);
-                    pillarIcon.setAlpha(1f);
-                    topIcon.setAlpha(1f);
-                }
-                case COMPLETE_NOT_WORKING -> {
-                    baseIcon.setAlpha(1f);
-                    pillarIcon.setAlpha(1f);
-                    topIcon.setAlpha(0.6f);
-                }
-            }
-        }
+        updateInfo();
     }
 
     @SubscribeEvent

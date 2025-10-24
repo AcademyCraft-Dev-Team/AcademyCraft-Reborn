@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework.layout;
+package org.academy.api.client.gui.layout;
 
 public final class Gravity {
     public static final int NO_GRAVITY = 0;

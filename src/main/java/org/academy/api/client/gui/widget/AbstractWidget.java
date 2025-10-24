@@ -1,9 +1,9 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.framework.event.*;
-import org.academy.api.client.gui.framework.layout.MeasureSpec;
-import org.academy.api.client.gui.framework.layout.SizeMode;
-import org.academy.api.client.gui.framework.render.WidgetRenderContext;
+import org.academy.api.client.gui.event.*;
+import org.academy.api.client.gui.layout.MeasureSpec;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractWidget implements Widget {

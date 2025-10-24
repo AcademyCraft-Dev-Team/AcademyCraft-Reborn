@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework.render;
+package org.academy.api.client.gui.render;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
@@ -26,8 +26,7 @@ public final class BatchProcessor {
     }
 
     public List<MeshToDraw> process(List<SubmittedCommand> commands, float depthEpsilon) {
-        if (commands.isEmpty())
-            return Collections.emptyList();
+        if (commands.isEmpty()) return Collections.emptyList();
 
         commands.sort(COMMAND_COMPARATOR);
 

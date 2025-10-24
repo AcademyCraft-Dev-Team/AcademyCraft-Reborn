@@ -4,6 +4,8 @@
 
 A Minecraft mod about Academy City, for NeoForge.
 
+The project is currently in the early development stage and is not playable. Developers are welcome to participate in the development.
+
 ## Downloads & Community
 
 * **Latest Builds**: [GitHub Actions](https://github.com/AcademyCraft-Dev-Team/AcademyCraft-Reborn/actions) (

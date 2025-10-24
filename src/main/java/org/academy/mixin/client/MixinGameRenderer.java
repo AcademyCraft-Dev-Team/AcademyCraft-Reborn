@@ -3,6 +3,7 @@ package org.academy.mixin.client;
 import net.minecraft.client.renderer.GameRenderer;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.gui.animation.AnimationManager;
+import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,5 +25,6 @@ public abstract class MixinGameRenderer {
     @Inject(method = "render",at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
         AnimationManager.onFrameUpdate();
+        NeoForge.EVENT_BUS.post(new RenderLoopEvent());
     }
 }

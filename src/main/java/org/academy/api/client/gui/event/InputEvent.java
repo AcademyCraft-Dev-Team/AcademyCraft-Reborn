@@ -1,6 +1,6 @@
-package org.academy.api.client.gui.framework.event;
+package org.academy.api.client.gui.event;
 
-import org.academy.api.client.gui.framework.Widget;
+import org.academy.api.client.gui.widget.Widget;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class InputEvent {

@@ -4,6 +4,8 @@
 
 一个关于学园都市的 Minecraft 模组，适用于 NeoForge。
 
+项目目前处于早期开发阶段，无法进行游玩，欢迎各位开发者参与开发。
+
 ## 下载与社区
 
 * **最新构建**: [GitHub Actions](https://github.com/AcademyCraft-Dev-Team/AcademyCraft-Reborn/actions) (推荐)

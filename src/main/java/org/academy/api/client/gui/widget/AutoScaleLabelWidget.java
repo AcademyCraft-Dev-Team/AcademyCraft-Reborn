@@ -2,18 +2,21 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 
 public class AutoScaleLabelWidget extends LabelWidget {
-    public AutoScaleLabelWidget(String text, float x, float y, float renderAreaWidth) {
-        super(Component.literal(text), x, y, renderAreaWidth, Minecraft.getInstance().font.lineHeight);
-        setVerticalAlignment(VerticalAlignment.MIDDLE);
-        updateScale();
+    public AutoScaleLabelWidget(String text) {
+        super(text);
     }
 
-    public AutoScaleLabelWidget(Component component, float x, float y, float renderAreaWidth) {
-        super(component, x, y, renderAreaWidth, Minecraft.getInstance().font.lineHeight);
-        setVerticalAlignment(VerticalAlignment.MIDDLE);
+    public AutoScaleLabelWidget(Component component) {
+        super(component);
+    }
+
+    @Override
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
         updateScale();
+        super.render(context, mouseX, mouseY, partialTick);
     }
 
     private void updateScale() {
@@ -21,13 +24,13 @@ public class AutoScaleLabelWidget extends LabelWidget {
         var availableWidth = getWidth();
 
         if (availableWidth <= 0 || getComponent().getString().isEmpty()) {
-            setScale(1.0f);
+            scale = 1.0f;
             return;
         }
 
         var textOriginalWidth = font.width(getComponent());
         if (textOriginalWidth <= 0) {
-            setScale(1.0f);
+            scale = 1.0f;
             return;
         }
 
@@ -35,25 +38,16 @@ public class AutoScaleLabelWidget extends LabelWidget {
         if (textOriginalWidth > availableWidth)
             newScale = availableWidth / (float) textOriginalWidth;
 
-        setScale(newScale);
+        scale = newScale;
     }
 
     @Override
-    public AutoScaleLabelWidget setText(String text) {
-        return setText(Component.literal(text));
+    public LabelWidget setText(String text) {
+        return super.setText(text);
     }
 
     @Override
-    public AutoScaleLabelWidget setText(Component component) {
-        super.setText(component);
-        updateScale();
-        return this;
-    }
-
-    @Override
-    public AutoScaleLabelWidget setWidth(float width) {
-        super.setWidth(width);
-        updateScale();
-        return this;
+    public LabelWidget setText(Component component) {
+        return super.setText(component);
     }
 }

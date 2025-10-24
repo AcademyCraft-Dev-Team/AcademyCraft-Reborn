@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IUIScreen,IAnimationScreen {
+public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IUIScreen,IAnimationScreen {
     protected final FrameLayoutWidget rootContainer = new FrameLayoutWidget();
 
     private boolean handleContainer = true;
@@ -47,7 +47,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     @Nullable
     protected RenderTarget renderTarget;
 
-    protected CGuiContainerScreen(T menu, Inventory playerInventory, Component title) {
+    protected ContainerUIScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
     }
 

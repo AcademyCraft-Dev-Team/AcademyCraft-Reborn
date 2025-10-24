@@ -96,9 +96,9 @@ public final class Resource {
          * Solar Gen
          */
         public static final ResourceLocation SOLAR_GEN_MODEL = academy("textures/model/solar_gen.png");
-        public static final ResourceLocation ICON_SOLAR_GEN_NIGHT = academy("textures/gui/wind_gen/icon_solar_gen_night.png");
-        public static final ResourceLocation ICON_SOLAR_GEN_RAINY = academy("textures/gui/wind_gen/icon_solar_gen_rainy.png");
-        public static final ResourceLocation ICON_SOLAR_GEN_SUNNY = academy("textures/gui/wind_gen/icon_solar_gen_sunny.png");
+        public static final ResourceLocation ICON_SOLAR_GEN_NIGHT = academy("textures/gui/solar_gen/icon_solar_gen_night.png");
+        public static final ResourceLocation ICON_SOLAR_GEN_RAINY = academy("textures/gui/solar_gen/icon_solar_gen_rainy.png");
+        public static final ResourceLocation ICON_SOLAR_GEN_SUNNY = academy("textures/gui/solar_gen/icon_solar_gen_sunny.png");
         /**
          * Common
          */
