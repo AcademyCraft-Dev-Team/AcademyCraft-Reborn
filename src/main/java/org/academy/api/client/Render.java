@@ -23,7 +23,7 @@ import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 public final class Render {
     public static final class RenderPipelines extends net.minecraft.client.renderer.RenderPipelines {
         public static final RenderPipeline NO_DEPTH_OPAQUE_PARTICLE = builder(PARTICLE_SNIPPET)
-                .withLocation("pipeline/opaque_particle")
+                .withLocation(academy("pipeline/opaque_particle"))
                 .withCull(false)
                 .withDepthWrite(false)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
