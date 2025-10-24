@@ -1,10 +1,19 @@
 package org.academy.api.client.gui.framework;
 
-import org.academy.api.client.gui.event.*;
+import org.academy.api.client.gui.framework.event.*;
+import org.academy.api.client.gui.framework.layout.MeasureSpec;
+import org.academy.api.client.gui.framework.layout.SizeMode;
+import org.academy.api.client.gui.framework.render.WidgetRenderContext;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractWidget implements Widget {
-    protected float x, y, z, width, height;
+    protected WidgetContainer.LayoutParams layoutParams = WidgetContainer.LayoutParams.NONE;
+    protected float measuredWidth;
+    protected float measuredHeight;
+
+    protected float x = 0, y = 0, z = 0, width = 0, height = 0;
+    protected float translationX = 0;
+    protected float translationY = 0;
     protected boolean visible = true;
     protected boolean enabled = true;
     @Nullable
@@ -16,13 +25,6 @@ public abstract class AbstractWidget implements Widget {
     protected float scrollX = 0f;
     protected float scrollY = 0f;
     protected String name = "";
-
-    public AbstractWidget(float x, float y, float width, float height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-    }
 
     @Override
     public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
@@ -77,6 +79,77 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
+    public void measure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
+        onMeasure(widthMeasureSpec, heightMeasureSpec);
+    }
+
+    protected void onMeasure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
+        var desiredWidth = layoutParams.paddingLeft + layoutParams.paddingRight;
+        var desiredHeight = layoutParams.paddingTop + layoutParams.paddingBottom;
+
+        setMeasuredDimension(
+                resolveSize(desiredWidth, widthMeasureSpec),
+                resolveSize(desiredHeight, heightMeasureSpec)
+        );
+    }
+
+    protected final void setMeasuredDimension(float measuredWidth, float measuredHeight) {
+        this.measuredWidth = measuredWidth;
+        this.measuredHeight = measuredHeight;
+    }
+
+    protected static float resolveSize(float desiredSize, MeasureSpec spec) {
+        var specMode = spec.getMode();
+        var specSize = spec.getSize();
+        switch (specMode) {
+            case EXACTLY:
+                return specSize;
+            case AT_MOST:
+                return Math.min(desiredSize, specSize);
+            case UNSPECIFIED:
+            default:
+                return desiredSize;
+        }
+    }
+
+    @Override
+    public void layout(float left, float top, float right, float bottom) {
+        x = left;
+        y = top;
+        width = right - left;
+        height = bottom - top;
+    }
+
+    @Override
+    public void requestLayout() {
+        if (parent != null) {
+            parent.requestLayout();
+        }
+    }
+
+    @Override
+    public WidgetContainer.LayoutParams getLayoutParams() {
+        return layoutParams;
+    }
+
+    @Override
+    public Widget setLayoutParams(WidgetContainer.LayoutParams params) {
+        layoutParams = params;
+        requestLayout();
+        return this;
+    }
+
+    @Override
+    public float getMeasuredWidth() {
+        return measuredWidth;
+    }
+
+    @Override
+    public float getMeasuredHeight() {
+        return measuredHeight;
+    }
+
+    @Override
     public String getName() {
         return name;
     }
@@ -113,18 +186,6 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public Widget setX(float x) {
-        this.x = x;
-        return this;
-    }
-
-    @Override
-    public Widget setY(float y) {
-        this.y = y;
-        return this;
-    }
-
-    @Override
     public Widget setZ(float z) {
         this.z = z;
         return this;
@@ -132,13 +193,43 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public Widget setWidth(float width) {
-        this.width = width;
+        if (layoutParams.width != width || layoutParams.widthMode != SizeMode.FIXED) {
+            layoutParams.width = width;
+            layoutParams.widthMode = SizeMode.FIXED;
+            requestLayout();
+        }
         return this;
     }
 
     @Override
     public Widget setHeight(float height) {
-        this.height = height;
+        if (layoutParams.height != height || layoutParams.heightMode != SizeMode.FIXED) {
+            layoutParams.height = height;
+            layoutParams.heightMode = SizeMode.FIXED;
+            requestLayout();
+        }
+        return this;
+    }
+
+    @Override
+    public float getTranslationX() {
+        return translationX;
+    }
+
+    @Override
+    public Widget setTranslationX(float translationX) {
+        this.translationX = translationX;
+        return this;
+    }
+
+    @Override
+    public float getTranslationY() {
+        return translationY;
+    }
+
+    @Override
+    public Widget setTranslationY(float translationY) {
+        this.translationY = translationY;
         return this;
     }
 
@@ -149,7 +240,12 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public Widget setVisible(boolean visible) {
-        this.visible = visible;
+        if (this.visible != visible) {
+            this.visible = visible;
+            if (parent != null) {
+                parent.requestLayout();
+            }
+        }
         return this;
     }
 
@@ -269,6 +365,28 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
+    public float getAbsoluteTranslationX() {
+        var currentTX = translationX;
+        var p = parent;
+        while (p != null) {
+            currentTX += p.getTranslationX();
+            p = p.getParent();
+        }
+        return currentTX;
+    }
+
+    @Override
+    public float getAbsoluteTranslationY() {
+        var currentTY = translationY;
+        var p = parent;
+        while (p != null) {
+            currentTY += p.getTranslationY();
+            p = p.getParent();
+        }
+        return currentTY;
+    }
+
+    @Override
     public float getAbsoluteAlpha() {
         var currentAlpha = alpha;
         var p = parent;
@@ -291,9 +409,9 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public boolean isMouseOver(double mouseX, double mouseY) {
-        var absX = getAbsoluteX();
-        var absY = getAbsoluteY();
-        return mouseX >= absX && mouseY >= absY && mouseX < absX + width && mouseY < absY + height;
+        var visualX = getAbsoluteX() + getAbsoluteTranslationX();
+        var visualY = getAbsoluteY() + getAbsoluteTranslationY();
+        return mouseX >= visualX && mouseY >= visualY && mouseX < visualX + width && mouseY < visualY + height;
     }
 
     @Override

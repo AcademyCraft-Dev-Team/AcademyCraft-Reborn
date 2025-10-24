@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.event;
+package org.academy.api.client.gui.framework.event;
 
 import org.academy.api.client.gui.framework.Widget;
 import org.jetbrains.annotations.Nullable;

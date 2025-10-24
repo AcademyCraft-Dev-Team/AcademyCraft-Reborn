@@ -1,8 +1,7 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.screen;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -12,83 +11,99 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.event.*;
-import org.academy.api.client.gui.framework.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
-import org.academy.api.client.gui.widget.PanelWidget;
+import org.academy.api.client.gui.render.UIRenderContext;
+import org.academy.api.client.gui.widget.FrameLayoutWidget;
+import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.client.gui.widget.WidgetContainer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class CGuiScreen extends Screen implements IAnimationScreen {
-    public final AbstractContainerWidget rootContainer = new PanelWidget(0, 0, 0, 0);
+public abstract class CGuiScreen extends Screen implements IUIScreen, IAnimationScreen {
+    protected final FrameLayoutWidget rootContainer = new FrameLayoutWidget();
     private final List<Animator> screenAnimations = new ArrayList<>();
     private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
     private final UIRenderContext uiRenderContext = new UIRenderContext();
-    private final RenderTarget renderTarget;
-
-    {
-        var window = Minecraft.getInstance().getWindow();
-        renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
-        ImGuiUtilApi.clearEventsQueue();
-    }
+    @Nullable
+    private RenderTarget renderTarget;
 
     protected CGuiScreen(Component title) {
         super(title);
     }
 
     @Override
-    public List<Animator> getScreenAnimations() {
-        return screenAnimations;
+    @Nullable
+    public RenderTarget getRenderTarget() {
+        return renderTarget;
     }
 
     @Override
-    public Map<Widget, List<Animator>> getTrackedAnimations() {
-        return trackedAnimations;
+    public WidgetContainer getRootContainer() {
+        return rootContainer;
     }
 
     @Override
-    public void removed() {
-        super.removed();
-        cancelAllAnimations();
-        renderTarget.destroyBuffers();
-        uiRenderContext.close();
+    public UIRenderContext getUIRenderContext() {
+        return uiRenderContext;
     }
 
     @Override
     protected void init() {
-        var window = Minecraft.getInstance().getWindow();
-        renderTarget.resize(window.getWidth(), window.getHeight());
+        var minecraft = Minecraft.getInstance();
+        minecraft.execute(this::initializeRenderResources);
+
         rootContainer.setName("root");
-        rootContainer.setWidth(width);
-        rootContainer.setHeight(height);
         rootContainer.clearChildren();
+
         onInit();
+    }
+
+    private void initializeRenderResources() {
+        var window = Minecraft.getInstance().getWindow();
+        if (renderTarget != null) {
+            renderTarget.resize(window.getWidth(), window.getHeight());
+        } else {
+            renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
+        }
+        ImGuiUtilApi.clearEventsQueue();
     }
 
     protected abstract void onInit();
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        var colorTexture = renderTarget.getColorTexture();
-        var depthTexture = renderTarget.getDepthTexture();
+        if (renderTarget == null) return;
         var colorTextureView = renderTarget.getColorTextureView();
+        if (colorTextureView == null) return;
 
-        if (colorTexture == null || depthTexture == null || colorTextureView == null) return;
-
-        commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1);
-
-        uiRenderContext.renderFrame(rootContainer, renderTarget, mouseX, mouseY, partialTick);
-        ImGuiUIDebugger.render(renderTarget, rootContainer);
-        guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
+        guiGraphics.submitBlit(
+                RenderPipelines.GUI_TEXTURED,
+                colorTextureView,
+                0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
+                0, 1, 1, 0, -1
+        );
     }
 
     @Override
-    public void onClose() {
-        super.onClose();
-        uiRenderContext.close();
+    public void removed() {
+        super.removed();
+        cancelAllAnimations();
+
+        if (renderTarget == null) return;
+
+        var contextToClose = uiRenderContext;
+        var targetToDestroy = renderTarget;
+
+        renderTarget = null;
+
+        Minecraft.getInstance().execute(() -> {
+            contextToClose.close();
+            targetToDestroy.destroyBuffers();
+        });
     }
 
     @Override
@@ -171,5 +186,15 @@ public abstract class CGuiScreen extends Screen implements IAnimationScreen {
         if (event.isConsumed()) return true;
 
         return super.charTyped(e);
+    }
+
+    @Override
+    public List<Animator> getScreenAnimations() {
+        return screenAnimations;
+    }
+
+    @Override
+    public Map<Widget, List<Animator>> getTrackedAnimations() {
+        return trackedAnimations;
     }
 }

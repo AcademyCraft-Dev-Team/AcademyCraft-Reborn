@@ -1,7 +1,6 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.framework.render;
 
 import net.minecraft.util.Mth;
-import org.academy.api.common.util.MathUtil;
 import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 
@@ -32,7 +31,7 @@ public final class ScissorRect implements Comparable<ScissorRect> {
         return EMPTY;
     }
 
-    public static ScissorRect of(MathUtil.Axis2D pAxis, float pPrimaryPosition, float pSecondaryPosition, float pPrimaryLength, float pSecondaryLength) {
+    public static ScissorRect of(Axis2D pAxis, float pPrimaryPosition, float pSecondaryPosition, float pPrimaryLength, float pSecondaryLength) {
         return switch (pAxis) {
             case HORIZONTAL -> new ScissorRect(pPrimaryPosition, pSecondaryPosition, pPrimaryLength, pSecondaryLength);
             case VERTICAL -> new ScissorRect(pSecondaryPosition, pPrimaryPosition, pSecondaryLength, pPrimaryLength);
@@ -51,23 +50,23 @@ public final class ScissorRect implements Comparable<ScissorRect> {
         return height;
     }
 
-    public ScissorRect step(MathUtil.Direction2D pDirection) {
+    public ScissorRect step(Direction2D pDirection) {
         return new ScissorRect(position.step(pDirection), width, height);
     }
 
-    public float getLength(MathUtil.Axis2D axis) {
+    public float getLength(Axis2D axis) {
         return switch (axis) {
             case HORIZONTAL -> width;
             case VERTICAL -> height;
         };
     }
 
-    public float getBoundInDirection(MathUtil.Direction2D pDirection) {
+    public float getBoundInDirection(Direction2D pDirection) {
         var screenaxis = pDirection.getAxis();
         return pDirection.isPositive() ? position.getCoordinate(screenaxis) + getLength(screenaxis) - 1 : position.getCoordinate(screenaxis);
     }
 
-    public ScissorRect getBorder(MathUtil.Direction2D pDirection) {
+    public ScissorRect getBorder(Direction2D pDirection) {
         var i = getBoundInDirection(pDirection);
         var screenaxis = pDirection.getAxis().orthogonal();
         var j = getBoundInDirection(screenaxis.getNegative());
@@ -76,10 +75,10 @@ public final class ScissorRect implements Comparable<ScissorRect> {
     }
 
     public boolean overlaps(ScissorRect pRectangle) {
-        return overlapsInAxis(pRectangle, MathUtil.Axis2D.HORIZONTAL) && overlapsInAxis(pRectangle, MathUtil.Axis2D.VERTICAL);
+        return overlapsInAxis(pRectangle, Axis2D.HORIZONTAL) && overlapsInAxis(pRectangle, Axis2D.VERTICAL);
     }
 
-    public boolean overlapsInAxis(ScissorRect pRectangle, MathUtil.Axis2D pAxis) {
+    public boolean overlapsInAxis(ScissorRect pRectangle, Axis2D pAxis) {
         var i = getBoundInDirection(pAxis.getNegative());
         var j = pRectangle.getBoundInDirection(pAxis.getNegative());
         var k = getBoundInDirection(pAxis.getPositive());
@@ -87,7 +86,7 @@ public final class ScissorRect implements Comparable<ScissorRect> {
         return Math.max(i, j) <= Math.min(k, l);
     }
 
-    public float getCenterInAxis(MathUtil.Axis2D pAxis) {
+    public float getCenterInAxis(Axis2D pAxis) {
         return (getBoundInDirection(pAxis.getPositive()) + getBoundInDirection(pAxis.getNegative())) / 2;
     }
 

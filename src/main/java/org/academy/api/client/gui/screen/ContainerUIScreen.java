@@ -1,8 +1,7 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.screen;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -12,16 +11,18 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import org.academy.AcademyCraft;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.event.*;
-import org.academy.api.client.gui.framework.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
-import org.academy.api.client.gui.widget.BlendQuadWidget;
-import org.academy.api.client.gui.widget.ImageWidget;
-import org.academy.api.client.gui.widget.PanelWidget;
+import org.academy.api.client.gui.layout.Orientation;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.render.UIRenderContext;
+import org.academy.api.client.gui.widget.*;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -31,27 +32,57 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IAnimationScreen {
-    protected final PanelWidget rootContainer = new PanelWidget(0, 0, 0, 0);
+public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IUIScreen,IAnimationScreen {
+    protected final FrameLayoutWidget rootContainer = new FrameLayoutWidget();
+
     private boolean handleContainer = true;
     private boolean renderInventory = true;
     private final List<Animator> screenAnimations = new ArrayList<>();
     private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
-    private final UIRenderContext uiRenderContext = new UIRenderContext();
+    protected final UIRenderContext uiRenderContext = new UIRenderContext();
     private Supplier<Float> invHeightSupplier = () -> 1f;
-    private Supplier<Float> mainYSupplier = () -> 1f;
+    private Supplier<Float> invTranslationYSupplier = () -> 1f;
     private Consumer<Boolean> invVisibleSetter = ignore -> {
     };
-    private final RenderTarget renderTarget;
-
-    {
-        var window = Minecraft.getInstance().getWindow();
-        renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
-        ImGuiUtilApi.clearEventsQueue();
-    }
+    @Nullable
+    protected RenderTarget renderTarget;
 
     protected CGuiContainerScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
+    }
+
+    @Override
+    @Nullable
+    public RenderTarget getRenderTarget() {
+        return renderTarget;
+    }
+
+    @Override
+    public WidgetContainer getRootContainer() {
+        return rootContainer;
+    }
+
+    @Override
+    public UIRenderContext getUIRenderContext() {
+        return uiRenderContext;
+    }
+
+    @Override
+    public void onClose() {
+        super.onClose();
+        cancelAllAnimations();
+        if (renderTarget != null) renderTarget.destroyBuffers();
+        uiRenderContext.close();
+    }
+
+    private void initializeRenderResources() {
+        var window = Minecraft.getInstance().getWindow();
+        if (renderTarget != null) {
+            renderTarget.resize(window.getWidth(), window.getHeight());
+        } else {
+            renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
+        }
+        ImGuiUtilApi.clearEventsQueue();
     }
 
     @Override
@@ -65,65 +96,110 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     }
 
     @Override
-    public void onClose() {
-        super.onClose();
-        cancelAllAnimations();
-        renderTarget.destroyBuffers();
-        uiRenderContext.close();
-    }
-
-    @Override
     protected void init() {
         super.init();
-        var window = Minecraft.getInstance().getWindow();
-        renderTarget.resize(window.getWidth(), window.getHeight());
+        var minecraft = Minecraft.getInstance();
+        minecraft.execute(this::initializeRenderResources);
+
         rootContainer.setName("root");
-        rootContainer.setWidth(width);
-        rootContainer.setHeight(height);
         rootContainer.clearChildren();
 
         var finalHeight = 187f;
         var duration = 600L;
-        var main = new PanelWidget(leftPos, topPos - 22, imageWidth, finalHeight);
-        mainYSupplier = main::getY;
-        rootContainer.addChild("main", main);
-        playAnimation(ObjectAnimator.ofFloat(main::setAlpha, 0, 1.0f).setDuration(duration).setInterpolator(EasingFunctions.LINEAR));
-        {
-            var back = new BlendQuadWidget(0, 0, main.getWidth(), main.getHeight());
-            back.setAlpha(0.5f);
-            main.addChild("back", back);
-            playAnimation(ObjectAnimator.ofFloat(back::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
 
-            var invContent = new PanelWidget(0, 0, main.getWidth(), main.getHeight());
-            invVisibleSetter = invContent::setVisible;
-            invContent.setZ(1);
-            main.addChild("content_inv", invContent);
+        var main = new LinearLayoutWidget();
+        main.setOrientation(Orientation.HORIZONTAL);
+        main.setLayoutParams(
+                new FrameLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.WRAP_CONTENT)
+                        .heightMode(SizeMode.WRAP_CONTENT)
+                        .margin(leftPos - 16, topPos - 22, 0, 0)
+        );
+        rootContainer.addChild("main", main);
+        playAnimation(
+                ObjectAnimator
+                        .ofFloat(main::setAlpha, 0, 1.0f)
+                        .setDuration(duration)
+                        .setInterpolator(EasingFunctions.EASE_OUT_EXPO)
+        );
+        playAnimation(
+                ObjectAnimator
+                        .ofFloat(main::setHeight, 0, finalHeight)
+                        .setDuration(duration)
+                        .setInterpolator(EasingFunctions.EASE_OUT_EXPO)
+        );
+        {
+            var pageButtons = new RadioGroupWidget();
+            pageButtons.setOrientation(Orientation.VERTICAL);
+            pageButtons.setLayoutParams(
+                    new LinearLayoutWidget.LayoutParams()
+                            .width(16)
+                            .heightMode(SizeMode.WRAP_CONTENT)
+            );
+            main.addChild("radio_group_page_button", pageButtons);
+            ImageRadioButtonWidget invButton;
             {
-                var inventory = new ImageWidget(0, 0, main.getWidth(), main.getHeight(), Resource.Textures.UI_INVENTORY);
-                invHeightSupplier = inventory::getHeight;
-                invContent.addChild("inventory", inventory);
-                playAnimation(ObjectAnimator.ofFloat(inventory::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
+                invButton = new ImageRadioButtonWidget(Resource.Textures.ICON_INV);
+                invButton.setLayoutParams(
+                        new WidgetContainer.LayoutParams()
+                                .widthMode(SizeMode.WRAP_CONTENT)
+                                .height(16)
+                );
+                pageButtons.addChild("inv", invButton);
+                pageButtons.selectButton(invButton);
             }
 
-            onInit(main, invContent);
+            var content = new FrameLayoutWidget();
+            content.setLayoutParams(
+                    new LinearLayoutWidget.LayoutParams()
+                            .width(imageWidth)
+                            .height(187)
+            );
+            main.addChild("content", content);
+            {
+                var invPage = new FrameLayoutWidget();
+                invTranslationYSupplier = invPage::getTranslationY;
+                invHeightSupplier = invPage::getHeight;
+                invVisibleSetter = invPage::setVisible;
+                invPage.setLayoutParams(
+                        new FrameLayoutWidget.LayoutParams()
+                                .widthMode(SizeMode.MATCH_PARENT)
+                                .heightMode(SizeMode.MATCH_PARENT)
+                );
+                content.addChild("page_inv", invPage);
+                playAnimation(ObjectAnimator.ofFloat(invPage::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
+                {
+                    var back = new BlendQuadWidget();
+                    back.setLayoutParams(
+                            new FrameLayoutWidget.LayoutParams()
+                                    .widthMode(SizeMode.MATCH_PARENT)
+                                    .heightMode(SizeMode.MATCH_PARENT)
+                    );
+                    back.setAlpha(0.5f);
+                    invPage.addChild("back", back);
+
+                    var inv = new ImageWidget(Resource.Textures.UI_INVENTORY);
+                    inv.setLayoutParams(
+                            new FrameLayoutWidget.LayoutParams()
+                                    .widthMode(SizeMode.MATCH_PARENT)
+                                    .heightMode(SizeMode.MATCH_PARENT)
+                    );
+                    invPage.addChild("inv", inv);
+
+                    onInit(pageButtons, invButton, content, invPage);
+                }
+            }
         }
     }
 
-    protected abstract void onInit(PanelWidget main, PanelWidget invContent);
+    protected abstract void onInit(RadioGroupWidget pageButtons, ImageRadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage);
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        var colorTexture = renderTarget.getColorTexture();
-        var depthTexture = renderTarget.getDepthTexture();
+        if (renderTarget == null) return;
         var colorTextureView = renderTarget.getColorTextureView();
+        if (colorTextureView == null) return;
 
-        if (colorTexture == null || depthTexture == null || colorTextureView == null) return;
-
-        commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1);
-
-        uiRenderContext.renderFrame(rootContainer, renderTarget, mouseX, mouseY, partialTick);
-        ImGuiUIDebugger.render(renderTarget, rootContainer);
         guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
 
         if (isRenderInventory()) {
@@ -133,7 +209,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
             guiGraphics.pose().pushMatrix();
             guiGraphics.pose().translate(0, topPos);
             guiGraphics.pose().scale(1, scaleY);
-            guiGraphics.pose().translate(0, -mainYSupplier.get() - 22);
+            guiGraphics.pose().translate(0, -topPos + invTranslationYSupplier.get());
 
             renderContents(guiGraphics, mouseX, mouseY, partialTick);
             renderCarriedItem(guiGraphics, mouseX, mouseY);
@@ -227,6 +303,11 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
     public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
         if (ImGuiUtilApi.wantCaptureKeyboard()) return true;
 
+        if (e.key() == GLFW.GLFW_KEY_F12) {
+            AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
+            return true;
+        }
+
         var event = new KeyEvent(EventType.KEY_PRESSED, e.key(), e.scancode(), e.modifiers());
         rootContainer.dispatchEvent(event);
         if (event.isConsumed()) return true;
@@ -266,6 +347,6 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu> exten
 
     @Override
     protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop) {
-        return mouseX < (double) guiLeft || mouseY < (double) guiTop - 22 || mouseX >= (double) (guiLeft + imageWidth) || mouseY >= (double) (guiTop + imageHeight);
+        return mouseX < (double) guiLeft || mouseY < (double) guiTop - 22 || mouseX >= (double) (guiLeft + imageWidth) || mouseY >= (double) (guiTop + 187);
     }
 }
