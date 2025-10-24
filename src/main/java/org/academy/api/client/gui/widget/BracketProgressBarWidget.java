@@ -9,8 +9,8 @@ public class BracketProgressBarWidget extends AbstractAnimatedLabelWidget {
     private float stepsPerSecond = 50.0f;
     private int lastRenderedStep = -1;
 
-    public BracketProgressBarWidget(char fillChar, int totalSlots, float x, float y) {
-        super(Component.empty(), x, y);
+    public BracketProgressBarWidget(char fillChar, int totalSlots) {
+        super(Component.empty());
         this.fillChar = fillChar;
         this.totalSlots = totalSlots;
         targetComponent = Component.literal("[" + String.valueOf(fillChar).repeat(totalSlots) + "]");

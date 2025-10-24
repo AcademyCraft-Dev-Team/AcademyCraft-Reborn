@@ -2,45 +2,51 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 
 public class FillWidget extends AbstractWidget {
-    protected int color;
+    protected int red;
+    protected int green;
+    protected int blue;
+    protected int alpha;
 
-    public FillWidget(float x, float y, float width, float height, int color) {
-        super(x, y, width, height);
-        this.color = color;
+    public FillWidget(int color) {
+        setColor(color);
     }
 
     @Override
     public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        var colorAlpha = ARGB.alpha(color) / 255.0f * getAlpha();
-        var finalAlpha = colorAlpha * context.getAccumulatedAlpha();
+        var lp = getLayoutParams();
+        var paddedWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
+        var paddedHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
 
-        if (finalAlpha <= 1.0f / 255.0f) return;
+        if (paddedWidth <= 0 || paddedHeight <= 0) return;
+
+        var finalAlpha = alpha / 255f * getAlpha() * context.getAccumulatedAlpha();
+        var finalRed = red / 255f;
+        var finalGreen = green / 255f;
+        var finalBlue = blue / 255f;
 
         context.pose().pushPose();
-        context.pose().translate(getX(), getY(), getZ());
-
-        var red = ARGB.red(color) / 255.0f;
-        var green = ARGB.green(color) / 255.0f;
-        var blue = ARGB.blue(color) / 255.0f;
-
-        var command = new FillRectDrawCommand(getWidth(), getHeight(), red, green, blue, finalAlpha);
-        context.submit(command);
-
+        {
+            context.pose().translate(lp.paddingLeft, lp.paddingTop, 0);
+            var command = new FillRectDrawCommand(paddedWidth, paddedHeight, finalRed, finalGreen, finalBlue, finalAlpha);
+            context.submit(command);
+        }
         context.pose().popPose();
     }
 
     public int getColor() {
-        return color;
+        return ARGB.color(alpha, red, green, blue);
     }
 
     public FillWidget setColor(int color) {
-        this.color = color;
+        alpha = ARGB.alpha(color);
+        red = ARGB.red(color);
+        green = ARGB.green(color);
+        blue = ARGB.blue(color);
         return this;
     }
 }

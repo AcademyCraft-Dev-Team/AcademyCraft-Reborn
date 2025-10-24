@@ -11,7 +11,9 @@ import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.event.CharTypedEvent;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.MeasureSpec;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -36,11 +38,23 @@ public class TextBoxWidget extends LabelWidget {
     private boolean showCaret = true;
     private long lastBlinkTime = 0L;
 
-    public TextBoxWidget(int maxLength, float x, float y, float width, float height) {
-        super(Component.empty(), x, y, width, height);
+    public TextBoxWidget(int maxLength) {
+        super(Component.empty());
         this.maxLength = maxLength;
-        clickable = true;
-        setVerticalAlignment(VerticalAlignment.MIDDLE);
+        setClickable(true);
+    }
+
+    @Override
+    protected void onMeasure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
+        var font = Minecraft.getInstance().font;
+        var lp = getLayoutParams();
+
+        var desiredHeight = (float) font.lineHeight + lp.paddingTop + lp.paddingBottom;
+        var measuredHeight = resolveSize(desiredHeight, heightMeasureSpec);
+
+        var measuredWidth = resolveSize(lp.width, widthMeasureSpec);
+
+        setMeasuredDimension(measuredWidth, measuredHeight);
     }
 
     @Override
@@ -49,59 +63,99 @@ public class TextBoxWidget extends LabelWidget {
             return;
         }
 
-        context.pose().pushPose();
-        context.pose().translate(getX(), getY(), getZ());
-        {
-            if (showBackground) {
-                renderBackground(context);
-            }
-        }
-        context.pose().popPose();
+        context.drawOrder().push();
 
-        context.pose().pushPose();
-        context.pose().translate(0, 0, 0.2f);
+        if (showBackground) {
+            renderBackground(context);
+        }
+
+        context.drawOrder().advance();
         {
             super.render(context, mouseX, mouseY, partialTick);
-        }
-        context.pose().popPose();
 
-        if (isFocused() && showCaret) {
-            renderCaret(context);
+            if (isFocused() && showCaret) {
+                context.drawOrder().advance();
+                renderCaret(context);
+            }
         }
+
+        context.drawOrder().pop();
     }
 
     private void renderBackground(WidgetRenderContext context) {
-        var finalAlpha = getAbsoluteAlpha() * context.getAccumulatedAlpha();
+        var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
+        var width = getWidth();
+        var height = getHeight();
+
+        var bgR = ARGB.red(bgColor) / 255.0f;
+        var bgG = ARGB.green(bgColor) / 255.0f;
+        var bgB = ARGB.blue(bgColor) / 255.0f;
+        var bgA = ARGB.alpha(bgColor) / 255.0f * finalAlpha;
+        context.submit(new FillRectDrawCommand(width, height, bgR, bgG, bgB, bgA));
 
         var borderR = ARGB.red(borderColor) / 255.0f;
         var borderG = ARGB.green(borderColor) / 255.0f;
         var borderB = ARGB.blue(borderColor) / 255.0f;
         var borderA = ARGB.alpha(borderColor) / 255.0f * finalAlpha;
-        context.submit(new FillRectDrawCommand(getWidth(), getHeight(), borderR, borderG, borderB, borderA));
+
+        context.submit(new FillRectDrawCommand(width, 1, borderR, borderG, borderB, borderA));
+
+        context.pose().pushPose();
+        context.pose().translate(0, height - 1, 0);
+        context.submit(new FillRectDrawCommand(width, 1, borderR, borderG, borderB, borderA));
+        context.pose().popPose();
+
+        if (height > 2) {
+            context.pose().pushPose();
+            context.pose().translate(0, 1, 0);
+            context.submit(new FillRectDrawCommand(1, height - 2, borderR, borderG, borderB, borderA));
+            context.pose().popPose();
+
+            context.pose().pushPose();
+            context.pose().translate(width - 1, 1, 0);
+            context.submit(new FillRectDrawCommand(1, height - 2, borderR, borderG, borderB, borderA));
+            context.pose().popPose();
+        }
     }
 
     private void renderCaret(WidgetRenderContext context) {
+        var lp = getLayoutParams();
         var font = Minecraft.getInstance().font;
         var finalScale = getScale() * globalScale;
+
         var textBeforeCaret = text.substring(0, caretPos);
         var caretXOffset = font.width(textBeforeCaret) * finalScale;
 
-        var textHeight = font.lineHeight * finalScale * 0.85f;
-        var alignmentOffsetY = (getHeight() - textHeight) / 2.0f;
+        var visualTextWidth = font.width(text.toString()) * finalScale;
+        var visualTextHeight = font.lineHeight * finalScale;
 
-        var finalCaretX = getX() + caretXOffset;
-        var finalCaretY = getY() + alignmentOffsetY;
+        var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
+        var availableHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
+
+        var alignmentOffsetX = 0f;
+        var horizontalGravity = (lp.gravity >> Gravity.AXIS_X_SHIFT) & 0x7;
+        if (horizontalGravity == Gravity.AXIS_SPECIFIED) {
+            alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f;
+        } else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+            alignmentOffsetX = availableWidth - visualTextWidth;
+        }
+
+        var alignmentOffsetY = 0f;
+        var verticalGravity = (lp.gravity >> Gravity.AXIS_Y_SHIFT) & 0x7;
+        if (verticalGravity == Gravity.AXIS_SPECIFIED) {
+            alignmentOffsetY = (availableHeight - visualTextHeight) / 2.0f;
+        } else if ((verticalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+            alignmentOffsetY = availableHeight - visualTextHeight;
+        }
+
+        var finalX = lp.paddingLeft + alignmentOffsetX + caretXOffset;
+        var finalY = lp.paddingTop + alignmentOffsetY;
 
         context.pose().pushPose();
-        context.pose().translate(finalCaretX, finalCaretY, getZ() + 0.2f);
+        context.pose().translate(finalX, finalY, 0);
         {
-            var finalTextColor = ARGB.color((int) (getAbsoluteAlpha() * 255), ARGB.red(getColor()), ARGB.green(getColor()), ARGB.blue(getColor()));
-            var r = ARGB.red(finalTextColor) / 255.0f;
-            var g = ARGB.green(finalTextColor) / 255.0f;
-            var b = ARGB.blue(finalTextColor) / 255.0f;
-            var a = ARGB.alpha(finalTextColor) / 255.0f;
-
-            context.submit(new FillRectDrawCommand(0.75f, textHeight, r, g, b, a));
+            var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
+            context.submit(new FillRectDrawCommand(0.75f, visualTextHeight, 1, 1, 1, finalAlpha));
         }
         context.pose().popPose();
     }
@@ -109,27 +163,6 @@ public class TextBoxWidget extends LabelWidget {
     @Override
     public String getText() {
         return text.toString();
-    }
-
-    @Override
-    public LabelWidget setText(String text) {
-        this.text.setLength(0);
-        this.text.append(text, 0, Math.min(text.length(), maxLength));
-        super.setText(Component.literal(this.text.toString()));
-        caretPos = this.text.length();
-        updateScale();
-        return this;
-    }
-
-    @Override
-    public LabelWidget setText(Component component) {
-        var textStr = component.getString();
-        text.setLength(0);
-        text.append(textStr, 0, Math.min(textStr.length(), maxLength));
-        super.setText(component);
-        caretPos = text.length();
-        updateScale();
-        return this;
     }
 
     @Override
@@ -152,11 +185,38 @@ public class TextBoxWidget extends LabelWidget {
     protected void onMousePressed(MouseEvent event) {
         if (event.getButton() == 0 && isMouseOver(event.getX(), event.getY())) {
             var font = Minecraft.getInstance().font;
-            var localX = (float) event.getX() - getAbsoluteX() - 2;
-            var textStr = getText();
-            caretPos = font.plainSubstrByWidth(textStr, (int) (localX / getScale())).length();
+            var lp = getLayoutParams();
+            var finalScale = getScale() * globalScale;
+
+            var visualTextWidth = font.width(text.toString()) * finalScale;
+            var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
+
+            var alignmentOffsetX = 0f;
+            var horizontalGravity = (lp.gravity >> Gravity.AXIS_X_SHIFT) & 0x7;
+            if (horizontalGravity == Gravity.AXIS_SPECIFIED) {
+                alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f;
+            } else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+                alignmentOffsetX = availableWidth - visualTextWidth;
+            }
+
+            var localX = (float) event.getX() - getAbsoluteX() - lp.paddingLeft - alignmentOffsetX;
+            caretPos = font.plainSubstrByWidth(getText(), (int) (localX / finalScale)).length();
             event.consume();
         }
+    }
+
+    @Override
+    public LabelWidget setText(String text) {
+        this.text.setLength(0);
+        this.text.append(text, 0, Math.min(text.length(), maxLength));
+        caretPos = this.text.length();
+        updateTextComponent();
+        return this;
+    }
+
+    @Override
+    public LabelWidget setText(Component component) {
+        return setText(component.getString());
     }
 
     @Override
@@ -171,8 +231,7 @@ public class TextBoxWidget extends LabelWidget {
         if (inputValidator == null || inputValidator.test(potentialText)) {
             text.insert(caretPos, Character.toChars(event.getCodePoint()));
             caretPos++;
-            super.setText(text.toString());
-            updateScale();
+            updateTextComponent();
             event.consume();
         }
     }
@@ -186,16 +245,14 @@ public class TextBoxWidget extends LabelWidget {
                 if (caretPos > 0) {
                     --caretPos;
                     text.deleteCharAt(caretPos);
-                    super.setText(text.toString());
-                    updateScale();
+                    updateTextComponent();
                 }
                 yield true;
             }
             case GLFW.GLFW_KEY_DELETE -> {
                 if (caretPos < text.length()) {
                     text.deleteCharAt(caretPos);
-                    super.setText(text.toString());
-                    updateScale();
+                    updateTextComponent();
                 }
                 yield true;
             }
@@ -236,6 +293,11 @@ public class TextBoxWidget extends LabelWidget {
         }
     }
 
+    private void updateTextComponent() {
+        super.setText(Component.literal(text.toString()));
+        updateTextScale();
+    }
+
     @Override
     public void onFocusGained() {
         var event = new FocusGainedEvent(this);
@@ -258,14 +320,15 @@ public class TextBoxWidget extends LabelWidget {
         }
     }
 
-    private void updateScale() {
+    private void updateTextScale() {
         var font = Minecraft.getInstance().font;
+        var lp = getLayoutParams();
         var textWidth = font.width(text.toString());
-        var availableWidth = getWidth() - 1;
-        if (textWidth > availableWidth && textWidth > 0) {
-            setScale(availableWidth / textWidth);
+        var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight - 2;
+        if (textWidth > availableWidth && textWidth > 0 && availableWidth > 0) {
+            scale = availableWidth / textWidth;
         } else {
-            setScale(1.0f);
+            scale = 1.0f;
         }
     }
 
@@ -281,12 +344,6 @@ public class TextBoxWidget extends LabelWidget {
 
     public TextBoxWidget setBorderColor(int color) {
         borderColor = color;
-        return this;
-    }
-
-    @Override
-    public LabelWidget setColor(int color) {
-        super.setColor(color);
         return this;
     }
 

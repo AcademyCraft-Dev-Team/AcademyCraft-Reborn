@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework.event;
+package org.academy.api.client.gui.event;
 
 public enum EventType {
     /**

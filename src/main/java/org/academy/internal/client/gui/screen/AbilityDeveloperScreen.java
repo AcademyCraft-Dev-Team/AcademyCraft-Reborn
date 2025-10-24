@@ -1,52 +1,23 @@
 package org.academy.internal.client.gui.screen;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.Render;
-import org.academy.api.client.Resource;
-import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.gui.animation.Animator;
-import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.command.PosTexRectDrawCommand;
-import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.gui.framework.AbstractContainerWidget;
-import org.academy.api.client.gui.framework.CGuiScreen;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.screen.UIScreen;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.AcquireCategoryPacket;
-import org.academy.api.common.ability.LearnSkillPacket;
-import org.academy.api.common.util.MathUtil;
-import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector2f;
-import org.joml.Vector4f;
-import org.misaka.MisakaNetworkClient;
 
-import java.awt.*;
-import java.nio.ByteBuffer;
-import java.util.*;
-import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
-public final class AbilityDeveloperScreen extends CGuiScreen {
+public final class AbilityDeveloperScreen extends UIScreen {
     public final BlockPos mainPos;
     @Nullable
     public AbilityDeveloperBlockEntity abilityDeveloperBlockEntity;
@@ -63,10 +34,8 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
             ResourceLocation.fromNamespaceAndPath(abilityCategory.getKey().getNamespace(),
                     "textures/ability/" + abilityCategory.getKey().getPath() + "/icon_glow.png"
             );
-    private PanelWidget screenWirelessPanel = new PanelWidget(0, 0, 0, 0);
-    private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();
-    @Nullable
-    private AutoScaleLabelWidget wirelessNameLabel;
+/*    private PanelWidget screenWirelessPanel = new PanelWidget(0, 0, 0, 0);
+    private final SkillInfoPanel skillInfoPanel = new SkillInfoPanel();*/
 
     public AbilityDeveloperScreen(BlockPos mainPos) {
         super(Component.empty());
@@ -157,34 +126,32 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
     protected void onInit() {
         var duration = 500L;
 
-        var main = new PanelWidget((width - PANEL_MAIN_WIDTH) / 2f, (height - PANEL_MAIN_HEIGHT) / 2f, PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT);
+        var main = new FrameLayoutWidget();
         rootContainer.addChild("main", main);
         {
-            var back = new BlendQuadWidget(0, 0, main.getWidth(), main.getHeight());
+            var back = new BlendQuadWidget();
             back.setAlpha(0.5f);
             main.addChild("back", back);
 
-            var content = new PanelWidget(0, 0, main.getWidth(), main.getHeight());
+            var content = new FrameLayoutWidget();
             content.setZ(1);
             main.addChild("content", content);
             {
 
             }
 
-            playAnimation(ObjectAnimator.ofFloat(back::setX, back.getWidth() / 2, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
+//            playAnimation(ObjectAnimator.ofFloat(back::setX, back.getWidth() / 2, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
             playAnimation(ObjectAnimator.ofFloat(back::setWidth, 0, back.getWidth()).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
 
-            playAnimation(ObjectAnimator.ofFloat(back::setY, back.getHeight() / 2, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO).setStartDelay(duration));
+       //     playAnimation(ObjectAnimator.ofFloat(back::setY, back.getHeight() / 2, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO).setStartDelay(duration));
             playAnimation(ObjectAnimator.ofFloat(back::setHeight, 0, back.getHeight()).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO).setStartDelay(duration));
         }
     }
 
     @SubscribeEvent
     public void onConnectionStatusChanged(WirelessPanelUtil.ConnectionStatusChangedEvent event) {
-        if (wirelessNameLabel != null)
-            wirelessNameLabel.setText(event.nodeName);
     }
-
+/*
     private TypewriterLabelWidget setupTerminal(ScrollPanelWidget outputList) {
         var welcome = new TypewriterLabelWidget("Welcome to Academy OS, Ver 0.0.1", 0, 0);
         addOutput("welcome", welcome, outputList);
@@ -196,7 +163,7 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
         addOutput("copyright", copyright, outputList);
         var userDetected = new TypewriterLabelWidget(String.format("User %s detected, System booting...", userName), copyright.getX(), copyright.getY() + copyright.getHeight());
         addOutput("user_detected", userDetected, outputList);
-        var loadingBar = new BracketProgressBarWidget('#', 50, userDetected.getX(), userDetected.getY() + userDetected.getHeight());
+        var loadingBar = new BracketProgressBarWidget('#', 50);
         addOutput("loading_bar", loadingBar, outputList);
         var invalid = new TypewriterLabelWidget("FATAL: User's ability category is invalid, booting aborted.", loadingBar.getX(), loadingBar.getY() + loadingBar.getHeight());
         addOutput("invalid", invalid, outputList);
@@ -724,5 +691,5 @@ public final class AbilityDeveloperScreen extends CGuiScreen {
                         .putFloat(startAngle);
             }
         }
-    }
+    }*/
 }

@@ -2,8 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 
 import java.util.function.Supplier;
 
@@ -18,7 +17,6 @@ public class ProgressBarWidget extends AbstractWidget {
     protected int progressBarColor = 0xFFfcd932;
 
     public ProgressBarWidget(float x, float y, float width, float height, Supplier<Float> progressSupplier) {
-        super(x, y, width, height);
         this.progressSupplier = progressSupplier;
     }
 

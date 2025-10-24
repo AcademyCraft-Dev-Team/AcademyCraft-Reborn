@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.resources.ResourceLocation;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.academy.api.common.util.MathUtil;
 
 public class ParallaxImageWidget extends ImageWidget {
@@ -12,7 +12,7 @@ public class ParallaxImageWidget extends ImageWidget {
     protected float imageToViewRatioHeight = 0.9f;
 
     public ParallaxImageWidget(float x, float y, float width, float height, ResourceLocation texture) {
-        super(x, y, width, height, texture);
+        super(texture);
     }
 
     @Override

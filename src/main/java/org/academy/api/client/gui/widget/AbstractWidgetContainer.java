@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ARGB;
@@ -7,13 +7,13 @@ import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
-import org.academy.api.client.gui.framework.event.EventType;
-import org.academy.api.client.gui.framework.event.InputEvent;
-import org.academy.api.client.gui.framework.event.MouseEvent;
-import org.academy.api.client.gui.framework.layout.Gravity;
-import org.academy.api.client.gui.framework.layout.MeasureSpec;
-import org.academy.api.client.gui.framework.layout.SizeMode;
-import org.academy.api.client.gui.framework.render.WidgetRenderContext;
+import org.academy.api.client.gui.event.EventType;
+import org.academy.api.client.gui.event.InputEvent;
+import org.academy.api.client.gui.event.MouseEvent;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.MeasureSpec;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.academy.api.client.gui.util.GlyphCommandGenerator;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +36,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
     protected Widget gestureTarget = null;
 
     public AbstractWidgetContainer() {
-        clickable = true;
+        setClickable(true);
     }
 
     @Override

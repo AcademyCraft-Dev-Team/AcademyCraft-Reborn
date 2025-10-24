@@ -1,30 +1,22 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.framework.AbstractContainerWidget;
-import org.academy.api.client.gui.framework.Widget;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * A container that acts as a logical controller for a group of ImageRadioButtonWidgets,
- * ensuring that only one can be selected at a time.
- * This widget does NOT perform any visual layout on its children. If you need automatic
- * arrangement, add a layout container (e.g., a PanelWidget or LinearLayoutContainer)
- * as a child of this widget, and then add the buttons to that layout container.
+ * A container that acts as both a logical controller and a visual layout
+ * for a group of ImageRadioButtonWidgets, ensuring only one can be selected at a time.
+ * It inherits from LinearLayoutWidget to automatically arrange its children.
  */
-public class RadioGroupWidget extends AbstractContainerWidget {
+public class RadioGroupWidget extends LinearLayoutWidget {
     @Nullable
-    private ImageRadioButtonWidget selectedButton = null;
+    protected ImageRadioButtonWidget selectedButton = null;
     @Nullable
-    private Consumer<ImageRadioButtonWidget> onSelectionChanged = null;
-    private boolean allowReselect = false;
-    public int idCounter = 0;
-
-    public RadioGroupWidget(float x, float y, float width, float height) {
-        super(x, y, width, height);
-    }
+    protected Consumer<ImageRadioButtonWidget> onSelectionChanged = null;
+    protected boolean allowReselect = false ;
+    protected int idCounter = 0;
 
     public void selectButton(@Nullable ImageRadioButtonWidget buttonToSelect) {
         if (!allowReselect && Objects.equals(buttonToSelect, selectedButton)) {
@@ -50,7 +42,7 @@ public class RadioGroupWidget extends AbstractContainerWidget {
             selectedButton.setSelected(true);
         }
 
-        if (triggerCallback && (selectionChanged || allowReselect) && onSelectionChanged != null) {
+        if (triggerCallback && (selectionChanged || allowReselect) && onSelectionChanged != null && getSelectedButton() != null) {
             onSelectionChanged.accept(getSelectedButton());
         }
     }
@@ -60,53 +52,40 @@ public class RadioGroupWidget extends AbstractContainerWidget {
         return selectedButton;
     }
 
-    @Nullable
-    public String getSelectedButtonName() {
-        if (selectedButton == null) {
-            return null;
-        }
-        for (var entry : getChildren().entrySet()) {
-            if (entry.getValue() == selectedButton) {
-                return entry.getKey();
-            }
-        }
-        return null;
-    }
-
     @Override
     public void addChild(String name, Widget child) {
-        super.addChild(name, child);
         if (child instanceof ImageRadioButtonWidget radioButton) {
             radioButton.setRadioGroup(this);
             radioButton.setId(idCounter++);
         }
+        super.addChild(name, child);
     }
 
     @Override
     public void removeChild(String name) {
-        var removedWidget = getChildren().get(name);
+        var removedWidget = children.get(name);
         if (removedWidget == selectedButton) {
             internalSelect(null, true);
         }
 
-        super.removeChild(name);
-
         if (removedWidget instanceof ImageRadioButtonWidget removedRadio) {
             removedRadio.setRadioGroup(null);
         }
+
+        super.removeChild(name);
     }
 
     @Override
     public void clearChildren() {
-        for (var child : getChildren().values()) {
+        for (var child : children.values()) {
             if (child instanceof ImageRadioButtonWidget radioButton) {
                 radioButton.setRadioGroup(null);
             }
         }
-        super.clearChildren();
         if (selectedButton != null) {
             internalSelect(null, true);
         }
+        super.clearChildren();
     }
 
     public void setOnSelectionChanged(@Nullable Consumer<ImageRadioButtonWidget> onSelectionChanged) {

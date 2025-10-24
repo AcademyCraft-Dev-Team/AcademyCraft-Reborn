@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.app;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -10,7 +11,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.framework.AbstractContainerWidget;
-import org.academy.api.client.gui.framework.Orientation;
+import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.DataTerminalHUD;
 import org.academy.internal.client.app.mediaplayer.MediaInfo;
@@ -274,6 +275,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     }
 
     private static class GeometricButtonWidget extends AbstractButtonWidget {
+*/
 /*        private static final RenderType RENDER_TYPE = RenderType.create(
                 "geometric_button",
                 DefaultVertexFormat.POS_COLOR_QUADS,
@@ -289,7 +291,8 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                         .setDepthTestState(NO_DEPTH_TEST)
                         .setWriteMaskState(COLOR_WRITE)
                         .createCompositeState(false)
-        );*/
+        );*//*
+
 
         protected ButtonShape shape;
         protected int color = 0xFFFFFFFF;
@@ -326,4 +329,4 @@ public final class MediaPlayer implements DataTerminalHUD.App {
             buffer.addVertex(matrix, x, y, 0).setColor(r, g, b, a);
         }
     }
-}
+}*/

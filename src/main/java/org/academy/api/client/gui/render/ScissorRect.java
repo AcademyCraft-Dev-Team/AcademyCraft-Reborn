@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework.render;
+package org.academy.api.client.gui.render;
 
 import net.minecraft.util.Mth;
 import org.joml.Matrix3x2f;
