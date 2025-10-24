@@ -13,7 +13,6 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -22,20 +21,16 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
-import org.academy.api.client.Resource;
-import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.animation.Animator;
-import org.academy.api.client.gui.animation.EasingFunctions;
-import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.ScrollEvent;
-import org.academy.api.client.gui.framework.*;
+import org.academy.api.client.gui.render.UIRenderContext;
+import org.academy.api.client.gui.screen.IAnimationScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.NotNull;
@@ -49,15 +44,13 @@ import org.lwjgl.system.MemoryStack;
 import javax.annotation.Nullable;
 import java.util.*;
 
-import static org.academy.api.client.gui.framework.Orientation.HORIZONTAL;
-
 public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     public static final DataTerminalHUD INSTANCE = new DataTerminalHUD();
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = "data_terminal_hud_config_toggle";
 
     private static final UIRenderContext internalUIRenderContext = new UIRenderContext();
-    private static final AbstractContainerWidget rootContainer = new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F);
+    private static final AbstractWidgetContainer rootContainer = new FrameLayoutWidget();
     private static final List<App> APP_LIST = new ArrayList<>();
 
     private final List<Animator> screenAnimations = new ArrayList<>();
@@ -141,7 +134,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     }
 
     private static void initGui(int width, int height) {
-        rootContainer.setWidth((float) width);
+    /*    rootContainer.setWidth((float) width);
         rootContainer.setHeight((float) height);
         rootContainer.clearChildren();
 
@@ -157,9 +150,9 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         cursorWidget.setName("cursor");
         rootContainer.addChild(cursorWidget.getName(), cursorWidget);
 
-        maskDirty = true;
+        maskDirty = true;*/
     }
-
+/*
     private static Widget buildInfoBar() {
         var layout = config.layout;
         var barWidth = 150.0F * layout.scale;
@@ -220,7 +213,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
 
         linearLayout.doLayout();
         return dockPanel;
-    }
+    }*/
 
     @Override
     public void render(double mouseX, double mouseY, float partialTick) {
@@ -230,7 +223,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         commandEncoder.clearColorAndDepthTextures(uiRenderTarget.getColorTexture(), 0, uiRenderTarget.getDepthTexture(), 1);
 
-        internalUIRenderContext.renderFrame(rootContainer, uiRenderTarget, xpos, ypos, partialTick);
+      //  internalUIRenderContext.renderFrame(rootContainer, uiRenderTarget, xpos, ypos, partialTick);
         renderUIWith3DEffect();
     }
 
@@ -375,7 +368,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
 
     @SubscribeEvent
     public static void onTick(ClientTickEvent.Post event) {
-        if (active) {
+/*        if (active) {
             rootContainer.tick();
             var infoBar = (AbstractContainerWidget) rootContainer.getChildUnSafe("info_bar");
             var nameLabel = (LabelWidget) infoBar.getChildUnSafe("player_name");
@@ -383,11 +376,11 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             if (player != null) {
                 nameLabel.setText(player.getGameProfile().name());
             }
-        }
+        }*/
     }
 
     public static void toggle() {
-        ClientUtil.playDownSound();
+       /* ClientUtil.playDownSound();
         if (Minecraft.getInstance().screen != null) {
             active = false;
         } else {
@@ -407,11 +400,11 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
             INSTANCE.playEntranceAnimation(rootContainer.getChildUnSafe("info_bar"), AnimationDirection.FROM_RIGHT);
             INSTANCE.playEntranceAnimation(rootContainer.getChildUnSafe("app_dock"), AnimationDirection.FROM_BOTTOM);
-        }
+        }*/
     }
 
     private void playEntranceAnimation(Widget widget, AnimationDirection direction) {
-        var finalX = widget.getX();
+    /*    var finalX = widget.getX();
         var finalY = widget.getY();
         var offset = 20.0F;
 
@@ -423,7 +416,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         playAnimation(ObjectAnimator.ofFloat(widget::setAlpha, 0.0F, 1.0F).setDuration(300L));
         var posAnimator = direction == AnimationDirection.FROM_RIGHT ? ObjectAnimator.ofFloat(widget::setX, widget.getX(), finalX) : ObjectAnimator.ofFloat(widget::setY, widget.getY(), finalY);
         posAnimator.setDuration(300L).setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
-        playAnimation(posAnimator);
+        playAnimation(posAnimator);*/
     }
 
     public static void registerApp(App app) {
@@ -431,7 +424,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     }
 
     public static void openAppInWindow(App app) {
-        var contentWidget = app.getContainer();
+       /* var contentWidget = app.getContainer();
         var title = app.getName();
         rootContainer.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
         app.onClick().run();
@@ -473,7 +466,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         INSTANCE.playAnimation(ObjectAnimator.ofFloat(windowFrame::setAlpha, 0.0F, 1.0F).setDuration(200L));
         INSTANCE.playAnimation(ObjectAnimator.ofFloat(windowFrame::setY, windowFrame.getY(), (rootContainer.getHeight() - windowHeight) / 2.0F).setDuration(200L).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
 
-        maskDirty = true;
+        maskDirty = true;*/
     }
 
     @SubscribeEvent
@@ -618,7 +611,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
 
         Runnable onClose();
 
-        AbstractContainerWidget getContainer();
+        AbstractWidgetContainer getContainer();
     }
 
     public static class DataTerminalConfig extends KeyBindingConfig {
@@ -655,6 +648,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             }
         }
     }
+/*
 
     private static class AppWidget extends PanelWidget {
         private static final float BASE_ICON_SIZE = 22.0F;
@@ -722,6 +716,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             super.render(context, mouseX, mouseY, partialTick);
         }
     }
+*/
 
     private static class TransformUniforms {
         public static final int UBO_SIZE = new Std140SizeCalculator().putMat4f().get();

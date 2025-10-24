@@ -1,4 +1,6 @@
 package org.academy.api.client.vanilla;
 
-public class RenderLoopEvent {
+import net.neoforged.bus.api.Event;
+
+public final class RenderLoopEvent extends Event {
 }

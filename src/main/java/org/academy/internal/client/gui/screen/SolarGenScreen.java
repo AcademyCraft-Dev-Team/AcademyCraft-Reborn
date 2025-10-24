@@ -7,22 +7,29 @@ import net.minecraft.world.entity.player.Inventory;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.framework.CGuiContainerScreen;
+import org.academy.api.client.gui.screen.ContainerUIScreen;
+import org.academy.api.client.gui.layout.Orientation;
+import org.academy.api.client.gui.widget.WidgetContainer;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
-import org.academy.api.client.gui.widget.ImageRadioButtonWidget;
-import org.academy.api.client.gui.widget.ImageWidget;
-import org.academy.api.client.gui.widget.PanelWidget;
-import org.academy.api.client.gui.widget.RadioGroupWidget;
+import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ScreenAnimationUtil;
 import org.academy.internal.common.world.inventory.SolarGenMenu;
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
-public final class SolarGenScreen extends CGuiContainerScreen<SolarGenMenu> {
-    private final BlockPos mainPos;
+import java.util.function.Consumer;
 
-    public SolarGenScreen(SolarGenMenu menu, Inventory playerInventory, Component title, SolarGenBlockEntity blockEntity) {
+public final class SolarGenScreen extends ContainerUIScreen<SolarGenMenu> {
+    private final BlockPos mainPos;
+    private final SolarGenBlockEntity blockEntity;
+    private Consumer<SolarGenBlockEntity.State> stateConsumer = state -> {
+    };
+
+    private SolarGenScreen(SolarGenMenu menu, Inventory playerInventory, Component title, SolarGenBlockEntity blockEntity) {
         super(menu, playerInventory, title);
+        this.blockEntity = blockEntity;
         mainPos = blockEntity.getBlockPos();
     }
 
@@ -36,52 +43,88 @@ public final class SolarGenScreen extends CGuiContainerScreen<SolarGenMenu> {
     }
 
     @Override
-    protected void onInit(PanelWidget main, PanelWidget invContent) {
-        var startYOffset = 20f;
+    protected void onInit(RadioGroupWidget pageButtons, ImageRadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage) {
         var duration = 600L;
         var childDuration = duration - 100;
 
-        var ui = new ImageWidget(0, 0, invContent.getWidth(), invContent.getHeight(), Resource.Textures.UI_GEN);
-        invContent.addChild("ui", ui);
+        var ui = new ImageWidget(Resource.Textures.UI_GEN);
+        ui.setLayoutParams(
+                new FrameLayoutWidget.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT)
+        );
+        invPage.addChild("ui", ui);
 
-        var wirelessPanel = WirelessPanelUtil.create(leftPos, topPos - 22, mainPos, true);
-        wirelessPanel.setZ(1);
-        wirelessPanel.setEnabled(false);
-        wirelessPanel.setVisible(false);
-        rootContainer.addChild("panel_wireless", wirelessPanel);
+        var effect = new SpriteSheetWidget(
+                Resource.Textures.ICON_SOLAR_GEN_SUNNY,
+                Orientation.VERTICAL,
+                48, 96,
+                48, 48,
+                2
+        ) {
+            private int ticks;
 
-        var radioGroupWidget = new RadioGroupWidget(leftPos - 16.8f, topPos - 22, 24, 48);
-        rootContainer.addChild("radio_group", radioGroupWidget);
-        {
-            var inv = new ImageRadioButtonWidget(0, 0, 16.8f, 16.8f,
-                    Resource.Textures.ICON_INV, () -> {
-            });
-            radioGroupWidget.addChild("inv", inv);
+            @Override
+            public void tick() {
+                ticks++;
+                if (ticks == 10){
+                    nextFrame();
+                    ticks = 0;
+                }
+            }
+        };
+        stateConsumer = state -> {
+            switch (state) {
+                case SUNNY -> effect.setTexture(Resource.Textures.ICON_SOLAR_GEN_SUNNY);
+                case RAINY -> effect.setTexture(Resource.Textures.ICON_SOLAR_GEN_RAINY);
+                case NIGHT -> effect.setTexture(Resource.Textures.ICON_SOLAR_GEN_NIGHT);
+            }
+        };
+        effect.setLayoutParams(
+                new FrameLayoutWidget.LayoutParams()
+                        .heightMode(SizeMode.MATCH_PARENT)
+                        .width(48)
+                        .gravity(Gravity.CENTER_HORIZONTAL)
+                        .padding(0, 21, 0, 118)
+        );
+        invPage.addChild("effect", effect);
 
-            var wireless = new ImageRadioButtonWidget(0, 22, 16.8f, 16.8f,
-                    Resource.Textures.ICON_WIRELESS, () -> {
-            });
-            radioGroupWidget.addChild("wireless", wireless);
+        var wirelessPage = WirelessPanelUtil.create(mainPos, true);
+        wirelessPage.setVisible(false);
+        wirelessPage.setEnabled(false);
+        content.addChild("page_wireless", wirelessPage);
 
-            radioGroupWidget.selectButton(inv);
-        }
-        radioGroupWidget.setOnSelectionChanged(imageRadioButtonWidget -> {
-            var showInv = imageRadioButtonWidget.getId() == 0;
-            var topY = topPos - 22;
-
-            if (showInv) {
-                setRenderInventory(true);
-                ScreenAnimationUtil.show(this, main, topY);
-                ScreenAnimationUtil.hide(this, wirelessPanel, topY);
-            } else {
-                setRenderInventory(false);
-                ScreenAnimationUtil.show(this, wirelessPanel, topY);
-                ScreenAnimationUtil.hide(this, main, topY);
+        var wirelessButton = new ImageRadioButtonWidget(Resource.Textures.ICON_WIRELESS);
+        wirelessButton.setLayoutParams(
+                new WidgetContainer.LayoutParams()
+                        .widthMode(SizeMode.WRAP_CONTENT)
+                        .height(16)
+        );
+        pageButtons.addChild("wireless", wirelessButton);
+        pageButtons.setOnSelectionChanged(button -> {
+            switch (button.getName()) {
+                case "inv":
+                    ScreenAnimationUtil.hide(this, wirelessPage);
+                    ScreenAnimationUtil.show(this, invPage);
+                    setHandleContainer(true);
+                    setRenderInventory(true);
+                    break;
+                case "wireless":
+                    ScreenAnimationUtil.hide(this, invPage);
+                    ScreenAnimationUtil.show(this, wirelessPage);
+                    setHandleContainer(false);
+                    setRenderInventory(false);
+                    break;
             }
         });
+        pageButtons.selectButton(invButton);
 
-        var radioFinalY = radioGroupWidget.getY();
-        playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setY, radioFinalY + startYOffset, radioFinalY).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
-        playAnimation(ObjectAnimator.ofFloat(radioGroupWidget::setAlpha, 0f, 1f).setDuration(childDuration).setInterpolator(EasingFunctions.LINEAR));
+        playAnimation(ObjectAnimator.ofFloat(pageButtons::setAlpha, 0f, 1f).setDuration(childDuration));
+        playAnimation(ObjectAnimator.ofFloat(pageButtons::setTranslationY, 20, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        stateConsumer.accept(blockEntity.getState());
     }
 }

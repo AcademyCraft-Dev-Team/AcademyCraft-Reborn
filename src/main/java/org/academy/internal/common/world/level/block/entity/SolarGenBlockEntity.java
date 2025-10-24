@@ -35,6 +35,8 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
     private static final int MAX_ENERGY_STORAGE = 100_000;
     private static final int GENERATION_RATE = 50;
 
+    private State state = State.SUNNY;
+
     public SolarGenBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.SOLAR_GEN.get(), pos, blockState);
     }
@@ -51,6 +53,16 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         blockEntity.foldingState.animateWhen(!hasBrightness, blockEntity.ticks);
         blockEntity.unfoldingState.animateWhen(hasBrightness, blockEntity.ticks);
         blockEntity.setEnergyStored(blockEntity.energyStored + brightness * GENERATION_RATE);
+
+        if (level.isRainingAt(pos) || level.isRainingAt(pos.above())) {
+            blockEntity.state = State.RAINY;
+        } else {
+            if (hasBrightness) {
+                blockEntity.state = State.SUNNY;
+            } else {
+                blockEntity.state = State.NIGHT;
+            }
+        }
     }
 
     @Override
@@ -182,5 +194,13 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
     @Override
     public void clearContent() {
         items.clear();
+    }
+
+    public State getState() {
+        return state;
+    }
+
+    public enum State {
+        NIGHT, RAINY, SUNNY
     }
 }

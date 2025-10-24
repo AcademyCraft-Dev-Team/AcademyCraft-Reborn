@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class CGuiScreen extends Screen implements IUIScreen, IAnimationScreen {
+public abstract class UIScreen extends Screen implements IUIScreen, IAnimationScreen {
     protected final FrameLayoutWidget rootContainer = new FrameLayoutWidget();
     private final List<Animator> screenAnimations = new ArrayList<>();
     private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
@@ -31,7 +31,7 @@ public abstract class CGuiScreen extends Screen implements IUIScreen, IAnimation
     @Nullable
     private RenderTarget renderTarget;
 
-    protected CGuiScreen(Component title) {
+    protected UIScreen(Component title) {
         super(title);
     }
 

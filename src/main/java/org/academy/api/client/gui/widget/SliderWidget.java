@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.framework.Orientation;
+import org.academy.api.client.gui.layout.Orientation;
 
 public class SliderWidget extends AbstractSliderWidget {
 

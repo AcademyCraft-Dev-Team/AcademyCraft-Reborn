@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework.render;
+package org.academy.api.client.gui.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.DynamicUniformStorage;

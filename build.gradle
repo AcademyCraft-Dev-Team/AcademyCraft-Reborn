@@ -88,7 +88,7 @@ neoForge {
 repositories {
     maven {
         name = "AC Dev Team's maven"
-        // url = uri('D:/Project/maven-repo')
+        //  url = uri('D:/Project/maven-repo')
         url = "https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/"
         content {
             includeGroup "org.academy"
@@ -116,6 +116,13 @@ repositories {
         }
     }
     maven {
+        name = "Curse"
+        url = "https://cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+    maven {
         name = "KosmX's maven"
         url = "https://maven.kosmx.dev/"
         content {
@@ -137,11 +144,13 @@ dependencies {
     compileOnly "mezz.jei:jei-1.21.10-neoforge-api:${jei_version}"
     implementation "mezz.jei:jei-1.21.10-neoforge:${jei_version}"
 
+    implementation "maven.modrinth:better-modlist:2.0.0-beta.8"
     implementation "maven.modrinth:jade:20.0.5+neoforge"
     compileOnly "maven.modrinth:sodium:mc1.21.8-0.7.0-neoforge"
     compileOnly "maven.modrinth:iris:1.9.2+1.21.8-neoforge"
     compileOnly "maven.modrinth:sodium-extra:mc1.21.8-0.7.0+neoforge"
     implementation "maven.modrinth:lithium:mc1.21.10-0.20.0-neoforge"
+    implementation "curse.maven:configured-457570:7090441"
 
     def imguiBinding = "io.github.spair:imgui-java-binding:${project.imgui_version}"
     def imguiLwjgl3 = "io.github.spair:imgui-java-lwjgl3:${project.imgui_version}"

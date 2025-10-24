@@ -2,15 +2,15 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
-import org.academy.api.client.gui.framework.Orientation;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.layout.Orientation;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.academy.api.common.util.MathUtil;
 
 public class ScrollBarWidget extends DragBarWidget {
     protected final ScrollPanelWidget panel;
 
-    public ScrollBarWidget(ScrollPanelWidget panel, float x, float y, float width, float height, Orientation orientation) {
-        super(x, y, width, height, orientation);
+    public ScrollBarWidget(ScrollPanelWidget panel, Orientation orientation) {
+        super(orientation);
         this.panel = panel;
     }
 
@@ -21,7 +21,6 @@ public class ScrollBarWidget extends DragBarWidget {
         var finalAlpha = getAbsoluteAlpha() * context.getAccumulatedAlpha();
 
         context.pose().pushPose();
-        context.pose().translate(getX(), getY(), getZ());
 
         if (showBackground) renderTrack(context, finalAlpha);
 

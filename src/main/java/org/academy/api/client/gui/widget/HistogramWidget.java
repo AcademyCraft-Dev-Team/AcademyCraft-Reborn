@@ -4,47 +4,62 @@ import net.minecraft.client.Minecraft;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.layout.MeasureSpec;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class HistogramWidget extends AbstractWidget {
+    private static final float DEFAULT_INTRINSIC_SIZE = 84.0f;
+
     protected boolean renderBack = true;
     private final List<Value> values;
 
-    public HistogramWidget(float x, float y, float width, float height, List<Value> initialValues) {
-        super(x, y, width, height);
+    public HistogramWidget(List<Value> initialValues) {
         values = new ArrayList<>(initialValues);
     }
 
-    public HistogramWidget(float x, float y, float width, float height) {
-        this(x, y, width, height, Collections.emptyList());
+    public HistogramWidget() {
+        this(Collections.emptyList());
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {if (!isVisible())
-            return;
+    protected void onMeasure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
+        var lp = getLayoutParams();
+        var desiredWidth = DEFAULT_INTRINSIC_SIZE + lp.paddingLeft + lp.paddingRight;
+        var desiredHeight = DEFAULT_INTRINSIC_SIZE + lp.paddingTop + lp.paddingBottom;
+
+        setMeasuredDimension(
+                resolveSize(desiredWidth, widthMeasureSpec),
+                resolveSize(desiredHeight, heightMeasureSpec)
+        );
+    }
+
+    @Override
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (!isVisible()) return;
 
         context.pose().pushPose();
+        context.drawOrder().push();
         {
-            context.pose().translate(getX(), getY(), getZ());
-
             var accumulatedAlpha = context.getAccumulatedAlpha() * getAlpha();
 
             if (renderBack) renderBackground(context, accumulatedAlpha);
 
+            context.drawOrder().advance();
             renderBars(context, accumulatedAlpha);
         }
+        context.drawOrder().pop();
         context.pose().popPose();
     }
+
 
     private void renderBackground(WidgetRenderContext context, float finalAlpha) {
         context.pose().pushPose();
         {
-            context.pose().translate(5.0f, -15.0f, 0.0f);
+            context.pose().translate(5.0f, 0, 0.0f);
 
             var textureManager = Minecraft.getInstance().getTextureManager();
             var texture = textureManager.getTexture(Resource.Textures.HISTOGRAM).getTextureView();
@@ -64,7 +79,7 @@ public class HistogramWidget extends AbstractWidget {
             var barWidth = right - left;
             var barHeight = value.height;
 
-            var bottom = getHeight() - 20.0f;
+            var bottom = getHeight() - 5;
             var top = bottom - barHeight;
 
             context.pose().pushPose();

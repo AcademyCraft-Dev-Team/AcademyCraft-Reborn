@@ -4,11 +4,6 @@ import net.minecraft.resources.ResourceLocation;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * A specialized ImageButton that can be part of a RadioGroup. Only one button
- * within a group can be selected at a time. Its visual appearance (alpha)
- * changes based on its selection, hover, and enabled states.
- */
 public class ImageRadioButtonWidget extends ImageButtonWidget {
     protected boolean selected = false;
     @Nullable
@@ -20,9 +15,13 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
     protected float disabledAlpha = 0.5f;
     protected int id = -1;
 
-    public ImageRadioButtonWidget(float x, float y, float width, float height,
-                                  ResourceLocation texture, Runnable onPress) {
-        super(x, y, width, height, texture, onPress);
+    public ImageRadioButtonWidget(ResourceLocation texture) {
+        this(texture, () -> {
+        });
+    }
+
+    public ImageRadioButtonWidget(ResourceLocation texture, Runnable onPress) {
+        super(texture, onPress);
         updateVisualState();
     }
 
@@ -82,10 +81,6 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
         return this;
     }
 
-    /**
-     * Updates the widget's alpha based on its current state hierarchy:
-     * disabled -> hovered -> selected -> unselected.
-     */
     public void updateVisualState() {
         if (!isEnabled()) {
             setAlpha(disabledAlpha);

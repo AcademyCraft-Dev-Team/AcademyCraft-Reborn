@@ -12,7 +12,7 @@ public class TypewriterLabelWidget extends AbstractAnimatedLabelWidget {
     }
 
     public TypewriterLabelWidget(Component targetComponent, float x, float y) {
-        super(targetComponent, x, y);
+        super(targetComponent);
     }
 
     @Override

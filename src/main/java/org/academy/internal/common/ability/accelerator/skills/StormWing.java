@@ -29,7 +29,6 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -38,7 +37,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -93,7 +95,7 @@ public final class StormWing extends Skill {
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
             var mc = Minecraft.getInstance();
-            if (mc.player != null && mc.screen == null && mc.player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())) {
+            if (mc.level != null && mc.player != null && mc.player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())) {
                 var keyStates = InputSystem.KEYBOARD_STATE;
 
                 var front = keyStates.getOrDefault(GLFW_KEY_W, GLFW_RELEASE) != GLFW_RELEASE;

@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework.imgui;
+package org.academy.api.client.gui.imgui;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import imgui.ImGui;
@@ -9,11 +9,10 @@ import imgui.type.ImBoolean;
 import imgui.type.ImInt;
 import imgui.type.ImString;
 import net.minecraft.util.ARGB;
-import org.academy.api.client.gui.framework.Widget;
-import org.academy.api.client.gui.framework.WidgetContainer;
-import org.academy.api.client.gui.framework.layout.Gravity;
-import org.academy.api.client.gui.framework.layout.SizeMode;
-import org.academy.api.client.gui.imgui.ImGuiUtilApi;
+import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.client.gui.widget.WidgetContainer;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.FillWidget;
 import org.academy.api.client.gui.widget.LabelWidget;
 import org.academy.api.client.gui.widget.LinearLayoutWidget;

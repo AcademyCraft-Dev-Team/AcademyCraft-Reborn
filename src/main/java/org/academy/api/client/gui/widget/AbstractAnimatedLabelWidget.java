@@ -19,12 +19,12 @@ public abstract class AbstractAnimatedLabelWidget extends LabelWidget {
     @Nullable
     private TimeInterpolator interpolator;
 
-    public AbstractAnimatedLabelWidget(String initialText, float x, float y) {
-        this(Component.literal(initialText), x, y);
+    public AbstractAnimatedLabelWidget(String initialText) {
+        this(Component.literal(initialText));
     }
 
-    public AbstractAnimatedLabelWidget(Component initialText, float x, float y) {
-        super(Component.empty(), x, y);
+    public AbstractAnimatedLabelWidget(Component initialText) {
+        super(Component.empty());
         targetComponent = initialText;
     }
 
@@ -58,7 +58,10 @@ public abstract class AbstractAnimatedLabelWidget extends LabelWidget {
     }
 
     protected final void setAnimationProgressText(Component component) {
-        this.component = component;
+        if (!this.component.equals(component)) {
+            this.component = component;
+            requestLayout();
+        }
     }
 
     public void skipToEnd() {

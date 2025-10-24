@@ -50,7 +50,11 @@ public final class Screens {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menu = MenuTypes.NODE.get().create(containerId, inventory);
                         Minecraft.getInstance().player.containerMenu = menu;
-                        Minecraft.getInstance().setScreen(new WirelessNodeScreen(menu, inventory, Component.literal(title), pos));
+                        var screen = WirelessNodeScreen.create(menu, inventory, Component.literal(title), pos);
+                        if (screen != null && Minecraft.getInstance().player != null) {
+                            Minecraft.getInstance().player.containerMenu = menu;
+                        }
+                        Minecraft.getInstance().setScreen(screen);
                     }
                 });
         SCREEN_HANDLERS.put(OmniCraftingTableBlock.OMNI_CRAFTING_TABLE_SCREEN,
@@ -74,11 +78,11 @@ public final class Screens {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menuType = MenuTypes.SOLAR_GEN.get();
                         var windGenMenu = menuType.create(containerId, inventory);
-                        var windGenScreen = SolarGenScreen.create(windGenMenu, inventory, Component.literal(title), pos);
-                        if (windGenScreen != null && Minecraft.getInstance().player != null) {
+                        var screen = SolarGenScreen.create(windGenMenu, inventory, Component.literal(title), pos);
+                        if (screen != null && Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.containerMenu = windGenMenu;
                         }
-                        Minecraft.getInstance().setScreen(windGenScreen);
+                        Minecraft.getInstance().setScreen(screen);
                     }
                 });
     }

@@ -1,4 +1,6 @@
 package org.academy.api.client.vanilla;
 
-public class MainLoopEvent {
+import net.neoforged.bus.api.Event;
+
+public final class MainLoopEvent extends Event {
 }

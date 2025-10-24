@@ -1,13 +1,8 @@
 package org.academy.api.client.hud.terminal;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.Animator;
-import org.academy.api.client.gui.animation.EasingFunctions;
-import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.framework.*;
-import org.academy.api.client.gui.util.GlyphCommandGenerator;
+import org.academy.api.client.gui.screen.IAnimationScreen;
 import org.academy.api.client.gui.widget.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class UIManager implements IAnimationScreen, AutoCloseable {
-    private final AbstractContainerWidget rootContainer;
+    private final AbstractWidgetContainer rootContainer;
     private final Config config;
 
     private final List<Animator> screenAnimations = new ArrayList<>();
@@ -25,13 +20,13 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
 
     public UIManager(Config config) {
         this.config = config;
-        rootContainer = new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F);
+        rootContainer = new FrameLayoutWidget();
         var window = Minecraft.getInstance().getWindow();
         initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
     }
 
     public void initGui(int width, int height) {
-        rootContainer.setWidth(width);
+     /*   rootContainer.setWidth(width);
         rootContainer.setHeight(height);
         rootContainer.clearChildren();
 
@@ -55,8 +50,9 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         var dockFinalY = dock.getY();
         dock.setY(rootContainer.getHeight());
         playAnimation(ObjectAnimator.ofFloat(dock::setY, dock.getY(), dockFinalY).setDuration(400L).setInterpolator(EasingFunctions.EASE_OUT_BACK));
-        playAnimation(ObjectAnimator.ofFloat(dock::setAlpha, 0.0F, 1.0F).setDuration(400L));
+        playAnimation(ObjectAnimator.ofFloat(dock::setAlpha, 0.0F, 1.0F).setDuration(400L));*/
     }
+/*
 
     private PanelWidget buildDockBar(int width, int height) {
         var barWidth = 196;
@@ -143,6 +139,8 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
 
         return menuBar;
     }
+*/
+/*
 
     public void openAppInWindow(App app) {
         var oldWindow = rootContainer.getChildren().get("app_window");
@@ -203,6 +201,7 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         playAnimation(ObjectAnimator.ofFloat(windowFrame::setAlpha, 0.0F, 1.0F).setDuration(200L));
         playAnimation(ObjectAnimator.ofFloat(windowFrame::setY, windowFrame.getY(), windowY).setDuration(200L).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
     }
+*/
 
     public void tick() {
         rootContainer.tick();
@@ -213,7 +212,7 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
     }
 
-    public AbstractContainerWidget getRootContainer() {
+    public AbstractWidgetContainer getRootContainer() {
         return rootContainer;
     }
 

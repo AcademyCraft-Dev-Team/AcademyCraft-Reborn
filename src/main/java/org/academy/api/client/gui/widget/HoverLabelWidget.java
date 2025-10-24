@@ -2,27 +2,50 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 
 public class HoverLabelWidget extends LabelWidget {
     private static final String ELLIPSIS = "...";
 
     private final Component originalComponent;
-    private final Component truncatedComponent;
-    private final float maxWidth;
     private float baseScale = 1.0f;
 
-    public HoverLabelWidget(String text, float x, float y, float maxWidth) {
-        super(Component.empty(), x, y, maxWidth, Minecraft.getInstance().font.lineHeight);
-        originalComponent = Component.literal(text);
-        this.maxWidth = maxWidth;
-        truncatedComponent = truncate(originalComponent, maxWidth);
-        setText(truncatedComponent);
-        setVerticalAlignment(VerticalAlignment.MIDDLE);
+    public HoverLabelWidget(String text) {
+        this(Component.literal(text));
+    }
+
+    public HoverLabelWidget(Component component) {
+        super(component);
+        originalComponent = component;
+    }
+
+    @Override
+    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (isHovered()) {
+            component = originalComponent;
+            updateScaleForHover();
+        } else {
+            component = truncate(originalComponent, getWidth());
+            scale = baseScale;
+        }
+        super.render(context, mouseX, mouseY, partialTick);
+    }
+
+    private void updateScaleForHover() {
+        var font = Minecraft.getInstance().font;
+        var textWidth = font.width(originalComponent);
+        var availableWidth = getWidth();
+
+        if (textWidth > availableWidth && availableWidth > 0) {
+            scale = availableWidth / (float) textWidth;
+        } else {
+            scale = 1.0f;
+        }
     }
 
     private static Component truncate(Component source, float maxWidth) {
         var font = Minecraft.getInstance().font;
-        if (font.width(source) <= maxWidth) {
+        if (maxWidth <= 0 || font.width(source) <= maxWidth) {
             return source;
         }
         var originalText = source.getString();
@@ -31,40 +54,18 @@ public class HoverLabelWidget extends LabelWidget {
         return Component.literal(trimmedText + ELLIPSIS);
     }
 
-    @Override
-    public void setHovered(boolean hovered) {
-        if (isHovered() == hovered) {
-            return;
-        }
-        super.setHovered(hovered);
-
-        if (hovered) {
-            setText(originalComponent);
-
-            var font = Minecraft.getInstance().font;
-            var textWidth = font.width(originalComponent);
-
-            if (textWidth > maxWidth) {
-                setScale(maxWidth / (float) textWidth);
-            } else {
-                setScale(1.0f);
-            }
-        } else {
-            setText(truncatedComponent);
-            setScale(baseScale);
-        }
-    }
-
     public HoverLabelWidget setBaseScale(float scale) {
         baseScale = scale;
-        if (!isHovered()) {
-            setScale(scale);
-        }
         return this;
     }
 
     @Override
     public final LabelWidget setText(String text) {
+        throw new UnsupportedOperationException("Cannot set text directly on a HoverLabelWidget.");
+    }
+
+    @Override
+    public final LabelWidget setText(Component component) {
         throw new UnsupportedOperationException("Cannot set text directly on a HoverLabelWidget.");
     }
 }

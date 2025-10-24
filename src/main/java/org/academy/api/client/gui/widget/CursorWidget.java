@@ -7,8 +7,7 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.Render;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.WidgetRenderContext;
+import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.joml.Vector4f;
 
 import java.nio.ByteBuffer;
@@ -20,7 +19,6 @@ public class CursorWidget extends AbstractWidget {
     public float softness = 0.75f;
 
     public CursorWidget(float size) {
-        super(0, 0, size, size);
     }
 
     @Override

@@ -1,18 +1,15 @@
 package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.gui.framework.AbstractWidget;
-import org.academy.api.client.gui.framework.MouseButtonState;
 import org.academy.api.client.util.ClientUtil;
 
 public abstract class AbstractButtonWidget extends AbstractWidget {
-    public Runnable onPress;
-    public MouseButtonState state = MouseButtonState.PRESSED;
+    protected Runnable onPress;
+    protected MouseButtonState state = MouseButtonState.PRESSED;
 
-    public AbstractButtonWidget(float x, float y, float width, float height, Runnable onPress) {
-        super(x, y, width, height);
+    public AbstractButtonWidget(Runnable onPress) {
         this.onPress = onPress;
-        clickable = true;
+        setClickable(true);
     }
 
     @Override
@@ -42,5 +39,14 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
     @Override
     public boolean canFocus() {
         return isAbsoluteEnabled();
+    }
+
+    public void setOnPress(Runnable onPress) {
+        this.onPress = onPress;
+    }
+
+    public enum MouseButtonState {
+        PRESSED,
+        RELEASED
     }
 }
