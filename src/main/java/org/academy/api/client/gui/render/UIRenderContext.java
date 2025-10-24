@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.framework;
+package org.academy.api.client.gui.framework.render;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.client.renderer.MappableRingBuffer;
+import org.academy.api.client.gui.framework.Widget;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
@@ -43,13 +44,16 @@ public final class UIRenderContext {
         WINDOW,
         CUSTOM
     }
-
     public UIRenderContext() {
+        this(3000);
+    }
+
+    public UIRenderContext(float layered) {
         sharedByteBufferBuilder = new ByteBufferBuilder(DEFAULT_BUFFER_CAPACITY);
         vertexBuffers = new HashMap<>();
         batchProcessor = new BatchProcessor(sharedByteBufferBuilder);
         commandExecutor = new CommandExecutor(vertexBuffers);
-        projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("AC_GUI", -3000.0F, 0.0F, true);
+        projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("AC_GUI", -layered, 0.0F, true);
         dynamicUniformStorages = new HashMap<>();
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
@@ -84,6 +88,29 @@ public final class UIRenderContext {
         return customScale;
     }
 
+    private float calculateDepthEpsilon(RenderTarget target) {
+        var depthTexture = target.getDepthTexture();
+        if (depthTexture == null) {
+            return 0;
+        }
+
+        var format = depthTexture.getFormat();
+        if (!format.hasDepthAspect()) {
+            return 0;
+        }
+        var depthBits = switch (format) {
+            case DEPTH32, DEPTH32_STENCIL8 -> 32;
+            case DEPTH24_STENCIL8 -> 24;
+            default -> 0;
+        };
+
+        if (depthBits == 0) {
+            return 0;
+        }
+
+        return 1f / ((1L << depthBits) - 1);
+    }
+
     public void renderFrame(Widget rootWidget, RenderTarget target, double mouseX, double mouseY, float partialTick) {
         if (isClosed()) {
             LOGGER.warn("UIRenderContext has been closed!");
@@ -93,14 +120,22 @@ public final class UIRenderContext {
         prepareForNewFrame();
 
         var context = new WidgetRenderContext(this::getOrCreateUbo);
-        rootWidget.render(context, mouseX, mouseY, partialTick);
+        context.pose().pushPose();
+        {
+            context.pose().translate(rootWidget.getX(), rootWidget.getY(), rootWidget.getZ());
+            context.pose().translate(rootWidget.getTranslationX(), rootWidget.getTranslationY(), 0);
+
+            rootWidget.render(context, mouseX, mouseY, partialTick);
+        }
+        context.pose().popPose();
         var submittedCommands = context.getCommands();
 
         if (submittedCommands.isEmpty())
             return;
 
         var mutableCommands = new ArrayList<>(submittedCommands);
-        var meshesToDraw = batchProcessor.process(mutableCommands);
+        var depthEpsilon = calculateDepthEpsilon(target);
+        var meshesToDraw = batchProcessor.process(mutableCommands, depthEpsilon);
 
         var effectiveScale = getEffectiveScale();
         var window = Minecraft.getInstance().getWindow();
