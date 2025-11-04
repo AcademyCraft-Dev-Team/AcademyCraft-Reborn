@@ -6,7 +6,6 @@ import net.minecraft.core.RegistrySetBuilder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
@@ -17,8 +16,6 @@ import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.common.world.BiomeModifiers;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.world.level.levelgen.feature.Features;
-import org.academy.internal.common.world.level.levelgen.feature.ImagiphaseLakeFeature;
 
 import java.util.List;
 import java.util.Set;
@@ -32,7 +29,7 @@ public final class AcademyCraftDatapackProvider extends DatapackBuiltinEntriesPr
             AcademyCraft.academy("imag_phase_lake_modifier")
     );
     public static final RegistrySetBuilder BUILDER = new RegistrySetBuilder()
-            .add(Registries.CONFIGURED_FEATURE, context -> context.register(
+/*            .add(Registries.CONFIGURED_FEATURE, context -> context.register(
                     IMAG_PHASE_LAKE,
                     new ConfiguredFeature<>(
                             Features.IMAG_PHASE_LAKE.get(),
@@ -41,7 +38,7 @@ public final class AcademyCraftDatapackProvider extends DatapackBuiltinEntriesPr
                                     UniformInt.of(5, 10)
                             )
                     )
-            ))
+            ))*/
             .add(Registries.PLACED_FEATURE, context ->
                     context.register(
                             IMAG_PHASE_LAKE_PLACE,

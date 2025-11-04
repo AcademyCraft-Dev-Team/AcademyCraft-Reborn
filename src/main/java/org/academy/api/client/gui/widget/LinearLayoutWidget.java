@@ -373,13 +373,12 @@ public class LinearLayoutWidget extends AbstractWidgetContainer {
         public float weight = 0;
 
         public LayoutParams() {
-            super();
         }
 
         public LayoutParams(AbstractWidgetContainer.LayoutParams source) {
             super(source);
             if (source instanceof LayoutParams linearLp) {
-                this.weight = linearLp.weight;
+                weight = linearLp.weight;
             }
         }
 

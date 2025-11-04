@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.level.block;
 
 import net.minecraft.core.BlockPos;
@@ -39,4 +40,4 @@ public final class ImagiphasePlasma extends LiquidBlock {
     public ItemStack pickupBlock(@Nullable LivingEntity livingEntity, LevelAccessor levelAccessor, BlockPos pos, BlockState blockState) {
         return ItemStack.EMPTY;
     }
-}
+}*/

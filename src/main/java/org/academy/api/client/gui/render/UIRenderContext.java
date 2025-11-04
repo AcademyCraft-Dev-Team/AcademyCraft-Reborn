@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.MappableRingBuffer;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.widget.WidgetContainer;
+import org.academy.api.common.util.UncheckedUtil;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
@@ -157,12 +158,11 @@ public final class UIRenderContext {
         commandExecutor.execute(meshesToDraw, target, projectionBufferSlice, dynamicTransformsUbo, effectiveScale);
     }
 
-    @SuppressWarnings("unchecked")
     private <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreateUbo(Class<T> uboClass, int size) {
-        return (DynamicUniformStorage<T>) dynamicUniformStorages.computeIfAbsent(
+        return UncheckedUtil.uncheckedCast(dynamicUniformStorages.computeIfAbsent(
                 uboClass,
                 k -> new DynamicUniformStorage<>(uboClass.getSimpleName() + "_UBO", size, 2)
-        );
+        ));
     }
 
     public void close() {

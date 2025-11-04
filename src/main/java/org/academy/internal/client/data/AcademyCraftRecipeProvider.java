@@ -18,7 +18,7 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
 
     @Override
     protected void buildRecipes() {
-        {
+     /*   {
             var dowsingRod = shaped(RecipeCategory.MISC, Items.IMAGIPHASE_DOWSING_ROD.get());
 
             dowsingRod.define('C', net.minecraft.world.item.Items.COMPARATOR);
@@ -37,8 +37,8 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
             unlockedByHas(dowsingRod, Items.IMAGIPHASE_METAL.get());
 
             dowsingRod.save(output);
-        }
-        {
+        }*/
+/*        {
             var solar = shaped(RecipeCategory.MISC, Items.SOLAR_GEN.get());
 
             solar.define('G', net.minecraft.world.item.Items.GLASS_PANE);
@@ -57,8 +57,8 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
             unlockedByHas(solar, Items.IMAGIPHASE_METAL.get());
 
             solar.save(output);
-        }
-        {
+        }*/
+    /*    {
             var omni = shaped(RecipeCategory.MISC, Items.OMNI_CRAFTING_TABLE.get());
 
             omni.define('B', net.minecraft.world.item.Items.CHISELED_BOOKSHELF);
@@ -66,7 +66,7 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
             omni.define('T', net.minecraft.world.item.Items.CRAFTER);
             omni.define('C', net.minecraft.world.item.Items.CLOCK);
             omni.define('A', Items.IMAGIPHASE_AMETHYST_BLOCK.get());
-            omni.define('M', Items.IMAGIPHASE_METAL_BLOCK.get());
+           // omni.define('M', Items.IMAGIPHASE_METAL_BLOCK.get());
             omni.define('S', Items.SCREEN.get());
             omni.pattern("BSB");
             omni.pattern("OTC");
@@ -98,7 +98,7 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
             unlockedByHas(screen, Items.IMAGIPHASE_METAL.get());
 
             screen.save(output);
-        }
+        }*/
     }
 
     public void unlockedByHas(ShapedRecipeBuilder builder, ItemLike item) {

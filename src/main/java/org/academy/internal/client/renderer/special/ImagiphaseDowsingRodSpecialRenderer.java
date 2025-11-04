@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.renderer.special;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -162,4 +163,4 @@ public final class ImagiphaseDowsingRodSpecialRenderer implements NoDataSpecialM
             return MAP_CODEC;
         }
     }
-}
+}*/

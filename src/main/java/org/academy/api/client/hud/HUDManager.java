@@ -134,11 +134,10 @@ public final class HUDManager implements IAnimationScreen {
             return;
 
         var partialTick = event.getPartialTick().getGameTimeDeltaTicks();
-        var animFactor = partialTick;
 
         {
             var targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
-            currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, animFactor);
+            currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, partialTick);
             ROOT.setAlpha(currentAlpha);
 
             var r = 1.0f;
@@ -155,7 +154,7 @@ public final class HUDManager implements IAnimationScreen {
             var maximumComputingPower = AbilitySystemClient.getMaxComputingPower();
             var progress =computingPower / maximumComputingPower;
             if (Float.isNaN(progress) || Float.isInfinite(progress)) progress = 0;
-            smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, animFactor);
+            smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, partialTick);
             if (Float.isNaN(smoothProgress)) {
                 smoothProgress = 0.0f;
             }

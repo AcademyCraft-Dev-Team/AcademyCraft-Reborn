@@ -2,6 +2,7 @@ package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -9,26 +10,43 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.OmniCraftingMenu;
+import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public final class OmniCraftingTableBlock extends BaseEntityBlock {
+import java.util.Arrays;
+import java.util.List;
+
+public final class OmniCraftingTableBlock extends MultiBlock {
     public static final MapCodec<OmniCraftingTableBlock> CODEC = simpleCodec(OmniCraftingTableBlock::new);
+    public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
+            new Vec3i(0, 1, 0),
+            new Vec3i(1, 0, 0),
+            new Vec3i(1, 1, 0)
+    );
     public static final String OMNI_CRAFTING_TABLE_SCREEN = "omni_crafting_table_screen";
 
     public OmniCraftingTableBlock(Properties properties) {
         super(properties.noOcclusion());
+    }
+
+    @Override
+    public List<Vec3i> getSubBlocks() {
+        return SUBJECT_BLOCKS;
     }
 
     @Override
@@ -39,6 +57,16 @@ public final class OmniCraftingTableBlock extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.INVISIBLE;
+    }
+
+    @Override
+    public BlockState rotate(BlockState pState, Rotation pRotation) {
+        return pState.setValue(BlockStateProperties.HORIZONTAL_FACING, pRotation.rotate(pState.getValue(BlockStateProperties.HORIZONTAL_FACING)));
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext pContext) {
+        return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
     @Override
@@ -63,7 +91,7 @@ public final class OmniCraftingTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public MultiBlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new OmniCraftingTableBlockEntity(pos, state);
     }
 

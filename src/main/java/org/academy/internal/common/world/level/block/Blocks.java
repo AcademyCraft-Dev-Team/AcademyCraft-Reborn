@@ -24,9 +24,9 @@ public final class Blocks {
             BLOCKS.registerBlock("wind_gen_pillar", WindGenPillarBlock::new);
     public static final DeferredHolder<Block, AbilityDeveloperBlock> ABILITY_DEVELOPER =
             BLOCKS.registerBlock("ability_developer", AbilityDeveloperBlock::new);
-    public static final DeferredHolder<Block, ImagiphasePlasma> IMAGIPHASE_PLASMA =
-            BLOCKS.registerBlock("imagiphase_plasma", ImagiphasePlasma::new);
-    public static final DeferredHolder<Block, Block> IMAGIPHASE_VEGETATION =
+/*    public static final DeferredHolder<Block, ImagiphasePlasma> IMAGIPHASE_PLASMA =
+            BLOCKS.registerBlock("imagiphase_plasma", ImagiphasePlasma::new);*/
+ /*   public static final DeferredHolder<Block, Block> IMAGIPHASE_VEGETATION =
             BLOCKS.registerBlock("imagiphase_vegetation", Block::new);
     public static final DeferredHolder<Block, ImagiphaseLeavesBlock> IMAGIPHASE_LEAVES =
             BLOCKS.registerBlock("imagiphase_leaves", ImagiphaseLeavesBlock::new);
@@ -39,12 +39,12 @@ public final class Blocks {
                     )
             );
     public static final DeferredHolder<Block, ImagiphaseLichenBlock> IMAGIPHASE_LICHEN =
-            BLOCKS.registerBlock("imagiphase_lichen", ImagiphaseLichenBlock::new);
+            BLOCKS.registerBlock("imagiphase_lichen", ImagiphaseLichenBlock::new);*/
     public static final DeferredHolder<Block, OmniCraftingTableBlock> OMNI_CRAFTING_TABLE =
             BLOCKS.registerBlock("omni_crafting_table", OmniCraftingTableBlock::new);
     public static final DeferredHolder<Block, CatEngineBlock> CAT_ENGINE =
             BLOCKS.registerBlock("cat_engine", CatEngineBlock::new);
-    public static final DeferredHolder<Block, ImagiphaseAmethystBlock> IMAGIPHASE_AMETHYST_BLOCK =
+  /*  public static final DeferredHolder<Block, ImagiphaseAmethystBlock> IMAGIPHASE_AMETHYST_BLOCK =
             BLOCKS.registerBlock("imagiphase_amethyst_block", ImagiphaseAmethystBlock::new);
     public static final DeferredHolder<Block, ImagiphaseAmethystClusterBlock> IMAGIPHASE_AMETHYST_CLUSTER =
             BLOCKS.registerBlock("imagiphase_amethyst_cluster", properties ->
@@ -57,10 +57,10 @@ public final class Blocks {
                                     .pushReaction(PushReaction.DESTROY)
                                     .sound(SoundType.AMETHYST_CLUSTER)
                                     .lightLevel(state -> 5)
-                    ));
-    public static final DeferredHolder<Block, BuddingImagiphaseAmethystBlock> BUDDING_IMAGIPHASE_AMETHYST =
-            BLOCKS.registerBlock("budding_imagiphase_amethyst", BuddingImagiphaseAmethystBlock::new);
-    public static final DeferredHolder<Block, Block> LARGE_IMAGIPHASE_AMETHYST_BUD =
+                    ));*/
+/*    public static final DeferredHolder<Block, BuddingImagiphaseAmethystBlock> BUDDING_IMAGIPHASE_AMETHYST =
+            BLOCKS.registerBlock("budding_imagiphase_amethyst", BuddingImagiphaseAmethystBlock::new);*/
+   /* public static final DeferredHolder<Block, Block> LARGE_IMAGIPHASE_AMETHYST_BUD =
             BLOCKS.registerBlock("large_imagiphase_amethyst_bud", properties ->
                     new ImagiphaseAmethystClusterBlock(5.0F, 10.0F,
                             properties
@@ -98,10 +98,10 @@ public final class Blocks {
                                     .sound(SoundType.SMALL_AMETHYST_BUD)
                                     .lightLevel(state -> 1)
                     )
-            );
-    public static final DeferredHolder<Block, Block> IMAGIPHASE_METAL_BLOCK =
+            );*/
+/*    public static final DeferredHolder<Block, Block> IMAGIPHASE_METAL_BLOCK =
             BLOCKS.registerBlock("imagiphase_metal_block",
-                    properties -> new Block(properties.noOcclusion()));
+                    properties -> new Block(properties.noOcclusion()));*/
     public static final DeferredHolder<Block, SolarGenBlock> SOLAR_GEN =
             BLOCKS.registerBlock("solar_gen", SolarGenBlock::new);
 

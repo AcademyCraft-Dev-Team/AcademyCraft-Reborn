@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.MapCodec;
@@ -39,9 +40,11 @@ public final class BuddingImagiphaseAmethystBlock extends ImagiphaseAmethystBloc
         registerDefaultState(stateDefinition.any().setValue(CATALYZING, false));
     }
 
-    /**
+    */
+/**
      * Performs a random tick on a block.
-     */
+     *//*
+
     @Override
     protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         if (random.nextInt(5) == 0) {
@@ -118,3 +121,4 @@ public final class BuddingImagiphaseAmethystBlock extends ImagiphaseAmethystBloc
         return state.isAir() || state.is(net.minecraft.world.level.block.Blocks.WATER) && state.getFluidState().getAmount() == 8;
     }
 }
+*/
