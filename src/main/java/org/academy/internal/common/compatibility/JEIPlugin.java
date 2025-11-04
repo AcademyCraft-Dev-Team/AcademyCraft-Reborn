@@ -49,11 +49,11 @@ public final class JEIPlugin implements IModPlugin {
         });
     }
 
-    @Override
+/*    @Override
     public <T> void registerFluidSubtypes(ISubtypeRegistration registration, IPlatformFluidHelper<T> platformFluidHelper) {
         var plasma = Fluids.IMAGIPHASE_PLASMA.get();
         var ingredientType = platformFluidHelper.getFluidIngredientType();
         var subtype = new FluidSubtypeHandlerTest<>(ingredientType);
         registration.registerSubtypeInterpreter(ingredientType, plasma, subtype);
-    }
+    }*/
 }

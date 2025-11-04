@@ -1,8 +1,21 @@
+import groovy.xml.XmlSlurper
+import org.slf4j.event.Level
+
+buildscript {
+    dependencies {
+        classpath gradleApi()
+    }
+}
+
 plugins {
     id 'java-library'
     id 'idea'
     id 'net.neoforged.moddev' version 'latest.release'
 }
+
+def repoUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
+def metadata = new XmlSlurper().parse(repoUrl)
+def latestNeoVersion = metadata["versioning"]["latest"].toString()
 
 def isDev = project.hasProperty('isDev')
         ? Boolean.valueOf(project.property('isDev').toString())
@@ -17,7 +30,7 @@ base {
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
     var replaceProperties = [minecraft_version      : minecraft_version,
                              minecraft_version_range: minecraft_version_range,
-                             neo_version            : neo_version,
+                             neo_version            : latestNeoVersion,
                              neo_version_range      : neo_version_range,
                              loader_version_range   : loader_version_range,
                              mod_id                 : mod_id,
@@ -43,8 +56,11 @@ sourceSets {
 }
 
 neoForge {
-    version = project.neo_version
+    version = latestNeoVersion
     ideSyncTask generateModMetadata
+
+    def main = sourceSets.main
+    def modId = project["mod_id"].toString()
 
     parchment {
         mappingsVersion = project.parchment_mappings_version
@@ -54,18 +70,18 @@ neoForge {
     runs {
         client {
             client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty "neoforge.enabledGameTestNamespaces", modId
         }
 
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'neoforge.enabledGameTestNamespaces', modId
         }
 
         data {
             clientData()
-            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+            programArguments.addAll '--mod', modId, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
 
         configureEach {
@@ -74,13 +90,15 @@ neoForge {
                     '-XX:+IgnoreUnrecognizedVMOptions',
                     '-XX:+AllowEnhancedClassRedefinition'
             ]
-            logLevel = org.slf4j.event.Level.DEBUG
+            logLevel = Level.DEBUG
         }
     }
 
     mods {
-        "${mod_id}" {
-            sourceSet(sourceSets.main)
+        "${modId}" {
+            sourceSets {
+                main
+            }
         }
     }
 }
@@ -185,7 +203,7 @@ idea {
     }
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs.addAll(['-Xmaxerrs', '10000'])
-    options.compilerArgs.add("-Amisaka.provider.fqcn=org.academy.MisakaHandlersProviderImpl")
+tasks.withType(JavaCompile).configureEach { JavaCompile compile ->
+    compile.options.compilerArgs.addAll(['-Xmaxerrs', '10000'])
+    compile.options.compilerArgs.add("-Amisaka.provider.fqcn=org.academy.MisakaHandlersProviderImpl")
 }

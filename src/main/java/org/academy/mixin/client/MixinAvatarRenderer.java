@@ -23,13 +23,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(AvatarRenderer.class)
 public abstract class MixinAvatarRenderer {
-    @Inject(method = "getArmPose(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/client/model/HumanoidModel$ArmPose;", at = @At("HEAD"), cancellable = true)
+/*    @Inject(method = "getArmPose(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/client/model/HumanoidModel$ArmPose;", at = @At("HEAD"), cancellable = true)
     private static void getArmPose(Avatar avatar, ItemStack itemStack, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
         var itemstack = avatar.getItemInHand(hand);
         if (itemstack.getItem() == Items.IMAGIPHASE_DOWSING_ROD.get()) {
             cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
         }
-    }
+    }*/
 
     @Unique
     public AvatarRenderer<?> academyCraft$instance;

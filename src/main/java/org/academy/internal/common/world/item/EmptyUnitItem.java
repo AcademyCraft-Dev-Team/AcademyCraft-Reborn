@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.item;
 
 import net.minecraft.advancements.CriteriaTriggers;
@@ -60,4 +61,4 @@ public class EmptyUnitItem extends Item {
             return InteractionResult.FAIL;
         }
     }
-}
+}*/

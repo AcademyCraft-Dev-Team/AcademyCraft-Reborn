@@ -21,7 +21,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.inventory.MenuTypes;
-import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
+/*import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;*/
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
@@ -71,7 +71,7 @@ public final class AcademyCraftRegister {
 
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
-        modEventBus.addListener(AcademyCraftRegister::onFMLLoadComplete);
+     //   modEventBus.addListener(AcademyCraftRegister::onFMLLoadComplete);
     }
 
     private static void onNewRegistry(NewRegistryEvent event) {
@@ -86,8 +86,8 @@ public final class AcademyCraftRegister {
         });
     }
 
-    private static void onFMLLoadComplete(final FMLLoadCompleteEvent event) {
+/*    private static void onFMLLoadComplete(final FMLLoadCompleteEvent event) {
         event.enqueueWork(() ->
                 MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(ImagiphaseDowsingRodItem.class));
-    }
+    }*/
 }

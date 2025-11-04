@@ -54,7 +54,6 @@ public final class Resource {
 
     public static final class Textures {
         public static final ResourceLocation ARC = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
-        public static final ResourceLocation ELEMENT_LINE = academy("textures/gui/element/line.png");
         /**
          * Ability Developer
          */
@@ -100,6 +99,8 @@ public final class Resource {
         /**
          * Common
          */
+        public static final ResourceLocation LOGO_TECH = academy("textures/gui/element/logo_tech.png");
+        public static final ResourceLocation ELEMENT_LINE = academy("textures/gui/element/line.png");
         public static final ResourceLocation UI_INVENTORY = academy("textures/gui/element/ui_inventory.png");
         public static final ResourceLocation UI_GEN = academy("textures/gui/element/ui_gen.png");
         public static final ResourceLocation UI_BACKGROUND_LIGHT = academy("textures/gui/element/element_background_light.png");
@@ -110,7 +111,7 @@ public final class Resource {
         public static final ResourceLocation ICON_INV = academy("textures/gui/icon/icon_inv.png");
         public static final ResourceLocation ICON_WIRELESS = academy("textures/gui/icon/icon_wireless.png");
         public static final ResourceLocation UI_BUTTON_LEARN = academy("textures/gui/element/button.png");
-        public static final ResourceLocation HUD_SKILL_FRAME = academy("textures/gui/icon/icon_box.png");
+        public static final ResourceLocation ICON_BOX = academy("textures/gui/icon/icon_box.png");
         /**
          * Data Terminal
          */

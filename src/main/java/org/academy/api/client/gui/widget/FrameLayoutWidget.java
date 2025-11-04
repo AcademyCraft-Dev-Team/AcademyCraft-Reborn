@@ -186,7 +186,7 @@ public class FrameLayoutWidget extends AbstractWidgetContainer {
         }
 
         public LayoutParams(SizeMode widthMode, SizeMode heightMode) {
-            super.sizeMode(widthMode, heightMode);
+            sizeMode(widthMode, heightMode);
         }
 
         public LayoutParams(WidgetContainer.LayoutParams source) {

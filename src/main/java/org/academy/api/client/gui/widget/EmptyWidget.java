@@ -1,4 +1,4 @@
 package org.academy.api.client.gui.widget;
 
-public class EmptyWidget extends AbstractWidget {
+public final class EmptyWidget extends AbstractWidget {
 }

@@ -9,6 +9,6 @@ import static org.academy.AcademyCraft.MODID;
 
 public class Fluids {
     public static final DeferredRegister<Fluid> FLUIDS = DeferredRegister.create(BuiltInRegistries.FLUID, MODID);
-    public static final DeferredHolder<Fluid, ImagiphasePlasma.Flowing> FLOWING_IMAGIPHASE_PLASMA = FLUIDS.register("flowing_imagiphase_plasma", ImagiphasePlasma.Flowing::new);
+ /*   public static final DeferredHolder<Fluid, ImagiphasePlasma.Flowing> FLOWING_IMAGIPHASE_PLASMA = FLUIDS.register("flowing_imagiphase_plasma", ImagiphasePlasma.Flowing::new);
     public static final DeferredHolder<Fluid, ImagiphasePlasma.Source> IMAGIPHASE_PLASMA = FLUIDS.register("imagiphase_plasma", ImagiphasePlasma.Source::new);
-}
+*/}
