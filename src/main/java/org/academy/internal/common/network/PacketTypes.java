@@ -19,7 +19,7 @@ import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElec
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.item.CoinItem;
-import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
+//import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
 import org.misaka.api.common.registries.MisakaNetworkRegistries;
 import org.misaka.api.common.network.packet.PacketType;
 
@@ -169,6 +169,7 @@ public final class PacketTypes {
             GET_CURRENT_NODE_RESPONSE = PACKET_TYPES.register("get_current_node_response",
             () -> new PacketType<>(GetCurrentNodePacket.Response.class, GetCurrentNodePacket.Response.CODEC));
 
+/*
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket>>
             GET_LEVEL_CHUNK_SECTIONS = PACKET_TYPES.register("get_level_chunk_sections",
             () -> new PacketType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.CODEC));
@@ -176,6 +177,7 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response>>
             GET_LEVEL_CHUNK_SECTIONS_RESPONSE = PACKET_TYPES.register("get_level_chunk_sections_response",
             () -> new PacketType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response.CODEC));
+*/
 
     private PacketTypes() {
     }

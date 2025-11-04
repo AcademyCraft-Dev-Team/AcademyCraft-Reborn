@@ -2,17 +2,17 @@ package org.academy;
 
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.world.entity.Avatar;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.*;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import org.academy.api.client.Render;
@@ -24,6 +24,7 @@ import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
+import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.model.WindGenBaseModel;
@@ -33,10 +34,9 @@ import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
-import org.academy.internal.common.world.level.material.FluidTypes;
-import org.academy.internal.common.world.level.material.ImagiphasePlasma;
 
 import java.io.File;
+import java.util.function.BiConsumer;
 
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
@@ -121,14 +121,19 @@ public final class AcademyCraftClient {
         private ModBusSubscriber() {
         }
 
-        @SuppressWarnings("unchecked")
         @SubscribeEvent
         public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
-            event.registerEntityModifier(
-                    (Class<AvatarRenderer<AbstractClientPlayer>>) (Object) AvatarRenderer.class, (abstractClientPlayer, avatarRenderState) -> avatarRenderState.setRenderData(
-                            StormWingEffectRenderer.CONTEXT_KEY,
-                            abstractClientPlayer.getData(AttachmentTypes.ACTIVATED_STORM_WING)
-                    )
+            event.registerEntityModifier(baseRenderer(), stateModify());
+        }
+
+        private static <AvatarlikeEntity extends Avatar & ClientAvatarEntity> Class<AvatarRenderer<AvatarlikeEntity>> baseRenderer() {
+            return UncheckedUtil.uncheckedCast(AvatarRenderer.class);
+        }
+
+        private static <AvatarlikeEntity extends Avatar & ClientAvatarEntity> BiConsumer<AvatarlikeEntity, AvatarRenderState> stateModify() {
+            return (avatarlikeEntity, avatarRenderState) -> avatarRenderState.setRenderData(
+                    StormWingEffectRenderer.CONTEXT_KEY,
+                    avatarlikeEntity.getData(AttachmentTypes.ACTIVATED_STORM_WING)
             );
         }
 
@@ -145,7 +150,7 @@ public final class AcademyCraftClient {
             event.register(AcademyCraft.academy("wind_gen_top"), WindGenTopSpecialRenderer.Unbaked.MAP_CODEC);
             event.register(AcademyCraft.academy("ability_developer"), AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC);
             event.register(AcademyCraft.academy("omni_crafting_table"), OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(AcademyCraft.academy("imagiphase_dowsing_rod"), ImagiphaseDowsingRodSpecialRenderer.Unbaked.MAP_CODEC);
+         //   event.register(AcademyCraft.academy("imagiphase_dowsing_rod"), ImagiphaseDowsingRodSpecialRenderer.Unbaked.MAP_CODEC);
             event.register(AcademyCraft.academy("solar_gen"), SolarGenSpecialRenderer.Unbaked.MAP_CODEC);
         }
 
@@ -156,7 +161,7 @@ public final class AcademyCraftClient {
 
         @SubscribeEvent
         public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
-            event.registerFluidType(new IClientFluidTypeExtensions() {
+/*            event.registerFluidType(new IClientFluidTypeExtensions() {
                 @Override
                 public int getTintColor() {
                     return 0XFF000000;
@@ -171,7 +176,7 @@ public final class AcademyCraftClient {
                 public ResourceLocation getFlowingTexture() {
                     return ImagiphasePlasma.TEXTURE;
                 }
-            }, FluidTypes.IMAGIPHASE_PLASMA.get());
+            }, FluidTypes.IMAGIPHASE_PLASMA.get());*/
         }
     }
 }

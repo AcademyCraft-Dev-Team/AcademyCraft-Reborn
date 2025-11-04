@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.item;
 
 import net.minecraft.advancements.CriteriaTriggers;
@@ -55,9 +56,11 @@ public final class ImagiphaseUnitItem extends Item {
         }
     }
 
+*/
 /*
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand usedHand) {
 
-    }*/
-}
+    }*//*
+
+}*/

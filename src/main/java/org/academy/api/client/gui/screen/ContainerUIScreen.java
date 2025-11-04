@@ -11,6 +11,8 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import org.academy.AcademyCraft;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.Animator;
@@ -219,6 +221,24 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         }
 
         renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderSlotContents(GuiGraphics guiGraphics, ItemStack itemstack, Slot slot, @Nullable String countString) {
+        var pose = guiGraphics.pose();
+        pose.pushMatrix();
+
+        pose.translate(slot.x, slot.y);
+        pose.translate(8.0F, 8.0F);
+
+        pose.scale(2 / 3f);
+
+        pose.translate(-8.0F, -8.0F);
+        pose.translate(-slot.x, -slot.y);
+
+        super.renderSlotContents(guiGraphics, itemstack, slot, countString);
+
+        pose.popMatrix();
     }
 
     @Override

@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.level.material;
 
 import net.minecraft.core.BlockPos;
@@ -138,4 +139,4 @@ public abstract class ImagiphasePlasma extends FlowingFluid {
             return 8;
         }
     }
-}
+}*/

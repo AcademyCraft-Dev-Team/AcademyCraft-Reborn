@@ -21,15 +21,21 @@ public final class OmniCraftingTableSpecialRenderer implements NoDataSpecialMode
     @Override
     public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
-        poseStack.translate(0.5f, 0, 0.5f);
-        poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
-        OmniCraftingTableRenderer.MODEL.resetPose();
-        OmniCraftingTableRenderer.MODEL.render(poseStack, nodeCollector, packedLight, packedOverlay);
+        {
+            poseStack.scale(0.5f, 0.5f, 0.5f);
+            poseStack.translate(0.5f, 0, 0.5f);
+            poseStack.mulPose(Axis.XP.rotationDegrees(180));
+            OmniCraftingTableRenderer.MODEL.resetPose();
+            OmniCraftingTableRenderer.MODEL.render(poseStack, nodeCollector, packedLight, packedOverlay);
+        }
         poseStack.popPose();
     }
 
     @Override
     public void getExtents(Set<Vector3f> output) {
+        var posestack = new PoseStack();
+        posestack.scale(1.0F, -1.0F, -1.0F);
+        OmniCraftingTableRenderer.MODEL.root().getExtentsForGui(posestack, output);
     }
 
     public record Unbaked() implements SpecialModelRenderer.Unbaked {

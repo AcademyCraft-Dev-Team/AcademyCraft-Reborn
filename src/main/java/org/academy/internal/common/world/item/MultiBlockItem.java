@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.item;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -10,12 +9,11 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.academy.internal.common.world.level.block.MultiBlock;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public class MultiBlockItem extends BlockItem {
-    public final List<Vec3i> subBlocks;
+    private final List<Vec3i> subBlocks;
 
     public MultiBlockItem(MultiBlock block, Properties properties) {
         super(block, properties);
@@ -23,7 +21,7 @@ public class MultiBlockItem extends BlockItem {
     }
 
     @Override
-    protected boolean canPlace(BlockPlaceContext context, @NotNull BlockState state) {
+    protected boolean canPlace(BlockPlaceContext context, BlockState state) {
         var basePos = context.getClickedPos();
         var level = context.getLevel();
         var collisionContext = context.getPlayer() == null ? CollisionContext.empty() : CollisionContext.of(context.getPlayer());

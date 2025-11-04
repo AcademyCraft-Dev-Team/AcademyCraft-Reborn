@@ -39,9 +39,11 @@ public final class AbilityDeveloperSpecialRenderer implements NoDataSpecialModel
         poseStack.popPose();
     }
 
-
     @Override
     public void getExtents(Set<Vector3f> output) {
+        var posestack = new PoseStack();
+        posestack.scale(1.0F, -1.0F, -1.0F);
+        AbilityDeveloperRenderer.MODEL.root().getExtentsForGui(posestack, output);
     }
 
     public record Unbaked() implements SpecialModelRenderer.Unbaked {

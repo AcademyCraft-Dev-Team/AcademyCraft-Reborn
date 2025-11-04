@@ -7,10 +7,10 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
-public final class OmniCraftingTableBlockEntity extends BlockEntity implements Container {
+public final class OmniCraftingTableBlockEntity extends MultiBlockEntity implements Container {
     public int ticks;
     public NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
 
@@ -70,5 +70,11 @@ public final class OmniCraftingTableBlockEntity extends BlockEntity implements C
     @Override
     public void clearContent() {
         items.clear();
+    }
+
+    public AABB getRenderBoundingBox() {
+        var pos = getBlockPos().getCenter();
+        var radius = 2d;
+        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
 }

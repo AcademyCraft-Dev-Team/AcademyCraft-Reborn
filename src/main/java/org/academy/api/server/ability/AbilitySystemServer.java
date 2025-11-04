@@ -13,19 +13,20 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
-import org.misaka.MisakaNetworkServer;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.packet.sync.s2c.*;
-import org.misaka.api.common.network.future.annotation.HandleFuture;
-import org.misaka.api.common.network.packet.S2CPacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.world.level.storage.Player;
 import org.jetbrains.annotations.Nullable;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.future.annotation.HandleFuture;
+import org.misaka.api.common.network.packet.S2CPacket;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -215,9 +216,8 @@ public final class AbilitySystemServer {
     }
 
     @Nullable
-    @SuppressWarnings("unchecked")
     public static <T extends Player.SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
-        return (T) getPlayerData(uuid).getSkillData().get(skillKey);
+        return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
     }
 
     public static float getPlayerSkillExp(UUID uuid, String skillKey) {

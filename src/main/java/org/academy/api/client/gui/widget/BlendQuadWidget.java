@@ -34,66 +34,73 @@ public class BlendQuadWidget extends AbstractWidget {
     public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
+        var lp = getLayoutParams();
+        var paddedWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
+        var paddedHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
+
+        // paddedHeight == 0 是预期行为喵
+        if (paddedWidth <= 0 || paddedHeight < 0) return;
+
         var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
 
         context.pose().pushPose();
+        context.pose().translate(lp.paddingLeft, lp.paddingTop, 0);
         context.drawOrder().push();
         {
-            var sdfCommand = new PosTexRectDrawCommand(
-                    Render.RenderPipelines.SDF_SHARP_MARGIN,
-                    getWidth(),
-                    getHeight(),
-                    0.0f,
-                    0.0f,
-                    1.0f,
-                    1.0f
-            ) {
-                @Override
-                public Map<String, GpuTextureView> getSamplers() {
-                    return Collections.emptyMap();
-                }
+            // 极小值也需要渲染喵
+            if (finalAlpha != 0) {
+                var sdfCommand = new PosTexRectDrawCommand(
+                        Render.RenderPipelines.SDF_SHARP_MARGIN,
+                        paddedWidth,
+                        paddedHeight,
+                        0.0f,
+                        0.0f,
+                        1.0f,
+                        1.0f
+                ) {
+                    @Override
+                    public Map<String, GpuTextureView> getSamplers() {
+                        return Collections.emptyMap();
+                    }
 
-                @Override
-                public Map<String, GpuBufferSlice> getUniforms() {
-                    var uboStorage = context.getDynamicUbo(SDFData.class, SDFData.UBO_SIZE);
-                    var size = new Vector2f(getWidth(), getHeight());
-                    var margins = new Vector4f(marginLeft, marginTop, marginRight, marginBottom);
-                    var fillColor = new Vector4f(red, green, blue, finalAlpha);
-                    var sdfData = new SDFData(size, margins, fillColor);
-                    var uboSlice = uboStorage.writeUniform(sdfData);
-                    return Map.of("SdfUniforms", uboSlice);
-                }
-            };
-            context.submit(sdfCommand);
+                    @Override
+                    public Map<String, GpuBufferSlice> getUniforms() {
+                        var uboStorage = context.getDynamicUbo(SDFData.class, SDFData.UBO_SIZE);
+                        var size = new Vector2f(paddedWidth, paddedHeight);
+                        var margins = new Vector4f(marginLeft, marginTop, marginRight, marginBottom);
+                        var fillColor = new Vector4f(red, green, blue, finalAlpha);
+                        var sdfData = new SDFData(size, margins, fillColor);
+                        var uboSlice = uboStorage.writeUniform(sdfData);
+                        return Map.of("SdfUniforms", uboSlice);
+                    }
+                };
+                context.submit(sdfCommand);
+            }
 
             if (drawLine) {
                 context.drawOrder().advance();
-                renderLines(context, context.getAccumulatedAlpha());
+                renderLines(context, context.getAccumulatedAlpha(), paddedWidth, paddedHeight);
             }
         }
         context.drawOrder().pop();
         context.pose().popPose();
     }
 
-    private void renderLines(WidgetRenderContext context, float finalAlpha) {
+    private void renderLines(WidgetRenderContext context, float finalAlpha, float paddedWidth, float paddedHeight) {
         var textureManager = Minecraft.getInstance().getTextureManager();
         var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTexture();
         lineTexture.setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, false);
         var lineTextureView = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTextureView();
-        var lineW = getWidth();
         var lineH = 4.0f;
 
         {
-            context.pose().pushPose();
-            context.pose().translate(0, 0, 0);
-            var topLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            var topLineCommand = new ImageDrawCommand(lineTextureView, paddedWidth, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(topLineCommand);
-            context.pose().popPose();
         }
         {
             context.pose().pushPose();
-            context.pose().translate(0, getHeight() - marginBottom, 0);
-            var bottomLineCommand = new ImageDrawCommand(lineTextureView, lineW, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            context.pose().translate(0, Math.max(paddedHeight - lineH, 0), 0);
+            var bottomLineCommand = new ImageDrawCommand(lineTextureView, paddedWidth, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(bottomLineCommand);
             context.pose().popPose();
         }

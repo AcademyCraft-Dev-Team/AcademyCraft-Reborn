@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.misaka.api.common.network.packet.S2CPacket;
 
 import java.util.Arrays;
@@ -93,7 +94,7 @@ public final class AbilityDeveloperBlock extends MultiBlock {
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public MultiBlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new AbilityDeveloperBlockEntity(pos, state);
     }
 

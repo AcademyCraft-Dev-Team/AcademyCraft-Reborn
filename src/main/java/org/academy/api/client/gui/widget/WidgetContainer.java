@@ -126,11 +126,11 @@ public interface WidgetContainer extends Widget {
             return this;
         }
 
-        public LayoutParams margin(float vertical, float horizontal) {
-            marginTop = vertical;
-            marginBottom = vertical;
+        public LayoutParams margin(float horizontal, float vertical) {
             marginLeft = horizontal;
             marginRight = horizontal;
+            marginTop = vertical;
+            marginBottom = vertical;
             return this;
         }
 

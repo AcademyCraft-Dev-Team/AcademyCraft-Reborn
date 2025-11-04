@@ -4,6 +4,7 @@ import com.google.gson.*;
 import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.UncheckedUtil;
 
 import java.io.File;
 import java.io.FileReader;
@@ -59,7 +60,7 @@ public final class AcademyCraftConfig {
             var configInstance = cacheEntry.getValue();
             var handler = HANDLER_MAP.get(configKey);
             if (handler != null) {
-                newRootJson.add(configKey, serializeWithHandler(handler, configInstance));
+                newRootJson.add(configKey, serializeWithHandler(handler, UncheckedUtil.uncheckedCast(configInstance)));
             }
         }
         rootJsonConfig = newRootJson;
@@ -73,23 +74,22 @@ public final class AcademyCraftConfig {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> JsonElement serializeWithHandler(TypeHandler<T> handler, Object instance) {
-        return handler.getAdapter(GSON).toJsonTree((T) instance);
+    private <T> JsonElement serializeWithHandler(TypeHandler<T> handler, T instance) {
+        return handler.getAdapter(GSON).toJsonTree(instance);
     }
 
     public <T> T getConfig(ResourceLocation configKey) {
         return getConfig(Util.makeDescriptionId("config", configKey));
     }
 
-    @SuppressWarnings("unchecked")
     public <T> T getConfig(String configKey) {
         var cachedInstance = runtimeConfigCache.get(configKey);
         if (cachedInstance != null) {
-            return (T) cachedInstance;
+            return UncheckedUtil.uncheckedCast(cachedInstance);
         }
 
-        var handler = (TypeHandler<T>) HANDLER_MAP.get(configKey);
+        TypeHandler<T> handler =  UncheckedUtil.uncheckedCast(HANDLER_MAP.get(configKey));
+
         if (handler == null) {
             throw new IllegalStateException("No TypeHandler registered for key: " + configKey);
         }

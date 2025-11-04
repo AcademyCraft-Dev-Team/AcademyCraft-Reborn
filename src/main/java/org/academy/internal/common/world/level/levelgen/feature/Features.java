@@ -10,7 +10,9 @@ import static org.academy.AcademyCraft.MODID;
 @SuppressWarnings("unused")
 public final class Features {
     public static final DeferredRegister<Feature<?>> FEATURES = DeferredRegister.create(BuiltInRegistries.FEATURE, MODID);
+/*
     public static final DeferredHolder<Feature<?>, ImagiphaseLakeFeature> IMAG_PHASE_LAKE = FEATURES.register("imag_phase_lake", () -> new ImagiphaseLakeFeature(ImagiphaseLakeFeature.Configuration.CODEC));
+*/
 
     private Features() {
     }

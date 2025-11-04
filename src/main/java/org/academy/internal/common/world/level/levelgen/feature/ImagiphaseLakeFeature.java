@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.level.levelgen.feature;
 
 import com.mojang.serialization.Codec;
@@ -414,4 +415,4 @@ public final class ImagiphaseLakeFeature extends Feature<ImagiphaseLakeFeature.C
                 ).apply(instance, Configuration::new)
         );
     }
-}
+}*/

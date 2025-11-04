@@ -47,8 +47,8 @@ public abstract class MultiBlock extends BaseEntityBlock {
 
         for (var vec3i : subBlocks) {
             var offsetPos = switch (direction) {
-                case NORTH -> pos.offset(vec3i.getX(), vec3i.getY(), vec3i.getZ());
-                case SOUTH -> pos.offset(-vec3i.getX(), vec3i.getY(), -vec3i.getZ());
+                case NORTH -> pos.offset(-vec3i.getX(), vec3i.getY(), vec3i.getZ());
+                case SOUTH -> pos.offset(vec3i.getX(), vec3i.getY(), -vec3i.getZ());
                 case EAST -> pos.offset(-vec3i.getZ(), vec3i.getY(), -vec3i.getX());
                 case WEST -> pos.offset(vec3i.getZ(), vec3i.getY(), vec3i.getX());
                 default -> pos;
@@ -108,6 +108,11 @@ public abstract class MultiBlock extends BaseEntityBlock {
                 multiBlockEntity.setMainPos(pos);
             }
         }
+    }
+
+    @Override
+    public @Nullable MultiBlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return null;
     }
 
     public enum MultiBlockType implements StringRepresentable {
