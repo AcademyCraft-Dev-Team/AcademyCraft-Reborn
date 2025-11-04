@@ -3,6 +3,7 @@ package org.academy.api.client.render.post;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -118,44 +119,70 @@ public final class BloomEffect {
         }
     }
 
-    public static void process() {
-        var mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
-        var blurUboSlice = blurUniformsBuffer.slice();
+    public static void process(FrameGraphBuilder frameGraphBuilder) {
+        var mc = Minecraft.getInstance();
+        var levelRenderer = mc.levelRenderer;
+        var bloom = frameGraphBuilder.addPass("bloom");
+        levelRenderer.targets.main = bloom.readsAndWrites(levelRenderer.targets.main);
+        if (levelRenderer.targets.translucent != null) {
+            levelRenderer.targets.translucent = bloom.readsAndWrites(levelRenderer.targets.translucent);
+        }
+        bloom.executes(() -> {
+            var translucentTarget = levelRenderer.getTranslucentTarget();
+            var depthTarget = translucentTarget == null ? mc.getMainRenderTarget() : translucentTarget;
+            var mainRenderTarget = mc.getMainRenderTarget();
+            var blurUboSlice = blurUniformsBuffer.slice();
 
-        INPUT.copyDepthFrom(mainRenderTarget);
+            var main = mainRenderTarget.getColorTextureView();
+            var input = INPUT.getColorTexture();
+            var inputView = INPUT.getColorTextureView();
+            var output = OUTPUT.getColorTextureView();
+            var swap2A = SWAP2A.getColorTextureView();
+            var swap4A = SWAP4A.getColorTextureView();
+            var swap8A = SWAP8A.getColorTextureView();
+            var swap2B = SWAP2B.getColorTextureView();
+            var swap4B = SWAP4B.getColorTextureView();
+            var swap8B = SWAP8B.getColorTextureView();
 
-        PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Collections.emptyMap(), false);
+            if (main == null || input == null || inputView == null || output == null || swap2A == null || swap4A == null
+                    || swap8A == null || swap2B == null || swap4B == null || swap8B == null
+            ) return;
 
-        BLIT_TO_MAIN_POST.endBatch();
+            INPUT.copyDepthFrom(depthTarget);
 
-        writeBlurUniforms(new Vector2f(SWAP2A.width, SWAP2A.height), 1.0f, 0.0f, 4);
-        PostEffect.runBlitPass(SWAP2A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", INPUT.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
+            PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", inputView), Collections.emptyMap(), false);
 
-        writeBlurUniforms(new Vector2f(SWAP2B.width, SWAP2B.height), 0.0f, 1.0f, 4);
-        PostEffect.runBlitPass(SWAP2B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", SWAP2A.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
+            BLIT_TO_MAIN_POST.endBatch();
 
-        writeBlurUniforms(new Vector2f(SWAP4A.width, SWAP4A.height), 1.0f, 0.0f, 6);
-        PostEffect.runBlitPass(SWAP4A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", SWAP2B.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
+            writeBlurUniforms(new Vector2f(SWAP2A.width, SWAP2A.height), 1.0f, 0.0f, 4);
+            PostEffect.runBlitPass(SWAP2A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", inputView), Map.of("BlurInfo", blurUboSlice), true);
 
-        writeBlurUniforms(new Vector2f(SWAP4B.width, SWAP4B.height), 0.0f, 1.0f, 6);
-        PostEffect.runBlitPass(SWAP4B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", SWAP4A.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
+            writeBlurUniforms(new Vector2f(SWAP2B.width, SWAP2B.height), 0.0f, 1.0f, 4);
+            PostEffect.runBlitPass(SWAP2B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap2A), Map.of("BlurInfo", blurUboSlice), true);
 
-        writeBlurUniforms(new Vector2f(SWAP8A.width, SWAP8A.height), 1.0f, 0.0f, 8);
-        PostEffect.runBlitPass(SWAP8A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", SWAP4B.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
+            writeBlurUniforms(new Vector2f(SWAP4A.width, SWAP4A.height), 1.0f, 0.0f, 6);
+            PostEffect.runBlitPass(SWAP4A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap2B), Map.of("BlurInfo", blurUboSlice), true);
 
-        writeBlurUniforms(new Vector2f(SWAP8B.width, SWAP8B.height), 0.0f, 1.0f, 8);
-        PostEffect.runBlitPass(SWAP8B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", SWAP8A.getColorTextureView()), Map.of("BlurInfo", blurUboSlice), true);
+            writeBlurUniforms(new Vector2f(SWAP4B.width, SWAP4B.height), 0.0f, 1.0f, 6);
+            PostEffect.runBlitPass(SWAP4B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap4A), Map.of("BlurInfo", blurUboSlice), true);
 
-        writeBloomUniforms(1.0f, 1.0f);
-        var blendSamplers = Map.of(
-                "DiffuseSampler", mainRenderTarget.getColorTextureView(),
-                "BlurTexture1", SWAP2B.getColorTextureView(),
-                "BlurTexture2", SWAP4B.getColorTextureView(),
-                "BlurTexture3", SWAP8B.getColorTextureView()
-        );
-        PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLOOM_BLEND, blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()), false);
-        PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND, Map.of("DiffuseSampler", mainRenderTarget.getColorTextureView()), Collections.emptyMap(), false);
-        RenderSystem.getDevice().createCommandEncoder().clearColorTexture(INPUT.getColorTexture(), 0);
+            writeBlurUniforms(new Vector2f(SWAP8A.width, SWAP8A.height), 1.0f, 0.0f, 8);
+            PostEffect.runBlitPass(SWAP8A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap4B), Map.of("BlurInfo", blurUboSlice), true);
+
+            writeBlurUniforms(new Vector2f(SWAP8B.width, SWAP8B.height), 0.0f, 1.0f, 8);
+            PostEffect.runBlitPass(SWAP8B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap8A), Map.of("BlurInfo", blurUboSlice), true);
+
+            writeBloomUniforms(1.0f, 1.0f);
+            var blendSamplers = Map.of(
+                    "DiffuseSampler", main,
+                    "BlurTexture1", swap2B,
+                    "BlurTexture2", swap4B,
+                    "BlurTexture3", swap8B
+            );
+            PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLOOM_BLEND, blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()), false);
+            PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND, Map.of("DiffuseSampler", main), Collections.emptyMap(), false);
+            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(input, 0);
+        });
     }
 
     public record BlurUniforms(Vector2f outSize, Vector2f blurDir, int radius) {

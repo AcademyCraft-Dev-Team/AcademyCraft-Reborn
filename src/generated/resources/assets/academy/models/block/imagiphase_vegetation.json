@@ -1,7 +1,0 @@
-{
-  "parent": "minecraft:block/cube_column",
-  "textures": {
-    "end": "academy:block/imagiphase_vegetation_top",
-    "side": "academy:block/imagiphase_vegetation_side"
-  }
-}
