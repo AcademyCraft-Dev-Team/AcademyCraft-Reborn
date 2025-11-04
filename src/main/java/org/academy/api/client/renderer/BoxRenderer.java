@@ -9,9 +9,9 @@ import org.academy.api.client.util.VertexUtil;
  * Quads 喵
  */
 public final class BoxRenderer {
-    public static void renderFilledBox(PoseStack poseStack, VertexConsumer vertexConsumer, AABB box,
+    public static void renderFilledBox(PoseStack.Pose pose, VertexConsumer vertexConsumer, AABB box,
                                        float r, float g, float b, float a) {
-        final var matrix4f = poseStack.last().pose();
+        final var matrix4f = pose.pose();
 
         var faces = VertexUtil.Box.getBoxVertices(box);
 
@@ -21,5 +21,10 @@ public final class BoxRenderer {
             vertexConsumer.addVertex(matrix4f, face[2][0], face[2][1], face[2][2]).setColor(r, g, b, a);
             vertexConsumer.addVertex(matrix4f, face[3][0], face[3][1], face[3][2]).setColor(r, g, b, a);
         }
+    }
+
+    public static void renderFilledBox(PoseStack poseStack, VertexConsumer vertexConsumer, AABB box,
+                                       float r, float g, float b, float a) {
+        renderFilledBox(poseStack.last(), vertexConsumer, box, r, g, b, a);
     }
 }

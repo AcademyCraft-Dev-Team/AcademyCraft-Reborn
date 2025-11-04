@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.Render;
 import org.academy.api.client.render.post.BloomEffect;
-import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.BallRenderer;
 import org.academy.api.client.renderer.BoxRenderer;
 import org.academy.api.client.util.VertexUtil;
@@ -46,12 +45,16 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
                 renderState.lightCoords, OverlayTexture.NO_OVERLAY
         );
         poseStack.scale(0.85f, 0.85f, 0.85f);
-        BallRenderer.renderBall(
-                poseStack.last(),
-                PostEffect.BUFFER_SOURCE_PRE.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES),
-                HEAD_BUFFER,
-                1, 1, 1, 1,
-                renderState.lightCoords, OverlayTexture.NO_OVERLAY
+        nodeCollector.submitCustomGeometry(
+                poseStack,
+                Render.RenderTypes.POS_COLOR_TRANGLES,
+                (pose, vertexConsumer) -> BallRenderer.renderBall(
+                        pose,
+                        vertexConsumer,
+                        HEAD_BUFFER,
+                        1, 1, 1, 1,
+                        renderState.lightCoords, OverlayTexture.NO_OVERLAY
+                )
         );
         poseStack.popPose();
 
@@ -65,10 +68,14 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
                 RAY, 0, 1, 0, 1
         );
         poseStack.scale(0.75f, 1, 0.75f);
-        BoxRenderer.renderFilledBox(
+        nodeCollector.submitCustomGeometry(
                 poseStack,
-                PostEffect.BUFFER_SOURCE_PRE.getBuffer(Render.RenderTypes.POS_COLOR_QUADS),
-                RAY, 1, 1, 1, 1f
+                Render.RenderTypes.POS_COLOR_QUADS,
+                (pose, vertexConsumer) -> BoxRenderer.renderFilledBox(
+                        pose,
+                        vertexConsumer,
+                        RAY, 1, 1, 1, 1f
+                )
         );
         poseStack.popPose();
 
