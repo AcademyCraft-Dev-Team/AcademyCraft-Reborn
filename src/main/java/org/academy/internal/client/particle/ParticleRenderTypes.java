@@ -5,7 +5,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
-import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
@@ -14,7 +13,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 
 import java.util.List;
 
-@EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class ParticleRenderTypes {
     private static final List<String> IMAG_PHASE_HEX_COLORS = List.of(
             "f59090", "b2e8f3", "d1aae1", "f3b6e0", "c4ee9c"

@@ -17,16 +17,19 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.hud.HUDManager;
+import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.terminal.HUDController;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
+import org.academy.api.client.thread.MainThread;
+import org.academy.api.client.thread.RenderThread;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.app.Apps;
 import org.academy.internal.client.gui.screen.Screens;
+import org.academy.internal.client.hud.HUDManager;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.particle.ParticleRenderTypes;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
@@ -39,20 +42,31 @@ import java.io.File;
 import java.util.function.BiConsumer;
 
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
-@EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class AcademyCraftClient {
     public AcademyCraftClient(IEventBus modEventBus) {
         modEventBus.register(ModBusSubscriber.class);
     }
 
-    public static void init() {
+    @MainThread
+    public static void initMain() {
         Screens.register();
-        HUDManager.init();
+        HUDManager.initMain();
         Apps.register();
         ParticleRenderTypes.init();
         AbilitySystemClient.init();
-        HUDController.INSTANCE.init();
-        BlurEffect.init();
+    }
+
+    @RenderThread
+    public static void initRender() {
+        Render.init();
+        ScreenDispatcher.init();
+        HUDManager.initRender();
+    }
+
+    public static void init() {
+        initMain();
+        initRender();
     }
 
     @SubscribeEvent
@@ -61,11 +75,11 @@ public final class AcademyCraftClient {
     }
 
     public static void resize(int width, int height) {
+        Render.resize();
+        ScreenDispatcher.resize(width, height);
         PostEffect.resize(width, height);
         BloomEffect.resize(width, height);
-        BlurEffect.resize(width, height);
         HUDManager.resize(width, height);
-        HUDController.INSTANCE.resize(width, height);
     }
 
     @SubscribeEvent
