@@ -2,14 +2,18 @@ package org.academy.api.client.gui.render;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MappableRingBuffer;
+import net.neoforged.neoforge.client.stencil.StencilFunction;
+import net.neoforged.neoforge.client.stencil.StencilOperation;
+import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
+import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
 
 import java.util.List;
@@ -24,7 +28,15 @@ public final class CommandExecutor {
         this.vertexBuffers = vertexBuffers;
     }
 
-    public void execute(List<MeshToDraw> meshesToDraw, RenderTarget target, GpuBufferSlice projectionUbo, GpuBuffer dynamicTransformsUbo, float guiScale) {
+    public void execute(
+            List<MeshToDraw> meshesToDraw,
+            GpuTextureView color,
+            GpuTextureView depth,
+            GpuBufferSlice projectionUbo,
+            GpuBuffer dynamicTransformsUbo,
+            float guiScale,
+            boolean stencilTest
+    ) {
         if (meshesToDraw.isEmpty())
             return;
 
@@ -61,7 +73,7 @@ public final class CommandExecutor {
         var physicalHeight = window.getHeight();
 
         try (var renderPass = commandEncoder.createRenderPass(
-                () -> "UIRender", target.getColorTextureView(), OptionalInt.empty(), target.getDepthTextureView(), OptionalDouble.empty()
+                () -> "UIRender", color, OptionalInt.empty(), depth, OptionalDouble.empty()
         )) {
             for (var i = 0; i < meshesToDraw.size(); i++) {
                 var meshToDraw = meshesToDraw.get(i);
@@ -72,7 +84,22 @@ public final class CommandExecutor {
                 var hasClosedSampler = false;
 
                 {
-                    renderPass.setPipeline(meshToDraw.pipeline());
+                    var pipeline = meshToDraw.pipeline();
+                    if (stencilTest) {
+                        var perFaceTest = new StencilPerFaceTest(
+                                StencilOperation.KEEP,
+                                StencilOperation.KEEP,
+                                StencilOperation.REPLACE,
+                                StencilFunction.ALWAYS
+                        );
+                        var stencilTestConfig = new StencilTest(
+                                perFaceTest, 0xFF, 0xFF, 1
+                        );
+                        pipeline = pipeline.toBuilder()
+                                .withStencilTest(stencilTestConfig)
+                                .build();
+                    }
+                    renderPass.setPipeline(pipeline);
 
                     var scissor = meshToDraw.scissorArea();
                     if (scissor != null) {

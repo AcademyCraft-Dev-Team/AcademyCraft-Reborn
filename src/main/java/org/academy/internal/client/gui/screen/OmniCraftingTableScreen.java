@@ -25,7 +25,7 @@ public final class OmniCraftingTableScreen extends ContainerUIScreen<OmniCraftin
         mainLayout.setOrientation(Orientation.HORIZONTAL);
         mainLayout.setLayoutParams(new WidgetContainer.LayoutParams().gravity(Gravity.CENTER));
         mainLayout.setSpacing(3.0f);
-        rootContainer.addChild("main_layout", mainLayout);
+        root.addChild("main_layout", mainLayout);
 
         var radioGroupWidget = new RadioGroupWidget();
         radioGroupWidget.setSpacing(5.2f);

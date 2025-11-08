@@ -11,7 +11,7 @@ plugins {
 val repoUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
 val metadata: Document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(repoUrl)
 metadata.documentElement.normalize()
-val latestNeoVersion: String = metadata.getElementsByTagName("latest").item(0).textContent
+val latestNeoVersion: String = "21.10.49-beta"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "true").toBoolean()
 
@@ -87,6 +87,8 @@ neoForge {
 
         all {
             systemProperty("forge.logging.markers", "REGISTRIES")
+            systemProperty("terminal.ansi", "true")
+
             jvmArguments.addAll(
                 "-XX:+IgnoreUnrecognizedVMOptions",
                 "-XX:+AllowEnhancedClassRedefinition"
@@ -156,7 +158,9 @@ repositories {
 }
 
 dependencies {
-    val misaka = "org.academy:misaka-network:21.10.1";
+    implementation("org.jspecify:jspecify:1.0.0")
+
+    val misaka = "org.academy:misaka-network:21.10.1-hotfix";
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)

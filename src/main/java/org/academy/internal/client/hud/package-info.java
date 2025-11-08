@@ -1,4 +1,4 @@
 @NullMarked
-package org.academy.api.client;
+package org.academy.internal.client.hud;
 
 import org.jspecify.annotations.NullMarked;

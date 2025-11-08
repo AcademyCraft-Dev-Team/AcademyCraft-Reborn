@@ -6,9 +6,14 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -16,6 +21,7 @@ import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.Render;
 import org.joml.Vector2f;
+import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.Collections;
@@ -25,37 +31,71 @@ import java.util.SequencedMap;
 import static org.academy.api.client.render.post.PostEffect.MAIN_SCENE;
 
 public final class BloomEffect {
-    private static final RenderTarget INPUT, OUTPUT, SWAP2A, SWAP4A, SWAP8A, SWAP2B, SWAP4B, SWAP8B;
+    private static final int MAX_GAUSSIAN_SAMPLES = 12;
+    private static final Int2ObjectMap<GaussianSamples> SAMPLES_CACHE =
+            Int2ObjectMaps.synchronize(new Int2ObjectLinkedOpenHashMap<>());
+    private static final RenderTarget INPUT;
     private static final GpuBuffer blurUniformsBuffer;
     private static final GpuBuffer bloomUniformsBuffer;
-    public static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS = new Object2ObjectLinkedOpenHashMap<>();
-    public static final MultiBufferSource.BufferSource BLIT_TO_MAIN_POST = PostEffect.createPostEffectPassBuffer(FIXED_BUFFERS);
+    private static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS =
+            new Object2ObjectLinkedOpenHashMap<>();
+    private static final MultiBufferSource.BufferSource BLIT_TO_MAIN_POST =
+            PostEffect.createPostEffectPassBuffer(FIXED_BUFFERS);
 
     public static final RenderStateShard.OutputStateShard BLOOM_TARGET = new RenderStateShard.OutputStateShard(
             "bloom_target",
             BloomEffect::getInput
     );
 
+    private static boolean hasBeenUsed;
+
     static {
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
-        var width = mainRenderTarget.width;
-        var height = mainRenderTarget.height;
-
-        INPUT = new TextureTarget(null, width, height, true);
-        OUTPUT = getRenderTarget(width, height);
-
-        SWAP2A = getRenderTarget(width / 2, height / 2);
-        SWAP4A = getRenderTarget(width / 4, height / 4);
-        SWAP8A = getRenderTarget(width / 8, height / 8);
-        SWAP2B = getRenderTarget(width / 2, height / 2);
-        SWAP4B = getRenderTarget(width / 4, height / 4);
-        SWAP8B = getRenderTarget(width / 8, height / 8);
+        INPUT = new TextureTarget(null, mainRenderTarget.width, mainRenderTarget.height, true);
+        INPUT.setFilterMode(FilterMode.LINEAR);
 
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
         blurUniformsBuffer = device.createBuffer(() -> "Bloom Blur UBO", uboUsage, BlurUniforms.UBO_SIZE);
         bloomUniformsBuffer = device.createBuffer(() -> "Bloom Blend UBO", uboUsage, BloomUniforms.UBO_SIZE);
+    }
+
+    private record GaussianSamples(int sampleCount, Vector4f[] samples) {}
+
+    private static GaussianSamples getGaussianSamples(int radius) {
+        return SAMPLES_CACHE.computeIfAbsent(radius, key -> {
+            var samples = new Vector4f[MAX_GAUSSIAN_SAMPLES];
+            var weights = new float[key + 1];
+            var totalWeight = 0.0f;
+            var sigma = key / 2.0f;
+
+            for (var i = 0; i <= key; i++) {
+                weights[i] = (float) (Math.exp(-0.5 * (i * i) / (sigma * sigma)));
+                totalWeight += (i == 0 ? 1.0f : 2.0f) * weights[i];
+            }
+
+            for (var i = 0; i < weights.length; i++) {
+                weights[i] /= totalWeight;
+            }
+
+            var sampleCount = 0;
+            samples[sampleCount++] = new Vector4f(0.0f, 0.0f, weights[0], 0.0f);
+
+            for (var i = 1; i < key; i += 2) {
+                var weight1 = weights[i];
+                var weight2 = weights[i + 1];
+                var total = weight1 + weight2;
+                var offset = (i * weight1 + (i + 1.0f) * weight2) / total;
+                samples[sampleCount++] = new Vector4f(offset, offset, total, 0.0f);
+            }
+
+            for (var i = sampleCount; i < MAX_GAUSSIAN_SAMPLES; i++) {
+                samples[i] = new Vector4f();
+            }
+
+            return new GaussianSamples(sampleCount, samples);
+        });
     }
 
     public static void addFixedBuffer(RenderType type) {
@@ -64,50 +104,43 @@ public final class BloomEffect {
 
     public static void close() {
         INPUT.destroyBuffers();
-        OUTPUT.destroyBuffers();
-        SWAP2A.destroyBuffers();
-        SWAP4A.destroyBuffers();
-        SWAP8A.destroyBuffers();
-        SWAP2B.destroyBuffers();
-        SWAP4B.destroyBuffers();
-        SWAP8B.destroyBuffers();
         blurUniformsBuffer.close();
         bloomUniformsBuffer.close();
     }
 
     public static void resize(int width, int height) {
-        resize(INPUT, width, height);
-        resize(OUTPUT, width, height);
-        resize(SWAP2A, width / 2, height / 2);
-        resize(SWAP4A, width / 4, height / 4);
-        resize(SWAP8A, width / 8, height / 8);
-        resize(SWAP2B, width / 2, height / 2);
-        resize(SWAP4B, width / 4, height / 4);
-        resize(SWAP8B, width / 8, height / 8);
-    }
-
-    private static void resize(RenderTarget renderTarget, int width, int height) {
-        renderTarget.resize(width, height);
-        renderTarget.setFilterMode(FilterMode.LINEAR);
-    }
-
-    private static RenderTarget getRenderTarget(int width, int height) {
-        var renderTarget = new TextureTarget(null, width, height, false);
-        renderTarget.setFilterMode(FilterMode.LINEAR);
-        return renderTarget;
+        INPUT.resize(width, height);
+        INPUT.setFilterMode(FilterMode.LINEAR);
     }
 
     public static RenderTarget getInput() {
+        hasBeenUsed = true;
         return INPUT;
+    }
+
+    public static MultiBufferSource.BufferSource getBlitToMainPost() {
+        hasBeenUsed = true;
+        return BLIT_TO_MAIN_POST;
     }
 
     private static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, int radius) {
         try (var memoryStack = MemoryStack.stackPush()) {
+            var samples = getGaussianSamples(radius);
             var builder = Std140Builder.onStack(memoryStack, BlurUniforms.UBO_SIZE);
-            new BlurUniforms(outSize, new Vector2f(dirX, dirY), radius).write(builder);
+            new BlurUniforms(outSize, new Vector2f(dirX, dirY), samples.sampleCount, samples.samples).write(builder);
             var byteBuffer = builder.get();
             RenderSystem.getDevice().createCommandEncoder().writeToBuffer(blurUniformsBuffer.slice(), byteBuffer);
         }
+    }
+
+    private static void runBlurPass(
+            GpuTextureView output, GpuTextureView input,
+            Vector2f outSize, float dirX, float dirY, int radius
+    ) {
+        writeBlurUniforms(outSize, dirX, dirY, radius);
+        var blurUboSlice = blurUniformsBuffer.slice();
+        Render.runBlitPassNDC(output, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", input), Map.of(
+                "BlurInfo", blurUboSlice), true);
     }
 
     private static void writeBloomUniforms(float radius, float intensity) {
@@ -120,6 +153,8 @@ public final class BloomEffect {
     }
 
     public static void process(FrameGraphBuilder frameGraphBuilder) {
+        if (!hasBeenUsed) return;
+
         var mc = Minecraft.getInstance();
         var levelRenderer = mc.levelRenderer;
         var bloom = frameGraphBuilder.addPass("bloom");
@@ -128,68 +163,157 @@ public final class BloomEffect {
             levelRenderer.targets.translucent = bloom.readsAndWrites(levelRenderer.targets.translucent);
         }
         bloom.executes(() -> {
-            var translucentTarget = levelRenderer.getTranslucentTarget();
-            var depthTarget = translucentTarget == null ? mc.getMainRenderTarget() : translucentTarget;
             var mainRenderTarget = mc.getMainRenderTarget();
-            var blurUboSlice = blurUniformsBuffer.slice();
+            var width = mainRenderTarget.width;
+            var height = mainRenderTarget.height;
+            var resourcePool = Render.Buffers.getResourcePool();
 
-            var main = mainRenderTarget.getColorTextureView();
-            var input = INPUT.getColorTexture();
-            var inputView = INPUT.getColorTextureView();
-            var output = OUTPUT.getColorTextureView();
-            var swap2A = SWAP2A.getColorTextureView();
-            var swap4A = SWAP4A.getColorTextureView();
-            var swap8A = SWAP8A.getColorTextureView();
-            var swap2B = SWAP2B.getColorTextureView();
-            var swap4B = SWAP4B.getColorTextureView();
-            var swap8B = SWAP8B.getColorTextureView();
-
-            if (main == null || input == null || inputView == null || output == null || swap2A == null || swap4A == null
-                    || swap8A == null || swap2B == null || swap4B == null || swap8B == null
-            ) return;
-
-            INPUT.copyDepthFrom(depthTarget);
-
-            PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND, Map.of("DiffuseSampler", inputView), Collections.emptyMap(), false);
-
-            BLIT_TO_MAIN_POST.endBatch();
-
-            writeBlurUniforms(new Vector2f(SWAP2A.width, SWAP2A.height), 1.0f, 0.0f, 4);
-            PostEffect.runBlitPass(SWAP2A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", inputView), Map.of("BlurInfo", blurUboSlice), true);
-
-            writeBlurUniforms(new Vector2f(SWAP2B.width, SWAP2B.height), 0.0f, 1.0f, 4);
-            PostEffect.runBlitPass(SWAP2B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap2A), Map.of("BlurInfo", blurUboSlice), true);
-
-            writeBlurUniforms(new Vector2f(SWAP4A.width, SWAP4A.height), 1.0f, 0.0f, 6);
-            PostEffect.runBlitPass(SWAP4A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap2B), Map.of("BlurInfo", blurUboSlice), true);
-
-            writeBlurUniforms(new Vector2f(SWAP4B.width, SWAP4B.height), 0.0f, 1.0f, 6);
-            PostEffect.runBlitPass(SWAP4B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap4A), Map.of("BlurInfo", blurUboSlice), true);
-
-            writeBlurUniforms(new Vector2f(SWAP8A.width, SWAP8A.height), 1.0f, 0.0f, 8);
-            PostEffect.runBlitPass(SWAP8A, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap4B), Map.of("BlurInfo", blurUboSlice), true);
-
-            writeBlurUniforms(new Vector2f(SWAP8B.width, SWAP8B.height), 0.0f, 1.0f, 8);
-            PostEffect.runBlitPass(SWAP8B, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", swap8A), Map.of("BlurInfo", blurUboSlice), true);
-
-            writeBloomUniforms(1.0f, 1.0f);
-            var blendSamplers = Map.of(
-                    "DiffuseSampler", main,
-                    "BlurTexture1", swap2B,
-                    "BlurTexture2", swap4B,
-                    "BlurTexture3", swap8B
+            var descHalf = new RenderTargetDescriptor(
+                    width / 2, height / 2, false, 0
             );
-            PostEffect.runBlitPass(mainRenderTarget, Render.RenderPipelines.BLOOM_BLEND, blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()), false);
-            PostEffect.runBlitPass(MAIN_SCENE, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND, Map.of("DiffuseSampler", main), Collections.emptyMap(), false);
-            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(input, 0);
+            var descQuarter = new RenderTargetDescriptor(
+                    width / 4, height / 4, false, 0
+            );
+            var descEighth = new RenderTargetDescriptor(
+                    width / 8, height / 8, false, 0
+            );
+
+            RenderTarget pongHalf = null, pongQuarter = null, pongEighth = null;
+            RenderTarget ping = null;
+
+            try {
+                var scene = MAIN_SCENE.getColorTextureView();
+                var main = mainRenderTarget.getColorTextureView();
+                var inputView = INPUT.getColorTextureView();
+                var translucentTarget = levelRenderer.getTranslucentTarget();
+                var depthTarget = translucentTarget == null ? mainRenderTarget : translucentTarget;
+
+                if (scene == null || main == null || inputView == null) return;
+
+                INPUT.copyDepthFrom(depthTarget);
+                Render.runBlitPassNDC(
+                        main, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
+                        Map.of("DiffuseSampler", inputView), Collections.emptyMap(),
+                        false
+                );
+                BLIT_TO_MAIN_POST.endBatch();
+
+                {
+                    ping = resourcePool.acquire(descHalf);
+                    ping.setFilterMode(FilterMode.LINEAR);
+                    pongHalf = resourcePool.acquire(descHalf);
+                    pongHalf.setFilterMode(FilterMode.LINEAR);
+                }
+
+                var pingView = ping.getColorTextureView();
+                var pongHalfView = pongHalf.getColorTextureView();
+                if (pingView == null || pongHalfView == null) return;
+
+                runBlurPass(
+                        pingView, inputView,
+                        new Vector2f(ping.width, ping.height), 1.0f, 0.0f, 4
+                );
+                runBlurPass(
+                        pongHalfView, pingView,
+                        new Vector2f(pongHalf.width, pongHalf.height), 0.0f, 1.0f, 4
+                );
+                resourcePool.release(descHalf, ping);
+                ping = null;
+
+                {
+                    ping = resourcePool.acquire(descQuarter);
+                    ping.setFilterMode(FilterMode.LINEAR);
+                    pongQuarter = resourcePool.acquire(descQuarter);
+                    pongQuarter.setFilterMode(FilterMode.LINEAR);
+                }
+
+                var pongQuarterView = pongQuarter.getColorTextureView();
+                pingView = ping.getColorTextureView();
+                pongHalfView = pongHalf.getColorTextureView();
+                pongQuarterView = pongQuarter.getColorTextureView();
+                if (pingView == null || pongHalfView == null || pongQuarterView == null) return;
+
+                runBlurPass(
+                        pingView, pongHalfView,
+                        new Vector2f(ping.width, ping.height), 1.0f, 0.0f, 6
+                );
+                runBlurPass(
+                        pongQuarterView, pingView,
+                        new Vector2f(pongQuarter.width, pongQuarter.height), 0.0f, 1.0f, 6
+                );
+                resourcePool.release(descQuarter, ping);
+                ping = null;
+
+                {
+                    ping = resourcePool.acquire(descEighth);
+                    ping.setFilterMode(FilterMode.LINEAR);
+                    pongEighth = resourcePool.acquire(descEighth);
+                    pongEighth.setFilterMode(FilterMode.LINEAR);
+                }
+
+                pingView = ping.getColorTextureView();
+                var pongEighthView = pongEighth.getColorTextureView();
+                if (pingView == null || pongEighthView == null) return;
+
+                runBlurPass(
+                        pingView, pongQuarterView,
+                        new Vector2f(ping.width, ping.height), 1.0f, 0.0f, 8
+                );
+                runBlurPass(
+                        pongEighthView, pingView,
+                        new Vector2f(pongEighth.width, pongEighth.height), 0.0f, 1.0f, 8
+                );
+                resourcePool.release(descEighth, ping);
+                ping = null;
+
+                writeBloomUniforms(1.0f, 1.0f);
+                var blendSamplers = Map.of(
+                        "DiffuseSampler", main,
+                        "BlurTexture1", pongHalfView,
+                        "BlurTexture2", pongQuarterView,
+                        "BlurTexture3", pongEighthView
+                );
+                Render.runBlitPassNDC(
+                        main, Render.RenderPipelines.BLOOM_BLEND,
+                        blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()),
+                        false
+                );
+                Render.runBlitPassNDC(
+                        scene, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
+                        Map.of("DiffuseSampler", main), Collections.emptyMap(),
+                        false
+                );
+                RenderSystem.getDevice().createCommandEncoder().clearColorTexture(inputView.texture(), 0);
+            } finally {
+                if (ping != null) {
+                    if (ping.width == width / 2) resourcePool.release(descHalf, ping);
+                    else if (ping.width == width / 4) resourcePool.release(descQuarter, ping);
+                    else resourcePool.release(descEighth, ping);
+                }
+                if (pongHalf != null) resourcePool.release(descHalf, pongHalf);
+                if (pongQuarter != null) resourcePool.release(descQuarter, pongQuarter);
+                if (pongEighth != null) resourcePool.release(descEighth, pongEighth);
+            }
         });
+        hasBeenUsed = false;
     }
 
-    public record BlurUniforms(Vector2f outSize, Vector2f blurDir, int radius) {
-        public static final int UBO_SIZE = new Std140SizeCalculator().putVec2().putVec2().putInt().get();
+    public record BlurUniforms(Vector2f outSize, Vector2f blurDir, int sampleCount, Vector4f[] samples) {
+        public static final int UBO_SIZE;
+
+        static {
+            var calculator = new Std140SizeCalculator().putVec2().putVec2().putInt();
+            for (var i = 0; i < MAX_GAUSSIAN_SAMPLES; i++) {
+                calculator.putVec4();
+            }
+            UBO_SIZE = calculator.get();
+        }
 
         public void write(Std140Builder builder) {
-            builder.putVec2(outSize).putVec2(blurDir).putInt(radius);
+            builder.putVec2(outSize).putVec2(blurDir).putInt(sampleCount);
+            for (var sample : samples) {
+                builder.putVec4(sample);
+            }
         }
     }
 

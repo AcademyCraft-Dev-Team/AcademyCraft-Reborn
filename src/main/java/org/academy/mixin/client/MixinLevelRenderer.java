@@ -3,7 +3,9 @@ package org.academy.mixin.client;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
+import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
@@ -12,6 +14,7 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.LevelRenderState;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.Render;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.post.BloomEffect;
@@ -43,6 +46,18 @@ public abstract class MixinLevelRenderer {
             CallbackInfo ci,
             @Local(ordinal = 0) FrameGraphBuilder frameGraphBuilder
     ) {
+        var mc = Minecraft.getInstance();
+        var main = mc.getMainRenderTarget();
+
+        RenderTarget renderTarget = null;
+        var desc = new RenderTargetDescriptor(main.width, main.height, true, 0, true);
+
+        try {
+            renderTarget = graphicsResourceAllocator.acquire(desc);
+        } finally {
+            if (renderTarget != null) graphicsResourceAllocator.release(desc, renderTarget);
+        }
+
         BloomEffect.process(frameGraphBuilder);
     }
 

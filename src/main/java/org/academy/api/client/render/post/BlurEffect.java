@@ -4,212 +4,144 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.Minecraft;
+import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import org.academy.api.client.Render;
 import org.joml.Vector2f;
+import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
-import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.OptionalInt;
-import java.util.function.Consumer;
 
 public final class BlurEffect {
-    private static float blurRadius = 20.0F;
-    @Nullable
-    private static RenderTarget maskInputRenderTarget;
-    @Nullable
-    private static RenderTarget swapTarget;
-    @Nullable
-    private static GpuBuffer blurUniformsBuffer;
-    @Nullable
-    private static GpuBuffer fullscreenQuadVertexBuffer;
+    private static final int MAX_GAUSSIAN_SAMPLES = 12;
+    private static final Int2ObjectMap<GaussianSamples> SAMPLES_CACHE = Int2ObjectMaps.synchronize(new Int2ObjectLinkedOpenHashMap<>());
+    private static final GpuBuffer blurUniformsBuffer;
 
-    public static void init() {
-        var mc = Minecraft.getInstance();
-        var mainRenderTarget = mc.getMainRenderTarget();
-        var width = mainRenderTarget.width;
-        var height = mainRenderTarget.height;
-        maskInputRenderTarget = createRenderTarget(width, height);
-        swapTarget = createRenderTarget(width, height);
-
+    static {
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
         blurUniformsBuffer = device.createBuffer(() -> "Blur UBO", uboUsage, BlurUniforms.UBO_SIZE);
-        createFullscreenQuad();
     }
 
-    public static void resize(int width, int height) {
-        if (maskInputRenderTarget != null)
-            resizeRenderTarget(maskInputRenderTarget, width, height);
-        if (swapTarget != null)
-            resizeRenderTarget(swapTarget, width, height);
+    private record GaussianSamples(int sampleCount, Vector4f[] samples) {}
+
+    private static GaussianSamples getGaussianSamples(int radius) {
+        return SAMPLES_CACHE.computeIfAbsent(radius, key -> {
+            var samples = new Vector4f[MAX_GAUSSIAN_SAMPLES];
+            var weights = new float[key + 1];
+            float totalWeight = 0.0f;
+            float sigma = key / 2.0f;
+
+            for (int i = 0; i <= key; i++) {
+                weights[i] = (float) (Math.exp(-0.5 * (i * i) / (sigma * sigma)));
+                totalWeight += (i == 0 ? 1.0f : 2.0f) * weights[i];
+            }
+
+            for (int i = 0; i < weights.length; i++) {
+                weights[i] /= totalWeight;
+            }
+
+            int sampleCount = 0;
+            samples[sampleCount++] = new Vector4f(0.0f, 0.0f, weights[0], 0.0f);
+
+            for (int i = 1; i < key; i += 2) {
+                float weight1 = weights[i];
+                float weight2 = weights[i + 1];
+                float total = weight1 + weight2;
+                float offset = (i * weight1 + (i + 1.0f) * weight2) / total;
+                samples[sampleCount++] = new Vector4f(offset, offset, total, 0.0f);
+            }
+
+            for (int i = sampleCount; i < MAX_GAUSSIAN_SAMPLES; i++) {
+                samples[i] = new Vector4f();
+            }
+
+            return new GaussianSamples(sampleCount, samples);
+        });
     }
 
     public static void close() {
-        if (maskInputRenderTarget != null)
-            maskInputRenderTarget.destroyBuffers();
-        if (swapTarget != null)
-            swapTarget.destroyBuffers();
-        if (blurUniformsBuffer != null)
-            blurUniformsBuffer.close();
-        if (fullscreenQuadVertexBuffer != null)
-            fullscreenQuadVertexBuffer.close();
+        blurUniformsBuffer.close();
     }
 
-    public static void apply(Consumer<RenderPass> maskDrawer, RenderTarget samplerTarget, RenderTarget outputTarget) {
-        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+    /**
+     * 应用高斯模糊喵
+     *
+     * @param samplerTarget 采样目标喵
+     * @param outputTarget 输出目标喵, 也是模板缓冲区喵
+     * @param radius 模糊半径喵
+     */
+    public static void apply(RenderTarget samplerTarget, RenderTarget outputTarget, float radius) {
+        if (radius < 0.1f) return;
 
-        {
-            try (
-                    var renderPass = commandEncoder.createRenderPass(
-                            () -> "Blur Mask Pass",
-                            maskInputRenderTarget.getColorTextureView(),
-                            OptionalInt.of(0)
-                    )
-            ) {
-                maskDrawer.accept(renderPass);
-            }
-        }
+        var width = samplerTarget.width;
+        var height = samplerTarget.height;
+        var resourcePool = Render.Buffers.getResourcePool();
+        var desc = new RenderTargetDescriptor(width, height, false, 0);
+        RenderTarget swapTarget = null;
 
-        var blurUboSlice = blurUniformsBuffer.slice();
+        try {
+            swapTarget = resourcePool.acquire(desc);
 
-        {
-            writeBlurUniforms(new Vector2f((float) swapTarget.width, (float) swapTarget.height), 1.0F, 0.0F);
-            var samplers = Map.of("DiffuseSampler", samplerTarget.getColorTextureView(), "MaskSampler", maskInputRenderTarget.getColorTextureView());
+            var sampler = samplerTarget.getColorTextureView();
+            var swap = swapTarget.getColorTextureView();
+            var output = outputTarget.getColorTextureView();
+
+            if (sampler == null || swap == null || output == null) return;
+
+            var blurUboSlice = blurUniformsBuffer.slice();
             var uniforms = Map.of("BlurInfo", blurUboSlice);
-            runBlitPass(swapTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms, true);
-        }
 
-        {
-            writeBlurUniforms(new Vector2f((float) samplerTarget.width, (float) samplerTarget.height), 0.0F, 1.0F);
-            var samplers = Map.of("DiffuseSampler", swapTarget.getColorTextureView(), "MaskSampler", maskInputRenderTarget.getColorTextureView());
-            var uniforms = Map.of("BlurInfo", blurUboSlice);
-            runBlitPass(outputTarget, Render.RenderPipelines.MASKED_BLUR_SHADER, samplers, uniforms, false);
-        }
-    }
+            writeBlurUniforms(new Vector2f(swapTarget.width, swapTarget.height), 1.0F, 0.0F, radius);
+            runBlitPass(swap, Map.of("DiffuseSampler", sampler), uniforms);
 
-    private static void createFullscreenQuad() {
-        if (fullscreenQuadVertexBuffer != null) {
-            fullscreenQuadVertexBuffer.close();
-        }
-
-        try (var byteBufferBuilder = ByteBufferBuilder.exactlySized(DefaultVertexFormat.POSITION_TEX.getVertexSize() * 4)) {
-            var bufferBuilder = new BufferBuilder(byteBufferBuilder, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-            bufferBuilder.addVertex(-1.0F, -1.0F, 0.0F).setUv(0.0F, 0.0F);
-            bufferBuilder.addVertex(1.0F, -1.0F, 0.0F).setUv(1.0F, 0.0F);
-            bufferBuilder.addVertex(1.0F, 1.0F, 0.0F).setUv(1.0F, 1.0F);
-            bufferBuilder.addVertex(-1.0F, 1.0F, 0.0F).setUv(0.0F, 1.0F);
-
-            try (var meshData = bufferBuilder.buildOrThrow()) {
-                fullscreenQuadVertexBuffer = RenderSystem.getDevice().createBuffer(() -> "Blur Fullscreen Quad", 32, meshData.vertexBuffer());
+            writeBlurUniforms(new Vector2f(outputTarget.width, outputTarget.height), 0.0F, 1.0F, radius);
+            runBlitPass(output, Map.of("DiffuseSampler", swap), uniforms);
+        } finally {
+            if (swapTarget != null) {
+                resourcePool.release(desc, swapTarget);
             }
         }
     }
 
-    private static void resizeRenderTarget(RenderTarget renderTarget, int width, int height) {
-        renderTarget.resize(width, height);
-        renderTarget.setFilterMode(FilterMode.LINEAR);
-    }
-
-    private static RenderTarget createRenderTarget(int width, int height) {
-        var renderTarget = new TextureTarget(null, width, height, false);
-        renderTarget.setFilterMode(FilterMode.LINEAR);
-        return renderTarget;
-    }
-
-    private static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY) {
+    private static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, float radius) {
         try (var memoryStack = MemoryStack.stackPush()) {
+            var samples = getGaussianSamples((int) Math.ceil(radius));
             var builder = Std140Builder.onStack(memoryStack, BlurUniforms.UBO_SIZE);
-            new BlurUniforms(outSize, new Vector2f(dirX, dirY), blurRadius).write(builder);
+            new BlurUniforms(outSize, new Vector2f(dirX, dirY), samples.sampleCount, samples.samples).write(builder);
             var byteBuffer = builder.get();
             RenderSystem.getDevice().createCommandEncoder().writeToBuffer(blurUniformsBuffer.slice(), byteBuffer);
         }
     }
 
-    private static void runBlitPass(RenderTarget target, RenderPipeline pipeline, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms, boolean clearColor) {
-        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-
-        if (clearColor) {
-            commandEncoder.clearColorTexture(target.getColorTexture(), 0);
-        }
-
-        try (
-                var renderPass = commandEncoder.createRenderPass(
-                        () -> "Blit Pass to " + target, target.getColorTextureView(), OptionalInt.empty()
-                )
-        ) {
-            renderPass.setPipeline(pipeline);
-            samplers.forEach(renderPass::bindSampler);
-            uniforms.forEach(renderPass::setUniform);
-            renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer);
-            var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-            renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
-            renderPass.drawIndexed(0, 0, 6, 1);
-        }
+    private static void runBlitPass(GpuTextureView target, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms) {
+        Render.runBlitPassNDC(target, Render.RenderPipelines.GAUSSIAN_BLUR, samplers, uniforms, false);
     }
 
-    public static float getBlurRadius() {
-        return blurRadius;
-    }
+    private record BlurUniforms(Vector2f outSize, Vector2f blurDir, int sampleCount, Vector4f[] samples) {
+        public static final int UBO_SIZE;
 
-    public static void setBlurRadius(float blurRadius) {
-        BlurEffect.blurRadius = blurRadius;
-    }
-
-    private BlurEffect() {
-    }
-
-    public static class BlurUniforms {
-        public static final int UBO_SIZE = new Std140SizeCalculator().putVec2().putVec2().putFloat().get();
-
-        private Vector2f outSize;
-        private Vector2f blurDir;
-        private float radius;
-
-        public BlurUniforms(Vector2f outSize, Vector2f blurDir, float radius) {
-            this.outSize = outSize;
-            this.blurDir = blurDir;
-            this.radius = radius;
+        static {
+            var calculator = new Std140SizeCalculator().putVec2().putVec2().putInt();
+            for (int i = 0; i < MAX_GAUSSIAN_SAMPLES; i++) {
+                calculator.putVec4();
+            }
+            UBO_SIZE = calculator.get();
         }
 
         public void write(Std140Builder builder) {
-            builder.putVec2(outSize).putVec2(blurDir).putFloat(radius);
-        }
-
-        public Vector2f getOutSize() {
-            return outSize;
-        }
-
-        public void setOutSize(Vector2f outSize) {
-            this.outSize = outSize;
-        }
-
-        public Vector2f getBlurDir() {
-            return blurDir;
-        }
-
-        public void setBlurDir(Vector2f blurDir) {
-            this.blurDir = blurDir;
-        }
-
-        public float getRadius() {
-            return radius;
-        }
-
-        public void setRadius(float radius) {
-            this.radius = radius;
+            builder.putVec2(outSize).putVec2(blurDir).putInt(sampleCount);
+            for (var sample : samples) {
+                builder.putVec4(sample);
+            }
         }
     }
+
+    private BlurEffect() {}
 }

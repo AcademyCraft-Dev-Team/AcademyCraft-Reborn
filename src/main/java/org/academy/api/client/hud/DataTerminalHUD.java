@@ -134,21 +134,21 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     }
 
     private static void initGui(int width, int height) {
-    /*    rootContainer.setWidth((float) width);
-        rootContainer.setHeight((float) height);
-        rootContainer.clearChildren();
+    /*    root.setWidth((float) width);
+        root.setHeight((float) height);
+        root.clearChildren();
 
         var infoBar = buildInfoBar();
-        rootContainer.addChild(infoBar.getName(), infoBar);
+        root.addChild(infoBar.getName(), infoBar);
 
         var appDock = buildAppDock();
-        rootContainer.addChild(appDock.getName(), appDock);
+        root.addChild(appDock.getName(), appDock);
 
-        rootContainer.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
+        root.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
 
         var cursorWidget = new CursorWidget(config.layout.cursorWidgetSize);
         cursorWidget.setName("cursor");
-        rootContainer.addChild(cursorWidget.getName(), cursorWidget);
+        root.addChild(cursorWidget.getName(), cursorWidget);
 
         maskDirty = true;*/
     }
@@ -158,8 +158,8 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var barWidth = 150.0F * layout.scale;
         var barHeight = 20.0F * layout.scale;
         var padding = 3.0F * layout.scale;
-        var screenWidth = rootContainer.getWidth();
-        var screenHeight = rootContainer.getHeight();
+        var screenWidth = root.getWidth();
+        var screenHeight = root.getHeight();
         var infoBarX = screenWidth - barWidth - screenWidth / 10.0F;
         var infoBarY = screenHeight / 10.0F;
 
@@ -188,8 +188,8 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var layout = config.layout;
         var dockWidth = 220.0F * layout.scale;
         var dockHeight = 40.0F * layout.scale;
-        var dockX = (rootContainer.getWidth() - dockWidth) / 2.0F;
-        var dockY = rootContainer.getHeight() - 2.0F * dockHeight;
+        var dockX = (root.getWidth() - dockWidth) / 2.0F;
+        var dockY = root.getHeight() - 2.0F * dockHeight;
 
         var dockPanel = new PanelWidget(dockX, dockY, dockWidth, dockHeight);
         dockPanel.setName("app_dock");
@@ -223,7 +223,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         commandEncoder.clearColorAndDepthTextures(uiRenderTarget.getColorTexture(), 0, uiRenderTarget.getDepthTexture(), 1);
 
-      //  internalUIRenderContext.renderFrame(rootContainer, uiRenderTarget, xpos, ypos, partialTick);
+      //  internalUIRenderContext.renderFrame(root, uiRenderTarget, xpos, ypos, partialTick);
         renderUIWith3DEffect();
     }
 
@@ -236,11 +236,11 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         float fov = 80;
         var fovY = 2f * (float) Math.atan(Math.tan(Math.toRadians(fov) / 2f) / aspectRatio);
 
-        var projectionMatrix = new Matrix4f().perspective(fovY, aspectRatio, 1.0F, 1000.0F);
+        var projectionMatrix = new Matrix4f().perspective(fovY, aspectRatio, -10.0F, 1000.0F);
         var viewMatrix = new Matrix4f().identity();
 
         {
-            var z = -2.5125F;
+            var z = 2.5125F;
             var scale = 2.0F * Math.abs(z) * (float) Math.tan(fovY / 2.0F) / guiHeight;
 
             viewMatrix.translate(0.0F, 0.0F, z);
@@ -273,7 +273,10 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         var mainRenderTarget = mc.getMainRenderTarget();
         var samplers = Map.of("Sampler0", uiRenderTarget.getColorTextureView());
-        var uniforms = Map.of("Projection", terminalTransformUbo.slice());
+        var uniforms = Map.of(
+                "Projection", terminalTransformUbo.slice(),
+                "DynamicTransforms", dynamicTransformsSlice
+        );
 
         try (var renderPass = commandEncoder.createRenderPass(() -> "DataTerminal 3D Composite", mainRenderTarget.getColorTextureView(), OptionalInt.empty(), mainRenderTarget.getDepthTextureView(), OptionalDouble.empty())) {
             renderPass.setPipeline(Render.RenderPipelines.IMAGE);
@@ -369,8 +372,8 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     @SubscribeEvent
     public static void onTick(ClientTickEvent.Post event) {
 /*        if (active) {
-            rootContainer.tick();
-            var infoBar = (AbstractContainerWidget) rootContainer.getChildUnSafe("info_bar");
+            root.tick();
+            var infoBar = (AbstractContainerWidget) root.getChildUnSafe("info_bar");
             var nameLabel = (LabelWidget) infoBar.getChildUnSafe("player_name");
             var player = Minecraft.getInstance().player;
             if (player != null) {
@@ -398,8 +401,8 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             xpos = mouseHandler.xpos();
             ypos = mouseHandler.ypos();
             initGui(window.getGuiScaledWidth(), window.getGuiScaledHeight());
-            INSTANCE.playEntranceAnimation(rootContainer.getChildUnSafe("info_bar"), AnimationDirection.FROM_RIGHT);
-            INSTANCE.playEntranceAnimation(rootContainer.getChildUnSafe("app_dock"), AnimationDirection.FROM_BOTTOM);
+            INSTANCE.playEntranceAnimation(root.getChildUnSafe("info_bar"), AnimationDirection.FROM_RIGHT);
+            INSTANCE.playEntranceAnimation(root.getChildUnSafe("app_dock"), AnimationDirection.FROM_BOTTOM);
         }*/
     }
 
@@ -426,7 +429,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     public static void openAppInWindow(App app) {
        /* var contentWidget = app.getContainer();
         var title = app.getName();
-        rootContainer.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
+        root.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
         app.onClick().run();
 
         var titleBarSize = 16.0F;
@@ -434,9 +437,9 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         var windowWidth = contentWidget.getWidth() + padding * 2.0F;
         var windowHeight = contentWidget.getHeight() + titleBarSize + padding * 2.0F;
 
-        var windowFrame = new PanelWidget((rootContainer.getWidth() - windowWidth) / 2.0F, (rootContainer.getHeight() - windowHeight) / 2.0F, windowWidth, windowHeight);
+        var windowFrame = new PanelWidget((root.getWidth() - windowWidth) / 2.0F, (root.getHeight() - windowHeight) / 2.0F, windowWidth, windowHeight);
         windowFrame.setName("app_window");
-        rootContainer.addChild(windowFrame.getName(), windowFrame);
+        root.addChild(windowFrame.getName(), windowFrame);
 
         var back = new FillWidget(0.0F, 0.0F, windowWidth, windowHeight, -2147483648);
         windowFrame.addChild("back", back);
@@ -451,7 +454,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
 
         var closeButton = new ImageButtonWidget(windowWidth - titleBarSize, 0.0F, titleBarSize, titleBarSize, Resource.Textures.ICON_RANDOM, () -> {
             app.onClose().run();
-            rootContainer.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
+            root.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
             maskDirty = true;
         });
         closeButton.setDefaultHoverEffect(true);
@@ -464,7 +467,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
         windowFrame.setAlpha(0.0F);
         windowFrame.setY(windowFrame.getY() + 20.0F);
         INSTANCE.playAnimation(ObjectAnimator.ofFloat(windowFrame::setAlpha, 0.0F, 1.0F).setDuration(200L));
-        INSTANCE.playAnimation(ObjectAnimator.ofFloat(windowFrame::setY, windowFrame.getY(), (rootContainer.getHeight() - windowHeight) / 2.0F).setDuration(200L).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
+        INSTANCE.playAnimation(ObjectAnimator.ofFloat(windowFrame::setY, windowFrame.getY(), (root.getHeight() - windowHeight) / 2.0F).setDuration(200L).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
 
         maskDirty = true;*/
     }
@@ -720,17 +723,9 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
 
     private static class TransformUniforms {
         public static final int UBO_SIZE = new Std140SizeCalculator().putMat4f().get();
-        private Matrix4f mvp;
+        private final Matrix4f mvp;
 
         public TransformUniforms(Matrix4f mvp) {
-            this.mvp = mvp;
-        }
-
-        public Matrix4f getMvp() {
-            return mvp;
-        }
-
-        public void setMvp(Matrix4f mvp) {
             this.mvp = mvp;
         }
 

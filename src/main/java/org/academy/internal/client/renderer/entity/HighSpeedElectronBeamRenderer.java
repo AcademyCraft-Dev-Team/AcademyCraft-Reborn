@@ -39,7 +39,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.mulPose(new Matrix4f().scale(ballRadius));
         BallRenderer.renderBall(
                 poseStack.last(),
-                BloomEffect.BLIT_TO_MAIN_POST.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_POST),
+                BloomEffect.getBlitToMainPost().getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_POST),
                 HEAD_BUFFER,
                 0, 1, 0, 1,
                 renderState.lightCoords, OverlayTexture.NO_OVERLAY
@@ -64,7 +64,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.mulPose(new Matrix4f().scale(rayVisualProgress * 0.25f, renderState.length, rayVisualProgress * 0.25f));
         BoxRenderer.renderFilledBox(
                 poseStack,
-                BloomEffect.BLIT_TO_MAIN_POST.getBuffer(Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST),
+                BloomEffect.getBlitToMainPost().getBuffer(Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST),
                 RAY, 0, 1, 0, 1
         );
         poseStack.scale(0.75f, 1, 0.75f);
