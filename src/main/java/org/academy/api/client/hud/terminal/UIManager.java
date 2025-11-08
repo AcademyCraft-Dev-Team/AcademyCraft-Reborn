@@ -26,21 +26,21 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
     }
 
     public void initGui(int width, int height) {
-     /*   rootContainer.setWidth(width);
-        rootContainer.setHeight(height);
-        rootContainer.clearChildren();
+     /*   root.setWidth(width);
+        root.setHeight(height);
+        root.clearChildren();
 
         var menuBar = buildTopMenuBar();
-        rootContainer.addChild("top_menu_bar", menuBar);
+        root.addChild("top_menu_bar", menuBar);
 
         var dock = buildDockBar(width, height);
-        rootContainer.addChild("app_dock", dock);
+        root.addChild("app_dock", dock);
 
-        rootContainer.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
+        root.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
 
         var cursorWidget = new CursorWidget(config.layout.cursorWidgetSize);
         cursorWidget.setZ(100);
-        rootContainer.addChild(cursorWidget.getName(), cursorWidget);
+        root.addChild(cursorWidget.getName(), cursorWidget);
 
         var menuBarFinalY = menuBar.getY();
         menuBar.setY(-menuBar.getHeight());
@@ -48,7 +48,7 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         playAnimation(ObjectAnimator.ofFloat(menuBar::setAlpha, 0.0F, 1.0F).setDuration(400L));
 
         var dockFinalY = dock.getY();
-        dock.setY(rootContainer.getHeight());
+        dock.setY(root.getHeight());
         playAnimation(ObjectAnimator.ofFloat(dock::setY, dock.getY(), dockFinalY).setDuration(400L).setInterpolator(EasingFunctions.EASE_OUT_BACK));
         playAnimation(ObjectAnimator.ofFloat(dock::setAlpha, 0.0F, 1.0F).setDuration(400L));*/
     }
@@ -105,7 +105,7 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         var barWidth = 150.0F * layout.scale;
         var barHeight = 20.0F * layout.scale;
         var padding = 3.0F * layout.scale;
-        var screenWidth = rootContainer.getWidth();
+        var screenWidth = root.getWidth();
         var menuBarX = screenWidth - barWidth - 20f * layout.scale;
         var menuBarY = 20f * layout.scale;
 
@@ -143,11 +143,11 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
 /*
 
     public void openAppInWindow(App app) {
-        var oldWindow = rootContainer.getChildren().get("app_window");
+        var oldWindow = root.getChildren().get("app_window");
         if (oldWindow != null) {
             oldWindow.setVisible(false);
         }
-        rootContainer.removeChild("app_window");
+        root.removeChild("app_window");
 
         var contentWidget = app.createUI(this);
         var title = app.getName();
@@ -157,13 +157,13 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         var windowWidth = contentWidget.getWidth() + padding * 2.0F;
         var windowHeight = contentWidget.getHeight() + titleBarSize + padding * 2.0F;
 
-        var dock = rootContainer.getChildUnSafe("app_dock");
-        var windowX = (rootContainer.getWidth() - windowWidth) / 2.0F;
+        var dock = root.getChildUnSafe("app_dock");
+        var windowX = (root.getWidth() - windowWidth) / 2.0F;
         var windowY = (dock.getY() - windowHeight) / 2.0F;
 
         var windowFrame = new PanelWidget(windowX, windowY, windowWidth, windowHeight);
         windowFrame.setName("app_window");
-        rootContainer.addChild(windowFrame.getName(), windowFrame);
+        root.addChild(windowFrame.getName(), windowFrame);
 
         var back = new FillWidget(0.0F, 0.0F, windowWidth, windowHeight, 0x40000000);
         windowFrame.addChild("back", back);
@@ -181,12 +181,12 @@ public final class UIManager implements IAnimationScreen, AutoCloseable {
         var closeAction = new Runnable() {
             @Override
             public void run() {
-            var currentWindow = rootContainer.getChildren().get("app_window");
+            var currentWindow = root.getChildren().get("app_window");
             if (currentWindow != null) {
                 currentWindow.setVisible(false);
             }
-            rootContainer.removeChild("app_window");
-            rootContainer.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
+            root.removeChild("app_window");
+            root.addChild("app_window", new PanelWidget(0.0F, 0.0F, 0.0F, 0.0F));
             }
         };
         var closeButton = new ImageButtonWidget(windowWidth - titleBarSize, 0.0F, titleBarSize, titleBarSize, Resource.Textures.ICON_RANDOM, closeAction);

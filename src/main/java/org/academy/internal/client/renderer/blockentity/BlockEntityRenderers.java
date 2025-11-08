@@ -4,10 +4,9 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import org.academy.AcademyCraft;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 
-@EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class BlockEntityRenderers {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {

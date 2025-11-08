@@ -375,7 +375,7 @@ public final class AbilitySystemServer {
         }
     }
 
-    @EventBusSubscriber(modid = AcademyCraft.MODID)
+    @EventBusSubscriber
     public static final class ServerLifecycleHooks {
         @SubscribeEvent
         public static void tickMinecraftServerThread(ServerTickEvent.Pre event) {

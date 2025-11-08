@@ -3,7 +3,6 @@ package org.academy.api.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import org.academy.api.client.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.util.MathUtil;
 import org.joml.Vector3f;

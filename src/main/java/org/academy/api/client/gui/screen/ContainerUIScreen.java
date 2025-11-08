@@ -1,8 +1,5 @@
 package org.academy.api.client.gui.screen;
 
-import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.pipeline.TextureTarget;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.CharacterEvent;
@@ -22,7 +19,6 @@ import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.render.UIRenderContext;
 import org.academy.api.client.gui.widget.*;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -34,57 +30,31 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements IUIScreen,IAnimationScreen {
-    protected final FrameLayoutWidget rootContainer = new FrameLayoutWidget();
+public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements RenderRoot, IAnimationScreen {
+    protected final FrameLayoutWidget root = new FrameLayoutWidget();
 
     private boolean handleContainer = true;
     private boolean renderInventory = true;
     private final List<Animator> screenAnimations = new ArrayList<>();
     private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
-    protected final UIRenderContext uiRenderContext = new UIRenderContext();
     private Supplier<Float> invHeightSupplier = () -> 1f;
     private Supplier<Float> invTranslationYSupplier = () -> 1f;
     private Consumer<Boolean> invVisibleSetter = ignore -> {
     };
-    @Nullable
-    protected RenderTarget renderTarget;
 
     protected ContainerUIScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
     }
 
     @Override
-    @Nullable
-    public RenderTarget getRenderTarget() {
-        return renderTarget;
-    }
-
-    @Override
-    public WidgetContainer getRootContainer() {
-        return rootContainer;
-    }
-
-    @Override
-    public UIRenderContext getUIRenderContext() {
-        return uiRenderContext;
+    public WidgetContainer getRoot() {
+        return root;
     }
 
     @Override
     public void onClose() {
         super.onClose();
         cancelAllAnimations();
-        if (renderTarget != null) renderTarget.destroyBuffers();
-        uiRenderContext.close();
-    }
-
-    private void initializeRenderResources() {
-        var window = Minecraft.getInstance().getWindow();
-        if (renderTarget != null) {
-            renderTarget.resize(window.getWidth(), window.getHeight());
-        } else {
-            renderTarget = new TextureTarget(null, window.getWidth(), window.getHeight(), true);
-        }
-        ImGuiUtilApi.clearEventsQueue();
     }
 
     @Override
@@ -100,11 +70,10 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
     @Override
     protected void init() {
         super.init();
-        var minecraft = Minecraft.getInstance();
-        minecraft.execute(this::initializeRenderResources);
+        ImGuiUtilApi.clearEventsQueue();
 
-        rootContainer.setName("root");
-        rootContainer.clearChildren();
+        root.setName("root");
+        root.clearChildren();
 
         var finalHeight = 187f;
         var duration = 600L;
@@ -117,7 +86,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
                         .heightMode(SizeMode.WRAP_CONTENT)
                         .margin(leftPos - 16, topPos - 22, 0, 0)
         );
-        rootContainer.addChild("main", main);
+        root.addChild("main", main);
         playAnimation(
                 ObjectAnimator
                         .ofFloat(main::setAlpha, 0, 1.0f)
@@ -198,6 +167,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        var renderTarget = ScreenDispatcher.getRenderTarget();
         if (renderTarget == null) return;
         var colorTextureView = renderTarget.getColorTextureView();
         if (colorTextureView == null) return;
@@ -251,7 +221,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
 
     @Override
     protected void containerTick() {
-        rootContainer.tick();
+        root.tick();
     }
 
     @Override
@@ -259,7 +229,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         if (ImGuiUtilApi.wantCaptureMouse()) return;
 
         var event = MouseEvent.createMoveEvent(mouseX, mouseY);
-        rootContainer.dispatchEvent(event);
+        root.dispatchEvent(event);
         super.mouseMoved(mouseX, mouseY);
     }
 
@@ -268,7 +238,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         if (ImGuiUtilApi.wantCaptureMouse()) return true;
 
         var event = new ScrollEvent(mouseX, mouseY, scrollY);
-        rootContainer.dispatchEvent(event);
+        root.dispatchEvent(event);
         var rootResult = event.isConsumed();
 
         var superResult = false;
@@ -282,7 +252,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         if (ImGuiUtilApi.wantCaptureMouse()) return true;
 
         var event = MouseEvent.createReleaseEvent(e.x(), e.y(), e.button());
-        rootContainer.dispatchEvent(event);
+        root.dispatchEvent(event);
         var rootResult = event.isConsumed();
 
         var superResult = false;
@@ -296,7 +266,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         if (ImGuiUtilApi.wantCaptureMouse()) return true;
 
         var event = MouseEvent.createDragEvent(e.x(), e.y(), e.button(), mouseX, mouseY);
-        rootContainer.dispatchEvent(event);
+        root.dispatchEvent(event);
         var rootResult = event.isConsumed();
 
         var superResult = false;
@@ -310,7 +280,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         if (ImGuiUtilApi.wantCaptureMouse()) return true;
 
         var event = MouseEvent.createPressEvent(e.x(), e.y(), e.button());
-        rootContainer.dispatchEvent(event);
+        root.dispatchEvent(event);
         var rootResult = event.isConsumed();
 
         var superResult = false;
@@ -329,7 +299,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         }
 
         var event = new KeyEvent(EventType.KEY_PRESSED, e.key(), e.scancode(), e.modifiers());
-        rootContainer.dispatchEvent(event);
+        root.dispatchEvent(event);
         if (event.isConsumed()) return true;
         if (e.key() == GLFW.GLFW_KEY_ESCAPE && shouldCloseOnEsc()) {
             onClose();
@@ -343,7 +313,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         if (ImGuiUtilApi.wantCaptureKeyboard()) return true;
 
         var event = new CharTypedEvent(e.codepoint(), e.modifiers());
-        rootContainer.dispatchEvent(event);
+        root.dispatchEvent(event);
         if (event.isConsumed()) return true;
         return isHandleContainer() && super.charTyped(e);
     }

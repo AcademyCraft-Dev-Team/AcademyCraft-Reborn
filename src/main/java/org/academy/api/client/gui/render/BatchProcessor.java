@@ -4,7 +4,7 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import org.academy.api.client.Render;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.joml.Matrix4f;
 
@@ -12,8 +12,6 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 public final class BatchProcessor {
-    private final ByteBufferBuilder sharedByteBufferBuilder;
-
     private static final Comparator<SubmittedCommand> COMMAND_COMPARATOR =
             Comparator.comparingDouble((SubmittedCommand cmd) -> cmd.getPose().pose().m32())
                     .thenComparingLong(SubmittedCommand::getDrawOrder)
@@ -21,11 +19,7 @@ public final class BatchProcessor {
                     .thenComparingLong(SubmittedCommand::getResourceKey)
                     .thenComparing(SubmittedCommand::getScissorRect, Comparator.nullsFirst(ScissorRect::compareTo));
 
-    public BatchProcessor(ByteBufferBuilder sharedByteBufferBuilder) {
-        this.sharedByteBufferBuilder = sharedByteBufferBuilder;
-    }
-
-    public List<MeshToDraw> process(List<SubmittedCommand> commands, float depthEpsilon) {
+    public static List<MeshToDraw> process(List<SubmittedCommand> commands, float depthEpsilon) {
         if (commands.isEmpty()) return Collections.emptyList();
 
         commands.sort(COMMAND_COMPARATOR);
@@ -41,7 +35,7 @@ public final class BatchProcessor {
         var currentUniforms = firstCommand.getCommand().getUniforms();
 
         var currentBuilder = new BufferBuilder(
-                sharedByteBufferBuilder,
+                Render.Buffers.getByteBufferBuilder(),
                 currentPipeline.getVertexFormatMode(),
                 currentPipeline.getVertexFormat()
         );
@@ -66,7 +60,7 @@ public final class BatchProcessor {
                 currentUniforms = command.getUniforms();
 
                 currentBuilder = new BufferBuilder(
-                        sharedByteBufferBuilder,
+                        Render.Buffers.getByteBufferBuilder(),
                         currentPipeline.getVertexFormatMode(),
                         currentPipeline.getVertexFormat()
                 );
@@ -80,7 +74,7 @@ public final class BatchProcessor {
         return meshesToDraw;
     }
 
-    private void applyVertices(BufferBuilder builder, SubmittedCommand submittedCommand, float depthEpsilon) {
+    private static void applyVertices(BufferBuilder builder, SubmittedCommand submittedCommand, float depthEpsilon) {
         var command = submittedCommand.getCommand();
         var pose = submittedCommand.getPose().pose();
         var sequenceId = submittedCommand.getDrawOrder();
@@ -94,7 +88,7 @@ public final class BatchProcessor {
         }
     }
 
-    private void finishBatch(
+    private static void finishBatch(
             List<MeshToDraw> meshesToDraw,
             BufferBuilder builder,
             RenderPipeline pipeline,
@@ -105,5 +99,8 @@ public final class BatchProcessor {
         var meshData = builder.build();
         if (meshData != null)
             meshesToDraw.add(new MeshToDraw(meshData, pipeline, scissor, samplers, uniforms));
+    }
+
+    private BatchProcessor() {
     }
 }

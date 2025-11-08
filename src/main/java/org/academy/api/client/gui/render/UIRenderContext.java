@@ -6,7 +6,6 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
@@ -16,6 +15,8 @@ import net.minecraft.client.renderer.MappableRingBuffer;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.widget.WidgetContainer;
+import org.academy.api.client.thread.MainThread;
+import org.academy.api.client.thread.RenderThread;
 import org.academy.api.common.util.UncheckedUtil;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -29,10 +30,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * 看情况 close 喵, 像 ScreenDispatcher 这种就没必要 close 了喵
+ */
 public final class UIRenderContext {
     private static final Logger LOGGER = LogUtils.getLogger();
-
-    private static final int DEFAULT_BUFFER_CAPACITY = 786432;
 
     private final AtomicReference<List<SubmittedCommand>> commandList = new AtomicReference<>();
 
@@ -43,10 +45,6 @@ public final class UIRenderContext {
     private final Map<Class<? extends DynamicUniformStorage.DynamicUniform>, DynamicUniformStorage<?>> dynamicUniformStorages = new HashMap<>();
     private final CommandExecutor commandExecutor = new CommandExecutor(vertexBuffers);
 
-    @Nullable
-    private ByteBufferBuilder sharedByteBufferBuilder;
-    @Nullable
-    private BatchProcessor batchProcessor;
     @Nullable
     private CachedOrthoProjectionMatrixBuffer projectionMatrixBuffer;
     @Nullable
@@ -61,8 +59,6 @@ public final class UIRenderContext {
     }
 
     private void initOnRenderThread(float layered) {
-        sharedByteBufferBuilder = new ByteBufferBuilder(DEFAULT_BUFFER_CAPACITY);
-        batchProcessor = new BatchProcessor(sharedByteBufferBuilder);
         projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("gui", -layered, 0.0F, true);
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
@@ -77,7 +73,7 @@ public final class UIRenderContext {
             builder.putMat4f(identityMatrix);
             builder.putFloat(1.0f);
             var byteBuffer = builder.get();
-            dynamicTransformsUbo = device.createBuffer(() -> "AC GUI DynamicTransforms UBO", uboUsage, byteBuffer);
+            dynamicTransformsUbo = device.createBuffer(() -> "UI DynamicTransforms UBO", uboUsage, byteBuffer);
         }
     }
 
@@ -97,6 +93,7 @@ public final class UIRenderContext {
         return 1f / ((1L << depthBits) - 1);
     }
 
+    @MainThread
     public void perform(WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick) {
         if (closed.get() || closing.get()) return;
 
@@ -126,36 +123,40 @@ public final class UIRenderContext {
         commandList.set(submittedCommands);
     }
 
-    public void upload(RenderTarget target) {
-        if (sharedByteBufferBuilder == null) return;
-        sharedByteBufferBuilder.discard();
+    @RenderThread
+    public void upload(RenderTarget target, boolean clear, boolean stencilTest) {
         for (var buffer : vertexBuffers.values()) buffer.rotate();
         for (var ubo : dynamicUniformStorages.values()) ubo.endFrame();
 
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         var colorTexture = target.getColorTexture();
-        var depthTexture = target.getDepthTexture();
+        var depthTextureView = target.getDepthTextureView();
+        if (depthTextureView == null) return;
+        var depthTexture = depthTextureView.texture();
         var colorTextureView = target.getColorTextureView();
 
-        if (colorTexture == null || depthTexture == null || colorTextureView == null) return;
+        if (colorTexture == null || colorTextureView == null) return;
 
-        commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1);
+        if (clear) commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1);
 
-        if (batchProcessor == null || projectionMatrixBuffer == null || dynamicTransformsUbo == null) return;
+        if (projectionMatrixBuffer == null || dynamicTransformsUbo == null) return;
 
         var commands = commandList.getAndSet(null);
 
         if (commands == null || commands.isEmpty()) return;
 
         var depthEpsilon = calculateDepthEpsilon(depthTexture);
-        var meshesToDraw = batchProcessor.process(new ArrayList<>(commands), depthEpsilon);
+        var meshesToDraw = BatchProcessor.process(new ArrayList<>(commands), depthEpsilon);
 
         var effectiveScale = (float) Minecraft.getInstance().getWindow().getGuiScale();
         var window = Minecraft.getInstance().getWindow();
         var guiScaledWidth = window.getWidth() / effectiveScale;
         var guiScaledHeight = window.getHeight() / effectiveScale;
         var projectionBufferSlice = projectionMatrixBuffer.getBuffer(guiScaledWidth, guiScaledHeight);
-        commandExecutor.execute(meshesToDraw, target, projectionBufferSlice, dynamicTransformsUbo, effectiveScale);
+        commandExecutor.execute(
+                meshesToDraw, colorTextureView, depthTextureView,
+                projectionBufferSlice, dynamicTransformsUbo, effectiveScale, stencilTest
+        );
     }
 
     private <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreateUbo(Class<T> uboClass, int size) {
@@ -172,9 +173,8 @@ public final class UIRenderContext {
     }
 
     public void closeOnRenderThread() {
-        if (sharedByteBufferBuilder == null || projectionMatrixBuffer == null || dynamicTransformsUbo == null) return;
+        if (projectionMatrixBuffer == null || dynamicTransformsUbo == null) return;
 
-        sharedByteBufferBuilder.close();
         for (var buffer : vertexBuffers.values()) buffer.close();
         vertexBuffers.clear();
 

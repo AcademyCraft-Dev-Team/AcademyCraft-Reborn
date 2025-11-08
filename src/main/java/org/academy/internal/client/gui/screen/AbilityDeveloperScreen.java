@@ -85,11 +85,11 @@ public final class AbilityDeveloperScreen extends UIScreen {
         leftPanel.setX(mainPanelX);
         leftPanel.setY(mainPanelY + startYOffset);
         leftPanel.setAlpha(0f);
-        rootContainer.addChild("panel_left", leftPanel);
+        root.addChild("panel_left", leftPanel);
 
         var rightPanel = new PanelWidget(mainPanelX + PANEL_LEFT_WIDTH, mainPanelY + startYOffset, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT);
         rightPanel.setAlpha(0f);
-        rootContainer.addChild("panel_right", rightPanel);
+        root.addChild("panel_right", rightPanel);
 
         var rightPanelBack = new ImageWidget(0, 0, PANEL_RIGHT_WIDTH, PANEL_MAIN_HEIGHT, Resource.Textures.PANEL_RIGHT_BACK);
         rightPanel.addChild("panel_right_back", rightPanelBack);
@@ -139,7 +139,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
                         .gravity(Gravity.CENTER)
                         .size(PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT)
         );
-        rootContainer.addChild("main", main);
+        root.addChild("main", main);
         playAnimation(
                 ObjectAnimator.ofFloat(
                         aFloat ->
@@ -433,7 +433,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
         };
         screenWirelessPanel.setVisible(false);
         screenWirelessPanel.setEnabled(false);
-        rootContainer.addChild("panel_screen_wireless", screenWirelessPanel);
+        root.addChild("panel_screen_wireless", screenWirelessPanel);
 
         var backgroundWidget = new FillWidget(0, 0, width, height, 0xFF000000);
         backgroundWidget.setAlpha(0.75f);
@@ -450,7 +450,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
         skillInfoPanel.setEnabled(false);
         skillInfoPanel.setVisible(false);
         skillInfoPanel.setZ(100);
-        rootContainer.addChild("panel_skill_info", skillInfoPanel);
+        root.addChild("panel_skill_info", skillInfoPanel);
     }
 
     private static void addOutput(String name, LabelWidget labelWidget, AbstractContainerWidget abstractContainerWidget) {

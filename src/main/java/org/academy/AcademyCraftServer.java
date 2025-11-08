@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Logic server, not physical.
  */
-@EventBusSubscriber(modid = AcademyCraft.MODID)
+@EventBusSubscriber
 public final class AcademyCraftServer {
     @Nullable
     public static AcademyCraftConfig serverConfig;

@@ -6,18 +6,18 @@ import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.IAnimationScreen;
-import org.academy.api.client.gui.screen.IUIScreen;
+import org.academy.api.client.gui.screen.RenderRoot;
 import org.academy.api.client.gui.widget.*;
 
 public final class InfoAreaUtil {
-    public static LinearLayoutWidget create(IUIScreen ui, IAnimationScreen animation, float left, float top) {
+    public static LinearLayoutWidget create(RenderRoot ui, IAnimationScreen animation, float left, float top) {
         var infoArea = new FrameLayoutWidget();
         infoArea.setLayoutParams(
                 new FrameLayoutWidget.LayoutParams()
                         .margin(left, top, 0, 0)
                         .sizeMode(SizeMode.WRAP_CONTENT)
         );
-        ui.getRootContainer().addChild("area_info", infoArea);
+        ui.getRoot().addChild("area_info", infoArea);
         animation.playAnimation(ObjectAnimator.ofFloat(infoArea::setAlpha, 0, 1).setDuration(600));
         animation.playAnimation(ObjectAnimator.ofFloat(infoArea::setTranslationY, 20, 0).setDuration(600).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
         {

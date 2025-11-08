@@ -15,14 +15,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 
 import java.util.concurrent.CompletableFuture;
 
-@EventBusSubscriber(modid = AcademyCraft.MODID)
+@EventBusSubscriber
 public final class AcademyCraftCommand {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {

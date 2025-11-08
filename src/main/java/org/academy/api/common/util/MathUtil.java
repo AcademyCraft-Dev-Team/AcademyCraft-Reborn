@@ -49,6 +49,10 @@ public class MathUtil {
         return x * x * (3.0 - 2.0 * x);
     }
 
+    public static double calculateVerticalFov(double horizontalFovDegrees, double aspectRatio) {
+        return 2 * Math.atan(Math.tan(Math.toRadians(horizontalFovDegrees) / 2) / aspectRatio);
+    }
+
     public static class RayUtil {
         public static boolean intersectRayTransformedAABB(
                 Vector3fc rayOriginWorld,

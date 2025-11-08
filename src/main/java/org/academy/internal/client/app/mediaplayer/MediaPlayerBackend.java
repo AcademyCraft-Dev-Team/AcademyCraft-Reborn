@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.academy.AcademyCraft.academy;
 
-@EventBusSubscriber(modid = AcademyCraft.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class MediaPlayerBackend {
     private static final int BUFFER_COUNT = 4;
     private static final List<MediaInfo> PLAYLIST = new ArrayList<>();
