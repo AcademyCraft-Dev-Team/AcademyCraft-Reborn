@@ -22,6 +22,7 @@ import net.minecraft.client.renderer.RenderType;
 import org.academy.api.client.Render;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.Collections;
@@ -31,12 +32,11 @@ import java.util.SequencedMap;
 import static org.academy.api.client.render.post.PostEffect.MAIN_SCENE;
 
 public final class BloomEffect {
+    @Nullable
+    private static BloomEffect instance;
     private static final int MAX_GAUSSIAN_SAMPLES = 12;
     private static final Int2ObjectMap<GaussianSamples> SAMPLES_CACHE =
             Int2ObjectMaps.synchronize(new Int2ObjectLinkedOpenHashMap<>());
-    private static final RenderTarget INPUT;
-    private static final GpuBuffer blurUniformsBuffer;
-    private static final GpuBuffer bloomUniformsBuffer;
     private static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS =
             new Object2ObjectLinkedOpenHashMap<>();
     private static final MultiBufferSource.BufferSource BLIT_TO_MAIN_POST =
@@ -44,21 +44,29 @@ public final class BloomEffect {
 
     public static final RenderStateShard.OutputStateShard BLOOM_TARGET = new RenderStateShard.OutputStateShard(
             "bloom_target",
-            BloomEffect::getInput
+            () -> getInstance().getInput()
     );
 
     private static boolean hasBeenUsed;
 
-    static {
+    private final RenderTarget input;
+    private final GpuBuffer blurUniformsBuffer;
+    private final GpuBuffer bloomUniformsBuffer;
+
+    {
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
-        INPUT = new TextureTarget(null, mainRenderTarget.width, mainRenderTarget.height, true);
-        INPUT.setFilterMode(FilterMode.LINEAR);
+        input = new TextureTarget(null, mainRenderTarget.width, mainRenderTarget.height, true, true);
+        input.setFilterMode(FilterMode.LINEAR);
 
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
         blurUniformsBuffer = device.createBuffer(() -> "Bloom Blur UBO", uboUsage, BlurUniforms.UBO_SIZE);
         bloomUniformsBuffer = device.createBuffer(() -> "Bloom Blend UBO", uboUsage, BloomUniforms.UBO_SIZE);
+    }
+
+    public static void init() {
+        instance = new BloomEffect();
     }
 
     private record GaussianSamples(int sampleCount, Vector4f[] samples) {}
@@ -102,20 +110,31 @@ public final class BloomEffect {
         FIXED_BUFFERS.put(type, new ByteBufferBuilder(type.bufferSize()));
     }
 
-    public static void close() {
-        INPUT.destroyBuffers();
+    public static BloomEffect getInstance() {
+        if (instance == null) {
+            throw new IllegalStateException(
+                    "BloomEffect has not been initialized."
+            );
+        }
+        return instance;
+    }
+
+    public void close() {
+        input.destroyBuffers();
         blurUniformsBuffer.close();
         bloomUniformsBuffer.close();
     }
 
     public static void resize(int width, int height) {
-        INPUT.resize(width, height);
-        INPUT.setFilterMode(FilterMode.LINEAR);
+        if (instance != null) {
+            instance.input.resize(width, height);
+            instance.input.setFilterMode(FilterMode.LINEAR);
+        }
     }
 
-    public static RenderTarget getInput() {
+    public RenderTarget getInput() {
         hasBeenUsed = true;
-        return INPUT;
+        return input;
     }
 
     public static MultiBufferSource.BufferSource getBlitToMainPost() {
@@ -123,7 +142,7 @@ public final class BloomEffect {
         return BLIT_TO_MAIN_POST;
     }
 
-    private static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, int radius) {
+    private void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, int radius) {
         try (var memoryStack = MemoryStack.stackPush()) {
             var samples = getGaussianSamples(radius);
             var builder = Std140Builder.onStack(memoryStack, BlurUniforms.UBO_SIZE);
@@ -133,7 +152,7 @@ public final class BloomEffect {
         }
     }
 
-    private static void runBlurPass(
+    private void runBlurPass(
             GpuTextureView output, GpuTextureView input,
             Vector2f outSize, float dirX, float dirY, int radius
     ) {
@@ -143,7 +162,7 @@ public final class BloomEffect {
                 "BlurInfo", blurUboSlice), true);
     }
 
-    private static void writeBloomUniforms(float radius, float intensity) {
+    private void writeBloomUniforms(float radius, float intensity) {
         try (var memoryStack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(memoryStack, BloomUniforms.UBO_SIZE);
             new BloomUniforms(radius, intensity).write(builder);
@@ -152,7 +171,7 @@ public final class BloomEffect {
         }
     }
 
-    public static void process(FrameGraphBuilder frameGraphBuilder) {
+    public void process(FrameGraphBuilder frameGraphBuilder) {
         if (!hasBeenUsed) return;
 
         var mc = Minecraft.getInstance();
@@ -184,13 +203,13 @@ public final class BloomEffect {
             try {
                 var scene = MAIN_SCENE.getColorTextureView();
                 var main = mainRenderTarget.getColorTextureView();
-                var inputView = INPUT.getColorTextureView();
+                var inputView = input.getColorTextureView();
                 var translucentTarget = levelRenderer.getTranslucentTarget();
                 var depthTarget = translucentTarget == null ? mainRenderTarget : translucentTarget;
 
                 if (scene == null || main == null || inputView == null) return;
 
-                INPUT.copyDepthFrom(depthTarget);
+                input.copyDepthFrom(depthTarget);
                 Render.runBlitPassNDC(
                         main, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
                         Map.of("DiffuseSampler", inputView), Collections.emptyMap(),

@@ -18,9 +18,7 @@ import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEve
 import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
-import org.academy.api.client.hud.terminal.HUDController;
 import org.academy.api.client.render.post.BloomEffect;
-import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.thread.MainThread;
@@ -60,6 +58,7 @@ public final class AcademyCraftClient {
     @RenderThread
     public static void initRender() {
         Render.init();
+        BloomEffect.init();
         ScreenDispatcher.init();
         HUDManager.initRender();
     }
@@ -171,6 +170,11 @@ public final class AcademyCraftClient {
         @SubscribeEvent
         public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
             event.register(Blocks.WIND_GEN_PILLAR.get(), WindGenPillarSpecialRenderer.Unbaked.INSTANCE);
+        }
+
+        @SubscribeEvent
+        public static void onMain(ConfigureMainRenderTargetEvent event) {
+            event.enableStencil();
         }
 
         @SubscribeEvent

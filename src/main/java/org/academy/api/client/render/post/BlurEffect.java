@@ -8,15 +8,20 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import org.academy.api.client.Render;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 
 public final class BlurEffect {
     private static final int MAX_GAUSSIAN_SAMPLES = 12;
@@ -73,40 +78,63 @@ public final class BlurEffect {
     /**
      * 应用高斯模糊喵
      *
-     * @param samplerTarget 采样目标喵
-     * @param outputTarget 输出目标喵, 也是模板缓冲区喵
+     * @param width 采样宽度喵
+     * @param height 采样高度喵
+     * @param sampler 采样目标喵
+     * @param output 输出目标喵
+     * @param depth 模板喵
      * @param radius 模糊半径喵
      */
-    public static void apply(RenderTarget samplerTarget, RenderTarget outputTarget, float radius) {
+    public static void apply(
+            int width, int height,
+            GpuTextureView sampler,
+            GpuTextureView output,
+            @Nullable GpuTextureView depth,
+            float radius
+    ) {
         if (radius < 0.1f) return;
 
-        var width = samplerTarget.width;
-        var height = samplerTarget.height;
         var resourcePool = Render.Buffers.getResourcePool();
         var desc = new RenderTargetDescriptor(width, height, false, 0);
+
         RenderTarget swapTarget = null;
 
         try {
             swapTarget = resourcePool.acquire(desc);
 
-            var sampler = samplerTarget.getColorTextureView();
             var swap = swapTarget.getColorTextureView();
-            var output = outputTarget.getColorTextureView();
 
-            if (sampler == null || swap == null || output == null) return;
+            if (swap == null) return;
 
             var blurUboSlice = blurUniformsBuffer.slice();
             var uniforms = Map.of("BlurInfo", blurUboSlice);
 
-            writeBlurUniforms(new Vector2f(swapTarget.width, swapTarget.height), 1.0F, 0.0F, radius);
-            runBlitPass(swap, Map.of("DiffuseSampler", sampler), uniforms);
-
-            writeBlurUniforms(new Vector2f(outputTarget.width, outputTarget.height), 0.0F, 1.0F, radius);
-            runBlitPass(output, Map.of("DiffuseSampler", swap), uniforms);
+            var vec2 = new Vector2f(width, height);
+            writeBlurUniforms(vec2, 1.0F, 0.0F, radius);
+            Render.runBlitPass(
+                    swap, depth,
+                    Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR,
+                    Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
+                    Map.of("DiffuseSampler", sampler), uniforms,
+                    false
+            );
+            Render.runBlitPass(
+                    swap, depth,
+                    Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT,
+                    Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
+                    Map.of("DiffuseSampler", sampler), Collections.emptyMap(),
+                    false
+            );
+            writeBlurUniforms(vec2, 0.0F, 1.0F, radius);
+            Render.runBlitPass(
+                    output, depth,
+                    Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR,
+                    Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
+                    Map.of("DiffuseSampler", swap), uniforms,
+                    false
+            );
         } finally {
-            if (swapTarget != null) {
-                resourcePool.release(desc, swapTarget);
-            }
+            if (swapTarget != null) resourcePool.release(desc, swapTarget);
         }
     }
 
@@ -120,8 +148,32 @@ public final class BlurEffect {
         }
     }
 
-    private static void runBlitPass(GpuTextureView target, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms) {
-        Render.runBlitPassNDC(target, Render.RenderPipelines.GAUSSIAN_BLUR, samplers, uniforms, false);
+    private static void runBlitPass(GpuTextureView color, @Nullable GpuTextureView depth, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms) {
+        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+
+        try (
+                var renderPass = depth == null
+                        ? commandEncoder.createRenderPass
+                        (
+                                () -> "Blit Pass to " + color,
+                                color, OptionalInt.empty()
+                        )
+                        : commandEncoder.createRenderPass
+                        (
+                                () -> "Blit Pass to " + color + depth,
+                                color, OptionalInt.empty(),
+                                depth, OptionalDouble.empty()
+                        )
+        ) {
+            renderPass.setPipeline(Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR);
+            samplers.forEach(renderPass::bindSampler);
+            uniforms.forEach(renderPass::setUniform);
+
+            renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFullScreenQuadVBNDC());
+            var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
+            renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
+            renderPass.drawIndexed(0, 0, 6, 1);
+        }
     }
 
     private record BlurUniforms(Vector2f outSize, Vector2f blurDir, int sampleCount, Vector4f[] samples) {

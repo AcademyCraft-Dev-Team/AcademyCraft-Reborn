@@ -1,7 +1,6 @@
 package org.academy.internal.client.hud;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
@@ -14,11 +13,11 @@ import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.thread.RenderThread;
 import org.academy.api.client.vanilla.MainLoopEvent;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 负责管理本模组内置的 UI 帧缓冲区与 HUD 喵
@@ -26,21 +25,9 @@ import java.util.Map;
 @EventBusSubscriber(Dist.CLIENT)
 public final class HUDManager {
     public static final Logger LOGGER = LogUtils.getLogger();
-    /**
-     * 有深度, 模板
-     */
-    @Nullable
-    private static RenderTarget renderTarget;
 
     @RenderThread
     public static void initRender() {
-        var mc = Minecraft.getInstance();
-        var mainRenderTarget = mc.getMainRenderTarget();
-        var width = mainRenderTarget.width;
-        var height = mainRenderTarget.height;
-
-        renderTarget = new TextureTarget("UI", width, height, true, true);
-
         DataTerminalHUD.initRender();
     }
 
@@ -51,11 +38,6 @@ public final class HUDManager {
 
     @RenderThread
     public static void resize(int width, int height) {
-        if (renderTarget != null) {
-            renderTarget.resize(width, height);
-        } else {
-            hasNotBeenInitialized();
-        }
         DataTerminalHUD.resize(width, height);
     }
 
@@ -80,22 +62,34 @@ public final class HUDManager {
     public static void onRenderGui(RenderGuiEvent.Pre event) {
         var mc = Minecraft.getInstance();
         var main = mc.getMainRenderTarget();
+        var width = main.width;
+        var height = main.height;
 
         RenderTarget renderTarget = null;
         var pool = Render.Buffers.getResourcePool();
-        var desc = new RenderTargetDescriptor(1314,1314, true, 0, true);
+        var desc = new RenderTargetDescriptor(width, height, true, 0, true);
 
         try {
             renderTarget = pool.acquire(desc);
 
             var mainColorView = main.getColorTextureView();
             var uiColorView = renderTarget.getColorTextureView();
-            var uiDepth = renderTarget.getDepthTexture();
-            if (mainColorView == null || uiColorView == null || uiDepth == null) return;
+            var uiDepthView = renderTarget.getDepthTextureView();
+            if (mainColorView == null || uiColorView == null || uiDepthView == null) return;
 
-            DataTerminalHUD.render(renderTarget, true);
+            var drew = new AtomicBoolean();
 
-            BlurEffect.apply(main, main, 20.0f);
+            DataTerminalHUD.render(width, height, uiColorView, uiDepthView, drew);
+
+            if (!drew.get()) return;
+
+            BlurEffect.apply(
+                    width, height,
+                    mainColorView,
+                    mainColorView,
+                    uiDepthView,
+                    20.0f
+            );
 
             Render.runBlitPassNDC(mainColorView, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
                     Map.of("DiffuseSampler", uiColorView),
@@ -105,10 +99,6 @@ public final class HUDManager {
         } finally {
             if (renderTarget != null) pool.release(desc, renderTarget);
         }
-    }
-
-    private static void hasNotBeenInitialized() {
-        LOGGER.warn("ScreenDispatcher has not been initialized.");
     }
 
     private HUDManager() {
