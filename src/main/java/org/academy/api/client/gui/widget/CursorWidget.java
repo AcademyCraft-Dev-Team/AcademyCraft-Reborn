@@ -18,9 +18,6 @@ public class CursorWidget extends AbstractWidget {
     public float radius = 0.25f;
     public float softness = 0.75f;
 
-    public CursorWidget(float size) {
-    }
-
     @Override
     public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;

@@ -2,10 +2,11 @@ package org.academy.internal.client.hud;
 
 import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
@@ -16,14 +17,14 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
-import org.academy.api.client.Resource;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
+import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.UIRenderContext;
+import org.academy.api.client.gui.widget.FillWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.KeyInputEvent;
 import org.academy.api.client.thread.MainThread;
@@ -40,6 +41,8 @@ import org.slf4j.Logger;
 
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @EventBusSubscriber(Dist.CLIENT)
@@ -65,11 +68,15 @@ public final class DataTerminalHUD {
             prev = ACTIVE.get();
         } while (!ACTIVE.compareAndSet(prev, !prev));
 
+        var mc = Minecraft.getInstance();
+        var mh = mc.mouseHandler;
         if (isActive()) {
             ClientUtil.playDownSound();
-            var mc = Minecraft.getInstance();
             var w = mc.getWindow();
             init(w.getGuiScaledWidth(), w.getGuiScaledHeight());
+            mh.releaseMouse();
+        } else {
+            mh.grabMouse();
         }
     }
 
@@ -104,12 +111,23 @@ public final class DataTerminalHUD {
         ROOT.setName("root");
         ROOT.clearChildren();
 
-        var a = new ImageWidget(Resource.Textures.LOGO_TECH);
-        a.setLayoutParams(
+        var dockBar = new FrameLayoutWidget();
+        dockBar.setLayoutParams(
                 new FrameLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT)
+                        .gravity(Gravity.CENTER_BOTTOM)
+                        .margin(0, 0, 0, 32)
+                        .sizeMode(SizeMode.WRAP_CONTENT)
         );
-        ROOT.addChild("a", a);
+        {
+            var back = new FillWidget(1073741824);
+            back.setLayoutParams(
+                    new FrameLayoutWidget.LayoutParams()
+                            .size(100, 24)
+            );
+            dockBar.addChild("back", back);
+        }
+
+        ROOT.addChild("dock_bar", dockBar);
     }
 
     public static void resize(int width, int height) {
@@ -125,12 +143,16 @@ public final class DataTerminalHUD {
         }
     }
 
-    public static void render(RenderTarget renderTarget, boolean writeToStencil) {
-        var targetView = renderTarget.getColorTextureView();
-        if (!isActive() || uiRenderContext == null || targetView == null) return;
+    public static void render(
+            int width, int height,
+            GpuTextureView color,
+            GpuTextureView depth,
+            AtomicBoolean drew
+    ) {
+        if (!isActive() || uiRenderContext == null) return;
 
         var desc = new RenderTargetDescriptor(
-                renderTarget.width, renderTarget.height,
+                width, height,
                 true, 0
         );
         var terminalTarget = Render.Buffers.getResourcePool().acquire(desc);
@@ -158,14 +180,24 @@ public final class DataTerminalHUD {
                     "DynamicTransforms", dynamicTransformsSlice
             );
 
-            var finalBlitPipeline = writeToStencil
-                    ? Render.RenderPipelines.IMAGE_NO_DEPTH_STENCIL
-                    : Render.RenderPipelines.IMAGE_NO_DEPTH;
+            var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
-            Render.runBlitPassColorSDC(
-                    targetView, finalBlitPipeline,
-                    samplers, uniforms, false
-            );
+            try (
+                    var renderPass = commandEncoder.createRenderPass(
+                            () -> "Blit Pass to " + color + depth,
+                            color, OptionalInt.empty(), depth, OptionalDouble.empty()
+                    )
+            ) {
+                renderPass.setPipeline(Render.RenderPipelines.IMAGE_NO_DEPTH_STENCIL);
+                samplers.forEach(renderPass::bindSampler);
+                uniforms.forEach(renderPass::setUniform);
+
+                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFullScreenQuadColorVBSDC());
+                var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
+                renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
+                renderPass.drawIndexed(0, 0, 6, 1);
+            }
+            drew.set(true);
         } finally {
             Render.Buffers.getResourcePool().release(desc, terminalTarget);
         }
