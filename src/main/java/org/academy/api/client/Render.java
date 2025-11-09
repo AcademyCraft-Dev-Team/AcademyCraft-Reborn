@@ -27,6 +27,7 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 import static com.mojang.blaze3d.pipeline.RenderPipeline.builder;
@@ -75,10 +76,41 @@ public final class Render {
             Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms,
             boolean clear
     ) {
+        runBlitPass(color, null, pipeline, fullscreenQuadVertexBuffer, samplers, uniforms, clear);
+    }
+
+    /**
+     * @param color 输出喵
+     * @param depth 模板喵
+     * @param pipeline 管线喵
+     * @param fullscreenQuadVertexBuffer 顶点缓冲区喵
+     * @param samplers Samplers 喵
+     * @param uniforms Uniforms 喵
+     * @param clear 是否在输出前 clear 喵
+     */
+    public static void runBlitPass(
+            GpuTextureView color, @Nullable GpuTextureView depth,
+            RenderPipeline pipeline, GpuBuffer fullscreenQuadVertexBuffer,
+            Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms,
+            boolean clear
+    ) {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         var clearColor = clear ? OptionalInt.of(0) : OptionalInt.empty();
 
-        try (var renderPass = commandEncoder.createRenderPass(() -> "Blit Pass to " + color, color, clearColor)) {
+        try (
+                var renderPass = depth == null
+                        ? commandEncoder.createRenderPass
+                        (
+                                () -> "Blit Pass to " + color,
+                                color, clearColor
+                        )
+                        : commandEncoder.createRenderPass
+                        (
+                                () -> "Blit Pass to " + color + depth,
+                                color, clearColor,
+                                depth, OptionalDouble.empty()
+                        )
+        ) {
             renderPass.setPipeline(pipeline);
             samplers.forEach(renderPass::bindSampler);
             uniforms.forEach(renderPass::setUniform);
@@ -131,8 +163,9 @@ public final class Render {
 
         public static Buffers getInstance() {
             if (instance == null) {
-                throw new IllegalStateException("Render.Buffers has not been initialized. Please call Render.init() " +
-                        "first.");
+                throw new IllegalStateException(
+                        "Render.Buffers has not been initialized."
+                );
             }
             return instance;
         }
@@ -314,8 +347,36 @@ public final class Render {
                 .withoutBlend()
                 .build();
 
+        public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT = builder(BLIT_SCREEN_SNIPPET)
+                .withLocation(academy("pipeline/blit_screen"))
+                .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
+                .withSampler("DiffuseSampler")
+                .withoutBlend()
+                .withStencilTest(
+                        new StencilTest(
+                                new StencilPerFaceTest(
+                                        StencilOperation.KEEP,
+                                        StencilOperation.KEEP,
+                                        StencilOperation.KEEP,
+                                        StencilFunction.EQUAL
+                                ),
+                                0XFF,
+                                0XFF,
+                                0
+                        )
+                )
+                .build();
+
+
         public static final RenderPipeline GAUSSIAN_BLUR = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/gaussian_blur"))
+                .withFragmentShader(Resource.Shaders.Fragment.GAUSSIAN_BLUR)
+                .withSampler("DiffuseSampler")
+                .withUniform("BlurInfo", UniformType.UNIFORM_BUFFER)
+                .build();
+
+        public static final RenderPipeline CUTOUT_GAUSSIAN_BLUR = builder(BLIT_SCREEN_SNIPPET)
+                .withLocation(academy("pipeline/cutout_gaussian_blur"))
                 .withFragmentShader(Resource.Shaders.Fragment.GAUSSIAN_BLUR)
                 .withSampler("DiffuseSampler")
                 .withUniform("BlurInfo", UniformType.UNIFORM_BUFFER)
