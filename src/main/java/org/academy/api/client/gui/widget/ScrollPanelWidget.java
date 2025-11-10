@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget;
 
+import net.minecraft.util.Mth;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.event.MouseEvent;
@@ -242,12 +243,14 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
         if (isMouseOver(event.getX(), event.getY())) {
             event.consume();
             scrollTarget -= (float) (event.getDelta() * scrollSpeed);
-            scrollTarget = MathUtil.clamp(scrollTarget, 0, getMaxScroll());
+            float max = getMaxScroll();
+            scrollTarget = Mth.clamp(scrollTarget, (float) 0, max);
         }
     }
 
     public ScrollPanelWidget setScrollTarget(float scrollTarget) {
-        this.scrollTarget = MathUtil.clamp(scrollTarget, 0, getMaxScroll());
+        float max = getMaxScroll();
+        this.scrollTarget = Mth.clamp(scrollTarget, (float) 0, max);
         return this;
     }
 

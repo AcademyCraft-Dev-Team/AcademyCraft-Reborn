@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.widget;
 
+import net.minecraft.util.Mth;
 import org.academy.api.client.gui.layout.Orientation;
-import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
@@ -32,7 +32,7 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
         super(orientation);
         this.minValue = minValue;
         this.maxValue = maxValue;
-        currentValue = MathUtil.clamp(initialValue, this.minValue, this.maxValue);
+        currentValue = Mth.clamp(initialValue, this.minValue, this.maxValue);
     }
 
     public float getValue() {
@@ -40,7 +40,7 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
     }
 
     public void setValue(float value) {
-        var newValue = MathUtil.clamp(value, minValue, maxValue);
+        var newValue = Mth.clamp(value, minValue, maxValue);
         if (currentValue != newValue) {
             currentValue = newValue;
             if (onValueChanged != null) {
@@ -73,7 +73,7 @@ public abstract class AbstractSliderWidget extends DragBarWidget {
         }
 
         var position = mousePosition - dragOffset;
-        var positionFraction = MathUtil.clamp(position / trackSize, 0f, 1f);
+        var positionFraction = Mth.clamp(position / trackSize, 0f, 1f);
 
         if (orientation == Orientation.VERTICAL && direction == Direction.BOTTOM_TO_TOP) {
             positionFraction = 1.0f - positionFraction;

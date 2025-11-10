@@ -484,6 +484,8 @@ public final class Render {
                 .withUniform("GlowUniforms", UniformType.UNIFORM_BUFFER)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .build();
 
