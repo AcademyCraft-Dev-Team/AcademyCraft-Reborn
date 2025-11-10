@@ -14,6 +14,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -32,7 +33,6 @@ import org.academy.api.client.gui.screen.IAnimationScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -502,8 +502,8 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
             xpos += deltaGuiX * (double) config.mouseSensitivity;
             ypos += deltaGuiY * (double) config.mouseSensitivity;
             var window = Minecraft.getInstance().getWindow();
-            xpos = MathUtil.clamp(xpos, 0.0, window.getGuiScaledWidth());
-            ypos = MathUtil.clamp(ypos, 0.0, window.getGuiScaledHeight());
+            xpos = Mth.clamp(xpos, 0.0, window.getGuiScaledWidth());
+            ypos = Mth.clamp(ypos, 0.0, window.getGuiScaledHeight());
             rootContainer.dispatchEvent(MouseEvent.createMoveEvent(xpos, ypos));
             if (InputSystem.currentMouseAction == 1 || InputSystem.currentMouseAction == 2) {
                 rootContainer.dispatchEvent(MouseEvent.createDragEvent(xpos, ypos, InputSystem.currentMouseButton, deltaGuiX, deltaGuiY));

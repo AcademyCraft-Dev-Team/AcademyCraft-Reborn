@@ -1,6 +1,7 @@
 package org.academy.api.client.hud.terminal;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -16,7 +17,6 @@ import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.hud.HUDRenderer;
 import org.academy.api.client.input.*;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.common.util.MathUtil;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nullable;
@@ -177,8 +177,8 @@ public final class HUDController implements HUDRenderer {
             xpos += deltaGuiX * config.mouseSensitivity;
             ypos += deltaGuiY * config.mouseSensitivity;
             var window = Minecraft.getInstance().getWindow();
-            xpos = MathUtil.clamp(xpos, 0.0, window.getGuiScaledWidth());
-            ypos = MathUtil.clamp(ypos, 0.0, window.getGuiScaledHeight());
+            xpos = Mth.clamp(xpos, 0.0, window.getGuiScaledWidth());
+            ypos = Mth.clamp(ypos, 0.0, window.getGuiScaledHeight());
             uiManager.getRootContainer().dispatchEvent(MouseEvent.createMoveEvent(xpos, ypos));
 
             if (currentMouseAction == 1 || currentMouseAction == 2) {

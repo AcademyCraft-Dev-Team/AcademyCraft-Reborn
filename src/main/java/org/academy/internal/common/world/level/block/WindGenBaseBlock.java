@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
@@ -95,8 +96,8 @@ public final class WindGenBaseBlock extends MultiBlock {
                     var guiX = (1.0f - normX) * WindGenWorldGUI.WIDTH;
                     var guiY = normY * WindGenWorldGUI.HEIGHT;
 
-                    guiX = MathUtil.clamp(guiX, 0, WindGenWorldGUI.WIDTH);
-                    guiY = MathUtil.clamp(guiY, 0, WindGenWorldGUI.HEIGHT);
+                    guiX = Mth.clamp(guiX, (float) 0, WindGenWorldGUI.WIDTH);
+                    guiY = Mth.clamp(guiY, (float) 0, WindGenWorldGUI.HEIGHT);
 
                     AcademyCraft.LOGGER.info("Intersection in GUI coords: {}, {}", guiX, guiY);
                 }

@@ -1,6 +1,7 @@
 package org.academy.api.common.util;
 
 import it.unimi.dsi.fastutil.ints.IntComparator;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import org.joml.*;
 
@@ -31,21 +32,13 @@ public class MathUtil {
         return start + delta * (end - start);
     }
 
-    public static float clamp(float val, float min, float max) {
-        return Math.max(min, Math.min(val, max));
-    }
-
-    public static double clamp(double val, double min, double max) {
-        return Math.max(min, Math.min(val, max));
-    }
-
     public static float smoothStep(float x) {
-        x = clamp(x, 0.0f, 1.0f);
+        x = Mth.clamp(x, 0.0f, 1.0f);
         return x * x * (3.0f - 2.0f * x);
     }
 
     public static double smoothStep(double x) {
-        x = clamp(x, 0.0, 1.0);
+        x = Mth.clamp(x, 0.0, 1.0);
         return x * x * (3.0 - 2.0 * x);
     }
 

@@ -62,7 +62,7 @@ public final class WidgetRenderContext {
     }
 
     public List<SubmittedCommand> getCommands() {
-        return Collections.unmodifiableList(submittedCommands);
+        return submittedCommands;
     }
 
     public float getAccumulatedAlpha() {

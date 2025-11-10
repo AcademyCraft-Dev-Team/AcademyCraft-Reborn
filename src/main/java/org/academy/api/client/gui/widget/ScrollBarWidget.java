@@ -1,10 +1,10 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.render.WidgetRenderContext;
-import org.academy.api.common.util.MathUtil;
 
 public class ScrollBarWidget extends DragBarWidget {
     protected final ScrollPanelWidget panel;
@@ -70,7 +70,8 @@ public class ScrollBarWidget extends DragBarWidget {
         var viewSize = orientation == Orientation.HORIZONTAL ? panel.getWidth() : panel.getHeight();
         var contentSize = maxScroll + viewSize;
         var ratio = viewSize / contentSize;
-        return MathUtil.clamp(ratio * getTrackSize(), 16.0f, getTrackSize());
+        float val = ratio * getTrackSize();
+        return Mth.clamp(val, 16.0f, getTrackSize());
     }
 
     @Override
@@ -94,7 +95,7 @@ public class ScrollBarWidget extends DragBarWidget {
         if (track <= 0.0f)
             return;
 
-        var ratio = MathUtil.clamp((mouse - dragOffset) / track, 0.0f, 1.0f);
+        var ratio = Mth.clamp((mouse - dragOffset) / track, 0.0f, 1.0f);
         panel.setScrollTarget(ratio * maxScroll);
     }
 }

@@ -1,8 +1,8 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import org.academy.api.client.gui.render.WidgetRenderContext;
-import org.academy.api.common.util.MathUtil;
 
 public class ParallaxImageWidget extends ImageWidget {
     protected float parallaxFactorX = 0.5f;
@@ -23,8 +23,8 @@ public class ParallaxImageWidget extends ImageWidget {
         var deviationX = (float) ((mouseX - anchorX) / anchorX);
         var deviationY = (float) ((mouseY - anchorY) / anchorY);
 
-        var motionX = MathUtil.clamp(deviationX * parallaxFactorX, -1.0f, 1.0f);
-        var motionY = MathUtil.clamp(deviationY * parallaxFactorY, -1.0f, 1.0f);
+        var motionX = Mth.clamp(deviationX * parallaxFactorX, -1.0f, 1.0f);
+        var motionY = Mth.clamp(deviationY * parallaxFactorY, -1.0f, 1.0f);
 
         var maxUOffset = 1.0f - imageToViewRatioWidth;
         var maxVOffset = 1.0f - imageToViewRatioHeight;
@@ -44,8 +44,8 @@ public class ParallaxImageWidget extends ImageWidget {
     }
 
     public ParallaxImageWidget setImageToViewRatio(float imageToViewRatioWidth, float imageToViewRatioHeight) {
-        this.imageToViewRatioWidth = MathUtil.clamp(imageToViewRatioWidth, 0, 1);
-        this.imageToViewRatioHeight = MathUtil.clamp(imageToViewRatioHeight, 0, 1);
+        this.imageToViewRatioWidth = Mth.clamp(imageToViewRatioWidth, (float) 0, (float) 1);
+        this.imageToViewRatioHeight = Mth.clamp(imageToViewRatioHeight, (float) 0, (float) 1);
         return this;
     }
 }

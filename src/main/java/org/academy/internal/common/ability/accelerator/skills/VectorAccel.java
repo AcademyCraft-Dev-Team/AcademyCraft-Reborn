@@ -12,6 +12,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -367,7 +368,7 @@ public final class VectorAccel extends Skill {
 
                 var currentTime = System.nanoTime();
                 var elapsedMillis = (currentTime - chargeStartTime) / 1_000_000;
-                chargeRatio = MathUtil.clamp((float) elapsedMillis / MAX_CHARGE_TIME_MS, 0f, 1f);
+                chargeRatio = Mth.clamp((float) elapsedMillis / MAX_CHARGE_TIME_MS, 0f, 1f);
 
                 lastCalculatedDirection = calculateDashDirection(event.getPartialTick());
                 simulatePath(event.getPartialTick());

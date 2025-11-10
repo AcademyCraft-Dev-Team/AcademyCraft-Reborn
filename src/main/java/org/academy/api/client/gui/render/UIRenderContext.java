@@ -23,7 +23,6 @@ import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * 看情况 close 喵, 像 ScreenDispatcher 这种就没必要 close 了喵
  */
-public final class UIRenderContext {
+public class UIRenderContext {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final AtomicReference<List<SubmittedCommand>> commandList = new AtomicReference<>();
@@ -108,8 +107,14 @@ public final class UIRenderContext {
             rootWidget.measure(widthSpec, heightSpec);
             rootWidget.layout(0, 0, width, height);
         }
-
         var context = new WidgetRenderContext(this::getOrCreateUbo);
+        generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
+        commandList.set(context.getCommands());
+    }
+
+    public void generateCommands(
+            WidgetRenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
+    ) {
         context.pose().pushPose();
         {
             context.pose().translate(rootWidget.getX(), rootWidget.getY(), rootWidget.getZ());
@@ -118,9 +123,6 @@ public final class UIRenderContext {
             rootWidget.render(context, mouseX, mouseY, partialTick);
         }
         context.pose().popPose();
-        var submittedCommands = context.getCommands();
-
-        commandList.set(submittedCommands);
     }
 
     @RenderThread
@@ -146,7 +148,7 @@ public final class UIRenderContext {
         if (commands == null || commands.isEmpty()) return;
 
         var depthEpsilon = calculateDepthEpsilon(depthTexture);
-        var meshesToDraw = BatchProcessor.process(new ArrayList<>(commands), depthEpsilon);
+        var meshesToDraw = BatchProcessor.process(commands, depthEpsilon);
 
         var effectiveScale = (float) Minecraft.getInstance().getWindow().getGuiScale();
         var window = Minecraft.getInstance().getWindow();

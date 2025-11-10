@@ -1,6 +1,7 @@
 package org.academy.internal.client.particle;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -44,9 +45,12 @@ public final class ParticleRenderTypes {
             var baseG = Integer.parseInt(baseHexColor.substring(2, 4), 16);
             var baseB = Integer.parseInt(baseHexColor.substring(4, 6), 16);
 
-            var finalR = MathUtil.clamp(baseR + rd.nextInt(-20, 20), 0, 255) / 255.0f;
-            var finalG = MathUtil.clamp(baseG + rd.nextInt(-20, 20), 0, 255) / 255.0f;
-            var finalB = MathUtil.clamp(baseB + rd.nextInt(-20, 20), 0, 255) / 255.0f;
+            float val2 = baseR + rd.nextInt(-20, 20);
+            var finalR = Mth.clamp(val2, (float) 0, (float) 255) / 255.0f;
+            float val1 = baseG + rd.nextInt(-20, 20);
+            var finalG = Mth.clamp(val1, (float) 0, (float) 255) / 255.0f;
+            float val = baseB + rd.nextInt(-20, 20);
+            var finalB = Mth.clamp(val, (float) 0, (float) 255) / 255.0f;
 
             particle.setColor(finalR, finalG, finalB);
             return particle;
