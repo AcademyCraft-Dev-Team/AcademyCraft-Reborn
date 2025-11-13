@@ -14,6 +14,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -38,6 +39,8 @@ import org.academy.internal.common.world.level.block.MultiBlock;
 
 import java.io.File;
 import java.util.function.BiConsumer;
+
+import static org.academy.AcademyCraft.academy;
 
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 @EventBusSubscriber(Dist.CLIENT)
@@ -156,25 +159,25 @@ public final class AcademyCraftClient {
         }
 
         @SubscribeEvent
+        public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+            event.registerAbove(VanillaGuiLayers.CROSSHAIR, academy("hud"), HUDManager::render);
+        }
+
+        @SubscribeEvent
         public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
-            event.register(AcademyCraft.academy("wireless_node"), WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(AcademyCraft.academy("wind_gen_base"), WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(AcademyCraft.academy("wind_gen_pillar"), WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(AcademyCraft.academy("wind_gen_top"), WindGenTopSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(AcademyCraft.academy("ability_developer"), AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(AcademyCraft.academy("omni_crafting_table"), OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(academy("wireless_node"), WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(academy("wind_gen_base"), WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(academy("wind_gen_pillar"), WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(academy("wind_gen_top"), WindGenTopSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(academy("ability_developer"), AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(academy("omni_crafting_table"), OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC);
          //   event.register(AcademyCraft.academy("imagiphase_dowsing_rod"), ImagiphaseDowsingRodSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(AcademyCraft.academy("solar_gen"), SolarGenSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(academy("solar_gen"), SolarGenSpecialRenderer.Unbaked.MAP_CODEC);
         }
 
         @SubscribeEvent
         public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
             event.register(Blocks.WIND_GEN_PILLAR.get(), WindGenPillarSpecialRenderer.Unbaked.INSTANCE);
-        }
-
-        @SubscribeEvent
-        public static void onMain(ConfigureMainRenderTargetEvent event) {
-            event.enableStencil();
         }
 
         @SubscribeEvent

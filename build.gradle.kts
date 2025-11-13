@@ -8,10 +8,10 @@ plugins {
     id("net.neoforged.moddev") version "latest.release"
 }
 
-val repoUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
+/*val repoUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
 val metadata: Document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(repoUrl)
-metadata.documentElement.normalize()
-val latestNeoVersion: String = "21.10.49-beta"
+metadata.documentElement.normalize()*/
+val latestNeoVersion: String = "21.10.51-beta"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "true").toBoolean()
 
