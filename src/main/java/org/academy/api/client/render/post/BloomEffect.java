@@ -56,7 +56,10 @@ public final class BloomEffect {
     {
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
-        input = new TextureTarget(null, mainRenderTarget.width, mainRenderTarget.height, true, true);
+        input = new TextureTarget(
+                null, mainRenderTarget.width, mainRenderTarget.height,
+                true, mainRenderTarget.useStencil
+        );
         input.setFilterMode(FilterMode.LINEAR);
 
         var device = RenderSystem.getDevice();

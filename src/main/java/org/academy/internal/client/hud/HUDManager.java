@@ -3,11 +3,12 @@ package org.academy.internal.client.hud;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import org.academy.api.client.Render;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.thread.MainThread;
@@ -15,8 +16,6 @@ import org.academy.api.client.thread.RenderThread;
 import org.academy.api.client.vanilla.MainLoopEvent;
 import org.slf4j.Logger;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -38,7 +37,7 @@ public final class HUDManager {
 
     @RenderThread
     public static void resize(int width, int height) {
-        DataTerminalHUD.resize(width, height);
+        DataTerminalHUD.resize();
     }
 
     /**
@@ -55,11 +54,7 @@ public final class HUDManager {
         DataTerminalHUD.perform(mouseX, mouseY, deltaPartialTick);
     }
 
-    /**
-     * 由 Render 线程调用喵, 解析命令并绘制喵
-     */
-    @SubscribeEvent
-    public static void onRenderGui(RenderGuiEvent.Pre event) {
+    public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         var mc = Minecraft.getInstance();
         var main = mc.getMainRenderTarget();
         var width = main.width;
@@ -91,10 +86,11 @@ public final class HUDManager {
                     20.0f
             );
 
-            Render.runBlitPassNDC(mainColorView, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
-                    Map.of("DiffuseSampler", uiColorView),
-                    Collections.emptyMap(),
-                    false
+            guiGraphics.submitBlit(
+                    Render.RenderPipelines.IMAGE, uiColorView,
+                    0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
+                    0, 1, 1, 0,
+                    -1
             );
         } finally {
             if (renderTarget != null) pool.release(desc, renderTarget);
