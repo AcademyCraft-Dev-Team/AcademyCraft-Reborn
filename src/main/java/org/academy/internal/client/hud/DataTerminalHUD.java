@@ -30,14 +30,12 @@ import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.UIRenderContext;
 import org.academy.api.client.gui.render.WidgetRenderContext;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.input.KeyInputEvent;
-import org.academy.api.client.input.MouseMoveEvent;
-import org.academy.api.client.input.MouseScrollEvent;
+import org.academy.api.client.input.*;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
+import org.academy.internal.client.hud.apps.SettingsApp;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -51,6 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class DataTerminalHUD {
+    public static final int COLOR = 1073741824;
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = "data_terminal_hud_config_toggle";
     @Nullable
@@ -86,7 +85,7 @@ public final class DataTerminalHUD {
             GLFW.glfwSetCursorPos(w.handle(), w.getWidth() / 2.0, w.getHeight() / 2.0);
             startXpos = m.xpos;
             startYpos = m.ypos;
-            init(width, height);
+            init();
         } else {
             GLFW.glfwSetCursorPos(w.handle(), startXpos, startYpos);
         }
@@ -163,20 +162,66 @@ public final class DataTerminalHUD {
         };
     }
 
-    private static void init(int width, int height) {
+    private static void init() {
         ROOT.setName("root");
         ROOT.clearChildren();
 
+        var infoBar = new FrameLayoutWidget();
+        infoBar.setLayoutParams(
+                new FrameLayoutWidget.LayoutParams()
+                        .gravity(Gravity.TOP_RIGHT)
+                        .margin(0, 12, 12, 0)
+                        .sizeMode(SizeMode.WRAP_CONTENT)
+        );
+        ROOT.addChild("info_bar", infoBar);
+        {
+            var back = new FillWidget(COLOR);
+            back.setLayoutParams(
+                    new FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
+            );
+            infoBar.addChild("back", back);
+
+            var info = new LinearLayoutWidget();
+            info.setSpacing(5);
+            info.setOrientation(Orientation.HORIZONTAL);
+            info.setLayoutParams(
+                    new FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.WRAP_CONTENT)
+            );
+            infoBar.addChild("info", info);
+            {
+                var icon = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
+                icon.setLayoutParams(
+                        new LinearLayoutWidget.LayoutParams()
+                                .gravity(Gravity.CENTER_VERTICAL)
+                                .size(16, 16)
+                                .margin(4, 2)
+                );
+                info.addChild("icon", icon);
+
+                var player = Minecraft.getInstance().player;
+                var playerName = player == null ? "None" : player.getPlainTextName();
+                var name = new LabelWidget(playerName);
+                name.setLayoutParams(
+                        new LinearLayoutWidget.LayoutParams()
+                                .gravity(Gravity.CENTER_VERTICAL)
+                                .margin(4, 2)
+                );
+                info.addChild("name", name);
+            }
+        }
         var dockBar = new FrameLayoutWidget();
         dockBar.setLayoutParams(
                 new FrameLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER_BOTTOM)
-                        .margin(0, 0, 0, 32)
+                        .margin(0, 0, 0, 24)
                         .widthMode(SizeMode.WRAP_CONTENT)
                         .height(24)
         );
+        ROOT.addChild("dock_bar", dockBar);
         {
-            var back = new FillWidget(1073741824);
+            var back = new FillWidget(COLOR);
             back.setLayoutParams(
                     new FrameLayoutWidget.LayoutParams()
                             .sizeMode(SizeMode.MATCH_PARENT)
@@ -192,29 +237,37 @@ public final class DataTerminalHUD {
             );
             dockBar.addChild("app_area", appArea);
             {
-                var mediaPlayer = new FrameLayoutWidget();
-                mediaPlayer.setLayoutParams(
+                var settings = new FrameLayoutWidget();
+                settings.setLayoutParams(
                         new LinearLayoutWidget.LayoutParams()
-                                .heightMode(SizeMode.MATCH_PARENT)
+                                .sizeMode(SizeMode.WRAP_CONTENT, SizeMode.MATCH_PARENT)
                 );
-                appArea.addChild("media_player", mediaPlayer);
+                appArea.addChild("settings", settings);
                 {
                     var icon = new ImageWidget(Resource.Textures.ICON_SETTINGS);
                     icon.setLayoutParams(
                             new FrameLayoutWidget.LayoutParams()
                                     .size(16, 16)
+                                    .margin(0, 0, 0, 4)
                                     .gravity(Gravity.CENTER)
                     );
-                    mediaPlayer.addChild("icon", icon);
+                    settings.addChild("icon", icon);
                 }
             }
         }
 
-        ROOT.addChild("dock_bar", dockBar);
+        var window = SettingsApp.create();
+        window.setLayoutParams(
+                new FrameLayoutWidget.LayoutParams()
+                        .gravity(Gravity.CENTER)
+                        .size(280, 160)
+                        .margin(0, 0, 0, 24)
+        );
+        ROOT.addChild("window", window);
     }
 
-    public static void resize(int width, int height) {
-        init(width, height);
+    public static void resize() {
+        init();
     }
 
     @MainThread
@@ -342,6 +395,20 @@ public final class DataTerminalHUD {
                     Mth.clamp(event.ypos, 0.0, window.getHeight())
             );
 
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onMouseButton(MouseButtonEvent event) {
+        if (isActive() && Minecraft.getInstance().screen == null) {
+            InputSystem.currentMouseButton = event.button;
+            InputSystem.currentMouseAction = event.action;
+            InputSystem.currentMouseModifier = event.modifiers;
+            var inputEvent = event.action == 1
+                    ? MouseEvent.createPressEvent(xpos, ypos, event.button)
+                    : MouseEvent.createReleaseEvent(xpos, ypos, event.button);
+            ROOT.dispatchEvent(inputEvent);
             event.setCanceled(true);
         }
     }
