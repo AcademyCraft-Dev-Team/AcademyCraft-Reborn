@@ -11,27 +11,16 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import org.academy.api.client.Render;
-import org.academy.api.client.gui.render.UIRenderContext;
-import org.academy.api.client.gui.widget.Widget;
-import org.academy.api.client.gui.widget.CursorWidget;
-import org.academy.api.client.render.post.BlurEffect;
+import org.academy.api.client.gui.render.UIContext;
 import org.joml.Matrix4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
 
 public final class Renderer implements AutoCloseable {
     private final Config config;
     private final UIManager uiManager;
-    private final UIRenderContext internalUIRenderContext;
+    private final UIContext internalUIContext;
 
     @Nullable
     private RenderTarget uiRenderTarget;
@@ -48,7 +37,7 @@ public final class Renderer implements AutoCloseable {
     public Renderer(Config config, UIManager uiManager) {
         this.config = config;
         this.uiManager = uiManager;
-        internalUIRenderContext = new UIRenderContext();
+        internalUIContext = new UIContext();
 
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.getMainRenderTarget();
@@ -125,7 +114,7 @@ public final class Renderer implements AutoCloseable {
             maskVertexBuffer = null;
         }
         maskIndexBuffer = null;
-        internalUIRenderContext.close();
+        internalUIContext.close();
     }
 
     private static class TransformUniforms {

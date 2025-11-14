@@ -40,30 +40,30 @@ public final class BlurEffect {
         return SAMPLES_CACHE.computeIfAbsent(radius, key -> {
             var samples = new Vector4f[MAX_GAUSSIAN_SAMPLES];
             var weights = new float[key + 1];
-            float totalWeight = 0.0f;
-            float sigma = key / 2.0f;
+            var totalWeight = 0.0f;
+            var sigma = key / 2.0f;
 
-            for (int i = 0; i <= key; i++) {
+            for (var i = 0; i <= key; i++) {
                 weights[i] = (float) (Math.exp(-0.5 * (i * i) / (sigma * sigma)));
                 totalWeight += (i == 0 ? 1.0f : 2.0f) * weights[i];
             }
 
-            for (int i = 0; i < weights.length; i++) {
+            for (var i = 0; i < weights.length; i++) {
                 weights[i] /= totalWeight;
             }
 
-            int sampleCount = 0;
+            var sampleCount = 0;
             samples[sampleCount++] = new Vector4f(0.0f, 0.0f, weights[0], 0.0f);
 
-            for (int i = 1; i < key; i += 2) {
-                float weight1 = weights[i];
-                float weight2 = weights[i + 1];
-                float total = weight1 + weight2;
-                float offset = (i * weight1 + (i + 1.0f) * weight2) / total;
+            for (var i = 1; i < key; i += 2) {
+                var weight1 = weights[i];
+                var weight2 = weights[i + 1];
+                var total = weight1 + weight2;
+                var offset = (i * weight1 + (i + 1.0f) * weight2) / total;
                 samples[sampleCount++] = new Vector4f(offset, offset, total, 0.0f);
             }
 
-            for (int i = sampleCount; i < MAX_GAUSSIAN_SAMPLES; i++) {
+            for (var i = sampleCount; i < MAX_GAUSSIAN_SAMPLES; i++) {
                 samples[i] = new Vector4f();
             }
 
@@ -181,7 +181,7 @@ public final class BlurEffect {
 
         static {
             var calculator = new Std140SizeCalculator().putVec2().putVec2().putInt();
-            for (int i = 0; i < MAX_GAUSSIAN_SAMPLES; i++) {
+            for (var i = 0; i < MAX_GAUSSIAN_SAMPLES; i++) {
                 calculator.putVec4();
             }
             UBO_SIZE = calculator.get();

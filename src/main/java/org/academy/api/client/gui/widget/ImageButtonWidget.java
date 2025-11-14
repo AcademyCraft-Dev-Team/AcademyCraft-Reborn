@@ -10,7 +10,7 @@ import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.jetbrains.annotations.Nullable;
@@ -118,7 +118,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         resolveAndPrepareTexture();

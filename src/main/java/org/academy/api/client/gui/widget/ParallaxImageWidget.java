@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 
 public class ParallaxImageWidget extends ImageWidget {
     protected float parallaxFactorX = 0.5f;
@@ -16,7 +16,7 @@ public class ParallaxImageWidget extends ImageWidget {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         var anchorX = getAbsoluteX() + width / 2.0f;
         var anchorY = getAbsoluteY() + height / 2.0f;
 

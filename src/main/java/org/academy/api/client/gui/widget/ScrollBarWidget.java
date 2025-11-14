@@ -4,7 +4,7 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.layout.Orientation;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 
 public class ScrollBarWidget extends DragBarWidget {
     protected final ScrollPanelWidget panel;
@@ -15,7 +15,7 @@ public class ScrollBarWidget extends DragBarWidget {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         var finalAlpha = getAbsoluteAlpha() * context.getAccumulatedAlpha();
@@ -29,7 +29,7 @@ public class ScrollBarWidget extends DragBarWidget {
         context.pose().popPose();
     }
 
-    private void renderTrack(WidgetRenderContext context, float finalAlpha) {
+    private void renderTrack(RenderContext context, float finalAlpha) {
         var trackAlpha = ARGB.alpha(trackColor) / 255.0f * finalAlpha;
         var r = ARGB.red(trackColor) / 255.0f;
         var g = ARGB.green(trackColor) / 255.0f;
@@ -38,7 +38,7 @@ public class ScrollBarWidget extends DragBarWidget {
         context.submit(trackCommand);
     }
 
-    private void renderThumb(WidgetRenderContext context, float finalAlpha) {
+    private void renderThumb(RenderContext context, float finalAlpha) {
         var thumbStart = getThumbPosition();
         var thumbSize = getThumbSize();
 
@@ -70,7 +70,7 @@ public class ScrollBarWidget extends DragBarWidget {
         var viewSize = orientation == Orientation.HORIZONTAL ? panel.getWidth() : panel.getHeight();
         var contentSize = maxScroll + viewSize;
         var ratio = viewSize / contentSize;
-        float val = ratio * getTrackSize();
+        var val = ratio * getTrackSize();
         return Mth.clamp(val, 16.0f, getTrackSize());
     }
 

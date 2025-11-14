@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 
 public class AutoScaleLabelWidget extends LabelWidget {
     public AutoScaleLabelWidget(String text) {
@@ -14,7 +14,7 @@ public class AutoScaleLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         updateScale();
         super.render(context, mouseX, mouseY, partialTick);
     }
