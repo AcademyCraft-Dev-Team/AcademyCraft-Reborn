@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.render.RenderContext;
@@ -80,6 +81,12 @@ public interface Widget extends Tickable {
 
     void setHovered(boolean hovered);
 
+    boolean isPressed();
+
+    boolean isSelected();
+
+    void setSelected(boolean selected);
+
     float getAlpha();
 
     Widget setAlpha(float alpha);
@@ -119,4 +126,14 @@ public interface Widget extends Tickable {
     @Override
     default void tick() {
     }
+
+    void setBackground(Drawable background);
+
+    @Nullable
+    Drawable getBackground();
+
+    void setForeground(Drawable foreground);
+
+    @Nullable
+    Drawable getForeground();
 }

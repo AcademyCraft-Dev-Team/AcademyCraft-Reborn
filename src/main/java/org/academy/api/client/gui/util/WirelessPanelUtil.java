@@ -207,7 +207,7 @@ public final class WirelessPanelUtil {
                     inputBox.setShowBackground(true);
                     itemContent.addChild("input", inputBox);
 
-                    var connectButton = new ImageButtonWidget(ICON_UNCONNECTED, () -> connectAction.accept(inputBox.getText()));
+                    var connectButton = new ImageButtonWidget(ICON_UNCONNECTED, source -> connectAction.accept(inputBox.getText()));
                     connectButton.setLayoutParams(
                             new LinearLayoutWidget.LayoutParams()
                                     .gravity(Gravity.CENTER)
@@ -215,7 +215,7 @@ public final class WirelessPanelUtil {
                     );
                     itemContent.addChild("button", connectButton);
                 } else if (!isNull) {
-                    var disconnectButton = new ImageButtonWidget(ICON_CONNECTED, () -> {
+                    var disconnectButton = new ImageButtonWidget(ICON_CONNECTED, source -> {
                         MisakaNetworkClient.sendPacket(new DisconnectNodePacket(position));
                         updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList);
                     });

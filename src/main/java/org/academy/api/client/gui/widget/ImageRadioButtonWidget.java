@@ -1,36 +1,56 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.resources.ResourceLocation;
+import org.academy.api.client.gui.drawable.StateListDrawable;
+import org.academy.api.client.gui.drawable.TextureDrawable;
+import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.MouseEvent;
+import org.academy.api.client.gui.event.OnClickListener;
 import org.jetbrains.annotations.Nullable;
 
 public class ImageRadioButtonWidget extends ImageButtonWidget {
     protected boolean selected = false;
     @Nullable
     protected RadioGroupWidget radioGroup = null;
-
-    protected float selectedAlpha = 1.0f;
-    protected float unselectedAlpha = 0.7f;
-    protected float hoverAlpha = 1.0f;
-    protected float disabledAlpha = 0.5f;
     protected int id = -1;
 
     public ImageRadioButtonWidget(ResourceLocation texture) {
-        this(texture, () -> {
-        });
+        this(texture, null);
     }
 
-    public ImageRadioButtonWidget(ResourceLocation texture, Runnable onPress) {
-        super(texture, onPress);
-        updateVisualState();
+    public ImageRadioButtonWidget(ResourceLocation texture, @Nullable OnClickListener listener) {
+        super(texture, listener);
+
+        var defaultDrawable = new TextureDrawable(texture);
+        defaultDrawable.setTintColor(0xB3FFFFFF);
+        var hoveredDrawable = new TextureDrawable(texture);
+        hoveredDrawable.setTintColor(0xFFFFFFFF);
+        var selectedDrawable = new TextureDrawable(texture);
+        selectedDrawable.setTintColor(0xFFFFFFFF);
+        var disabledDrawable = new TextureDrawable(texture);
+        disabledDrawable.setTintColor(0x80FFFFFF);
+
+        var sld = new StateListDrawable();
+        sld.addState(WidgetState.DISABLED, disabledDrawable);
+        sld.addState(WidgetState.SELECTED, selectedDrawable);
+        sld.addState(WidgetState.HOVERED, hoveredDrawable);
+        sld.addState(WidgetState.DEFAULT, defaultDrawable);
+
+        setBackground(sld);
+    }
+
+    @Override
+    public boolean isSelected() {
+        return selected;
+    }
+
+    @Override
+    public void setSelected(boolean selected) {
+        this.selected = selected;
     }
 
     public int getId() {
         return id;
-    }
-
-    public boolean isSelected() {
-        return selected;
     }
 
     @Override
@@ -39,19 +59,6 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
         if (event.isConsumed() && radioGroup != null) {
             radioGroup.selectButton(this);
         }
-    }
-
-    @Override
-    public void setHovered(boolean hovered) {
-        super.setHovered(hovered);
-        updateVisualState();
-    }
-
-    @Override
-    public ImageButtonWidget setEnabled(boolean enabled) {
-        super.setEnabled(enabled);
-        updateVisualState();
-        return this;
     }
 
     public ImageRadioButtonWidget setId(int id) {
@@ -64,32 +71,18 @@ public class ImageRadioButtonWidget extends ImageButtonWidget {
         return this;
     }
 
-    public ImageRadioButtonWidget setSelected(boolean selected) {
-        if (this.selected != selected) {
-            this.selected = selected;
-            updateVisualState();
-        }
-        return this;
-    }
-
+    /**
+     * @deprecated Visual state is now controlled by the background {@link StateListDrawable}.
+     */
+    @Deprecated
     public ImageRadioButtonWidget setVisualAlphas(float selected, float unselected, float hover, float disabled) {
-        selectedAlpha = selected;
-        unselectedAlpha = unselected;
-        hoverAlpha = hover;
-        disabledAlpha = disabled;
-        updateVisualState();
         return this;
     }
 
+    /**
+     * @deprecated Visual state is now controlled by the background {@link StateListDrawable}.
+     */
+    @Deprecated
     public void updateVisualState() {
-        if (!isEnabled()) {
-            setAlpha(disabledAlpha);
-        } else if (isHovered()) {
-            setAlpha(hoverAlpha);
-        } else if (isSelected()) {
-            setAlpha(selectedAlpha);
-        } else {
-            setAlpha(unselectedAlpha);
-        }
     }
 }
