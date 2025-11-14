@@ -15,7 +15,7 @@ public class RadioGroupWidget extends LinearLayoutWidget {
     protected ImageRadioButtonWidget selectedButton = null;
     @Nullable
     protected Consumer<ImageRadioButtonWidget> onSelectionChanged = null;
-    protected boolean allowReselect = false ;
+    protected boolean allowReselect = false;
     protected int idCounter = 0;
 
     public void selectButton(@Nullable ImageRadioButtonWidget buttonToSelect) {

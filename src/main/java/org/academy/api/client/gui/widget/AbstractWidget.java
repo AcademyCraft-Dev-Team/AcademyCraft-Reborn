@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
@@ -26,8 +27,19 @@ public abstract class AbstractWidget implements Widget {
     protected float scrollY = 0f;
     protected String name = "";
 
+    @Nullable
+    protected Drawable background = null;
+    @Nullable
+    protected Drawable foreground = null;
+
     @Override
     public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+        if (background != null) {
+            background.draw(context, this);
+        }
+        if (foreground != null) {
+            foreground.draw(context, this);
+        }
     }
 
     @Override
@@ -101,15 +113,11 @@ public abstract class AbstractWidget implements Widget {
     protected static float resolveSize(float desiredSize, MeasureSpec spec) {
         var specMode = spec.getMode();
         var specSize = spec.getSize();
-        switch (specMode) {
-            case EXACTLY:
-                return specSize;
-            case AT_MOST:
-                return Math.min(desiredSize, specSize);
-            case UNSPECIFIED:
-            default:
-                return desiredSize;
-        }
+        return switch (specMode) {
+            case EXACTLY -> specSize;
+            case AT_MOST -> Math.min(desiredSize, specSize);
+            default -> desiredSize;
+        };
     }
 
     @Override
@@ -297,6 +305,20 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
+    public boolean isPressed() {
+        return false;
+    }
+
+    @Override
+    public boolean isSelected() {
+        return false;
+    }
+
+    @Override
+    public void setSelected(boolean selected) {
+    }
+
+    @Override
     public float getAlpha() {
         return alpha;
     }
@@ -425,5 +447,27 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public void onFocusLost() {
+    }
+
+    @Override
+    public void setBackground(@Nullable Drawable background) {
+        this.background = background;
+    }
+
+    @Override
+    @Nullable
+    public Drawable getBackground() {
+        return background;
+    }
+
+    @Override
+    public void setForeground(@Nullable Drawable foreground) {
+        this.foreground = foreground;
+    }
+
+    @Override
+    @Nullable
+    public Drawable getForeground() {
+        return foreground;
     }
 }

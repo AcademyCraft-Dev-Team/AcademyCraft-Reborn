@@ -2,18 +2,21 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
+import org.academy.api.client.gui.drawable.ColorDrawable;
+import org.academy.api.client.gui.drawable.Drawable;
+import org.academy.api.client.gui.drawable.StateListDrawable;
+import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.CharTypedEvent;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
+import org.academy.api.client.gui.render.RenderContext;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -24,9 +27,6 @@ public class TextBoxWidget extends LabelWidget {
     protected final StringBuilder text = new StringBuilder();
     protected final int maxLength;
     protected int caretPos = 0;
-    protected boolean showBackground = false;
-    protected int bgColor = 0x5F1F1F1F;
-    protected int borderColor = 0x5F5A5A5A;
     @Nullable
     protected Consumer<String> whenEnter;
     @Nullable
@@ -42,6 +42,11 @@ public class TextBoxWidget extends LabelWidget {
         super(Component.empty());
         this.maxLength = maxLength;
         setClickable(true);
+
+        var sld = new StateListDrawable();
+        sld.addState(WidgetState.DEFAULT, new ColorDrawable(0x5F1F1F1F));
+        sld.addState(WidgetState.FOCUSED, new ColorDrawable(0x5F5A5A5A));
+        setBackground(sld);
     }
 
     @Override
@@ -51,7 +56,6 @@ public class TextBoxWidget extends LabelWidget {
 
         var desiredHeight = (float) font.lineHeight + lp.paddingTop + lp.paddingBottom;
         var measuredHeight = resolveSize(desiredHeight, heightMeasureSpec);
-
         var measuredWidth = resolveSize(lp.width, widthMeasureSpec);
 
         setMeasuredDimension(measuredWidth, measuredHeight);
@@ -59,17 +63,9 @@ public class TextBoxWidget extends LabelWidget {
 
     @Override
     public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
-        if (!isVisible()) {
-            return;
-        }
+        if (!isVisible()) return;
 
         context.drawOrder().push();
-
-        if (showBackground) {
-            renderBackground(context);
-        }
-
-        context.drawOrder().advance();
         {
             super.render(context, mouseX, mouseY, partialTick);
 
@@ -78,44 +74,7 @@ public class TextBoxWidget extends LabelWidget {
                 renderCaret(context);
             }
         }
-
         context.drawOrder().pop();
-    }
-
-    private void renderBackground(RenderContext context) {
-        var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
-        var width = getWidth();
-        var height = getHeight();
-
-        var bgR = ARGB.red(bgColor) / 255.0f;
-        var bgG = ARGB.green(bgColor) / 255.0f;
-        var bgB = ARGB.blue(bgColor) / 255.0f;
-        var bgA = ARGB.alpha(bgColor) / 255.0f * finalAlpha;
-        context.submit(new FillRectDrawCommand(width, height, bgR, bgG, bgB, bgA));
-
-        var borderR = ARGB.red(borderColor) / 255.0f;
-        var borderG = ARGB.green(borderColor) / 255.0f;
-        var borderB = ARGB.blue(borderColor) / 255.0f;
-        var borderA = ARGB.alpha(borderColor) / 255.0f * finalAlpha;
-
-        context.submit(new FillRectDrawCommand(width, 1, borderR, borderG, borderB, borderA));
-
-        context.pose().pushPose();
-        context.pose().translate(0, height - 1, 0);
-        context.submit(new FillRectDrawCommand(width, 1, borderR, borderG, borderB, borderA));
-        context.pose().popPose();
-
-        if (height > 2) {
-            context.pose().pushPose();
-            context.pose().translate(0, 1, 0);
-            context.submit(new FillRectDrawCommand(1, height - 2, borderR, borderG, borderB, borderA));
-            context.pose().popPose();
-
-            context.pose().pushPose();
-            context.pose().translate(width - 1, 1, 0);
-            context.submit(new FillRectDrawCommand(1, height - 2, borderR, borderG, borderB, borderA));
-            context.pose().popPose();
-        }
     }
 
     private void renderCaret(RenderContext context) {
@@ -134,19 +93,17 @@ public class TextBoxWidget extends LabelWidget {
 
         var alignmentOffsetX = 0f;
         var horizontalGravity = (lp.gravity >> Gravity.AXIS_X_SHIFT) & 0x7;
-        if (horizontalGravity == Gravity.AXIS_SPECIFIED) {
+        if (horizontalGravity == Gravity.AXIS_SPECIFIED)
             alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f;
-        } else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+        else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0)
             alignmentOffsetX = availableWidth - visualTextWidth;
-        }
 
         var alignmentOffsetY = 0f;
         var verticalGravity = (lp.gravity >> Gravity.AXIS_Y_SHIFT) & 0x7;
-        if (verticalGravity == Gravity.AXIS_SPECIFIED) {
+        if (verticalGravity == Gravity.AXIS_SPECIFIED)
             alignmentOffsetY = (availableHeight - visualTextHeight) / 2.0f;
-        } else if ((verticalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+        else if ((verticalGravity & Gravity.AXIS_PULL_AFTER) != 0)
             alignmentOffsetY = availableHeight - visualTextHeight;
-        }
 
         var finalX = lp.paddingLeft + alignmentOffsetX + caretXOffset;
         var finalY = lp.paddingTop + alignmentOffsetY;
@@ -193,11 +150,10 @@ public class TextBoxWidget extends LabelWidget {
 
             var alignmentOffsetX = 0f;
             var horizontalGravity = (lp.gravity >> Gravity.AXIS_X_SHIFT) & 0x7;
-            if (horizontalGravity == Gravity.AXIS_SPECIFIED) {
+            if (horizontalGravity == Gravity.AXIS_SPECIFIED)
                 alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f;
-            } else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
+            else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0)
                 alignmentOffsetX = availableWidth - visualTextWidth;
-            }
 
             var localX = (float) event.getX() - getAbsoluteX() - lp.paddingLeft - alignmentOffsetX;
             caretPos = font.plainSubstrByWidth(getText(), (int) (localX / finalScale)).length();
@@ -221,9 +177,8 @@ public class TextBoxWidget extends LabelWidget {
 
     @Override
     protected void onCharTyped(CharTypedEvent event) {
-        if (!isFocused() || text.length() >= maxLength || Character.isISOControl(event.getCodePoint())) {
+        if (!isFocused() || text.length() >= maxLength || Character.isISOControl(event.getCodePoint()))
             return;
-        }
 
         caretPos = Mth.clamp(caretPos, 0, text.length());
         var potentialText = new StringBuilder(text).insert(caretPos, event.getCodePoint()).toString();
@@ -257,24 +212,16 @@ public class TextBoxWidget extends LabelWidget {
                 yield true;
             }
             case GLFW.GLFW_KEY_RIGHT -> {
-                if (caretPos < text.length()) {
-                    caretPos++;
-                }
+                if (caretPos < text.length()) caretPos++;
                 yield true;
             }
             case GLFW.GLFW_KEY_LEFT -> {
-                if (caretPos > 0) {
-                    caretPos--;
-                }
+                if (caretPos > 0) caretPos--;
                 yield true;
             }
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
-                if (whenEnter != null) {
-                    whenEnter.accept(getText());
-                }
-                if (clearWhenEnter) {
-                    setText("");
-                }
+                if (whenEnter != null) whenEnter.accept(getText());
+                if (clearWhenEnter) setText("");
                 yield true;
             }
             case GLFW.GLFW_KEY_END -> {
@@ -288,9 +235,7 @@ public class TextBoxWidget extends LabelWidget {
             default -> false;
         };
 
-        if (handled) {
-            event.consume();
-        }
+        if (handled) event.consume();
     }
 
     private void updateTextComponent() {
@@ -315,9 +260,7 @@ public class TextBoxWidget extends LabelWidget {
         if (event.isCanceled()) return;
 
         showCaret = false;
-        if (onFocusLostCallback != null) {
-            onFocusLostCallback.run();
-        }
+        if (onFocusLostCallback != null) onFocusLostCallback.run();
     }
 
     private void updateTextScale() {
@@ -325,25 +268,33 @@ public class TextBoxWidget extends LabelWidget {
         var lp = getLayoutParams();
         var textWidth = font.width(text.toString());
         var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight - 2;
-        if (textWidth > availableWidth && textWidth > 0 && availableWidth > 0) {
+        if (textWidth > availableWidth && textWidth > 0 && availableWidth > 0)
             scale = availableWidth / textWidth;
-        } else {
-            scale = 1.0f;
-        }
+        else scale = 1.0f;
     }
 
+    /**
+     * @deprecated Use {@link #setBackground(Drawable)} to provide a custom background.
+     */
+    @Deprecated
     public TextBoxWidget setShowBackground(boolean show) {
-        showBackground = show;
+        if (!show) setBackground(null);
         return this;
     }
 
+    /**
+     * @deprecated Use {@link #setBackground(Drawable)} with a {@link StateListDrawable} and {@link ColorDrawable}.
+     */
+    @Deprecated
     public TextBoxWidget setBgColor(int color) {
-        bgColor = color;
         return this;
     }
 
+    /**
+     * @deprecated Use {@link #setBackground(Drawable)} to define borders within a custom Drawable.
+     */
+    @Deprecated
     public TextBoxWidget setBorderColor(int color) {
-        borderColor = color;
         return this;
     }
 
