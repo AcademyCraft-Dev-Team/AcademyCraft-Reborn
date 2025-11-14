@@ -7,18 +7,18 @@ import java.util.function.Consumer;
 
 /**
  * A container that acts as both a logical controller and a visual layout
- * for a group of ImageRadioButtonWidgets, ensuring only one can be selected at a time.
+ * for a group of {@link RadioButtonWidget}s, ensuring only one can be selected at a time.
  * It inherits from LinearLayoutWidget to automatically arrange its children.
  */
 public class RadioGroupWidget extends LinearLayoutWidget {
     @Nullable
-    protected ImageRadioButtonWidget selectedButton = null;
+    protected RadioButtonWidget selectedButton = null;
     @Nullable
-    protected Consumer<ImageRadioButtonWidget> onSelectionChanged = null;
+    protected Consumer<RadioButtonWidget> onSelectionChanged = null;
     protected boolean allowReselect = false;
     protected int idCounter = 0;
 
-    public void selectButton(@Nullable ImageRadioButtonWidget buttonToSelect) {
+    public void selectButton(@Nullable RadioButtonWidget buttonToSelect) {
         if (!allowReselect && Objects.equals(buttonToSelect, selectedButton)) {
             return;
         }
@@ -26,7 +26,7 @@ public class RadioGroupWidget extends LinearLayoutWidget {
         internalSelect(buttonToSelect, true);
     }
 
-    private void internalSelect(@Nullable ImageRadioButtonWidget buttonToSelect, boolean triggerCallback) {
+    private void internalSelect(@Nullable RadioButtonWidget buttonToSelect, boolean triggerCallback) {
         if (buttonToSelect != null && !buttonToSelect.isEnabled()) {
             return;
         }
@@ -48,13 +48,13 @@ public class RadioGroupWidget extends LinearLayoutWidget {
     }
 
     @Nullable
-    public ImageRadioButtonWidget getSelectedButton() {
+    public RadioButtonWidget getSelectedButton() {
         return selectedButton;
     }
 
     @Override
     public void addChild(String name, Widget child) {
-        if (child instanceof ImageRadioButtonWidget radioButton) {
+        if (child instanceof RadioButtonWidget radioButton) {
             radioButton.setRadioGroup(this);
             radioButton.setId(idCounter++);
         }
@@ -68,7 +68,7 @@ public class RadioGroupWidget extends LinearLayoutWidget {
             internalSelect(null, true);
         }
 
-        if (removedWidget instanceof ImageRadioButtonWidget removedRadio) {
+        if (removedWidget instanceof RadioButtonWidget removedRadio) {
             removedRadio.setRadioGroup(null);
         }
 
@@ -78,7 +78,7 @@ public class RadioGroupWidget extends LinearLayoutWidget {
     @Override
     public void clearChildren() {
         for (var child : children.values()) {
-            if (child instanceof ImageRadioButtonWidget radioButton) {
+            if (child instanceof RadioButtonWidget radioButton) {
                 radioButton.setRadioGroup(null);
             }
         }
@@ -88,7 +88,7 @@ public class RadioGroupWidget extends LinearLayoutWidget {
         super.clearChildren();
     }
 
-    public void setOnSelectionChanged(@Nullable Consumer<ImageRadioButtonWidget> onSelectionChanged) {
+    public void setOnSelectionChanged(@Nullable Consumer<RadioButtonWidget> onSelectionChanged) {
         this.onSelectionChanged = onSelectionChanged;
     }
 

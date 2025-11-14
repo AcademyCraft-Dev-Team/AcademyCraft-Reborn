@@ -108,9 +108,9 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
                             .heightMode(SizeMode.WRAP_CONTENT)
             );
             main.addChild("radio_group_page_button", pageButtons);
-            ImageRadioButtonWidget invButton;
+            RadioButtonWidget invButton;
             {
-                invButton = new ImageRadioButtonWidget(Resource.Textures.ICON_INV);
+                invButton = new RadioButtonWidget(new ImageWidget(Resource.Textures.ICON_INV));
                 invButton.setLayoutParams(
                         new WidgetContainer.LayoutParams()
                                 .widthMode(SizeMode.WRAP_CONTENT)
@@ -163,7 +163,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         }
     }
 
-    protected abstract void onInit(RadioGroupWidget pageButtons, ImageRadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage);
+    protected abstract void onInit(RadioGroupWidget pageButtons, RadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage);
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
