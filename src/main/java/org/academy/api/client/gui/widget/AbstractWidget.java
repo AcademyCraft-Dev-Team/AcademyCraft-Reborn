@@ -3,7 +3,7 @@ package org.academy.api.client.gui.widget;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractWidget implements Widget {
@@ -27,7 +27,7 @@ public abstract class AbstractWidget implements Widget {
     protected String name = "";
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
     }
 
     @Override

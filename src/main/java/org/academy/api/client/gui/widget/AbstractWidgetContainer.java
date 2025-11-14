@@ -13,7 +13,7 @@ import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.util.GlyphCommandGenerator;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,7 +44,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
         return isLayoutDirty;
     }
 
-    private void renderDebugLayoutBounds(Widget widget, WidgetRenderContext context) {
+    private void renderDebugLayoutBounds(Widget widget, RenderContext context) {
         var outlineColor = 0xFFFF0000;
         if (widget.isFocused()) {
             outlineColor = 0xFF00FF00;
@@ -77,7 +77,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
         }
     }
 
-    private void renderDebugInfo(Widget widget, WidgetRenderContext context) {
+    private void renderDebugInfo(Widget widget, RenderContext context) {
         var font = Minecraft.getInstance().font;
         var namePart = widget.getName().isEmpty() ? "" : "'" + widget.getName() + "'";
         var infoText = String.format(
@@ -212,7 +212,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) {
             return;
         }
@@ -232,7 +232,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
         context.pose().popPose();
     }
 
-    protected void renderChildren(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    protected void renderChildren(RenderContext context, double mouseX, double mouseY, float partialTick) {
         for (var child : children.values()) {
             if (child.isVisible()) {
                 context.pose().pushPose();

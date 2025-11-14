@@ -8,7 +8,7 @@ import org.academy.api.client.gui.command.SubmittedCommand;
 import javax.annotation.Nullable;
 import java.util.*;
 
-public final class WidgetRenderContext {
+public final class RenderContext {
     private final List<SubmittedCommand> submittedCommands;
     private final PoseStack pose;
     private final ScissorStack scissorStack;
@@ -21,7 +21,7 @@ public final class WidgetRenderContext {
         <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreate(Class<T> uboClass, int size);
     }
 
-    public WidgetRenderContext(UboFactory uboFactory) {
+    public RenderContext(UboFactory uboFactory) {
         submittedCommands = new ArrayList<>();
         pose = new PoseStack();
         scissorStack = new ScissorStack();

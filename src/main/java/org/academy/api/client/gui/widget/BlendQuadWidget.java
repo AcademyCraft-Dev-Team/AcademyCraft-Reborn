@@ -11,7 +11,7 @@ import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
@@ -31,7 +31,7 @@ public class BlendQuadWidget extends AbstractWidget {
     public float blue;
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         var lp = getLayoutParams();
@@ -86,7 +86,7 @@ public class BlendQuadWidget extends AbstractWidget {
         context.pose().popPose();
     }
 
-    private void renderLines(WidgetRenderContext context, float finalAlpha, float paddedWidth, float paddedHeight) {
+    private void renderLines(RenderContext context, float finalAlpha, float paddedWidth, float paddedHeight) {
         var textureManager = Minecraft.getInstance().getTextureManager();
         var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTexture();
         lineTexture.setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, false);

@@ -16,8 +16,8 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.command.ImageDrawCommand;
-import org.academy.api.client.gui.render.UIRenderContext;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.UIContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.screen.IAnimationScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.InputSystem;
@@ -32,7 +32,7 @@ public final class HUDManager implements IAnimationScreen {
     public static final String KEY_SKILL_UP = "hud_skill_up";
     public static final String KEY_SKILL_DOWN = "hud_skill_down";
 
-    public static final UIRenderContext UI_RENDER_CONTEXT = new UIRenderContext();
+    public static final UIContext UI_RENDER_CONTEXT = new UIContext();
     public static final List<HUDRenderer> HUD_RENDERERS = new ArrayList<>();
     public static final RenderTarget RENDER_TARGET;
     public static final FrameLayoutWidget ROOT;
@@ -297,7 +297,7 @@ public final class HUDManager implements IAnimationScreen {
             setTextureFilter(FilterMode.LINEAR, true);
         }
 
-        public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+        public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
             var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
             context.pose().translate(0, 0, 1);
 

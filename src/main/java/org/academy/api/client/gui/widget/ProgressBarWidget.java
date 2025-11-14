@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 
 import java.util.function.Supplier;
 
@@ -21,7 +21,7 @@ public class ProgressBarWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         var progress = progressSupplier.get();

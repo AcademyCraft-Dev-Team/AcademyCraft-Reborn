@@ -5,7 +5,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -20,7 +19,6 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.skill.Arc;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -65,7 +63,6 @@ public final class ArcGenerate extends Skill {
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
-            AcademyCraft.LOGGER.info("Start: " + System.nanoTime());
             MisakaNetworkClient.sendPacket(GeneratePacket.INSTANCE);
         }
 
@@ -77,12 +74,12 @@ public final class ArcGenerate extends Skill {
                 }
 
                 @Override
-                public @NotNull ArcGenerate.Client.ArcGenerateConfig getDefault() {
+                public ArcGenerate.Client.ArcGenerateConfig getDefault() {
                     return new ArcGenerateConfig();
                 }
 
                 @Override
-                public @NotNull Class<ArcGenerateConfig> getTypeClass() {
+                public Class<ArcGenerateConfig> getTypeClass() {
                     return ArcGenerateConfig.class;
                 }
             }
@@ -92,8 +89,6 @@ public final class ArcGenerate extends Skill {
     public static final class Server {
         @SubscribePacket
         public static void handle(GeneratePacket packet) {
-            AcademyCraft.LOGGER.info("End: " + System.nanoTime());
-
             var player = packet.getPacketListener().getPlayer();
             var level = player.level();
             var currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());

@@ -2,12 +2,12 @@ package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.layout.MeasureSpec;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.common.vanilla.Tickable;
 import org.jetbrains.annotations.Nullable;
 
 public interface Widget extends Tickable {
-    void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick);
+    void render(RenderContext context, double mouseX, double mouseY, float partialTick);
 
     /**
      * The new unified entry point for all input events.

@@ -8,7 +8,7 @@ import org.academy.api.client.gui.event.ScrollEvent;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.render.ScissorRect;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
 import org.jetbrains.annotations.Nullable;
@@ -213,7 +213,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         var currentScrollY = getScrollY();
@@ -243,13 +243,13 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
         if (isMouseOver(event.getX(), event.getY())) {
             event.consume();
             scrollTarget -= (float) (event.getDelta() * scrollSpeed);
-            float max = getMaxScroll();
+            var max = getMaxScroll();
             scrollTarget = Mth.clamp(scrollTarget, (float) 0, max);
         }
     }
 
     public ScrollPanelWidget setScrollTarget(float scrollTarget) {
-        float max = getMaxScroll();
+        var max = getMaxScroll();
         this.scrollTarget = Mth.clamp(scrollTarget, (float) 0, max);
         return this;
     }

@@ -28,7 +28,7 @@ import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.ScrollEvent;
-import org.academy.api.client.gui.render.UIRenderContext;
+import org.academy.api.client.gui.render.UIContext;
 import org.academy.api.client.gui.screen.IAnimationScreen;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
@@ -49,7 +49,7 @@ public final class DataTerminalHUD implements IAnimationScreen, HUDRenderer {
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = "data_terminal_hud_config_toggle";
 
-    private static final UIRenderContext internalUIRenderContext = new UIRenderContext();
+    private static final UIContext INTERNAL_UI_CONTEXT = new UIContext();
     private static final AbstractWidgetContainer rootContainer = new FrameLayoutWidget();
     private static final List<App> APP_LIST = new ArrayList<>();
 

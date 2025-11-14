@@ -27,8 +27,8 @@ import org.academy.api.client.gui.event.ScrollEvent;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.render.UIRenderContext;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.UIContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
 import org.academy.api.client.thread.MainThread;
@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class DataTerminalHUD {
-    public static final int COLOR = 1073741824;
+    public static final int COLOR = 0x40000000;
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = "data_terminal_hud_config_toggle";
     @Nullable
@@ -57,7 +57,7 @@ public final class DataTerminalHUD {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final FrameLayoutWidget ROOT = new FrameLayoutWidget();
     @Nullable
-    private static UIRenderContext uiRenderContext;
+    private static UIContext uiContext;
     /**
      * Main 和 Render 线程都需要用喵
      */
@@ -115,9 +115,9 @@ public final class DataTerminalHUD {
     }
 
     public static void initRender() {
-        uiRenderContext = new UIRenderContext() {
+        uiContext = new UIContext() {
             @Override
-            public void generateCommands(WidgetRenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick) {
+            public void generateCommands(RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick) {
                 super.generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
                 var size = 4;
 
@@ -134,7 +134,7 @@ public final class DataTerminalHUD {
                 context.pose().popPose();
             }
 
-            private void submitGlowCommand(WidgetRenderContext context, Vector4f color, float size) {
+            private void submitGlowCommand(RenderContext context, Vector4f color, float size) {
                 var sdfData = new CursorWidget.SDFData(color, 0.25f, 0.75f);
                 var glowCommand = new PosTexRectDrawCommand(
                         Render.RenderPipelines.SDF_CIRCLE_GLOW,
@@ -248,10 +248,19 @@ public final class DataTerminalHUD {
                     icon.setLayoutParams(
                             new FrameLayoutWidget.LayoutParams()
                                     .size(16, 16)
-                                    .margin(0, 0, 0, 4)
                                     .gravity(Gravity.CENTER)
+                                    .margin(0, 0, 0, 4)
                     );
                     settings.addChild("icon", icon);
+
+                    var name = new LabelWidget("Settings");
+                    name.setLayoutParams(
+                            new FrameLayoutWidget.LayoutParams()
+                                    .gravity(Gravity.CENTER_BOTTOM)
+                                    .width(16)
+                                    .margin(2, 0, 2, 2)
+                    );
+                    settings.addChild("name", name);
                 }
             }
         }
@@ -272,8 +281,8 @@ public final class DataTerminalHUD {
 
     @MainThread
     public static void perform(double mouseX, double mouseY, float deltaPartialTick) {
-        if (uiRenderContext != null) {
-            uiRenderContext.perform(ROOT, mouseX, mouseY, deltaPartialTick);
+        if (uiContext != null) {
+            uiContext.perform(ROOT, mouseX, mouseY, deltaPartialTick);
         } else {
             hasNotBeenInitialized();
         }
@@ -285,7 +294,7 @@ public final class DataTerminalHUD {
             GpuTextureView depth,
             AtomicBoolean drew
     ) {
-        if (!isActive() || uiRenderContext == null) return;
+        if (!isActive() || uiContext == null) return;
 
         var desc = new RenderTargetDescriptor(
                 width, height,
@@ -294,7 +303,7 @@ public final class DataTerminalHUD {
         var terminalTarget = Render.Buffers.getResourcePool().acquire(desc);
 
         try {
-            uiRenderContext.upload(terminalTarget, false, false);
+            uiContext.upload(terminalTarget, false, false);
 
             var terminalView = terminalTarget.getColorTextureView();
             if (terminalView == null) return;
@@ -323,7 +332,7 @@ public final class DataTerminalHUD {
                             color, OptionalInt.empty(), depth, OptionalDouble.empty()
                     )
             ) {
-                renderPass.setPipeline(Render.RenderPipelines.IMAGE_NO_DEPTH_STENCIL);
+                renderPass.setPipeline(Render.RenderPipelines.IMAGE_STENCIL);
                 samplers.forEach(renderPass::bindSampler);
                 uniforms.forEach(renderPass::setUniform);
 
