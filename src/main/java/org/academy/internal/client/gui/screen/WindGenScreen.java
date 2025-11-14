@@ -53,7 +53,7 @@ public final class WindGenScreen extends ContainerUIScreen<WindGenMenu> {
     }
 
     @Override
-    protected void onInit(RadioGroupWidget pageButtons, ImageRadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage) {
+    protected void onInit(RadioGroupWidget pageButtons, RadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage) {
         var duration = 600L;
         var childDuration = duration - 100;
 
@@ -107,7 +107,7 @@ public final class WindGenScreen extends ContainerUIScreen<WindGenMenu> {
         wirelessPage.setEnabled(false);
         content.addChild("page_wireless", wirelessPage);
 
-        var wirelessButton = new ImageRadioButtonWidget(Resource.Textures.ICON_WIRELESS);
+        var wirelessButton = new RadioButtonWidget(new ImageWidget(Resource.Textures.ICON_WIRELESS));
         wirelessButton.setLayoutParams(
                 new WidgetContainer.LayoutParams()
                         .widthMode(SizeMode.WRAP_CONTENT)
@@ -116,18 +116,18 @@ public final class WindGenScreen extends ContainerUIScreen<WindGenMenu> {
         pageButtons.addChild("wireless", wirelessButton);
         pageButtons.setOnSelectionChanged(button -> {
             switch (button.getName()) {
-                case "inv":
+                case "inv" -> {
                     ScreenAnimationUtil.hide(this, wirelessPage);
                     ScreenAnimationUtil.show(this, invPage);
                     setHandleContainer(true);
                     setRenderInventory(true);
-                    break;
-                case "wireless":
+                }
+                case "wireless" -> {
                     ScreenAnimationUtil.hide(this, invPage);
                     ScreenAnimationUtil.show(this, wirelessPage);
                     setHandleContainer(false);
                     setRenderInventory(false);
-                    break;
+                }
             }
         });
         pageButtons.selectButton(invButton);
