@@ -2,10 +2,7 @@ package org.academy.internal.client.hud.apps;
 
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.widget.FillWidget;
-import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.LinearLayoutWidget;
-import org.academy.api.client.gui.widget.ScrollPanelWidget;
+import org.academy.api.client.gui.widget.*;
 import org.academy.internal.client.hud.DataTerminalHUD;
 
 public final class SettingsApp {
@@ -27,7 +24,14 @@ public final class SettingsApp {
             );
             root.addChild("content", content);
             {
-                var tabBar = new LinearLayoutWidget();
+                var infoArea = new ScrollPanelWidget();
+                infoArea.setLayoutParams(
+                        new LinearLayoutWidget.LayoutParams()
+                                .weight(5f / 6)
+                                .widthMode(SizeMode.MATCH_PARENT)
+                );
+
+                var tabBar = new RadioGroupWidget();
                 tabBar.setOrientation(Orientation.HORIZONTAL);
                 tabBar.setLayoutParams(
                         new LinearLayoutWidget.LayoutParams()
@@ -35,13 +39,9 @@ public final class SettingsApp {
                                 .widthMode(SizeMode.MATCH_PARENT)
                 );
                 root.addChild("tab_bar", tabBar);
-
-                var infoArea = new ScrollPanelWidget();
-                infoArea.setLayoutParams(
-                        new LinearLayoutWidget.LayoutParams()
-                                .weight(5f / 6)
-                                .widthMode(SizeMode.MATCH_PARENT)
-                );
+                {
+                }
+                root.addChild("info_area", infoArea);
             }
         }
         return root;

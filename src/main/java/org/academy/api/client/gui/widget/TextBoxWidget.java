@@ -11,7 +11,7 @@ import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.event.CharTypedEvent;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.jetbrains.annotations.Nullable;
@@ -58,7 +58,7 @@ public class TextBoxWidget extends LabelWidget {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) {
             return;
         }
@@ -82,7 +82,7 @@ public class TextBoxWidget extends LabelWidget {
         context.drawOrder().pop();
     }
 
-    private void renderBackground(WidgetRenderContext context) {
+    private void renderBackground(RenderContext context) {
         var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
         var width = getWidth();
         var height = getHeight();
@@ -118,7 +118,7 @@ public class TextBoxWidget extends LabelWidget {
         }
     }
 
-    private void renderCaret(WidgetRenderContext context) {
+    private void renderCaret(RenderContext context) {
         var lp = getLayoutParams();
         var font = Minecraft.getInstance().font;
         var finalScale = getScale() * globalScale;

@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * 看情况 close 喵, 像 ScreenDispatcher 这种就没必要 close 了喵
  */
-public class UIRenderContext {
+public class UIContext {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final AtomicReference<List<SubmittedCommand>> commandList = new AtomicReference<>();
@@ -49,11 +49,11 @@ public class UIRenderContext {
     @Nullable
     private GpuBuffer dynamicTransformsUbo;
 
-    public UIRenderContext() {
+    public UIContext() {
         this(3000);
     }
 
-    public UIRenderContext(float layered) {
+    public UIContext(float layered) {
         Minecraft.getInstance().execute(() -> initOnRenderThread(layered));
     }
 
@@ -107,13 +107,13 @@ public class UIRenderContext {
             rootWidget.measure(widthSpec, heightSpec);
             rootWidget.layout(0, 0, width, height);
         }
-        var context = new WidgetRenderContext(this::getOrCreateUbo);
+        var context = new RenderContext(this::getOrCreateUbo);
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
         commandList.set(context.getCommands());
     }
 
     public void generateCommands(
-            WidgetRenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
+            RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
     ) {
         context.pose().pushPose();
         {

@@ -7,7 +7,7 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.Render;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.joml.Vector4f;
 
 import java.nio.ByteBuffer;
@@ -19,7 +19,7 @@ public class CursorWidget extends AbstractWidget {
     public float softness = 0.75f;
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
         var renderX = mouseX - getWidth() / 2f;
@@ -35,7 +35,7 @@ public class CursorWidget extends AbstractWidget {
         context.pose().popPose();
     }
 
-    private void submitGlowCommand(WidgetRenderContext context, Vector4f color) {
+    private void submitGlowCommand(RenderContext context, Vector4f color) {
         var sdfData = new SDFData(color, radius, softness);
         var glowCommand = new PosTexRectDrawCommand(
                 Render.RenderPipelines.SDF_CIRCLE_GLOW,

@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 
 public class HoverLabelWidget extends LabelWidget {
     private static final String ELLIPSIS = "...";
@@ -20,7 +20,7 @@ public class HoverLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (isHovered()) {
             component = originalComponent;
             updateScaleForHover();

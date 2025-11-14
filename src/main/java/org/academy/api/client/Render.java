@@ -143,9 +143,9 @@ public final class Render {
         private GpuBuffer fullScreenQuadColorVBSDC;
 
         private Buffers() {
-            this.fullScreenQuadVBNDC = createNDC();
+            fullScreenQuadVBNDC = createNDC();
             createSDC();
-            this.projectionUB = createProjection();
+            projectionUB = createProjection();
         }
 
         public static void init() {
@@ -171,15 +171,15 @@ public final class Render {
         }
 
         private void closeInternal() {
-            this.fullScreenQuadVBNDC.close();
-            this.fullScreenQuadVBSDC.close();
-            this.fullScreenQuadColorVBSDC.close();
-            this.projectionUB.close();
+            fullScreenQuadVBNDC.close();
+            fullScreenQuadVBSDC.close();
+            fullScreenQuadColorVBSDC.close();
+            projectionUB.close();
         }
 
         public void recreateSDC() {
-            this.fullScreenQuadVBSDC.close();
-            this.fullScreenQuadColorVBSDC.close();
+            fullScreenQuadVBSDC.close();
+            fullScreenQuadColorVBSDC.close();
             createSDC();
         }
 
@@ -203,7 +203,7 @@ public final class Render {
                 bufferBuilder.addVertex(0, height, 0.0F).setUv(0.0F, 1.0F);
 
                 try (var meshData = bufferBuilder.buildOrThrow()) {
-                    this.fullScreenQuadVBSDC = RenderSystem.getDevice().createBuffer(
+                    fullScreenQuadVBSDC = RenderSystem.getDevice().createBuffer(
                             () -> "Fullscreen Quad SDC", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
                     );
                 }
@@ -224,7 +224,7 @@ public final class Render {
                 bufferBuilder.addVertex(width, height, 0.0F).setUv(1.0F, 1.0F).setColor(white);
 
                 try (var meshData = bufferBuilder.buildOrThrow()) {
-                    this.fullScreenQuadColorVBSDC = RenderSystem.getDevice().createBuffer(
+                    fullScreenQuadColorVBSDC = RenderSystem.getDevice().createBuffer(
                             () -> "Fullscreen Quad Color SDC", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
                     );
                 }
@@ -266,21 +266,21 @@ public final class Render {
                 var builder = Std140Builder.onStack(memoryStack, PROJECTION_UBO_SIZE);
                 builder.putMat4f(matrix4f);
                 var byteBuffer = builder.get();
-                RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.projectionUB.slice(), byteBuffer);
+                RenderSystem.getDevice().createCommandEncoder().writeToBuffer(projectionUB.slice(), byteBuffer);
             }
-            return this.projectionUB;
+            return projectionUB;
         }
 
         public GpuBuffer getFullScreenQuadVBNDC() {
-            return this.fullScreenQuadVBNDC;
+            return fullScreenQuadVBNDC;
         }
 
         public GpuBuffer getFullScreenQuadVBSDC() {
-            return this.fullScreenQuadVBSDC;
+            return fullScreenQuadVBSDC;
         }
 
         public GpuBuffer getFullScreenQuadColorVBSDC() {
-            return this.fullScreenQuadColorVBSDC;
+            return fullScreenQuadColorVBSDC;
         }
 
         public static ByteBufferBuilder getByteBufferBuilder() {
@@ -411,6 +411,8 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withSampler("Sampler0")
                 .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthWrite(false)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
@@ -425,7 +427,7 @@ public final class Render {
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
-        public static final RenderPipeline IMAGE_NO_DEPTH_STENCIL = builder(MATRICES_PROJECTION_SNIPPET)
+        public static final RenderPipeline IMAGE_STENCIL = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/image"))
                 .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)

@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.render.WidgetRenderContext;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
@@ -30,7 +30,7 @@ public class FrameLayoutWidget extends AbstractWidgetContainer {
     }
 
     @Override
-    protected void renderChildren(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
+    protected void renderChildren(RenderContext context, double mouseX, double mouseY, float partialTick) {
         context.drawOrder().push();
         {
             for (var child : children.values()) {
