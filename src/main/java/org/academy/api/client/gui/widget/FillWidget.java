@@ -1,52 +1,37 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.util.ARGB;
-import org.academy.api.client.gui.command.FillRectDrawCommand;
+import org.academy.api.client.gui.drawable.ColorDrawable;
 import org.academy.api.client.gui.render.RenderContext;
 
 public class FillWidget extends AbstractWidget {
-    protected int red;
-    protected int green;
-    protected int blue;
-    protected int alpha;
-
     public FillWidget(int color) {
-        setColor(color);
+        setBackground(new ColorDrawable(color));
     }
 
     @Override
     public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
         if (!isVisible()) return;
 
-        var lp = getLayoutParams();
-        var paddedWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
-        var paddedHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
-
-        if (paddedWidth <= 0 || paddedHeight <= 0) return;
-
-        var finalAlpha = alpha / 255f * getAlpha() * context.getAccumulatedAlpha();
-        var finalRed = red / 255f;
-        var finalGreen = green / 255f;
-        var finalBlue = blue / 255f;
-
-        context.pose().pushPose();
-        {
-            context.pose().translate(lp.paddingLeft, lp.paddingTop, 0);
-            var command = new FillRectDrawCommand(paddedWidth, paddedHeight, finalRed, finalGreen, finalBlue, finalAlpha);
-            context.submit(command);
-        }
-        context.pose().popPose();
+        super.render(context, mouseX, mouseY, partialTick);
     }
 
     public int getColor() {
-        return ARGB.color(alpha, red, green, blue);
+        if (getBackground() instanceof ColorDrawable colorDrawable) {
+            return colorDrawable.getColor();
+        }
+        return 0;
     }
 
+    /**
+     * @deprecated Use {@code setBackground(new ColorDrawable(color))} or {@code if (getBackground() instanceof ColorDrawable cd) cd.setColor(color);} instead.
+     */
+    @Deprecated
     public FillWidget setColor(int color) {
-        alpha = ARGB.alpha(color);
-        red = ARGB.red(color);
-        green = ARGB.green(color);
-        blue = ARGB.blue(color);
+        if (getBackground() instanceof ColorDrawable colorDrawable) {
+            colorDrawable.setColor(color);
+        } else {
+            setBackground(new ColorDrawable(color));
+        }
         return this;
     }
 }
