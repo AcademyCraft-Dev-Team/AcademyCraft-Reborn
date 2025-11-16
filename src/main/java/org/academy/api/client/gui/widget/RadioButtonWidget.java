@@ -65,9 +65,7 @@ public class RadioButtonWidget extends ButtonWidget {
 
     @Override
     protected void onMousePressed(MouseEvent event) {
-        // First, let the superclass handle the click to fire onClickListener etc.
         super.onMousePressed(event);
-        // If the click was successful, notify the radio group to handle selection logic.
         if (event.isConsumed() && radioGroup != null) {
             radioGroup.selectButton(this);
         }

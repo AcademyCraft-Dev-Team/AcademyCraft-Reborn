@@ -17,7 +17,6 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
-import org.academy.api.client.Resource;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
@@ -25,17 +24,17 @@ import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.ScrollEvent;
 import org.academy.api.client.gui.layout.Gravity;
-import org.academy.api.client.gui.layout.Orientation;
-import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.render.UIContext;
 import org.academy.api.client.gui.render.RenderContext;
-import org.academy.api.client.gui.widget.*;
+import org.academy.api.client.gui.render.UIContext;
+import org.academy.api.client.gui.widget.CursorWidget;
+import org.academy.api.client.gui.widget.FillWidget;
+import org.academy.api.client.gui.widget.FrameLayoutWidget;
+import org.academy.api.client.gui.widget.WidgetContainer;
 import org.academy.api.client.input.*;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.client.hud.apps.SettingsApp;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -49,7 +48,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class DataTerminalHUD {
-    public static final int COLOR = 0x40000000;
+    public static final int COLOR = 0x60000000;
+    public static final float MAIN_WIDTH = 150;
+    public static final float MAIN_HEIGHT = 200;
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = "data_terminal_hud_config_toggle";
     @Nullable
@@ -119,23 +120,29 @@ public final class DataTerminalHUD {
             @Override
             public void generateCommands(RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick) {
                 super.generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
-                var size = 4;
-
-                var renderX = xpos - size / 2f;
-                var renderY = ypos - size / 2f;
 
                 context.pose().pushPose();
-                context.pose().translate(renderX, renderY, 0);
+                context.pose().translate(xpos, ypos, 1000);
 
-                submitGlowCommand(context, new Vector4f(0.0f, 0.0f, 0.0f, 0.8f), size);
-                context.pose().translate(0, 0, 0.1f);
-                submitGlowCommand(context, new Vector4f(1.0f, 1.0f, 1.0f, 0.8f), size);
+                var sdfData = new CursorWidget.SDFData(new Vector4f(0, 0, 0, 0.75f), 0.5f, 0.5f);
 
+                context.pose().pushPose();
+                {
+                    context.pose().translate(-2, -2, 0);
+                    submitGlowCommand(context, 4, sdfData);
+                }
+                context.pose().popPose();
+
+                context.pose().pushPose();
+                {
+                    context.pose().translate(-1.5f, -1.5f, 0.1f);
+                    sdfData = new CursorWidget.SDFData(new Vector4f(1, 1, 1, 1), 0.5f, 0.25f);
+                    submitGlowCommand(context, 3, sdfData);
+                }
                 context.pose().popPose();
             }
 
-            private void submitGlowCommand(RenderContext context, Vector4f color, float size) {
-                var sdfData = new CursorWidget.SDFData(color, 0.25f, 0.75f);
+            private void submitGlowCommand(RenderContext context, float size, CursorWidget.SDFData sdfData) {
                 var glowCommand = new PosTexRectDrawCommand(
                         Render.RenderPipelines.SDF_CIRCLE_GLOW,
                         size,
@@ -166,113 +173,18 @@ public final class DataTerminalHUD {
         ROOT.setName("root");
         ROOT.clearChildren();
 
-        var infoBar = new FrameLayoutWidget();
-        infoBar.setLayoutParams(
+        var main = new FrameLayoutWidget();
+        main.setLayoutParams(
                 new FrameLayoutWidget.LayoutParams()
-                        .gravity(Gravity.TOP_RIGHT)
-                        .margin(0, 12, 12, 0)
-                        .sizeMode(SizeMode.WRAP_CONTENT)
+                        .gravity(Gravity.CENTER_RIGHT)
+                        .margin(0, 0, 32, 0)
+                        .size(150, 200)
         );
-        ROOT.addChild("info_bar", infoBar);
+        ROOT.addChild("main", main);
         {
             var back = new FillWidget(COLOR);
-            back.setLayoutParams(
-                    new FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-            );
-            infoBar.addChild("back", back);
-
-            var info = new LinearLayoutWidget();
-            info.setSpacing(5);
-            info.setOrientation(Orientation.HORIZONTAL);
-            info.setLayoutParams(
-                    new FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.WRAP_CONTENT)
-            );
-            infoBar.addChild("info", info);
-            {
-                var icon = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
-                icon.setLayoutParams(
-                        new LinearLayoutWidget.LayoutParams()
-                                .gravity(Gravity.CENTER_VERTICAL)
-                                .size(16, 16)
-                                .margin(4, 2)
-                );
-                info.addChild("icon", icon);
-
-                var player = Minecraft.getInstance().player;
-                var playerName = player == null ? "None" : player.getPlainTextName();
-                var name = new LabelWidget(playerName);
-                name.setLayoutParams(
-                        new LinearLayoutWidget.LayoutParams()
-                                .gravity(Gravity.CENTER_VERTICAL)
-                                .margin(4, 2)
-                );
-                info.addChild("name", name);
-            }
+            main.addChild("back", back);
         }
-        var dockBar = new FrameLayoutWidget();
-        dockBar.setLayoutParams(
-                new FrameLayoutWidget.LayoutParams()
-                        .gravity(Gravity.CENTER_BOTTOM)
-                        .margin(0, 0, 0, 24)
-                        .widthMode(SizeMode.WRAP_CONTENT)
-                        .height(24)
-        );
-        ROOT.addChild("dock_bar", dockBar);
-        {
-            var back = new FillWidget(COLOR);
-            back.setLayoutParams(
-                    new FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-            );
-            dockBar.addChild("back", back);
-
-            var appArea = new LinearLayoutWidget();
-            appArea.setOrientation(Orientation.HORIZONTAL);
-            appArea.setSpacing(4);
-            appArea.setLayoutParams(
-                    new FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.WRAP_CONTENT, SizeMode.MATCH_PARENT)
-            );
-            dockBar.addChild("app_area", appArea);
-            {
-                var settings = new FrameLayoutWidget();
-                settings.setLayoutParams(
-                        new LinearLayoutWidget.LayoutParams()
-                                .sizeMode(SizeMode.WRAP_CONTENT, SizeMode.MATCH_PARENT)
-                );
-                appArea.addChild("settings", settings);
-                {
-                    var icon = new ImageWidget(Resource.Textures.ICON_SETTINGS);
-                    icon.setLayoutParams(
-                            new FrameLayoutWidget.LayoutParams()
-                                    .size(16, 16)
-                                    .gravity(Gravity.CENTER)
-                                    .margin(0, 0, 0, 4)
-                    );
-                    settings.addChild("icon", icon);
-
-                    var name = new LabelWidget("Settings");
-                    name.setLayoutParams(
-                            new FrameLayoutWidget.LayoutParams()
-                                    .gravity(Gravity.CENTER_BOTTOM)
-                                    .width(16)
-                                    .margin(2, 0, 2, 2)
-                    );
-                    settings.addChild("name", name);
-                }
-            }
-        }
-
-        var window = SettingsApp.create();
-        window.setLayoutParams(
-                new FrameLayoutWidget.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .size(280, 160)
-                        .margin(0, 0, 0, 24)
-        );
-        ROOT.addChild("window", window);
     }
 
     public static void resize() {
@@ -358,11 +270,13 @@ public final class DataTerminalHUD {
         viewMatrix.translate(0.0F, 0.0F, z);
         viewMatrix.scale(scale, scale, scale);
 
-        var dx = (float) (xpos - guiWidth / 2.0F);
+        var dx = (float) (xpos - guiWidth - 32 - MAIN_WIDTH / 2f);
         var dy = (float) (ypos - guiHeight / 2.0F);
 
-        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), dx * 0.01F));
+        viewMatrix.translate((guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f, 0, 0.0F);
+        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), dx * 0.01F - 5));
         viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(1.0F, 0.0F, 0.0F), -dy * 0.01F));
+        viewMatrix.translate(-(((guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f)), 0, 0.0F);
         viewMatrix.translate(-(guiWidth / 2.0F), -(guiHeight / 2.0F), 0.0F);
 
         return viewMatrix;
