@@ -4,6 +4,7 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.Render;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
@@ -19,11 +20,14 @@ public class CursorWidget extends AbstractWidget {
     public float softness = 0.75f;
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) return;
 
-        var renderX = mouseX - getWidth() / 2f;
-        var renderY = mouseY - getHeight() / 2f;
+        var mc = Minecraft.getInstance();
+        var mh = mc.mouseHandler;
+        var w = mc.getWindow();
+        var renderX = mh.getScaledXPos(w) - getWidth() / 2f;
+        var renderY = mh.getScaledYPos(w) - getHeight() / 2f;
 
         context.pose().pushPose();
         context.pose().translate(renderX, renderY, getZ());

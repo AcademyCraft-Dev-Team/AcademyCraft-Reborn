@@ -120,7 +120,7 @@ public class UIContext {
             context.pose().translate(rootWidget.getX(), rootWidget.getY(), rootWidget.getZ());
             context.pose().translate(rootWidget.getTranslationX(), rootWidget.getTranslationY(), 0);
 
-            rootWidget.render(context, mouseX, mouseY, partialTick);
+            rootWidget.render(context);
         }
         context.pose().popPose();
     }

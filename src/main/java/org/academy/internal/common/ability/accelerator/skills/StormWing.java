@@ -28,7 +28,6 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -103,13 +102,16 @@ public final class StormWing extends Skill {
                 var left = keyStates.getOrDefault(GLFW_KEY_A, GLFW_RELEASE) != GLFW_RELEASE;
                 var right = keyStates.getOrDefault(GLFW_KEY_D, GLFW_RELEASE) != GLFW_RELEASE;
 
-                Set<State> states = new HashSet<>();
+                var states = new HashSet<State>();
 
-                if (front && !back) states.add(State.FRONT);
-                else if (back && !front) states.add(State.BACK);
+                var canMove = mc.screen == null;
 
-                if (left && !right) states.add(State.LEFT);
-                else if (right && !left) states.add(State.RIGHT);
+                if (canMove) {
+                    if (front && !back) states.add(State.FRONT);
+                    else if (back && !front) states.add(State.BACK);
+                    if (left && !right) states.add(State.LEFT);
+                    else if (right && !left) states.add(State.RIGHT);
+                }
 
                 if (states.isEmpty()) states.add(State.KEEP);
 
@@ -129,12 +131,12 @@ public final class StormWing extends Skill {
                 }
 
                 @Override
-                public @NotNull StormWing.Client.Config getDefault() {
+                public StormWing.Client.Config getDefault() {
                     return new Config();
                 }
 
                 @Override
-                public @NotNull Class<Config> getTypeClass() {
+                public Class<Config> getTypeClass() {
                     return Config.class;
                 }
             }

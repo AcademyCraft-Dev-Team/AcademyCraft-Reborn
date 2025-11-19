@@ -33,7 +33,7 @@ public abstract class AbstractWidget implements Widget {
     protected Drawable foreground = null;
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (background != null) {
             background.draw(context, this);
         }

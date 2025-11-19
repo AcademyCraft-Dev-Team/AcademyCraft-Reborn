@@ -20,11 +20,11 @@ public class TextureDrawable implements Drawable {
 
     public TextureDrawable(@Nullable ResourceLocation textureLocation) {
         this.textureLocation = textureLocation;
-        this.textureView = null;
+        textureView = null;
     }
 
     public TextureDrawable(@Nullable GpuTextureView textureView) {
-        this.textureLocation = null;
+        textureLocation = null;
         this.textureView = textureView;
     }
 

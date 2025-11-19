@@ -17,6 +17,7 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
+import org.academy.api.client.Resource;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
@@ -24,12 +25,11 @@ import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.ScrollEvent;
 import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.Orientation;
+import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.render.UIContext;
-import org.academy.api.client.gui.widget.CursorWidget;
-import org.academy.api.client.gui.widget.FillWidget;
-import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.WidgetContainer;
+import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class DataTerminalHUD {
-    public static final int COLOR = 0x60000000;
+    public static final int COLOR = 0x40000000;
     public static final float MAIN_WIDTH = 150;
     public static final float MAIN_HEIGHT = 200;
     public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
@@ -184,6 +184,30 @@ public final class DataTerminalHUD {
         {
             var back = new FillWidget(COLOR);
             main.addChild("back", back);
+
+            var content = new LinearLayoutWidget();
+            content.setOrientation(Orientation.VERTICAL);
+            content.setSpacing(2);
+            main.addChild("content", content);
+            {
+                var icon = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
+                icon.setLayoutParams(
+                        new LinearLayoutWidget.LayoutParams()
+                                .size(16, 16)
+                                .gravity(Gravity.START)
+                                .margin(2, 2, 0, 0)
+                );
+                content.addChild("icon", icon);
+
+                var splitLine = new FillWidget(0xFFFFFFFF);
+                splitLine.setLayoutParams(
+                        new LinearLayoutWidget.LayoutParams()
+                                .height(1)
+                                .widthMode(SizeMode.MATCH_PARENT)
+                                .padding(2, 0)
+                );
+                content.addChild("splitLine", splitLine);
+            }
         }
     }
 
@@ -273,10 +297,11 @@ public final class DataTerminalHUD {
         var dx = (float) (xpos - guiWidth - 32 - MAIN_WIDTH / 2f);
         var dy = (float) (ypos - guiHeight / 2.0F);
 
-        viewMatrix.translate((guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f, 0, 0.0F);
-        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), dx * 0.01F - 5));
-        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(1.0F, 0.0F, 0.0F), -dy * 0.01F));
-        viewMatrix.translate(-(((guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f)), 0, 0.0F);
+        var center = (guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f;
+        viewMatrix.translate(center, 0, 0.0F);
+        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), dx * 0.05F - 5));
+        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(1.0F, 0.0F, 0.0F), -dy * 0.05F - 1));
+        viewMatrix.translate(-center, 0, 0.0F);
         viewMatrix.translate(-(guiWidth / 2.0F), -(guiHeight / 2.0F), 0.0F);
 
         return viewMatrix;

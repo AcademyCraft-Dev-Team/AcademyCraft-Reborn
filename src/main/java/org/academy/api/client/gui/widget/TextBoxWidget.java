@@ -50,6 +50,11 @@ public class TextBoxWidget extends LabelWidget {
     }
 
     @Override
+    protected float calculateLayoutScale(float baseTextWidth, float baseTextHeight) {
+        return 1.0f;
+    }
+
+    @Override
     protected void onMeasure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
         var font = Minecraft.getInstance().font;
         var lp = getLayoutParams();
@@ -62,12 +67,12 @@ public class TextBoxWidget extends LabelWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) return;
 
         context.drawOrder().push();
         {
-            super.render(context, mouseX, mouseY, partialTick);
+            super.render(context);
 
             if (isFocused() && showCaret) {
                 context.drawOrder().advance();
@@ -177,8 +182,7 @@ public class TextBoxWidget extends LabelWidget {
 
     @Override
     protected void onCharTyped(CharTypedEvent event) {
-        if (!isFocused() || text.length() >= maxLength || Character.isISOControl(event.getCodePoint()))
-            return;
+        if (!isFocused() || text.length() >= maxLength || Character.isISOControl(event.getCodePoint())) return;
 
         caretPos = Mth.clamp(caretPos, 0, text.length());
         var potentialText = new StringBuilder(text).insert(caretPos, event.getCodePoint()).toString();
@@ -279,22 +283,6 @@ public class TextBoxWidget extends LabelWidget {
     @Deprecated
     public TextBoxWidget setShowBackground(boolean show) {
         if (!show) setBackground(null);
-        return this;
-    }
-
-    /**
-     * @deprecated Use {@link #setBackground(Drawable)} with a {@link StateListDrawable} and {@link ColorDrawable}.
-     */
-    @Deprecated
-    public TextBoxWidget setBgColor(int color) {
-        return this;
-    }
-
-    /**
-     * @deprecated Use {@link #setBackground(Drawable)} to define borders within a custom Drawable.
-     */
-    @Deprecated
-    public TextBoxWidget setBorderColor(int color) {
         return this;
     }
 
