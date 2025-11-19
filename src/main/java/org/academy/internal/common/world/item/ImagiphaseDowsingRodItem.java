@@ -15,7 +15,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.level.material.Fluids;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.misaka.api.common.network.future.packet.RequestPacket;
 import org.misaka.api.common.network.future.packet.ResponsePacket;

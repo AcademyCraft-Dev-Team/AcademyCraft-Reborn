@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.event.MouseEvent;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A universal radio button that can contain any widget as its content.

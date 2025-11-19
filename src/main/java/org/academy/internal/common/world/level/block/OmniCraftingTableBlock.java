@@ -26,7 +26,7 @@ import org.academy.internal.common.world.inventory.OmniCraftingMenu;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.List;

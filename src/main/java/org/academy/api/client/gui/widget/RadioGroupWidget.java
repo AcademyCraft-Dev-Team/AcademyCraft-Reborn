@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.widget;
 
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.function.Consumer;

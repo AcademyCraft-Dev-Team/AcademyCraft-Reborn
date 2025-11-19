@@ -6,7 +6,7 @@ import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.OnClickListener;
 import org.academy.api.client.util.ClientUtil;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A universal button widget that acts as a container.

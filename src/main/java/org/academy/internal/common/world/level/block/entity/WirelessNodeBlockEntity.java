@@ -23,8 +23,7 @@ import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -33,8 +32,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     private static final int TRANSFER_RATE = 20000;
 
     private int energyStored = 5000;
-    @Nullable
-    public WirelessNetworkData.NodeConfig cachedConfig = null;
+    public WirelessNetworkData.@Nullable NodeConfig cachedConfig = null;
     public NonNullList<ItemStack> items = NonNullList.withSize(2, ItemStack.EMPTY);
     @Nullable
     private BlockPos connectedNodePos = null;
@@ -246,7 +244,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.@NotNull Provider registries) {
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         return saveWithoutMetadata(registries);
     }
 

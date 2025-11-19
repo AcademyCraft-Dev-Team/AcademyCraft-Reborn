@@ -16,7 +16,7 @@ import org.academy.internal.client.gui.screen.SolarGenScreen;
 import org.academy.internal.client.gui.screen.WindGenScreen;
 import org.academy.internal.client.gui.screen.WirelessNodeScreen;
 import org.academy.internal.common.world.level.material.Fluids;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 

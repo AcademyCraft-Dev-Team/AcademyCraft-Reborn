@@ -3,7 +3,7 @@ package org.academy.api.client.gui.widget;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.OnClickListener;
 import org.academy.api.client.util.ClientUtil;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractButtonWidget extends AbstractWidget {
     @Nullable

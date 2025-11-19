@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 

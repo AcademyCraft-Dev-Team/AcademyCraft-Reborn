@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.client.model.OmniCraftingTableModel;
 import org.academy.internal.client.renderer.blockentity.state.OmniCraftingTableRenderState;
 import org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class OmniCraftingTableRenderer implements BlockEntityRenderer<OmniCraftingTableBlockEntity, OmniCraftingTableRenderState> {
     public static final OmniCraftingTableRenderer INSTANCE = new OmniCraftingTableRenderer();
@@ -28,7 +28,7 @@ public final class OmniCraftingTableRenderer implements BlockEntityRenderer<Omni
     }
 
     @Override
-    public void extractRenderState(OmniCraftingTableBlockEntity blockEntity, OmniCraftingTableRenderState renderState, float partialTick, Vec3 cameraPosition, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+    public void extractRenderState(OmniCraftingTableBlockEntity blockEntity, OmniCraftingTableRenderState renderState, float partialTick, Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPosition, breakProgress);
         renderState.unfoldingState = blockEntity.unfoldingState;
         renderState.ageInTicks = blockEntity.ticks + partialTick;

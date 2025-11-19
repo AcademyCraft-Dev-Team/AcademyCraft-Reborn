@@ -8,7 +8,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.future.annotation.HandleFuture;

@@ -17,7 +17,7 @@ import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.render.RenderContext;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;

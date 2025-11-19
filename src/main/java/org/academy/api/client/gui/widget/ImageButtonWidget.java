@@ -11,7 +11,7 @@ import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.OnClickListener;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 

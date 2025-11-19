@@ -23,7 +23,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.world.level.storage.Player;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.misaka.api.common.network.packet.S2CPacket;
