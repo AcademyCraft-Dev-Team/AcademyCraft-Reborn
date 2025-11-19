@@ -1,7 +1,7 @@
 package org.academy.api.common.wireless;
 
 import net.minecraft.core.BlockPos;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public interface WirelessUser {
     @Nullable

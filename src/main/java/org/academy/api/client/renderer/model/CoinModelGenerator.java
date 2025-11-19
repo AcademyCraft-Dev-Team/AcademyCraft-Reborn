@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.block.model.*;
 import net.minecraft.client.resources.model.*;
 import net.minecraft.core.Direction;
 import net.neoforged.neoforge.client.ClientHooks;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;

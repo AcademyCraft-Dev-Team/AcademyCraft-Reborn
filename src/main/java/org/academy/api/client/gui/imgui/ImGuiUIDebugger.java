@@ -16,7 +16,7 @@ import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.FillWidget;
 import org.academy.api.client.gui.widget.LabelWidget;
 import org.academy.api.client.gui.widget.LinearLayoutWidget;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class ImGuiUIDebugger {
     private static final String[] SIZE_MODE_NAMES = {"FIXED", "MATCH_PARENT", "WRAP_CONTENT"};

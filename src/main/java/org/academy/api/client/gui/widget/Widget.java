@@ -5,7 +5,7 @@ import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.common.vanilla.Tickable;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public interface Widget extends Tickable {
     void render(RenderContext context);

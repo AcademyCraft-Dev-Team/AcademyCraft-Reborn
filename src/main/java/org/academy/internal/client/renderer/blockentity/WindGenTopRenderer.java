@@ -17,7 +17,7 @@ import org.academy.internal.client.model.WindGenTopModel;
 import org.academy.internal.client.model.WindGenTurbineModel;
 import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderState;
 import org.academy.internal.common.world.level.block.entity.WindGenTopBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class WindGenTopRenderer implements BlockEntityRenderer<WindGenTopBlockEntity, WindGenTopRenderState> {
     public static final WindGenTopRenderer INSTANCE = new WindGenTopRenderer();
@@ -32,7 +32,7 @@ public final class WindGenTopRenderer implements BlockEntityRenderer<WindGenTopB
     }
 
     @Override
-    public void extractRenderState(WindGenTopBlockEntity blockEntity, WindGenTopRenderState renderState, float partialTick, Vec3 cameraPosition, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+    public void extractRenderState(WindGenTopBlockEntity blockEntity, WindGenTopRenderState renderState, float partialTick, Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPosition, breakProgress);
         renderState.ageInTicks = blockEntity.ticks + partialTick;
         renderState.facing = blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);

@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.Mth;
 import org.academy.api.client.gui.layout.Orientation;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.Consumer;
 

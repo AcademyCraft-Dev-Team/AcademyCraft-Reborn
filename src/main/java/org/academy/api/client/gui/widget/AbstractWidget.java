@@ -5,7 +5,7 @@ import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractWidget implements Widget {
     protected WidgetContainer.LayoutParams layoutParams = WidgetContainer.LayoutParams.NONE;

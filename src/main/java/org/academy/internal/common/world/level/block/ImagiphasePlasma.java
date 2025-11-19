@@ -15,7 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.PushReaction;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.material.Fluids;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class ImagiphasePlasma extends LiquidBlock {
     public ImagiphasePlasma(BlockBehaviour.Properties properties) {

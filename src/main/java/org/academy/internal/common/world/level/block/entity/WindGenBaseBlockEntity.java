@@ -19,7 +19,7 @@ import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.internal.client.gui.world.WindGenWorldGUI;
 import org.academy.internal.common.world.level.block.Blocks;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 

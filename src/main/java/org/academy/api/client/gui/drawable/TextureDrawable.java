@@ -8,7 +8,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.widget.Widget;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public class TextureDrawable implements Drawable {
     @Nullable

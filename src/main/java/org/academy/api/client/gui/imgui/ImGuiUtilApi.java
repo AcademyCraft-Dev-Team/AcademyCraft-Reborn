@@ -6,7 +6,7 @@ import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
 import org.academy.Dev;
 import org.academy.internal.client.gui.imgui.ImGuiUtilInternal;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.function.BiConsumer;

@@ -11,7 +11,7 @@ import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.WorldData;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.io.File;
 import java.util.concurrent.ScheduledFuture;

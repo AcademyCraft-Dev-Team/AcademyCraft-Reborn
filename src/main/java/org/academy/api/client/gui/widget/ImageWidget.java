@@ -8,7 +8,7 @@ import net.minecraft.util.ARGB;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.render.RenderContext;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public class ImageWidget extends AbstractWidget {
     @Nullable

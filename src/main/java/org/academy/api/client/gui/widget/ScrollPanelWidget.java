@@ -11,7 +11,7 @@ import org.academy.api.client.gui.render.ScissorRect;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public class ScrollPanelWidget extends AbstractWidgetContainer {
     protected float scrollTarget;
