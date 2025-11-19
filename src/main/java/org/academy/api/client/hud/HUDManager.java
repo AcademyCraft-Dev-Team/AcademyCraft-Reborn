@@ -297,7 +297,7 @@ public final class HUDManager implements IAnimationScreen {
             setTextureFilter(FilterMode.LINEAR, true);
         }
 
-        public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+        public void render(RenderContext context) {
             var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
             context.pose().translate(0, 0, 1);
 

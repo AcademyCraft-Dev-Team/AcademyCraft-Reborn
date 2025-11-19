@@ -1,8 +1,5 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.drawable.ColorDrawable;
-import org.academy.api.client.gui.drawable.StateListDrawable;
-import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,8 +18,6 @@ public class RadioButtonWidget extends ButtonWidget {
      * Creates an empty radio button.
      */
     public RadioButtonWidget() {
-        super();
-        setupDefaultStyle();
     }
 
     /**
@@ -31,17 +26,6 @@ public class RadioButtonWidget extends ButtonWidget {
      */
     public RadioButtonWidget(Widget content) {
         super(content);
-        setupDefaultStyle();
-    }
-
-    private void setupDefaultStyle() {
-        var sld = new StateListDrawable();
-        sld.addState(WidgetState.DISABLED, new ColorDrawable(0x40808080));
-        sld.addState(WidgetState.PRESSED, new ColorDrawable(0x85FFFFFF));
-        sld.addState(WidgetState.SELECTED, new ColorDrawable(0x6547C3FF));
-        sld.addState(WidgetState.HOVERED, new ColorDrawable(0x65FFFFFF));
-        sld.addState(WidgetState.DEFAULT, new ColorDrawable(0x55000000));
-        setBackground(sld);
     }
 
     @Override

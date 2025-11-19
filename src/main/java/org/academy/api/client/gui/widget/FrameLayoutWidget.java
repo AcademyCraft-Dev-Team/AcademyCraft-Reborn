@@ -30,7 +30,7 @@ public class FrameLayoutWidget extends AbstractWidgetContainer {
     }
 
     @Override
-    protected void renderChildren(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    protected void renderChildren(RenderContext context) {
         context.drawOrder().push();
         {
             for (var child : children.values()) {
@@ -39,7 +39,7 @@ public class FrameLayoutWidget extends AbstractWidgetContainer {
                     {
                         context.pose().translate(child.getX(), child.getY(), child.getZ());
                         context.pose().translate(child.getTranslationX(), child.getTranslationY(), 0);
-                        child.render(context, mouseX, mouseY, partialTick);
+                        child.render(context);
                     }
                     context.pose().popPose();
                     context.drawOrder().advance();

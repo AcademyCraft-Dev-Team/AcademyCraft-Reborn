@@ -107,10 +107,10 @@ public final class WindGenScreen extends ContainerUIScreen<WindGenMenu> {
         wirelessPage.setEnabled(false);
         content.addChild("page_wireless", wirelessPage);
 
-        var wirelessButton = new RadioButtonWidget(new ImageWidget(Resource.Textures.ICON_WIRELESS));
+        var wirelessButton = createButton(Resource.Textures.ICON_WIRELESS);
         wirelessButton.setLayoutParams(
                 new WidgetContainer.LayoutParams()
-                        .widthMode(SizeMode.WRAP_CONTENT)
+                        .widthMode(SizeMode.MATCH_PARENT)
                         .height(16)
         );
         pageButtons.addChild("wireless", wirelessButton);

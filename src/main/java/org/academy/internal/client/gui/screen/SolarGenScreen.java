@@ -7,11 +7,10 @@ import net.minecraft.world.entity.player.Inventory;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.screen.ContainerUIScreen;
-import org.academy.api.client.gui.layout.Orientation;
-import org.academy.api.client.gui.widget.WidgetContainer;
 import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.screen.ContainerUIScreen;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ScreenAnimationUtil;
@@ -93,10 +92,10 @@ public final class SolarGenScreen extends ContainerUIScreen<SolarGenMenu> {
         wirelessPage.setEnabled(false);
         content.addChild("page_wireless", wirelessPage);
 
-        var wirelessButton = new RadioButtonWidget(new ImageWidget(Resource.Textures.ICON_WIRELESS));
+        var wirelessButton = createButton(Resource.Textures.ICON_WIRELESS);
         wirelessButton.setLayoutParams(
                 new WidgetContainer.LayoutParams()
-                        .widthMode(SizeMode.WRAP_CONTENT)
+                        .widthMode(SizeMode.MATCH_PARENT)
                         .height(16)
         );
         pageButtons.addChild("wireless", wirelessButton);

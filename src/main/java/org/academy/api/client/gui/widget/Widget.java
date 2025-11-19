@@ -8,7 +8,7 @@ import org.academy.api.common.vanilla.Tickable;
 import org.jetbrains.annotations.Nullable;
 
 public interface Widget extends Tickable {
-    void render(RenderContext context, double mouseX, double mouseY, float partialTick);
+    void render(RenderContext context);
 
     /**
      * The new unified entry point for all input events.

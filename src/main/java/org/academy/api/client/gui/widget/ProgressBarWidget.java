@@ -21,7 +21,7 @@ public class ProgressBarWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) return;
 
         var progress = progressSupplier.get();

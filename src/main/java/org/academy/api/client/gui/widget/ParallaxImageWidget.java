@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.academy.api.client.gui.render.RenderContext;
@@ -16,9 +17,15 @@ public class ParallaxImageWidget extends ImageWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         var anchorX = getAbsoluteX() + width / 2.0f;
         var anchorY = getAbsoluteY() + height / 2.0f;
+
+        var mc = Minecraft.getInstance();
+        var mh = mc.mouseHandler;
+        var w = mc.getWindow();
+        var mouseX = mh.getScaledXPos(w);
+        var mouseY = mh.getScaledYPos(w);
 
         var deviationX = (float) ((mouseX - anchorX) / anchorX);
         var deviationY = (float) ((mouseY - anchorY) / anchorY);
@@ -34,7 +41,7 @@ public class ParallaxImageWidget extends ImageWidget {
 
         setUv(uOffset, vOffset, uOffset + imageToViewRatioWidth, vOffset + imageToViewRatioHeight);
 
-        super.render(context, mouseX, mouseY, partialTick);
+        super.render(context);
     }
 
     public ParallaxImageWidget setParallaxFactor(float parallaxFactorX, float parallaxFactorY) {

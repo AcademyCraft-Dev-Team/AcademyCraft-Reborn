@@ -20,7 +20,7 @@ public class HoverLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (isHovered()) {
             component = originalComponent;
             updateScaleForHover();
@@ -28,7 +28,7 @@ public class HoverLabelWidget extends LabelWidget {
             component = truncate(originalComponent, getWidth());
             scale = baseScale;
         }
-        super.render(context, mouseX, mouseY, partialTick);
+        super.render(context);
     }
 
     private void updateScaleForHover() {
