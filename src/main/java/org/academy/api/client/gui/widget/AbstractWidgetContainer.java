@@ -195,10 +195,8 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
                     resultMode = MeasureSpec.Mode.EXACTLY;
                 } else if (childMode == SizeMode.MATCH_PARENT) {
                     resultSize = 0;
-                    resultMode = MeasureSpec.Mode.UNSPECIFIED;
                 } else if (childMode == SizeMode.WRAP_CONTENT) {
                     resultSize = 0;
-                    resultMode = MeasureSpec.Mode.UNSPECIFIED;
                 }
             }
         }
@@ -212,7 +210,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) {
             return;
         }
@@ -225,14 +223,15 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
                     renderDebugLayoutBounds(this, context);
                 }
 
-                renderChildren(context, mouseX, mouseY, partialTick);
+                super.render(context);
+                renderChildren(context);
             }
             context.alpha().pop();
         }
         context.pose().popPose();
     }
 
-    protected void renderChildren(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    protected void renderChildren(RenderContext context) {
         for (var child : children.values()) {
             if (child.isVisible()) {
                 context.pose().pushPose();
@@ -240,7 +239,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
                     context.pose().translate(child.getX(), child.getY(), child.getZ());
                     context.pose().translate(child.getTranslationX(), child.getTranslationY(), 0);
 
-                    child.render(context, mouseX, mouseY, partialTick);
+                    child.render(context);
                 }
                 context.pose().popPose();
             }

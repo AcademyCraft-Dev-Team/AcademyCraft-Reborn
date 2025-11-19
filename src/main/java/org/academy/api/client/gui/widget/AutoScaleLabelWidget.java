@@ -14,9 +14,9 @@ public class AutoScaleLabelWidget extends LabelWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         updateScale();
-        super.render(context, mouseX, mouseY, partialTick);
+        super.render(context);
     }
 
     private void updateScale() {

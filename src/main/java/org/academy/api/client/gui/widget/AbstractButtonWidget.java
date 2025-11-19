@@ -66,7 +66,7 @@ public abstract class AbstractButtonWidget extends AbstractWidget {
      */
     @Deprecated
     public void setOnPress(Runnable onPress) {
-        this.onClickListener = widget -> onPress.run();
+        onClickListener = widget -> onPress.run();
     }
 
     public enum MouseButtonState {

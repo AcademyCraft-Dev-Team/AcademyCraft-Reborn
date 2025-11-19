@@ -9,10 +9,9 @@ public class FillWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) return;
-
-        super.render(context, mouseX, mouseY, partialTick);
+        super.render(context);
     }
 
     public int getColor() {

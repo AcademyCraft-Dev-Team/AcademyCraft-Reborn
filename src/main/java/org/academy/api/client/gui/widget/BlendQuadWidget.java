@@ -31,7 +31,7 @@ public class BlendQuadWidget extends AbstractWidget {
     public float blue;
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) return;
 
         var lp = getLayoutParams();

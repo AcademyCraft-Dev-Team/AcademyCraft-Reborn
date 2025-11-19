@@ -6,6 +6,7 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -15,6 +16,9 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.drawable.StateListDrawable;
+import org.academy.api.client.gui.drawable.TextureDrawable;
+import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.layout.Orientation;
@@ -110,10 +114,10 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
             main.addChild("radio_group_page_button", pageButtons);
             RadioButtonWidget invButton;
             {
-                invButton = new RadioButtonWidget(new ImageWidget(Resource.Textures.ICON_INV));
+                invButton = createButton(Resource.Textures.ICON_INV);
                 invButton.setLayoutParams(
                         new WidgetContainer.LayoutParams()
-                                .widthMode(SizeMode.WRAP_CONTENT)
+                                .widthMode(SizeMode.MATCH_PARENT)
                                 .height(16)
                 );
                 pageButtons.addChild("inv", invButton);
@@ -164,6 +168,25 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
     }
 
     protected abstract void onInit(RadioGroupWidget pageButtons, RadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage);
+
+    protected RadioButtonWidget createButton(ResourceLocation textureLocation) {
+        var widget = new RadioButtonWidget();
+        var defaultDrawable = new TextureDrawable(textureLocation);
+        defaultDrawable.setTintColor(0xFFBBBBBB);
+
+        var hoveredDrawable = new TextureDrawable(textureLocation);
+        hoveredDrawable.setTintColor(0xFFFFFFFF);
+
+        var sld = new StateListDrawable();
+        sld.addState(WidgetState.DEFAULT, defaultDrawable);
+        sld.addState(WidgetState.FOCUSED, hoveredDrawable);
+        sld.addState(WidgetState.SELECTED, hoveredDrawable);
+        sld.addState(WidgetState.HOVERED, hoveredDrawable);
+        sld.addState(WidgetState.PRESSED, hoveredDrawable);
+
+        widget.setBackground(sld);
+        return widget;
+    }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {

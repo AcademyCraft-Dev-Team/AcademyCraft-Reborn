@@ -213,7 +213,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) return;
 
         var currentScrollY = getScrollY();
@@ -229,7 +229,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
             {
                 context.pose().translate(-getScrollX(), -getScrollY(), 0);
                 if (content != null && content.isVisible()) {
-                    renderChildren(context, mouseX, mouseY, partialTick);
+                    renderChildren(context);
                 }
             }
             context.pose().popPose();

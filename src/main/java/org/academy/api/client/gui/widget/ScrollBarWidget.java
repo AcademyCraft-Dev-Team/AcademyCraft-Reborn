@@ -15,7 +15,7 @@ public class ScrollBarWidget extends DragBarWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible()) return;
 
         var finalAlpha = getAbsoluteAlpha() * context.getAccumulatedAlpha();

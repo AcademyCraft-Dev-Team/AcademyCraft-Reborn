@@ -33,7 +33,7 @@ public class LabelWidget extends AbstractWidget {
         this.component = component;
     }
 
-    private float calculateLayoutScale(float baseTextWidth, float baseTextHeight) {
+    protected float calculateLayoutScale(float baseTextWidth, float baseTextHeight) {
         var lp = getLayoutParams();
         var layoutScale = 1.0f;
 
@@ -47,7 +47,7 @@ public class LabelWidget extends AbstractWidget {
         } else if (hasLayoutWidth) layoutScale = lp.width / baseTextWidth;
         else if (hasLayoutHeight) layoutScale = lp.height / baseTextHeight;
 
-        return layoutScale;
+        return Math.min(1.0f, layoutScale);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class LabelWidget extends AbstractWidget {
     }
 
     @Override
-    public void render(RenderContext context, double mouseX, double mouseY, float partialTick) {
+    public void render(RenderContext context) {
         if (!isVisible() || component.getString().isEmpty()) return;
 
         var lp = getLayoutParams();
