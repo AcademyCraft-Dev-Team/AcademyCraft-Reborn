@@ -14,7 +14,7 @@ import org.academy.api.common.ability.packet.sync.s2c.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.annotation.SubscribePacket;

@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.event;
 
 import org.academy.api.client.gui.widget.Widget;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public abstract class InputEvent {
     private final EventType type;

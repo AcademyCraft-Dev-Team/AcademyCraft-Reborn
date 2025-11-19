@@ -24,7 +24,7 @@ import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.SolarGenMenu;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class SolarGenBlock extends BaseEntityBlock {
     public static final String SOLAR_GEN_SCREEN = "solar_gen_screen";

@@ -12,7 +12,7 @@ import net.minecraft.world.phys.AABB;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 

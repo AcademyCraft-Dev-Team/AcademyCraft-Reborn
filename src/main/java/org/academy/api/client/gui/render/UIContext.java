@@ -18,7 +18,7 @@ import org.academy.api.client.gui.widget.WidgetContainer;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.thread.RenderThread;
 import org.academy.api.common.util.UncheckedUtil;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;

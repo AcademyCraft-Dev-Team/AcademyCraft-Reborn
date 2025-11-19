@@ -12,7 +12,7 @@ import org.academy.api.client.render.RenderTypes;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.blockentity.state.CatEngineRenderState;
 import org.academy.internal.common.world.level.block.entity.CatEngineBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.joml.Vector3f;
 
 public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlockEntity, CatEngineRenderState> {
@@ -27,7 +27,7 @@ public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlo
     }
 
     @Override
-    public void extractRenderState(CatEngineBlockEntity blockEntity, CatEngineRenderState renderState, float partialTick, Vec3 cameraPos, @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
+    public void extractRenderState(CatEngineBlockEntity blockEntity, CatEngineRenderState renderState, float partialTick, Vec3 cameraPos, ModelFeatureRenderer.@Nullable CrumblingOverlay crumblingOverlay) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPos, crumblingOverlay);
         renderState.enable = blockEntity.enable;
         renderState.oRot = blockEntity.oRot;

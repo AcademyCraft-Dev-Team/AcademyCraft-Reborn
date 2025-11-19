@@ -20,7 +20,7 @@ import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.Function;
 

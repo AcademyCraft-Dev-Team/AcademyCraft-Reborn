@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.client.model.WirelessNodeModel;
 import org.academy.internal.client.renderer.blockentity.state.WirelessNodeRenderState;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class WirelessNodeRenderer implements BlockEntityRenderer<WirelessNodeBlockEntity, WirelessNodeRenderState> {
     public static final WirelessNodeRenderer INSTANCE = new WirelessNodeRenderer();
@@ -33,7 +33,7 @@ public final class WirelessNodeRenderer implements BlockEntityRenderer<WirelessN
     }
 
     @Override
-    public void extractRenderState(WirelessNodeBlockEntity blockEntity, WirelessNodeRenderState renderState, float partialTick, Vec3 cameraPosition, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+    public void extractRenderState(WirelessNodeBlockEntity blockEntity, WirelessNodeRenderState renderState, float partialTick, Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPosition, breakProgress);
         renderState.ageInTicks = blockEntity.ticks + partialTick;
         renderState.coreState = blockEntity.coreState;

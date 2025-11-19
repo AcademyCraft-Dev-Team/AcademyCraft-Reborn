@@ -15,7 +15,7 @@ import org.academy.api.client.Resource;
 import org.academy.internal.client.model.SolarGenModel;
 import org.academy.internal.client.renderer.blockentity.state.SolarGenRenderState;
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class SolarGenRenderer implements BlockEntityRenderer<SolarGenBlockEntity, SolarGenRenderState> {
     public static final SolarGenRenderer INSTANCE = new SolarGenRenderer();
@@ -30,7 +30,7 @@ public final class SolarGenRenderer implements BlockEntityRenderer<SolarGenBlock
     }
 
     @Override
-    public void extractRenderState(SolarGenBlockEntity blockEntity, SolarGenRenderState renderState, float partialTick, Vec3 cameraPosition, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+    public void extractRenderState(SolarGenBlockEntity blockEntity, SolarGenRenderState renderState, float partialTick, Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPosition, breakProgress);
         renderState.ageInTicks = blockEntity.ticks + partialTick;
         renderState.facing = blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);

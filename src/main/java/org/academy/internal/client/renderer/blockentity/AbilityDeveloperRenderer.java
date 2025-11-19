@@ -14,7 +14,7 @@ import org.academy.api.client.render.RenderTypes;
 import org.academy.internal.client.model.AbilityDeveloperModel;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class AbilityDeveloperRenderer implements BlockEntityRenderer<AbilityDeveloperBlockEntity, AbilityDeveloperRenderState> {
     public static final AbilityDeveloperRenderer INSTANCE = new AbilityDeveloperRenderer();
@@ -29,7 +29,7 @@ public final class AbilityDeveloperRenderer implements BlockEntityRenderer<Abili
     }
 
     @Override
-    public void extractRenderState(AbilityDeveloperBlockEntity blockEntity, AbilityDeveloperRenderState renderState, float partialTick, Vec3 cameraPos, @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
+    public void extractRenderState(AbilityDeveloperBlockEntity blockEntity, AbilityDeveloperRenderState renderState, float partialTick, Vec3 cameraPos, ModelFeatureRenderer.@Nullable CrumblingOverlay crumblingOverlay) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPos, crumblingOverlay);
         renderState.closingState = blockEntity.closingState;
         renderState.openingState = blockEntity.openingState;

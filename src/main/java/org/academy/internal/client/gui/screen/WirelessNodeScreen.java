@@ -21,7 +21,7 @@ import org.academy.api.common.wireless.SetNodeNamePacket;
 import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 
 import java.util.function.Consumer;
