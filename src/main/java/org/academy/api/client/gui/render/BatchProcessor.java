@@ -7,24 +7,18 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import org.academy.api.client.Render;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.joml.Matrix4f;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 public final class BatchProcessor {
-    private static final Comparator<SubmittedCommand> COMMAND_COMPARATOR =
-            Comparator.comparingDouble((SubmittedCommand cmd) -> cmd.getPose().pose().m32())
-                    .thenComparingLong(SubmittedCommand::getDrawOrder)
-                    .thenComparingLong(cmd -> cmd.getCommand().getPipeline().getSortKey())
-                    .thenComparingLong(SubmittedCommand::getResourceKey)
-                    .thenComparing(SubmittedCommand::getScissorRect, Comparator.nullsFirst(ScissorRect::compareTo));
 
-    public static List<MeshToDraw> process(List<SubmittedCommand> commands, float depthEpsilon) {
+    public static List<PendingBatch> process(List<SubmittedCommand> commands, float depthEpsilon) {
         if (commands.isEmpty()) return Collections.emptyList();
 
-        commands.sort(COMMAND_COMPARATOR);
+        commands.sort(BatchProcessor::compareCommands);
 
-        var meshesToDraw = new ArrayList<MeshToDraw>();
+        var batches = new ArrayList<PendingBatch>();
         var iterator = commands.iterator();
         var firstCommand = iterator.next();
 
@@ -51,7 +45,7 @@ public final class BatchProcessor {
                     || !Objects.equals(submittedCommand.getScissorRect(), currentScissor);
 
             if (shouldBreakBatch) {
-                finishBatch(meshesToDraw, currentBuilder, currentPipeline, currentScissor, currentSamplers, currentUniforms);
+                finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentSamplers, currentUniforms);
 
                 currentPipeline = command.getPipeline();
                 currentScissor = submittedCommand.getScissorRect();
@@ -69,9 +63,32 @@ public final class BatchProcessor {
             applyVertices(currentBuilder, submittedCommand, depthEpsilon);
         }
 
-        finishBatch(meshesToDraw, currentBuilder, currentPipeline, currentScissor, currentSamplers, currentUniforms);
+        finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentSamplers, currentUniforms);
 
-        return meshesToDraw;
+        return batches;
+    }
+
+    private static int compareCommands(SubmittedCommand c1, SubmittedCommand c2) {
+        var pose1 = c1.getPose().pose().m32();
+        var pose2 = c2.getPose().pose().m32();
+        var zCompare = Double.compare(pose1, pose2);
+        if (zCompare != 0) return zCompare;
+
+        var orderCompare = Long.compare(c1.getDrawOrder(), c2.getDrawOrder());
+        if (orderCompare != 0) return orderCompare;
+
+        var pipelineCompare = Integer.compare(c1.getCommand().getPipeline().getSortKey(), c2.getCommand().getPipeline().getSortKey());
+        if (pipelineCompare != 0) return pipelineCompare;
+
+        var resCompare = Long.compare(c1.getResourceKey(), c2.getResourceKey());
+        if (resCompare != 0) return resCompare;
+
+        var s1 = c1.getScissorRect();
+        var s2 = c2.getScissorRect();
+        if (s1 == null && s2 == null) return 0;
+        if (s1 == null) return -1;
+        if (s2 == null) return 1;
+        return s1.compareTo(s2);
     }
 
     private static void applyVertices(BufferBuilder builder, SubmittedCommand submittedCommand, float depthEpsilon) {
@@ -89,7 +106,7 @@ public final class BatchProcessor {
     }
 
     private static void finishBatch(
-            List<MeshToDraw> meshesToDraw,
+            List<PendingBatch> batches,
             BufferBuilder builder,
             RenderPipeline pipeline,
             @Nullable ScissorRect scissor,
@@ -98,7 +115,7 @@ public final class BatchProcessor {
     ) {
         var meshData = builder.build();
         if (meshData != null)
-            meshesToDraw.add(new MeshToDraw(meshData, pipeline, scissor, samplers, uniforms));
+            batches.add(new PendingBatch(meshData, pipeline, scissor, samplers, uniforms));
     }
 
     private BatchProcessor() {

@@ -19,6 +19,8 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.gui.animation.EasingFunctions;
+import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
@@ -182,22 +184,22 @@ public final class DataTerminalHUD {
         );
         ROOT.addChild("main", main);
         {
-            var back = new FillWidget(COLOR);
-            main.addChild("back", back);
+            var background = new FillWidget(COLOR);
+            main.addChild("back", background);
 
             var content = new LinearLayoutWidget();
             content.setOrientation(Orientation.VERTICAL);
             content.setSpacing(2);
             main.addChild("content", content);
             {
-                var icon = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
-                icon.setLayoutParams(
+                var logo = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
+                logo.setLayoutParams(
                         new LinearLayoutWidget.LayoutParams()
                                 .size(16, 16)
                                 .gravity(Gravity.START)
                                 .margin(2, 2, 0, 0)
                 );
-                content.addChild("icon", icon);
+                content.addChild("icon", logo);
 
                 var splitLine = new FillWidget(0xFFFFFFFF);
                 splitLine.setLayoutParams(
@@ -207,6 +209,126 @@ public final class DataTerminalHUD {
                                 .padding(2, 0)
                 );
                 content.addChild("splitLine", splitLine);
+
+                var apps = new ScrollPanelWidget();
+                apps.setLayoutParams(
+                        new LinearLayoutWidget.LayoutParams()
+                                .weight(1)
+                                .widthMode(SizeMode.MATCH_PARENT)
+                                .gravity(Gravity.CENTER)
+                                .padding(4, 4, 4, 2)
+                );
+                content.addChild("apps", apps);
+                {
+                    var appRows = new LinearLayoutWidget();
+                    appRows.setOrientation(Orientation.VERTICAL);
+                    appRows.setSpacing(4);
+                    appRows.setLayoutParams(
+                            new WidgetContainer.LayoutParams()
+                                    .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    );
+                    apps.addChild("app_rows", appRows);
+                    {
+                        var size = 48;
+
+                        var rowOne = new LinearLayoutWidget();
+                        rowOne.setOrientation(Orientation.HORIZONTAL);
+                        rowOne.setLayoutParams(
+                                new LinearLayoutWidget.LayoutParams()
+                                        .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                        );
+                        appRows.addChild("row_one", rowOne);
+                        {
+                            var a = new LinearLayoutWidget();
+                            a.setSpacing(1);
+                            a.setOrientation(Orientation.VERTICAL);
+                            a.setLayoutParams(
+                                    new LinearLayoutWidget.LayoutParams()
+                                            .width(size)
+                                            .heightMode(SizeMode.WRAP_CONTENT)
+                            );
+                            rowOne.addChild("a", a);
+                            {
+                                var iconArea = new FrameLayoutWidget() {
+                                    private boolean overed;
+                                    private float scale = 1;
+
+                                    @Override
+                                    public void render(RenderContext context) {
+                                        var overed = isMouseOver(xpos, ypos);
+                                        if (overed != this.overed) {
+                                            this.overed = overed;
+                                            startAnimation(
+                                                    ObjectAnimator.ofFloat(
+                                                            this::setScale,
+                                                            scale,
+                                                            overed ? 1.2f : 1f
+                                                    ).setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
+                                            );
+                                        }
+                                        context.pose().pushPose();
+                                        var centerX = getWidth() / 2f;
+                                        var centerY = getHeight() / 2f;
+                                        context.pose().translate(centerX, centerY, 0);
+                                        context.pose().scale(scale, scale, 1f);
+                                        context.pose().translate(-centerX, -centerY, 0);
+                                        super.render(context);
+                                        context.pose().popPose();
+                                    }
+
+                                    private void setScale(float scale) {
+                                        this.scale = scale;
+                                    }
+                                };
+                                iconArea.setLayoutParams(
+                                        new LinearLayoutWidget.LayoutParams()
+                                                .size(size, size)
+                                );
+                                a.addChild("icon_area", iconArea);
+                                {
+                                    var back = new ImageWidget(Resource.Textures.APP_BACK) {
+                                        @Override
+                                        public void render(RenderContext context) {
+                                            if (iconArea.isMouseOver(xpos, ypos)) {
+                                                setColor(1.0f, 1.0f, 1.0f);
+                                            } else {
+                                                setColor(0.8f, 0.8f, 0.8f);
+                                            }
+                                            super.render(context);
+                                        }
+                                    };
+                                    iconArea.addChild("back", back);
+
+                                    var icon = new ImageWidget(Resource.Textures.ICON_SETTINGS) {
+                                        @Override
+                                        public void render(RenderContext context) {
+                                            if (iconArea.isMouseOver(xpos, ypos)) {
+                                                setColor(1, 1, 1);
+                                            } else {
+                                                setColor(0.9f, 0.9f, 0.9f);
+                                            }
+                                            super.render(context);
+                                        }
+                                    };
+                                    icon.setLayoutParams(
+                                            new FrameLayoutWidget.LayoutParams()
+                                                    .size(size / 2f, size / 2f)
+                                                    .gravity(Gravity.CENTER)
+                                    );
+                                    iconArea.addChild("icon", icon);
+                                }
+
+                                var name = new LabelWidget("Settings");
+                                name.setLayoutParams(
+                                        new LinearLayoutWidget.LayoutParams()
+                                                .gravity(Gravity.CENTER)
+                                                .margin(2, 0)
+                                );
+                                a.addChild("name", name);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

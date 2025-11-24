@@ -6,20 +6,18 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.DynamicUniformStorage;
-import net.minecraft.client.renderer.MappableRingBuffer;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.widget.WidgetContainer;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.thread.RenderThread;
 import org.academy.api.common.util.UncheckedUtil;
-import org.jspecify.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 
@@ -35,14 +33,13 @@ import java.util.concurrent.atomic.AtomicReference;
 public class UIContext {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final AtomicReference<List<SubmittedCommand>> commandList = new AtomicReference<>();
+    private final AtomicReference<@Nullable List<SubmittedCommand>> commandList = new AtomicReference<>();
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicBoolean closing = new AtomicBoolean(false);
 
-    private final Map<VertexFormat, MappableRingBuffer> vertexBuffers = new HashMap<>();
     private final Map<Class<? extends DynamicUniformStorage.DynamicUniform>, DynamicUniformStorage<?>> dynamicUniformStorages = new HashMap<>();
-    private final CommandExecutor commandExecutor = new CommandExecutor(vertexBuffers);
+    private final CommandExecutor commandExecutor = new CommandExecutor();
 
     @Nullable
     private CachedOrthoProjectionMatrixBuffer projectionMatrixBuffer;
@@ -127,7 +124,6 @@ public class UIContext {
 
     @RenderThread
     public void upload(RenderTarget target, boolean clear, boolean stencilTest) {
-        for (var buffer : vertexBuffers.values()) buffer.rotate();
         for (var ubo : dynamicUniformStorages.values()) ubo.endFrame();
 
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
@@ -177,8 +173,7 @@ public class UIContext {
     public void closeOnRenderThread() {
         if (projectionMatrixBuffer == null || dynamicTransformsUbo == null) return;
 
-        for (var buffer : vertexBuffers.values()) buffer.close();
-        vertexBuffers.clear();
+        commandExecutor.close();
 
         projectionMatrixBuffer.close();
         for (var ubo : dynamicUniformStorages.values()) ubo.close();

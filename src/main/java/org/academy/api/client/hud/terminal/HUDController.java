@@ -19,7 +19,7 @@ import org.academy.api.client.input.*;
 import org.academy.api.client.util.ClientUtil;
 import org.lwjgl.glfw.GLFW;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import java.util.LinkedHashSet;
 
 public final class HUDController implements HUDRenderer {

@@ -13,7 +13,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.academy.AcademyCraft;
 import org.academy.api.client.Resource;
-import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.drawable.StateListDrawable;
@@ -27,20 +26,14 @@ import org.academy.api.client.gui.widget.*;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements RenderRoot, IAnimationScreen {
+public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements RenderRoot {
     protected final FrameLayoutWidget root = new FrameLayoutWidget();
 
     private boolean handleContainer = true;
     private boolean renderInventory = true;
-    private final List<Animator> screenAnimations = new ArrayList<>();
-    private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
     private Supplier<Float> invHeightSupplier = () -> 1f;
     private Supplier<Float> invTranslationYSupplier = () -> 1f;
     private Consumer<Boolean> invVisibleSetter = ignore -> {
@@ -53,22 +46,6 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
     @Override
     public WidgetContainer getRoot() {
         return root;
-    }
-
-    @Override
-    public void onClose() {
-        super.onClose();
-        cancelAllAnimations();
-    }
-
-    @Override
-    public List<Animator> getScreenAnimations() {
-        return screenAnimations;
-    }
-
-    @Override
-    public Map<Widget, List<Animator>> getTrackedAnimations() {
-        return trackedAnimations;
     }
 
     @Override
@@ -91,18 +68,14 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
                         .margin(leftPos - 16, topPos - 22, 0, 0)
         );
         root.addChild("main", main);
-        playAnimation(
-                ObjectAnimator
-                        .ofFloat(main::setAlpha, 0, 1.0f)
-                        .setDuration(duration)
-                        .setInterpolator(EasingFunctions.EASE_OUT_EXPO)
-        );
-        playAnimation(
-                ObjectAnimator
-                        .ofFloat(main::setHeight, 0, finalHeight)
-                        .setDuration(duration)
-                        .setInterpolator(EasingFunctions.EASE_OUT_EXPO)
-        );
+        main.startAnimation(ObjectAnimator
+                .ofFloat(main::setAlpha, 0, 1.0f)
+                .setDuration(duration)
+                .setInterpolator(EasingFunctions.EASE_OUT_EXPO));
+        main.startAnimation(ObjectAnimator
+                .ofFloat(main::setHeight, 0, finalHeight)
+                .setDuration(duration)
+                .setInterpolator(EasingFunctions.EASE_OUT_EXPO));
         {
             var pageButtons = new RadioGroupWidget();
             pageButtons.setOrientation(Orientation.VERTICAL);
@@ -142,7 +115,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
                                 .heightMode(SizeMode.MATCH_PARENT)
                 );
                 content.addChild("page_inv", invPage);
-                playAnimation(ObjectAnimator.ofFloat(invPage::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
+                invPage.startAnimation(ObjectAnimator.ofFloat(invPage::setHeight, 0, finalHeight).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_EXPO));
                 {
                     var back = new BlendQuadWidget();
                     back.setLayoutParams(
@@ -164,6 +137,10 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
                     onInit(pageButtons, invButton, content, invPage);
                 }
             }
+        }
+
+        if (!root.isAttached()) {
+            root.dispatchAttached();
         }
     }
 
@@ -214,6 +191,14 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         }
 
         renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (root.isAttached()) {
+            root.dispatchDetached();
+        }
     }
 
     @Override
