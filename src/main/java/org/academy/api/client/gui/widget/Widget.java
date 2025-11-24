@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.layout.MeasureSpec;
@@ -10,12 +11,6 @@ import org.jspecify.annotations.Nullable;
 public interface Widget extends Tickable {
     void render(RenderContext context);
 
-    /**
-     * The new unified entry point for all input events.
-     * This method is responsible for dispatching the event to specific handlers
-     * within the widget's implementation.
-     * @param event The input event to be processed.
-     */
     void dispatchEvent(InputEvent event);
 
     void measure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec);
@@ -127,13 +122,27 @@ public interface Widget extends Tickable {
     default void tick() {
     }
 
-    void setBackground(Drawable background);
+    void setBackground(@Nullable Drawable background);
 
     @Nullable
     Drawable getBackground();
 
-    void setForeground(Drawable foreground);
+    void setForeground(@Nullable Drawable foreground);
 
     @Nullable
     Drawable getForeground();
+
+    void onAttached();
+
+    void onDetached();
+
+    void dispatchAttached();
+
+    void dispatchDetached();
+
+    boolean isAttached();
+
+    void startAnimation(Animator animator);
+
+    void cancelAnimations();
 }

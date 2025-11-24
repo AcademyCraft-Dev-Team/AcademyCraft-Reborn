@@ -9,7 +9,7 @@
 
 package org.academy.api.common.collider;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /// 碰撞箱接口
 ///

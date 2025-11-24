@@ -6,7 +6,7 @@ import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.animation.TimeInterpolator;
 import org.academy.api.client.gui.animation.ValueAnimator;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractAnimatedLabelWidget extends LabelWidget {
     @Nullable

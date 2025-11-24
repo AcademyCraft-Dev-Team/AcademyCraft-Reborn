@@ -16,7 +16,7 @@ import org.academy.api.client.gui.screen.ContainerUIScreen;
 import org.academy.api.client.gui.util.InfoAreaUtil;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.util.ScreenAnimationUtil;
+import org.academy.api.client.util.AnimationUtil;
 import org.academy.api.common.wireless.SetNodeNamePacket;
 import org.academy.api.common.wireless.SetNodePassPacket;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
@@ -121,14 +121,14 @@ public final class WirelessNodeScreen extends ContainerUIScreen<WirelessNodeMenu
         pageButtons.setOnSelectionChanged(button -> {
             switch (button.getName()) {
                 case "inv" -> {
-                    ScreenAnimationUtil.hide(this, wirelessPage);
-                    ScreenAnimationUtil.show(this, invPage);
+                    AnimationUtil.hide(wirelessPage);
+                    AnimationUtil.show(invPage);
                     setHandleContainer(true);
                     setRenderInventory(true);
                 }
                 case "wireless" -> {
-                    ScreenAnimationUtil.hide(this, invPage);
-                    ScreenAnimationUtil.show(this, wirelessPage);
+                    AnimationUtil.hide(invPage);
+                    AnimationUtil.show(wirelessPage);
                     setHandleContainer(false);
                     setRenderInventory(false);
                 }
@@ -136,7 +136,7 @@ public final class WirelessNodeScreen extends ContainerUIScreen<WirelessNodeMenu
         });
         pageButtons.selectButton(invButton);
 
-        var info = InfoAreaUtil.create(this, this, leftPos + imageWidth, topPos - 22);
+        var info = InfoAreaUtil.create(this, leftPos + imageWidth, topPos - 22);
         {
             var energyValueLabel = new LabelWidget("0 AF");
             energyValueSetter = energyValueLabel::setText;
@@ -173,8 +173,8 @@ public final class WirelessNodeScreen extends ContainerUIScreen<WirelessNodeMenu
             info.addChild("pass_layout", passLayout);
         }
 
-        playAnimation(ObjectAnimator.ofFloat(pageButtons::setAlpha, 0f, 1f).setDuration(childDuration));
-        playAnimation(ObjectAnimator.ofFloat(pageButtons::setTranslationY, 20, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
+        pageButtons.startAnimation(ObjectAnimator.ofFloat(pageButtons::setAlpha, 0f, 1f).setDuration(childDuration));
+        pageButtons.startAnimation(ObjectAnimator.ofFloat(pageButtons::setTranslationY, 20, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
 
         updateInfo();
     }

@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public abstract class AbstractWidgetContainer extends AbstractWidget implements WidgetContainer {
     protected final Map<String, Widget> children = new LinkedHashMap<>();
@@ -126,19 +125,11 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
         var childrenList = new ArrayList<>(children.values());
         Collections.reverse(childrenList);
 
-        if (AcademyCraft.DEBUG_UI) {
-            var childNames = childrenList.stream().map(Widget::getName).collect(Collectors.joining(", "));
-            AcademyCraft.LOGGER.debug("[UI Find] Searching in '{}' for widget at ({}, {}). Children (top to bottom): [{}]", getName(), mouseX, mouseY, childNames);
-        }
-
         for (var child : childrenList) {
             if (!child.isVisible() || !child.isAbsoluteEnabled()) {
                 continue;
             }
             if (child.isMouseOver(mouseX, mouseY)) {
-                if (AcademyCraft.DEBUG_UI) {
-                    AcademyCraft.LOGGER.debug("[UI Find] Mouse is over child '{}'.", child.getName());
-                }
                 if (child instanceof AbstractWidgetContainer acw) {
                     var nestedChild = acw.findTopWidgetAt(mouseX, mouseY);
                     return nestedChild != null ? nestedChild : acw;
@@ -149,9 +140,6 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
         }
 
         if (isMouseOver(mouseX, mouseY)) {
-            if (AcademyCraft.DEBUG_UI) {
-                AcademyCraft.LOGGER.debug("[UI Find] Mouse is over container '{}' itself.", getName());
-            }
             return this;
         }
 
@@ -340,18 +328,9 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
     public void dispatchEvent(InputEvent event) {
         if (!isAbsoluteEnabled() || !isVisible()) return;
 
-        if (AcademyCraft.DEBUG_UI && event instanceof MouseEvent) {
-            AcademyCraft.LOGGER.debug("[UI Event] Dispatching {} to Container '{}'", event.getType(), getName());
-        }
-
         if (event.getType() == EventType.MOUSE_MOVED) {
             var newHoveredWidget = findTopWidgetAt(((MouseEvent) event).getX(), ((MouseEvent) event).getY());
             if (hoveredWidget != newHoveredWidget) {
-                if (AcademyCraft.DEBUG_UI) {
-                    var oldName = hoveredWidget != null ? hoveredWidget.getName() : "null";
-                    var newName = newHoveredWidget != null ? newHoveredWidget.getName() : "null";
-                    AcademyCraft.LOGGER.debug("[UI Hover] Hover changed from '{}' to '{}'", oldName, newName);
-                }
                 if (hoveredWidget instanceof AbstractWidget oldHovered) {
                     oldHovered.setHovered(false);
                 }
@@ -398,9 +377,6 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
             }
         }
 
-        if (AcademyCraft.DEBUG_UI && event.getType() != EventType.MOUSE_MOVED) {
-            AcademyCraft.LOGGER.debug("[UI Event] No child consumed event. '{}' is handling it.", getName());
-        }
         super.dispatchEvent(event);
         if (event.isConsumed() && event.getType() == EventType.MOUSE_PRESSED) {
             setFocusedChild(this);
@@ -425,6 +401,11 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
         child.setParent(this);
         child.setName(name);
         children.put(name, child);
+
+        if (isAttached()) {
+            child.dispatchAttached();
+        }
+
         requestLayout();
     }
 
@@ -432,6 +413,11 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
     public void removeChild(String name) {
         if (children.containsKey(name)) {
             var widget = children.get(name);
+
+            if (widget.isAttached()) {
+                widget.dispatchDetached();
+            }
+
             widget.setParent(null);
             if (focusedChild == widget) {
                 focusedChild = null;
@@ -519,6 +505,22 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
             focusedChild = null;
         }
         return this;
+    }
+
+    @Override
+    public void dispatchAttached() {
+        super.dispatchAttached();
+        for (var child : children.values()) {
+            child.dispatchAttached();
+        }
+    }
+
+    @Override
+    public void dispatchDetached() {
+        for (var child : children.values()) {
+            child.dispatchDetached();
+        }
+        super.dispatchDetached();
     }
 
     public static class ContainerSetFocusedChildEvent extends Event implements ICancellableEvent {

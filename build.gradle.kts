@@ -1,6 +1,4 @@
 import org.slf4j.event.Level
-import org.w3c.dom.Document
-import javax.xml.parsers.DocumentBuilderFactory
 
 plugins {
     `java-library`
@@ -8,12 +6,9 @@ plugins {
     id("net.neoforged.moddev") version "latest.release"
 }
 
-/*val repoUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
-val metadata: Document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(repoUrl)
-metadata.documentElement.normalize()*/
-val latestNeoVersion: String = "21.10.51-beta"
+val neoVersion: String = "21.10.52-beta"
 
-val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "true").toBoolean()
+val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 
 base {
     version = "${project.property("mod_version")}" + (if (isDev) "-dev" else "-release")
@@ -25,7 +20,7 @@ val generateModMetadata by tasks.registering(ProcessResources::class) {
     val replaceProperties = mapOf(
         "minecraft_version" to project.property("minecraft_version"),
         "minecraft_version_range" to project.property("minecraft_version_range"),
-        "neo_version" to latestNeoVersion,
+        "neo_version" to neoVersion,
         "neo_version_range" to project.property("neo_version_range"),
         "loader_version_range" to project.property("loader_version_range"),
         "mod_id" to project.property("mod_id"),
@@ -50,7 +45,7 @@ sourceSets.named("main") {
 }
 
 neoForge {
-    version = latestNeoVersion
+    version = neoVersion
     ideSyncTask(generateModMetadata)
 
     val modId = project.property("mod_id").toString()
@@ -91,7 +86,8 @@ neoForge {
 
             jvmArguments.addAll(
                 "-XX:+IgnoreUnrecognizedVMOptions",
-                "-XX:+AllowEnhancedClassRedefinition"
+                "-XX:+AllowEnhancedClassRedefinition",
+                "-Xmx2G"
             )
             logLevel = Level.DEBUG
         }

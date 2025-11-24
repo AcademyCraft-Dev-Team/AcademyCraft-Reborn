@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.SubmittedCommand;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import java.util.*;
 
 public final class RenderContext {

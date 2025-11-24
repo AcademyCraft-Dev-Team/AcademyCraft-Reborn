@@ -2,34 +2,36 @@ package org.academy.api.client.gui.render;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MappableRingBuffer;
 import net.neoforged.neoforge.client.stencil.StencilFunction;
 import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
+import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
-import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
-public final class CommandExecutor {
-    private final Map<VertexFormat, MappableRingBuffer> vertexBuffers;
+public final class CommandExecutor implements AutoCloseable {
+    private static final int INITIAL_CAPACITY = 4 * 1024 * 1024;
 
-    public CommandExecutor(Map<VertexFormat, MappableRingBuffer> vertexBuffers) {
-        this.vertexBuffers = vertexBuffers;
-    }
+    private @Nullable GpuBuffer globalBuffer;
+    private int writeOffset = 0;
+
+    private final Deque<FrameRegion> activeRegions = new ArrayDeque<>();
+    private final Deque<RetiredBuffer> retiredBuffers = new ArrayDeque<>();
 
     public void execute(
-            List<MeshToDraw> meshesToDraw,
+            List<PendingBatch> batches,
             GpuTextureView color,
             GpuTextureView depth,
             GpuBufferSlice projectionUbo,
@@ -37,54 +39,73 @@ public final class CommandExecutor {
             float guiScale,
             boolean stencilTest
     ) {
-        if (meshesToDraw.isEmpty())
+        processRetiredBuffers();
+
+        if (batches.isEmpty())
             return;
 
-        ensureVertexBufferSizes(meshesToDraw);
+        var meshAbsoluteOffsets = new int[batches.size()];
+        var allocation = tryAllocate(batches, meshAbsoluteOffsets);
 
-        var safeVertexBuffers = new Object2ObjectOpenHashMap<VertexFormat, GpuBuffer>();
-        for (var entry : vertexBuffers.entrySet()) {
-            safeVertexBuffers.put(entry.getKey(), entry.getValue().currentBuffer());
+        if (globalBuffer == null) {
+            ensureCapacity(allocation.totalSize);
+            allocation = tryAllocate(batches, meshAbsoluteOffsets);
+        } else if (allocation.needsRotate || allocation.totalSize > globalBuffer.size()) {
+            retireCurrentBuffer();
+            if (allocation.totalSize > globalBuffer.size()) {
+                ensureCapacity(allocation.totalSize);
+            }
+            allocation = tryAllocate(batches, meshAbsoluteOffsets);
         }
 
-        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        var baseVertices = new IntArrayList(meshesToDraw.size());
-        var writeOffsets = new Object2IntOpenHashMap<VertexFormat>();
+        var drawCalls = new ArrayList<DrawCall>(batches.size());
+        var maxIndexCount = 0;
 
-        for (var meshToDraw : meshesToDraw) {
-            var mesh = meshToDraw.mesh();
-            var format = mesh.drawState().format();
-            var vertexBufferData = mesh.vertexBuffer();
-            var vertexDataSize = vertexBufferData.remaining();
-            var currentOffset = writeOffsets.getOrDefault(format, 0);
-            var baseVertex = currentOffset / format.getVertexSize();
-            var gpuBuffer = safeVertexBuffers.get(format);
+        try (var mapped = RenderSystem.getDevice().createCommandEncoder()
+                .mapBuffer(globalBuffer.slice(allocation.start, allocation.length), false, true)) {
 
-            commandEncoder.writeToBuffer(gpuBuffer.slice(currentOffset, vertexDataSize), vertexBufferData);
-            writeOffsets.put(format, currentOffset + vertexDataSize);
-            baseVertices.add(baseVertex);
+            var buffer = mapped.data();
+
+            for (var i = 0; i < batches.size(); i++) {
+                var batch = batches.get(i);
+                var mesh = batch.meshData();
+                var srcBuffer = mesh.vertexBuffer();
+                var relativeOffset = meshAbsoluteOffsets[i] - allocation.start;
+                buffer.position(relativeOffset);
+                buffer.put(srcBuffer);
+
+                var baseVertex = meshAbsoluteOffsets[i] / batch.vertexStride();
+                drawCalls.add(new DrawCall(
+                        batch.pipeline(),
+                        batch.scissorArea(),
+                        batch.samplers(),
+                        batch.uniforms(),
+                        baseVertex,
+                        batch.indexCount()
+                ));
+
+                maxIndexCount = Math.max(maxIndexCount, batch.indexCount());
+                batch.close();
+            }
         }
 
-        var maxIndexCount = calculateMaxIndexCount(meshesToDraw);
         var sequentialIndexBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
         var indexBuffer = sequentialIndexBuffer.getBuffer(maxIndexCount);
         var indexType = sequentialIndexBuffer.type();
         var window = Minecraft.getInstance().getWindow();
         var physicalHeight = window.getHeight();
 
+        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         try (var renderPass = commandEncoder.createRenderPass(
                 () -> "UIRender", color, OptionalInt.empty(), depth, OptionalDouble.empty()
         )) {
-            for (var i = 0; i < meshesToDraw.size(); i++) {
-                var meshToDraw = meshesToDraw.get(i);
-                var mesh = meshToDraw.mesh();
-                var format = mesh.drawState().format();
-                var baseVertex = baseVertices.getInt(i);
-                var safeBuffer = safeVertexBuffers.get(format);
+            renderPass.setIndexBuffer(indexBuffer, indexType);
+
+            for (var drawCall : drawCalls) {
                 var hasClosedSampler = false;
 
                 {
-                    var pipeline = meshToDraw.pipeline();
+                    var pipeline = drawCall.pipeline();
                     if (stencilTest) {
                         var perFaceTest = new StencilPerFaceTest(
                                 StencilOperation.KEEP,
@@ -101,7 +122,9 @@ public final class CommandExecutor {
                     }
                     renderPass.setPipeline(pipeline);
 
-                    var scissor = meshToDraw.scissorArea();
+                    renderPass.setVertexBuffer(0, globalBuffer);
+
+                    var scissor = drawCall.scissorArea();
                     if (scissor != null) {
                         var pos = scissor.getPosition();
                         var screenX = (int) (pos.x * guiScale);
@@ -117,69 +140,171 @@ public final class CommandExecutor {
                     renderPass.setUniform("Projection", projectionUbo);
                     renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo);
 
-                    for (var entry : meshToDraw.samplers().entrySet()) {
+                    for (var entry : drawCall.samplers().entrySet()) {
                         var value = entry.getValue();
                         if (value.isClosed()) {
-                            AcademyCraft.LOGGER.error("Sampler {} has been closed, skipping draw for this mesh.", entry.getKey());
+                            AcademyCraft.LOGGER.error("Sampler {} has been closed, skipping draw call.", entry.getKey());
                             hasClosedSampler = true;
                             break;
                         }
                         renderPass.bindSampler(entry.getKey(), value);
                     }
                     if (hasClosedSampler) {
-                        meshToDraw.close();
                         continue;
                     }
-                    for (var entry : meshToDraw.uniforms().entrySet()) {
+                    for (var entry : drawCall.uniforms().entrySet()) {
                         renderPass.setUniform(entry.getKey(), entry.getValue());
                     }
                 }
 
-                {
-                    renderPass.setVertexBuffer(0, safeBuffer);
-                    renderPass.setIndexBuffer(indexBuffer, indexType);
-                    renderPass.drawIndexed(baseVertex, 0, mesh.drawState().indexCount(), 1);
-                }
-
-                meshToDraw.close();
+                renderPass.drawIndexed(drawCall.baseVertex(), 0, drawCall.indexCount(), 1);
             }
         }
 
-        for (var ringBuffer : vertexBuffers.values()) {
-            ringBuffer.rotate();
-        }
+        var fence = commandEncoder.createFence();
+        activeRegions.addLast(new FrameRegion(allocation.start, allocation.end, fence));
+        writeOffset = allocation.end;
     }
 
-    private void ensureVertexBufferSizes(List<MeshToDraw> meshesToDraw) {
-        var requiredSizes = new Object2IntOpenHashMap<VertexFormat>();
-        for (var meshToDraw : meshesToDraw) {
-            var mesh = meshToDraw.mesh();
-            var format = mesh.drawState().format();
-            var vertexSize = mesh.vertexBuffer().remaining();
-            requiredSizes.addTo(format, vertexSize);
+    private AllocationResult tryAllocate(List<PendingBatch> batches, int[] outOffsets) {
+        var currentPtr = writeOffset;
+
+        for (var i = 0; i < batches.size(); i++) {
+            var batch = batches.get(i);
+            currentPtr = align(currentPtr, batch.vertexStride());
+            outOffsets[i] = currentPtr;
+            currentPtr += batch.vertexBufferSize();
         }
 
-        for (var entry : requiredSizes.object2IntEntrySet()) {
-            var format = entry.getKey();
-            var requiredSize = entry.getIntValue();
-            var ringBuffer = vertexBuffers.get(format);
+        var endPtr = currentPtr;
+        var startPtr = writeOffset;
+        var requiredLength = endPtr - startPtr;
 
-            if (ringBuffer == null || ringBuffer.size() < requiredSize) {
-                if (ringBuffer != null) {
-                    ringBuffer.close();
+        var needsRotate = false;
+
+        if (globalBuffer != null && endPtr > globalBuffer.size()) {
+            currentPtr = 0;
+            for (var i = 0; i < batches.size(); i++) {
+                var batch = batches.get(i);
+                currentPtr = align(currentPtr, batch.vertexStride());
+                outOffsets[i] = currentPtr;
+                currentPtr += batch.vertexBufferSize();
+            }
+            startPtr = 0;
+            endPtr = currentPtr;
+            requiredLength = endPtr;
+
+            if (globalBuffer != null && endPtr <= globalBuffer.size()) {
+                if (isRegionConflicted(startPtr, endPtr)) {
+                    needsRotate = true;
                 }
-                var usage = GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_WRITE;
-                var newBuffer = new MappableRingBuffer(() -> "AC_UI_VB_" + format.toString(), usage, requiredSize);
-                vertexBuffers.put(format, newBuffer);
+            } else {
+                needsRotate = true;
+            }
+        } else {
+            if (isRegionConflicted(startPtr, endPtr)) {
+                needsRotate = true;
+            }
+        }
+
+        return new AllocationResult(startPtr, endPtr, requiredLength, requiredLength, needsRotate);
+    }
+
+    private void processRetiredBuffers() {
+        while (!retiredBuffers.isEmpty()) {
+            var retired = retiredBuffers.peekFirst();
+            if (retired.isReady()) {
+                retired.free();
+                retiredBuffers.pollFirst();
+            } else {
+                break;
             }
         }
     }
 
-    private int calculateMaxIndexCount(List<MeshToDraw> meshesToDraw) {
-        var maxCount = 0;
-        for (var meshToDraw : meshesToDraw) {
-            maxCount = Math.max(maxCount, meshToDraw.mesh().drawState().indexCount());
+    private boolean isRegionConflicted(int start, int end) {
+        cleanupActiveRegions();
+        for (var region : activeRegions) {
+            if (region.intersects(start, end)) {
+                return true;
+            }
         }
-        return maxCount;
+        return false;
+    }
+
+    private void cleanupActiveRegions() {
+        while (!activeRegions.isEmpty()) {
+            var region = activeRegions.peekFirst();
+            if (region.fence.awaitCompletion(0)) {
+                region.fence.close();
+                activeRegions.pollFirst();
+            } else {
+                break;
+            }
+        }
+    }
+
+    private void retireCurrentBuffer() {
+        if (globalBuffer != null) {
+            retiredBuffers.add(new RetiredBuffer(globalBuffer, new ArrayDeque<>(activeRegions)));
+            globalBuffer = null;
+            activeRegions.clear();
+            writeOffset = 0;
+        }
+    }
+
+    private void ensureCapacity(int requiredBytes) {
+        var newSize = Math.max(INITIAL_CAPACITY, requiredBytes);
+        if (!retiredBuffers.isEmpty()) {
+            newSize = Math.max(retiredBuffers.getLast().buffer.size(), newSize);
+        }
+        var usage = GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_WRITE;
+        globalBuffer = RenderSystem.getDevice().createBuffer(() -> "AC_UI_StreamingBuffer", usage, newSize);
+        writeOffset = 0;
+    }
+
+    private static int align(int offset, int alignment) {
+        return (offset + (alignment - 1)) / alignment * alignment;
+    }
+
+    @Override
+    public void close() {
+        if (globalBuffer != null) {
+            globalBuffer.close();
+            globalBuffer = null;
+        }
+        for (var region : activeRegions) {
+            region.fence.close();
+        }
+        activeRegions.clear();
+        for (var retired : retiredBuffers) {
+            retired.free();
+        }
+        retiredBuffers.clear();
+        writeOffset = 0;
+    }
+
+    private record FrameRegion(int start, int end, GpuFence fence) {
+        boolean intersects(int otherStart, int otherEnd) {
+            return start < otherEnd && otherStart < end;
+        }
+    }
+
+    private record RetiredBuffer(GpuBuffer buffer, Deque<FrameRegion> regions) {
+        boolean isReady() {
+            if (regions.isEmpty()) return true;
+            return regions.getLast().fence.awaitCompletion(0);
+        }
+
+        void free() {
+            for (var region : regions) {
+                region.fence.close();
+            }
+            regions.clear();
+            buffer.close();
+        }
+    }
+
+    private record AllocationResult(int start, int end, int length, int totalSize, boolean needsRotate) {
     }
 }

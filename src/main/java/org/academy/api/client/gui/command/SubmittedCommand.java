@@ -3,7 +3,7 @@ package org.academy.api.client.gui.command;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.academy.api.client.gui.render.ScissorRect;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 public final class SubmittedCommand {

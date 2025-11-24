@@ -13,7 +13,7 @@ import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.ContainerUIScreen;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.util.ScreenAnimationUtil;
+import org.academy.api.client.util.AnimationUtil;
 import org.academy.internal.common.world.inventory.SolarGenMenu;
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity;
 import org.jspecify.annotations.Nullable;
@@ -102,14 +102,14 @@ public final class SolarGenScreen extends ContainerUIScreen<SolarGenMenu> {
         pageButtons.setOnSelectionChanged(button -> {
             switch (button.getName()) {
                 case "inv" -> {
-                    ScreenAnimationUtil.hide(this, wirelessPage);
-                    ScreenAnimationUtil.show(this, invPage);
+                    AnimationUtil.hide(wirelessPage);
+                    AnimationUtil.show(invPage);
                     setHandleContainer(true);
                     setRenderInventory(true);
                 }
                 case "wireless" -> {
-                    ScreenAnimationUtil.hide(this, invPage);
-                    ScreenAnimationUtil.show(this, wirelessPage);
+                    AnimationUtil.hide(invPage);
+                    AnimationUtil.show(wirelessPage);
                     setHandleContainer(false);
                     setRenderInventory(false);
                 }
@@ -117,8 +117,8 @@ public final class SolarGenScreen extends ContainerUIScreen<SolarGenMenu> {
         });
         pageButtons.selectButton(invButton);
 
-        playAnimation(ObjectAnimator.ofFloat(pageButtons::setAlpha, 0f, 1f).setDuration(childDuration));
-        playAnimation(ObjectAnimator.ofFloat(pageButtons::setTranslationY, 20, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
+        pageButtons.startAnimation(ObjectAnimator.ofFloat(pageButtons::setAlpha, 0f, 1f).setDuration(childDuration));
+        pageButtons.startAnimation(ObjectAnimator.ofFloat(pageButtons::setTranslationY, 20, 0).setDuration(duration).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
     }
 
     @Override
