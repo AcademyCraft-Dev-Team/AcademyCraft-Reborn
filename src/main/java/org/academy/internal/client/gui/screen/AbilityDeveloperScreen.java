@@ -140,7 +140,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
                         .size(PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT)
         );
         root.addChild("main", main);
-        playAnimation(
+        main.startAnimation(
                 ObjectAnimator.ofFloat(
                         aFloat ->
                                 main.setLayoutParams(
@@ -160,7 +160,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
             main.addChild("back", back);
 
             var content = new FrameLayoutWidget();
-            back.setLayoutParams(
+            content.setLayoutParams(
                     new FrameLayoutWidget.LayoutParams()
                             .sizeMode(SizeMode.MATCH_PARENT)
             );
@@ -176,10 +176,10 @@ public final class AbilityDeveloperScreen extends UIScreen {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     main.addChild("content", content);
-                    playAnimation(ObjectAnimator.ofFloat(content::setAlpha, 0f, 1f).setDuration(duration));
+                    content.startAnimation(ObjectAnimator.ofFloat(content::setAlpha, 0f, 1f).setDuration(duration));
                 }
             });
-            playAnimation(anim);
+            main.startAnimation(anim);
             {
                 var leftContent = new LinearLayoutWidget();
                 leftContent.setLayoutParams(

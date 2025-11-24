@@ -5,12 +5,11 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.screen.IAnimationScreen;
 import org.academy.api.client.gui.screen.RenderRoot;
 import org.academy.api.client.gui.widget.*;
 
 public final class InfoAreaUtil {
-    public static LinearLayoutWidget create(RenderRoot ui, IAnimationScreen animation, float left, float top) {
+    public static LinearLayoutWidget create(RenderRoot ui, float left, float top) {
         var infoArea = new FrameLayoutWidget();
         infoArea.setLayoutParams(
                 new FrameLayoutWidget.LayoutParams()
@@ -18,8 +17,8 @@ public final class InfoAreaUtil {
                         .sizeMode(SizeMode.WRAP_CONTENT)
         );
         ui.getRoot().addChild("area_info", infoArea);
-        animation.playAnimation(ObjectAnimator.ofFloat(infoArea::setAlpha, 0, 1).setDuration(600));
-        animation.playAnimation(ObjectAnimator.ofFloat(infoArea::setTranslationY, 20, 0).setDuration(600).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
+        infoArea.startAnimation(ObjectAnimator.ofFloat(infoArea::setAlpha, 0, 1).setDuration(600));
+        infoArea.startAnimation(ObjectAnimator.ofFloat(infoArea::setTranslationY, 20, 0).setDuration(600).setInterpolator(EasingFunctions.EASE_OUT_CUBIC));
         {
             var back = new BlendQuadWidget();
             back.setAlpha(0.5f);

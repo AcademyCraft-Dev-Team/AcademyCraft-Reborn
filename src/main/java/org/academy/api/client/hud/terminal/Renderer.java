@@ -15,7 +15,7 @@ import org.academy.api.client.gui.render.UIContext;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public final class Renderer implements AutoCloseable {
     private final Config config;

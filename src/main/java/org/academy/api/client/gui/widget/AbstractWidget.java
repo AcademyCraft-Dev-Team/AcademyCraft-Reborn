@@ -1,11 +1,16 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
 import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class AbstractWidget implements Widget {
     protected WidgetContainer.LayoutParams layoutParams = WidgetContainer.LayoutParams.NONE;
@@ -26,6 +31,9 @@ public abstract class AbstractWidget implements Widget {
     protected float scrollX = 0f;
     protected float scrollY = 0f;
     protected String name = "";
+
+    private boolean isAttached = false;
+    private final List<Animator> attachedAnimators = new ArrayList<>();
 
     @Nullable
     protected Drawable background = null;
@@ -469,5 +477,58 @@ public abstract class AbstractWidget implements Widget {
     @Nullable
     public Drawable getForeground() {
         return foreground;
+    }
+
+    @Override
+    public boolean isAttached() {
+        return isAttached;
+    }
+
+    @Override
+    public void dispatchAttached() {
+        if (isAttached) return;
+        isAttached = true;
+        onAttached();
+    }
+
+    @Override
+    public void dispatchDetached() {
+        if (!isAttached) return;
+        onDetached();
+        isAttached = false;
+    }
+
+    @Override
+    public void onAttached() {
+    }
+
+    @Override
+    public void onDetached() {
+        cancelAnimations();
+    }
+
+    @Override
+    public void startAnimation(Animator animator) {
+        attachedAnimators.add(animator);
+        animator.addListener(new AnimatorListener() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                attachedAnimators.remove(animation);
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                attachedAnimators.remove(animation);
+            }
+        });
+        animator.start();
+    }
+
+    @Override
+    public void cancelAnimations() {
+        for (var anim : new ArrayList<>(attachedAnimators)) {
+            anim.cancel();
+        }
+        attachedAnimators.clear();
     }
 }

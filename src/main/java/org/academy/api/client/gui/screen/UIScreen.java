@@ -6,22 +6,13 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.client.gui.widget.WidgetContainer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-public abstract class UIScreen extends Screen implements RenderRoot, IAnimationScreen {
+public abstract class UIScreen extends Screen implements RenderRoot {
     protected final FrameLayoutWidget root = new FrameLayoutWidget();
-    private final List<Animator> screenAnimations = new ArrayList<>();
-    private final Map<Widget, List<Animator>> trackedAnimations = new HashMap<>();
 
     protected UIScreen(Component title) {
         super(title);
@@ -40,6 +31,10 @@ public abstract class UIScreen extends Screen implements RenderRoot, IAnimationS
         root.clearChildren();
 
         onInit();
+
+        if (!root.isAttached()) {
+            root.dispatchAttached();
+        }
     }
 
     protected abstract void onInit();
@@ -62,7 +57,9 @@ public abstract class UIScreen extends Screen implements RenderRoot, IAnimationS
     @Override
     public void removed() {
         super.removed();
-        cancelAllAnimations();
+        if (root.isAttached()) {
+            root.dispatchDetached();
+        }
     }
 
     @Override
@@ -145,15 +142,5 @@ public abstract class UIScreen extends Screen implements RenderRoot, IAnimationS
         if (event.isConsumed()) return true;
 
         return super.charTyped(e);
-    }
-
-    @Override
-    public List<Animator> getScreenAnimations() {
-        return screenAnimations;
-    }
-
-    @Override
-    public Map<Widget, List<Animator>> getTrackedAnimations() {
-        return trackedAnimations;
     }
 }
