@@ -23,7 +23,7 @@ public final class GlyphCommandGenerator {
             boolean shadow
     ) {
         var visitor = new CommandGlyphVisitor();
-        var preparedText = font.prepareText(text, x, y, color, shadow, 0);
+        var preparedText = font.prepareText(text, x, y, color, shadow, false, 0);
         preparedText.visit(visitor);
         return visitor.getCommands();
     }
@@ -59,8 +59,8 @@ public final class GlyphCommandGenerator {
         }
 
         @Override
-        public void acceptGlyph(TextRenderable textRenderable) {
-            commandList.add(new GlyphDrawCommand(textRenderable));
+        public void acceptGlyph(TextRenderable.Styled styled) {
+            commandList.add(new GlyphDrawCommand(styled));
         }
 
         @Override

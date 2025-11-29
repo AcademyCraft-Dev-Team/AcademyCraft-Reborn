@@ -35,7 +35,7 @@ void main() {
         edgeFactor = (1.0 - progress_in_ring) / ringEdgeBlur;
     }
 
-    vec2 direction = normalize(centeredUV);
+    vec2 direction = normalize(vec2(centeredUV.y, -centeredUV.x));
     vec2 offset = direction * intensity * distortionStrength * edgeFactor;
     vec2 distortedUV = screenUV + offset;
 

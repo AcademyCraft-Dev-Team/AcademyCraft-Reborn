@@ -8,9 +8,9 @@ import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.blockentity.OmniCraftingTableRenderer;
-import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
-import java.util.Set;
+import java.util.function.Consumer;
 
 public final class OmniCraftingTableSpecialRenderer implements NoDataSpecialModelRenderer {
     public static final OmniCraftingTableSpecialRenderer INSTANCE = new OmniCraftingTableSpecialRenderer();
@@ -32,7 +32,7 @@ public final class OmniCraftingTableSpecialRenderer implements NoDataSpecialMode
     }
 
     @Override
-    public void getExtents(Set<Vector3f> output) {
+    public void getExtents(Consumer<Vector3fc> output) {
         var posestack = new PoseStack();
         posestack.scale(1.0F, -1.0F, -1.0F);
         OmniCraftingTableRenderer.MODEL.root().getExtentsForGui(posestack, output);

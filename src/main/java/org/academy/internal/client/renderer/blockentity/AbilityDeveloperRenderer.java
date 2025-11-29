@@ -10,7 +10,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.render.RenderTypes;
+import org.academy.api.client.Render;
 import org.academy.internal.client.model.AbilityDeveloperModel;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -52,7 +52,7 @@ public final class AbilityDeveloperRenderer implements BlockEntityRenderer<Abili
             poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
             poseStack.translate(0, 0, -1);
 
-            submitNodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.ABILITY_DEVELOPER, renderState.lightCoords, OverlayTexture.NO_OVERLAY, 0, renderState.breakProgress);
+            submitNodeCollector.submitModel(MODEL, renderState, poseStack, Render.RenderTypes.ABILITY_DEVELOPER, renderState.lightCoords, OverlayTexture.NO_OVERLAY, 0, renderState.breakProgress);
 
             poseStack.popPose();
         }

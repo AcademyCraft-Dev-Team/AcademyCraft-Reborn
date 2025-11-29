@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.teleport.skills;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
@@ -29,7 +28,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -40,13 +39,12 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
 
 public final class SelfTeleport extends Skill {
-    public static InputSystem.InputPair KEY_START;
-    public static InputSystem.InputPair KEY_END;
-    public static Client.Config CONFIG;
+    public static InputSystem.@Nullable InputPair KEY_START;
+    public static InputSystem.@Nullable InputPair KEY_END;
+    public static Client.@Nullable Config CONFIG;
 
     public SelfTeleport() {
         super(Builder
@@ -87,7 +85,7 @@ public final class SelfTeleport extends Skill {
         @SubscribePacket
         public static void handleTeleport(SelfTeleportPacket packet) {
             var serverPlayer = packet.getPacketListener().getPlayer();
-            packet.getPosition().ifPresent(pos -> {
+            var pos = packet.getPosition();
                 var dimensions = serverPlayer.getDimensions(Pose.STANDING);
                 var playerHeight = dimensions.height();
                 var teleportY = pos.y() - (playerHeight / 2.0);
@@ -95,13 +93,13 @@ public final class SelfTeleport extends Skill {
                 serverPlayer.resetFallDistance();
                 serverPlayer.setDeltaMovement(0, 0.25, 0);
                 serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(serverPlayer));
-            });
         }
     }
 
     private static final class Client {
         public static final String KEY_NAME_START = SkillNames.SELF_TELEPORT + "_start";
         public static final String KEY_NAME_END = SkillNames.SELF_TELEPORT + "_end";
+        @Nullable
         public static TeleportRenderContext currentContext = null;
 
         private static void start() {
@@ -123,7 +121,7 @@ public final class SelfTeleport extends Skill {
             }
         }
 
-        public static class TeleportRenderContext implements ClientContext {
+        public static class TeleportRenderContext extends ClientContext {
             private double distance = 10;
             private final LocalPlayer player;
             public Vec3 currentRenderPos;
@@ -221,7 +219,7 @@ public final class SelfTeleport extends Skill {
                 var matrixStack = event.getMatrixStack();
                 var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
                 var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-                var camPos = camera.getPosition();
+                var camPos = camera.position();
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
@@ -245,12 +243,12 @@ public final class SelfTeleport extends Skill {
                 }
 
                 @Override
-                public @NotNull SelfTeleport.Client.Config getDefault() {
+                public SelfTeleport.Client.Config getDefault() {
                     return new Config();
                 }
 
                 @Override
-                public @NotNull Class<Config> getTypeClass() {
+                public Class<Config> getTypeClass() {
                     return Config.class;
                 }
             }
@@ -259,27 +257,16 @@ public final class SelfTeleport extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class SelfTeleportPacket extends Packet<ServerGamePacketListenerImpl, SelfTeleportPacket> {
-        private static final StreamCodec<ByteBuf, Vec3> VEC3_CODEC = StreamCodec.composite(
-                ByteBufCodecs.DOUBLE, Vec3::x,
-                ByteBufCodecs.DOUBLE, Vec3::y,
-                ByteBufCodecs.DOUBLE, Vec3::z,
-                Vec3::new
-        );
-
-        public static final StreamCodec<ByteBuf, SelfTeleportPacket> CODEC = ByteBufCodecs.optional(VEC3_CODEC)
+        public static final StreamCodec<ByteBuf, SelfTeleportPacket> CODEC = Vec3.STREAM_CODEC
                 .map(SelfTeleportPacket::new, SelfTeleportPacket::getPosition);
 
-        private final Optional<Vec3> position;
+        private final Vec3 position;
 
-        public SelfTeleportPacket(Optional<Vec3> position) {
+        public SelfTeleportPacket(Vec3 position) {
             this.position = position;
         }
 
-        public SelfTeleportPacket(Vec3 position) {
-            this(Optional.of(position));
-        }
-
-        public Optional<Vec3> getPosition() {
+        public Vec3 getPosition() {
             return position;
         }
 

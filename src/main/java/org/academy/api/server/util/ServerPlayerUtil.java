@@ -38,11 +38,6 @@ public final class ServerPlayerUtil {
         }
     }
 
-    public static void openMenuScreen(ServerPlayer serverPlayer, MenuProvider menuProvider, String screenName) {
-        openMenuScreen(serverPlayer, menuProvider, screenName, buf -> {
-        });
-    }
-
     private ServerPlayerUtil() {
     }
 }

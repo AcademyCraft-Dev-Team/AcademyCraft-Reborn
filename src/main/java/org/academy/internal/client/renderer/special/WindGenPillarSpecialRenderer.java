@@ -7,9 +7,9 @@ import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.blockentity.WindGenBaseRenderer;
-import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
-import java.util.Set;
+import java.util.function.Consumer;
 
 public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRenderer {
     public static final WindGenPillarSpecialRenderer INSTANCE = new WindGenPillarSpecialRenderer();
@@ -18,7 +18,7 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
     }
 
     @Override
-    public void getExtents(Set<Vector3f> output) {
+    public void getExtents(Consumer<Vector3fc> output) {
     }
 
     @Override

@@ -1,7 +1,6 @@
 package org.academy.api.client;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
@@ -10,28 +9,33 @@ import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.resource.CrossFrameResourcePool;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.neoforged.neoforge.client.stencil.StencilFunction;
 import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
-import java.util.Map;
+import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 import static com.mojang.blaze3d.pipeline.RenderPipeline.builder;
-import static net.minecraft.client.renderer.RenderStateShard.EmptyTextureStateShard;
+import static net.minecraft.client.renderer.rendertype.RenderType.create;
 import static org.academy.AcademyCraft.academy;
 import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 
@@ -49,34 +53,34 @@ public final class Render {
 
     public static void runBlitPassNDC(
             GpuTextureView color, RenderPipeline pipeline,
-            Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms,
+            List<TextureBinding> textures, List<UniformBinding> uniforms,
             boolean clear
     ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadVBNDC(), samplers, uniforms, clear);
+        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadVBNDC(), textures, uniforms, clear);
     }
 
     public static void runBlitPassSDC(
             GpuTextureView color, RenderPipeline pipeline,
-            Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms,
+            List<TextureBinding> textures, List<UniformBinding> uniforms,
             boolean clear
     ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadVBSDC(), samplers, uniforms, clear);
+        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadVBSDC(), textures, uniforms, clear);
     }
 
     public static void runBlitPassColorSDC(
             GpuTextureView color, RenderPipeline pipeline,
-            Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms,
+            List<TextureBinding> textures, List<UniformBinding> uniforms,
             boolean clear
     ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadColorVBSDC(), samplers, uniforms, clear);
+        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadColorVBSDC(), textures, uniforms, clear);
     }
 
     public static void runBlitPass(
             GpuTextureView color, RenderPipeline pipeline, GpuBuffer fullscreenQuadVertexBuffer,
-            Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms,
+            List<TextureBinding> textures, List<UniformBinding> uniforms,
             boolean clear
     ) {
-        runBlitPass(color, null, pipeline, fullscreenQuadVertexBuffer, samplers, uniforms, clear);
+        runBlitPass(color, null, clear, false, pipeline, fullscreenQuadVertexBuffer, textures, uniforms);
     }
 
     /**
@@ -84,37 +88,43 @@ public final class Render {
      * @param depth 模板喵
      * @param pipeline 管线喵
      * @param fullscreenQuadVertexBuffer 顶点缓冲区喵
-     * @param samplers Samplers 喵
+     * @param textures Textures 喵
      * @param uniforms Uniforms 喵
-     * @param clear 是否在输出前 clear 喵
+     * @param clearColor 是否在输出前清除颜色喵
+     * @param clearDepth 是否在输出前清除深度喵
      */
     public static void runBlitPass(
             GpuTextureView color, @Nullable GpuTextureView depth,
+            boolean clearColor, boolean clearDepth,
             RenderPipeline pipeline, GpuBuffer fullscreenQuadVertexBuffer,
-            Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms,
-            boolean clear
+            List<TextureBinding> textures, List<UniformBinding> uniforms
     ) {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        var clearColor = clear ? OptionalInt.of(0) : OptionalInt.empty();
 
         try (
                 var renderPass = depth == null
                         ? commandEncoder.createRenderPass
                         (
                                 () -> "Blit Pass to " + color,
-                                color, clearColor
+                                color,
+                                clearColor ? OptionalInt.of(0) : OptionalInt.empty()
                         )
                         : commandEncoder.createRenderPass
                         (
                                 () -> "Blit Pass to " + color + depth,
-                                color, clearColor,
-                                depth, OptionalDouble.empty()
+                                color,
+                                clearColor ? OptionalInt.of(0) : OptionalInt.empty(),
+                                depth,
+                                clearDepth ? OptionalDouble.of(1) : OptionalDouble.empty()
                         )
         ) {
             renderPass.setPipeline(pipeline);
-            samplers.forEach(renderPass::bindSampler);
-            uniforms.forEach(renderPass::setUniform);
-
+            for (var texture : textures) {
+                renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
+            }
+            for (var uniform : uniforms) {
+                renderPass.setUniform(uniform.name(), uniform.slice());
+            }
             renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer);
             var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
             renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
@@ -548,57 +558,30 @@ public final class Render {
         }
     }
 
-    public static final class TextureStateShards {
-        public static final EmptyTextureStateShard ARC = blur(Resource.Textures.ARC);
 
-        public static final EmptyTextureStateShard MAIN_SCENE = new EmptyTextureStateShard(
-                () -> RenderSystem.setShaderTexture(0, PostEffect.MAIN_SCENE.getColorTextureView()),
-                () -> {
-                }
-        );
-
-        public static EmptyTextureStateShard pixel(ResourceLocation texture) {
-            return new EmptyTextureStateShard(() -> {
-                var texturemanager = Minecraft.getInstance().getTextureManager();
-                var abstracttexture = texturemanager.getTexture(texture);
-                abstracttexture.setFilter(false, false);
-                RenderSystem.setShaderTexture(0, abstracttexture.getTextureView());
-            }, () -> {
-            });
-        }
-
-        public static EmptyTextureStateShard blur(ResourceLocation texture) {
-            return new RenderStateShard.TextureStateShard(texture, true);
-        }
-    }
-
-    public abstract static class RenderTypes extends RenderType {
+    public abstract static class RenderTypes extends net.minecraft.client.renderer.rendertype.RenderTypes {
         public static final RenderType ARC = create(
                 "arc",
-                1536,
-                RenderPipelines.LEVEL_POS_TEX_COLOR,
-                CompositeState.builder()
-                        .setTextureState(TextureStateShards.ARC)
-                        .setOutputState(BLOOM_TARGET)
-                        .setLightmapState(LIGHTMAP)
-                        .setOverlayState(OVERLAY)
-                        .createCompositeState(false)
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR)
+                        .withTexture(
+                                "Sampler0", Resource.Textures.ARC,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .setOutputTarget(BLOOM_TARGET)
+                        .sortOnUpload()
+                        .createRenderSetup()
         );
 
         public static final RenderType POS_COLOR_QUADS = create(
                 "pos_color_quads",
-                1536,
-                RenderPipelines.LEVEL_POS_COLOR_QUADS,
-                CompositeState.builder()
-                        .createCompositeState(false)
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
+                        .createRenderSetup()
         );
 
         public static final RenderType POS_COLOR_TRANGLES = create(
                 "pos_color_trangles",
-                1536,
-                RenderPipelines.LEVEL_POS_COLOR_TRANGLES,
-                CompositeState.builder()
-                        .createCompositeState(false)
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES)
+                        .createRenderSetup()
         );
 
         // 记得使用对应的 BufferSource 喵
@@ -608,11 +591,9 @@ public final class Render {
          */
         public static final RenderType POS_COLOR_QUADS_BLOOM = create(
                 "pos_color_quads_bloom",
-                1536,
-                RenderPipelines.LEVEL_POS_COLOR_QUADS,
-                CompositeState.builder()
-                        .setOutputState(BLOOM_TARGET)
-                        .createCompositeState(false)
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
+                        .setOutputTarget(BLOOM_TARGET)
+                        .createRenderSetup()
         );
 
         /**
@@ -620,11 +601,9 @@ public final class Render {
          */
         public static final RenderType POS_COLOR_TRANGLES_BLOOM = create(
                 "pos_color_trangles_bloom",
-                1536,
-                RenderPipelines.LEVEL_POS_COLOR_TRANGLES,
-                CompositeState.builder()
-                        .setOutputState(BLOOM_TARGET)
-                        .createCompositeState(false)
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES)
+                        .setOutputTarget(BLOOM_TARGET)
+                        .createRenderSetup()
         );
 
         /**
@@ -632,11 +611,9 @@ public final class Render {
          */
         public static final RenderType POS_COLOR_QUADS_BLOOM_POST = create(
                 "pos_color_quads_bloom_post",
-                1536,
-                RenderPipelines.LEVEL_POS_COLOR_QUADS,
-                CompositeState.builder()
-                        .setOutputState(BLOOM_TARGET)
-                        .createCompositeState(false)
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
+                        .setOutputTarget(BLOOM_TARGET)
+                        .createRenderSetup()
         );
 
         /**
@@ -644,23 +621,54 @@ public final class Render {
          */
         public static final RenderType POS_COLOR_TRANGLES_BLOOM_POST = create(
                 "pos_color_trangles_bloom_post",
-                1536,
-                RenderPipelines.LEVEL_POS_COLOR_TRANGLES,
-                CompositeState.builder()
-                        .setOutputState(BLOOM_TARGET)
-                        .createCompositeState(false)
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES)
+                        .setOutputTarget(BLOOM_TARGET)
+                        .createRenderSetup()
         );
 
-        public static final RenderType DISTORTION_RING = create(
-                "distortion_ring",
-                1536,
-                RenderPipelines.DISTORTION_RING,
-                CompositeState.builder()
-                        .setTextureState(TextureStateShards.MAIN_SCENE)
-                        .createCompositeState(false)
-        );
+        public static final RenderType DISTORTION_RING;
+        public static final RenderType ABILITY_DEVELOPER = entityTranslucent(Resource.Textures.MODEL_ABILITY_DEVELOPER);
+        public static final RenderType CAT_ENGINE = entityTranslucent(Resource.Textures.CAT_ENGINE);
+        public static final RenderType CLEANING_ROBOT = entitySolid(Resource.Textures.CLEANING_ROBOT);
 
         static {
+            var id = academy("render/distortion_ring");
+            Minecraft.getInstance().getTextureManager().register(
+                    id,
+                    new AbstractTexture() {
+                        @Override
+                        public GpuTexture getTexture() {
+                            var tex = PostEffect.MAIN_SCENE.getColorTexture();
+                            return tex
+                                    == null
+                                    ?
+                                    Minecraft.getInstance().getTextureManager().getTexture(
+                                            MissingTextureAtlasSprite.getLocation()
+                                    ).getTexture()
+                                    :
+                                    tex;
+                        }
+
+                        @Override
+                        public GpuTextureView getTextureView() {
+                            var tex = PostEffect.MAIN_SCENE.getColorTextureView();
+                            return tex
+                                    == null
+                                    ?
+                                    Minecraft.getInstance().getTextureManager().getTexture(
+                                            MissingTextureAtlasSprite.getLocation()
+                                    ).getTextureView()
+                                    :
+                                    tex;
+                        }
+                    }
+            );
+            DISTORTION_RING = create(
+                    "distortion_ring",
+                    RenderSetup.builder(RenderPipelines.DISTORTION_RING)
+                            .withTexture("Sampler0", id)
+                            .createRenderSetup()
+            );
             PostEffect.addFixedBuffer(POS_COLOR_QUADS);
             PostEffect.addFixedBuffer(POS_COLOR_TRANGLES);
             PostEffect.addFixedBuffer(POS_COLOR_QUADS_BLOOM);
@@ -669,8 +677,7 @@ public final class Render {
             BloomEffect.addFixedBuffer(POS_COLOR_TRANGLES_BLOOM_POST);
         }
 
-        private RenderTypes(Runnable a, Runnable b) {
-            super("", -1, false, false, a, b);
+        private RenderTypes() {
         }
     }
 

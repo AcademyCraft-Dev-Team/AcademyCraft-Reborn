@@ -11,8 +11,9 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.level.block.Blocks;
 import org.academy.api.client.Resource;
 import org.academy.api.client.compatibility.IrisCompat;
@@ -34,7 +35,7 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
     private final KeyframeAnimation full;
 
     public WirelessNodeModel(ModelPart root) {
-        super(root.getChild("all"), RenderType::entityTranslucent);
+        super(root.getChild("all"), RenderTypes::entityTranslucent);
         all = root.getChild("all");
         core_li = all.getChild("core_li");
         base2 = all.getChild("base2");
@@ -224,7 +225,7 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
 
         RenderType type;
         if (!IrisCompat.isShaderPackInUse()) {
-            type = RenderType.endGateway();
+            type = RenderTypes.endGateway();
         } else {
             var blockStateIds = WorldRenderingSettings.INSTANCE.getBlockStateIds();
 
@@ -233,7 +234,7 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
                 CapturedRenderingState.INSTANCE.setCurrentBlockEntity(intId);
             }
 
-            type = RenderType.entitySolid(END_PORTAL_LOCATION);
+            type = RenderTypes.entitySolid(END_PORTAL_LOCATION);
         }
 
         submitNodeCollector.submitModelPart(innner_ef, poseStack, type, packedLight, packedOverlay, null);

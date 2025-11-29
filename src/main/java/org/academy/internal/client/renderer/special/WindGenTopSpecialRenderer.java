@@ -3,29 +3,22 @@ package org.academy.internal.client.renderer.special;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.Resource;
 import org.academy.internal.client.renderer.blockentity.WindGenTopRenderer;
 import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderState;
-import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
-import java.util.Set;
+import java.util.function.Consumer;
 
 public final class WindGenTopSpecialRenderer implements NoDataSpecialModelRenderer {
     public static final WindGenTopSpecialRenderer INSTANCE = new WindGenTopSpecialRenderer();
 
     private WindGenTopSpecialRenderer() {
-    }
-
-    @Override
-    public void getExtents(Set<Vector3f> output) {
-        var posestack = new PoseStack();
-        posestack.scale(1.0F, -1.0F, -1.0F);
-        WindGenTopRenderer.MODEL.root().getExtentsForGui(posestack, output);
     }
 
     @Override
@@ -40,8 +33,15 @@ public final class WindGenTopSpecialRenderer implements NoDataSpecialModelRender
         if (displayContext.firstPerson()){
             poseStack.mulPose(Axis.YN.rotationDegrees(90));
         }
-        nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderType.entityTranslucent(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, outlineColor, null);
+        nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderTypes.entityTranslucent(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, outlineColor, null);
         poseStack.popPose();
+    }
+
+    @Override
+    public void getExtents(Consumer<Vector3fc> output) {
+        var posestack = new PoseStack();
+        posestack.scale(1.0F, -1.0F, -1.0F);
+        WindGenTopRenderer.MODEL.root().getExtentsForGui(posestack, output);
     }
 
     public record Unbaked() implements SpecialModelRenderer.Unbaked {

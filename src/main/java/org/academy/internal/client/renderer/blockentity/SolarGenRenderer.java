@@ -2,10 +2,10 @@ package org.academy.internal.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -51,7 +51,7 @@ public final class SolarGenRenderer implements BlockEntityRenderer<SolarGenBlock
         poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
         MODEL.setupAnim(renderState);
-        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderType.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, renderState.breakProgress);
+        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, renderState.breakProgress);
 
         poseStack.popPose();
     }

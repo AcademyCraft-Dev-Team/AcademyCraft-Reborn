@@ -3,40 +3,26 @@ package org.academy.api.common.ability;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.Util;
 import net.minecraft.locale.Language;
-import net.minecraft.network.VarInt;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.Util;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.registries.Registries;
-import org.academy.internal.server.world.level.storage.Player;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public abstract class Skill {
     public static final Codec<Skill> CODEC =
-            Codec.INT.xmap(Registries.SKILLS::byId, Registries.SKILLS::getId);
-    public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = new StreamCodec<>() {
-        @Override
-        public Skill decode(ByteBuf buffer) {
-            return Registries.SKILLS.byIdOrThrow(VarInt.read(buffer));
-        }
-
-        @Override
-        public void encode(ByteBuf buffer, Skill value) {
-            VarInt.write(buffer, Registries.SKILLS.getId(value));
-        }
-    };
+            Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
+    public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
-            (StreamCodec.CodecOperation<ByteBuf, Skill, Set<Skill>>)
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
     );
 
@@ -57,6 +43,10 @@ public abstract class Skill {
             var dependencyResolver = new DependencyResolver(this, builder.dependencyHolders);
             NeoForge.EVENT_BUS.register(dependencyResolver);
         }
+    }
+
+    public static <T extends Context> Map<Player, T> createContextMap() {
+        return new WeakHashMap<>();
     }
 
     public final Set<Skill> getDependencies() {
@@ -84,12 +74,7 @@ public abstract class Skill {
         return energyCostToLearn;
     }
 
-    public Player.SkillData getDefaultSkillData() {
-        return new Player.SkillData() {
-        };
-    }
-
-    public ResourceLocation getKey() {
+    public Identifier getKey() {
         var key = Registries.SKILLS.getKey(this);
         if (key == null) {
             throw new IllegalStateException("This skill has not been registered: " + this);

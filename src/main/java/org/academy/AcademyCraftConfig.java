@@ -1,8 +1,8 @@
 package org.academy;
 
 import com.google.gson.*;
-import net.minecraft.Util;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Util;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.UncheckedUtil;
 
@@ -31,7 +31,7 @@ public final class AcademyCraftConfig {
         HANDLER_MAP.put(configKey, handler);
     }
 
-    public static void registerTypeHandler(ResourceLocation configKey, TypeHandler<?> handler) {
+    public static void registerTypeHandler(Identifier configKey, TypeHandler<?> handler) {
         registerTypeHandler(Util.makeDescriptionId("config", configKey), handler);
     }
 
@@ -78,7 +78,7 @@ public final class AcademyCraftConfig {
         return handler.getAdapter(GSON).toJsonTree(instance);
     }
 
-    public <T> T getConfig(ResourceLocation configKey) {
+    public <T> T getConfig(Identifier configKey) {
         return getConfig(Util.makeDescriptionId("config", configKey));
     }
 
@@ -104,18 +104,11 @@ public final class AcademyCraftConfig {
             configInstance = handler.getAdapter(GSON).fromJsonTree(jsonElement);
         }
 
-        if (configInstance == null) {
-            throw new IllegalStateException(
-                    "TypeHandler for key '" + configKey + "' (" + handler.getClass().getName() +
-                            ") illegally returned a null value either from getDefault() or fromJsonTree()."
-            );
-        }
-
         runtimeConfigCache.put(configKey, configInstance);
         return configInstance;
     }
 
-    public void setConfig(ResourceLocation configKey, Object configInstance) {
+    public void setConfig(Identifier configKey, Object configInstance) {
         setConfig(Util.makeDescriptionId("config", configKey), configInstance);
     }
 

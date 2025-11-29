@@ -4,8 +4,11 @@ import net.minecraft.client.animation.KeyframeAnimation;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import org.academy.internal.client.definitions.SolarGenAnimation;
 import org.academy.internal.client.renderer.blockentity.state.SolarGenRenderState;
 
@@ -19,7 +22,7 @@ public final class SolarGenModel extends Model<SolarGenRenderState> {
     private final KeyframeAnimation unfolding;
 
     public SolarGenModel(ModelPart root) {
-        super(root, RenderType::entityCutout);
+        super(root, RenderTypes::entityCutout);
         all = root.getChild("all");
         bottom = all.getChild("bottom");
         pole = bottom.getChild("pole");
