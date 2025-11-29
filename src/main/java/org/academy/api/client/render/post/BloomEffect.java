@@ -17,16 +17,17 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import org.academy.api.client.Render;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
-import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 import java.util.SequencedMap;
 
 import static org.academy.api.client.render.post.PostEffect.MAIN_SCENE;
@@ -42,7 +43,7 @@ public final class BloomEffect {
     private static final MultiBufferSource.BufferSource BLIT_TO_MAIN_POST =
             PostEffect.createPostEffectPassBuffer(FIXED_BUFFERS);
 
-    public static final RenderStateShard.OutputStateShard BLOOM_TARGET = new RenderStateShard.OutputStateShard(
+    public static final OutputTarget BLOOM_TARGET = new OutputTarget(
             "bloom_target",
             () -> getInstance().getInput()
     );
@@ -60,7 +61,6 @@ public final class BloomEffect {
                 null, mainRenderTarget.width, mainRenderTarget.height,
                 true, mainRenderTarget.useStencil
         );
-        input.setFilterMode(FilterMode.LINEAR);
 
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
@@ -131,7 +131,6 @@ public final class BloomEffect {
     public static void resize(int width, int height) {
         if (instance != null) {
             instance.input.resize(width, height);
-            instance.input.setFilterMode(FilterMode.LINEAR);
         }
     }
 
@@ -161,8 +160,13 @@ public final class BloomEffect {
     ) {
         writeBlurUniforms(outSize, dirX, dirY, radius);
         var blurUboSlice = blurUniformsBuffer.slice();
-        Render.runBlitPassNDC(output, Render.RenderPipelines.GAUSSIAN_BLUR, Map.of("DiffuseSampler", input), Map.of(
-                "BlurInfo", blurUboSlice), true);
+
+        Render.runBlitPassNDC(
+                output,
+                Render.RenderPipelines.GAUSSIAN_BLUR,
+                List.of(new TextureBinding("DiffuseSampler", input, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))),
+                List.of(new UniformBinding("BlurInfo", blurUboSlice)), true
+        );
     }
 
     private void writeBloomUniforms(float radius, float intensity) {
@@ -213,18 +217,17 @@ public final class BloomEffect {
                 if (scene == null || main == null || inputView == null) return;
 
                 input.copyDepthFrom(depthTarget);
+                var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
                 Render.runBlitPassNDC(
                         main, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
-                        Map.of("DiffuseSampler", inputView), Collections.emptyMap(),
+                        List.of(new TextureBinding("DiffuseSampler", inputView, sampler)), List.of(),
                         false
                 );
                 BLIT_TO_MAIN_POST.endBatch();
 
                 {
                     ping = resourcePool.acquire(descHalf);
-                    ping.setFilterMode(FilterMode.LINEAR);
                     pongHalf = resourcePool.acquire(descHalf);
-                    pongHalf.setFilterMode(FilterMode.LINEAR);
                 }
 
                 var pingView = ping.getColorTextureView();
@@ -244,9 +247,7 @@ public final class BloomEffect {
 
                 {
                     ping = resourcePool.acquire(descQuarter);
-                    ping.setFilterMode(FilterMode.LINEAR);
                     pongQuarter = resourcePool.acquire(descQuarter);
-                    pongQuarter.setFilterMode(FilterMode.LINEAR);
                 }
 
                 var pongQuarterView = pongQuarter.getColorTextureView();
@@ -268,9 +269,7 @@ public final class BloomEffect {
 
                 {
                     ping = resourcePool.acquire(descEighth);
-                    ping.setFilterMode(FilterMode.LINEAR);
                     pongEighth = resourcePool.acquire(descEighth);
-                    pongEighth.setFilterMode(FilterMode.LINEAR);
                 }
 
                 pingView = ping.getColorTextureView();
@@ -289,20 +288,22 @@ public final class BloomEffect {
                 ping = null;
 
                 writeBloomUniforms(1.0f, 1.0f);
-                var blendSamplers = Map.of(
-                        "DiffuseSampler", main,
-                        "BlurTexture1", pongHalfView,
-                        "BlurTexture2", pongQuarterView,
-                        "BlurTexture3", pongEighthView
+                var blendSamplers = List.of(
+                        new TextureBinding("DiffuseSampler", main, sampler),
+                        new TextureBinding("BlurTexture1", pongHalfView, sampler),
+                        new TextureBinding("BlurTexture2", pongQuarterView, sampler),
+                        new TextureBinding("BlurTexture3", pongEighthView, sampler)
                 );
                 Render.runBlitPassNDC(
                         main, Render.RenderPipelines.BLOOM_BLEND,
-                        blendSamplers, Map.of("BloomInfo", bloomUniformsBuffer.slice()),
+                        blendSamplers,
+                        List.of(new UniformBinding("BloomInfo", bloomUniformsBuffer.slice())),
                         false
                 );
                 Render.runBlitPassNDC(
                         scene, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
-                        Map.of("DiffuseSampler", main), Collections.emptyMap(),
+                        List.of(new TextureBinding("DiffuseSampler", main, sampler)),
+                        List.of(),
                         false
                 );
                 RenderSystem.getDevice().createCommandEncoder().clearColorTexture(inputView.texture(), 0);

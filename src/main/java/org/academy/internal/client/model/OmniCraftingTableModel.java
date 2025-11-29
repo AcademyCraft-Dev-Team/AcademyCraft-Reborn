@@ -10,8 +10,8 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import org.academy.api.client.Resource;
 import org.academy.api.client.compatibility.IrisCompat;
@@ -44,7 +44,7 @@ public class OmniCraftingTableModel extends Model<OmniCraftingTableRenderState> 
     private final KeyframeAnimation idle;
 
     public OmniCraftingTableModel(ModelPart root) {
-        super(root.getChild("all"), RenderType::entityTranslucent);
+        super(root.getChild("all"), RenderTypes::entityTranslucent);
 
         all = root.getChild("all");
         craftinggrid_end = all.getChild("craftinggrid_end");
@@ -156,7 +156,7 @@ public class OmniCraftingTableModel extends Model<OmniCraftingTableRenderState> 
 
     public void render(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay) {
         nodeCollector.submitModelPart(main, poseStack, renderType(Resource.Textures.OMNI_CRAFTING_TABLE), packedLight, packedOverlay, null);
-        var rt = IrisCompat.isShaderPackInUse() ? RenderType.entitySolid(END_PORTAL_LOCATION) : RenderType.endGateway();
+        var rt = IrisCompat.isShaderPackInUse() ? RenderTypes.entitySolid(END_PORTAL_LOCATION) : RenderTypes.endGateway();
         nodeCollector.submitModelPart(craftinggrid_end, poseStack, rt, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
 
         nodeCollector.submitModelPart(_fluid, poseStack, renderType(Resource.Textures.OMNI_CRAFTING_TABLE), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);

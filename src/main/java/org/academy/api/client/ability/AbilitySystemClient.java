@@ -1,6 +1,6 @@
 package org.academy.api.client.ability;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -10,7 +10,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.packet.sync.s2c.*;
+import org.academy.api.common.ability.pakcet.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -25,7 +25,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
-    public static final Map<Skill,Float> SKILL_EXP = new ConcurrentHashMap<>();
+    public static final Map<Skill, Float> SKILL_EXP = new ConcurrentHashMap<>();
     public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system";
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
     public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
@@ -82,7 +82,7 @@ public final class AbilitySystemClient {
 
     @SubscribePacket
     public static void handleSync(ExpSyncPacket packet) {
-        var skillKey = ResourceLocation.parse(packet.getSkillName());
+        var skillKey = Identifier.parse(packet.getSkillName());
         var exp = packet.getExp();
         var skill = Registries.SKILLS.get(skillKey);
         skill.ifPresent(skillReference -> setSkillExp(skillReference.value(), exp));
@@ -187,6 +187,6 @@ public final class AbilitySystemClient {
         }
     }
 
-    public record SkillInfo(Skill skill, List<SkillInfo> dependencies, ResourceLocation texture, float x, float y) {
+    public record SkillInfo(Skill skill, List<SkillInfo> dependencies, Identifier texture, float x, float y) {
     }
 }

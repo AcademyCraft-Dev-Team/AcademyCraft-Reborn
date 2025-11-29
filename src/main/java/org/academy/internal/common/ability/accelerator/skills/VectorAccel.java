@@ -5,7 +5,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -39,9 +39,9 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -101,7 +101,7 @@ public final class VectorAccel extends Skill {
 
     public static final class Client {
         public static Config CONFIG = new Config();
-        public static Context currentContext = null;
+        public static @Nullable Context currentContext = null;
 
         public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
         public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";
@@ -129,23 +129,23 @@ public final class VectorAccel extends Skill {
                 }
 
                 @Override
-                public @NotNull VectorAccel.Client.Config getDefault() {
+                public VectorAccel.Client.Config getDefault() {
                     return new Config();
                 }
 
                 @Override
-                public @NotNull Class<Config> getTypeClass() {
+                public Class<Config> getTypeClass() {
                     return Config.class;
                 }
             }
         }
 
-        public static final class Context implements ClientContext {
+        public static final class Context extends ClientContext {
             private final LocalPlayer player;
             private boolean released = false;
             private final long chargeStartTime;
             private float chargeRatio;
-            private HitResult lastHitResult;
+            private @Nullable HitResult lastHitResult;
             private final List<Vec3> trajectoryPath = new ArrayList<>();
             private float ringAlpha;
             private Vec3 lastCalculatedDirection = Vec3.ZERO;
@@ -173,8 +173,8 @@ public final class VectorAccel extends Skill {
             private Vec3 calculateDashDirection(float partialTick) {
                 var mc = Minecraft.getInstance();
                 var camera = mc.gameRenderer.getMainCamera();
-                var cameraPos = camera.getPosition();
-                var lookVec = new Vec3(camera.getLookVector());
+                var cameraPos = camera.position();
+                var lookVec = new Vec3(camera.forwardVector());
                 var farPoint = cameraPos.add(lookVec.scale(100.0));
 
                 var hitResult = player.level().clip(new ClipContext(cameraPos, farPoint, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, player));
@@ -196,7 +196,7 @@ public final class VectorAccel extends Skill {
             }
 
             private double calculateSpeedScalar() {
-                var prog = MathUtil.lerpFactorStartEnd(chargeRatio, 0.4f, 1.0f);
+                var prog = Mth.lerp(chargeRatio, 0.4f, 1.0f);
                 return Math.sin(prog) * Server.MAX_VELOCITY_SCALAR;
             }
 
@@ -284,14 +284,14 @@ public final class VectorAccel extends Skill {
             private void renderTrajectoryPath(MatrixStack matrixStack, MultiBufferSource.BufferSource bufferSource, Camera camera) {
                 if (trajectoryPath.size() < 2) return;
 
-                var buffer = bufferSource.getBuffer(RenderType.lightning());
+                var buffer = bufferSource.getBuffer(RenderTypes.lightning());
 
                 for (var i = 0; i < trajectoryPath.size() - 1; i++) {
                     var p1 = trajectoryPath.get(i);
                     var p2 = trajectoryPath.get(i + 1);
 
                     var dir = p2.subtract(p1).normalize();
-                    var cross = dir.cross(p1.subtract(camera.getPosition())).normalize();
+                    var cross = dir.cross(p1.subtract(camera.position())).normalize();
 
                     var width = 0.025f * (1 - (float) i / trajectoryPath.size());
                     var v1 = p1.add(cross.scale(width));
@@ -318,7 +318,7 @@ public final class VectorAccel extends Skill {
                     var lerpFactor = ClientUtil.animationFactor(1.5f);
                     final var ringRadius = 0.4f;
                     var targetAlpha = 0.5f + 0.5f * chargeRatio;
-                    ringAlpha = MathUtil.lerpStartEndFactor(ringAlpha, targetAlpha, lerpFactor);
+                    ringAlpha = Mth.lerp(lerpFactor, ringAlpha, targetAlpha);
 
                     matrixStack.pushPose();
                     matrixStack.translate((float) hitPos.x, (float) hitPos.y, (float) hitPos.z);
@@ -328,7 +328,7 @@ public final class VectorAccel extends Skill {
 
                     matrixStack.translate(0, 0.005f, 0);
 
-                    var consumer = bufferSource.getBuffer(RenderType.lightning());
+                    var consumer = bufferSource.getBuffer(RenderTypes.lightning());
                     var matrix = matrixStack.lastMatrix();
                     var ringHeight = 0.25f;
                     var y_bottom = -ringHeight / 2.0f;
@@ -376,7 +376,7 @@ public final class VectorAccel extends Skill {
                 var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
                 var matrixStack = event.getMatrixStack();
                 var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-                var camPos = camera.getPosition();
+                var camPos = camera.position();
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
@@ -400,7 +400,7 @@ public final class VectorAccel extends Skill {
         public static void handleDash(DashPacket packet) {
             var player = packet.getPacketListener().getPlayer();
 
-            var speedScalarProg = MathUtil.lerpFactorStartEnd(packet.getChargeRatio(), 0.4f, 1.0f);
+            var speedScalarProg = Mth.lerp(packet.getChargeRatio(), 0.4f, 1.0f);
             var actualSpeedScalar = Math.sin(speedScalarProg) * MAX_VELOCITY_SCALAR;
 
             var dashVelocity = packet.getDirection().scale(actualSpeedScalar);

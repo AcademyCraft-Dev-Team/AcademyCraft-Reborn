@@ -1,8 +1,11 @@
 package org.academy.api.client.gui.drawable;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
@@ -12,26 +15,31 @@ import org.jspecify.annotations.Nullable;
 
 public class TextureDrawable implements Drawable {
     @Nullable
-    private final ResourceLocation textureLocation;
+    protected final Identifier textureLocation;
     @Nullable
-    private transient GpuTextureView textureView;
+    protected transient GpuTextureView texture;
+    protected transient GpuSampler sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
 
     private int tintColor = 0xFFFFFFFF;
 
-    public TextureDrawable(@Nullable ResourceLocation textureLocation) {
+    public TextureDrawable(@Nullable Identifier textureLocation) {
         this.textureLocation = textureLocation;
-        textureView = null;
+        texture = null;
     }
 
-    public TextureDrawable(@Nullable GpuTextureView textureView) {
+    public TextureDrawable(@Nullable GpuTextureView texture) {
         textureLocation = null;
-        this.textureView = textureView;
+        this.texture = texture;
+    }
+
+    public void setSampler(GpuSampler sampler) {
+        this.sampler = sampler;
     }
 
     @Override
     public void draw(RenderContext context, Widget widget) {
         resolveAndPrepareTexture();
-        if (textureView == null) return;
+        if (texture == null) return;
 
         var lp = widget.getLayoutParams();
         var paddedWidth = widget.getWidth() - lp.paddingLeft - lp.paddingRight;
@@ -51,25 +59,25 @@ public class TextureDrawable implements Drawable {
         context.pose().pushPose();
         context.pose().translate(lp.paddingLeft, lp.paddingTop, 0);
 
-        var command = new ImageDrawCommand(textureView, paddedWidth, paddedHeight, 0, 0, 1, 1, r, g, b, finalAlpha);
+        var command = new ImageDrawCommand(texture, sampler, paddedWidth, paddedHeight, 0, 0, 1, 1, r, g, b, finalAlpha);
         context.submit(command);
 
         context.pose().popPose();
     }
 
     private void resolveAndPrepareTexture() {
-        if (textureView != null && !textureView.isClosed()) return;
+        if (texture != null && !texture.isClosed()) return;
         if (textureLocation == null) {
-            textureView = null;
+            texture = null;
             return;
         }
 
         try {
             var texture = Minecraft.getInstance().getTextureManager().getTexture(textureLocation);
-            textureView = texture.getTextureView();
+            this.texture = texture.getTextureView();
         } catch (Exception e) {
             AcademyCraft.LOGGER.error("Failed to resolve texture view for {}", textureLocation, e);
-            textureView = null;
+            texture = null;
         }
     }
 

@@ -8,9 +8,9 @@ import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.blockentity.WirelessNodeRenderer;
-import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
-import java.util.Set;
+import java.util.function.Consumer;
 
 public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRenderer {
     public static final WirelessNodeSpecialRenderer INSTANCE = new WirelessNodeSpecialRenderer();
@@ -19,7 +19,7 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
     }
 
     @Override
-    public void getExtents(Set<Vector3f> output) {
+    public void getExtents(Consumer<Vector3fc> output) {
         var posestack = new PoseStack();
         posestack.scale(1.0F, -1.0F, -1.0F);
         WirelessNodeRenderer.MODEL.root().getExtentsForGui(posestack, output);

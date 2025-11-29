@@ -1,5 +1,7 @@
 package org.academy.api.client.gui.screen;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -49,6 +51,7 @@ public abstract class UIScreen extends Screen implements RenderRoot {
         guiGraphics.submitBlit(
                 RenderPipelines.GUI_TEXTURED,
                 colorTextureView,
+                RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
                 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
                 0, 1, 1, 0, -1
         );

@@ -2,7 +2,7 @@
 package org.academy.internal.client.app;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -160,7 +160,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
                             controlPanel.addChild("next", nextButton);
                             currentX += btnSize + bigGap;
 
-                            modeButton = new ImageButtonWidget(currentX, 0, btnSize, btnSize, (ResourceLocation) null, MediaPlayer::cyclePlaybackMode);
+                            modeButton = new ImageButtonWidget(currentX, 0, btnSize, btnSize, (Identifier) null, MediaPlayer::cyclePlaybackMode);
                             modeButton.setDefaultHoverEffect(true);
                             controlPanel.addChild("mode_button", modeButton);
                             currentX += btnSize + bigGap;
@@ -201,7 +201,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     private PanelWidget createMediaWidget(MediaInfo mediaInfo, float y, Runnable onClick) {
         var root = new PanelWidget(0, y, 150f - 6f, MEDIA_HEIGHT);
         {
-            var button = new ImageButtonWidget(0, 0, root.getWidth(), root.getHeight(), (ResourceLocation) null, onClick);
+            var button = new ImageButtonWidget(0, 0, root.getWidth(), root.getHeight(), (Identifier) null, onClick);
             root.addChild("button", button);
 
             var back = new FillWidget(0, 0, root.getWidth(), root.getHeight(), 0xFF000000);
@@ -244,7 +244,7 @@ public final class MediaPlayer implements DataTerminalHUD.App {
     }
 
     @Override
-    public @NotNull ResourceLocation getIcon() {
+    public @NotNull Identifier getIcon() {
         return ICON_MUSIC_PLAYER;
     }
 

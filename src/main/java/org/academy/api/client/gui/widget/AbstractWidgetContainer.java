@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.ARGB;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
@@ -95,7 +96,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
 
         var textCommands = GlyphCommandGenerator.generate(font, infoText, 0, 0, textColor, true);
         var textWidth = font.width(infoText);
-        var textHeight = font.wordWrapHeight(infoText, (int) (textWidth / textScale));
+        var textHeight = font.wordWrapHeight(FormattedText.of(infoText), (int) (textWidth / textScale));
 
         context.pose().pushPose();
         {

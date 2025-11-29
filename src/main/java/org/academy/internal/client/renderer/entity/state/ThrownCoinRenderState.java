@@ -1,8 +1,8 @@
 package org.academy.internal.client.renderer.entity.state;
 
-import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import org.academy.internal.common.world.entity.projectile.ThrownCoin;
+import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
 
-public class ThrownCoinRenderState extends EntityRenderState {
-    public ThrownCoin thrownCoin;
+public class ThrownCoinRenderState extends ItemEntityRenderState {
+    public float angle;
+    public float yRot;
 }

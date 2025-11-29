@@ -3,7 +3,7 @@ package org.academy.internal.client.gui.screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
@@ -37,8 +37,8 @@ public final class AbilityDeveloperScreen extends UIScreen {
     public static final float PANEL_RIGHT_SKILL_BACK_WIDTH = 256;
     public static final float PANEL_RIGHT_SKILL_BACK_HEIGHT = 139.5f;
     public static final float PANEL_RIGHT_SKILL_SIZE = 24f;
-    public static final Function<AbilityCategory, ResourceLocation> ABILITY_ICON = abilityCategory ->
-            ResourceLocation.fromNamespaceAndPath(abilityCategory.getKey().getNamespace(),
+    public static final Function<AbilityCategory, Identifier> ABILITY_ICON = abilityCategory ->
+            Identifier.fromNamespaceAndPath(abilityCategory.getKey().getNamespace(),
                     "textures/ability/" + abilityCategory.getKey().getPath() + "/icon_glow.png"
             );
 /*    private PanelWidget screenWirelessPanel = new PanelWidget(0, 0, 0, 0);
@@ -400,7 +400,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
         var abilityCategory = AbilitySystemClient.getCategory();
         var skillInfos = AbilitySystemClient.getSkillInfos().get(abilityCategory);
         if (skillInfos != null) {
-            var skillWidgetMap = new HashMap<ResourceLocation, SkillWidget>();
+            var skillWidgetMap = new HashMap<Identifier, SkillWidget>();
 
             for (var skillInfo : skillInfos) {
                 var skillWidget = new SkillWidget(skillInfo);
@@ -528,7 +528,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
             {
                 var button = new ImageButtonWidget(0, 0,
                         wirelessButtonPanel.getWidth(), wirelessButtonPanel.getHeight(),
-                        (ResourceLocation) null, () -> {
+                        (Identifier) null, () -> {
                     screenWirelessPanel.setVisible(true);
                     screenWirelessPanel.setEnabled(true);
                 });
@@ -626,7 +626,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
         AbilitySystemClient.SkillInfo skillInfo;
         final ImageButtonWidget closeBack;
         final ImageWidget iconBack = new ImageWidget(0, 0, 65, 65, Resource.Textures.UI_DEVELOPER_SKILL_ICON_BG);
-        final ImageWidget icon = new ImageWidget(0, 0, 32.5f, 32.5f, (ResourceLocation) null);
+        final ImageWidget icon = new ImageWidget(0, 0, 32.5f, 32.5f, (Identifier) null);
         final AutoScaleLabelWidget nameLabel = new AutoScaleLabelWidget("", 0, 0, 200);
         final AutoScaleLabelWidget stateLabel = new AutoScaleLabelWidget("", 0, 0, 200);
         final PanelWidget depPanel = new PanelWidget(0, 0, 0, 16);
@@ -635,7 +635,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
 
         public SkillInfoPanel() {
             super(0, 0, 0, 0);
-            closeBack = new ImageButtonWidget(0, 0, AbilityDeveloperScreen.this.width, AbilityDeveloperScreen.this.height, (ResourceLocation) null, () -> {
+            closeBack = new ImageButtonWidget(0, 0, AbilityDeveloperScreen.this.width, AbilityDeveloperScreen.this.height, (Identifier) null, () -> {
                 setEnabled(false);
                 setVisible(false);
             });
@@ -682,7 +682,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
             this.skillInfo = skillInfo;
         }
 
-        public void resolveDependencies(Map<ResourceLocation, SkillWidget> allWidgets) {
+        public void resolveDependencies(Map<Identifier, SkillWidget> allWidgets) {
             resolvedDependencies.clear();
             for (var depInfo : skillInfo.dependencies()) {
                 var depWidget = allWidgets.get(depInfo.skill().getKey());

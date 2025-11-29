@@ -1,10 +1,10 @@
 package org.academy.api.client.hud.terminal;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.widget.AbstractWidgetContainer;
 
 public interface App {
-    ResourceLocation getIcon();
+    Identifier getIcon();
 
     String getName();
 

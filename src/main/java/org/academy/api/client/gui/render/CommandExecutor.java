@@ -14,18 +14,13 @@ import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
+import java.util.*;
 
 public final class CommandExecutor implements AutoCloseable {
-    private static final int INITIAL_CAPACITY = 4 * 1024 * 1024;
+    private static final long INITIAL_CAPACITY = 4L * 1024L * 1024L;
 
     private @Nullable GpuBuffer globalBuffer;
-    private int writeOffset = 0;
+    private long writeOffset = 0L;
 
     private final Deque<FrameRegion> activeRegions = new ArrayDeque<>();
     private final Deque<RetiredBuffer> retiredBuffers = new ArrayDeque<>();
@@ -44,7 +39,7 @@ public final class CommandExecutor implements AutoCloseable {
         if (batches.isEmpty())
             return;
 
-        var meshAbsoluteOffsets = new int[batches.size()];
+        var meshAbsoluteOffsets = new long[batches.size()];
         var allocation = tryAllocate(batches, meshAbsoluteOffsets);
 
         if (globalBuffer == null) {
@@ -62,7 +57,12 @@ public final class CommandExecutor implements AutoCloseable {
         var maxIndexCount = 0;
 
         try (var mapped = RenderSystem.getDevice().createCommandEncoder()
-                .mapBuffer(globalBuffer.slice(allocation.start, allocation.length), false, true)) {
+                .mapBuffer(
+                        globalBuffer.slice(
+                                allocation.start, allocation.length
+                        ), false, true
+                )
+        ) {
 
             var buffer = mapped.data();
 
@@ -71,14 +71,14 @@ public final class CommandExecutor implements AutoCloseable {
                 var mesh = batch.meshData();
                 var srcBuffer = mesh.vertexBuffer();
                 var relativeOffset = meshAbsoluteOffsets[i] - allocation.start;
-                buffer.position(relativeOffset);
+                buffer.position(Math.toIntExact(relativeOffset));
                 buffer.put(srcBuffer);
 
-                var baseVertex = meshAbsoluteOffsets[i] / batch.vertexStride();
+                var baseVertex = Math.toIntExact(meshAbsoluteOffsets[i] / batch.vertexStride());
                 drawCalls.add(new DrawCall(
                         batch.pipeline(),
                         batch.scissorArea(),
-                        batch.samplers(),
+                        batch.textures(),
                         batch.uniforms(),
                         baseVertex,
                         batch.indexCount()
@@ -97,64 +97,61 @@ public final class CommandExecutor implements AutoCloseable {
 
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         try (var renderPass = commandEncoder.createRenderPass(
-                () -> "UIRender", color, OptionalInt.empty(), depth, OptionalDouble.empty()
+                () -> "UIRender",
+                color, OptionalInt.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setIndexBuffer(indexBuffer, indexType);
 
             for (var drawCall : drawCalls) {
-                var hasClosedSampler = false;
+                var pipeline = drawCall.pipeline();
+                if (stencilTest) {
+                    var perFaceTest = new StencilPerFaceTest(
+                            StencilOperation.KEEP,
+                            StencilOperation.KEEP,
+                            StencilOperation.REPLACE,
+                            StencilFunction.ALWAYS
+                    );
+                    var stencilTestConfig = new StencilTest(
+                            perFaceTest, 0xFF, 0xFF, 1
+                    );
+                    pipeline = pipeline.toBuilder()
+                            .withStencilTest(stencilTestConfig)
+                            .build();
+                }
+                renderPass.setPipeline(pipeline);
 
-                {
-                    var pipeline = drawCall.pipeline();
-                    if (stencilTest) {
-                        var perFaceTest = new StencilPerFaceTest(
-                                StencilOperation.KEEP,
-                                StencilOperation.KEEP,
-                                StencilOperation.REPLACE,
-                                StencilFunction.ALWAYS
-                        );
-                        var stencilTestConfig = new StencilTest(
-                                perFaceTest, 0xFF, 0xFF, 1
-                        );
-                        pipeline = pipeline.toBuilder()
-                                .withStencilTest(stencilTestConfig)
-                                .build();
-                    }
-                    renderPass.setPipeline(pipeline);
+                renderPass.setVertexBuffer(0, globalBuffer);
 
-                    renderPass.setVertexBuffer(0, globalBuffer);
+                var scissor = drawCall.scissorArea();
+                if (scissor != null) {
+                    var pos = scissor.getPosition();
+                    var screenX = (int) (pos.x * guiScale);
+                    var screenWidth = (int) (scissor.getWidth() * guiScale);
+                    var screenHeight = (int) (scissor.getHeight() * guiScale);
+                    var screenY = (int) (physicalHeight - (pos.y + scissor.getHeight()) * guiScale);
+                    renderPass.enableScissor(screenX, screenY, screenWidth, screenHeight);
+                } else {
+                    renderPass.disableScissor();
+                }
 
-                    var scissor = drawCall.scissorArea();
-                    if (scissor != null) {
-                        var pos = scissor.getPosition();
-                        var screenX = (int) (pos.x * guiScale);
-                        var screenWidth = (int) (scissor.getWidth() * guiScale);
-                        var screenHeight = (int) (scissor.getHeight() * guiScale);
-                        var screenY = (int) (physicalHeight - (pos.y + scissor.getHeight()) * guiScale);
-                        renderPass.enableScissor(screenX, screenY, screenWidth, screenHeight);
-                    } else {
-                        renderPass.disableScissor();
-                    }
+                RenderSystem.bindDefaultUniforms(renderPass);
+                renderPass.setUniform("Projection", projectionUbo);
+                renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo);
 
-                    RenderSystem.bindDefaultUniforms(renderPass);
-                    renderPass.setUniform("Projection", projectionUbo);
-                    renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo);
-
-                    for (var entry : drawCall.samplers().entrySet()) {
-                        var value = entry.getValue();
-                        if (value.isClosed()) {
-                            AcademyCraft.LOGGER.error("Sampler {} has been closed, skipping draw call.", entry.getKey());
-                            hasClosedSampler = true;
-                            break;
-                        }
-                        renderPass.bindSampler(entry.getKey(), value);
-                    }
-                    if (hasClosedSampler) {
+                for (var texture : drawCall.textures()) {
+                    var value = texture.view();
+                    if (value.isClosed()) {
+                        AcademyCraft.LOGGER.error("Sampler {} has been closed, skipping draw call.", texture.name());
                         continue;
                     }
-                    for (var entry : drawCall.uniforms().entrySet()) {
-                        renderPass.setUniform(entry.getKey(), entry.getValue());
+                    renderPass.bindTexture(texture.name(), value, texture.sampler());
+                }
+                for (var uniform : drawCall.uniforms()) {
+                    var since = uniform.slice();
+                    if (since.buffer().isClosed()) {
+                        AcademyCraft.LOGGER.error("Uniform {} has been closed, skipping draw call.", uniform.name());
                     }
+                    renderPass.setUniform(uniform.name(), since);
                 }
 
                 renderPass.drawIndexed(drawCall.baseVertex(), 0, drawCall.indexCount(), 1);
@@ -166,7 +163,7 @@ public final class CommandExecutor implements AutoCloseable {
         writeOffset = allocation.end;
     }
 
-    private AllocationResult tryAllocate(List<PendingBatch> batches, int[] outOffsets) {
+    private AllocationResult tryAllocate(List<PendingBatch> batches, long[] outOffsets) {
         var currentPtr = writeOffset;
 
         for (var i = 0; i < batches.size(); i++) {
@@ -222,7 +219,7 @@ public final class CommandExecutor implements AutoCloseable {
         }
     }
 
-    private boolean isRegionConflicted(int start, int end) {
+    private boolean isRegionConflicted(long start, long end) {
         cleanupActiveRegions();
         for (var region : activeRegions) {
             if (region.intersects(start, end)) {
@@ -249,21 +246,23 @@ public final class CommandExecutor implements AutoCloseable {
             retiredBuffers.add(new RetiredBuffer(globalBuffer, new ArrayDeque<>(activeRegions)));
             globalBuffer = null;
             activeRegions.clear();
-            writeOffset = 0;
+            writeOffset = 0L;
         }
     }
 
-    private void ensureCapacity(int requiredBytes) {
+    private void ensureCapacity(long requiredBytes) {
         var newSize = Math.max(INITIAL_CAPACITY, requiredBytes);
         if (!retiredBuffers.isEmpty()) {
             newSize = Math.max(retiredBuffers.getLast().buffer.size(), newSize);
         }
         var usage = GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_WRITE;
-        globalBuffer = RenderSystem.getDevice().createBuffer(() -> "AC_UI_StreamingBuffer", usage, newSize);
-        writeOffset = 0;
+        globalBuffer = RenderSystem.getDevice().createBuffer(
+                () -> "AC UI StreamingBuffer", usage, newSize
+        );
+        writeOffset = 0L;
     }
 
-    private static int align(int offset, int alignment) {
+    private static long align(long offset, int alignment) {
         return (offset + (alignment - 1)) / alignment * alignment;
     }
 
@@ -281,11 +280,11 @@ public final class CommandExecutor implements AutoCloseable {
             retired.free();
         }
         retiredBuffers.clear();
-        writeOffset = 0;
+        writeOffset = 0L;
     }
 
-    private record FrameRegion(int start, int end, GpuFence fence) {
-        boolean intersects(int otherStart, int otherEnd) {
+    private record FrameRegion(long start, long end, GpuFence fence) {
+        boolean intersects(long otherStart, long otherEnd) {
             return start < otherEnd && otherStart < end;
         }
     }
@@ -305,6 +304,6 @@ public final class CommandExecutor implements AutoCloseable {
         }
     }
 
-    private record AllocationResult(int start, int end, int length, int totalSize, boolean needsRotate) {
+    private record AllocationResult(long start, long end, long length, long totalSize, boolean needsRotate) {
     }
 }

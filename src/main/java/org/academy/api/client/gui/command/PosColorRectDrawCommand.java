@@ -1,12 +1,8 @@
 package org.academy.api.client.gui.command;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
-
-import java.util.Map;
 
 public abstract class PosColorRectDrawCommand extends DrawCommand {
     protected final float width;
@@ -41,10 +37,4 @@ public abstract class PosColorRectDrawCommand extends DrawCommand {
         consumer.addVertex(pose, width, height, 0.0F).setColor(red, green, blue, alpha);
         consumer.addVertex(pose, width, 0.0F, 0.0F).setColor(red, green, blue, alpha);
     }
-
-    @Override
-    public abstract Map<String, GpuTextureView> getSamplers();
-
-    @Override
-    public abstract Map<String, GpuBufferSlice> getUniforms();
 }

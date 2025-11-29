@@ -3,7 +3,7 @@ package org.academy.internal.common.world.level.material;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
@@ -26,7 +26,7 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class ImagiphasePlasma extends FlowingFluid {
-    public static final ResourceLocation TEXTURE = AcademyCraft.academy("block/black");
+    public static final Identifier TEXTURE = AcademyCraft.academy("block/black");
 
     @Override
     protected void animateTick(@NotNull Level level, @NotNull BlockPos pos, @NotNull FluidState state, @NotNull RandomSource random) {

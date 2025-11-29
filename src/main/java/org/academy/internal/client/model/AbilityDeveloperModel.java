@@ -4,8 +4,11 @@ import net.minecraft.client.animation.KeyframeAnimation;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 
@@ -32,7 +35,7 @@ public class AbilityDeveloperModel extends Model<AbilityDeveloperRenderState> {
     private final KeyframeAnimation standing;
 
     public AbilityDeveloperModel(ModelPart root) {
-        super(root.getChild("all"), RenderType::entityTranslucent);
+        super(root.getChild("all"), RenderTypes::entityTranslucent);
         all = root.getChild("all");
         up = all.getChild("up");
         glass = up.getChild("glass");

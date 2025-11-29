@@ -1,5 +1,7 @@
 package org.academy.api.common.util;
 
+import net.minecraft.util.Mth;
+
 /**
  * JAVA REFERENCE IMPLEMENTATION OF IMPROVED NOISE - COPYRIGHT 2002 KEN PERLIN.
  * From: <a href="http://mrl.nyu.edu/~perlin/noise/">...</a>
@@ -28,14 +30,7 @@ public final class ImprovedNoise {
         var BA = p[B] + Z;
         var BB = p[B + 1] + Z;
 
-        return MathUtil.lerpFactorStartEnd(w, MathUtil.lerpFactorStartEnd(v, MathUtil.lerpFactorStartEnd(u, grad(p[AA], x, y, z),
-                                grad(p[BA], x - 1, y, z)),
-                        MathUtil.lerpFactorStartEnd(u, grad(p[AB], x, y - 1, z),
-                                grad(p[BB], x - 1, y - 1, z))),
-                MathUtil.lerpFactorStartEnd(v, MathUtil.lerpFactorStartEnd(u, grad(p[AA + 1], x, y, z - 1),
-                                grad(p[BA + 1], x - 1, y, z - 1)),
-                        MathUtil.lerpFactorStartEnd(u, grad(p[AB + 1], x, y - 1, z - 1),
-                                grad(p[BB + 1], x - 1, y - 1, z - 1))));
+        return Mth.lerp(w, Mth.lerp(v, Mth.lerp(u, grad(p[AA], x, y, z), grad(p[BA], x - 1, y, z)), Mth.lerp(u, grad(p[AB], x, y - 1, z), grad(p[BB], x - 1, y - 1, z))), Mth.lerp(v, Mth.lerp(u, grad(p[AA + 1], x, y, z - 1), grad(p[BA + 1], x - 1, y, z - 1)), Mth.lerp(u, grad(p[AB + 1], x, y - 1, z - 1), grad(p[BB + 1], x - 1, y - 1, z - 1))));
     }
 
     static double fade(double t) {

@@ -1,12 +1,12 @@
 package org.academy.api.client.gui.command;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.joml.Matrix4f;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * 看情况选择内部类或外部类喵, 独占选择内部类喵, 可复用选择外部类喵
@@ -34,7 +34,7 @@ public abstract class DrawCommand {
 
     public abstract void generateVertices(VertexConsumer consumer, Matrix4f pose);
 
-    public abstract Map<String, GpuTextureView> getSamplers();
+    public abstract List<TextureBinding> getTextures();
 
-    public abstract Map<String, GpuBufferSlice> getUniforms();
+    public abstract List<UniformBinding> getUniforms();
 }

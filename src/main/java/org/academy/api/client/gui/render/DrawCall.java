@@ -1,17 +1,17 @@
 package org.academy.api.client.gui.render;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Map;
+import java.util.List;
 
 public record DrawCall(
         RenderPipeline pipeline,
         @Nullable ScissorRect scissorArea,
-        Map<String, GpuTextureView> samplers,
-        Map<String, GpuBufferSlice> uniforms,
+        List<TextureBinding> textures,
+        List<UniformBinding> uniforms,
         int baseVertex,
         int indexCount
 ) {

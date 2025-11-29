@@ -6,6 +6,7 @@ import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import org.academy.internal.common.ability.electromaster.skills.Railgun;
 
 import java.util.function.Supplier;
 
@@ -20,11 +21,18 @@ public final class AttachmentTypes {
                     .builder(DEFAULT_FALSE)
                     .serialize(Codec.BOOL.fieldOf("has_data_terminal"))
                     .sync(ByteBufCodecs.BOOL)
-                    .build());
+                    .build()
+    );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> ACTIVATED_STORM_WING = REGISTER.register("activated_storm_wing",
             () -> AttachmentType
                     .builder(DEFAULT_FALSE)
-                    .serialize(Codec.BOOL.fieldOf("activated_storm_wing"))
                     .sync(ByteBufCodecs.BOOL)
-                    .build());
+                    .build()
+    );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Railgun.Data>> RAILGUN_DATA = REGISTER.register("railgun_data",
+            () -> AttachmentType
+                    .builder(Railgun.Data::getDefault)
+                    .sync(Railgun.Data.CODEC)
+                    .build()
+    );
 }

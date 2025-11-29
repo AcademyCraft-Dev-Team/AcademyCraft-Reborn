@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.render.RenderTypes;
+import org.academy.api.client.Render;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.blockentity.state.CatEngineRenderState;
 import org.academy.internal.common.world.level.block.entity.CatEngineBlockEntity;
@@ -59,7 +59,7 @@ public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlo
         poseStack.translate(sizeHalf, sizeHalf, sizeHalf);
         poseStack.mulPose(Axis.XP.rotationDegrees(90));
         var packedLight = renderState.lightCoords;
-        submitNodeCollector.submitCustomGeometry(poseStack, RenderTypes.CAT_ENGINE, (pose, vertexConsumer) -> {
+        submitNodeCollector.submitCustomGeometry(poseStack, Render.RenderTypes.CAT_ENGINE, (pose, vertexConsumer) -> {
             var matrix = pose.pose();
             var normalMatrix = pose.normal();
 

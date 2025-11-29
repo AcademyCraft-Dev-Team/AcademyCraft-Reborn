@@ -64,23 +64,19 @@ public final class AcademyCraftServer {
         AbilitySystemServer.init(event.getServer(), playerDataManager);
         WirelessManager.initServer();
 
-        if (worldDataSaveTask != null) {
-            worldDataSaveTask.cancel(false);
-        }
+        if (worldDataSaveTask != null) worldDataSaveTask.cancel(false);
+
         worldDataSaveTask = AcademyCraft.executorService.scheduleAtFixedRate(
-                WorldData::saveData, 5, 5, TimeUnit.MINUTES);
+                WorldData::saveData, 5, 5, TimeUnit.MINUTES
+        );
         AcademyCraft.LOGGER.info("Scheduled periodic world data saving.");
     }
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
-        if (worldDataSaveTask != null) {
-            worldDataSaveTask.cancel(false);
-        }
+        if (worldDataSaveTask != null) worldDataSaveTask.cancel(false);
         AcademyCraft.LOGGER.info("Server stopping. Performing final data saves...");
         WorldData.saveData();
-        if (serverConfig != null) {
-            serverConfig.save();
-        }
+        if (serverConfig != null) serverConfig.save();
     }
 }
