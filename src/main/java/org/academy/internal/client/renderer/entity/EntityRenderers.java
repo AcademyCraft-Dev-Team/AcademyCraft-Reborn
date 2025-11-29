@@ -17,6 +17,7 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.GLOW_CIRCLE.get(), GlowCircleRenderer::new);
         event.registerEntityRenderer(EntityTypes.SMOKE.get(), SmokeRenderer::new);
         event.registerEntityRenderer(EntityTypes.CLEANING_ROBOT.get(), CleaningRobotRenderer::new);
+        event.registerEntityRenderer(EntityTypes.ARC_EFFECT.get(), ArcEffectRenderer::new);
     }
 
     private EntityRenderers() {

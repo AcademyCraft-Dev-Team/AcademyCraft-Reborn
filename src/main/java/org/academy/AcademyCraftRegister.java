@@ -14,9 +14,12 @@ import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.arc.PathModifierTypes;
+import org.academy.internal.common.arc.PathTypes;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.syncher.EntityDataSerializers;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
@@ -53,6 +56,7 @@ public final class AcademyCraftRegister {
         Items.ITEMS.register(modEventBus);
         BlockEntityTypes.BLOCK_ENTITY_TYPES.register(modEventBus);
         EntityTypes.ENTITY_TYPES.register(modEventBus);
+        EntityDataSerializers.ENTITY_DATA_SERIALIZERS.register(modEventBus);
         SoundEvents.SOUND_EVENTS.register(modEventBus);
         MenuTypes.MENU_TYPES.register(modEventBus);
         Fluids.FLUIDS.register(modEventBus);
@@ -70,6 +74,8 @@ public final class AcademyCraftRegister {
 
         DataTypes.SYNC_DATA_TYPES.register(modEventBus);
         SyncKeys.SYNC_KEYS.register(modEventBus);
+        PathTypes.PATH_TYPES.register(modEventBus);
+        PathModifierTypes.PATH_MODIFIER_TYPES.register(modEventBus);
 
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
@@ -81,6 +87,8 @@ public final class AcademyCraftRegister {
         event.register(SKILLS);
         event.register(SYNC_KEYS);
         event.register(DATA_TYPES);
+        event.register(PATH_TYPES);
+        event.register(PATH_MODIFIER_TYPES);
     }
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
