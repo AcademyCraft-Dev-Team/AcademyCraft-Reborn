@@ -9,9 +9,7 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.Level;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
-import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings("resource")
 public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public static final int MAX_CHARGE_TICKS = 40;
     public static final int MAX_RAY_LIFE_TICKS = 15;
@@ -28,7 +26,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.@NotNull Builder builder) {
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
     }
 
     @Override
