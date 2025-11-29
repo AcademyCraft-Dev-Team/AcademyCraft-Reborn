@@ -70,13 +70,13 @@ public class Arc extends Entity {
     public void tick() {
         super.tick();
 
-        if (level().isClientSide()) {
+/*        if (level().isClientSide()) {
             var style = ArcStyles.classic();
             style.seed = MathUtil.RANDOM.nextLong();
             style.start.set(0, 0, 0);
             style.end.set(0, getLength(), 0);
             renderData = ArcFactory.Generator.generate(style);
-        }
+        }*/
 
         currentLifetime--;
         if (currentLifetime <= 0) {
