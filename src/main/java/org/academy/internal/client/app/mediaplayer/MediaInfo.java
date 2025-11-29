@@ -1,6 +1,6 @@
 package org.academy.internal.client.app.mediaplayer;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-public record MediaInfo(ResourceLocation icon, MediaSource source, String name, String subtitle) {
+public record MediaInfo(Identifier icon, MediaSource source, String name, String subtitle) {
 }

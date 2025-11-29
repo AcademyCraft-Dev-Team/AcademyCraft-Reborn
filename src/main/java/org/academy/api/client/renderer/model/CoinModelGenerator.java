@@ -4,9 +4,8 @@ import com.mojang.math.Quadrant;
 import net.minecraft.client.renderer.block.model.*;
 import net.minecraft.client.resources.model.*;
 import net.minecraft.core.Direction;
-import net.neoforged.neoforge.client.ClientHooks;
-import org.jspecify.annotations.Nullable;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,16 +18,12 @@ public class CoinModelGenerator implements UnbakedModel {
     public static final String TEXTURE_KEY_BACK = "back";
     public static final String BACK_TEXTURE_REF = "#" + TEXTURE_KEY_BACK;
 
-    private static final float MIN_Z = 7.5F;
-    private static final float MAX_Z = 8.5F;
-
     @Override
     public @Nullable UnbakedGeometry geometry() {
-        return (textureSlots, baker, modelState, debugName)
-                -> bake(textureSlots, baker.sprites(), modelState, debugName);
+        return CoinModelGenerator::bake;
     }
 
-    private static QuadCollection bake(TextureSlots textureSlots, SpriteGetter sprites, ModelState modelState, ModelDebugName debugName) {
+    private static QuadCollection bake(TextureSlots textureSlots, ModelBaker baker, ModelState modelState, ModelDebugName debugName) {
         var outputElements = new ArrayList<BlockElement>();
 
         // Default Material
@@ -40,20 +35,19 @@ public class CoinModelGenerator implements UnbakedModel {
             coreFaces.put(Direction.NORTH, new BlockElementFace(null, 0, BACK_TEXTURE_REF, ItemModelGenerator.NORTH_FACE_UVS, Quadrant.R0));
 
             var coreElement = new BlockElement(
-                    new Vector3f(0.0F, 0.0F, MIN_Z),
-                    new Vector3f(16.0F, 16.0F, MAX_Z),
+                    new Vector3f(0.0F, 0.0F, ItemModelGenerator.MIN_Z),
+                    new Vector3f(16.0F, 16.0F, ItemModelGenerator.MAX_Z),
                     coreFaces
             );
             outputElements.add(coreElement);
 
-            var sprite = sprites.get(material, debugName);
+            var sprite = baker.sprites().get(material, debugName);
             var frontSpriteContents = sprite.contents();
 
             outputElements.addAll(ItemModelGenerator.createSideElements(frontSpriteContents, FRONT_TEXTURE_REF, 0));
-            outputElements.addAll(ClientHooks.fixItemModelSeams(outputElements, sprite));
         }
 
-        return SimpleUnbakedGeometry.bake(outputElements, textureSlots, sprites, modelState, debugName);
+        return SimpleUnbakedGeometry.bake(outputElements, textureSlots, baker, modelState, debugName);
     }
 
     private CoinModelGenerator() {

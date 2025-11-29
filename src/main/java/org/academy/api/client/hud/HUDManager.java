@@ -3,11 +3,12 @@ package org.academy.api.client.hud;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -15,14 +16,12 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.animation.Animator;
-import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.render.UIContext;
-import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.screen.IAnimationScreen;
-import org.academy.api.client.gui.widget.*;
+import org.academy.api.client.gui.widget.FrameLayoutWidget;
+import org.academy.api.client.gui.widget.ImageWidget;
+import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.common.util.MathUtil;
-import org.joml.Matrix4f;
 
 import java.util.*;
 
@@ -71,17 +70,17 @@ public final class HUDManager implements IAnimationScreen {
         ROOT.setAlpha(0.0F);
 
         CP_BAR_BACKGROUND_WIDGET = new ImageWidget(Resource.Textures.CP_BAR_BACKGROUND);
-        CP_BAR_BACKGROUND_WIDGET.setTextureFilter(FilterMode.NEAREST, false);
+        CP_BAR_BACKGROUND_WIDGET.setSampler(FilterMode.NEAREST, false);
         ROOT.addChild("cp_bar_bg", CP_BAR_BACKGROUND_WIDGET);
 
         CP_BAR_WIDGET = new ImageWidget(Resource.Textures.CP_BAR);
-        CP_BAR_WIDGET.setTextureFilter(FilterMode.LINEAR, true);
+        CP_BAR_WIDGET.setSampler(FilterMode.LINEAR, true);
         ROOT.addChild("cp_bar", CP_BAR_WIDGET);
 
         CP_BAR_VALUE_WIDGET = new CPBarValueWidget(0.0F, 0.0F, 0.0F, 0.0F);
         ROOT.addChild("cp_bar_value", CP_BAR_VALUE_WIDGET);
 
-        ABILITY_ICON_WIDGET = new ImageWidget((ResourceLocation) null);
+        ABILITY_ICON_WIDGET = new ImageWidget((Identifier) null);
         ROOT.addChild("ability_icon", ABILITY_ICON_WIDGET);
 /*
         SKILL_LIST_CONTAINER = new LinearLayoutContainer(0.0F, 0.0F, 0.0F, 0.0F, Orientation.VERTICAL);
@@ -137,15 +136,15 @@ public final class HUDManager implements IAnimationScreen {
 
         {
             var targetAlpha = AbilitySystemClient.isActiveHUD() ? 1.0f : 0.0f;
-            currentAlpha = MathUtil.lerpStartEndFactor(currentAlpha, targetAlpha, partialTick);
+            currentAlpha = Mth.lerp(partialTick, currentAlpha, targetAlpha);
             ROOT.setAlpha(currentAlpha);
 
             var r = 1.0f;
             var g = 0.68235296F;
             var b = 0.26666668F;
-            var finalR = MathUtil.lerpFactorStartEnd(currentAlpha, r, 1.0f);
-            var finalG = MathUtil.lerpFactorStartEnd(currentAlpha, g, 1.0f);
-            var finalB = MathUtil.lerpFactorStartEnd(currentAlpha, b, 1.0f);
+            var finalR = Mth.lerp(currentAlpha, r, 1.0f);
+            var finalG = Mth.lerp(currentAlpha, g, 1.0f);
+            var finalB = Mth.lerp(currentAlpha, b, 1.0f);
             CP_BAR_WIDGET.setColor(finalR, finalG, finalB);
         }
 
@@ -154,7 +153,7 @@ public final class HUDManager implements IAnimationScreen {
             var maximumComputingPower = AbilitySystemClient.getMaxComputingPower();
             var progress =computingPower / maximumComputingPower;
             if (Float.isNaN(progress) || Float.isInfinite(progress)) progress = 0;
-            smoothProgress = MathUtil.lerpStartEndFactor(smoothProgress, progress, partialTick);
+            smoothProgress = Mth.lerp(partialTick, smoothProgress, progress);
             if (Float.isNaN(smoothProgress)) {
                 smoothProgress = 0.0f;
             }
@@ -176,7 +175,12 @@ public final class HUDManager implements IAnimationScreen {
             renderer.render(mouseX, mouseY, partialTick);
 
         var guiGraphics = event.getGuiGraphics();
-        guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0,
+        guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView,
+                RenderSystem.getSamplerCache().getSampler(
+                        AddressMode.REPEAT, AddressMode.REPEAT,
+                        FilterMode.NEAREST, FilterMode.LINEAR,
+                        false
+                ), 0, 0,
                 guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
     }
 
@@ -294,10 +298,10 @@ public final class HUDManager implements IAnimationScreen {
     private static class CPBarValueWidget extends ImageWidget {
         public CPBarValueWidget(float x, float y, float width, float height) {
             super(Resource.Textures.CP_BAR_VALUE);
-            setTextureFilter(FilterMode.LINEAR, true);
+            setSampler(FilterMode.LINEAR, true);
         }
 
-        public void render(RenderContext context) {
+       /* public void render(RenderContext context) {
             var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
             context.pose().translate(0, 0, 1);
 
@@ -336,7 +340,7 @@ public final class HUDManager implements IAnimationScreen {
                 }
             };
             context.submit(command);
-        }
+        }*/
     }
 /*
     private static class SkillWidget extends PanelWidget {

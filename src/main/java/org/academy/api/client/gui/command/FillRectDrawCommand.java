@@ -1,11 +1,10 @@
 package org.academy.api.client.gui.command;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import org.academy.api.client.Render;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 
-import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 
 public class FillRectDrawCommand extends PosColorRectDrawCommand {
     public FillRectDrawCommand(
@@ -20,12 +19,12 @@ public class FillRectDrawCommand extends PosColorRectDrawCommand {
     }
 
     @Override
-    public Map<String, GpuTextureView> getSamplers() {
-        return Collections.emptyMap();
+    public List<TextureBinding> getTextures() {
+        return List.of();
     }
 
     @Override
-    public Map<String, GpuBufferSlice> getUniforms() {
-        return Collections.emptyMap();
+    public List<UniformBinding> getUniforms() {
+        return List.of();
     }
 }

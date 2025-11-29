@@ -1,7 +1,7 @@
 package org.academy.api.server.ability;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -14,7 +14,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.*;
-import org.academy.api.common.ability.packet.sync.s2c.*;
+import org.academy.api.common.ability.pakcet.*;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.util.UncheckedUtil;
@@ -35,7 +35,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
 
 public final class AbilitySystemServer {
     public static final Map<UUID, LivePlayer> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
@@ -85,7 +84,6 @@ public final class AbilitySystemServer {
         return playerDataManager.getData(uuid);
     }
 
-    @SuppressWarnings("resource")
     @HandleFuture
     public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
         var player = payload.getPacketListener().getPlayer();
@@ -124,7 +122,6 @@ public final class AbilitySystemServer {
     }
 
     @HandleFuture
-    @SuppressWarnings("resource")
     public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
         var player = payload.getPacketListener().getPlayer();
         var userPos = BlockPos.of(payload.getUserPos());
@@ -136,7 +133,7 @@ public final class AbilitySystemServer {
         var skillKey = payload.getSkillName();
         var be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
-            var skillReference = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
+            var skillReference = Registries.SKILLS.get(Identifier.parse(skillKey));
             if (skillReference.isPresent()) {
                 var skill = skillReference.get().value();
                 var energy = skill.getEnergyCostToLearn();
@@ -165,7 +162,7 @@ public final class AbilitySystemServer {
         if (abilityCategory == null) {
             category = AbilityCategories.LEVEL0.get();
         } else {
-            var categoryKey = ResourceLocation.parse(abilityCategory);
+            var categoryKey = Identifier.parse(abilityCategory);
             category = Registries.ABILITY_CATEGORIES.get(categoryKey).orElseThrow().value();
         }
 
@@ -187,8 +184,7 @@ public final class AbilitySystemServer {
     public static void addPlayerSkill(UUID uuid, String skillKey) {
         var playerData = getPlayerData(uuid);
         if (playerData.getSkills().add(skillKey)) {
-            var skill = Registries.SKILLS.get(ResourceLocation.parse(skillKey));
-            skill.ifPresent(skillReference -> addPlayerSkillData(uuid, skillKey, skillReference.value().getDefaultSkillData()));
+            var skill = Registries.SKILLS.get(Identifier.parse(skillKey));
             playerData.markDirty();
             schedulePlayerSync(uuid, SyncTypes.SKILL_LIST);
         }
@@ -295,7 +291,7 @@ public final class AbilitySystemServer {
                 : AcademyCraftServer.abilityConfig.damageMultiplier;
     }
 
-    public static void schedulePlayerSync(final UUID uuid, final ResourceLocation syncType) {
+    public static void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
         if (LIVE_PLAYER_MAP.containsKey(uuid)) {
             LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
         }
@@ -358,7 +354,7 @@ public final class AbilitySystemServer {
                 var skills = getPlayerSkills(uuid);
                 var set = new HashSet<Skill>();
                 for (var s : skills) {
-                    var skill = Registries.SKILLS.getValue(ResourceLocation.parse(s));
+                    var skill = Registries.SKILLS.getValue(Identifier.parse(s));
                     set.add(skill);
                 }
                 var packet = new SyncSkillsPacket(set);
@@ -390,7 +386,7 @@ public final class AbilitySystemServer {
 
     public static class LivePlayer {
         public final UUID uuid;
-        public final Set<ResourceLocation> syncQueue = ConcurrentHashMap.newKeySet();
+        public final Set<Identifier> syncQueue = ConcurrentHashMap.newKeySet();
         private final ServerGamePacketListenerImpl connection;
         public float additionalComputingPower;
 

@@ -23,7 +23,7 @@ public final class SubmittedCommand {
     }
 
     private static long calculateResourceKey(DrawCommand command) {
-        return Objects.hash(command.getSamplers(), command.getUniforms());
+        return Objects.hash(command.getTextures(), command.getUniforms());
     }
 
     public DrawCommand getCommand() {

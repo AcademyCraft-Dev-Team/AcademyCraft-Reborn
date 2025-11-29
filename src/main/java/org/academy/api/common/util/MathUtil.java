@@ -1,8 +1,9 @@
 package org.academy.api.common.util;
 
 import it.unimi.dsi.fastutil.ints.IntComparator;
-import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.*;
 
 import java.lang.Math;
@@ -11,35 +12,93 @@ import java.util.Random;
 import java.util.TreeMap;
 
 public class MathUtil {
+    public static final RandomSource RANDOM_SOURCE = RandomSource.create();
     public static final Random RANDOM = new Random();
     public static final float PI = (float) Math.PI;
     public static final float TWO_PI = 2.0f * PI;
     public static final double EPSILON = 1e-6;
 
-    public static float lerpStartEndFactor(float a, float b, float t) {
-        return a + t * (b - a);
+    public static Vec3 intersectRayCapsule(Vec3 origin, Vec3 direction, Vec3 capsuleCenter, float width, float height) {
+        float radius = width / 2.0F;
+        float halfEffectiveHeight = height / 2.0F - radius;
+
+        if (halfEffectiveHeight <= 0) {
+            return intersectRaySphere(origin, direction, capsuleCenter, radius);
+        }
+
+        Vector3f originF = new Vector3f((float) origin.x, (float) origin.y, (float) origin.z);
+        Vector3f dirF = new Vector3f((float) direction.x, (float) direction.y, (float) direction.z);
+        Vector3f centerF = new Vector3f((float) capsuleCenter.x, (float) capsuleCenter.y, (float) capsuleCenter.z);
+
+        Vector3f topCenter = new Vector3f(centerF).add(0, halfEffectiveHeight, 0);
+        Vector3f bottomCenter = new Vector3f(centerF).sub(0, halfEffectiveHeight, 0);
+
+        Vector2f resultSphere = new Vector2f();
+        float minT = Float.MAX_VALUE;
+
+        if (Intersectionf.intersectRaySphere(originF, dirF, topCenter, radius * radius, resultSphere)) {
+            float t = resultSphere.x > 0 ? resultSphere.x : resultSphere.y;
+            if (t > 0 && (originF.y + dirF.y * t) >= topCenter.y) {
+                minT = t;
+            }
+        }
+
+        if (Intersectionf.intersectRaySphere(originF, dirF, bottomCenter, radius * radius, resultSphere)) {
+            float t = resultSphere.x > 0 ? resultSphere.x : resultSphere.y;
+            if (t > 0 && t < minT && (originF.y + dirF.y * t) <= bottomCenter.y) {
+                minT = t;
+            }
+        }
+
+        float dx = originF.x - centerF.x;
+        float dz = originF.z - centerF.z;
+
+        float a = dirF.x * dirF.x + dirF.z * dirF.z;
+        float b = 2 * (dx * dirF.x + dz * dirF.z);
+        float c = dx * dx + dz * dz - radius * radius;
+
+        if (Math.abs(a) > 1e-6) {
+            float delta = b * b - 4 * a * c;
+            if (delta >= 0) {
+                float sqrtDelta = (float) Math.sqrt(delta);
+                float t1 = (-b - sqrtDelta) / (2 * a);
+                float t2 = (-b + sqrtDelta) / (2 * a);
+
+                if (t1 > 0 && t1 < minT) {
+                    float yHit = originF.y + dirF.y * t1;
+                    if (yHit >= bottomCenter.y && yHit <= topCenter.y) {
+                        minT = t1;
+                    }
+                }
+                if (t2 > 0 && t2 < minT) {
+                    float yHit = originF.y + dirF.y * t2;
+                    if (yHit >= bottomCenter.y && yHit <= topCenter.y) {
+                        minT = t2;
+                    }
+                }
+            }
+        }
+
+        if (minT < Float.MAX_VALUE) {
+            return origin.add(direction.scale(minT));
+        }
+
+        return capsuleCenter;
     }
 
-    public static double lerpStartEndFactor(double a, double b, double t) {
-        return a + t * (b - a);
-    }
+    private static Vec3 intersectRaySphere(Vec3 origin, Vec3 direction, Vec3 center, float radius) {
+        Vector3f originF = new Vector3f((float) origin.x, (float) origin.y, (float) origin.z);
+        Vector3f dirF = new Vector3f((float) direction.x, (float) direction.y, (float) direction.z);
+        Vector3f centerF = new Vector3f((float) center.x, (float) center.y, (float) center.z);
+        Vector2f result = new Vector2f();
 
-    public static float lerpFactorStartEnd(float delta, float start, float end) {
-        return start + delta * (end - start);
-    }
-
-    public static double lerpFactorStartEnd(double delta, double start, double end) {
-        return start + delta * (end - start);
-    }
-
-    public static float smoothStep(float x) {
-        x = Mth.clamp(x, 0.0f, 1.0f);
-        return x * x * (3.0f - 2.0f * x);
-    }
-
-    public static double smoothStep(double x) {
-        x = Mth.clamp(x, 0.0, 1.0);
-        return x * x * (3.0 - 2.0 * x);
+        if (Intersectionf.intersectRaySphere(originF, dirF, centerF, radius * radius, result)) {
+            float t = result.x > 0 ? result.x : result.y;
+            if (t > 0) {
+                return origin.add(direction.scale(t));
+            }
+        }
+        return center;
     }
 
     public static double calculateVerticalFov(double horizontalFovDegrees, double aspectRatio) {

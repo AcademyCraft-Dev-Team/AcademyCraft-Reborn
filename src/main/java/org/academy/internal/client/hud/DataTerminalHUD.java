@@ -2,13 +2,17 @@ package org.academy.internal.client.hud;
 
 import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -33,6 +37,8 @@ import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.render.UIContext;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.gson.TypeHandler;
@@ -45,7 +51,11 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.nio.ByteBuffer;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @EventBusSubscriber(Dist.CLIENT)
@@ -126,7 +136,7 @@ public final class DataTerminalHUD {
                 context.pose().pushPose();
                 context.pose().translate(xpos, ypos, 1000);
 
-                var sdfData = new CursorWidget.SDFData(new Vector4f(0, 0, 0, 0.75f), 0.5f, 0.5f);
+                var sdfData = new SDFData(new Vector4f(0, 0, 0, 0.75f), 0.5f, 0.5f);
 
                 context.pose().pushPose();
                 {
@@ -138,13 +148,13 @@ public final class DataTerminalHUD {
                 context.pose().pushPose();
                 {
                     context.pose().translate(-1.5f, -1.5f, 0.1f);
-                    sdfData = new CursorWidget.SDFData(new Vector4f(1, 1, 1, 1), 0.5f, 0.25f);
+                    sdfData = new SDFData(new Vector4f(1, 1, 1, 1), 0.5f, 0.25f);
                     submitGlowCommand(context, 3, sdfData);
                 }
                 context.pose().popPose();
             }
 
-            private void submitGlowCommand(RenderContext context, float size, CursorWidget.SDFData sdfData) {
+            private void submitGlowCommand(RenderContext context, float size, SDFData sdfData) {
                 var glowCommand = new PosTexRectDrawCommand(
                         Render.RenderPipelines.SDF_CIRCLE_GLOW,
                         size,
@@ -155,15 +165,15 @@ public final class DataTerminalHUD {
                         1
                 ) {
                     @Override
-                    public Map<String, GpuTextureView> getSamplers() {
-                        return Collections.emptyMap();
+                    public List<TextureBinding> getTextures() {
+                        return List.of();
                     }
 
                     @Override
-                    public Map<String, GpuBufferSlice> getUniforms() {
-                        var uboStorage = context.getDynamicUbo(CursorWidget.SDFData.class, CursorWidget.SDFData.UBO_SIZE);
+                    public List<UniformBinding> getUniforms() {
+                        var uboStorage = context.getDynamicUbo(SDFData.class, SDFData.UBO_SIZE);
                         var uboSlice = uboStorage.writeUniform(sdfData);
-                        return Map.of("GlowUniforms", uboSlice);
+                        return List.of(new UniformBinding("GlowUniforms", uboSlice));
                     }
                 };
                 context.submit(glowCommand);
@@ -376,12 +386,6 @@ public final class DataTerminalHUD {
             var dynamicTransformsSlice = createDynamicTransformsSlice(viewMatrix);
             var projectionUBSlice = createProjectionUboSlice(fovY, aspectRatio);
 
-            var samplers = Map.of("Sampler0", terminalView);
-            var uniforms = Map.of(
-                    "Projection", projectionUBSlice,
-                    "DynamicTransforms", dynamicTransformsSlice
-            );
-
             var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
             try (
@@ -391,8 +395,13 @@ public final class DataTerminalHUD {
                     )
             ) {
                 renderPass.setPipeline(Render.RenderPipelines.IMAGE_STENCIL);
-                samplers.forEach(renderPass::bindSampler);
-                uniforms.forEach(renderPass::setUniform);
+                renderPass.bindTexture(
+                        "Sampler0",
+                        terminalView,
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                );
+                renderPass.setUniform("Projection", projectionUBSlice);
+                renderPass.setUniform("DynamicTransforms", dynamicTransformsSlice);
 
                 renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFullScreenQuadColorVBSDC());
                 var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
@@ -435,8 +444,7 @@ public final class DataTerminalHUD {
                         viewMatrix,
                         new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
                         new Vector3f(),
-                        new Matrix4f(),
-                        0.0F
+                        new Matrix4f()
                 );
     }
 
@@ -576,5 +584,18 @@ public final class DataTerminalHUD {
     }
 
     private DataTerminalHUD() {
+    }
+
+    public record SDFData(Vector4f color, float radius,
+                          float softness) implements DynamicUniformStorage.DynamicUniform {
+        public static final int UBO_SIZE = new Std140SizeCalculator().putVec4().putFloat().putFloat().get();
+
+        @Override
+        public void write(ByteBuffer buffer) {
+            Std140Builder.intoBuffer(buffer)
+                    .putVec4(color)
+                    .putFloat(radius)
+                    .putFloat(softness);
+        }
     }
 }

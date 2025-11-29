@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -99,7 +100,8 @@ public final class ArcGenerate extends Skill {
             var playerPos = player.position();
             var eyePos = player.getEyePosition();
             var rightVec = lookVec.cross(new Vec3(0, 1, 0)).normalize();
-            var handPos = playerPos.add(rightVec.scale(0.4)).add(0, 1.2, 0).add(lookVec.scale(0.5));
+            var right = (player.getMainArm() == HumanoidArm.RIGHT);
+            var handPos = playerPos.add(rightVec.scale(right ? 0.4 : -0.4f)).add(0, 1.2, 0).add(lookVec.scale(0.5));
             var targetPos = eyePos.add(lookVec.scale(10));
             var arc = new Arc(level, handPos, targetPos);
 

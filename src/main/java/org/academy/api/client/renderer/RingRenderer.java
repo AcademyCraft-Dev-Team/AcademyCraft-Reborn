@@ -1,22 +1,21 @@
 package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import org.academy.api.client.Render;
 import org.joml.Matrix4f;
 
 import java.util.function.Function;
 
 public final class RingRenderer {
-    public static final Function<ResourceLocation, RenderType> RING_RENDER_TYPE = resourceLocation -> RenderType.create(
+    public static final Function<Identifier, RenderType> RING_RENDER_TYPE = tex -> RenderType.create(
             "ring_render_type",
-            65536,
-            Render.RenderPipelines.LEVEL_POS_TEX_COLOR,
-            RenderType.CompositeState.builder()
-                    .setTextureState(new RenderStateShard.TextureStateShard(resourceLocation, false))
-                    .createCompositeState(false)
+            RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
+                    .withTexture("Sampler0", tex)
+                    .bufferSize(65536)
+                    .createRenderSetup()
     );
 
     public static void renderRing(Matrix4f matrix, VertexConsumer vertexConsumer,

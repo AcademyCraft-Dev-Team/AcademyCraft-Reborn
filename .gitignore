@@ -123,3 +123,4 @@ runs/
 # Local
 *.py
 *.txt
+*.exe

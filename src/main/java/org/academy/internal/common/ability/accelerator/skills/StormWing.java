@@ -54,7 +54,7 @@ public final class StormWing extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(StormWingEffectRenderer.getInstance());
+        RendererManager.registerEffectRenderer(StormWingEffectRenderer.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);

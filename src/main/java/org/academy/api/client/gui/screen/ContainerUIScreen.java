@@ -1,12 +1,15 @@
 package org.academy.api.client.gui.screen;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -24,7 +27,6 @@ import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.*;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -146,7 +148,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
 
     protected abstract void onInit(RadioGroupWidget pageButtons, RadioButtonWidget invButton, FrameLayoutWidget content, FrameLayoutWidget invPage);
 
-    protected RadioButtonWidget createButton(ResourceLocation textureLocation) {
+    protected RadioButtonWidget createButton(Identifier textureLocation) {
         var widget = new RadioButtonWidget();
         var defaultDrawable = new TextureDrawable(textureLocation);
         defaultDrawable.setTintColor(0xFFBBBBBB);
@@ -172,7 +174,13 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         var colorTextureView = renderTarget.getColorTextureView();
         if (colorTextureView == null) return;
 
-        guiGraphics.submitBlit(RenderPipelines.GUI_TEXTURED, colorTextureView, 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0, 1, 1, 0, -1);
+        guiGraphics.submitBlit(
+                RenderPipelines.GUI_TEXTURED,
+                colorTextureView,
+                RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
+                0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
+                0, 1, 1, 0, -1
+        );
 
         if (isRenderInventory()) {
             var originHeight = 187f;
@@ -301,7 +309,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
     public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
         if (ImGuiUtilApi.wantCaptureKeyboard()) return true;
 
-        if (e.key() == GLFW.GLFW_KEY_F12) {
+        if (e.key() == InputConstants.KEY_F12) {
             AcademyCraft.DEBUG_UI = !AcademyCraft.DEBUG_UI;
             return true;
         }
@@ -309,7 +317,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         var event = new KeyEvent(EventType.KEY_PRESSED, e.key(), e.scancode(), e.modifiers());
         root.dispatchEvent(event);
         if (event.isConsumed()) return true;
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE && shouldCloseOnEsc()) {
+        if (e.key() == InputConstants.KEY_ESCAPE && shouldCloseOnEsc()) {
             onClose();
             return true;
         }

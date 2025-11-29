@@ -3,16 +3,16 @@ package org.academy.internal.client.renderer.special;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.Resource;
 import org.academy.internal.client.renderer.blockentity.state.SolarGenRenderState;
-import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
-import java.util.Set;
+import java.util.function.Consumer;
 
 import static org.academy.internal.client.renderer.blockentity.SolarGenRenderer.MODEL;
 
@@ -23,7 +23,7 @@ public final class SolarGenSpecialRenderer implements NoDataSpecialModelRenderer
     }
 
     @Override
-    public void getExtents(Set<Vector3f> output) {
+    public void getExtents(Consumer<Vector3fc> output) {
         var posestack = new PoseStack();
         posestack.scale(1.0F, -1.0F, -1.0F);
         MODEL.root().getExtentsForGui(posestack, output);
@@ -38,7 +38,7 @@ public final class SolarGenSpecialRenderer implements NoDataSpecialModelRenderer
         }
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         MODEL.resetPose();
-        nodeCollector.submitModel(MODEL, new SolarGenRenderState(), poseStack, RenderType.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, null);
+        nodeCollector.submitModel(MODEL, new SolarGenRenderState(), poseStack, RenderTypes.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, null);
         poseStack.popPose();
     }
 

@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
-import org.academy.api.client.render.RenderTypes;
+import org.academy.api.client.Render;
 import org.academy.internal.client.model.CleaningRobotModel;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 
@@ -20,7 +20,7 @@ public class CleaningRobotRenderer extends EntityRenderer<CleaningRobot, EntityR
     public void submit(EntityRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0.75f, 0);
-        nodeCollector.submitModel(CLEANING_ROBOT_MODEL, renderState, poseStack, RenderTypes.CLEANING_ROBOT, renderState.lightCoords, NO_OVERLAY, 0, null);
+        nodeCollector.submitModel(CLEANING_ROBOT_MODEL, renderState, poseStack, Render.RenderTypes.CLEANING_ROBOT, renderState.lightCoords, NO_OVERLAY, 0, null);
         poseStack.popPose();
     }
 

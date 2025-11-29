@@ -1,27 +1,25 @@
 package org.academy.api.client.render.post;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import org.academy.api.client.Render;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
+import java.util.List;
 
 public final class BlurEffect {
     private static final int MAX_GAUSSIAN_SAMPLES = 12;
@@ -107,31 +105,33 @@ public final class BlurEffect {
             if (swap == null) return;
 
             var blurUboSlice = blurUniformsBuffer.slice();
-            var uniforms = Map.of("BlurInfo", blurUboSlice);
+            var gpuSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+            var textures = List.of(new TextureBinding("DiffuseSampler", sampler, gpuSampler));
+            var uniforms = List.of(new UniformBinding("BlurInfo", blurUboSlice));
 
             var vec2 = new Vector2f(width, height);
             writeBlurUniforms(vec2, 1.0F, 0.0F, radius);
             Render.runBlitPass(
                     swap, depth,
+                    false, false,
                     Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR,
                     Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
-                    Map.of("DiffuseSampler", sampler), uniforms,
-                    false
+                    textures, uniforms
             );
             Render.runBlitPass(
                     swap, depth,
+                    false, false,
                     Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT,
                     Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
-                    Map.of("DiffuseSampler", sampler), Collections.emptyMap(),
-                    false
+                    textures, List.of()
             );
             writeBlurUniforms(vec2, 0.0F, 1.0F, radius);
             Render.runBlitPass(
                     output, depth,
+                    false, false,
                     Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR,
                     Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
-                    Map.of("DiffuseSampler", swap), uniforms,
-                    false
+                    List.of(new TextureBinding("DiffuseSampler", swap, gpuSampler)), uniforms
             );
         } finally {
             if (swapTarget != null) resourcePool.release(desc, swapTarget);
@@ -145,34 +145,6 @@ public final class BlurEffect {
             new BlurUniforms(outSize, new Vector2f(dirX, dirY), samples.sampleCount, samples.samples).write(builder);
             var byteBuffer = builder.get();
             RenderSystem.getDevice().createCommandEncoder().writeToBuffer(blurUniformsBuffer.slice(), byteBuffer);
-        }
-    }
-
-    private static void runBlitPass(GpuTextureView color, @Nullable GpuTextureView depth, Map<String, GpuTextureView> samplers, Map<String, GpuBufferSlice> uniforms) {
-        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-
-        try (
-                var renderPass = depth == null
-                        ? commandEncoder.createRenderPass
-                        (
-                                () -> "Blit Pass to " + color,
-                                color, OptionalInt.empty()
-                        )
-                        : commandEncoder.createRenderPass
-                        (
-                                () -> "Blit Pass to " + color + depth,
-                                color, OptionalInt.empty(),
-                                depth, OptionalDouble.empty()
-                        )
-        ) {
-            renderPass.setPipeline(Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR);
-            samplers.forEach(renderPass::bindSampler);
-            uniforms.forEach(renderPass::setUniform);
-
-            renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFullScreenQuadVBNDC());
-            var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-            renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
-            renderPass.drawIndexed(0, 0, 6, 1);
         }
     }
 

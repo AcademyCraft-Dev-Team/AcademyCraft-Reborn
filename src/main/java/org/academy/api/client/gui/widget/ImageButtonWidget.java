@@ -3,7 +3,7 @@ package org.academy.api.client.gui.widget;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.drawable.StateListDrawable;
 import org.academy.api.client.gui.drawable.TextureDrawable;
@@ -34,7 +34,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         setBackground(sld);
     }
 
-    public ImageButtonWidget(@Nullable ResourceLocation textureLocation, @Nullable OnClickListener listener) {
+    public ImageButtonWidget(@Nullable Identifier textureLocation, @Nullable OnClickListener listener) {
         super(listener);
         var defaultDrawable = new TextureDrawable(textureLocation);
         defaultDrawable.setTintColor(0xFFBBBBBB);
@@ -53,7 +53,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
                 .sizeMode(SizeMode.WRAP_CONTENT));
     }
 
-    private void resolveIntrinsicSize(@Nullable ResourceLocation textureLocation) {
+    private void resolveIntrinsicSize(@Nullable Identifier textureLocation) {
         if (textureLocation == null) {
             intrinsicWidth = 0;
             intrinsicHeight = 0;

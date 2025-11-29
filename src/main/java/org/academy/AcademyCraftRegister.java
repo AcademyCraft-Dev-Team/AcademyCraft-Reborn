@@ -18,6 +18,8 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.sync.DataTypes;
+import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.item.Items;
@@ -29,8 +31,7 @@ import org.academy.internal.common.world.level.material.Fluids;
 
 import static org.academy.AcademyCraft.MODID;
 import static org.academy.AcademyCraft.MOD_NAME;
-import static org.academy.api.common.registries.Registries.ABILITY_CATEGORIES;
-import static org.academy.api.common.registries.Registries.SKILLS;
+import static org.academy.api.common.registries.Registries.*;
 
 public final class AcademyCraftRegister {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
@@ -67,6 +68,9 @@ public final class AcademyCraftRegister {
         PacketTypes.PACKET_TYPES.register(modEventBus);
         Skills.SKILLS.register(modEventBus);
 
+        DataTypes.SYNC_DATA_TYPES.register(modEventBus);
+        SyncKeys.SYNC_KEYS.register(modEventBus);
+
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
      //   modEventBus.addListener(AcademyCraftRegister::onFMLLoadComplete);
@@ -75,9 +79,11 @@ public final class AcademyCraftRegister {
     private static void onNewRegistry(NewRegistryEvent event) {
         event.register(ABILITY_CATEGORIES);
         event.register(SKILLS);
+        event.register(SYNC_KEYS);
+        event.register(DATA_TYPES);
     }
 
-    private static void onCommonSetup(final FMLCommonSetupEvent event) {
+    private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
             ABILITY_CATEGORIES.forEach(AbilityCategory::seal);

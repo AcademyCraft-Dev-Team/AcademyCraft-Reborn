@@ -112,7 +112,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
 
     public static final class GetLevelChunkSectionsPacket extends RequestPacket<ServerGamePacketListenerImpl, GetLevelChunkSectionsPacket, ClientPacketListener, GetLevelChunkSectionsPacket.Response> {
         public static final StreamCodec<ByteBuf, GetLevelChunkSectionsPacket> CODEC = StreamCodec.composite(
-                BlockPos.STREAM_CODEC,
+                BlockPos.CODEC,
                 GetLevelChunkSectionsPacket::getPlayerPos,
                 GetLevelChunkSectionsPacket::new
         );
@@ -139,7 +139,7 @@ public final class ImagiphaseDowsingRodItem extends Item {
 
         public static final class Response extends ResponsePacket<ClientPacketListener, Response> {
             public static final StreamCodec<ByteBuf, Response> CODEC = StreamCodec.composite(
-                    BlockPos.STREAM_CODEC.apply(ByteBufCodecs.list()),
+                    BlockPos.CODEC.apply(ByteBufCodecs.list()),
                     Response::getSectionsWithImagPhase,
                     Response::new
             );

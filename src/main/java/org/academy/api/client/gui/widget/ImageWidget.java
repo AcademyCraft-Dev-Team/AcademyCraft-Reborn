@@ -1,9 +1,11 @@
 package org.academy.api.client.gui.widget;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
@@ -12,12 +14,10 @@ import org.jspecify.annotations.Nullable;
 
 public class ImageWidget extends AbstractWidget {
     @Nullable
-    protected ResourceLocation textureLocation;
+    protected Identifier textureLocation;
     @Nullable
     protected transient GpuTextureView textureView;
-    @Nullable
-    private FilterMode filterMode;
-    private boolean useMipmap = false;
+    private transient GpuSampler sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
     protected float u0 = 0.0F;
     protected float v0 = 0.0F;
     protected float u1 = 1.0F;
@@ -34,7 +34,7 @@ public class ImageWidget extends AbstractWidget {
         textureLocation = null;
     }
 
-    public ImageWidget(@Nullable ResourceLocation textureLocation) {
+    public ImageWidget(@Nullable Identifier textureLocation) {
         this.textureLocation = textureLocation;
         textureView = null;
     }
@@ -49,9 +49,6 @@ public class ImageWidget extends AbstractWidget {
 
         try {
             var texture = Minecraft.getInstance().getTextureManager().getTexture(textureLocation);
-            if (filterMode != null) {
-                texture.setFilter(useMipmap, filterMode == FilterMode.LINEAR);
-            }
             textureView = texture.getTextureView();
         } catch (Exception e) {
             AcademyCraft.LOGGER.error("Failed to resolve texture view for {}", textureLocation, e);
@@ -84,7 +81,7 @@ public class ImageWidget extends AbstractWidget {
                 context.pose().translate((paddedWidth - scaledWidth) / 2.0F, (paddedHeight - scaledHeight) / 2.0F, 0.0F);
             }
 
-            var command = new ImageDrawCommand(textureView, scaledWidth, scaledHeight, u0, v0, u1, v1, red, green, blue, finalAlpha);
+            var command = new ImageDrawCommand(textureView, sampler, scaledWidth, scaledHeight, u0, v0, u1, v1, red, green, blue, finalAlpha);
             context.submit(command);
         }
         context.pose().popPose();
@@ -117,10 +114,12 @@ public class ImageWidget extends AbstractWidget {
         return this;
     }
 
-    public ImageWidget setTextureFilter(FilterMode mode, boolean useMipmap) {
-        filterMode = mode;
-        this.useMipmap = useMipmap;
-        textureView = null;
+    public ImageWidget setSampler(FilterMode mode, boolean useMipmap) {
+        return setSampler(RenderSystem.getSamplerCache().getClampToEdge(mode, useMipmap));
+    }
+
+    public ImageWidget setSampler(GpuSampler sampler) {
+        this.sampler = sampler;
         return this;
     }
 
@@ -131,7 +130,7 @@ public class ImageWidget extends AbstractWidget {
         return this;
     }
 
-    public ImageWidget setTexture(@Nullable ResourceLocation textureLocation) {
+    public ImageWidget setTexture(@Nullable Identifier textureLocation) {
         this.textureLocation = textureLocation;
         textureView = null;
         requestLayout();

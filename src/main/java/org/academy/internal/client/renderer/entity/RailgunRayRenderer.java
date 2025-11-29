@@ -7,9 +7,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.client.util.VertexUtil;
-import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.entity.state.RailgunRayRenderState;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.joml.Matrix4f;
@@ -21,12 +19,11 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
     public void submit(RailgunRayRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
 
-        renderState.renderProgress = MathUtil.lerpStartEndFactor(renderState.renderProgress, renderState.progress, ClientUtil.animationFactor(MathUtil.PI / 2));
         poseStack.mulPose(new Matrix4f()
                 .rotateY((float) Math.toRadians(90 - renderState.yRot))
                 .rotateZ((float) Math.toRadians(90 + renderState.xRot))
         );
-        poseStack.scale(renderState.renderProgress * 0.1f, 50, renderState.renderProgress * 0.1f);
+        poseStack.scale(0.1f, 50, 0.1f);
         CylinderRenderer.renderCylinder(poseStack, PostEffect.BUFFER_SOURCE_PRE, BUFFERED_VERTEX, 0.75f, 0.5f, 0, 1f);
         poseStack.popPose();
     }
@@ -34,6 +31,13 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
     @Override
     public RailgunRayRenderState createRenderState() {
         return new RailgunRayRenderState();
+    }
+
+    @Override
+    public void extractRenderState(RailgunRay entity, RailgunRayRenderState reusedState, float partialTick) {
+        super.extractRenderState(entity, reusedState, partialTick);
+        reusedState.xRot = entity.getXRot();
+        reusedState.yRot = entity.getYRot();
     }
 
     public RailgunRayRenderer(EntityRendererProvider.Context context) {

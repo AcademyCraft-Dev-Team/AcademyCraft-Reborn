@@ -7,9 +7,9 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderState;
 
-import static net.minecraft.client.renderer.RenderType.ENTITY_SOLID;
 
 /**
  * @author MapleBadd
@@ -18,7 +18,7 @@ public class WindGenTopModel extends Model<WindGenTopRenderState> {
     private final ModelPart all;
 
     public WindGenTopModel(ModelPart root) {
-        super(root, ENTITY_SOLID);
+        super(root, RenderTypes::entityCutout);
         all = root.getChild("all");
     }
 

@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.widget;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.layout.Orientation;
 
 public class SpriteSheetWidget extends ImageWidget {
@@ -13,7 +13,7 @@ public class SpriteSheetWidget extends ImageWidget {
     protected final Orientation orientation;
 
     public SpriteSheetWidget(
-            ResourceLocation texture,
+            Identifier texture,
             Orientation orientation,
             int sheetWidth,
             int sheetHeight,

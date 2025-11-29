@@ -1,12 +1,10 @@
 package org.academy.api.client.gui.util;
 
-import com.mojang.blaze3d.textures.FilterMode;
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.Event;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.gui.layout.Orientation;
-import org.academy.api.client.gui.widget.WidgetContainer;
 import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.common.wireless.ConnectNodePacket;
@@ -58,9 +56,10 @@ public final class WirelessPanelUtil {
             root.addChild("content", content);
             {
                 var icon = new ImageWidget(ICON_OPEN_WIRELESS_PANEL);
-                icon.setLayoutParams(new LinearLayoutWidget.LayoutParams()
-                        .size(16, 16));
-                icon.setTextureFilter(FilterMode.LINEAR, true);
+                icon.setLayoutParams(
+                        new LinearLayoutWidget.LayoutParams()
+                                .size(16, 16)
+                );
                 content.addChild("icon", icon);
 
                 var connectedLabel = new LabelWidget("Connected");

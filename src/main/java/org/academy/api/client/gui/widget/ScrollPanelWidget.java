@@ -217,7 +217,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
         if (!isVisible()) return;
 
         var currentScrollY = getScrollY();
-        var newScrollY = MathUtil.lerpStartEndFactor(currentScrollY, scrollTarget, ClientUtil.animationFactor(MathUtil.PI / 1.5f));
+        var newScrollY = Mth.lerp(ClientUtil.animationFactor(MathUtil.PI / 1.5f), currentScrollY, scrollTarget);
         scrollTo(getScrollX(), newScrollY);
 
         var alpha1 = getAlpha();

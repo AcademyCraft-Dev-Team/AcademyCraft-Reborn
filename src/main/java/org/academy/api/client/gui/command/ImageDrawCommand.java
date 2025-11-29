@@ -1,17 +1,20 @@
 package org.academy.api.client.gui.command;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import org.academy.api.client.Render;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 
-import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 
 public class ImageDrawCommand extends PosTexColorRectDrawCommand {
-    protected final GpuTextureView textureView;
+    protected final GpuTextureView texture;
+    protected final GpuSampler sampler;
 
     public ImageDrawCommand(
-            GpuTextureView gpuTextureView,
+            GpuTextureView texture,
+            GpuSampler sampler,
             float width,
             float height,
             float u0,
@@ -24,16 +27,17 @@ public class ImageDrawCommand extends PosTexColorRectDrawCommand {
             float alpha
     ) {
         super(Render.RenderPipelines.IMAGE,width,height,u0,v0,u1,v1,red,green,blue,alpha);
-        textureView = gpuTextureView;
+        this.texture = texture;
+        this.sampler = sampler;
     }
 
     @Override
-    public Map<String, GpuTextureView> getSamplers() {
-        return Map.of("Sampler0", textureView);
+    public List<TextureBinding> getTextures() {
+        return List.of(new TextureBinding("Sampler0", texture, sampler));
     }
 
     @Override
-    public Map<String, GpuBufferSlice> getUniforms() {
-        return Collections.emptyMap();
+    public List<UniformBinding> getUniforms() {
+        return List.of();
     }
 }

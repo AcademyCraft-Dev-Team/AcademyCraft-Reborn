@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.model;
 
 import net.minecraft.client.model.Model;
@@ -7,12 +8,14 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.Unit;
 
+*/
 /**
  * @author MapleBadd
- */
+ *//*
+
 public class ImagiphaseDowsingRodModel extends Model<Unit> {
     private final ModelPart all;
     private final ModelPart handle;
@@ -20,7 +23,7 @@ public class ImagiphaseDowsingRodModel extends Model<Unit> {
     private final ModelPart main;
 
     public ImagiphaseDowsingRodModel(ModelPart root) {
-        super(root.getChild("all"), RenderType::entityCutout);
+        super(root.getChild("all"), RenderTypes::entityCutout);
         all = root.getChild("all");
         handle = all.getChild("handle");
         pointer = handle.getChild("pointer");
@@ -52,4 +55,4 @@ public class ImagiphaseDowsingRodModel extends Model<Unit> {
 
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
-}
+}*/

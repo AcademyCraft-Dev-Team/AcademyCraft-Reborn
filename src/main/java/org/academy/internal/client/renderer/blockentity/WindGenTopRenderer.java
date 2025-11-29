@@ -3,10 +3,10 @@ package org.academy.internal.client.renderer.blockentity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -52,7 +52,7 @@ public final class WindGenTopRenderer implements BlockEntityRenderer<WindGenTopB
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
-        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderType.entityCutout(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, 0, renderState.breakProgress);
+        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, 0, renderState.breakProgress);
         poseStack.pushPose();
         poseStack.translate(0, 1.5f, 0);
         poseStack.scale(1, 1f / 16f, 1);

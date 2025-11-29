@@ -2,6 +2,8 @@ package org.academy.internal.client.hud;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -88,6 +90,7 @@ public final class HUDManager {
 
             guiGraphics.submitBlit(
                     Render.RenderPipelines.IMAGE, uiColorView,
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
                     0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
                     0, 1, 1, 0,
                     -1

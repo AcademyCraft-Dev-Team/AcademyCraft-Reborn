@@ -5,6 +5,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -43,12 +44,16 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
 
     public static void tick(Level level, BlockPos pos, BlockState state, SolarGenBlockEntity blockEntity) {
         blockEntity.ticks++;
-        var brightness = level.getBrightness(LightLayer.SKY, pos) - level.getSkyDarken();
-        var sunAngle = level.getSunAngle(1.0F);
-        var adjustedAngle = sunAngle < (float) Math.PI ? 0.0F : (float) (Math.PI * 2);
-        sunAngle += (adjustedAngle - sunAngle) * 0.2F;
-        brightness = Math.round(brightness * Mth.cos(sunAngle));
-        brightness = Math.clamp(brightness, 0, 15);
+
+        var target = level.getBrightness(LightLayer.SKY, pos) - level.getSkyDarken();
+        var sunAngle = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, pos) * (float) (Math.PI / 180.0);
+        if (target > 0) {
+            var offset = sunAngle < (float) Math.PI ? 0.0F : (float) (Math.PI * 2);
+            sunAngle += (offset - sunAngle) * 0.2F;
+            target = Math.round(target * Mth.cos(sunAngle));
+        }
+
+        var brightness = Mth.clamp(target, 0, 15);
         var hasBrightness = brightness != 0;
         blockEntity.foldingState.animateWhen(!hasBrightness, blockEntity.ticks);
         blockEntity.unfoldingState.animateWhen(hasBrightness, blockEntity.ticks);
@@ -114,7 +119,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
             energyStored = clamped;
             setChanged();
             if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
     }
@@ -182,7 +187,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         }
         setChanged();
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 

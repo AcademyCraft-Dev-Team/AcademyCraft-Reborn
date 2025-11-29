@@ -4,10 +4,9 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
-import org.jetbrains.annotations.NotNull;
 
 public class GlowCircle extends RenderOnlyEntity {
-    public static final float LIFE_TICKS = 20.0f;
+    public static final float LIFE_TICKS = 10.0f;
 
     public int ticks;
 
@@ -16,7 +15,7 @@ public class GlowCircle extends RenderOnlyEntity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.@NotNull Builder builder) {
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
     }
 
     @Override

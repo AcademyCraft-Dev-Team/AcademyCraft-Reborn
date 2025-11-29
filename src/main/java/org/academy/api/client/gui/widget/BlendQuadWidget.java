@@ -1,10 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.Render;
@@ -12,12 +11,13 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.render.RenderContext;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 
 public class BlendQuadWidget extends AbstractWidget {
     public float marginTop = 4f;
@@ -59,19 +59,19 @@ public class BlendQuadWidget extends AbstractWidget {
                         1.0f
                 ) {
                     @Override
-                    public Map<String, GpuTextureView> getSamplers() {
-                        return Collections.emptyMap();
+                    public List<TextureBinding> getTextures() {
+                        return List.of();
                     }
 
                     @Override
-                    public Map<String, GpuBufferSlice> getUniforms() {
+                    public List<UniformBinding> getUniforms() {
                         var uboStorage = context.getDynamicUbo(SDFData.class, SDFData.UBO_SIZE);
                         var size = new Vector2f(paddedWidth, paddedHeight);
                         var margins = new Vector4f(marginLeft, marginTop, marginRight, marginBottom);
                         var fillColor = new Vector4f(red, green, blue, finalAlpha);
                         var sdfData = new SDFData(size, margins, fillColor);
                         var uboSlice = uboStorage.writeUniform(sdfData);
-                        return Map.of("SdfUniforms", uboSlice);
+                        return List.of(new UniformBinding("SdfUniforms", uboSlice));
                     }
                 };
                 context.submit(sdfCommand);
@@ -87,20 +87,18 @@ public class BlendQuadWidget extends AbstractWidget {
     }
 
     private void renderLines(RenderContext context, float finalAlpha, float paddedWidth, float paddedHeight) {
+        var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
         var textureManager = Minecraft.getInstance().getTextureManager();
-        var lineTexture = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTexture();
-        lineTexture.setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, false);
         var lineTextureView = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTextureView();
         var lineH = 4.0f;
-
         {
-            var topLineCommand = new ImageDrawCommand(lineTextureView, paddedWidth, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            var topLineCommand = new ImageDrawCommand(lineTextureView, sampler, paddedWidth, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(topLineCommand);
         }
         {
             context.pose().pushPose();
             context.pose().translate(0, Math.max(paddedHeight - lineH, 0), 0);
-            var bottomLineCommand = new ImageDrawCommand(lineTextureView, paddedWidth, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
+            var bottomLineCommand = new ImageDrawCommand(lineTextureView, sampler, paddedWidth, lineH, 0, 0, 1, 1, 1.0f, 1.0f, 1.0f, finalAlpha);
             context.submit(bottomLineCommand);
             context.pose().popPose();
         }

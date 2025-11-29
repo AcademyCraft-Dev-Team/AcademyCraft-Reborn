@@ -65,23 +65,21 @@ public final class WorldData {
     }
 
     public static void saveData() {
-        if (AcademyCraftServer.worldData == null) {
-            return;
-        }
+        if (AcademyCraftServer.worldData == null) return;
 
         var hasDirtyData = AcademyCraftServer.worldData.getPlayers().values().stream()
                 .anyMatch(Player::isDirty);
 
-        if (!hasDirtyData) {
-            return;
-        }
+        if (!hasDirtyData) return;
 
         AcademyCraft.LOGGER.debug("Dirty data detected, saving world data...");
 
-        final var gson = new GsonBuilder().setPrettyPrinting().create();
-        final var configFile = AcademyCraftServer.worldDataFile;
+         var gson = new GsonBuilder().setPrettyPrinting().create();
+         var worldDataFile = AcademyCraftServer.worldDataFile;
 
-        try (var fileWriter = new FileWriter(configFile)) {
+         if (worldDataFile == null) throw new IllegalStateException("World data file has not been set.");
+
+        try (var fileWriter = new FileWriter(worldDataFile)) {
             gson.toJson(AcademyCraftServer.worldData, fileWriter);
         } catch (IOException e) {
             AcademyCraft.LOGGER.error("Failed to save world data", e);

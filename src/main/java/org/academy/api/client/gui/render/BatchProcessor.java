@@ -1,15 +1,18 @@
 package org.academy.api.client.gui.render;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import org.academy.api.client.Render;
 import org.academy.api.client.gui.command.SubmittedCommand;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformBinding;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
 public final class BatchProcessor {
 
@@ -25,7 +28,7 @@ public final class BatchProcessor {
         var currentPipeline = firstCommand.getCommand().getPipeline();
         var currentScissor = firstCommand.getScissorRect();
         var currentResourceKey = firstCommand.getResourceKey();
-        var currentSamplers = firstCommand.getCommand().getSamplers();
+        var currentTextures = firstCommand.getCommand().getTextures();
         var currentUniforms = firstCommand.getCommand().getUniforms();
 
         var currentBuilder = new BufferBuilder(
@@ -45,12 +48,12 @@ public final class BatchProcessor {
                     || !Objects.equals(submittedCommand.getScissorRect(), currentScissor);
 
             if (shouldBreakBatch) {
-                finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentSamplers, currentUniforms);
+                finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniforms);
 
                 currentPipeline = command.getPipeline();
                 currentScissor = submittedCommand.getScissorRect();
                 currentResourceKey = submittedCommand.getResourceKey();
-                currentSamplers = command.getSamplers();
+                currentTextures = command.getTextures();
                 currentUniforms = command.getUniforms();
 
                 currentBuilder = new BufferBuilder(
@@ -63,7 +66,7 @@ public final class BatchProcessor {
             applyVertices(currentBuilder, submittedCommand, depthEpsilon);
         }
 
-        finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentSamplers, currentUniforms);
+        finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniforms);
 
         return batches;
     }
@@ -110,12 +113,11 @@ public final class BatchProcessor {
             BufferBuilder builder,
             RenderPipeline pipeline,
             @Nullable ScissorRect scissor,
-            Map<String, GpuTextureView> samplers,
-            Map<String, GpuBufferSlice> uniforms
+            List<TextureBinding> textures,
+            List<UniformBinding> uniforms
     ) {
         var meshData = builder.build();
-        if (meshData != null)
-            batches.add(new PendingBatch(meshData, pipeline, scissor, samplers, uniforms));
+        if (meshData != null) batches.add(new PendingBatch(meshData, pipeline, scissor, textures, uniforms));
     }
 
     private BatchProcessor() {

@@ -1,7 +1,7 @@
 package org.academy;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import org.academy.internal.client.data.AcademyCraftClientData;
@@ -52,15 +52,15 @@ public final class AcademyCraft {
         }
     }
 
-    public static ResourceLocation custom(String namespace, String path) {
-        return ResourceLocation.fromNamespaceAndPath(namespace, path);
+    public static Identifier custom(String namespace, String path) {
+        return Identifier.fromNamespaceAndPath(namespace, path);
     }
 
-    public static ResourceLocation vanilla(String name) {
-        return ResourceLocation.withDefaultNamespace(name);
+    public static Identifier vanilla(String name) {
+        return Identifier.withDefaultNamespace(name);
     }
 
-    public static ResourceLocation academy(String name) {
-        return ResourceLocation.fromNamespaceAndPath(MOD_ID, name);
+    public static Identifier academy(String name) {
+        return Identifier.fromNamespaceAndPath(MOD_ID, name);
     }
 }

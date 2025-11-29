@@ -2,7 +2,7 @@ package org.academy.internal.client.app.mediaplayer;
 
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -122,11 +122,11 @@ public final class MediaPlayerBackend {
             var name = entry.getKey();
             var data = entry.getValue();
 
-            ResourceLocation iconLocation;
+            Identifier iconLocation;
             try {
-                iconLocation = ResourceLocation.parse(data.icon());
+                iconLocation = Identifier.parse(data.icon());
             } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Invalid icon ResourceLocation '{}' for entry '{}' in {}{}", data.icon(), name, sourceDescription, e);
+                AcademyCraft.LOGGER.error("Invalid icon Identifier '{}' for entry '{}' in {}{}", data.icon(), name, sourceDescription, e);
                 continue;
             }
 
@@ -150,7 +150,7 @@ public final class MediaPlayerBackend {
 
             try {
                 if (sourceTypeStr.equalsIgnoreCase("RESOURCE_LOCATION")) {
-                    source = MediaSource.fromResourceLocation(ResourceLocation.parse(sourcePath));
+                    source = MediaSource.fromIdentifier(Identifier.parse(sourcePath));
                 } else if (sourceTypeStr.equalsIgnoreCase("PATH")) {
                     source = MediaSource.fromAbsolutePath(sourcePath);
                 } else {

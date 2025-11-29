@@ -9,7 +9,9 @@ import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.PlayerSyncPacket;
-import org.academy.api.common.ability.packet.sync.s2c.*;
+import org.academy.api.common.ability.pakcet.*;
+import org.academy.api.common.sync.packet.SyncDataPacket;
+import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.common.ability.accelerator.skills.*;
@@ -19,9 +21,8 @@ import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElec
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.item.CoinItem;
-//import org.academy.internal.common.world.item.ImagiphaseDowsingRodItem;
-import org.misaka.api.common.registries.MisakaNetworkRegistries;
 import org.misaka.api.common.network.packet.PacketType;
+import org.misaka.api.common.registries.MisakaNetworkRegistries;
 
 public final class PacketTypes {
     public static final DeferredRegister<PacketType<?, ?>> PACKET_TYPES =
@@ -30,6 +31,10 @@ public final class PacketTypes {
     /**
      * Sync
      */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<?, ?>>
+            SHARED_PUT = PACKET_TYPES.register("shared_put",
+            () -> new PacketType<>(SyncDataPacket.class, UncheckedUtil.uncheckedCast(SyncDataPacket.CODEC)));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncLevelPacket>>
             SYNC_LEVEL = PACKET_TYPES.register("sync_level",
             () -> new PacketType<>(SyncLevelPacket.class, SyncLevelPacket.CODEC));
@@ -93,21 +98,9 @@ public final class PacketTypes {
             ARC_GENERATE_GENERATE = PACKET_TYPES.register("arc_generate_generate",
             () -> new PacketType<>(ArcGenerate.GeneratePacket.class, ArcGenerate.GeneratePacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Railgun.ShootPacket>>
-            RAILGUN_SHOOT = PACKET_TYPES.register("railgun_shoot",
-            () -> new PacketType<>(Railgun.ShootPacket.class, Railgun.ShootPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Railgun.StartChargePacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Railgun.StartPacket>>
             RAILGUN_START_CHARGE = PACKET_TYPES.register("railgun_start_charge",
-            () -> new PacketType<>(Railgun.StartChargePacket.class, Railgun.StartChargePacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, Railgun.ConfirmChargePacket>>
-            RAILGUN_CONFIRM_CHARGE = PACKET_TYPES.register("railgun_confirm_charge",
-            () -> new PacketType<>(Railgun.ConfirmChargePacket.class, Railgun.ConfirmChargePacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, Railgun.ChargeEndPacket>>
-            RAILGUN_CHARGE_END = PACKET_TYPES.register("railgun_charge_end",
-            () -> new PacketType<>(Railgun.ChargeEndPacket.class, Railgun.ChargeEndPacket.CODEC));
+            () -> new PacketType<>(Railgun.StartPacket.class, Railgun.StartPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SingleHighSpeedElectronBeam.ShootPacket>>
             SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT = PACKET_TYPES.register("single_high_speed_electron_beam_shoot",

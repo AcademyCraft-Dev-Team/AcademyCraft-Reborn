@@ -9,9 +9,9 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -31,19 +31,19 @@ public final class AcademyCraftCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext context) {
         dispatcher.register(Commands.literal("academy")
                 .then(Commands.literal("learn_all")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(AcademyCraftCommand::learnAllSkills))
                 .then(Commands.literal("learned")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(AcademyCraftCommand::listLearnedSkills))
                 .then(Commands.literal("learn")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.argument("skill_name", ResourceLocationArgument.id())
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.argument("skill_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestLearnableSkills)
                                 .executes(AcademyCraftCommand::learnSingleSkill)))
                 .then(Commands.literal("set_category")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.argument("category_name", ResourceLocationArgument.id())
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.argument("category_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestAbilityCategories)
                                 .executes(AcademyCraftCommand::setAbilityCategory))));
     }
@@ -85,12 +85,12 @@ public final class AcademyCraftCommand {
     private static int learnSingleSkill(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
-        var skillResourceLocation = ResourceLocationArgument.getId(context, "skill_name");
+        var skillIdentifier = IdentifierArgument.getId(context, "skill_name");
 
-        var skillToLearn = Registries.SKILLS.get(skillResourceLocation);
+        var skillToLearn = Registries.SKILLS.get(skillIdentifier);
 
         if (skillToLearn.isEmpty()) {
-            context.getSource().sendFailure(Component.literal("Skill '" + skillResourceLocation + "' not found."));
+            context.getSource().sendFailure(Component.literal("Skill '" + skillIdentifier + "' not found."));
             return 0;
         }
 
@@ -98,29 +98,29 @@ public final class AcademyCraftCommand {
         if (skillToLearn.get().value().getCategory() != playerCategory) {
             var playerCategoryKey = Registries.ABILITY_CATEGORIES.getKey(playerCategory);
             var playerCategoryName = playerCategoryKey != null ? playerCategoryKey.toString() : "None";
-            context.getSource().sendFailure(Component.literal("Skill '" + skillResourceLocation + "' does not belong to your current ability category (" + playerCategoryName + ")."));
+            context.getSource().sendFailure(Component.literal("Skill '" + skillIdentifier + "' does not belong to your current ability category (" + playerCategoryName + ")."));
             return 0;
         }
 
-        if (AbilitySystemServer.getPlayerSkills(playerUuid).contains(skillResourceLocation.toString())) {
-            context.getSource().sendFailure(Component.literal("You have already learned skill '" + skillResourceLocation + "'."));
+        if (AbilitySystemServer.getPlayerSkills(playerUuid).contains(skillIdentifier.toString())) {
+            context.getSource().sendFailure(Component.literal("You have already learned skill '" + skillIdentifier + "'."));
             return 0;
         }
 
-        AbilitySystemServer.addPlayerSkill(playerUuid, skillResourceLocation.toString());
-        context.getSource().sendSuccess(() -> Component.literal("Successfully learned skill: " + skillResourceLocation), true);
+        AbilitySystemServer.addPlayerSkill(playerUuid, skillIdentifier.toString());
+        context.getSource().sendSuccess(() -> Component.literal("Successfully learned skill: " + skillIdentifier), true);
         return 1;
     }
 
     private static int setAbilityCategory(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
-        var categoryResourceLocation = ResourceLocationArgument.getId(context, "category_name");
+        var categoryIdentifier = IdentifierArgument.getId(context, "category_name");
 
-        var categoryToSet = Registries.ABILITY_CATEGORIES.get(categoryResourceLocation);
+        var categoryToSet = Registries.ABILITY_CATEGORIES.get(categoryIdentifier);
 
         if (categoryToSet.isEmpty()) {
-            context.getSource().sendFailure(Component.literal("Ability category '" + categoryResourceLocation + "' not found."));
+            context.getSource().sendFailure(Component.literal("Ability category '" + categoryIdentifier + "' not found."));
             return 0;
         }
 
@@ -133,7 +133,7 @@ public final class AcademyCraftCommand {
             AbilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_LIST);
         }
 
-        context.getSource().sendSuccess(() -> Component.literal("Ability category set to: " + categoryResourceLocation + ". All previous skills have been cleared."), true);
+        context.getSource().sendSuccess(() -> Component.literal("Ability category set to: " + categoryIdentifier + ". All previous skills have been cleared."), true);
         return 1;
     }
 
@@ -157,7 +157,7 @@ public final class AcademyCraftCommand {
 
     private static CompletableFuture<Suggestions> suggestAbilityCategories(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(
-                Registries.ABILITY_CATEGORIES.keySet().stream().map(ResourceLocation::toString),
+                Registries.ABILITY_CATEGORIES.keySet().stream().map(Identifier::toString),
                 builder
         );
     }

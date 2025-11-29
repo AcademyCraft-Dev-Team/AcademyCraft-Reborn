@@ -25,11 +25,11 @@ public final class PlayerDataManager {
 
     private Player createDefaultPlayerData(UUID uuid) {
         AcademyCraft.LOGGER.debug("Creating new data entry for player {}", uuid);
-        var newPlayerData = new Player();
-        newPlayerData.setLevel(0);
-        newPlayerData.setComputingPower(100);
-        newPlayerData.setMaxComputingPower(100);
-        newPlayerData.markDirty();
-        return newPlayerData;
+        var player = new Player();
+        player.setLevel(0);
+        player.setComputingPower(100);
+        player.setMaxComputingPower(100);
+        player.markDirty();
+        return player;
     }
 }

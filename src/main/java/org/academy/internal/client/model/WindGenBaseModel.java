@@ -10,8 +10,9 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.internal.client.definitions.WindGenBaseAnimation;
@@ -27,13 +28,13 @@ import static org.academy.api.client.Resource.Textures.MODEL_WIND_GEN;
 public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
     public static final float[][] PILLAR_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.3f, 8, true);
     public static final float[][] PILLAR_OUTLINE_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderWireframeBuffer(0, 1, 0.3f, 8);
-    public static final RenderType BASE_RENDER_TYPE = RenderType.entitySolid(MODEL_WIND_GEN);
-    public static final RenderType PILLAR_RENDER_TYPE = RenderType.entitySolid(BLOCK_WIND_GEN_PILLAR);
+    public static final RenderType BASE_RENDER_TYPE = RenderTypes.entitySolid(MODEL_WIND_GEN);
+    public static final RenderType PILLAR_RENDER_TYPE = RenderTypes.entitySolid(BLOCK_WIND_GEN_PILLAR);
     private final KeyframeAnimation setup;
     private final KeyframeAnimation shut;
 
     public WindGenBaseModel(ModelPart root) {
-        super(root, RenderType::entityCutoutNoCull);
+        super(root, RenderTypes::entityCutoutNoCull);
         var all = root.getChild("all");
         var parts = all.getChild("parts");
         var screen = parts.getChild("screen");

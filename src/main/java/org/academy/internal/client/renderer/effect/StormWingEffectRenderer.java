@@ -2,13 +2,11 @@ package org.academy.internal.client.renderer.effect;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.RandomSource;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.context.ContextKey;
-import org.academy.AcademyCraft;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.renderer.RingRenderer;
@@ -18,14 +16,15 @@ import org.academy.api.common.util.MathUtil;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
+import static org.academy.AcademyCraft.academy;
+
 @SuppressWarnings("SuspiciousNameCombination")
 public final class StormWingEffectRenderer implements EffectRenderer {
-    public static final ContextKey<Boolean> CONTEXT_KEY = new ContextKey<>(AcademyCraft.academy("storm_wing"));
-    private static final StormWingEffectRenderer INSTANCE = new StormWingEffectRenderer();
-    public static final ResourceLocation TEXTURE = AcademyCraft.academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
+    public static final ContextKey<Boolean> CONTEXT_KEY = new ContextKey<>(academy("storm_wing"));
+    public static final StormWingEffectRenderer INSTANCE = new StormWingEffectRenderer();
+    public static final Identifier TEXTURE = academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
     public static final int RING_SEGMENTS = 4;
-    private static final RandomSource RAND = RandomSource.create();
-    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0);
+    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, -0.25f);
     private static final RenderType RENDER_TYPE = RingRenderer.RING_RENDER_TYPE.apply(TEXTURE);
     private static final int NUM_RINGS = 24;
     private static final float HEIGHT = 3.5f;
@@ -57,7 +56,6 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     private static final double TIME_WIDTH_BASE = 0.15 * TIME_SCALE_GLOBAL;
     private static final double TIME_WIDTH_DETAIL = 0.55 * TIME_SCALE_GLOBAL;
     private static final double TIME_TILT = 0.18 * TIME_SCALE_GLOBAL;
-    private static final float NESTED_RING_PROBABILITY = 0.40f;
     private static final float NESTED_RADIUS_FACTOR = 0.50f;
     private static final float NESTED_WIDTH_FACTOR = 0.75f;
     private static final float TORNADO_OFFSET_1 = 0.0f;
@@ -72,10 +70,6 @@ public final class StormWingEffectRenderer implements EffectRenderer {
 
     static {
         PostEffect.addFixedBuffer(RENDER_TYPE);
-    }
-
-    public static StormWingEffectRenderer getInstance() {
-        return INSTANCE;
     }
 
     private StormWingEffectRenderer() {
@@ -154,9 +148,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
         for (var i = 0; i < NUM_RINGS; i++) {
             var normalizedY = (NUM_RINGS <= 1) ? 0.5 : i / (double) (NUM_RINGS - 1);
 
-            if (i > 0) {
-                currentY += calculateGap(i, tGap);
-            }
+            if (i > 0) currentY += calculateGap(i, tGap);
 
             applyDomainWarp(normalizedY, tWarp);
 

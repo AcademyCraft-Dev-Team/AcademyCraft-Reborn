@@ -2,7 +2,7 @@ package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.render.MatrixStack;
@@ -43,7 +43,7 @@ public final class LineBoxRenderer {
     public static void renderWireframeBox(MatrixStack poseStack, MultiBufferSource bufferSource, AABB box,
                                           float r, float g, float b, float a) {
         var vertices = getVertices(box);
-        var vertexConsumer = bufferSource.getBuffer(RenderType.LINES);
+        var vertexConsumer = bufferSource.getBuffer(RenderTypes.LINES);
         var matrix4f = poseStack.lastMatrix();
         var matrix3f = poseStack.lastNormal();
 
@@ -60,7 +60,7 @@ public final class LineBoxRenderer {
         var faceIndices = FACE_EDGES.get(face);
         if (faceIndices == null) return;
 
-        var vertexConsumer = bufferSource.getBuffer(RenderType.LINES);
+        var vertexConsumer = bufferSource.getBuffer(RenderTypes.LINES);
         var matrix4f = poseStack.lastMatrix();
         var matrix3f = poseStack.lastNormal();
 

@@ -3,15 +3,16 @@ package org.academy.api.client.render.post;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import org.academy.api.client.Render;
+import org.academy.api.client.render.TextureBinding;
 
-import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 import java.util.SequencedMap;
 
 public final class PostEffect {
@@ -52,8 +53,8 @@ public final class PostEffect {
         Render.runBlitPassNDC(
                 sceneColorView,
                 Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
-                Map.of("DiffuseSampler", main),
-                Collections.emptyMap(),
+                List.of(new TextureBinding("DiffuseSampler", main, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))),
+                List.of(),
                 false
         );
         BUFFER_SOURCE_PRE.endBatch();

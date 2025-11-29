@@ -1,7 +1,7 @@
 /*
 package org.academy.api.client.hud.terminal.apps;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.Resource;
@@ -29,7 +29,7 @@ public final class SettingsApp implements App {
     }
 
     @Override
-    public ResourceLocation getIcon() {
+    public Identifier getIcon() {
         return Resource.Textures.ICON_SETTINGS;
     }
 
@@ -125,7 +125,7 @@ public final class SettingsApp implements App {
 
         private PanelWidget createTabButton(String text, float x, float width) {
             var panel = new PanelWidget(x, 0, width, 20);
-            panel.addChild("button_logic", new ImageButtonWidget(0, 0, width, 20, (ResourceLocation) null, () -> {
+            panel.addChild("button_logic", new ImageButtonWidget(0, 0, width, 20, (Identifier) null, () -> {
             }));
             var back = new FillWidget(0, 0, width, 20, 0xFF000000);
             back.setAlpha(0.25f);
@@ -206,7 +206,7 @@ public final class SettingsApp implements App {
                     text.setText(stateSupplier.get() ? "On" : "Off");
                 }
             };
-            var logic = new ImageButtonWidget(0, 0, 180f, 20f, (ResourceLocation) null, toggleAction);
+            var logic = new ImageButtonWidget(0, 0, 180f, 20f, (Identifier) null, toggleAction);
             buttonPanel.addChild("button_logic", logic);
             var back = new FillWidget(0, 0, 180f, 20f, 0xFF000000);
             back.setAlpha(0.3f);
@@ -269,7 +269,7 @@ public final class SettingsApp implements App {
                 keySelectionPanel.setEnabled(false);
                 }
             };
-            var closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, (ResourceLocation) null, closeAction);
+            var closeButtonLogic = new ImageButtonWidget(0, 0, 20, 15, (Identifier) null, closeAction);
             closeButtonPanel.addChild("button_logic", closeButtonLogic);
             var closeBack = new FillWidget(0, 0, 20, 15, 0xFF000000);
             closeBack.setAlpha(0.5f);
@@ -296,7 +296,7 @@ public final class SettingsApp implements App {
                 keySelectionButton.<PanelWidget>getChildUnSafe("layered").<AutoScaleLabelWidget>getChildUnSafe("text").setText("> ... <");
                 }
             };
-            var listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, (ResourceLocation) null, listenAction);
+            var listenButtonLogic = new ImageButtonWidget(0, 0, 170, 20, (Identifier) null, listenAction);
             listenBtnPanel.addChild("button_logic", listenButtonLogic);
             var listenBtnBack = new FillWidget(0, 0, 170, 20, 0xFF000000);
             listenBtnBack.setAlpha(0.5f);
@@ -518,7 +518,7 @@ public final class SettingsApp implements App {
                 }
             };
             keyboardBtn = new PanelWidget(0, 0, 60, 15);
-            var keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, (ResourceLocation) null, keyboardAction);
+            var keyboardLogic = new ImageButtonWidget(0, 0, 60, 15, (Identifier) null, keyboardAction);
             keyboardBtn.addChild("button_logic", keyboardLogic);
             var keyboardBtnBack = new FillWidget(0, 0, 60, 15, 0xFF000000);
             keyboardBtnBack.setAlpha(0.4f);
@@ -539,7 +539,7 @@ public final class SettingsApp implements App {
                 }
             };
             mouseBtn = new PanelWidget(65, 0, 60, 15);
-            var mouseLogic = new ImageButtonWidget(0, 0, 60, 15, (ResourceLocation) null, mouseAction);
+            var mouseLogic = new ImageButtonWidget(0, 0, 60, 15, (Identifier) null, mouseAction);
             mouseBtn.addChild("button_logic", mouseLogic);
             var mouseBtnBack = new FillWidget(0, 0, 60, 15, 0xFF000000);
             mouseBtnBack.setAlpha(0.4f);
@@ -562,7 +562,7 @@ public final class SettingsApp implements App {
                     updateKeySelectionHighlights();
                 }
             };
-            var keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, (ResourceLocation) null, keySelectAction);
+            var keySelectionLogic = new ImageButtonWidget(0, 0, 125, 20, (Identifier) null, keySelectAction);
             keySelectionButton.addChild("button_logic", keySelectionLogic);
             var keySelectionButtonBack = new FillWidget(0, 0, 125, 20, 0xFF000000);
             keySelectionButtonBack.setAlpha(0.3f);
@@ -599,7 +599,7 @@ public final class SettingsApp implements App {
 
         private PanelWidget createModifierButton(String text, float x, Runnable onPress) {
             var panel = new PanelWidget(x, 0, 35, 15);
-            var buttonLogic = new ImageButtonWidget(0, 0, 35, 15, (ResourceLocation) null, onPress);
+            var buttonLogic = new ImageButtonWidget(0, 0, 35, 15, (Identifier) null, onPress);
             panel.addChild("button_logic", buttonLogic);
             var back = new FillWidget(0, 0, 35, 15, 0xFF000000);
             panel.addChild("back", back);
@@ -712,7 +712,7 @@ public final class SettingsApp implements App {
             panel.addChild("label", label);
 
             var buttonPanel = new PanelWidget(105, 0, 75, 20);
-            var buttonLogic = new ImageButtonWidget(0, 0, 75, 20, (ResourceLocation) null, () -> toggleKeybindingControls(panel, keyName));
+            var buttonLogic = new ImageButtonWidget(0, 0, 75, 20, (Identifier) null, () -> toggleKeybindingControls(panel, keyName));
             buttonPanel.addChild("button_logic", buttonLogic);
             panel.addChild("button", buttonPanel);
 
@@ -815,7 +815,7 @@ public final class SettingsApp implements App {
 
         private PanelWidget createSmallKeyButton(String text, float x, float y, float w, Runnable onPress) {
             var panel = new PanelWidget(x, y, w, 15);
-            var buttonLogic = new ImageButtonWidget(0, 0, w, 15, (ResourceLocation) null, onPress);
+            var buttonLogic = new ImageButtonWidget(0, 0, w, 15, (Identifier) null, onPress);
             panel.addChild("button_logic", buttonLogic);
 
             var back = new FillWidget(0, 0, w, 15, 0xFF000000);

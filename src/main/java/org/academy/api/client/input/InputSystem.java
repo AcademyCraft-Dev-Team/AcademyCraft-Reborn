@@ -145,10 +145,10 @@ public final class InputSystem {
         public int action;
         public LinkedHashSet<Integer> modifiers;
 
-        public KeyInfo(LinkedHashSet<Integer> newInputs, int newAction, LinkedHashSet<Integer> newModifiers) {
-            inputs = newInputs;
-            action = newAction;
-            modifiers = newModifiers;
+        public KeyInfo(LinkedHashSet<Integer> inputs, int action, LinkedHashSet<Integer> modifiers) {
+            this.inputs = inputs;
+            this.action = action;
+            this.modifiers = modifiers;
         }
     }
 
@@ -156,9 +156,9 @@ public final class InputSystem {
         public InputPair inputPair;
         public Runnable runnable;
 
-        public KeyBinding(InputPair newInputPair, Runnable newRunnable) {
-            inputPair = newInputPair;
-            runnable = newRunnable;
+        public KeyBinding(InputPair inputPair, Runnable runnable) {
+            this.inputPair = inputPair;
+            this.runnable = runnable;
         }
     }
 
@@ -166,9 +166,9 @@ public final class InputSystem {
         public InputType inputType;
         public KeyInfo keyInfo;
 
-        public InputPair(InputType newInputType, KeyInfo newKeyInfo) {
-            inputType = newInputType;
-            keyInfo = newKeyInfo;
+        public InputPair(InputType inputType, KeyInfo keyInfo) {
+            this.inputType = inputType;
+            this.keyInfo = keyInfo;
         }
     }
 }

@@ -1,7 +1,7 @@
 package org.academy.internal.client.app.mediaplayer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public record MediaSource(Object path) {
-    public static MediaSource fromResourceLocation(ResourceLocation location) {
+    public static MediaSource fromIdentifier(Identifier location) {
         return new MediaSource(location);
     }
 
@@ -19,7 +19,7 @@ public record MediaSource(Object path) {
 
     public ByteBuffer getData() throws IOException {
         byte[] bytes;
-        if (path instanceof ResourceLocation location) {
+        if (path instanceof Identifier location) {
             try (var stream = Minecraft.getInstance().getResourceManager().open(location)) {
                 bytes = stream.readAllBytes();
             }
