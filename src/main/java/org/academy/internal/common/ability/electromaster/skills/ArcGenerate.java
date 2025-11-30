@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
@@ -14,12 +15,8 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.Branch;
-import org.academy.api.common.arc.modifier.DisplacementModifier;
 import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.modifier.TaperModifier;
 import org.academy.api.common.arc.path.LinePath;
-import org.academy.api.common.arc.property.AttributeCurve;
-import org.academy.api.common.arc.property.Knot;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.util.MathUtil;
@@ -123,30 +120,25 @@ public final class ArcGenerate extends Skill {
             arc.setPos(handPos);
 
             List<Branch> branches = new ArrayList<>();
-            int branchCount = 3 + MathUtil.RANDOM.nextInt(3);
-            double maxAngleRad = Math.toRadians(20.0);
+            int branchCount = 4 + MathUtil.RANDOM.nextInt(3);
+            double maxAngleRad = Math.toRadians(10.0);
 
             for (int i = 0; i < branchCount; i++) {
                 float progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;
-                float branchLength = trunkLength * (0.3f + MathUtil.RANDOM.nextFloat() * 0.4f);
+                float branchLength = trunkLength * (0.3f + MathUtil.RANDOM.nextFloat() * 0.2f);
 
                 double phi = MathUtil.RANDOM.nextDouble() * maxAngleRad;
-                double theta = MathUtil.RANDOM.nextDouble() * 2.0 * Math.PI;
 
-                float x = (float) (Math.sin(phi) * Math.cos(theta));
-                float y = (float) (Math.sin(phi) * Math.sin(theta));
-                float z = (float) Math.cos(phi);
+                float x = Mth.sin(phi);
+                float y = Mth.sin(phi);
+                float z = Mth.cos(phi);
 
                 Vector3f localDir = new Vector3f(x, y, z).normalize().mul(branchLength);
 
                 ArcPath childPath = new ArcPath(
                         new LinePath(new Vector3f(0, 0, 0), localDir),
                         List.of(
-                                new JaggedModifier(0.6f, 3, MathUtil.RANDOM.nextLong()),
-                                new TaperModifier(
-                                        new AttributeCurve(List.of(new Knot(0, 1.0f), new Knot(1, 0.1f))),
-                                        0.5f
-                                )
+                                new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())
                         ),
                         2.0f,
                         List.of()
