@@ -158,7 +158,7 @@ public final class ArcGenerate extends Skill {
             ArcPath rootPath = new ArcPath(
                     new LinePath(handPos.toVector3f(), targetPos.toVector3f()),
                     List.of(
-                            new JaggedModifier(0.4f, 4, MathUtil.RANDOM.nextLong())
+                            new JaggedModifier(1, 4, MathUtil.RANDOM.nextLong())
                     ),
                     2,
                     branches

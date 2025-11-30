@@ -10,26 +10,34 @@ import org.academy.api.common.arc.ArcPath;
 import org.academy.internal.client.renderer.arc.PathProcessor;
 import org.academy.internal.client.renderer.entity.state.ArcEffectRenderState;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ArcEffectRenderer extends EntityRenderer<ArcEffect, ArcEffectRenderState> {
-
     public ArcEffectRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
 
     @Override
     public void submit(ArcEffectRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        if (renderState.renderDataList == null || renderState.renderDataList.isEmpty()) {
+        if (renderState.arcPaths == null || renderState.arcPaths.isEmpty()) {
             return;
+        }
+
+        Vector3f cameraPos = cameraRenderState.pos.toVector3f();
+        float time = renderState.ageInTicks - 1.0f + renderState.partialTick;
+        List<ArcFactory.ArcRenderData> renderDataList = new ArrayList<>(renderState.arcPaths.size());
+
+        for (ArcPath path : renderState.arcPaths) {
+            renderDataList.add(PathProcessor.process(path, time, cameraPos));
         }
 
         poseStack.pushPose();
         poseStack.translate(-renderState.x, -renderState.y, -renderState.z);
 
-        for (var renderData : renderState.renderDataList) {
+        for (var renderData : renderDataList) {
             ArcFactory.render(poseStack, nodeCollector, renderData);
         }
 
@@ -44,17 +52,7 @@ public class ArcEffectRenderer extends EntityRenderer<ArcEffect, ArcEffectRender
     @Override
     public void extractRenderState(ArcEffect entity, ArcEffectRenderState reusedState, float partialTick) {
         super.extractRenderState(entity, reusedState, partialTick);
-
-        List<ArcPath> paths = entity.getArcPaths();
-        if (paths.isEmpty()) {
-            reusedState.renderDataList = null;
-            return;
-        }
-
-        reusedState.renderDataList = new ArrayList<>(paths.size());
-        for (ArcPath path : paths) {
-            reusedState.renderDataList.add(PathProcessor.process(path, entity.tickCount));
-        }
+        reusedState.arcPaths = entity.getArcPaths();
     }
 
     @Override

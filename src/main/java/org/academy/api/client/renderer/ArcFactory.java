@@ -7,7 +7,9 @@ import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.arc.data.PathData;
 import org.academy.api.common.arc.data.PathFrame;
 import org.academy.api.common.arc.data.PropertyType;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,21 +67,44 @@ public final class ArcFactory {
     }
 
     public static class Generator {
-        public static ArcRenderData generate(PathData data, float baseThickness) {
+        public static ArcRenderData generate(PathData data, float baseThickness, Vector3fc cameraPos) {
             ArcRenderData renderData = new ArcRenderData();
             List<PathFrame> frames = data.getFrames();
-            if (frames.size() < 2) {
+            int frameCount = frames.size();
+            if (frameCount < 2) {
                 return renderData;
             }
 
             List<Float> thicknessTrack = data.getProperty(PropertyType.THICKNESS);
             List<Vector3f> colorTrack = data.getProperty(PropertyType.COLOR);
-            boolean hasThickness = thicknessTrack != null && thicknessTrack.size() == frames.size();
-            boolean hasColor = colorTrack != null && colorTrack.size() == frames.size();
+            boolean hasThickness = thicknessTrack != null && thicknessTrack.size() == frameCount;
+            boolean hasColor = colorTrack != null && colorTrack.size() == frameCount;
 
-            for (int i = 0; i < frames.size() - 1; i++) {
+            List<Vector3f> sideVectors = new ArrayList<>(frameCount);
+            PathFrame firstFrame = frames.getFirst();
+            Vector3f viewVec = new Vector3f(cameraPos).sub(firstFrame.position()).normalize();
+            Vector3f firstSideVec = new Vector3f(firstFrame.tangent()).cross(viewVec).normalize();
+            if (firstSideVec.lengthSquared() < 1.0E-6f) {
+                firstSideVec.set(firstFrame.normal());
+            }
+            sideVectors.add(firstSideVec);
+
+            for (int i = 1; i < frameCount; i++) {
+                Vector3f prevTangent = frames.get(i - 1).tangent();
+                Vector3f currentTangent = frames.get(i).tangent();
+                Vector3f prevSideVec = sideVectors.get(i - 1);
+
+                Quaternionf rotation = new Quaternionf().rotationTo(prevTangent, currentTangent);
+                Vector3f currentSideVec = new Vector3f(prevSideVec).rotate(rotation);
+                sideVectors.add(currentSideVec);
+            }
+
+            for (int i = 0; i < frameCount - 1; i++) {
                 PathFrame frame1 = frames.get(i);
                 PathFrame frame2 = frames.get(i + 1);
+
+                Vector3f sideVec1 = sideVectors.get(i);
+                Vector3f sideVec2 = sideVectors.get(i + 1);
 
                 float scale1 = hasThickness ? thicknessTrack.get(i) : 1.0f;
                 float scale2 = hasThickness ? thicknessTrack.get(i + 1) : 1.0f;
@@ -89,19 +114,13 @@ public final class ArcFactory {
                 float halfThick1 = baseThickness * scale1 * 0.5f;
                 float halfThick2 = baseThickness * scale2 * 0.5f;
 
-                Vector3f binormal1 = new Vector3f(frame1.tangent()).cross(frame1.normal());
-                Vector3f binormal2 = new Vector3f(frame2.tangent()).cross(frame2.normal());
+                Vector3f v1Pos = new Vector3f(frame1.position()).sub(new Vector3f(sideVec1).mul(halfThick1));
+                Vector3f v2Pos = new Vector3f(frame1.position()).add(new Vector3f(sideVec1).mul(halfThick1));
+                Vector3f v3Pos = new Vector3f(frame2.position()).add(new Vector3f(sideVec2).mul(halfThick2));
+                Vector3f v4Pos = new Vector3f(frame2.position()).sub(new Vector3f(sideVec2).mul(halfThick2));
 
-                Vector3f p1 = new Vector3f(frame1.position());
-                Vector3f p2 = new Vector3f(frame2.position());
-
-                Vector3f v1Pos = new Vector3f(p1).sub(new Vector3f(binormal1).mul(halfThick1));
-                Vector3f v2Pos = new Vector3f(p1).add(new Vector3f(binormal1).mul(halfThick1));
-                Vector3f v3Pos = new Vector3f(p2).add(new Vector3f(binormal2).mul(halfThick2));
-                Vector3f v4Pos = new Vector3f(p2).sub(new Vector3f(binormal2).mul(halfThick2));
-
-                float u0 = (float) i / (frames.size() - 1);
-                float u1 = (float) (i + 1) / (frames.size() - 1);
+                float u0 = (float) i / (frameCount - 1);
+                float u1 = (float) (i + 1) / (frameCount - 1);
 
                 Quad quad = new Quad();
                 quad.v1 = new Vertex(v1Pos, u0, 0, color1);

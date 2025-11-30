@@ -20,7 +20,7 @@ public record ColorModifier(Gradient gradient) implements PathModifier {
     );
 
     @Override
-    public PathData apply(PathData data, int tick) {
+    public PathData apply(PathData data, float time) {
         int frameCount = data.getFrames().size();
         if (frameCount <= 1) {
             return data;

@@ -21,7 +21,7 @@ public interface PathModifier {
         }
     };
 
-    PathData apply(PathData data, int tick);
+    PathData apply(PathData data, float time);
 
     PathModifierType<? extends PathModifier> getType();
 }
