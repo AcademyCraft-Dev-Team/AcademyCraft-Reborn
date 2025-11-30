@@ -24,7 +24,7 @@ public record TargetSeekModifier(Vector3fc target, AttributeCurve force) impleme
     );
 
     @Override
-    public PathData apply(PathData data, int tick) {
+    public PathData apply(PathData data, float time) {
         List<PathFrame> originalFrames = data.getFrames();
         if (originalFrames.size() < 2) {
             return data;
