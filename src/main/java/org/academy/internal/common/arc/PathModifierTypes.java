@@ -24,6 +24,10 @@ public final class PathModifierTypes {
             PATH_MODIFIER_TYPES.register("target_seek", () -> new PathModifierType<>(TargetSeekModifier.CODEC));
     public static final DeferredHolder<PathModifierType<?>, PathModifierType<JaggedModifier>> JAGGED =
             PATH_MODIFIER_TYPES.register("jagged", () -> new PathModifierType<>(JaggedModifier.CODEC));
+    public static final DeferredHolder<PathModifierType<?>, PathModifierType<StretchModifier>> STRETCH =
+            PATH_MODIFIER_TYPES.register("stretch", () -> new PathModifierType<>(StretchModifier.CODEC));
+    public static final DeferredHolder<PathModifierType<?>, PathModifierType<WarpModifier>> WARP =
+            PATH_MODIFIER_TYPES.register("warp", () -> new PathModifierType<>(WarpModifier.CODEC));
 
     private PathModifierTypes() {
     }

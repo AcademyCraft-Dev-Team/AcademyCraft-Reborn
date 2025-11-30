@@ -61,10 +61,11 @@ repositories {
     mavenLocal()
     maven {
         name = "AC Dev Team's maven"
-        url = uri("D:/Project/maven-repo")
-        //    url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
+        //  url = uri("D:/Project/maven-repo")
+        url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
         content {
             includeGroup("org.academy")
+            includeGroup("net.neoforged")
         }
     }
     maven {
@@ -112,9 +113,9 @@ repositories {
 }
 
 dependencies {
-    implementation("net.neoforged:neoforge:21.11.0-alpha.1.21.11-pre3.20251127.043646")
+    implementation("net.neoforged:neoforge:21.11.0-alpha.1.21.11-pre3.20251130.033458")
 
-    val misaka = "org.academy:misaka-network:21.11.4"
+    val misaka = "org.academy:misaka-network:21.11.1-pre"
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)
