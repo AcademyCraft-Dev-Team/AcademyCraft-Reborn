@@ -25,13 +25,13 @@ public record JaggedModifier(float jaggedness, int subdivisions, long seed) impl
     );
 
     @Override
-    public PathData apply(PathData data, int tick) {
+    public PathData apply(PathData data, float time) {
         List<PathFrame> originalFrames = data.getFrames();
         if (originalFrames.size() < 2 || this.jaggedness <= 1.0E-6f || this.subdivisions <= 0) {
             return data;
         }
 
-        Random random = new Random(this.seed + tick);
+        Random random = new Random(this.seed + (int) time);
         List<Vector3f> finalPoints = new ArrayList<>();
         finalPoints.add(new Vector3f(originalFrames.getFirst().position()));
 

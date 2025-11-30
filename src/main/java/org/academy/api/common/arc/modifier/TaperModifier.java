@@ -6,6 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import org.academy.api.common.arc.PathModifier;
 import org.academy.api.common.arc.PathModifierType;
 import org.academy.api.common.arc.data.PathData;
+import org.academy.api.common.arc.data.PathFrame;
 import org.academy.api.common.arc.data.PropertyType;
 import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.internal.common.arc.PathModifierTypes;
@@ -20,7 +21,7 @@ public record TaperModifier(AttributeCurve curve, float globalScale) implements 
     );
 
     @Override
-    public PathData apply(PathData data, int tick) {
+    public PathData apply(PathData data, float time) {
         if (!data.hasProperty(PropertyType.THICKNESS)) {
             return data;
         }

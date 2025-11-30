@@ -25,7 +25,7 @@ public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequ
     );
 
     @Override
-    public PathData apply(PathData data, int tick) {
+    public PathData apply(PathData data, float time) {
         List<PathFrame> originalFrames = data.getFrames();
         if (originalFrames.size() < 2) {
             return data;
@@ -33,7 +33,7 @@ public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequ
 
         int frameCount = originalFrames.size();
         List<PathFrame> displacedFrames = new ArrayList<>(frameCount);
-        Random random = new Random(this.seed + tick);
+        Random random = new Random(this.seed + (int) time);
 
         displacedFrames.add(originalFrames.getFirst());
 
@@ -63,7 +63,6 @@ public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequ
                     .mul(magnitude);
 
             Vector3f newPosition = new Vector3f(currentFrame.position()).add(offset);
-
             displacedFrames.add(new PathFrame(newPosition, currentFrame.tangent(), currentFrame.normal()));
         }
 

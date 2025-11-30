@@ -23,7 +23,7 @@ public record HelixModifier(float radius, float turns, float phaseOffset) implem
     );
 
     @Override
-    public PathData apply(PathData data, int tick) {
+    public PathData apply(PathData data, float time) {
         List<PathFrame> originalFrames = data.getFrames();
         if (originalFrames.size() < 2 || radius <= 1.0E-6f || Math.abs(turns) <= 1.0E-6f) {
             return data;

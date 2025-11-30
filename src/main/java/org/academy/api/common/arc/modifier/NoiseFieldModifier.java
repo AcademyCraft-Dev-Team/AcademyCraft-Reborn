@@ -17,7 +17,6 @@ import org.joml.Vector3fc;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public record NoiseFieldModifier(AttributeCurve strength, float scale, float speed, long seed) implements PathModifier {
     public static final StreamCodec<ByteBuf, NoiseFieldModifier> CODEC = StreamCodec.composite(
             AttributeCurve.CODEC, NoiseFieldModifier::strength,
@@ -28,7 +27,7 @@ public record NoiseFieldModifier(AttributeCurve strength, float scale, float spe
     );
 
     @Override
-    public PathData apply(PathData data, int tick) {
+    public PathData apply(PathData data, float time) {
         List<PathFrame> originalFrames = data.getFrames();
         if (originalFrames.size() < 2) {
             return data;
@@ -36,7 +35,7 @@ public record NoiseFieldModifier(AttributeCurve strength, float scale, float spe
 
         int frameCount = originalFrames.size();
         List<PathFrame> newFrames = new ArrayList<>(frameCount);
-        float time = (tick + this.seed) * this.speed;
+        float noiseTime = (time + this.seed) * this.speed;
 
         for (int i = 0; i < frameCount; i++) {
             PathFrame frame = originalFrames.get(i);
@@ -49,9 +48,9 @@ public record NoiseFieldModifier(AttributeCurve strength, float scale, float spe
             }
 
             Vector3fc pos = frame.position();
-            double offsetX = ImprovedNoise.noise(pos.x() * this.scale, pos.y() * this.scale, pos.z() * this.scale + time);
-            double offsetY = ImprovedNoise.noise(pos.x() * this.scale + 100, pos.y() * this.scale, pos.z() * this.scale + time);
-            double offsetZ = ImprovedNoise.noise(pos.x() * this.scale, pos.y() * this.scale + 100, pos.z() * this.scale + time);
+            double offsetX = ImprovedNoise.noise(pos.x() * this.scale, pos.y() * this.scale, pos.z() * this.scale + noiseTime);
+            double offsetY = ImprovedNoise.noise(pos.x() * this.scale + 100, pos.y() * this.scale, pos.z() * this.scale + noiseTime);
+            double offsetZ = ImprovedNoise.noise(pos.x() * this.scale, pos.y() * this.scale + 100, pos.z() * this.scale + noiseTime);
 
             Vector3f offset = new Vector3f((float) offsetX, (float) offsetY, (float) offsetZ).mul(currentStrength);
             Vector3f newPosition = new Vector3f(pos).add(offset);
