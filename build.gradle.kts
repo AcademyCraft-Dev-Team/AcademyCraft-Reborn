@@ -4,7 +4,7 @@ import xyz.wagyourtail.jvmdg.gradle.task.DowngradeJar
 plugins {
     idea
     `java-library`
-    id("net.neoforged.gradle.userdev") version "7.1.4"
+    id("net.neoforged.gradle.userdev") version "7.1.6"
     id ("xyz.wagyourtail.jvmdowngrader") version "1.3.4"
 }
 
@@ -21,7 +21,7 @@ base {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(24)
     }
 }
 
@@ -61,8 +61,8 @@ repositories {
     mavenLocal()
     maven {
         name = "AC Dev Team's maven"
-        //  url = uri("D:/Project/maven-repo")
-        url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
+        url = uri("D:/Project/maven-repo")
+        //    url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
         content {
             includeGroup("org.academy")
             includeGroup("net.neoforged")
@@ -113,9 +113,9 @@ repositories {
 }
 
 dependencies {
-    implementation("net.neoforged:neoforge:21.11.0-alpha.1.21.11-pre3.20251130.033458")
+    implementation("net.neoforged:neoforge:21.11.0-alpha.1.21.11-rc2.20251206.082211")
 
-    val misaka = "org.academy:misaka-network:21.11.1-pre"
+    val misaka = "org.academy:misaka-network:21.11.1-rc2"
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)

@@ -25,7 +25,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
@@ -116,26 +115,26 @@ public final class ArcGenerate extends Skill {
             var targetPos = eyePos.add(lookVec.scale(length));
             var trunkLength = (float) handPos.distanceTo(targetPos);
 
-            var arc = new ArcEffect(EntityTypes.ARC_EFFECT.get(), level);
+            var arc = new ArcEffect(level, 20);
             arc.setPos(handPos);
 
             List<Branch> branches = new ArrayList<>();
-            int branchCount = 4 + MathUtil.RANDOM.nextInt(3);
-            double maxAngleRad = Math.toRadians(10.0);
+            var branchCount = 4 + MathUtil.RANDOM.nextInt(3);
+            var maxAngleRad = Math.toRadians(10.0);
 
-            for (int i = 0; i < branchCount; i++) {
-                float progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;
-                float branchLength = trunkLength * (0.3f + MathUtil.RANDOM.nextFloat() * 0.2f);
+            for (var i = 0; i < branchCount; i++) {
+                var progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;
+                var branchLength = trunkLength * (0.3f + MathUtil.RANDOM.nextFloat() * 0.2f);
 
-                double phi = MathUtil.RANDOM.nextDouble() * maxAngleRad;
+                var phi = MathUtil.RANDOM.nextDouble() * maxAngleRad;
 
-                float x = Mth.sin(phi);
-                float y = Mth.sin(phi);
-                float z = Mth.cos(phi);
+                var x = Mth.sin(phi);
+                var y = Mth.sin(phi);
+                var z = Mth.cos(phi);
 
-                Vector3f localDir = new Vector3f(x, y, z).normalize().mul(branchLength);
+                var localDir = new Vector3f(x, y, z).normalize().mul(branchLength);
 
-                ArcPath childPath = new ArcPath(
+                var childPath = new ArcPath(
                         new LinePath(new Vector3f(0, 0, 0), localDir),
                         List.of(
                                 new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())
@@ -147,7 +146,7 @@ public final class ArcGenerate extends Skill {
                 branches.add(new Branch(progress, childPath));
             }
 
-            ArcPath rootPath = new ArcPath(
+            var rootPath = new ArcPath(
                     new LinePath(handPos.toVector3f(), targetPos.toVector3f()),
                     List.of(
                             new JaggedModifier(1, 4, MathUtil.RANDOM.nextLong())

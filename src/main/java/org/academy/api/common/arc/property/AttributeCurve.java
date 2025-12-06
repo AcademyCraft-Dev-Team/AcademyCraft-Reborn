@@ -18,28 +18,28 @@ public record AttributeCurve(List<Knot> knots) {
     }
 
     public float evaluate(float progress) {
-        if (this.knots.isEmpty()) {
+        if (knots.isEmpty()) {
             return 1.0f;
         }
 
-        if (this.knots.size() == 1 || progress <= this.knots.getFirst().progress()) {
-            return this.knots.getFirst().value();
+        if (knots.size() == 1 || progress <= knots.getFirst().progress()) {
+            return knots.getFirst().value();
         }
 
-        if (progress >= this.knots.getLast().progress()) {
-            return this.knots.getLast().value();
+        if (progress >= knots.getLast().progress()) {
+            return knots.getLast().value();
         }
 
-        for (int i = 0; i < this.knots.size() - 1; i++) {
-            Knot current = this.knots.get(i);
-            Knot next = this.knots.get(i + 1);
+        for (var i = 0; i < knots.size() - 1; i++) {
+            var current = knots.get(i);
+            var next = knots.get(i + 1);
 
             if (progress >= current.progress() && progress <= next.progress()) {
-                float segmentProgress = (progress - current.progress()) / (next.progress() - current.progress());
+                var segmentProgress = (progress - current.progress()) / (next.progress() - current.progress());
                 return current.value() + (next.value() - current.value()) * segmentProgress;
             }
         }
 
-        return this.knots.getLast().value();
+        return knots.getLast().value();
     }
 }

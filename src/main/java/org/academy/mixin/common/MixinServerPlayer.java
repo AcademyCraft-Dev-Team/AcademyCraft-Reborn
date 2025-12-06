@@ -17,6 +17,7 @@ public abstract class MixinServerPlayer extends Player {
         super(level, gameProfile);
     }
 
+    @SuppressWarnings("UnnecessarySuperQualifier")
     @Redirect(
             method = "hurtServer",
             at = @At(
@@ -26,7 +27,7 @@ public abstract class MixinServerPlayer extends Player {
     )
     public boolean redirectHurtServer(Player instance, ServerLevel level, DamageSource source, float amount) {
         var pair = VectorReflection.Server.hurtServer(instance, level, source, amount);
-        if (!pair.getLeft()) return false;
+        if (pair.getLeft()) return false;
         return super.hurtServer(level, source, pair.getRight());
     }
 }

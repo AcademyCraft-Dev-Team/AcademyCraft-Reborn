@@ -21,15 +21,15 @@ public record ColorModifier(Gradient gradient) implements PathModifier {
 
     @Override
     public PathData apply(PathData data, float time) {
-        int frameCount = data.getFrames().size();
+        var frameCount = data.getFrames().size();
         if (frameCount <= 1) {
             return data;
         }
 
         List<Vector3f> colorTrack = new ArrayList<>(frameCount);
-        for (int i = 0; i < frameCount; i++) {
-            float progress = (float) i / (frameCount - 1);
-            colorTrack.add(this.gradient.evaluate(progress));
+        for (var i = 0; i < frameCount; i++) {
+            var progress = (float) i / (frameCount - 1);
+            colorTrack.add(gradient.evaluate(progress));
         }
         data.setProperty(PropertyType.COLOR, colorTrack);
         return data;

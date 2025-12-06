@@ -24,13 +24,13 @@ public record HelixModifier(float radius, float turns, float phaseOffset) implem
 
     @Override
     public PathData apply(PathData data, float time) {
-        List<PathFrame> originalFrames = data.getFrames();
+        var originalFrames = data.getFrames();
         if (originalFrames.size() < 2 || radius <= 1.0E-6f || Math.abs(turns) <= 1.0E-6f) {
             return data;
         }
 
-        float totalLength = 0.0f;
-        for (int i = 0; i < originalFrames.size() - 1; i++) {
+        var totalLength = 0.0f;
+        for (var i = 0; i < originalFrames.size() - 1; i++) {
             totalLength += originalFrames.get(i).position().distance(originalFrames.get(i + 1).position());
         }
         if (totalLength <= 1.0E-6f) {
@@ -38,16 +38,16 @@ public record HelixModifier(float radius, float turns, float phaseOffset) implem
         }
 
         List<Vector3f> newPositions = new ArrayList<>(originalFrames.size());
-        float distanceTraveled = 0.0f;
+        var distanceTraveled = 0.0f;
 
-        for (int i = 0; i < originalFrames.size(); i++) {
-            PathFrame frame = originalFrames.get(i);
-            float progress = distanceTraveled / totalLength;
-            float angle = this.phaseOffset + this.turns * 2.0f * (float) Math.PI * progress;
+        for (var i = 0; i < originalFrames.size(); i++) {
+            var frame = originalFrames.get(i);
+            var progress = distanceTraveled / totalLength;
+            var angle = phaseOffset + turns * 2.0f * (float) Math.PI * progress;
 
-            Vector3f binormal = new Vector3f(frame.tangent()).cross(frame.normal());
-            Vector3f offset = new Vector3f(frame.normal()).mul((float) Math.cos(angle) * this.radius)
-                    .add(binormal.mul((float) Math.sin(angle) * this.radius));
+            var binormal = new Vector3f(frame.tangent()).cross(frame.normal());
+            var offset = new Vector3f(frame.normal()).mul((float) Math.cos(angle) * radius)
+                    .add(binormal.mul((float) Math.sin(angle) * radius));
 
             newPositions.add(new Vector3f(frame.position()).add(offset));
 
@@ -57,8 +57,8 @@ public record HelixModifier(float radius, float turns, float phaseOffset) implem
         }
 
         List<PathFrame> newFrames = new ArrayList<>(originalFrames.size());
-        for (int i = 0; i < newPositions.size(); i++) {
-            Vector3f pos = newPositions.get(i);
+        for (var i = 0; i < newPositions.size(); i++) {
+            var pos = newPositions.get(i);
             Vector3f tangent;
             if (i < newPositions.size() - 1) {
                 tangent = new Vector3f(newPositions.get(i + 1)).sub(pos);
@@ -71,12 +71,12 @@ public record HelixModifier(float radius, float turns, float phaseOffset) implem
                 tangent = new Vector3f(newFrames.get(i - 1).tangent());
             }
 
-            Vector3f radialDir = new Vector3f(pos).sub(originalFrames.get(i).position());
+            var radialDir = new Vector3f(pos).sub(originalFrames.get(i).position());
             if (radialDir.lengthSquared() < 1.0E-6f) {
                 radialDir.set(originalFrames.get(i).normal());
             }
 
-            Vector3f normal = new Vector3f(tangent).cross(radialDir).cross(tangent).normalize();
+            var normal = new Vector3f(tangent).cross(radialDir).cross(tangent).normalize();
             if (normal.lengthSquared() < 1.0E-6f) {
                 normal.set(originalFrames.get(i).normal());
             }
@@ -84,7 +84,7 @@ public record HelixModifier(float radius, float turns, float phaseOffset) implem
             newFrames.add(new PathFrame(pos, tangent, normal));
         }
 
-        PathData newData = new PathData(newFrames);
+        var newData = new PathData(newFrames);
         if (data.hasProperty(PropertyType.THICKNESS)) {
             newData.setProperty(PropertyType.THICKNESS, new ArrayList<>(data.getProperty(PropertyType.THICKNESS)));
         }

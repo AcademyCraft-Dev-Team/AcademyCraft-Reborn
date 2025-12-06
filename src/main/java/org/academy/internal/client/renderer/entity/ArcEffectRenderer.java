@@ -26,11 +26,11 @@ public class ArcEffectRenderer extends EntityRenderer<ArcEffect, ArcEffectRender
             return;
         }
 
-        Vector3f cameraPos = cameraRenderState.pos.toVector3f();
-        float time = renderState.ageInTicks - 1.0f + renderState.partialTick;
+        var cameraPos = cameraRenderState.pos.toVector3f();
+        var time = renderState.ageInTicks - 1.0f + renderState.partialTick;
         List<ArcFactory.ArcRenderData> renderDataList = new ArrayList<>(renderState.arcPaths.size());
 
-        for (ArcPath path : renderState.arcPaths) {
+        for (var path : renderState.arcPaths) {
             renderDataList.add(PathProcessor.process(path, time, cameraPos));
         }
 

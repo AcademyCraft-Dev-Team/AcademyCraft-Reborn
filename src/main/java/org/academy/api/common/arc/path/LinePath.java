@@ -26,35 +26,35 @@ public record LinePath(Vector3fc start, Vector3fc end) implements BasePath {
 
     @Override
     public PathData generate(float resolution) {
-        float distance = this.start.distance(this.end);
-        int segments = Math.max(1, (int) (distance * resolution));
-        int pointCount = segments + 1;
+        var distance = start.distance(end);
+        var segments = Math.max(1, (int) (distance * resolution));
+        var pointCount = segments + 1;
 
         List<PathFrame> frames = new ArrayList<>(pointCount);
         if (distance < 1.0E-6f) {
-            frames.add(new PathFrame(this.start, new Vector3f(0, 1, 0), new Vector3f(1, 0, 0)));
-            PathData data = new PathData(frames);
+            frames.add(new PathFrame(start, new Vector3f(0, 1, 0), new Vector3f(1, 0, 0)));
+            var data = new PathData(frames);
             data.setProperty(PropertyType.THICKNESS, Collections.singletonList(1.0f));
             return data;
         }
 
-        Vector3f tangent = new Vector3f(this.end).sub(this.start).normalize();
-        Vector3f globalUp = new Vector3f(0, 1, 0);
-        Vector3f normal = new Vector3f(tangent).cross(globalUp);
+        var tangent = new Vector3f(end).sub(start).normalize();
+        var globalUp = new Vector3f(0, 1, 0);
+        var normal = new Vector3f(tangent).cross(globalUp);
 
         if (normal.lengthSquared() < 1.0E-6f) {
-            Vector3f globalRight = new Vector3f(1, 0, 0);
+            var globalRight = new Vector3f(1, 0, 0);
             normal.set(tangent).cross(globalRight);
         }
         normal.normalize();
 
-        for (int i = 0; i <= segments; ++i) {
-            float t = (float) i / segments;
-            Vector3f position = this.start.lerp(this.end, t, new Vector3f());
+        for (var i = 0; i <= segments; ++i) {
+            var t = (float) i / segments;
+            var position = start.lerp(end, t, new Vector3f());
             frames.add(new PathFrame(position, new Vector3f(tangent), new Vector3f(normal)));
         }
 
-        PathData data = new PathData(frames);
+        var data = new PathData(frames);
         List<Float> thickness = new ArrayList<>(Collections.nCopies(pointCount, 1.0f));
         data.setProperty(PropertyType.THICKNESS, thickness);
 
@@ -68,8 +68,8 @@ public record LinePath(Vector3fc start, Vector3fc end) implements BasePath {
 
     @Override
     public BasePath transform(Matrix4f transform) {
-        Vector3f newStart = new Vector3f(this.start).mulPosition(transform);
-        Vector3f newEnd = new Vector3f(this.end).mulPosition(transform);
+        var newStart = new Vector3f(start).mulPosition(transform);
+        var newEnd = new Vector3f(end).mulPosition(transform);
         return new LinePath(newStart, newEnd);
     }
 }

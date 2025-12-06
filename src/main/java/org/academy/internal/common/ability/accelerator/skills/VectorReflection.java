@@ -155,14 +155,13 @@ public class VectorReflection extends Skill {
             }
 
             if (!shouldReflection(player, source)) {
-                return Pair.of(true, originalDamage);
+                return Pair.of(false, originalDamage);
             }
 
             var requiredPower = originalDamage * 10f;
             var currentPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
 
             if (currentPower > 0) {
-                player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(), SoundSource.BLOCKS, 1, 1);
             }
 
             if (currentPower >= requiredPower) {
@@ -191,6 +190,8 @@ public class VectorReflection extends Skill {
             var hasDirectEntity = directEntity != null;
 
             if ((!hasCausingEntity && !hasDirectEntity) || directEntity == player || causingEntity == player) return;
+
+            player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(), SoundSource.BLOCKS, 1, 1);
 
             var sourceEntity = hasDirectEntity ? directEntity : causingEntity;
 

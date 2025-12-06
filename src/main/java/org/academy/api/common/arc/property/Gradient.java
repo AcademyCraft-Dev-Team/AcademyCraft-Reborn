@@ -19,28 +19,28 @@ public record Gradient(List<ColorKnot> knots) {
     }
 
     public Vector3f evaluate(float progress) {
-        if (this.knots.isEmpty()) {
+        if (knots.isEmpty()) {
             return new Vector3f(1.0f, 1.0f, 1.0f);
         }
 
-        if (this.knots.size() == 1 || progress <= this.knots.getFirst().progress()) {
-            return new Vector3f(this.knots.getFirst().color());
+        if (knots.size() == 1 || progress <= knots.getFirst().progress()) {
+            return new Vector3f(knots.getFirst().color());
         }
 
-        if (progress >= this.knots.getLast().progress()) {
-            return new Vector3f(this.knots.getLast().color());
+        if (progress >= knots.getLast().progress()) {
+            return new Vector3f(knots.getLast().color());
         }
 
-        for (int i = 0; i < this.knots.size() - 1; i++) {
-            ColorKnot current = this.knots.get(i);
-            ColorKnot next = this.knots.get(i + 1);
+        for (var i = 0; i < knots.size() - 1; i++) {
+            var current = knots.get(i);
+            var next = knots.get(i + 1);
 
             if (progress >= current.progress() && progress <= next.progress()) {
-                float segmentProgress = (progress - current.progress()) / (next.progress() - current.progress());
+                var segmentProgress = (progress - current.progress()) / (next.progress() - current.progress());
                 return current.color().lerp(next.color(), segmentProgress, new Vector3f());
             }
         }
 
-        return new Vector3f(this.knots.getLast().color());
+        return new Vector3f(knots.getLast().color());
     }
 }

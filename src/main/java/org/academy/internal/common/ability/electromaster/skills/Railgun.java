@@ -12,6 +12,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -22,8 +23,13 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.arc.ArcPath;
+import org.academy.api.common.arc.modifier.HelixModifier;
+import org.academy.api.common.arc.modifier.JaggedModifier;
+import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
@@ -37,6 +43,7 @@ import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.item.Items;
 import org.jspecify.annotations.Nullable;
@@ -49,6 +56,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -89,7 +97,7 @@ public final class Railgun extends Skill {
     }
 
     public static final class Client {
-        public static final String KEY_NAME_START = SkillNames.RAILGUN + "_strat";
+        public static final String KEY_NAME_START = SkillNames.RAILGUN + "_start";
         public static Config CLIENT_CONFIG = new Config();
         private static boolean charging = false;
 
@@ -161,11 +169,14 @@ public final class Railgun extends Skill {
         public static class Context extends ServerContext {
             private final InteractionHand hand;
             private int ticks = 0;
-            private float yCurveOld;
+            private final ArcEffect arcEffect;
 
             public Context(ServerPlayer player, InteractionHand hand) {
                 super(player);
                 this.hand = hand;
+                this.arcEffect = new ArcEffect(player.level(), 40);
+                this.arcEffect.setPos(player.position());
+                player.level().addFreshEntity(this.arcEffect);
             }
 
             @Override
@@ -173,22 +184,60 @@ public final class Railgun extends Skill {
                 super.unregister();
                 CONTEXT_MAP.remove(player);
                 player.removeData(AttachmentTypes.RAILGUN_DATA);
-                if (chargingSyncManager != null) chargingSyncManager.set(player.getUUID(), false);
+                if (chargingSyncManager != null) {
+                    chargingSyncManager.set(player.getUUID(), false);
+                }
             }
 
             @SubscribeEvent
             public void onTick(ServerTickEvent.Post event) {
-                ticks++;
-                var yCurve = Math.max(0, -4.0f * ticks * (ticks - CHARGE_TIME) / (CHARGE_TIME * CHARGE_TIME));
+                this.ticks++;
+
+                if (player.isRemoved()) {
+                    unregister();
+                    return;
+                }
+
                 player.setData(
                         AttachmentTypes.RAILGUN_DATA,
                         new Data(
                                 (player.getMainArm() == HumanoidArm.RIGHT) ==
-                                        (hand == InteractionHand.MAIN_HAND), yCurve, yCurveOld
+                                        (hand == InteractionHand.MAIN_HAND), ticks
                         )
                 );
-                yCurveOld = yCurve;
-                if (ticks > CHARGE_TIME) {
+
+                if (this.ticks <= 30) {
+                    float timeFactor = this.ticks / 30.0f;
+                    float baseRadius = 0.4f + 0.4f * (float) Math.sin(timeFactor * Math.PI * 2.0);
+                    float baseTurns = 1;
+                    float phaseOffset = MathUtil.RANDOM.nextFloat(ticks) * 0.2f;
+
+                    var look = player.getLookAngle().multiply(1, 0, 1).normalize();
+                    var right = new Vec3(-look.z, 0, look.x).normalize();
+
+                    var startPos = player.position()
+                            .add(0, 1.25f, 0)
+                            .add(look.scale(0.75f))
+                            .add(right.scale(0.35f));
+
+                    var arcEffect = new ArcEffect(player.level(), 2);
+                    arcEffect.setPos(player.position());
+                    player.level().addFreshEntity(arcEffect);
+
+                    arcEffect.setPos(startPos);
+                    var endPos = startPos.add(look.scale(0.125f));
+
+                    ArcPath arcPath = new ArcPath(
+                            new LinePath(startPos.toVector3f(), endPos.toVector3f()),
+                            List.of(
+                                    new HelixModifier(baseRadius, baseTurns, phaseOffset),
+                                    new JaggedModifier(1, 3, player.getId() + ticks)
+                            ),
+                            128.0f,
+                            List.of()
+                    );
+                    arcEffect.setArcPath(arcPath);
+                } else {
                     unregister();
                 }
             }
@@ -227,12 +276,11 @@ public final class Railgun extends Skill {
         }
     }
 
-    public record Data(boolean rightHand, float yOffset, float yOffsetOld) {
-        private static final Data DEFAULT = new Data(true, 0, 0);
+    public record Data(boolean rightHand, int ticks) {
+        private static final Data DEFAULT = new Data(true, 0);
         public static final StreamCodec<ByteBuf, Data> CODEC = StreamCodec.composite(
                 ByteBufCodecs.BOOL, Data::rightHand,
-                ByteBufCodecs.FLOAT, Data::yOffset,
-                ByteBufCodecs.FLOAT, Data::yOffsetOld,
+                ByteBufCodecs.INT, Data::ticks,
                 Data::new
         );
 
