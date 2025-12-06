@@ -26,49 +26,49 @@ public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequ
 
     @Override
     public PathData apply(PathData data, float time) {
-        List<PathFrame> originalFrames = data.getFrames();
+        var originalFrames = data.getFrames();
         if (originalFrames.size() < 2) {
             return data;
         }
 
-        int frameCount = originalFrames.size();
+        var frameCount = originalFrames.size();
         List<PathFrame> displacedFrames = new ArrayList<>(frameCount);
-        Random random = new Random(this.seed + (int) time);
+        var random = new Random(seed + (int) time);
 
         displacedFrames.add(originalFrames.getFirst());
 
-        for (int i = 1; i < frameCount - 1; ++i) {
-            PathFrame currentFrame = originalFrames.get(i);
-            float progress = (float) i / (frameCount - 1);
+        for (var i = 1; i < frameCount - 1; ++i) {
+            var currentFrame = originalFrames.get(i);
+            var progress = (float) i / (frameCount - 1);
 
-            float currentStrength = this.strength.evaluate(progress);
+            var currentStrength = strength.evaluate(progress);
             if (currentStrength <= 1.0E-6f) {
                 displacedFrames.add(currentFrame);
                 continue;
             }
 
-            float currentFrequency = this.frequency.evaluate(progress);
+            var currentFrequency = frequency.evaluate(progress);
 
-            Vector3f binormal = new Vector3f(currentFrame.tangent()).cross(currentFrame.normal()).normalize();
+            var binormal = new Vector3f(currentFrame.tangent()).cross(currentFrame.normal()).normalize();
 
-            float noiseFactor = 1.0f - (random.nextFloat() * (1.0f - currentFrequency));
-            float magnitude = currentStrength * noiseFactor;
+            var noiseFactor = 1.0f - (random.nextFloat() * (1.0f - currentFrequency));
+            var magnitude = currentStrength * noiseFactor;
 
-            float angle = random.nextFloat() * 2.0f * (float) Math.PI;
-            float cosAngle = (float) Math.cos(angle);
-            float sinAngle = (float) Math.sin(angle);
+            var angle = random.nextFloat() * 2.0f * (float) Math.PI;
+            var cosAngle = (float) Math.cos(angle);
+            var sinAngle = (float) Math.sin(angle);
 
-            Vector3f offset = new Vector3f(currentFrame.normal()).mul(cosAngle)
+            var offset = new Vector3f(currentFrame.normal()).mul(cosAngle)
                     .add(binormal.mul(sinAngle))
                     .mul(magnitude);
 
-            Vector3f newPosition = new Vector3f(currentFrame.position()).add(offset);
+            var newPosition = new Vector3f(currentFrame.position()).add(offset);
             displacedFrames.add(new PathFrame(newPosition, currentFrame.tangent(), currentFrame.normal()));
         }
 
         displacedFrames.add(originalFrames.getLast());
 
-        PathData newData = new PathData(displacedFrames);
+        var newData = new PathData(displacedFrames);
         if (data.hasProperty(PropertyType.THICKNESS)) {
             newData.setProperty(PropertyType.THICKNESS, new ArrayList<>(data.getProperty(PropertyType.THICKNESS)));
         }

@@ -15,21 +15,21 @@ public class PathData {
     }
 
     public List<PathFrame> getFrames() {
-        return this.frames;
+        return frames;
     }
 
     public <T> List<T> getProperty(PropertyType<T> type) {
-        return UncheckedUtil.uncheckedCast(this.properties.get(type));
+        return UncheckedUtil.uncheckedCast(properties.get(type));
     }
 
     public <T> void setProperty(PropertyType<T> type, List<T> values) {
-        if (values.size() != this.frames.size()) {
+        if (values.size() != frames.size()) {
             throw new IllegalArgumentException("Property list size must match frame list size.");
         }
-        this.properties.put(type, values);
+        properties.put(type, values);
     }
 
     public boolean hasProperty(PropertyType<?> type) {
-        return this.properties.containsKey(type);
+        return properties.containsKey(type);
     }
 }

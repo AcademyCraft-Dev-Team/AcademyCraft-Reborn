@@ -29,12 +29,12 @@ public final class AcademyCraftModelProvider extends ModelProvider {
     @Override
     protected void registerModels(BlockModelGenerators blockModels, ItemModelGenerators itemModels) {
         var providerW = createDefault(
-                block ->
+                _ ->
                         new TextureMapping().put(
                                 TextureSlot.ALL, academy("break_w").withPrefix("block/")
                         ), ModelTemplates.CUBE_ALL);
         var providerDB = createDefault(
-                block ->
+                _ ->
                         new TextureMapping().put(
                                 TextureSlot.ALL, academy("break_db").withPrefix("block/")
                         ), ModelTemplates.CUBE_ALL);
@@ -52,7 +52,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.IMAGIPHASE_VEGETATION.get(), TexturedModel.COLUMN);
         blockModels.createMultiface(Blocks.IMAGIPHASE_LICHEN.get());*/
         blockModels.createTrivialBlock(Blocks.CAT_ENGINE.get(), createDefault(
-                block ->
+                _ ->
                         new TextureMapping().put(
                                 TextureSlot.ALL, academy("cat_engine").withPrefix("item/")
                         ), ModelTemplates.CUBE_ALL)
@@ -106,9 +106,10 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                             .transform(ItemDisplayContext.HEAD, transformVecBuilder -> {
                                 transformVecBuilder.rotation(0, 180, 0);
                                 transformVecBuilder.translation(0, 13, 7);
+                                transformVecBuilder.scale(0.5f);
                             })
                             .transform(ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, transformVecBuilder -> {
-                                transformVecBuilder.translation(0, 3, 0);
+                                transformVecBuilder.translation(0, 2, 1);
                                 transformVecBuilder.scale(0.275f);
                             })
                             .transform(ItemDisplayContext.FIRST_PERSON_RIGHT_HAND, transformVecBuilder -> {

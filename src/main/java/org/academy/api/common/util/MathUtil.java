@@ -19,59 +19,59 @@ public class MathUtil {
     public static final double EPSILON = 1e-6;
 
     public static Vec3 intersectRayCapsule(Vec3 origin, Vec3 direction, Vec3 capsuleCenter, float width, float height) {
-        float radius = width / 2.0F;
-        float halfEffectiveHeight = height / 2.0F - radius;
+        var radius = width / 2.0F;
+        var halfEffectiveHeight = height / 2.0F - radius;
 
         if (halfEffectiveHeight <= 0) {
             return intersectRaySphere(origin, direction, capsuleCenter, radius);
         }
 
-        Vector3f originF = new Vector3f((float) origin.x, (float) origin.y, (float) origin.z);
-        Vector3f dirF = new Vector3f((float) direction.x, (float) direction.y, (float) direction.z);
-        Vector3f centerF = new Vector3f((float) capsuleCenter.x, (float) capsuleCenter.y, (float) capsuleCenter.z);
+        var originF = new Vector3f((float) origin.x, (float) origin.y, (float) origin.z);
+        var dirF = new Vector3f((float) direction.x, (float) direction.y, (float) direction.z);
+        var centerF = new Vector3f((float) capsuleCenter.x, (float) capsuleCenter.y, (float) capsuleCenter.z);
 
-        Vector3f topCenter = new Vector3f(centerF).add(0, halfEffectiveHeight, 0);
-        Vector3f bottomCenter = new Vector3f(centerF).sub(0, halfEffectiveHeight, 0);
+        var topCenter = new Vector3f(centerF).add(0, halfEffectiveHeight, 0);
+        var bottomCenter = new Vector3f(centerF).sub(0, halfEffectiveHeight, 0);
 
-        Vector2f resultSphere = new Vector2f();
-        float minT = Float.MAX_VALUE;
+        var resultSphere = new Vector2f();
+        var minT = Float.MAX_VALUE;
 
         if (Intersectionf.intersectRaySphere(originF, dirF, topCenter, radius * radius, resultSphere)) {
-            float t = resultSphere.x > 0 ? resultSphere.x : resultSphere.y;
+            var t = resultSphere.x > 0 ? resultSphere.x : resultSphere.y;
             if (t > 0 && (originF.y + dirF.y * t) >= topCenter.y) {
                 minT = t;
             }
         }
 
         if (Intersectionf.intersectRaySphere(originF, dirF, bottomCenter, radius * radius, resultSphere)) {
-            float t = resultSphere.x > 0 ? resultSphere.x : resultSphere.y;
+            var t = resultSphere.x > 0 ? resultSphere.x : resultSphere.y;
             if (t > 0 && t < minT && (originF.y + dirF.y * t) <= bottomCenter.y) {
                 minT = t;
             }
         }
 
-        float dx = originF.x - centerF.x;
-        float dz = originF.z - centerF.z;
+        var dx = originF.x - centerF.x;
+        var dz = originF.z - centerF.z;
 
-        float a = dirF.x * dirF.x + dirF.z * dirF.z;
-        float b = 2 * (dx * dirF.x + dz * dirF.z);
-        float c = dx * dx + dz * dz - radius * radius;
+        var a = dirF.x * dirF.x + dirF.z * dirF.z;
+        var b = 2 * (dx * dirF.x + dz * dirF.z);
+        var c = dx * dx + dz * dz - radius * radius;
 
         if (Math.abs(a) > 1e-6) {
-            float delta = b * b - 4 * a * c;
+            var delta = b * b - 4 * a * c;
             if (delta >= 0) {
-                float sqrtDelta = (float) Math.sqrt(delta);
-                float t1 = (-b - sqrtDelta) / (2 * a);
-                float t2 = (-b + sqrtDelta) / (2 * a);
+                var sqrtDelta = (float) Math.sqrt(delta);
+                var t1 = (-b - sqrtDelta) / (2 * a);
+                var t2 = (-b + sqrtDelta) / (2 * a);
 
                 if (t1 > 0 && t1 < minT) {
-                    float yHit = originF.y + dirF.y * t1;
+                    var yHit = originF.y + dirF.y * t1;
                     if (yHit >= bottomCenter.y && yHit <= topCenter.y) {
                         minT = t1;
                     }
                 }
                 if (t2 > 0 && t2 < minT) {
-                    float yHit = originF.y + dirF.y * t2;
+                    var yHit = originF.y + dirF.y * t2;
                     if (yHit >= bottomCenter.y && yHit <= topCenter.y) {
                         minT = t2;
                     }
@@ -87,13 +87,13 @@ public class MathUtil {
     }
 
     private static Vec3 intersectRaySphere(Vec3 origin, Vec3 direction, Vec3 center, float radius) {
-        Vector3f originF = new Vector3f((float) origin.x, (float) origin.y, (float) origin.z);
-        Vector3f dirF = new Vector3f((float) direction.x, (float) direction.y, (float) direction.z);
-        Vector3f centerF = new Vector3f((float) center.x, (float) center.y, (float) center.z);
-        Vector2f result = new Vector2f();
+        var originF = new Vector3f((float) origin.x, (float) origin.y, (float) origin.z);
+        var dirF = new Vector3f((float) direction.x, (float) direction.y, (float) direction.z);
+        var centerF = new Vector3f((float) center.x, (float) center.y, (float) center.z);
+        var result = new Vector2f();
 
         if (Intersectionf.intersectRaySphere(originF, dirF, centerF, radius * radius, result)) {
-            float t = result.x > 0 ? result.x : result.y;
+            var t = result.x > 0 ? result.x : result.y;
             if (t > 0) {
                 return origin.add(direction.scale(t));
             }
