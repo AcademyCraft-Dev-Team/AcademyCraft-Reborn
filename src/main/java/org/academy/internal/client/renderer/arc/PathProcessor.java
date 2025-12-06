@@ -22,17 +22,17 @@ public final class PathProcessor {
     }
 
     private static ArcFactory.ArcRenderData processRecursive(ArcPath currentPath, float time, Matrix4f transform, int depth, Vector3fc cameraPos) {
-        BasePath worldSpacePath = currentPath.path().transform(transform);
-        PathData pathData = generateLinearData(worldSpacePath, currentPath.modifiers(), currentPath.resolution(), time);
-        ArcFactory.ArcRenderData renderData = ArcFactory.Generator.generate(pathData, 0.1f, cameraPos);
+        var worldSpacePath = currentPath.path().transform(transform);
+        var pathData = generateLinearData(worldSpacePath, currentPath.modifiers(), currentPath.resolution(), time);
+        var renderData = ArcFactory.Generator.generate(pathData, 0.1f, cameraPos);
 
         if (!currentPath.branches().isEmpty() && !pathData.getFrames().isEmpty()) {
-            for (Branch branch : currentPath.branches()) {
-                int frameCount = pathData.getFrames().size();
-                int frameIndex = Math.min(frameCount - 1, (int) (frameCount * branch.attachmentProgress()));
-                PathFrame attachmentFrame = pathData.getFrames().get(frameIndex);
+            for (var branch : currentPath.branches()) {
+                var frameCount = pathData.getFrames().size();
+                var frameIndex = Math.min(frameCount - 1, (int) (frameCount * branch.attachmentProgress()));
+                var attachmentFrame = pathData.getFrames().get(frameIndex);
 
-                Matrix4f childTransform = calculateChildTransform(attachmentFrame);
+                var childTransform = calculateChildTransform(attachmentFrame);
                 renderData.branches.add(processRecursive(branch.child(), time, childTransform, depth + 1, cameraPos));
             }
         }
@@ -41,20 +41,20 @@ public final class PathProcessor {
     }
 
     private static PathData generateLinearData(BasePath path, List<PathModifier> modifiers, float resolution, float time) {
-        PathData currentData = path.generate(resolution);
-        for (PathModifier modifier : modifiers) {
+        var currentData = path.generate(resolution);
+        for (var modifier : modifiers) {
             currentData = modifier.apply(currentData, time);
         }
         return currentData;
     }
 
     private static Matrix4f calculateChildTransform(PathFrame frame) {
-        Vector3fc position = frame.position();
-        Vector3f tangent = frame.tangent();
-        Vector3f normal = frame.normal();
-        Vector3f binormal = new Vector3f(tangent).cross(normal);
+        var position = frame.position();
+        var tangent = frame.tangent();
+        var normal = frame.normal();
+        var binormal = new Vector3f(tangent).cross(normal);
 
-        Matrix4f transform = new Matrix4f();
+        var transform = new Matrix4f();
         transform.set(
                 binormal.x(), binormal.y(), binormal.z(), 0.0f,
                 normal.x(),   normal.y(),   normal.z(),   0.0f,

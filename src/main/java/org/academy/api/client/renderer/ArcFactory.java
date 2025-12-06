@@ -68,61 +68,61 @@ public final class ArcFactory {
 
     public static class Generator {
         public static ArcRenderData generate(PathData data, float baseThickness, Vector3fc cameraPos) {
-            ArcRenderData renderData = new ArcRenderData();
-            List<PathFrame> frames = data.getFrames();
-            int frameCount = frames.size();
+            var renderData = new ArcRenderData();
+            var frames = data.getFrames();
+            var frameCount = frames.size();
             if (frameCount < 2) {
                 return renderData;
             }
 
-            List<Float> thicknessTrack = data.getProperty(PropertyType.THICKNESS);
-            List<Vector3f> colorTrack = data.getProperty(PropertyType.COLOR);
-            boolean hasThickness = thicknessTrack != null && thicknessTrack.size() == frameCount;
-            boolean hasColor = colorTrack != null && colorTrack.size() == frameCount;
+            var thicknessTrack = data.getProperty(PropertyType.THICKNESS);
+            var colorTrack = data.getProperty(PropertyType.COLOR);
+            var hasThickness = thicknessTrack != null && thicknessTrack.size() == frameCount;
+            var hasColor = colorTrack != null && colorTrack.size() == frameCount;
 
             List<Vector3f> sideVectors = new ArrayList<>(frameCount);
-            PathFrame firstFrame = frames.getFirst();
-            Vector3f viewVec = new Vector3f(cameraPos).sub(firstFrame.position()).normalize();
-            Vector3f firstSideVec = new Vector3f(firstFrame.tangent()).cross(viewVec).normalize();
+            var firstFrame = frames.getFirst();
+            var viewVec = new Vector3f(cameraPos).sub(firstFrame.position()).normalize();
+            var firstSideVec = new Vector3f(firstFrame.tangent()).cross(viewVec).normalize();
             if (firstSideVec.lengthSquared() < 1.0E-6f) {
                 firstSideVec.set(firstFrame.normal());
             }
             sideVectors.add(firstSideVec);
 
-            for (int i = 1; i < frameCount; i++) {
-                Vector3f prevTangent = frames.get(i - 1).tangent();
-                Vector3f currentTangent = frames.get(i).tangent();
-                Vector3f prevSideVec = sideVectors.get(i - 1);
+            for (var i = 1; i < frameCount; i++) {
+                var prevTangent = frames.get(i - 1).tangent();
+                var currentTangent = frames.get(i).tangent();
+                var prevSideVec = sideVectors.get(i - 1);
 
-                Quaternionf rotation = new Quaternionf().rotationTo(prevTangent, currentTangent);
-                Vector3f currentSideVec = new Vector3f(prevSideVec).rotate(rotation);
+                var rotation = new Quaternionf().rotationTo(prevTangent, currentTangent);
+                var currentSideVec = new Vector3f(prevSideVec).rotate(rotation);
                 sideVectors.add(currentSideVec);
             }
 
-            for (int i = 0; i < frameCount - 1; i++) {
-                PathFrame frame1 = frames.get(i);
-                PathFrame frame2 = frames.get(i + 1);
+            for (var i = 0; i < frameCount - 1; i++) {
+                var frame1 = frames.get(i);
+                var frame2 = frames.get(i + 1);
 
-                Vector3f sideVec1 = sideVectors.get(i);
-                Vector3f sideVec2 = sideVectors.get(i + 1);
+                var sideVec1 = sideVectors.get(i);
+                var sideVec2 = sideVectors.get(i + 1);
 
-                float scale1 = hasThickness ? thicknessTrack.get(i) : 1.0f;
-                float scale2 = hasThickness ? thicknessTrack.get(i + 1) : 1.0f;
-                Vector3f color1 = hasColor ? colorTrack.get(i) : DEFAULT_COLOR;
-                Vector3f color2 = hasColor ? colorTrack.get(i + 1) : DEFAULT_COLOR;
+                var scale1 = hasThickness ? thicknessTrack.get(i) : 1.0f;
+                var scale2 = hasThickness ? thicknessTrack.get(i + 1) : 1.0f;
+                var color1 = hasColor ? colorTrack.get(i) : DEFAULT_COLOR;
+                var color2 = hasColor ? colorTrack.get(i + 1) : DEFAULT_COLOR;
 
-                float halfThick1 = baseThickness * scale1 * 0.5f;
-                float halfThick2 = baseThickness * scale2 * 0.5f;
+                var halfThick1 = baseThickness * scale1 * 0.5f;
+                var halfThick2 = baseThickness * scale2 * 0.5f;
 
-                Vector3f v1Pos = new Vector3f(frame1.position()).sub(new Vector3f(sideVec1).mul(halfThick1));
-                Vector3f v2Pos = new Vector3f(frame1.position()).add(new Vector3f(sideVec1).mul(halfThick1));
-                Vector3f v3Pos = new Vector3f(frame2.position()).add(new Vector3f(sideVec2).mul(halfThick2));
-                Vector3f v4Pos = new Vector3f(frame2.position()).sub(new Vector3f(sideVec2).mul(halfThick2));
+                var v1Pos = new Vector3f(frame1.position()).sub(new Vector3f(sideVec1).mul(halfThick1));
+                var v2Pos = new Vector3f(frame1.position()).add(new Vector3f(sideVec1).mul(halfThick1));
+                var v3Pos = new Vector3f(frame2.position()).add(new Vector3f(sideVec2).mul(halfThick2));
+                var v4Pos = new Vector3f(frame2.position()).sub(new Vector3f(sideVec2).mul(halfThick2));
 
-                float u0 = (float) i / (frameCount - 1);
-                float u1 = (float) (i + 1) / (frameCount - 1);
+                var u0 = (float) i / (frameCount - 1);
+                var u1 = (float) (i + 1) / (frameCount - 1);
 
-                Quad quad = new Quad();
+                var quad = new Quad();
                 quad.v1 = new Vertex(v1Pos, u0, 0, color1);
                 quad.v2 = new Vertex(v2Pos, u0, 1, color1);
                 quad.v3 = new Vertex(v3Pos, u1, 1, color2);

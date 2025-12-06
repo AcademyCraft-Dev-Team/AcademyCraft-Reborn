@@ -26,15 +26,15 @@ public record TaperModifier(AttributeCurve curve, float globalScale) implements 
             return data;
         }
 
-        List<Float> thicknessTrack = data.getProperty(PropertyType.THICKNESS);
-        int frameCount = data.getFrames().size();
+        var thicknessTrack = data.getProperty(PropertyType.THICKNESS);
+        var frameCount = data.getFrames().size();
         if (frameCount <= 1) {
             return data;
         }
 
-        for (int i = 0; i < frameCount; ++i) {
-            float progress = (float) i / (frameCount - 1);
-            float taperScale = this.curve.evaluate(progress) * this.globalScale;
+        for (var i = 0; i < frameCount; ++i) {
+            var progress = (float) i / (frameCount - 1);
+            var taperScale = curve.evaluate(progress) * globalScale;
             thicknessTrack.set(i, thicknessTrack.get(i) * taperScale);
         }
 

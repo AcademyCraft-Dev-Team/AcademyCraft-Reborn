@@ -8,7 +8,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.renderer.EffectRenderer;
@@ -17,6 +16,7 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.item.Items;
 
 import static org.academy.AcademyCraft.academy;
+import static org.academy.internal.common.ability.electromaster.skills.Railgun.CHARGE_TIME;
 
 public final class RailgunEffectRenderer implements EffectRenderer {
     public static final RailgunEffectRenderer INSTANCE = new RailgunEffectRenderer();
@@ -30,7 +30,9 @@ public final class RailgunEffectRenderer implements EffectRenderer {
         var xOffset = 0.35f;
         xOffset = data.rightHand() ? -xOffset : xOffset;
         var zOffset = 0.4f;
-        poseStack.translate(xOffset, -Mth.lerp(renderState.partialTick, data.yOffsetOld(), data.yOffset()) + 0.5f, -zOffset);
+        var ticks = data.ticks() + renderState.partialTick;
+        var yCurve = Math.max(0, -4.0f * ticks * (ticks - CHARGE_TIME) / (CHARGE_TIME * CHARGE_TIME));
+        poseStack.translate(xOffset, -yCurve + 0.5f, -zOffset);
         poseStack.mulPose(Axis.XP.rotationDegrees(renderState.ageInTicks * 50));
         var state = new ItemStackRenderState();
         Minecraft.getInstance()
@@ -55,7 +57,10 @@ public final class RailgunEffectRenderer implements EffectRenderer {
         var xOffset = 0.35f;
         xOffset = data.rightHand() ? xOffset : -xOffset;
         var zOffset = 0.5f;
-        poseStack.translate(xOffset, Mth.lerp(partialTick, data.yOffsetOld(), data.yOffset()) * 0.5f - 0.125f, -zOffset);
+        var ticks = data.ticks() + partialTick;
+        var yCurve = Math.max(0, -4.0f * ticks * (ticks - CHARGE_TIME) / (CHARGE_TIME * CHARGE_TIME));
+        poseStack.translate(xOffset, yCurve * 0.5f - 0.125f, -zOffset);
+
         poseStack.mulPose(Axis.XP.rotationDegrees((player.tickCount + partialTick) * 50));
         var state = new ItemStackRenderState();
         Minecraft.getInstance()

@@ -28,36 +28,36 @@ public record NoiseFieldModifier(AttributeCurve strength, float scale, float spe
 
     @Override
     public PathData apply(PathData data, float time) {
-        List<PathFrame> originalFrames = data.getFrames();
+        var originalFrames = data.getFrames();
         if (originalFrames.size() < 2) {
             return data;
         }
 
-        int frameCount = originalFrames.size();
+        var frameCount = originalFrames.size();
         List<PathFrame> newFrames = new ArrayList<>(frameCount);
-        float noiseTime = (time + this.seed) * this.speed;
+        var noiseTime = (time + seed) * speed;
 
-        for (int i = 0; i < frameCount; i++) {
-            PathFrame frame = originalFrames.get(i);
-            float progress = (float) i / (frameCount - 1);
-            float currentStrength = this.strength.evaluate(progress);
+        for (var i = 0; i < frameCount; i++) {
+            var frame = originalFrames.get(i);
+            var progress = (float) i / (frameCount - 1);
+            var currentStrength = strength.evaluate(progress);
 
             if (currentStrength <= 1.0E-6f) {
                 newFrames.add(frame);
                 continue;
             }
 
-            Vector3fc pos = frame.position();
-            double offsetX = ImprovedNoise.noise(pos.x() * this.scale, pos.y() * this.scale, pos.z() * this.scale + noiseTime);
-            double offsetY = ImprovedNoise.noise(pos.x() * this.scale + 100, pos.y() * this.scale, pos.z() * this.scale + noiseTime);
-            double offsetZ = ImprovedNoise.noise(pos.x() * this.scale, pos.y() * this.scale + 100, pos.z() * this.scale + noiseTime);
+            var pos = frame.position();
+            var offsetX = ImprovedNoise.noise(pos.x() * scale, pos.y() * scale, pos.z() * scale + noiseTime);
+            var offsetY = ImprovedNoise.noise(pos.x() * scale + 100, pos.y() * scale, pos.z() * scale + noiseTime);
+            var offsetZ = ImprovedNoise.noise(pos.x() * scale, pos.y() * scale + 100, pos.z() * scale + noiseTime);
 
-            Vector3f offset = new Vector3f((float) offsetX, (float) offsetY, (float) offsetZ).mul(currentStrength);
-            Vector3f newPosition = new Vector3f(pos).add(offset);
+            var offset = new Vector3f((float) offsetX, (float) offsetY, (float) offsetZ).mul(currentStrength);
+            var newPosition = new Vector3f(pos).add(offset);
             newFrames.add(new PathFrame(newPosition, frame.tangent(), frame.normal()));
         }
 
-        PathData newData = new PathData(newFrames);
+        var newData = new PathData(newFrames);
         if (data.hasProperty(PropertyType.THICKNESS)) {
             newData.setProperty(PropertyType.THICKNESS, new ArrayList<>(data.getProperty(PropertyType.THICKNESS)));
         }

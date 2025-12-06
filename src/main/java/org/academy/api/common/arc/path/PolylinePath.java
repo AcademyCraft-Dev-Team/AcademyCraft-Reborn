@@ -26,41 +26,41 @@ public record PolylinePath(List<Vector3fc> vertices) implements BasePath {
     @Override
     public PathData generate(float resolution) {
         List<PathFrame> frames = new ArrayList<>();
-        if (this.vertices.size() < 2) {
-            if (!this.vertices.isEmpty()) {
-                frames.add(new PathFrame(this.vertices.getFirst(), new Vector3f(0, 1, 0), new Vector3f(1, 0, 0)));
+        if (vertices.size() < 2) {
+            if (!vertices.isEmpty()) {
+                frames.add(new PathFrame(vertices.getFirst(), new Vector3f(0, 1, 0), new Vector3f(1, 0, 0)));
             }
-            PathData data = new PathData(frames);
+            var data = new PathData(frames);
             if (!frames.isEmpty()) {
                 data.setProperty(PropertyType.THICKNESS, Collections.singletonList(1.0f));
             }
             return data;
         }
 
-        for (int i = 0; i < this.vertices.size() - 1; ++i) {
-            Vector3fc start = this.vertices.get(i);
-            Vector3fc end = this.vertices.get(i + 1);
+        for (var i = 0; i < vertices.size() - 1; ++i) {
+            var start = vertices.get(i);
+            var end = vertices.get(i + 1);
 
-            float distance = start.distance(end);
-            int segments = Math.max(1, (int) (distance * resolution));
+            var distance = start.distance(end);
+            var segments = Math.max(1, (int) (distance * resolution));
 
-            Vector3f tangent = new Vector3f(end).sub(start).normalize();
-            Vector3f globalUp = new Vector3f(0, 1, 0);
-            Vector3f normal = new Vector3f(tangent).cross(globalUp);
+            var tangent = new Vector3f(end).sub(start).normalize();
+            var globalUp = new Vector3f(0, 1, 0);
+            var normal = new Vector3f(tangent).cross(globalUp);
             if (normal.lengthSquared() < 1.0E-6f) {
                 normal.set(tangent).cross(new Vector3f(1, 0, 0));
             }
             normal.normalize();
 
-            int loopEnd = (i == this.vertices.size() - 2) ? segments : segments - 1;
-            for (int j = 0; j <= loopEnd; ++j) {
-                float t = (float) j / segments;
-                Vector3f position = start.lerp(end, t, new Vector3f());
+            var loopEnd = (i == vertices.size() - 2) ? segments : segments - 1;
+            for (var j = 0; j <= loopEnd; ++j) {
+                var t = (float) j / segments;
+                var position = start.lerp(end, t, new Vector3f());
                 frames.add(new PathFrame(position, new Vector3f(tangent), new Vector3f(normal)));
             }
         }
 
-        PathData data = new PathData(frames);
+        var data = new PathData(frames);
         if (!frames.isEmpty()) {
             List<Float> thickness = new ArrayList<>(Collections.nCopies(frames.size(), 1.0f));
             data.setProperty(PropertyType.THICKNESS, thickness);
@@ -75,8 +75,8 @@ public record PolylinePath(List<Vector3fc> vertices) implements BasePath {
 
     @Override
     public BasePath transform(Matrix4f transform) {
-        List<Vector3fc> newVertices = new ArrayList<>(this.vertices.size());
-        for (Vector3fc vertex : this.vertices) {
+        List<Vector3fc> newVertices = new ArrayList<>(vertices.size());
+        for (var vertex : vertices) {
             newVertices.add(new Vector3f(vertex).mulPosition(transform));
         }
         return new PolylinePath(newVertices);

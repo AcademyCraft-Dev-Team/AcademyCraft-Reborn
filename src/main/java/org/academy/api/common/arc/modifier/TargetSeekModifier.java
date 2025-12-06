@@ -25,34 +25,34 @@ public record TargetSeekModifier(Vector3fc target, AttributeCurve force) impleme
 
     @Override
     public PathData apply(PathData data, float time) {
-        List<PathFrame> originalFrames = data.getFrames();
+        var originalFrames = data.getFrames();
         if (originalFrames.size() < 2) {
             return data;
         }
 
-        int frameCount = originalFrames.size();
+        var frameCount = originalFrames.size();
         List<PathFrame> newFrames = new ArrayList<>(frameCount);
 
-        for (int i = 0; i < frameCount; i++) {
-            PathFrame frame = originalFrames.get(i);
-            float progress = (float) i / (frameCount - 1);
-            float currentForce = this.force.evaluate(progress);
+        for (var i = 0; i < frameCount; i++) {
+            var frame = originalFrames.get(i);
+            var progress = (float) i / (frameCount - 1);
+            var currentForce = force.evaluate(progress);
 
             if (currentForce <= 1.0E-6f) {
                 newFrames.add(frame);
                 continue;
             }
 
-            Vector3f toTarget = new Vector3f(this.target).sub(frame.position());
+            var toTarget = new Vector3f(target).sub(frame.position());
             if (toTarget.lengthSquared() > 1.0E-6f) {
                 toTarget.normalize().mul(currentForce);
             }
 
-            Vector3f newPosition = new Vector3f(frame.position()).add(toTarget);
+            var newPosition = new Vector3f(frame.position()).add(toTarget);
             newFrames.add(new PathFrame(newPosition, frame.tangent(), frame.normal()));
         }
 
-        PathData newData = new PathData(newFrames);
+        var newData = new PathData(newFrames);
         if (data.hasProperty(PropertyType.THICKNESS)) {
             newData.setProperty(PropertyType.THICKNESS, new ArrayList<>(data.getProperty(PropertyType.THICKNESS)));
         }
