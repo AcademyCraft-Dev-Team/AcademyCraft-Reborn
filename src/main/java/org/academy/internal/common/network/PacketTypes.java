@@ -6,7 +6,6 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AcquireCategoryPacket;
-import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.pakcet.*;
@@ -38,9 +37,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncLevelPacket>>
             SYNC_LEVEL = PACKET_TYPES.register("sync_level",
             () -> new PacketType<>(SyncLevelPacket.class, SyncLevelPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillsPacket>>
-            SYNC_SKILLS = PACKET_TYPES.register("sync_skills",
-            () -> new PacketType<>(SyncSkillsPacket.class, SyncSkillsPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncAbilityCategoryPacket>>
             SYNC_ABILITY_CATEGORY = PACKET_TYPES.register("sync_ability_category",
             () -> new PacketType<>(SyncAbilityCategoryPacket.class, SyncAbilityCategoryPacket.CODEC));
@@ -53,10 +49,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerSyncPacket>>
             PLAYER_SYNC = PACKET_TYPES.register("player_sync",
             () -> new PacketType<>(PlayerSyncPacket.class, PlayerSyncPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ExpSyncPacket>>
-            EXP_SYNC = PACKET_TYPES.register("exp_sync",
-            () -> new PacketType<>(ExpSyncPacket.class, ExpSyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillDataPacket>>
+            SYNC_SKILL_DATA = PACKET_TYPES.register("sync_skill_data",
+            () -> new PacketType<>(SyncSkillDataPacket.class, SyncSkillDataPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ConnectNodePacket>>
             CONNECT_NODE = PACKET_TYPES.register("connect_node",

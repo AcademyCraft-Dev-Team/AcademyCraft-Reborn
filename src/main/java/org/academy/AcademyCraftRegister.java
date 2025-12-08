@@ -13,6 +13,7 @@ import net.neoforged.neoforge.registries.NewRegistryEvent;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.skilldata.SkillDataTypes;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.arc.PathModifierTypes;
 import org.academy.internal.common.arc.PathTypes;
@@ -76,6 +77,7 @@ public final class AcademyCraftRegister {
         SyncKeys.SYNC_KEYS.register(modEventBus);
         PathTypes.PATH_TYPES.register(modEventBus);
         PathModifierTypes.PATH_MODIFIER_TYPES.register(modEventBus);
+        SkillDataTypes.SKILL_DATA_TYPES.register(modEventBus);
 
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
@@ -89,6 +91,7 @@ public final class AcademyCraftRegister {
         event.register(DATA_TYPES);
         event.register(PATH_TYPES);
         event.register(PATH_MODIFIER_TYPES);
+        event.register(SKILL_DATA_TYPES);
     }
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
