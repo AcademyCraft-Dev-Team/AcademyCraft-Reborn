@@ -18,6 +18,98 @@ public class MathUtil {
     public static final float TWO_PI = 2.0f * PI;
     public static final double EPSILON = 1e-6;
 
+    /**
+     *    peakHeight
+     *        *
+     *       * *
+     *      *   *
+     *     *     *
+     *    *       *
+     *   *         *
+     *   -----------
+     *  totalDistance
+     *
+     * @param totalDistance total distance
+     * @param peakHeight    peak
+     * @param x             current x
+     * @return              height
+     */
+    public static double getParabolaHeight(double totalDistance, double peakHeight, double x) {
+        return (4 * peakHeight * x * (totalDistance - x)) / (totalDistance * totalDistance);
+    }
+
+    /**
+     *    peakHeight
+     *        *
+     *       * *
+     *      *   *
+     *     *     *
+     *    *       *
+     *   *         *
+     *   -----------
+     *  totalDistance
+     *
+     * @param totalDistance total distance
+     * @param peakHeight    peak
+     * @param x             current x
+     * @return              height
+     */
+    public static float getParabolaHeight(float totalDistance, float peakHeight, float x) {
+        return (4 * peakHeight * x * (totalDistance - x)) / (totalDistance * totalDistance);
+    }
+
+    /**
+     *    a + length + a
+     *   ________________
+     *        length
+     *      __________
+     *     *          *
+     *    *            *
+     *   *              *
+     *   ---          ---
+     *    a            a
+     *
+     * @param x      current x
+     * @param length flat length
+     * @param a      time
+     * @return       height
+     */
+    public static double getFlatTopParabolaHeight(double x, double length, double a) {
+        double halfLength = length * 0.5;
+        double maxL = Math.max(halfLength, 0);
+        double maxA = Math.max(a, 0);
+        double numerator = Math.max(0, Math.abs(x - halfLength - a) - maxL);
+        if (maxA == 0f) return 1;
+        double fraction = numerator / maxA;
+        return 1 - fraction * fraction;
+    }
+
+    /**
+     *    a + length + a
+     *   ________________
+     *        length
+     *      __________
+     *     *          *
+     *    *            *
+     *   *              *
+     *   ---          ---
+     *    a            a
+     *
+     * @param x      current x
+     * @param length flat length
+     * @param a      time
+     * @return       height
+     */
+    public static float getFlatTopParabolaHeight(float x, float length, float a) {
+        float halfLength = length * 0.5f;
+        float maxL = Math.max(halfLength, 0);
+        float maxA = Math.max(a, 0);
+        float numerator = Math.max(0, Math.abs(x - halfLength - a) - maxL);
+        if (maxA == 0) return 1;
+        float fraction = numerator / maxA;
+        return 1 - fraction * fraction;
+    }
+
     public static Vec3 intersectRayCapsule(Vec3 origin, Vec3 direction, Vec3 capsuleCenter, float width, float height) {
         var radius = width / 2.0F;
         var halfEffectiveHeight = height / 2.0F - radius;
