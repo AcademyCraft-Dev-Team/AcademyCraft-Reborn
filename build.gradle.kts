@@ -7,7 +7,7 @@ plugins {
     id ("xyz.wagyourtail.jvmdowngrader") version "1.3.4"
 }
 
-val neoVersion: String = "21.11.0-alpha.1.21.11-rc2.20251206.112733"
+val neoVersion: String = "21.11.0-alpha.1.21.11-rc2.20251208.130010"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
