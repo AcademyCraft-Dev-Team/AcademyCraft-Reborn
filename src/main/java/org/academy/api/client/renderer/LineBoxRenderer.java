@@ -88,7 +88,7 @@ public final class LineBoxRenderer {
             nz = 0;
         }
         var vector3f = normMat.transform(new Vector3f(nx, ny, nz));
-        vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(0, 1, 0);
-        vc.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(0, 1, 0);
+        vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(0, 1, 0).setLineWidth(4);
+        vc.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(0, 1, 0).setLineWidth(4);
     }
 }
