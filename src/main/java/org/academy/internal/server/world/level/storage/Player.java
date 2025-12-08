@@ -1,17 +1,13 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.google.gson.annotations.SerializedName;
+import org.academy.internal.common.skilldata.SkillData;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public final class Player {
-    @SerializedName("skills")
-    private final HashSet<String> skills = new HashSet<>();
     @SerializedName("skillData")
-    private final Map<String, SkillData> skillData = new HashMap<>();
+    private final Map<String, SkillData> skillDataMap = new HashMap<>();
     @SerializedName("abilityCategory")
     private String abilityCategory;
     @SerializedName("level")
@@ -48,12 +44,12 @@ public final class Player {
         }
     }
 
-    public HashSet<String> getSkills() {
-        return skills;
+    public Map<String, SkillData> getSkillData() {
+        return skillDataMap;
     }
 
-    public Map<String, SkillData> getSkillData() {
-        return skillData;
+    public boolean isSkillLearned(String skillId) {
+        return skillDataMap.containsKey(skillId);
     }
 
     public int getLevel() {
@@ -103,10 +99,5 @@ public final class Player {
             this.computingPowerRecoverySpeed = computingPowerRecoverySpeed;
             markDirty();
         }
-    }
-
-    public static abstract class SkillData {
-        @SerializedName("exp")
-        public float exp;
     }
 }

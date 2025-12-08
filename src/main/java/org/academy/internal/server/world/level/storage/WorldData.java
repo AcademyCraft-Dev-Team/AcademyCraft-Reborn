@@ -1,5 +1,6 @@
 package org.academy.internal.server.world.level.storage;
 
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
@@ -7,6 +8,7 @@ import com.google.gson.annotations.SerializedName;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
+import org.academy.internal.common.skilldata.SkillData;
 
 import java.io.File;
 import java.io.FileReader;
@@ -20,8 +22,15 @@ public final class WorldData {
     @SerializedName("players")
     private final Map<UUID, Player> players = new HashMap<>();
 
+    private static Gson createGson() {
+        return new GsonBuilder()
+                .setPrettyPrinting()
+                .registerTypeAdapter(SkillData.class, new SkillDataSerializer<>())
+                .create();
+    }
+
     private static boolean isValidFile(File file) {
-        final var gson = new GsonBuilder().create();
+        final var gson = createGson();
 
         try (var fileReader = new FileReader(file)) {
             final JsonObject jsonObject;
@@ -45,7 +54,7 @@ public final class WorldData {
     }
 
     public static WorldData getWorldData(File file) {
-        final var gson = new GsonBuilder().setPrettyPrinting().create();
+        final var gson = createGson();
         if (!isValidFile(file)) {
             var worldData = new WorldData();
             AcademyCraft.LOGGER.debug("Creating new world data file.");
@@ -73,9 +82,8 @@ public final class WorldData {
         if (!hasDirtyData) return;
 
         AcademyCraft.LOGGER.debug("Dirty data detected, saving world data...");
-
-         var gson = new GsonBuilder().setPrettyPrinting().create();
-         var worldDataFile = AcademyCraftServer.worldDataFile;
+        var gson = createGson();
+        var worldDataFile = AcademyCraftServer.worldDataFile;
 
          if (worldDataFile == null) throw new IllegalStateException("World data file has not been set.");
 

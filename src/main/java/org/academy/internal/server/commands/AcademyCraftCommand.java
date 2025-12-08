@@ -1,6 +1,7 @@
 package org.academy.internal.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -45,7 +46,14 @@ public final class AcademyCraftCommand {
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("category_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestAbilityCategories)
-                                .executes(AcademyCraftCommand::setAbilityCategory))));
+                                .executes(AcademyCraftCommand::setAbilityCategory)))
+                .then(Commands.literal("set_exp")
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.argument("skill_name", IdentifierArgument.id())
+                                .suggests(AcademyCraftCommand::suggestLearnedSkills)
+                                .then(Commands.argument("amount", FloatArgumentType.floatArg(0))
+                                        .executes(AcademyCraftCommand::setSkillExp))))
+        );
     }
 
     private static int learnAllSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -71,12 +79,12 @@ public final class AcademyCraftCommand {
     private static int listLearnedSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
-        var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
+        var learnedSkills = AbilitySystemServer.getPlayerData(playerUuid).getSkillData();
 
         if (learnedSkills.isEmpty()) {
             context.getSource().sendSuccess(() -> Component.literal("You have not learned any skills yet."), false);
         } else {
-            var skillsString = String.join(", ", learnedSkills);
+            var skillsString = String.join(", ", learnedSkills.keySet());
             context.getSource().sendSuccess(() -> Component.literal("Learned skills: " + skillsString), false);
         }
         return 1;
@@ -102,7 +110,7 @@ public final class AcademyCraftCommand {
             return 0;
         }
 
-        if (AbilitySystemServer.getPlayerSkills(playerUuid).contains(skillIdentifier.toString())) {
+        if (AbilitySystemServer.getPlayerData(playerUuid).isSkillLearned(skillIdentifier.toString())) {
             context.getSource().sendFailure(Component.literal("You have already learned skill '" + skillIdentifier + "'."));
             return 0;
         }
@@ -125,12 +133,12 @@ public final class AcademyCraftCommand {
         }
 
         AbilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet.get().value());
-        var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
+        var learnedSkills = AbilitySystemServer.getPlayerData(playerUuid).getSkillData();
         if (learnedSkills != null) {
             learnedSkills.clear();
             var playerData = AbilitySystemServer.getPlayerData(playerUuid);
             if (playerData != null) playerData.markDirty();
-            AbilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_LIST);
+            AbilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_DATA);
         }
 
         context.getSource().sendSuccess(() -> Component.literal("Ability category set to: " + categoryIdentifier + ". All previous skills have been cleared."), true);
@@ -142,12 +150,12 @@ public final class AcademyCraftCommand {
             var player = context.getSource().getPlayerOrException();
             var playerUuid = player.getUUID();
             var currentCategory = AbilitySystemServer.getPlayerAbilityCategory(playerUuid);
-            var learnedSkills = AbilitySystemServer.getPlayerSkills(playerUuid);
+            var learnedSkills = AbilitySystemServer.getPlayerData(playerUuid).getSkillData();
 
             return SharedSuggestionProvider.suggest(
                     currentCategory.getSkills().stream()
                             .map(skill -> skill.getKey().toString())
-                            .filter(skillName -> !learnedSkills.contains(skillName)),
+                            .filter(skillName -> !learnedSkills.containsKey(skillName)),
                     builder
             );
         } catch (CommandSyntaxException e) {
@@ -155,10 +163,49 @@ public final class AcademyCraftCommand {
         }
     }
 
+    private static int setSkillExp(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        var player = context.getSource().getPlayerOrException();
+        var playerUuid = player.getUUID();
+        var skillIdentifier = IdentifierArgument.getId(context, "skill_name");
+        float amount = FloatArgumentType.getFloat(context, "amount");
+
+        var playerData = AbilitySystemServer.getPlayerData(playerUuid);
+        var skillKey = skillIdentifier.toString();
+
+        if (!playerData.isSkillLearned(skillKey)) {
+            context.getSource().sendFailure(Component.literal("You do not have skill '" + skillIdentifier + "'."));
+            return 0;
+        }
+
+        var skillData = playerData.getSkillData().get(skillKey);
+        skillData.setExp(amount);
+
+        playerData.markDirty();
+        AbilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_DATA);
+
+        context.getSource().sendSuccess(() -> Component.literal("Set experience for " + skillIdentifier + " to " + amount), true);
+        return 1;
+    }
+
     private static CompletableFuture<Suggestions> suggestAbilityCategories(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(
                 Registries.ABILITY_CATEGORIES.keySet().stream().map(Identifier::toString),
                 builder
         );
+    }
+
+    private static CompletableFuture<Suggestions> suggestLearnedSkills(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        try {
+            var player = context.getSource().getPlayerOrException();
+            var playerUuid = player.getUUID();
+            var learnedSkills = AbilitySystemServer.getPlayerData(playerUuid).getSkillData();
+
+            return SharedSuggestionProvider.suggest(
+                    learnedSkills.keySet(),
+                    builder
+            );
+        } catch (CommandSyntaxException e) {
+            return Suggestions.empty();
+        }
     }
 }
