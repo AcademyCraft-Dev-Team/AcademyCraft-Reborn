@@ -28,6 +28,8 @@ public final class PathModifierTypes {
             PATH_MODIFIER_TYPES.register("stretch", () -> new PathModifierType<>(StretchModifier.CODEC));
     public static final DeferredHolder<PathModifierType<?>, PathModifierType<WarpModifier>> WARP =
             PATH_MODIFIER_TYPES.register("warp", () -> new PathModifierType<>(WarpModifier.CODEC));
+    public static final DeferredHolder<PathModifierType<?>, PathModifierType<TransformModifier>> TRANSFORM =
+            PATH_MODIFIER_TYPES.register("transform", () -> new PathModifierType<>(TransformModifier.CODEC));
 
     private PathModifierTypes() {
     }

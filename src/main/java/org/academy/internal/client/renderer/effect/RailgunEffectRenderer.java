@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.renderer.EffectRenderer;
+import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.item.Items;
@@ -58,7 +59,7 @@ public final class RailgunEffectRenderer implements EffectRenderer {
         xOffset = data.rightHand() ? xOffset : -xOffset;
         var zOffset = 0.5f;
         var ticks = data.ticks() + partialTick;
-        var yCurve = Math.max(0, -4.0f * ticks * (ticks - CHARGE_TIME) / (CHARGE_TIME * CHARGE_TIME));
+        var yCurve = MathUtil.getParabolaHeight(CHARGE_TIME, 1, ticks);
         poseStack.translate(xOffset, yCurve * 0.5f - 0.125f, -zOffset);
 
         poseStack.mulPose(Axis.XP.rotationDegrees((player.tickCount + partialTick) * 50));

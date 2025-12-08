@@ -191,7 +191,7 @@ public class VectorReflection extends Skill {
 
             if ((!hasCausingEntity && !hasDirectEntity) || directEntity == player || causingEntity == player) return;
 
-            player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(), SoundSource.BLOCKS, 1, 1);
+            player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(), SoundSource.PLAYERS, 1, 1);
 
             var sourceEntity = hasDirectEntity ? directEntity : causingEntity;
 

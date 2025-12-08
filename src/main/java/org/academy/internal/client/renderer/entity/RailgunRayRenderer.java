@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.state.CameraRenderState;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.VertexUtil;
+import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.entity.state.RailgunRayRenderState;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.joml.Matrix4f;
@@ -23,7 +24,8 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
                 .rotateY((float) Math.toRadians(90 - renderState.yRot))
                 .rotateZ((float) Math.toRadians(90 + renderState.xRot))
         );
-        poseStack.scale(0.1f, 50, 0.1f);
+        var progress = MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5) * 0.1f;
+        poseStack.scale(progress, 50, progress);
         CylinderRenderer.renderCylinder(poseStack, PostEffect.BUFFER_SOURCE_PRE, BUFFERED_VERTEX, 0.75f, 0.5f, 0, 1f);
         poseStack.popPose();
     }
@@ -42,5 +44,10 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
 
     public RailgunRayRenderer(EntityRendererProvider.Context context) {
         super(context);
+    }
+
+    @Override
+    protected boolean affectedByCulling(RailgunRay display) {
+        return false;
     }
 }

@@ -7,6 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
@@ -46,6 +47,8 @@ import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.item.Items;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkServer;
@@ -55,10 +58,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.misaka.MisakaNetworkClient.sendPacket;
 
@@ -174,9 +174,9 @@ public final class Railgun extends Skill {
             public Context(ServerPlayer player, InteractionHand hand) {
                 super(player);
                 this.hand = hand;
-                this.arcEffect = new ArcEffect(player.level(), 40);
-                this.arcEffect.setPos(player.position());
-                player.level().addFreshEntity(this.arcEffect);
+                arcEffect = new ArcEffect(player.level(), 40);
+                arcEffect.setPos(player.position());
+                player.level().addFreshEntity(arcEffect);
             }
 
             @Override
@@ -191,7 +191,7 @@ public final class Railgun extends Skill {
 
             @SubscribeEvent
             public void onTick(ServerTickEvent.Post event) {
-                this.ticks++;
+                ticks++;
 
                 if (player.isRemoved()) {
                     unregister();
@@ -206,38 +206,123 @@ public final class Railgun extends Skill {
                         )
                 );
 
-                if (this.ticks <= 30) {
-                    float timeFactor = this.ticks / 30.0f;
-                    float baseRadius = 0.4f + 0.4f * (float) Math.sin(timeFactor * Math.PI * 2.0);
-                    float baseTurns = 1;
-                    float phaseOffset = MathUtil.RANDOM.nextFloat(ticks) * 0.2f;
+                var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
+                var eyePos = player.getEyePosition();
 
-                    var look = player.getLookAngle().multiply(1, 0, 1).normalize();
-                    var right = new Vec3(-look.z, 0, look.x).normalize();
+                var playerOrientation = new Quaternionf().rotateY(yawRad);
 
-                    var startPos = player.position()
-                            .add(0, 1.25f, 0)
-                            .add(look.scale(0.75f))
-                            .add(right.scale(0.35f));
+                var look = new Vector3f(0, 0, 1).rotate(playerOrientation);
+                var up = new Vector3f(0, 1, 0).rotate(playerOrientation);
+                var right = new Vector3f(-1, 0, 0).rotate(playerOrientation);
 
-                    var arcEffect = new ArcEffect(player.level(), 2);
-                    arcEffect.setPos(player.position());
-                    player.level().addFreshEntity(arcEffect);
+                var startPos = eyePos
+                        .add(new Vec3(right).scale(0.35))
+                        .add(new Vec3(up).scale(-0.8))
+                        .add(new Vec3(look).scale(0.35));
+                var yCurve = MathUtil.getParabolaHeight(CHARGE_TIME, 1, ticks);
 
-                    arcEffect.setPos(startPos);
-                    var endPos = startPos.add(look.scale(0.125f));
+                if (ticks <= CHARGE_TIME) {
+                    var branchCount = MathUtil.RANDOM.nextInt(2, 4);
 
-                    ArcPath arcPath = new ArcPath(
-                            new LinePath(startPos.toVector3f(), endPos.toVector3f()),
-                            List.of(
-                                    new HelixModifier(baseRadius, baseTurns, phaseOffset),
-                                    new JaggedModifier(1, 3, player.getId() + ticks)
-                            ),
-                            128.0f,
-                            List.of()
-                    );
-                    arcEffect.setArcPath(arcPath);
+                    var coinPos = startPos.add(0, yCurve, 0);
+                    var level = player.level();
+                    var arcs = new ArrayList<ArcPath>();
+                    for (var i = 0; i < branchCount; i++) {
+                        var pos = coinPos.add(
+                                MathUtil.RANDOM.nextDouble(-2, 2),
+                                MathUtil.RANDOM.nextDouble(-2, 2),
+                                MathUtil.RANDOM.nextDouble(-2, 2)
+                        );
+                        arcs.add(
+                                new ArcPath(
+                                        new LinePath(pos.toVector3f(), coinPos.toVector3f()),
+                                        List.of(
+                                                new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())
+                                        ),
+                                        2.0f,
+                                        List.of()
+                                )
+                        );
+                    }
+                    var arc = new ArcEffect(level, 2);
+                    arc.setArcPaths(arcs);
+                    arc.setPos(coinPos);
+                    level.addFreshEntity(arc);
                 } else {
+                    var uuid = player.getUUID();
+                    var computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
+
+                    if (!player.isCreative()) {
+                        AbilitySystemServer.setPlayerComputingPower(uuid, computingPower - 100);
+                    }
+
+                    var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
+                    float length = 50;
+                    var lookDir = player.getLookAngle();
+
+                    var endPos = startPos.add(lookDir.scale(length));
+                    railgunRay.setPos(startPos);
+                    railgunRay.setYRot(player.getYRot());
+                    railgunRay.setXRot(player.getXRot());
+                    player.level().addFreshEntity(railgunRay);
+
+                    var branchCount = MathUtil.RANDOM.nextInt(12, 16);
+                    var level = player.level();
+                    var arcs = new ArrayList<ArcPath>();
+
+                    var axis = lookDir.normalize();
+                    var globalUp = new Vec3(0, 1, 0);
+                    var axisRight = axis.cross(globalUp);
+                    if (axisRight.lengthSqr() < 1.0E-4) {
+                        axisRight = axis.cross(new Vec3(1, 0, 0));
+                    }
+                    axisRight = axisRight.normalize();
+                    var axisUp = axisRight.cross(axis).normalize();
+
+                    for (var i = 0; i < branchCount; i++) {
+                        var h = MathUtil.RANDOM.nextDouble(10, 20);
+                        var rMax = h * Math.tan(Math.toRadians(MathUtil.RANDOM.nextInt(15, 30)));
+                        var r = rMax * Math.sqrt(MathUtil.RANDOM.nextDouble());
+                        var theta = MathUtil.RANDOM.nextDouble() * 2 * Math.PI;
+
+                        var offset = axisRight.scale(r * Math.cos(theta)).add(axisUp.scale(r * Math.sin(theta)));
+                        var pos = startPos.add(axis.scale(h)).add(offset);
+
+                        arcs.add(
+                                new ArcPath(
+                                        new LinePath(pos.toVector3f(), startPos.toVector3f()),
+                                        List.of(
+                                                new JaggedModifier(1, 2, MathUtil.RANDOM.nextLong())
+                                        ),
+                                        1.0f,
+                                        List.of()
+                                )
+                        );
+                    }
+                    arcs.add(
+                            new ArcPath(
+                                    new LinePath(startPos.toVector3f(), endPos.toVector3f()),
+                                    List.of(
+                                            new HelixModifier(0.5f, 16, 0),
+                                            new JaggedModifier(5, 1, MathUtil.RANDOM.nextLong())
+                                    ),
+                                    8,
+                                    List.of()
+                            )
+                    );
+                    var arc = new ArcEffect(level, 30);
+                    arc.setArcPaths(arcs);
+                    arc.setPos(startPos);
+                    level.addFreshEntity(arc);
+
+                    var result = LevelUtil.destroyBlocksAlongPath(railgunRay.level(), startPos, endPos, 0.025f, 10, false, true, true, false);
+                    if (result.getKey()) {
+                        double d = result.getValue();
+                        length = (float) d;
+                        endPos = startPos.add(lookDir.scale(length));
+                    }
+                    LevelUtil.attackEntitiesAlongPath(railgunRay.level(), startPos, endPos, 0.125f, new DamageSource(railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK), railgunRay), 150);
+                    railgunRay.level().playSound(null, player, SoundEvents.RAILGUN.get(), SoundSource.PLAYERS, 1, 1);
                     unregister();
                 }
             }
@@ -245,34 +330,6 @@ public final class Railgun extends Skill {
             public void end() {
             }
 
-            public void fire() {
-                final var uuid = player.getUUID();
-                final var computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
-
-                if (!player.isCreative()) {
-                    AbilitySystemServer.setPlayerComputingPower(uuid, computingPower - 100);
-                }
-
-                var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
-                float length = 50;
-                var lookDir = player.getLookAngle();
-                var startPos = player.position().add(0, 1.5, 0);
-
-                var endPos = startPos.add(lookDir.scale(length));
-                railgunRay.setPos(startPos);
-                railgunRay.setYRot(player.getYRot());
-                railgunRay.setXRot(player.getXRot());
-                player.level().addFreshEntity(railgunRay);
-
-                var result = LevelUtil.destroyBlocksAlongPath(railgunRay.level(), startPos, endPos, 0.025f, 10, false, true, true, false);
-                if (result.getKey()) {
-                    double d = result.getValue();
-                    length = (float) d;
-                    endPos = startPos.add(lookDir.scale(length));
-                }
-                LevelUtil.attackEntitiesAlongPath(railgunRay.level(), startPos, endPos, 0.125f, new DamageSource(railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK), railgunRay), 150);
-                railgunRay.playSound(SoundEvents.RAILGUN.get());
-            }
         }
     }
 

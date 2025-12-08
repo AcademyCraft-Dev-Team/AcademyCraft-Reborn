@@ -6,11 +6,9 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import org.academy.api.client.renderer.ArcFactory;
-import org.academy.api.common.arc.ArcPath;
 import org.academy.internal.client.renderer.arc.PathProcessor;
 import org.academy.internal.client.renderer.entity.state.ArcEffectRenderState;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
-import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,17 +1,16 @@
-import net.neoforged.gradle.common.tasks.JarJar
 import xyz.wagyourtail.jvmdg.gradle.task.DowngradeJar
 
 plugins {
     idea
     `java-library`
-    id("net.neoforged.gradle.userdev") version "7.1.6"
+    id("net.neoforged.moddev") version "2.0.121"
     id ("xyz.wagyourtail.jvmdowngrader") version "1.3.4"
 }
 
-val neoVersion: String = "21.10.52-beta"
+val neoVersion: String = "21.11.0-alpha.1.21.11-rc2.20251206.112733"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
-val modId = project.property("mod_id")
+val modId = project.property("mod_id").toString()
 
 base {
     version = "${project.property("mod_version")}" + (if (isDev) "-dev" else "-release")
@@ -61,8 +60,8 @@ repositories {
     mavenLocal()
     maven {
         name = "AC Dev Team's maven"
-        url = uri("D:/Project/maven-repo")
-        //    url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
+        //   url = uri("D:/Project/maven-repo")
+        url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
         content {
             includeGroup("org.academy")
             includeGroup("net.neoforged")
@@ -112,9 +111,41 @@ repositories {
     }
 }
 
-dependencies {
-    implementation("net.neoforged:neoforge:21.11.0-alpha.1.21.11-rc2.20251206.082211")
+neoForge {
+    version = neoVersion
+    ideSyncTask(generateModMetadata)
+    parchment {
+        minecraftVersion = "1.21.10"
+        mappingsVersion = "2025.10.12"
+    }
+    runs {
+        register("client") {
+            client()
+            systemProperty("neoforge.enabledGameTestNamespaces", modId)
+            environment("IS_DEV", "false")
+        }
+        register("server") {
+            server()
+            systemProperty("neoforge.enabledGameTestNamespaces", modId)
+        }
+        register("clientDev") {
+            client()
+            systemProperty("neoforge.enabledGameTestNamespaces", modId)
+            environment("IS_DEV", "true")
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
 
+    mods {
+        create(modId) {
+            sourceSet(sourceSets.main.get())
+        }
+    }
+}
+
+dependencies {
     val misaka = "org.academy:misaka-network:21.11.1-rc2"
     annotationProcessor(misaka)
     implementation(misaka)
@@ -158,54 +189,6 @@ dependencies {
     }
 }
 
-accessTransformers {
-    file("src/main/resources/META-INF/accesstransformer.cfg")
-}
-
-subsystems {
-    parchment {
-        minecraftVersion = "1.21.10"
-        mappingsVersion = "2025.10.12"
-    }
-}
-
-runs {
-    configureEach {
-        systemProperty("forge.logging.markers", "REGISTRIES")
-        systemProperty("terminal.ansi", "true")
-        systemProperty("forge.logging.console.level", "debug")
-        jvmArguments.addAll(
-            "-XX:+IgnoreUnrecognizedVMOptions",
-            "-XX:+AllowEnhancedClassRedefinition",
-            "-Xmx2G"
-        )
-
-        modSource(sourceSets.main.get())
-    }
-
-    named("clientData") {
-        arguments.addAll(
-            "--mod",
-            "$modId",
-            "--all",
-            "--output",
-            file("src/generated/resources/").absolutePath,
-            "--existing",
-            file("src/main/resources/").absolutePath
-        )
-    }
-
-    register("Client [Dev]") {
-        runType("client")
-        environmentVariable("IS_DEV", "true")
-    }
-
-    register("Client [Release]") {
-        runType("client")
-        environmentVariable("IS_DEV", "false")
-    }
-}
-
 idea {
     module {
         val buildDirFile = layout.buildDirectory.get().asFile
@@ -222,31 +205,14 @@ tasks.withType<JavaCompile> {
     options.compilerArgs.add("-Amisaka.provider.fqcn=org.academy.MisakaHandlersProviderImpl")
 }
 
-tasks.named<Jar>("jar") {
-    archiveClassifier.set("slim")
-}
-
-tasks.named<JarJar>("jarJar") {
-    archiveClassifier.set("")
-}
-
-tasks.named("downgradeJar") {
-    enabled = false
-}
-
 val finalDowngrade by tasks.registering(DowngradeJar::class) {
     group = "build"
-    description = "Downgrades the JarJar output to Java 21 and sets it as the main artifact"
+    description = "Downgrades to Java 21"
 
-    inputFile.set(tasks.named<JarJar>("jarJar").flatMap { it.archiveFile })
-
-    downgradeTo.set(JavaVersion.VERSION_21)
+    inputFile.set(tasks.named<Jar>("jar").flatMap { it.archiveFile })
     classpath + sourceSets.main.get().compileClasspath
 }
 
 tasks.named("assemble") {
     dependsOn(finalDowngrade)
-    doLast {
-        delete(tasks.named<Jar>("jar").get().archiveFile)
-    }
 }
