@@ -8,12 +8,12 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.ExpSyncPacket;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.pakcet.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.skilldata.SkillData;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
@@ -25,7 +25,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
-    public static final Map<Skill, Float> SKILL_EXP = new ConcurrentHashMap<>();
+    private static final Map<String, SkillData> SKILL_DATA = new ConcurrentHashMap<>();
     public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system";
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
     public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
@@ -81,14 +81,6 @@ public final class AbilitySystemClient {
     }
 
     @SubscribePacket
-    public static void handleSync(ExpSyncPacket packet) {
-        var skillKey = Identifier.parse(packet.getSkillName());
-        var exp = packet.getExp();
-        var skill = Registries.SKILLS.get(skillKey);
-        skill.ifPresent(skillReference -> setSkillExp(skillReference.value(), exp));
-    }
-
-    @SubscribePacket
     public static void handleSync(SyncAbilityCategoryPacket packet) {
         category = packet.getAbilityCategory();
     }
@@ -109,17 +101,17 @@ public final class AbilitySystemClient {
     }
 
     @SubscribePacket
-    public static void handleSync(SyncSkillsPacket packet) {
+    public static void handleSync(SyncSkillDataPacket packet) {
+        var newData = packet.getSkillDataMap();
+
+        SKILL_DATA.clear();
+        SKILL_DATA.putAll(newData);
+
         LEARNED_SKILLS.clear();
-        LEARNED_SKILLS.addAll(packet.getSkills());
-    }
-
-    public static float getSkillExp(Skill skill) {
-        return SKILL_EXP.getOrDefault(skill, 0f);
-    }
-
-    public static void setSkillExp(Skill skill, float exp) {
-        SKILL_EXP.put(skill, exp);
+        newData.keySet().forEach(skillId -> {
+            Registries.SKILLS.get(Identifier.parse(skillId))
+                    .ifPresent(holder -> LEARNED_SKILLS.add(holder.value()));
+        });
     }
 
     public static float getComputingPower() {
@@ -156,6 +148,28 @@ public final class AbilitySystemClient {
 
     public static AbilityCategory getCategory() {
         return category == null ? AbilityCategories.LEVEL0.get() : category;
+    }
+
+    public static float getSkillExp(Skill skill) {
+        return SKILL_DATA.get(skill.getKeyString()).getExp();
+    }
+
+    public static void setSkillExp(Skill skill, float exp) {
+        String skillId = Objects.requireNonNull(Registries.SKILLS.getKey(skill)).toString();
+        SkillData data = SKILL_DATA.get(skillId);
+        if (data != null) {
+            data.setExp(exp);
+        }
+    }
+
+    public static Optional<SkillData> getSkillData(Skill skill) {
+        var key = Registries.SKILLS.getKey(skill);
+        if (key == null) return Optional.empty();
+        return Optional.ofNullable(SKILL_DATA.get(key.toString()));
+    }
+
+    public static <T extends SkillData> Optional<T> getSkillData(Skill skill, Class<T> type) {
+        return getSkillData(skill).filter(type::isInstance).map(type::cast);
     }
 
     public static void registerContext(ClientContext clientContext) {

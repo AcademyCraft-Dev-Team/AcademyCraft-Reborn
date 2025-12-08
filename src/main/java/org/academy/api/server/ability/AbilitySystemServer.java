@@ -20,13 +20,14 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.skilldata.CommonSkillData;
+import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
-import org.misaka.api.common.network.packet.S2CPacket;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -139,12 +140,12 @@ public final class AbilitySystemServer {
                 var energy = skill.getEnergyCostToLearn();
                 var depLearned = true;
                 for (var dep : skill.getDependencies()) {
-                    if (!getPlayerSkills(player.getUUID()).contains(dep.getKeyString())) {
+                    if (!getPlayerData(player.getUUID()).isSkillLearned(dep.getKeyString())) {
                         depLearned = false;
                         break;
                     }
                 }
-                var learned = getPlayerData(player.getUUID()).getSkills().contains(skillKey);
+                var learned = getPlayerData(player.getUUID()).isSkillLearned(skillKey);
                 var canLearn = user.getEnergyStored() >= energy && depLearned && !learned;
                 if (canLearn) {
                     user.extractEnergy(energy, false);
@@ -177,20 +178,16 @@ public final class AbilitySystemServer {
         }
     }
 
-    public static HashSet<String> getPlayerSkills(UUID uuid) {
-        return getPlayerData(uuid).getSkills();
-    }
-
     public static void addPlayerSkill(UUID uuid, String skillKey) {
         var playerData = getPlayerData(uuid);
-        if (playerData.getSkills().add(skillKey)) {
+        if (playerData.getSkillData().putIfAbsent(skillKey, new CommonSkillData(0)) == null) {
             var skill = Registries.SKILLS.get(Identifier.parse(skillKey));
             playerData.markDirty();
-            schedulePlayerSync(uuid, SyncTypes.SKILL_LIST);
+            schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         }
     }
 
-    public static void addPlayerSkillData(UUID uuid, String skillKey, Player.SkillData skillData) {
+    public static void addPlayerSkillData(UUID uuid, String skillKey, SkillData skillData) {
         var playerData = getPlayerData(uuid);
         var oldValue = playerData.getSkillData().put(skillKey, skillData);
         if (!Objects.equals(oldValue, skillData)) {
@@ -200,10 +197,9 @@ public final class AbilitySystemServer {
 
     public static void removePlayerSkill(UUID uuid, String skillKey) {
         var playerData = getPlayerData(uuid);
-        if (playerData.getSkills().remove(skillKey)) {
-            playerData.getSkillData().remove(skillKey);
+        if (playerData.getSkillData().remove(skillKey) != null) {
             playerData.markDirty();
-            schedulePlayerSync(uuid, SyncTypes.SKILL_LIST);
+            schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         }
     }
 
@@ -212,7 +208,7 @@ public final class AbilitySystemServer {
     }
 
     @Nullable
-    public static <T extends Player.SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
+    public static <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
         return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
     }
 
@@ -222,17 +218,6 @@ public final class AbilitySystemServer {
             return 0;
         } else {
             return skillData.exp;
-        }
-    }
-
-    public static void setPlayerSkillExp(UUID uuid, String skillKey, float exp) {
-        var skillData = getPlayerData(uuid).getSkillData().get(skillKey);
-        if (skillData != null) {
-            skillData.exp = exp;
-            var player = LIVE_PLAYER_MAP.get(uuid);
-            if (player != null) {
-                player.connection.send(new S2CPacket(new ExpSyncPacket(skillKey, skillData.exp)));
-            }
         }
     }
 
@@ -311,7 +296,7 @@ public final class AbilitySystemServer {
         schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
         schedulePlayerSync(uuid, SyncTypes.COMPUTING_POWER);
         schedulePlayerSync(uuid, SyncTypes.MAX_COMPUTING_POWER);
-        schedulePlayerSync(uuid, SyncTypes.SKILL_LIST);
+        schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
     }
 
     public static final class AbilitySystemTicker {
@@ -332,7 +317,7 @@ public final class AbilitySystemServer {
             var currentComputingPowerChanged = syncQueue.contains(SyncTypes.COMPUTING_POWER);
             var maxComputingPowerChanged = syncQueue.contains(SyncTypes.MAX_COMPUTING_POWER);
             var abilityCategoryChanged = syncQueue.contains(SyncTypes.ABILITY_CATEGORY);
-            var skillsChanged = syncQueue.contains(SyncTypes.SKILL_LIST);
+            var skillDataChanged = syncQueue.contains(SyncTypes.SKILL_DATA);
 
             if (levelChanged) {
                 var packet = new SyncLevelPacket(getPlayerLevel(uuid));
@@ -350,14 +335,9 @@ public final class AbilitySystemServer {
                 var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
                 MisakaNetworkServer.sendPacket(connection, packet);
             }
-            if (skillsChanged) {
-                var skills = getPlayerSkills(uuid);
-                var set = new HashSet<Skill>();
-                for (var s : skills) {
-                    var skill = Registries.SKILLS.getValue(Identifier.parse(s));
-                    set.add(skill);
-                }
-                var packet = new SyncSkillsPacket(set);
+            if (skillDataChanged) {
+                var skills = getPlayerData(uuid).getSkillData();
+                var packet = new SyncSkillDataPacket(skills);
                 MisakaNetworkServer.sendPacket(connection, packet);
             }
             player.syncQueue.clear();
