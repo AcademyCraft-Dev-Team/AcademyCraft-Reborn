@@ -2,6 +2,7 @@ package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -69,7 +70,8 @@ public final class CylinderRenderer {
 
             vertexConsumer.addVertex(poseStack.last().pose(), x, y, z)
                     .setColor(red, green, blue, alpha)
-                    .setNormal(poseStack.last(), nx, ny, nz);
+                    .setNormal(poseStack.last(), nx, ny, nz)
+                    .setLineWidth(Minecraft.getInstance().getWindow().getAppropriateLineWidth());
         }
     }
 }
