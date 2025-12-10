@@ -1,6 +1,7 @@
 package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
@@ -8,7 +9,6 @@ import net.minecraft.world.phys.AABB;
 import org.academy.api.client.render.MatrixStack;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 import java.util.Map;
 
@@ -87,8 +87,12 @@ public final class LineBoxRenderer {
             ny = 1;
             nz = 0;
         }
-        var vector3f = normMat.transform(new Vector3f(nx, ny, nz));
-        vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(0, 1, 0).setLineWidth(4);
-        vc.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(0, 1, 0).setLineWidth(4);
+        var lineWidth = Minecraft.getInstance().getWindow().getAppropriateLineWidth();
+        vc.addVertex(mat, x1, y1, z1)
+                .setColor(r, g, b, a)
+                .setNormal(0, 1, 0).setLineWidth(lineWidth);
+        vc.addVertex(mat, x2, y2, z2)
+                .setColor(r, g, b, a)
+                .setNormal(0, 1, 0).setLineWidth(lineWidth);
     }
 }
