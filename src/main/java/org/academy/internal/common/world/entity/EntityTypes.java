@@ -35,6 +35,10 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "high_speed_electron_beam", HighSpeedElectronBeam::new, MobCategory.MISC
             );
+    public static final DeferredHolder<EntityType<?>, EntityType<LightOrb>> LIGHT_ORB =
+            ENTITY_TYPES.registerEntityType(
+                    "light_orb", LightOrb::new, MobCategory.MISC
+            );
     public static final DeferredHolder<EntityType<?>, EntityType<GlowCircle>> GLOW_CIRCLE =
             ENTITY_TYPES.registerEntityType(
                     "glow_circle", GlowCircle::new, MobCategory.MISC

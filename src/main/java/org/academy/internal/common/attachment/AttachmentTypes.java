@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
+import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
 
 import java.util.function.Supplier;
 
@@ -33,6 +34,13 @@ public final class AttachmentTypes {
             () -> AttachmentType
                     .builder(Railgun.Data::getDefault)
                     .sync(Railgun.Data.CODEC)
+                    .build()
+    );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<QuantumData>> QUANTUM_DATA = REGISTER.register(
+            "quantum_data",
+            () -> AttachmentType
+                    .builder(QuantumData::getDefault)
+                    .sync(QuantumData.CODEC)
                     .build()
     );
 }
