@@ -13,8 +13,10 @@ import org.academy.api.common.sync.packet.SyncDataPacket;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
+import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
 import org.academy.internal.common.ability.accelerator.skills.*;
 import org.academy.internal.common.ability.electromaster.skills.ArcGenerate;
+import org.academy.internal.common.ability.electromaster.skills.BallLightning;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
@@ -92,6 +94,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ArcGenerate.GeneratePacket>>
             ARC_GENERATE_GENERATE = PACKET_TYPES.register("arc_generate_generate",
             () -> new PacketType<>(ArcGenerate.GeneratePacket.class, ArcGenerate.GeneratePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BallLightning.ActivatePacket>>
+            LIGHTNING_NOVA_ACTIVATE = PACKET_TYPES.register("ball_lightning_activate",
+            () -> new PacketType<>(BallLightning.ActivatePacket.class, BallLightning.ActivatePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Railgun.StartPacket>>
             RAILGUN_START_CHARGE = PACKET_TYPES.register("railgun_start_charge",

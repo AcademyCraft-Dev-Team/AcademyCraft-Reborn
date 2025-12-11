@@ -4,12 +4,28 @@
   "package": "org.academy.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "common.MixinCombatTracker",
+    "common.MixinEntity",
+    "common.MixinLivingEntity",
     "common.MixinMinecraftServer",
     "common.MixinPlayerList",
     "common.MixinProjectile",
     "common.MixinServerPlayer"
   ],
-  "client": ["client.MixinAvatarRenderer", "client.MixinGameRenderer", "client.MixinGui", "client.MixinIntegratedServer", "client.MixinKeyboardHandler", "client.MixinLevelRenderer", "client.MixinMinecraft", "client.MixinModelDiscovery", "client.MixinMouseHandler", "client.MixinSoundEngine"],
+  "client": [
+    "client.MixinAvatarRenderer",
+    "client.MixinGameRenderer",
+    "client.MixinGui",
+    "client.MixinIntegratedServer",
+    "client.MixinKeyboardHandler",
+    "client.MixinLevelRenderer",
+    "client.MixinLivingEntityRenderer",
+    "client.MixinLivingEntityRenderState",
+    "client.MixinMinecraft",
+    "client.MixinModelDiscovery",
+    "client.MixinMouseHandler",
+    "client.MixinSoundEngine"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

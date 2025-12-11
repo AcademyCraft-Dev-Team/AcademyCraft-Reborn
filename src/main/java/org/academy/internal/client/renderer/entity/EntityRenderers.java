@@ -14,6 +14,7 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.RAILGUN_RAY.get(), RailgunRayRenderer::new);
         event.registerEntityRenderer(EntityTypes.ARC.get(), ArcRenderer::new);
         event.registerEntityRenderer(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), HighSpeedElectronBeamRenderer::new);
+        event.registerEntityRenderer(EntityTypes.LIGHT_ORB.get(), LightOrbRenderer::new);
         event.registerEntityRenderer(EntityTypes.GLOW_CIRCLE.get(), GlowCircleRenderer::new);
         event.registerEntityRenderer(EntityTypes.SMOKE.get(), SmokeRenderer::new);
         event.registerEntityRenderer(EntityTypes.CLEANING_ROBOT.get(), CleaningRobotRenderer::new);

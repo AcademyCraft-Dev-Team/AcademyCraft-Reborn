@@ -1,5 +1,6 @@
 {
   "item.academy.portable_developer": "Portable Developer",
   "item.academy.data_terminal": "Data Terminal",
-  "block.academy.cat_engine": "Toast and Cat"
+  "block.academy.cat_engine": "Toast and Cat",
+  "death.attack.academy.quantum_collapse": "%1$s's probability cloud spread to infinity, rendering local existence infinitesimal"
 }

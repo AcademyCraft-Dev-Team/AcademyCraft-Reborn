@@ -3,6 +3,7 @@ package org.academy.internal.common.ability;
 public final class SkillNames {
     public static final String RAILGUN = "railgun";
     public static final String ARC_GENERATE = "arc_generate";
+    public static final String BALL_LIGHTNING = "ball_lightning";
     public static final String SELF_TELEPORT = "self_teleport";
     public static final String SINGLE_HIGH_SPEED_ELECTRON_BEAM = "single_high_speed_electron_beam";
     public static final String VECTOR_REFLECTION = "vector_reflection";

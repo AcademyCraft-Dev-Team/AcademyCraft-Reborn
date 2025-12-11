@@ -2,14 +2,19 @@ package org.academy.api.common.util;
 
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 
 import java.lang.Math;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 
 public class MathUtil {
     public static final RandomSource RANDOM_SOURCE = RandomSource.create();
@@ -195,6 +200,22 @@ public class MathUtil {
 
     public static double calculateVerticalFov(double horizontalFovDegrees, double aspectRatio) {
         return 2 * Math.atan(Math.tan(Math.toRadians(horizontalFovDegrees) / 2) / aspectRatio);
+    }
+
+    /**
+     * 获取指定位置球形范围内的LivingEntity列表，并按血量降序排序。
+     * @param filter  可选的实体过滤器
+     */
+    public static List<LivingEntity> getEntitiesInSphereByHP(Level level, Vec3 center, double radius, @Nullable Predicate<LivingEntity> filter) {
+        AABB searchBox = AABB.ofSize(center, radius * 2, radius * 2, radius * 2);
+
+        List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, searchBox, entity -> {
+            if (!entity.isAlive()) return false;
+            if (entity.distanceToSqr(center) > radius * radius) return false;
+            return filter == null || filter.test(entity);
+        });
+        entities.sort((e1, e2) -> Float.compare(e2.getHealth(), e1.getHealth()));
+        return entities;
     }
 
     public static class RayUtil {

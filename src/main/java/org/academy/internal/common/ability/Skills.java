@@ -7,6 +7,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.accelerator.skills.*;
 import org.academy.internal.common.ability.electromaster.skills.ArcGenerate;
+import org.academy.internal.common.ability.electromaster.skills.BallLightning;
 import org.academy.internal.common.ability.electromaster.skills.MagnetManipulation;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
@@ -28,6 +29,7 @@ public final class Skills {
      * Electromaster
      */
     public static final DeferredHolder<Skill, ArcGenerate> ARC_GENERATE = SKILLS.register(SkillNames.ARC_GENERATE, ArcGenerate::new);
+    public static final DeferredHolder<Skill, BallLightning> LIGHTNING_NOVA = SKILLS.register(SkillNames.BALL_LIGHTNING, BallLightning::new);
     public static final DeferredHolder<Skill, MagnetManipulation> MAGNET_MANIPULATION = SKILLS.register(SkillNames.MAGNET_MANIPULATION, MagnetManipulation::new);
     public static final DeferredHolder<Skill, Railgun> RAILGUN = SKILLS.register(SkillNames.RAILGUN, Railgun::new);
     /**

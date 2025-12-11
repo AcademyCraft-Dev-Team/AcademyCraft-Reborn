@@ -1,5 +1,6 @@
 {
   "item.academy.portable_developer": "便携能力开发机",
   "item.academy.data_terminal": "数据终端",
-  "block.academy.cat_engine": "吐司猫"
+  "block.academy.cat_engine": "吐司猫",
+  "death.attack.academy.quantum_collapse": "%1$s 的概率云扩散至无穷，在此处存在的概率归于无限小"
 }
