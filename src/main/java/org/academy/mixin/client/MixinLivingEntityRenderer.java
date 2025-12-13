@@ -1,5 +1,6 @@
 package org.academy.mixin.client;
 
+import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -17,14 +18,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntityRenderer.class)
-public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extends LivingEntityRenderState, M extends net.minecraft.client.model.EntityModel<? super S>> {
+public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> {
 
     @Shadow public abstract Identifier getTextureLocation(S state);
 
     @Inject(method = "extractRenderState*", at = @At("RETURN"))
     private void academy$extractQuantumData(T entity, S state, float partialTick, CallbackInfo ci) {
         if (state instanceof QuantumRenderStateExtension ext) {
-            QuantumData data = entity.getData(AttachmentTypes.QUANTUM_DATA.get());
+            var data = entity.getData(AttachmentTypes.QUANTUM_DATA.get());
             if (data.active()) {
                 ext.academy$setQuantumState(true, data.intensity(), data.color());
                 ext.academy$setRealSize(entity.getBbWidth(), entity.getBbHeight());
@@ -38,7 +39,7 @@ public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extend
     @Inject(method = "getRenderType", at = @At("HEAD"), cancellable = true)
     private void academy$forceTranslucent(S state, boolean bodyVisible, boolean translucent, boolean glowing, CallbackInfoReturnable<RenderType> cir) {
         if (state instanceof QuantumRenderStateExtension ext && ext.academy$isQuantumActive()) {
-            Identifier texture = this.getTextureLocation(state);
+            var texture = getTextureLocation(state);
             cir.setReturnValue(RenderTypes.itemEntityTranslucentCull(texture));
         }
     }
@@ -46,12 +47,12 @@ public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extend
     @Inject(method = "getModelTint", at = @At("HEAD"), cancellable = true)
     private void academy$applyBreathingAlpha(S state, CallbackInfoReturnable<Integer> cir) {
         if (state instanceof QuantumRenderStateExtension ext && ext.academy$isQuantumActive()) {
-            float time = state.ageInTicks * 0.1f;
+            var time = state.ageInTicks * 0.1f;
 
-            float alphaFunc = 0.3f + (float)((Math.sin(time) + 1.0) * 0.25);
-            int alpha = (int)(alphaFunc * 255);
+            var alphaFunc = 0.3f + (float)((Math.sin(time) + 1.0) * 0.25);
+            var alpha = (int)(alphaFunc * 255);
 
-            int color = (alpha << 24) | 0xFFFFFF;
+            var color = (alpha << 24) | 0xFFFFFF;
 
             cir.setReturnValue(color);
         }

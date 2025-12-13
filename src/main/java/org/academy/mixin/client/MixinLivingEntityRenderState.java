@@ -35,9 +35,9 @@ public class MixinLivingEntityRenderState implements QuantumRenderStateExtension
 
     @Override
     public void academy$setQuantumState(boolean active, float intensity, int color) {
-        this.academy$quantumActive = active;
-        this.academy$quantumIntensity = intensity;
-        this.academy$quantumColor = color;
+        academy$quantumActive = active;
+        academy$quantumIntensity = intensity;
+        academy$quantumColor = color;
     }
 
     @Override
@@ -52,8 +52,8 @@ public class MixinLivingEntityRenderState implements QuantumRenderStateExtension
 
     @Override
     public void academy$setRealSize(float width, float height) {
-        this.academy$realWidth = width;
-        this.academy$realHeight = height;
+        academy$realWidth = width;
+        academy$realHeight = height;
     }
 
 }

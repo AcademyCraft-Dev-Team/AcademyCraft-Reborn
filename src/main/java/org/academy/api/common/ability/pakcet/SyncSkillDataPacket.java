@@ -30,11 +30,11 @@ public class SyncSkillDataPacket extends Packet<ClientPacketListener, SyncSkillD
 
     public static final StreamCodec<ByteBuf, SyncSkillDataPacket> CODEC = StreamCodec.of(
             (buf, packet) -> {
-                String json = GSON.toJson(packet.skillDataMap, MAP_TYPE);
+                var json = GSON.toJson(packet.skillDataMap, MAP_TYPE);
                 ByteBufCodecs.STRING_UTF8.encode(buf, json);
             },
             (buf) -> {
-                String json = ByteBufCodecs.STRING_UTF8.decode(buf);
+                var json = ByteBufCodecs.STRING_UTF8.decode(buf);
                 Map<String, SkillData> map = GSON.fromJson(json, MAP_TYPE);
                 return new SyncSkillDataPacket(map);
             }

@@ -17,7 +17,7 @@ public abstract class MixinEntity {
         if (amount <= 0) return amount;
         if ((Object) this instanceof LivingEntity self) {
             if (self.level().isClientSide()) return amount;
-            QuantumData data = self.getData(AttachmentTypes.QUANTUM_DATA.get());
+            var data = self.getData(AttachmentTypes.QUANTUM_DATA.get());
 
             //量子易伤：+15%
             if (data.active()) {

@@ -13,15 +13,15 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
 
     @Override
     public JsonElement serialize(T data, Type typeOfSrc, JsonSerializationContext context) {
-        JsonObject json = context.serialize(data).getAsJsonObject();
+        var json = context.serialize(data).getAsJsonObject();
         json.addProperty("type", data.getType().toString());
         return json;
     }
 
     @Override
     public T deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-        JsonObject jsonObject = json.getAsJsonObject();
-        Identifier typeId = CommonSkillData.ID;
+        var jsonObject = json.getAsJsonObject();
+        var typeId = CommonSkillData.ID;
 
         if (jsonObject.has("type")) {
             try {
@@ -32,7 +32,7 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
         }
 
         var dataTypeOptional = Registries.SKILL_DATA_TYPES.get(typeId);
-        SkillDataType<?> dataType = dataTypeOptional.isPresent() ? dataTypeOptional.get().value() : null;
+        var dataType = dataTypeOptional.isPresent() ? dataTypeOptional.get().value() : null;
 
         if (dataType == null) {
             var defaultTypeOptional = Registries.SKILL_DATA_TYPES.get(CommonSkillData.ID);

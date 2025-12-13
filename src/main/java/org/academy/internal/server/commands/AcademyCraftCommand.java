@@ -167,7 +167,7 @@ public final class AcademyCraftCommand {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
         var skillIdentifier = IdentifierArgument.getId(context, "skill_name");
-        float amount = FloatArgumentType.getFloat(context, "amount");
+        var amount = FloatArgumentType.getFloat(context, "amount");
 
         var playerData = AbilitySystemServer.getPlayerData(playerUuid);
         var skillKey = skillIdentifier.toString();

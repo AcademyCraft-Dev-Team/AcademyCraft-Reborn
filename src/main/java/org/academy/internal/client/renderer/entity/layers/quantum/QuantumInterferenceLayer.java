@@ -11,23 +11,7 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import org.academy.AcademyCraft;
 import org.academy.api.client.Render;
 
-import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.Map;
-
 public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M extends EntityModel<S>> extends RenderLayer<S, M> {
-
-    private static Field childrenField;
-
-    static {
-        try {
-            childrenField = ModelPart.class.getDeclaredField("children");
-            childrenField.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException("Failed to access ModelPart.children field via reflection", e);
-        }
-    }
-
     public QuantumInterferenceLayer(RenderLayerParent<S, M> renderer) {
         super(renderer);
     }
@@ -38,47 +22,45 @@ public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M exten
             return;
         }
 
-        float intensity = ext.academy$getQuantumIntensity();
+        var intensity = ext.academy$getQuantumIntensity();
         if (intensity <= 0.001f) return;
 
-        int color = ext.academy$getQuantumColor();
-        float r = ((color >> 16) & 0xFF) / 255.0f;
-        float g = ((color >> 8) & 0xFF) / 255.0f;
-        float b = (color & 0xFF) / 255.0f;
+        var color = ext.academy$getQuantumColor();
+        var r = ((color >> 16) & 0xFF) / 255.0f;
+        var g = ((color >> 8) & 0xFF) / 255.0f;
+        var b = (color & 0xFF) / 255.0f;
 
         var renderType = Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST;
 
-        float time = renderState.ageInTicks + partialTicks;
-        M model = this.getParentModel();
+        var time = renderState.ageInTicks + partialTicks;
+        var model = getParentModel();
 
         nodeCollector.submitCustomGeometry(
                 poseStack,
                 renderType,
                 (pose, vertexConsumer) -> {
                     try {
-                        ModelPart rootPart = model.root();
-                        if (rootPart == null) return;
+                        var rootPart = model.root();
 
-                        @SuppressWarnings("unchecked")
-                        Map<String, ModelPart> childrenMap = (Map<String, ModelPart>) childrenField.get(rootPart);
+                        var childrenMap = rootPart.children;
 
-                        if (childrenMap == null || childrenMap.isEmpty()) return;
+                        if (childrenMap.isEmpty()) return;
 
-                        Collection<ModelPart> parts = childrenMap.values();
+                        var parts = childrenMap.values();
 
-                        PoseStack tempStack = new PoseStack();
+                        var tempStack = new PoseStack();
                         tempStack.last().pose().set(pose.pose());
 
-                        int partIndex = 0;
+                        var partIndex = 0;
 
-                        for (ModelPart part : parts) {
+                        for (var part : parts) {
                             partIndex++;
 
                             if (!part.visible) continue;
-                            double wave = Math.sin(time * 0.08f + partIndex * 132.0f);
+                            var wave = Math.sin(time * 0.08f + partIndex * 132.0f);
 
                             if (wave > 0.2) {
-                                float localAlpha = (float) ((wave - 0.2) / 0.8);
+                                var localAlpha = (float) ((wave - 0.2) / 0.8);
                                 localAlpha *= (intensity + 0.5f);
                                 localAlpha *= 0.65f;
 
@@ -102,7 +84,7 @@ public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M exten
         poseStack.translate(offset, offset, 0);
         poseStack.scale(scale, scale, scale);
 
-        int argb = (int)(a * 255) << 24 | (int)(r * 255) << 16 | (int)(g * 255) << 8 | (int)(b * 255);
+        var argb = (int) (a * 255) << 24 | (int) (r * 255) << 16 | (int) (g * 255) << 8 | (int) (b * 255);
         part.render(poseStack, buffer, 15728880, 0, argb);
 
         poseStack.popPose();

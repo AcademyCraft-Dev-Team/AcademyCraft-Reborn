@@ -80,12 +80,12 @@ public class MathUtil {
      * @return       height
      */
     public static double getFlatTopParabolaHeight(double x, double length, double a) {
-        double halfLength = length * 0.5;
-        double maxL = Math.max(halfLength, 0);
-        double maxA = Math.max(a, 0);
-        double numerator = Math.max(0, Math.abs(x - halfLength - a) - maxL);
+        var halfLength = length * 0.5;
+        var maxL = Math.max(halfLength, 0);
+        var maxA = Math.max(a, 0);
+        var numerator = Math.max(0, Math.abs(x - halfLength - a) - maxL);
         if (maxA == 0f) return 1;
-        double fraction = numerator / maxA;
+        var fraction = numerator / maxA;
         return 1 - fraction * fraction;
     }
 
@@ -106,12 +106,12 @@ public class MathUtil {
      * @return       height
      */
     public static float getFlatTopParabolaHeight(float x, float length, float a) {
-        float halfLength = length * 0.5f;
-        float maxL = Math.max(halfLength, 0);
-        float maxA = Math.max(a, 0);
-        float numerator = Math.max(0, Math.abs(x - halfLength - a) - maxL);
+        var halfLength = length * 0.5f;
+        var maxL = Math.max(halfLength, 0);
+        var maxA = Math.max(a, 0);
+        var numerator = Math.max(0, Math.abs(x - halfLength - a) - maxL);
         if (maxA == 0) return 1;
-        float fraction = numerator / maxA;
+        var fraction = numerator / maxA;
         return 1 - fraction * fraction;
     }
 
@@ -207,9 +207,9 @@ public class MathUtil {
      * @param filter  可选的实体过滤器
      */
     public static List<LivingEntity> getEntitiesInSphereByHP(Level level, Vec3 center, double radius, @Nullable Predicate<LivingEntity> filter) {
-        AABB searchBox = AABB.ofSize(center, radius * 2, radius * 2, radius * 2);
+        var searchBox = AABB.ofSize(center, radius * 2, radius * 2, radius * 2);
 
-        List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, searchBox, entity -> {
+        var entities = level.getEntitiesOfClass(LivingEntity.class, searchBox, entity -> {
             if (!entity.isAlive()) return false;
             if (entity.distanceToSqr(center) > radius * radius) return false;
             return filter == null || filter.test(entity);

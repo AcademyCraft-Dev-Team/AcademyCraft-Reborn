@@ -14,17 +14,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(CombatTracker.class)
 public abstract class MixinCombatTracker {
-
     @Shadow @Final private LivingEntity mob;
 
     @Inject(method = "getDeathMessage", at = @At("HEAD"), cancellable = true)
     private void academy$overrideQuantumDeathMessage(CallbackInfoReturnable<Component> cir) {
-        if (this.mob == null) return;
-        QuantumData data = this.mob.getData(AttachmentTypes.QUANTUM_DATA.get());
+        var data = mob.getData(AttachmentTypes.QUANTUM_DATA.get());
         if (data.active()) {
             Component message = Component.translatable(
                     "death.attack.academy.quantum_collapse",
-                    this.mob.getDisplayName()
+                    mob.getDisplayName()
             );
             cir.setReturnValue(message);
         }

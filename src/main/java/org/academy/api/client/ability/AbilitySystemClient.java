@@ -155,8 +155,8 @@ public final class AbilitySystemClient {
     }
 
     public static void setSkillExp(Skill skill, float exp) {
-        String skillId = Objects.requireNonNull(Registries.SKILLS.getKey(skill)).toString();
-        SkillData data = SKILL_DATA.get(skillId);
+        var skillId = Objects.requireNonNull(Registries.SKILLS.getKey(skill)).toString();
+        var data = SKILL_DATA.get(skillId);
         if (data != null) {
             data.setExp(exp);
         }
