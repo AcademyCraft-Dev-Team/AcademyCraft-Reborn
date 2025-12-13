@@ -3,11 +3,11 @@ import xyz.wagyourtail.jvmdg.gradle.task.DowngradeJar
 plugins {
     idea
     `java-library`
-    id("net.neoforged.moddev") version "2.0.121"
+    id("net.neoforged.moddev") version "2.0.124"
     id ("xyz.wagyourtail.jvmdowngrader") version "1.3.4"
 }
 
-val neoVersion: String = "21.11.0-beta"
+val neoVersion: String = "21.11.6-beta"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
@@ -135,6 +135,7 @@ neoForge {
         }
         configureEach {
             logLevel = org.slf4j.event.Level.DEBUG
+            systemProperty("terminal.ansi", "true")
         }
     }
 
@@ -156,8 +157,8 @@ dependencies {
 
     //  implementation("maven.modrinth:better-modlist:2.0.0-beta.8")
     //  implementation("maven.modrinth:jade:20.0.5+neoforge")
-    //  compileOnly("maven.modrinth:sodium:mc1.21.8-0.7.0-neoforge")
-    compileOnly("maven.modrinth:iris:1.9.2+1.21.8-neoforge")
+    implementation("maven.modrinth:sodium:mc1.21.11-0.8.0-neoforge")
+    implementation("maven.modrinth:iris:1.10.2+1.21.11-neoforge")
     //  compileOnly("maven.modrinth:sodium-extra:mc1.21.8-0.7.0+neoforge")
     //  implementation("maven.modrinth:lithium:mc1.21.10-0.20.0-neoforge")
     //  implementation("curse.maven:configured-457570:7090441")

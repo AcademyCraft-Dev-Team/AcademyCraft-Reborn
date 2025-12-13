@@ -10,7 +10,7 @@ import org.academy.internal.client.renderer.entity.layers.quantum.QuantumSyncPay
 public class QuantumUtil {
 
     public static void enableQuantum(LivingEntity target, float intensity, int color) {
-        QuantumData data = new QuantumData(true, intensity, color, 600);
+        var data = new QuantumData(true, intensity, color, 600);
 
         target.setData(AttachmentTypes.QUANTUM_DATA.get(), data);
 
@@ -24,7 +24,7 @@ public class QuantumUtil {
     }
 
     public static void disableQuantum(LivingEntity target) {
-        QuantumData defaultData = QuantumData.getDefault();
+        var defaultData = QuantumData.getDefault();
         target.setData(AttachmentTypes.QUANTUM_DATA.get(), defaultData);
 
         if (!target.level().isClientSide()) {

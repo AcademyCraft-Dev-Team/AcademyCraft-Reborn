@@ -11,7 +11,7 @@ public abstract class SkillData {
     public int maxExp = 200;
 
     public SkillData() {
-        this.exp = 0;
+        exp = 0;
     }
 
     public SkillData(float exp) {

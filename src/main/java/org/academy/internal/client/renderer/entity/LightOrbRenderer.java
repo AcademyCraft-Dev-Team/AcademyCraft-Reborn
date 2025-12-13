@@ -23,10 +23,10 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
 
     @Override
     public void submit(LightOrbRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        float r = renderState.color.x();
-        float g = renderState.color.y();
-        float b = renderState.color.z();
-        float scale = renderState.scale;
+        var r = renderState.color.x();
+        var g = renderState.color.y();
+        var b = renderState.color.z();
+        var scale = renderState.scale;
 
         var orientation = new Matrix4f()
                 .rotateY((float) Math.toRadians(90 - renderState.yRot))

@@ -30,8 +30,8 @@ public class LightOrb extends RenderOnlyEntity {
     public LightOrb(Level level, int lifeTime, float scale, Runnable run) {
         this(EntityTypes.LIGHT_ORB.get(), level);
         this.lifeTime = lifeTime;
-        this.maxLifeTime = lifeTime;
-        this.setScale(scale);
+        maxLifeTime = lifeTime;
+        setScale(scale);
         this.run = run;
     }
 
@@ -40,17 +40,17 @@ public class LightOrb extends RenderOnlyEntity {
         super.tick();
 
         if (!level().isClientSide()) {
-            if (this.lifeTime > 0) {
-                this.lifeTime--;
+            if (lifeTime > 0) {
+                lifeTime--;
             }
 
-            if (this.lifeTime <= 0) {
-                this.discard();
+            if (lifeTime <= 0) {
+                discard();
                 return;
             }
 
-            if (this.run != null) {
-                this.run.run();
+            if (run != null) {
+                run.run();
             }
         }
     }
@@ -62,19 +62,19 @@ public class LightOrb extends RenderOnlyEntity {
     }
 
     public void setScale(float scale) {
-        this.entityData.set(SCALE, scale);
+        entityData.set(SCALE, scale);
     }
 
     public float getScale() {
-        return this.entityData.get(SCALE);
+        return entityData.get(SCALE);
     }
 
     public void setColor(float r, float g, float b) {
-        this.entityData.set(COLOR, new Vector3f(r, g, b));
+        entityData.set(COLOR, new Vector3f(r, g, b));
     }
 
     public Vector3f getColor() {
-        return (Vector3f) this.entityData.get(COLOR);
+        return (Vector3f) entityData.get(COLOR);
     }
 
     public int getLifeTime() {
