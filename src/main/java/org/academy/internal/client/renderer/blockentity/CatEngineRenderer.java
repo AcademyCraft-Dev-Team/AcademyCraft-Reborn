@@ -7,9 +7,9 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.Render;
-import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.blockentity.state.CatEngineRenderState;
 import org.academy.internal.common.world.level.block.entity.CatEngineBlockEntity;
 import org.jspecify.annotations.Nullable;
@@ -42,13 +42,13 @@ public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlo
         var sizeHalf = 0.5f;
         var f1 = renderState.rot - renderState.oRot;
 
-        f1 %= MathUtil.TWO_PI;
+        f1 %= Mth.TWO_PI;
 
         if (f1 >= (float) Math.PI) {
-            f1 -= MathUtil.TWO_PI;
+            f1 -= Mth.TWO_PI;
         }
         if (f1 < -(float) Math.PI) {
-            f1 += MathUtil.TWO_PI;
+            f1 += Mth.TWO_PI;
         }
         var f2 = renderState.oRot + f1 * renderState.partialTick;
         poseStack.rotateAround(Axis.YN.rotation(f2), 0.5f, 0.5f, 0.5f);

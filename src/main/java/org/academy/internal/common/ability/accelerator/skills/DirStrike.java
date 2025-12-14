@@ -24,7 +24,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -90,12 +89,12 @@ public class DirStrike extends Skill {
                 }
 
                 @Override
-                public @NotNull DirStrike.Client.Config getDefault() {
+                public DirStrike.Client.Config getDefault() {
                     return new Config();
                 }
 
                 @Override
-                public @NotNull Class<Config> getTypeClass() {
+                public Class<Config> getTypeClass() {
                     return Config.class;
                 }
             }
@@ -166,7 +165,7 @@ public class DirStrike extends Skill {
                     e != serverPlayer && e.isAlive());
 
             for (var target : targets) {
-                target.hurt(level.damageSources().playerAttack(serverPlayer), 6.0f);
+                target.hurtServer(level, level.damageSources().playerAttack(serverPlayer), 6.0f);
             }
         }
     }

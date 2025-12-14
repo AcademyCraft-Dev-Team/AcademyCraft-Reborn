@@ -1,60 +1,36 @@
 package org.academy.mixin.client;
 
-import net.minecraft.client.model.EntityModel;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.LivingEntity;
-import org.academy.internal.client.renderer.entity.layers.quantum.QuantumRenderStateExtension;
-import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntityRenderer.class)
-public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> {
-
-    @Shadow public abstract Identifier getTextureLocation(S state);
-
-    @Inject(method = "extractRenderState*", at = @At("RETURN"))
-    private void academy$extractQuantumData(T entity, S state, float partialTick, CallbackInfo ci) {
-        if (state instanceof QuantumRenderStateExtension ext) {
-            var data = entity.getData(AttachmentTypes.QUANTUM_DATA.get());
-            if (data.active()) {
-                ext.academy$setQuantumState(true, data.intensity(), data.color());
-                ext.academy$setRealSize(entity.getBbWidth(), entity.getBbHeight());
-            } else {
-                ext.academy$setQuantumState(false, 0f, 0);
-                ext.academy$setRealSize(0f, 0f);
-            }
-        }
-    }
-
-    @Inject(method = "getRenderType", at = @At("HEAD"), cancellable = true)
-    private void academy$forceTranslucent(S state, boolean bodyVisible, boolean translucent, boolean glowing, CallbackInfoReturnable<RenderType> cir) {
-        if (state instanceof QuantumRenderStateExtension ext && ext.academy$isQuantumActive()) {
-            var texture = getTextureLocation(state);
-            cir.setReturnValue(RenderTypes.itemEntityTranslucentCull(texture));
-        }
+public abstract class MixinLivingEntityRenderer<S extends LivingEntityRenderState> {
+    @ModifyVariable(
+            method = "getRenderType",
+            at = @At("HEAD"),
+            ordinal = 1,
+            argsOnly = true
+    )
+    private boolean getRenderType(boolean value, @Local(argsOnly = true, ordinal = 0) S state) {
+        var quantum = state.getRenderData(QuantumInterferenceLayer.CONTEXT_KEY);
+        return value || (quantum != null && quantum.active());
     }
 
     @Inject(method = "getModelTint", at = @At("HEAD"), cancellable = true)
-    private void academy$applyBreathingAlpha(S state, CallbackInfoReturnable<Integer> cir) {
-        if (state instanceof QuantumRenderStateExtension ext && ext.academy$isQuantumActive()) {
-            var time = state.ageInTicks * 0.1f;
-
-            var alphaFunc = 0.3f + (float)((Math.sin(time) + 1.0) * 0.25);
-            var alpha = (int)(alphaFunc * 255);
-
-            var color = (alpha << 24) | 0xFFFFFF;
-
-            cir.setReturnValue(color);
-        }
+    private void getModelTint(S state, CallbackInfoReturnable<Integer> cir) {
+        var quantum = state.getRenderData(QuantumInterferenceLayer.CONTEXT_KEY);
+        if (quantum == null || !quantum.active()) return;
+        cir.setReturnValue(ARGB.color(
+                (int) (Math.max(Mth.sin(state.ageInTicks * 0.125), 0) * 255), 255, 255, 255
+        ));
     }
 }

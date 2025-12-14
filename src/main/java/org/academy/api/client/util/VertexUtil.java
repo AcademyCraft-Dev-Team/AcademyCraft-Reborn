@@ -1,7 +1,7 @@
 package org.academy.api.client.util;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
-import org.academy.api.common.util.MathUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,7 +15,7 @@ public final class VertexUtil {
     public static final class Ring {
         public static float[][][] getRingVertexBuffer(float radius, int segments, float yBottom, float yTop) {
             var vertexBuffer = new float[segments][4][4];
-            final var twoPi = MathUtil.TWO_PI;
+            final var twoPi = Mth.TWO_PI;
 
             for (var i = 0; i < segments; i++) {
                 var angle1 = (i * twoPi) / segments;

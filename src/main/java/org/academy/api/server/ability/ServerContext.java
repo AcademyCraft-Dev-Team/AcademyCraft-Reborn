@@ -1,6 +1,7 @@
 package org.academy.api.server.ability;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Context;
 import org.misaka.MisakaNetworkServer;
@@ -15,6 +16,10 @@ public abstract class ServerContext implements Context {
 
     public final <P extends Packet<ClientPacketListener, P>> void sendPacket(P packet) {
         MisakaNetworkServer.sendPacket(player, packet);
+    }
+
+    public final ServerLevel level() {
+        return player.level();
     }
 
     @Override

@@ -1,22 +1,30 @@
 package org.academy;
 
+import com.google.common.reflect.TypeToken;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.ClientAvatarEntity;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.entity.Avatar;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.*;
+import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
+import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
@@ -33,7 +41,10 @@ import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.particle.ParticleRenderTypes;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
+import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
+import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
+import org.academy.internal.common.ability.electromaster.skills.BallLightning;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
@@ -68,7 +79,9 @@ public final class AcademyCraftClient {
         HUDManager.initRender();
     }
 
-    public static void init() {
+    @SubscribeEvent
+    public static void onClientStarted(ClientStartedEvent event) {
+        ImGuiUtilApi.init();
         initMain();
         initRender();
     }
@@ -89,6 +102,11 @@ public final class AcademyCraftClient {
     @SubscribeEvent
     public static void onClientPauseChange(ClientPauseChangeEvent.Post event) {
         Config.INSTANCE.save();
+    }
+
+    @SubscribeEvent
+    public static void onClientStopped(ClientStoppedEvent event) {
+        ImGuiUtilApi.close();
     }
 
     @SubscribeEvent
@@ -121,6 +139,30 @@ public final class AcademyCraftClient {
         }
     }
 
+    @SubscribeEvent
+    public static void onEntityRenderersAddLayers(EntityRenderersEvent.AddLayers event) {
+        for (var skinType : event.getSkins()) {
+            var renderer = event.getPlayerRenderer(skinType);
+            if (renderer != null) {
+                renderer.addLayer(new SkillEffectsLayer(renderer));
+                addQuantumLayerIfPossible(renderer);
+            }
+        }
+
+        for (var type : event.getEntityTypes()) {
+            var renderer = event.getRenderer(type);
+            if (renderer instanceof LivingEntityRenderer<?, ?, ?>) {
+                addQuantumLayerIfPossible(UncheckedUtil.uncheckedCast(renderer));
+            }
+        }
+    }
+
+    private static <T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> void addQuantumLayerIfPossible(
+            LivingEntityRenderer<T, S, M> renderer
+    ) {
+        renderer.addLayer(new QuantumInterferenceLayer<>(renderer));
+    }
+
     public static final class Config {
         public static final File CLIENT_CONFIG_FILE;
         public static final AcademyCraftConfig INSTANCE;
@@ -142,12 +184,16 @@ public final class AcademyCraftClient {
         @SubscribeEvent
         public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
             event.registerEntityModifier(
-                    UncheckedUtil.uncheckedCast(AvatarRenderer.class), stateModify()
+                    UncheckedUtil.uncheckedCast(AvatarRenderer.class), avatar()
+            );
+            event.registerEntityModifier(
+                    new TypeToken<LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>>() {},
+                    living()
             );
         }
 
         private static <AvatarlikeEntity extends Avatar & ClientAvatarEntity>
-        BiConsumer<AvatarlikeEntity, AvatarRenderState> stateModify() {
+        BiConsumer<AvatarlikeEntity, AvatarRenderState> avatar() {
             return (avatarlikeEntity, avatarRenderState) -> {
                 avatarRenderState.setRenderData(
                         StormWingEffectRenderer.CONTEXT_KEY,
@@ -158,6 +204,14 @@ public final class AcademyCraftClient {
                         avatarlikeEntity.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA)
                 );
             };
+        }
+
+        private static BiConsumer<LivingEntity, LivingEntityRenderState> living() {
+            return (livingEntity, livingEntityRenderState) ->
+                    livingEntityRenderState.setRenderData(
+                            QuantumInterferenceLayer.CONTEXT_KEY,
+                            livingEntity.getExistingDataOrNull(AttachmentTypes.QUANTUM_DATA.get())
+                    );
         }
 
         @SubscribeEvent

@@ -1,6 +1,7 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -42,7 +43,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
                 BloomEffect.getBlitToMainPost().getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_POST),
                 HEAD_BUFFER,
                 r, g, b, 1.0f,
-                15728880, // 满亮度
+                LightTexture.FULL_BRIGHT,
                 OverlayTexture.NO_OVERLAY
         );
 
@@ -56,7 +57,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
                         vertexConsumer,
                         HEAD_BUFFER,
                         1.0f, 1.0f, 1.0f, 1.0f,
-                        15728880,
+                        LightTexture.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY
                 )
         );

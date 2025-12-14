@@ -253,8 +253,8 @@ public class WirelessManager {
                 continue;
             }
             var cfg = entry.getValue();
-            var receiveWeight = cfg.getReceiveWeight();
-            var sendWeight = cfg.getSendWeight();
+            var receiveWeight = cfg.receiveWeight();
+            var sendWeight = cfg.sendWeight();
 
             var canExtract = node.extractFromUser(user, transferRate, true);
             if (canExtract > 0) {
@@ -278,7 +278,7 @@ public class WirelessManager {
                 if (remainingBandwidth <= 0 || energyStored <= 0) break;
                 var user = entry.getKey();
                 var capacity = entry.getValue();
-                var weight = userConfigMap.get(user).getSendWeight();
+                var weight = userConfigMap.get(user).sendWeight();
 
                 var share = (insertWeight > 0) ? (int) Math.floor((weight / insertWeight) * transferRate) : 0;
                 var amount = Math.min(Math.min(share, capacity), Math.min(energyStored, remainingBandwidth));
@@ -297,7 +297,7 @@ public class WirelessManager {
                 if (remainingBandwidth <= 0 || energyStored >= maxEnergy) break;
                 var user = entry.getKey();
                 var capacity = entry.getValue();
-                var weight = userConfigMap.get(user).getReceiveWeight();
+                var weight = userConfigMap.get(user).receiveWeight();
 
                 var share = (extractWeight > 0) ? (int) Math.floor((weight / extractWeight) * remainingBandwidth) : 0;
                 var amount = Math.min(Math.min(share, capacity), Math.min(maxEnergy - energyStored, remainingBandwidth));

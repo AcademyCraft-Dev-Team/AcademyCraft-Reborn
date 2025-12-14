@@ -16,15 +16,15 @@ public final class ImGuiUtilApi {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final Runnable EMPTY_RUNNABLE = () -> {
     };
-    public static final BiConsumer<Object, Object> EMPTY_BI_CONSUMER = (a, b) -> {
+    public static final BiConsumer<Object, Object> EMPTY_BI_CONSUMER = (_, _) -> {
     };
-    public static final Supplier<Object> NULL_SUPPLIER = () -> null;
+    public static final Supplier<@Nullable Object> NULL_SUPPLIER = () -> null;
     private static final Runnable IM_GUI_INIT;
     private static final Runnable IM_GUI_CLOSE;
     private static final Runnable CLEAR_EVENTS_QUEUE;
     private static final BiConsumer<RenderTarget, Runnable> RENDER;
-    private static final Supplier<Object> IM_GUI_IMPL_GL_3_GETTER;
-    private static final Supplier<Object> IM_GUI_IMPL_GLFW_GETTER;
+    private static final Supplier<@Nullable Object> IM_GUI_IMPL_GL_3_GETTER;
+    private static final Supplier<@Nullable Object> IM_GUI_IMPL_GLFW_GETTER;
     private static final Supplier<Boolean> WANT_CAPTURE_MOUSE_GETTER;
     private static final Supplier<Boolean> WANT_CAPTURE_KEYBOARD_GETTER;
 
@@ -32,7 +32,7 @@ public final class ImGuiUtilApi {
         var imGuiInit = EMPTY_RUNNABLE;
         var imGuiClose = EMPTY_RUNNABLE;
         var clearEventsQueue = EMPTY_RUNNABLE;
-        var render = (BiConsumer<RenderTarget, Runnable>) (renderTarget, runnable) -> {
+        var render = (BiConsumer<RenderTarget, Runnable>) (_, _) -> {
         };
 
         var imGuiImplGl3Getter = NULL_SUPPLIER;

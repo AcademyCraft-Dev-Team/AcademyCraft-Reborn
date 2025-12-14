@@ -190,7 +190,7 @@ public final class DataTerminalHUD {
                 new FrameLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER_RIGHT)
                         .margin(0, 0, 32, 0)
-                        .size(150, 200)
+                        .size(MAIN_WIDTH, MAIN_HEIGHT)
         );
         ROOT.addChild("main", main);
         {
@@ -464,7 +464,11 @@ public final class DataTerminalHUD {
             ypos = Mth.clamp(deltaGuiY, 0.0, window.getGuiScaledHeight());
             ROOT.dispatchEvent(MouseEvent.createMoveEvent(xpos, ypos));
             if (InputSystem.currentMouseAction == 1 || InputSystem.currentMouseAction == 2) {
-                ROOT.dispatchEvent(MouseEvent.createDragEvent(xpos, ypos, InputSystem.currentMouseButton, deltaGuiX, deltaGuiY));
+                ROOT.dispatchEvent(
+                        MouseEvent.createDragEvent(
+                                xpos, ypos, InputSystem.currentMouseButton, deltaGuiX, deltaGuiY
+                        )
+                );
             }
 
             GLFW.glfwSetCursorPos(
@@ -483,7 +487,8 @@ public final class DataTerminalHUD {
             InputSystem.currentMouseButton = event.button;
             InputSystem.currentMouseAction = event.action;
             InputSystem.currentMouseModifier = event.modifiers;
-            var inputEvent = event.action == 1
+            var inputEvent =
+                    event.action == 1
                     ? MouseEvent.createPressEvent(xpos, ypos, event.button)
                     : MouseEvent.createReleaseEvent(xpos, ypos, event.button);
             ROOT.dispatchEvent(inputEvent);
@@ -495,7 +500,12 @@ public final class DataTerminalHUD {
     public static void onMouseScroll(MouseScrollEvent event) {
         if (isActive() && Minecraft.getInstance().screen == null) {
             var options = Minecraft.getInstance().options;
-            var d0 = (options.discreteMouseScroll().get() ? Math.signum(event.yOffset) : event.yOffset) * options.mouseWheelSensitivity().get();
+            var d0 =
+                    (options.discreteMouseScroll().get()
+                            ?
+                            Math.signum(event.yOffset)
+                            : event.yOffset
+                    ) * options.mouseWheelSensitivity().get();
             ROOT.dispatchEvent(new ScrollEvent(xpos, ypos, d0));
             event.setCanceled(true);
         }

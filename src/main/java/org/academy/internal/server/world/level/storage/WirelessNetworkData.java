@@ -1,7 +1,6 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -18,27 +17,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 public final class WirelessNetworkData extends SavedData {
-    private static final Codec<BlockPos> BLOCKPOS_AS_STRING_CODEC = Codec.STRING.flatXmap(
-            s -> {
-                try {
-                    var parts = s.split(",");
-                    if (parts.length != 3) {
-                        return DataResult.error(() -> "Invalid BlockPos string format: " + s);
-                    }
-                    var x = Integer.parseInt(parts[0].trim());
-                    var y = Integer.parseInt(parts[1].trim());
-                    var z = Integer.parseInt(parts[2].trim());
-                    return DataResult.success(new BlockPos(x, y, z));
-                } catch (NumberFormatException e) {
-                    return DataResult.error(() -> "Failed to parse BlockPos from string: " + s);
-                }
-            },
-            pos -> DataResult.success(pos.getX() + ", " + pos.getY() + ", " + pos.getZ())
-    ).stable();
-
     public static final Codec<WirelessNetworkData> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                    Codec.unboundedMap(BLOCKPOS_AS_STRING_CODEC, NodeConfig.CODEC)
+                    Codec.unboundedMap(BlockPos.CODEC, NodeConfig.CODEC)
                             .fieldOf("nodes")
                             .forGetter(data -> data.nodes.getPrimaryMap())
             ).apply(instance, WirelessNetworkData::new)
@@ -178,7 +159,7 @@ public final class WirelessNetworkData extends SavedData {
                 Codec.STRING.fieldOf("password").forGetter(config -> config.password),
                 Codec.INT.fieldOf("radius").forGetter(config -> config.radius),
                 Codec.INT.fieldOf("max_connections").forGetter(config -> config.maxConnections),
-                Codec.unboundedMap(BLOCKPOS_AS_STRING_CODEC, UserConfig.CODEC)
+                Codec.unboundedMap(BlockPos.CODEC, UserConfig.CODEC)
                         .fieldOf("users")
                         .forGetter(config -> config.connectedUsers)
         ).apply(instance, (name, password, radius, maxConnections, users) -> {
@@ -199,30 +180,20 @@ public final class WirelessNetworkData extends SavedData {
         }
     }
 
-    public static class UserConfig {
-        private final double receiveWeight;
-        private final double sendWeight;
-
-        public static final Codec<UserConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Codec.DOUBLE.fieldOf("weight_receive").orElse(1.0).forGetter(UserConfig::getReceiveWeight),
-                Codec.DOUBLE.fieldOf("weight_send").orElse(1.0).forGetter(UserConfig::getSendWeight)
-        ).apply(instance, UserConfig::new));
-
-        public UserConfig(double receiveWeight, double sendWeight) {
-            this.receiveWeight = receiveWeight;
-            this.sendWeight = sendWeight;
-        }
+    public record UserConfig(double receiveWeight, double sendWeight) {
+        public static final Codec<UserConfig> CODEC = RecordCodecBuilder.create(
+                instance -> instance.group(
+                        Codec.DOUBLE.fieldOf("weight_receive")
+                                .orElse(1.0)
+                                .forGetter(UserConfig::receiveWeight),
+                        Codec.DOUBLE.fieldOf("weight_send")
+                                .orElse(1.0)
+                                .forGetter(UserConfig::sendWeight)
+                ).apply(instance, UserConfig::new)
+        );
 
         public UserConfig() {
             this(1.0, 1.0);
-        }
-
-        public double getReceiveWeight() {
-            return receiveWeight;
-        }
-
-        public double getSendWeight() {
-            return sendWeight;
         }
     }
 

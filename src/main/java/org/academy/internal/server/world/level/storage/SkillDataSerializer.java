@@ -1,6 +1,7 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.google.gson.*;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.common.registries.Registries;
@@ -10,7 +11,6 @@ import org.academy.internal.common.skilldata.SkillData;
 import java.lang.reflect.Type;
 
 public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<T>, JsonDeserializer<T> {
-
     @Override
     public JsonElement serialize(T data, Type typeOfSrc, JsonSerializationContext context) {
         var json = context.serialize(data).getAsJsonObject();
@@ -32,7 +32,7 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
         }
 
         var dataTypeOptional = Registries.SKILL_DATA_TYPES.get(typeId);
-        var dataType = dataTypeOptional.isPresent() ? dataTypeOptional.get().value() : null;
+        var dataType = dataTypeOptional.<SkillDataType<?>>map(Holder.Reference::value).orElse(null);
 
         if (dataType == null) {
             var defaultTypeOptional = Registries.SKILL_DATA_TYPES.get(CommonSkillData.ID);

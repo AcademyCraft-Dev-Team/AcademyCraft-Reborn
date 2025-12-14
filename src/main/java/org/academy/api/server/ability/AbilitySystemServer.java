@@ -43,7 +43,6 @@ public final class AbilitySystemServer {
     private static PlayerDataManager playerDataManager;
     public static volatile MinecraftServer minecraftServer;
     public static volatile ScheduledFuture<?> scheduledFuture;
-    public static boolean paused;
 
     public static void init(final MinecraftServer server, PlayerDataManager manager) {
         playerDataManager = manager;
@@ -301,7 +300,7 @@ public final class AbilitySystemServer {
 
     public static final class AbilitySystemTicker {
         public static void tick() {
-            if (paused) return;
+            if (minecraftServer.isPaused()) return;
             pendingTasks.forEach(Runnable::run);
             pendingTasks.clear();
             for (var player : LIVE_PLAYER_MAP.values()) {

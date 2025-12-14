@@ -19,7 +19,6 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -79,12 +78,12 @@ public class BloodflowReverse extends Skill {
                 }
 
                 @Override
-                public @NotNull BloodflowReverse.Client.Config getDefault() {
+                public BloodflowReverse.Client.Config getDefault() {
                     return new Config();
                 }
 
                 @Override
-                public @NotNull Class<Config> getTypeClass() {
+                public Class<Config> getTypeClass() {
                     return Config.class;
                 }
             }
@@ -92,18 +91,18 @@ public class BloodflowReverse extends Skill {
     }
 
     public static final class Server {
-        @SuppressWarnings("resource")
         @SubscribePacket
         public static void onAction(ReverseBloodflowPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var level = player.level();
             var hitResult = player.pick(1, 1, false);
-            var entityList = player.level().getEntitiesOfClass(LivingEntity.class,
+            var entityList = level.getEntitiesOfClass(LivingEntity.class,
                     new AABB(new BlockPos((int) hitResult.getLocation().x, (int) hitResult.getLocation().y, (int) hitResult.getLocation().z))
             );
             if (!entityList.isEmpty()) {
                 var livingEntity = entityList.getFirst();
                 if (livingEntity != player) {
-                    livingEntity.hurt(new DamageSource(player.damageSources().damageTypes.getOrThrow(DamageTypes.MAGIC)), livingEntity.getHealth());
+                    livingEntity.hurtServer(level, new DamageSource(player.damageSources().damageTypes.getOrThrow(DamageTypes.MAGIC)), livingEntity.getHealth());
                 }
             }
         }
