@@ -9,9 +9,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -122,7 +123,6 @@ public class BallLightning extends Skill {
         }
 
         public static class Context extends ServerContext {
-            private final Level level;
             private final ArcEffect visualEntity;
             private int existedTicks = 0;
             private Vec3 position;
@@ -151,7 +151,7 @@ public class BallLightning extends Skill {
                         0,
                         (MathUtil.RANDOM.nextDouble() - 0.5) * 0.1
                 );
-                level = player.level();
+                var level = level();
                 visualEntity = new ArcEffect(level, MAX_DURATION_TICKS);
                 coreOrb = new LightOrb(level, MAX_DURATION_TICKS, 0.15f, () -> {
                     var lifeTime = coreOrb.getLifeTime();
@@ -186,7 +186,7 @@ public class BallLightning extends Skill {
                     hasTarget = false;
                     targetEntity = null;
                 }
-
+                var level = level();
                 if (!hasTarget) {
                     var entities = MathUtil.getEntitiesInSphereByHP(level, position, MAX_RADIUS,
                             entity -> entity != player);
@@ -207,7 +207,7 @@ public class BallLightning extends Skill {
                     for (var entity : entities) {
                         var newHealth = entity.getHealth() * 0.7f;
                         entity.setHealth(newHealth);
-                        entity.hurt(damageSource, 10f);
+                        entity.hurtServer(level, damageSource, 10f);
                         QuantumUtil.enableQuantum(entity, 0.5f, 0x3366FF);
                     }
 

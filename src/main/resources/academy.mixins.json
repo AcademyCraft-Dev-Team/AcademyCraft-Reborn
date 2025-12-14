@@ -13,14 +13,11 @@
     "common.MixinServerPlayer"
   ],
   "client": [
-    "client.MixinAvatarRenderer",
     "client.MixinGameRenderer",
     "client.MixinGui",
-    "client.MixinIntegratedServer",
     "client.MixinKeyboardHandler",
     "client.MixinLevelRenderer",
     "client.MixinLivingEntityRenderer",
-    "client.MixinLivingEntityRenderState",
     "client.MixinMinecraft",
     "client.MixinModelDiscovery",
     "client.MixinMouseHandler",

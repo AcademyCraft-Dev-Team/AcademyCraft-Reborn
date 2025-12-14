@@ -12,7 +12,6 @@ import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.entity.state.SmokeRenderState;
 import org.academy.internal.common.world.entity.skill.Smoke;
 
@@ -23,7 +22,7 @@ public class SmokeRenderer extends EntityRenderer<Smoke, SmokeRenderState> {
     public void submit(SmokeRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
         renderState.renderCount++;
-        renderState.renderAlpha = Mth.lerp(ClientUtil.animationFactor(MathUtil.PI / 2), renderState.renderAlpha, renderState.alpha);
+        renderState.renderAlpha = Mth.lerp(ClientUtil.animationFactor(Mth.PI / 2), renderState.renderAlpha, renderState.alpha);
 
         var size = 0.5f;
         var halfSize = 1f;

@@ -19,9 +19,6 @@ import java.util.function.Predicate;
 public class MathUtil {
     public static final RandomSource RANDOM_SOURCE = RandomSource.create();
     public static final Random RANDOM = new Random();
-    public static final float PI = (float) Math.PI;
-    public static final float TWO_PI = 2.0f * PI;
-    public static final double EPSILON = 1e-6;
 
     /**
      *    peakHeight

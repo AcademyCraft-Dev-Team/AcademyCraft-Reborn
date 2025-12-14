@@ -10,7 +10,6 @@ import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.render.ScissorRect;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.common.util.MathUtil;
 import org.jspecify.annotations.Nullable;
 
 public class ScrollPanelWidget extends AbstractWidgetContainer {
@@ -217,7 +216,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
         if (!isVisible()) return;
 
         var currentScrollY = getScrollY();
-        var newScrollY = Mth.lerp(ClientUtil.animationFactor(MathUtil.PI / 1.5f), currentScrollY, scrollTarget);
+        var newScrollY = Mth.lerp(ClientUtil.animationFactor(Mth.PI / 1.5f), currentScrollY, scrollTarget);
         scrollTo(getScrollX(), newScrollY);
 
         var alpha1 = getAlpha();

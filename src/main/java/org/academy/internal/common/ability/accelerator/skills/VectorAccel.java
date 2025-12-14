@@ -35,7 +35,6 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
@@ -336,8 +335,8 @@ public final class VectorAccel extends Skill {
 
                     var segments = 40;
                     for (var i = 0; i < segments; i++) {
-                        var angle1 = (float) i / segments * MathUtil.TWO_PI;
-                        var angle2 = (float) (i + 1) / segments * MathUtil.TWO_PI;
+                        var angle1 = (float) i / segments * Mth.TWO_PI;
+                        var angle2 = (float) (i + 1) / segments * Mth.TWO_PI;
                         var x1 = (float) Math.cos(angle1) * ringRadius;
                         var z1 = (float) Math.sin(angle1) * ringRadius;
                         var x2 = (float) Math.cos(angle2) * ringRadius;

@@ -18,7 +18,6 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -77,12 +76,12 @@ public class KineticEnergyApplied extends Skill {
                 }
 
                 @Override
-                public @NotNull KineticEnergyApplied.Client.KineticEnergyAppliedConfig getDefault() {
+                public KineticEnergyApplied.Client.KineticEnergyAppliedConfig getDefault() {
                     return new KineticEnergyAppliedConfig();
                 }
 
                 @Override
-                public @NotNull Class<KineticEnergyAppliedConfig> getTypeClass() {
+                public Class<KineticEnergyAppliedConfig> getTypeClass() {
                     return KineticEnergyAppliedConfig.class;
                 }
             }
@@ -95,10 +94,9 @@ public class KineticEnergyApplied extends Skill {
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            SKILL_STATS.compute(player.getUUID(), (uuid, aBoolean) -> aBoolean == null || !aBoolean);
+            SKILL_STATS.compute(player.getUUID(), (_, aBoolean) -> aBoolean == null || !aBoolean);
         }
 
-        @SuppressWarnings("resource")
         public static float onProjectileShoot(Projectile projectile, Entity shooter, float velocity) {
             var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), shooter.level());
             var vec3 = shooter.getLookAngle().scale(1);

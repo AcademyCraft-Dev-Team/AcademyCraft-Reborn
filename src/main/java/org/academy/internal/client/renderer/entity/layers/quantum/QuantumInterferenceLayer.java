@@ -1,92 +1,54 @@
 package org.academy.internal.client.renderer.entity.layers.quantum;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import org.academy.AcademyCraft;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import net.minecraft.util.context.ContextKey;
 import org.academy.api.client.Render;
+import org.academy.api.client.render.post.BloomEffect;
 
-public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M extends EntityModel<S>> extends RenderLayer<S, M> {
+import static org.academy.AcademyCraft.academy;
+
+public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M extends EntityModel<? super S>>
+        extends RenderLayer<S, M> {
+    public static final ContextKey<QuantumData> CONTEXT_KEY = new ContextKey<>(academy("quantum"));
+
     public QuantumInterferenceLayer(RenderLayerParent<S, M> renderer) {
         super(renderer);
     }
 
     @Override
-    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, S renderState,float yRot, float partialTicks) {
-        if (!(renderState instanceof QuantumRenderStateExtension ext) || !ext.academy$isQuantumActive()) {
-            return;
-        }
+    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, S renderState, float yRot, float partialTicks) {
+        var quantum = renderState.getRenderData(CONTEXT_KEY);
+        if (quantum == null || !quantum.active()) return;
 
-        var intensity = ext.academy$getQuantumIntensity();
-        if (intensity <= 0.001f) return;
+        var intensity = quantum.intensity();
 
-        var color = ext.academy$getQuantumColor();
+        var color = quantum.color();
         var r = ((color >> 16) & 0xFF) / 255.0f;
         var g = ((color >> 8) & 0xFF) / 255.0f;
         var b = (color & 0xFF) / 255.0f;
 
         var renderType = Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST;
+        var vertexConsumer = BloomEffect.getBlitToMainPost().getBuffer(renderType);
 
-        var time = renderState.ageInTicks + partialTicks;
         var model = getParentModel();
-
-        nodeCollector.submitCustomGeometry(
+        model.renderToBuffer(
                 poseStack,
-                renderType,
-                (pose, vertexConsumer) -> {
-                    try {
-                        var rootPart = model.root();
-
-                        var childrenMap = rootPart.children;
-
-                        if (childrenMap.isEmpty()) return;
-
-                        var parts = childrenMap.values();
-
-                        var tempStack = new PoseStack();
-                        tempStack.last().pose().set(pose.pose());
-
-                        var partIndex = 0;
-
-                        for (var part : parts) {
-                            partIndex++;
-
-                            if (!part.visible) continue;
-                            var wave = Math.sin(time * 0.08f + partIndex * 132.0f);
-
-                            if (wave > 0.2) {
-                                var localAlpha = (float) ((wave - 0.2) / 0.8);
-                                localAlpha *= (intensity + 0.5f);
-                                localAlpha *= 0.65f;
-
-                                renderPartGlitch(part, tempStack, vertexConsumer, 1.05f, 0.02f, r, g, b, localAlpha);
-
-                                if (localAlpha > 0.3f) {
-                                    renderPartGlitch(part, tempStack, vertexConsumer, 1.08f, -0.01f, r, g, b, localAlpha * 0.5f);
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        AcademyCraft.LOGGER.warn("Failed to render Quantum FX for model: {}", model.getClass().getName());
-                    }
-                }
+                vertexConsumer,
+                LightTexture.FULL_BRIGHT,
+                OverlayTexture.NO_OVERLAY,
+                ARGB.colorFromFloat(
+                        intensity * Math.abs(Mth.sin(renderState.ageInTicks * 0.1)),
+                        r, g, b
+                )
         );
-    }
-
-    private void renderPartGlitch(ModelPart part, PoseStack poseStack, VertexConsumer buffer, float scale, float offset, float r, float g, float b, float a) {
-        poseStack.pushPose();
-
-        poseStack.translate(offset, offset, 0);
-        poseStack.scale(scale, scale, scale);
-
-        var argb = (int) (a * 255) << 24 | (int) (r * 255) << 16 | (int) (g * 255) << 8 | (int) (b * 255);
-        part.render(poseStack, buffer, 15728880, 0, argb);
-
-        poseStack.popPose();
     }
 }

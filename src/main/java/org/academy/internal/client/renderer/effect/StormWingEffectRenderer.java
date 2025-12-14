@@ -6,13 +6,13 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.renderer.RingRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
-import org.academy.api.common.util.MathUtil;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
@@ -39,7 +39,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     private static final float RADIUS_BASE_NOISE_SCALE = 0.15f;
     private static final float RADIUS_EXTRA_NOISE_SCALE = 0.20f;
     private static final float RADIUS_JITTER_SCALE = 0.03f;
-    private static final float ROTATION_BASE_NOISE_SCALE = 0.45f * MathUtil.PI;
+    private static final float ROTATION_BASE_NOISE_SCALE = 0.45f * Mth.PI;
     private static final float ROTATION_MODULATION_SCALE = 0.30f;
     private static final float RING_TILT_SCALE = 0.10f;
     private static final float WIDTH_BASE_NOISE_SCALE = 0.4f;

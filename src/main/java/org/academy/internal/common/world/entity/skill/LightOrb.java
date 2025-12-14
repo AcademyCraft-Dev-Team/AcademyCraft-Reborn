@@ -3,17 +3,18 @@ package org.academy.internal.common.world.entity.skill;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
+import org.jspecify.annotations.Nullable;
 
 public class LightOrb extends RenderOnlyEntity {
     private int lifeTime = -1;
     private int maxLifeTime = -1;
+    @Nullable
     private Runnable run;
 
     public static final EntityDataAccessor<Float> SCALE = SynchedEntityData.defineId(
