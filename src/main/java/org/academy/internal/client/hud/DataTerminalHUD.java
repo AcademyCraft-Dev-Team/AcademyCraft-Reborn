@@ -13,11 +13,13 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.DynamicUniformStorage;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ScreenEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
@@ -25,6 +27,7 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.animation.ValueAnimator;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
@@ -43,6 +46,7 @@ import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -77,6 +81,12 @@ public final class DataTerminalHUD {
     private static final AtomicBoolean ACTIVE = new AtomicBoolean();
     private static volatile double xpos, ypos;
     private static double startXpos, startYpos;
+
+    private static LinearLayoutWidget contentList;
+    private static FrameLayoutWidget appContainer;
+    private static FrameLayoutWidget main;
+    private static float viewStateProgress = 0.0f;// 1.0f:平行于屏幕
+    private static ValueAnimator viewStateAnimator;
 
     @MainThread
     public static void toggleActive() {
@@ -185,7 +195,7 @@ public final class DataTerminalHUD {
         ROOT.setName("root");
         ROOT.clearChildren();
 
-        var main = new FrameLayoutWidget();
+        main = new FrameLayoutWidget();
         main.setLayoutParams(
                 new FrameLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER_RIGHT)
@@ -257,85 +267,19 @@ public final class DataTerminalHUD {
                                             .width(size)
                                             .heightMode(SizeMode.WRAP_CONTENT)
                             );
-                            rowOne.addChild("a", a);
-                            {
-                                var iconArea = new FrameLayoutWidget() {
-                                    private boolean overed;
-                                    private float scale = 1;
 
-                                    @Override
-                                    public void render(RenderContext context) {
-                                        var overed = isMouseOver(xpos, ypos);
-                                        if (overed != this.overed) {
-                                            this.overed = overed;
-                                            startAnimation(
-                                                    ObjectAnimator.ofFloat(
-                                                            this::setScale,
-                                                            scale,
-                                                            overed ? 1.2f : 1f
-                                                    ).setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
-                                            );
-                                        }
-                                        context.pose().pushPose();
-                                        var centerX = getWidth() / 2f;
-                                        var centerY = getHeight() / 2f;
-                                        context.pose().translate(centerX, centerY, 0);
-                                        context.pose().scale(scale, scale, 1f);
-                                        context.pose().translate(-centerX, -centerY, 0);
-                                        super.render(context);
-                                        context.pose().popPose();
-                                    }
+                            rowOne.addChild("settings", createAppIcon(
+                                    "Settings",
+                                    Resource.Textures.ICON_SETTINGS,
+                                    DataTerminalHUD::closeApp
+                            ));
 
-                                    private void setScale(float scale) {
-                                        this.scale = scale;
-                                    }
-                                };
-                                iconArea.setLayoutParams(
-                                        new LinearLayoutWidget.LayoutParams()
-                                                .size(size, size)
-                                );
-                                a.addChild("icon_area", iconArea);
-                                {
-                                    var back = new ImageWidget(Resource.Textures.APP_BACK) {
-                                        @Override
-                                        public void render(RenderContext context) {
-                                            if (iconArea.isMouseOver(xpos, ypos)) {
-                                                setColor(1.0f, 1.0f, 1.0f);
-                                            } else {
-                                                setColor(0.8f, 0.8f, 0.8f);
-                                            }
-                                            super.render(context);
-                                        }
-                                    };
-                                    iconArea.addChild("back", back);
+                            rowOne.addChild("test", createAppIcon(
+                                    "test",
+                                    Resource.Textures.ICON_SETTINGS,
+                                    () -> openApp(new AbilityAppWidget())
+                            ));
 
-                                    var icon = new ImageWidget(Resource.Textures.ICON_SETTINGS) {
-                                        @Override
-                                        public void render(RenderContext context) {
-                                            if (iconArea.isMouseOver(xpos, ypos)) {
-                                                setColor(1, 1, 1);
-                                            } else {
-                                                setColor(0.9f, 0.9f, 0.9f);
-                                            }
-                                            super.render(context);
-                                        }
-                                    };
-                                    icon.setLayoutParams(
-                                            new FrameLayoutWidget.LayoutParams()
-                                                    .size(size / 2f, size / 2f)
-                                                    .gravity(Gravity.CENTER)
-                                    );
-                                    iconArea.addChild("icon", icon);
-                                }
-
-                                var name = new LabelWidget("Settings");
-                                name.setLayoutParams(
-                                        new LinearLayoutWidget.LayoutParams()
-                                                .gravity(Gravity.CENTER)
-                                                .margin(2, 0)
-                                );
-                                a.addChild("name", name);
-                            }
                         }
                     }
                 }
@@ -425,14 +369,26 @@ public final class DataTerminalHUD {
         viewMatrix.translate(0.0F, 0.0F, z);
         viewMatrix.scale(scale, scale, scale);
 
+        // 中心对齐
+        var currentWidth = main.getWidth();
+        var widgetCenterX = guiWidth - 32 - (currentWidth / 2.0f);
+        var screenCenterX = guiWidth / 2.0f;
+        var shiftX = viewStateProgress * (screenCenterX - widgetCenterX);
+
+        viewMatrix.translate(shiftX, 0, 0);
+
         var dx = (float) (xpos - guiWidth - 32 - MAIN_WIDTH / 2f);
         var dy = (float) (ypos - guiHeight / 2.0F);
 
-        var center = (guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f;
-        viewMatrix.translate(center, 0, 0.0F);
-        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), dx * 0.05F - 5));
-        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(1.0F, 0.0F, 0.0F), -dy * 0.05F - 1));
-        viewMatrix.translate(-center, 0, 0.0F);
+        var rotateY = Mth.lerp(viewStateProgress, dx * 0.05F - 5, 0f);
+        var rotateX = Mth.lerp(viewStateProgress, -dy * 0.05F - 1, 0f);
+        var centerX = (guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f;
+
+        viewMatrix.translate(centerX, 0, 0.0F);
+        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), rotateY));
+        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(1.0F, 0.0F, 0.0F), rotateX));
+        viewMatrix.translate(-centerX, 0, 0.0F);
+
         viewMatrix.translate(-(guiWidth / 2.0F), -(guiHeight / 2.0F), 0.0F);
 
         return viewMatrix;
@@ -451,6 +407,136 @@ public final class DataTerminalHUD {
     private static GpuBufferSlice createProjectionUboSlice(float fovY, float aspectRatio) {
         var projectionMatrix = new Matrix4f().perspective(fovY, aspectRatio, 1.0F, 1000.0F);
         return Render.Buffers.getInstance().getProjectionUB(projectionMatrix).slice();
+    }
+
+    private static void openApp(Widget appWidget) {
+        if (viewStateAnimator != null && viewStateAnimator.isRunning()) viewStateAnimator.cancel();
+
+        viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 1.0f);
+        viewStateAnimator.setDuration(400);
+        viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
+        viewStateAnimator.addUpdateListener(anim -> {
+            viewStateProgress = anim.getAnimatedValue();
+
+            if (main != null) {
+                float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+                float targetWidth = screenWidth * 0.8f;
+                main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
+            }
+        });
+        viewStateAnimator.start();
+
+        if (contentList == null || appContainer == null) return;
+        contentList.setVisible(false);
+        appContainer.clearChildren();
+        appContainer.addChild("current_app", appWidget);
+        appContainer.setVisible(true);
+    }
+
+    public static void closeApp() {
+        if (viewStateAnimator != null && viewStateAnimator.isRunning()) viewStateAnimator.cancel();
+
+        viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 0.0f);
+        viewStateAnimator.setDuration(400);
+        viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
+        viewStateAnimator.addUpdateListener(anim -> {
+            viewStateProgress = anim.getAnimatedValue();
+
+            if (main != null) {
+                float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+                float targetWidth = screenWidth * 0.8f;
+                main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
+            }
+        });
+        viewStateAnimator.start();
+
+        if (contentList == null || appContainer == null) return;
+        appContainer.setVisible(false);
+        appContainer.clearChildren();
+        contentList.setVisible(true);
+    }
+
+    private static Widget createAppIcon(String nameStr, Identifier iconRes, Runnable onClick) {
+        var container = new LinearLayoutWidget();
+        container.setSpacing(1);
+        container.setOrientation(Orientation.VERTICAL);
+        container.setLayoutParams(new LinearLayoutWidget.LayoutParams().width(48).heightMode(SizeMode.WRAP_CONTENT));
+        var iconArea = getFrameLayoutWidget(onClick);
+        iconArea.setLayoutParams(new LinearLayoutWidget.LayoutParams().size(48, 48));
+        container.addChild("icon_area", iconArea);
+
+        var back = new ImageWidget(Resource.Textures.APP_BACK) {
+            @Override
+            public void render(RenderContext context) {
+                float brightness = iconArea.isMouseOver(xpos, ypos) ? 1.0f : 0.8f;
+                setColor(brightness, brightness, brightness);
+                super.render(context);
+            }
+        };
+        iconArea.addChild("back", back);
+
+        var icon = new ImageWidget(iconRes) {
+            @Override
+            public void render(RenderContext context) {
+                float brightness = iconArea.isMouseOver(xpos, ypos) ? 1.0f : 0.8f;
+                setColor(brightness, brightness, brightness);
+                super.render(context);
+            }
+        };
+        icon.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(24, 24).gravity(Gravity.CENTER));
+        iconArea.addChild("icon", icon);
+
+        var nameLabel = new LabelWidget(nameStr);
+        nameLabel.setLayoutParams(new LinearLayoutWidget.LayoutParams().gravity(Gravity.CENTER).margin(2, 0));
+        container.addChild("name", nameLabel);
+
+        return container;
+    }
+
+    private static @NotNull FrameLayoutWidget getFrameLayoutWidget(Runnable onClick) {
+        var iconArea = new FrameLayoutWidget() {
+            private boolean overed;
+            private float scale = 1;
+
+            @Override
+            public void render(RenderContext context) {
+                var currentOvered = isMouseOver(xpos, ypos);
+                if (currentOvered != this.overed) {
+                    this.overed = currentOvered;
+                    startAnimation(
+                            ObjectAnimator.ofFloat(
+                                    this::setScale,
+                                    scale,
+                                    overed ? 1.2f : 1f
+                            ).setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
+                    );
+                }
+
+                context.pose().pushPose();
+                var centerX = getWidth() / 2f;
+                var centerY = getHeight() / 2f;
+                context.pose().translate(centerX, centerY, 0);
+                context.pose().scale(scale, scale, 1f);
+                context.pose().translate(-centerX, -centerY, 0);
+                super.render(context);
+                context.pose().popPose();
+            }
+
+            private void setScale(float s) {
+                this.scale = s;
+            }
+
+            @Override
+            protected void onMousePressed(MouseEvent event) {
+                if (isMouseOver(event.getX(), event.getY())) {
+                    ClientUtil.playDownSound();
+                    onClick.run();
+                    event.consume();
+                }
+            }
+        };
+        iconArea.setClickable(true);
+        return iconArea;
     }
 
     @SubscribeEvent
@@ -489,8 +575,8 @@ public final class DataTerminalHUD {
             InputSystem.currentMouseModifier = event.modifiers;
             var inputEvent =
                     event.action == 1
-                    ? MouseEvent.createPressEvent(xpos, ypos, event.button)
-                    : MouseEvent.createReleaseEvent(xpos, ypos, event.button);
+                            ? MouseEvent.createPressEvent(xpos, ypos, event.button)
+                            : MouseEvent.createReleaseEvent(xpos, ypos, event.button);
             ROOT.dispatchEvent(inputEvent);
             event.setCanceled(true);
         }
