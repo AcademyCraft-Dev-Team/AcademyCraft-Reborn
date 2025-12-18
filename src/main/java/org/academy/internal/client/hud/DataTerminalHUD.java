@@ -19,7 +19,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ScreenEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
@@ -28,6 +27,7 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.animation.ValueAnimator;
+import org.academy.api.client.gui.apps.MusicApp;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
@@ -85,6 +85,8 @@ public final class DataTerminalHUD {
     private static LinearLayoutWidget contentList;
     private static FrameLayoutWidget appContainer;
     private static FrameLayoutWidget main;
+
+    // 视图切换状态动画相关
     private static float viewStateProgress = 0.0f;// 1.0f:平行于屏幕
     private static ValueAnimator viewStateAnimator;
 
@@ -206,11 +208,10 @@ public final class DataTerminalHUD {
         {
             var background = new FillWidget(COLOR);
             main.addChild("back", background);
-
-            var content = new LinearLayoutWidget();
-            content.setOrientation(Orientation.VERTICAL);
-            content.setSpacing(2);
-            main.addChild("content", content);
+            contentList = new LinearLayoutWidget();
+            contentList.setOrientation(Orientation.VERTICAL);
+            contentList.setSpacing(2);
+            main.addChild("content", contentList);
             {
                 var logo = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
                 logo.setLayoutParams(
@@ -219,7 +220,7 @@ public final class DataTerminalHUD {
                                 .gravity(Gravity.START)
                                 .margin(2, 2, 0, 0)
                 );
-                content.addChild("icon", logo);
+                contentList.addChild("icon", logo);
 
                 var splitLine = new FillWidget(0xFFFFFFFF);
                 splitLine.setLayoutParams(
@@ -228,7 +229,7 @@ public final class DataTerminalHUD {
                                 .widthMode(SizeMode.MATCH_PARENT)
                                 .padding(2, 0)
                 );
-                content.addChild("splitLine", splitLine);
+                contentList.addChild("splitLine", splitLine);
 
                 var apps = new ScrollPanelWidget();
                 apps.setLayoutParams(
@@ -238,7 +239,7 @@ public final class DataTerminalHUD {
                                 .gravity(Gravity.CENTER)
                                 .padding(4, 4, 4, 2)
                 );
-                content.addChild("apps", apps);
+                contentList.addChild("apps", apps);
                 {
                     var appRows = new LinearLayoutWidget();
                     appRows.setOrientation(Orientation.VERTICAL);
@@ -249,8 +250,6 @@ public final class DataTerminalHUD {
                     );
                     apps.addChild("app_rows", appRows);
                     {
-                        var size = 48;
-
                         var rowOne = new LinearLayoutWidget();
                         rowOne.setOrientation(Orientation.HORIZONTAL);
                         rowOne.setLayoutParams(
@@ -259,31 +258,25 @@ public final class DataTerminalHUD {
                         );
                         appRows.addChild("row_one", rowOne);
                         {
-                            var a = new LinearLayoutWidget();
-                            a.setSpacing(1);
-                            a.setOrientation(Orientation.VERTICAL);
-                            a.setLayoutParams(
-                                    new LinearLayoutWidget.LayoutParams()
-                                            .width(size)
-                                            .heightMode(SizeMode.WRAP_CONTENT)
-                            );
-
                             rowOne.addChild("settings", createAppIcon(
                                     "Settings",
                                     Resource.Textures.ICON_SETTINGS,
                                     DataTerminalHUD::closeApp
                             ));
 
-                            rowOne.addChild("test", createAppIcon(
-                                    "test",
-                                    Resource.Textures.ICON_SETTINGS,
-                                    () -> openApp(new AbilityAppWidget())
+                            rowOne.addChild("music", createAppIcon(
+                                    "Music",
+                                    Resource.Textures.ICON_MUSIC_PLAYER,
+                                    () -> openApp(new MusicApp(Resource.Textures.ICON_MUSIC_PLAYER))
                             ));
-
                         }
                     }
                 }
             }
+            appContainer = new FrameLayoutWidget();
+            appContainer.setLayoutParams(new FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT));
+            appContainer.setVisible(false);
+            main.addChild("app_container", appContainer);
         }
     }
 
@@ -409,6 +402,7 @@ public final class DataTerminalHUD {
         return Render.Buffers.getInstance().getProjectionUB(projectionMatrix).slice();
     }
 
+    @SuppressWarnings("ConstantConditions")
     private static void openApp(Widget appWidget) {
         if (viewStateAnimator != null && viewStateAnimator.isRunning()) viewStateAnimator.cancel();
 
@@ -433,6 +427,7 @@ public final class DataTerminalHUD {
         appContainer.setVisible(true);
     }
 
+    @SuppressWarnings("ConstantConditions")
     public static void closeApp() {
         if (viewStateAnimator != null && viewStateAnimator.isRunning()) viewStateAnimator.cancel();
 
@@ -447,13 +442,18 @@ public final class DataTerminalHUD {
                 float targetWidth = screenWidth * 0.8f;
                 main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
             }
+
+            if (viewStateProgress == 0.0f) {
+                if (appContainer != null) {
+                    appContainer.setVisible(false);
+                    appContainer.clearChildren();
+                }
+                if (contentList != null) {
+                    contentList.setVisible(true);
+                }
+            }
         });
         viewStateAnimator.start();
-
-        if (contentList == null || appContainer == null) return;
-        appContainer.setVisible(false);
-        appContainer.clearChildren();
-        contentList.setVisible(true);
     }
 
     private static Widget createAppIcon(String nameStr, Identifier iconRes, Runnable onClick) {
@@ -491,6 +491,10 @@ public final class DataTerminalHUD {
         container.addChild("name", nameLabel);
 
         return container;
+    }
+
+    public static float getViewStateProgress() {
+        return viewStateProgress;
     }
 
     private static @NotNull FrameLayoutWidget getFrameLayoutWidget(Runnable onClick) {

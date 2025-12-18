@@ -1,6 +1,7 @@
 package org.academy.api.client;
 
 import net.minecraft.resources.Identifier;
+import org.academy.internal.common.ability.accelerator.skills.VectorAccel_Server_handleDash_DashPacket_3b0f20_MNListener;
 
 import static org.academy.AcademyCraft.academy;
 import static org.academy.AcademyCraft.vanilla;
@@ -75,7 +76,7 @@ public final class Resource {
          */
         public static final Identifier MODEL_WIND_GEN = academy("textures/model/wind_gen.png");
         public static final Identifier MODEL_WIND_GEN_TOP = academy("textures/model/wind_gen_top.png");
-        public static final Identifier BLOCK_WIND_GEN_PILLAR =  academy("textures/block/wind_gen_pillar.png");
+        public static final Identifier BLOCK_WIND_GEN_PILLAR = academy("textures/block/wind_gen_pillar.png");
         public static final Identifier ICON_WIND_GEN_BASE = academy("textures/gui/wind_gen/icon_wind_base.png");
         public static final Identifier ICON_WIND_GEN_PILLAR = academy("textures/gui/wind_gen/icon_wind_pillar.png");
         public static final Identifier ICON_WIND_GEN_TOP = academy("textures/gui/wind_gen/icon_wind_top.png");
@@ -153,6 +154,12 @@ public final class Resource {
         public static final Identifier ICON_CYCLE = academy("textures/gui/icon/icon_cycle.png");
         public static final Identifier ICON_RANDOM = academy("textures/gui/icon/icon_random.png");
         public static final Identifier ICON_SINGLE_CYCLE = academy("textures/gui/icon/icon_single_cycle.png");
+        public static final Identifier ICON_NEXT = academy("textures/gui/icon/icon_next.png");
+        public static final Identifier ICON_PREV = academy("textures/gui/icon/icon_previous.png");
+        public static final Identifier ICON_PAUSE = academy("textures/gui/icon/icon_pause.png");
+        public static final Identifier ICON_PLAY = academy("textures/gui/icon/icon_play.png");
+        public static final Identifier ICON_MUSIC_VINYL = academy("textures/apps/music/vinyl.png");
+        public static final Identifier ICON_MUSIC_NEEDLE = academy("textures/apps/music/needle.png");
         /**
          * Settings
          */
