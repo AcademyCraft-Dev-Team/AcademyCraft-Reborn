@@ -20,8 +20,8 @@ public abstract class AbstractApp extends LinearLayoutWidget {
     private boolean contentFadedIn = false;
 
     public AbstractApp(String title, @Nullable Identifier iconRes) {
-        this.setOrientation(Orientation.VERTICAL);
-        this.setLayoutParams(new LayoutParams()
+        setOrientation(Orientation.VERTICAL);
+        setLayoutParams(new LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT));
 
         var header = new FrameLayoutWidget();
@@ -29,7 +29,7 @@ public abstract class AbstractApp extends LinearLayoutWidget {
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(20)
                 .margin(8, 5, 8, 0));
-        this.addChild("header", header);
+        addChild("header", header);
 
         {
             var leftGroup = new LinearLayoutWidget();
@@ -79,12 +79,12 @@ public abstract class AbstractApp extends LinearLayoutWidget {
                 .height(1)
                 .widthMode(SizeMode.MATCH_PARENT)
                 .margin(0, 3, 0, 0));
-        this.addChild("split_line", splitLine);
+        addChild("split_line", splitLine);
 
         contentContainer = new FrameLayoutWidget();
         contentContainer.setLayoutParams(new LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT));
-        this.addChild("content", contentContainer);
+        addChild("content", contentContainer);
         contentContainer.setAlpha(0.0f);
         initAppContent(contentContainer);
     }
@@ -112,7 +112,7 @@ public abstract class AbstractApp extends LinearLayoutWidget {
         // 关闭时淡出
         var fadeEnd = 0.6f;
         var alpha = (progress - fadeEnd) / (1.0f - fadeEnd);
-        this.setAlpha(Math.max(0f, Math.min(1f, alpha)));
+        setAlpha(Math.max(0f, Math.min(1f, alpha)));
         if (progress <= fadeEnd) {
             contentFadedIn = false;
         }

@@ -8,17 +8,22 @@ public abstract class Animator {
     long startDelay = 0;
     long duration = 300;
     boolean running = false;
+    boolean paused = false;
+    long pauseBeginTime = -1;
     private final List<AnimatorListener> listeners = new ArrayList<>();
 
     public void start() {
         if (running) return;
         running = true;
+        paused = false;
+        pauseBeginTime = -1;
         AnimationManager.startAnimation(this);
     }
 
     public void cancel() {
         if (!running) return;
         running = false;
+        paused = false;
         AnimationManager.remove(this);
         var tempList = new ArrayList<>(listeners);
         for (var listener : tempList) {
@@ -29,6 +34,7 @@ public abstract class Animator {
     public void end() {
         if (running) {
             running = false;
+            paused = false;
             AnimationManager.remove(this);
             var tempList = new ArrayList<>(listeners);
             for (var listener : tempList) {
@@ -37,8 +43,26 @@ public abstract class Animator {
         }
     }
 
+    public void pause() {
+        if (running && !paused) {
+            paused = true;
+            pauseBeginTime = -1;
+        }
+    }
+
+    public void resume() {
+        if (running && paused) {
+            paused = false;
+        }
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
     void onStartInternal() {
         running = true;
+        paused = false;
         var tempList = new ArrayList<>(listeners);
         for (var listener : tempList) listener.onAnimationStart(this);
     }

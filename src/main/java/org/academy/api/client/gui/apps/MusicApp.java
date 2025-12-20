@@ -203,7 +203,7 @@ public class MusicApp extends AbstractApp {
         var track = currentPlaylist.get(index);
 
         if (track.id != null) {
-            boolean forceLoop = (loopMode == LoopMode.SINGLE_LOOP);
+            var forceLoop = (loopMode == LoopMode.SINGLE_LOOP);
             musicController.play(track.id, forceLoop);
             syncUIWithCurrentTrack();
         }
@@ -211,7 +211,7 @@ public class MusicApp extends AbstractApp {
 
     private void syncUIWithCurrentTrack() {
         if (currentIndex >= 0 && currentIndex < currentPlaylist.size()) {
-            MusicTrack track = currentPlaylist.get(currentIndex);
+            var track = currentPlaylist.get(currentIndex);
             titleLabel.setText(track.name);
             playPauseIcon.setTexture(Resource.Textures.ICON_PAUSE);
         }
@@ -266,7 +266,7 @@ public class MusicApp extends AbstractApp {
         if (musicController.isPlaying()) {
             vinylWidget.setRunning(true);
 
-            float p = musicController.getProgress();
+            var p = musicController.getProgress();
             if (progressBarFill.getParent() instanceof WidgetContainer parent) {
                 progressBarFill.setWidth(parent.getWidth() * p);
             }
@@ -308,24 +308,24 @@ public class MusicApp extends AbstractApp {
         }
 
         public void setRunning(boolean running) {
-            this.isRunning = running;
+            isRunning = running;
             if (!running) lastTime = 0;
         }
 
         @Override
         public void render(RenderContext context) {
             if (isRunning) {
-                long now = System.currentTimeMillis();
+                var now = System.currentTimeMillis();
                 if (lastTime > 0) {
-                    float delta = (now - lastTime) / 2000f;
+                    var delta = (now - lastTime) / 2000f;
                     rotation += delta * 120f;
                     rotation %= 360f;
                 }
                 lastTime = now;
             }
             context.pose().pushPose();
-            float cx = getWidth() / 2f;
-            float cy = getHeight() / 2f;
+            var cx = getWidth() / 2f;
+            var cy = getHeight() / 2f;
             context.pose().translate(cx, cy, 0);
             context.pose().mulPose(new Quaternionf().fromAxisAngleDeg(0, 0, 1, rotation));
             context.pose().translate(-cx, -cy, 0);
@@ -343,7 +343,7 @@ public class MusicApp extends AbstractApp {
 
         public void play(Identifier resourceLocation, boolean loop) {
             stop();
-            this.isLooping = loop;
+            isLooping = loop;
 
             try {
                 var resource = Minecraft.getInstance().getResourceManager().getResource(resourceLocation);
@@ -377,7 +377,7 @@ public class MusicApp extends AbstractApp {
                 });
 
                 currentClip.start();
-                this.isPaused = false;
+                isPaused = false;
 
             } catch (Exception e) {
                 LOGGER.error("Error playing music: {}", resourceLocation, e);
@@ -385,11 +385,11 @@ public class MusicApp extends AbstractApp {
         }
 
         public void setOnCompletionListener(Runnable listener) {
-            this.onCompletion = listener;
+            onCompletion = listener;
         }
 
         public void setLoop(boolean loop) {
-            this.isLooping = loop;
+            isLooping = loop;
             if (currentClip != null) {
                 if (loop) currentClip.loop(Clip.LOOP_CONTINUOUSLY);
                 else currentClip.loop(0);
@@ -439,9 +439,9 @@ public class MusicApp extends AbstractApp {
 
         public float getProgress() {
             if (currentClip != null) {
-                long len = currentClip.getMicrosecondLength();
+                var len = currentClip.getMicrosecondLength();
                 if (len == 0) return 0;
-                long pos = currentClip.getMicrosecondPosition();
+                var pos = currentClip.getMicrosecondPosition();
                 return Mth.clamp((float) pos / len, 0f, 1f);
             }
             return 0f;

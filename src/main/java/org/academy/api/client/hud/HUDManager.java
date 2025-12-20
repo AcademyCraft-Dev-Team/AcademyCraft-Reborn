@@ -96,7 +96,6 @@ public final class HUDManager {
                     0, 1, 1, 0,
                     -1
             );
-            guiGraphics.drawString(Minecraft.getInstance().font, "aaaaAAaAaA",0,0,-1);
         } finally {
             if (renderTarget != null) pool.release(desc, renderTarget);
         }
