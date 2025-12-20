@@ -2,10 +2,8 @@ package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.arc.data.PathData;
-import org.academy.api.common.arc.data.PathFrame;
 import org.academy.api.common.arc.data.PropertyType;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -23,25 +21,41 @@ public final class ArcFactory {
         PostEffect.addFixedBuffer(RenderTypes.ARC);
     }
 
-    public static void render(PoseStack ps, SubmitNodeCollector submitNodeCollector, ArcRenderData data) {
-        render(ps, submitNodeCollector, data, 1, 1, 1, 1);
+    public static void render(PoseStack ps, ArcRenderData data) {
+        render(ps, data, 1, 1, 1, 1);
     }
 
-    public static void render(PoseStack ps, SubmitNodeCollector submitNodeCollector, ArcRenderData data, float r, float g, float b, float a) {
-        submitNodeCollector.submitCustomGeometry(ps, RenderTypes.ARC, (pose, vc) -> renderRecursive(pose, vc, data, r, g, b, a));
+    public static void render(PoseStack ps, ArcRenderData data, float r, float g, float b, float a) {
+        var vc = PostEffect.BUFFER_SOURCE_PRE.getBuffer(RenderTypes.ARC);
+        renderRecursive(ps.last(), vc, data, r, g, b, a);
     }
 
     private static void renderRecursive(PoseStack.Pose pose, VertexConsumer vc, ArcRenderData data, float r, float g, float b, float a) {
         for (var quad : data.quads) {
-            vc.addVertex(pose, quad.v1.pos.x(), quad.v1.pos.y(), quad.v1.pos.z()).setUv(quad.v1.u, quad.v1.v).setColor(quad.v1.color.x() * r, quad.v1.color.y() * g, quad.v1.color.z() * b, a);
-            vc.addVertex(pose, quad.v2.pos.x(), quad.v2.pos.y(), quad.v2.pos.z()).setUv(quad.v2.u, quad.v2.v).setColor(quad.v2.color.x() * r, quad.v2.color.y() * g, quad.v2.color.z() * b, a);
-            vc.addVertex(pose, quad.v3.pos.x(), quad.v3.pos.y(), quad.v3.pos.z()).setUv(quad.v3.u, quad.v3.v).setColor(quad.v3.color.x() * r, quad.v3.color.y() * g, quad.v3.color.z() * b, a);
-            vc.addVertex(pose, quad.v4.pos.x(), quad.v4.pos.y(), quad.v4.pos.z()).setUv(quad.v4.u, quad.v4.v).setColor(quad.v4.color.x() * r, quad.v4.color.y() * g, quad.v4.color.z() * b, a);
+            var v1 = quad.v1();
+            var v2 = quad.v2();
+            var v3 = quad.v3();
+            var v4 = quad.v4();
+            addVertex(pose, vc, v1, r, g, b, a);
+            addVertex(pose, vc, v2, r, g, b, a);
+            addVertex(pose, vc, v3, r, g, b, a);
+            addVertex(pose, vc, v4, r, g, b, a);
         }
 
         for (var branch : data.branches) {
             renderRecursive(pose, vc, branch, r, g, b, a);
         }
+    }
+
+    private static void addVertex(
+            PoseStack.Pose pose,
+            VertexConsumer vc,
+            Vertex vertex,
+            float r, float g, float b, float a
+    ) {
+        vc.addVertex(pose, vertex.pos.x(), vertex.pos.y(), vertex.pos.z())
+                .setUv(vertex.u, vertex.v)
+                .setColor(vertex.color.x() * r, vertex.color.y() * g, vertex.color.z() * b, a);
     }
 
     public static class Vertex {
@@ -57,8 +71,7 @@ public final class ArcFactory {
         }
     }
 
-    public static class Quad {
-        public Vertex v1, v2, v3, v4;
+    public record Quad(Vertex v1, Vertex v2, Vertex v3, Vertex v4) {
     }
 
     public static class ArcRenderData {
@@ -122,11 +135,12 @@ public final class ArcFactory {
                 var u0 = (float) i / (frameCount - 1);
                 var u1 = (float) (i + 1) / (frameCount - 1);
 
-                var quad = new Quad();
-                quad.v1 = new Vertex(v1Pos, u0, 0, color1);
-                quad.v2 = new Vertex(v2Pos, u0, 1, color1);
-                quad.v3 = new Vertex(v3Pos, u1, 1, color2);
-                quad.v4 = new Vertex(v4Pos, u1, 0, color2);
+                var quad = new Quad(
+                        new Vertex(v1Pos, u0, 0, color1),
+                        new Vertex(v2Pos, u0, 1, color1),
+                        new Vertex(v3Pos, u1, 1, color2),
+                        new Vertex(v4Pos, u1, 0, color2)
+                );
                 renderData.quads.add(quad);
             }
 

@@ -10,7 +10,6 @@ import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.drawable.ColorDrawable;
 import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.drawable.StateListDrawable;
-import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.CharTypedEvent;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
@@ -44,8 +43,8 @@ public class TextBoxWidget extends LabelWidget {
         setClickable(true);
 
         var sld = new StateListDrawable();
-        sld.addState(WidgetState.DEFAULT, new ColorDrawable(0x5F1F1F1F));
-        sld.addState(WidgetState.FOCUSED, new ColorDrawable(0x5F5A5A5A));
+        sld.setDefault(new ColorDrawable(0x5F1F1F1F));
+        sld.addState(State.FOCUSED, new ColorDrawable(0x5F5A5A5A));
         setBackground(sld);
     }
 

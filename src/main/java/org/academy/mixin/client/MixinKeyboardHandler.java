@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(KeyboardHandler.class)
 public abstract class MixinKeyboardHandler {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
-    private void keyPress(long window, int action, KeyEvent event, CallbackInfo ci) {
-        InputSystem.handleKey(event.key(), event.scancode(), action, event.modifiers(), ci);
+    private void keyPress(long window, @KeyEvent.Action int action, KeyEvent event, CallbackInfo ci) {
+        InputSystem.handleKey(action, event, ci);
     }
 }

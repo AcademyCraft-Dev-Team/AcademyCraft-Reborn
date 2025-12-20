@@ -1,25 +1,49 @@
 package org.academy.internal.server.world.level.storage;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.Keyable;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
-import org.academy.AcademyCraft;
 import org.academy.api.server.wireless.WirelessManager;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public final class WirelessNetworkData extends SavedData {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
+    private static final Codec<BlockPos> BLOCKPOS_AS_STRING_CODEC = Codec.STRING.flatXmap(
+            s -> {
+                try {
+                    var parts = s.split(",");
+                    if (parts.length != 3) {
+                        return DataResult.error(() -> "Invalid Block Pos string format: " + s);
+                    }
+                    var x = Integer.parseInt(parts[0].trim());
+                    var y = Integer.parseInt(parts[1].trim());
+                    var z = Integer.parseInt(parts[2].trim());
+                    return DataResult.success(new BlockPos(x, y, z));
+                } catch (NumberFormatException e) {
+                    return DataResult.error(() -> "Failed to parse Block Pos from string: " + s);
+                }
+            },
+            pos -> DataResult.success(pos.getX() + ", " + pos.getY() + ", " + pos.getZ())
+    ).stable();
+
     public static final Codec<WirelessNetworkData> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                    Codec.unboundedMap(BlockPos.CODEC, NodeConfig.CODEC)
+                    Codec.simpleMap(BLOCKPOS_AS_STRING_CODEC, NodeConfig.CODEC, Keyable.forStrings(Stream::empty))
                             .fieldOf("nodes")
                             .forGetter(data -> data.nodes.getPrimaryMap())
             ).apply(instance, WirelessNetworkData::new)
@@ -46,26 +70,26 @@ public final class WirelessNetworkData extends SavedData {
 
     public boolean registerNode(BlockPos pos, String name, String password, int radius, int maxConnections) {
         if (nodes.containsPrimary(pos) || nodes.containsSecondary(name)) {
-            AcademyCraft.LOGGER.warn("Register failed: Node at {} or name '{}' already exists.", pos, name);
+            LOGGER.warn("Register failed: Node at {} or name '{}' already exists.", pos, name);
             return false;
         }
 
-        var config = new NodeConfig(name, password, radius, maxConnections);
+        var config = new NodeConfig(name, password, radius, maxConnections, new HashMap<>());
         nodes.put(pos, config);
         setDirty();
-        AcademyCraft.LOGGER.debug("Registered node '{}' at {}", name, pos);
+        LOGGER.debug("Registered node '{}' at {}", name, pos);
         return true;
     }
 
     public void unregisterNode(BlockPos pos, ServerLevel level) {
         var config = nodes.removeByPrimary(pos);
         if (config == null) {
-            AcademyCraft.LOGGER.warn("Attempted to unregister a node at {} but it was not found in configurations.", pos);
+            LOGGER.warn("Attempted to unregister a node at {} but it was not found in configurations.", pos);
             return;
         }
 
         setDirty();
-        AcademyCraft.LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", config.name, pos);
+        LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", config.name, pos);
 
         var usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
         for (var userPos : usersToDisconnect) {
@@ -113,22 +137,22 @@ public final class WirelessNetworkData extends SavedData {
     public boolean connectUserToNode(BlockPos nodePos, BlockPos userPos) {
         var config = getNodeConfig(nodePos);
         if (config == null) {
-            AcademyCraft.LOGGER.warn("Connect failed: Node at {} not found.", nodePos);
+            LOGGER.warn("Connect failed: Node at {} not found.", nodePos);
             return false;
         }
 
         if (config.connectedUsers.size() >= config.maxConnections) {
-            AcademyCraft.LOGGER.warn("Node '{}' at {} is at full capacity.", config.name, nodePos);
+            LOGGER.warn("Node '{}' at {} is at full capacity.", config.name, nodePos);
             return false;
         }
 
         if (config.connectedUsers.containsKey(userPos)) {
-            AcademyCraft.LOGGER.warn("User {} is already connected to node '{}'", userPos, config.name);
+            LOGGER.warn("User {} is already connected to node '{}'", userPos, config.name);
             return false;
         }
 
         config.connectedUsers.put(userPos, new UserConfig());
-        AcademyCraft.LOGGER.debug("Connected user {} to node '{}'", userPos, config.name);
+        LOGGER.debug("Connected user {} to node '{}'", userPos, config.name);
         setDirty();
         return true;
     }
@@ -140,7 +164,7 @@ public final class WirelessNetworkData extends SavedData {
         }
 
         if (config.connectedUsers.remove(userPos) != null) {
-            AcademyCraft.LOGGER.debug("Disconnected user {} from node '{}'", userPos, config.name);
+            LOGGER.debug("Disconnected user {} from node '{}'", userPos, config.name);
             setDirty();
             return true;
         }
@@ -152,27 +176,24 @@ public final class WirelessNetworkData extends SavedData {
         public String password;
         public final int radius;
         public final int maxConnections;
-        public final Map<BlockPos, UserConfig> connectedUsers = new HashMap<>();
+        public final Map<BlockPos, UserConfig> connectedUsers;
 
         public static final Codec<NodeConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.STRING.fieldOf("name").forGetter(config -> config.name),
                 Codec.STRING.fieldOf("password").forGetter(config -> config.password),
                 Codec.INT.fieldOf("radius").forGetter(config -> config.radius),
                 Codec.INT.fieldOf("max_connections").forGetter(config -> config.maxConnections),
-                Codec.unboundedMap(BlockPos.CODEC, UserConfig.CODEC)
+                Codec.simpleMap(BLOCKPOS_AS_STRING_CODEC, UserConfig.CODEC, Keyable.forStrings(Stream::empty))
                         .fieldOf("users")
                         .forGetter(config -> config.connectedUsers)
-        ).apply(instance, (name, password, radius, maxConnections, users) -> {
-            var config = new NodeConfig(name, password, radius, maxConnections);
-            config.connectedUsers.putAll(users);
-            return config;
-        }));
+        ).apply(instance, NodeConfig::new));
 
-        public NodeConfig(String name, String password, int radius, int maxConnections) {
+        public NodeConfig(String name, String password, int radius, int maxConnections, Map<BlockPos, UserConfig> connectedUsers) {
             this.name = name;
             this.password = password;
             this.radius = radius;
             this.maxConnections = maxConnections;
+            this.connectedUsers = connectedUsers;
         }
 
         public boolean checkPassword(String attempt) {

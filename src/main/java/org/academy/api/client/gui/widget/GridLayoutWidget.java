@@ -1,9 +1,10 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.AcademyCraft;
+import com.mojang.logging.LogUtils;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.Orientation;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -11,6 +12,8 @@ import java.util.*;
 import static org.academy.api.client.gui.layout.Gravity.*;
 
 public class GridLayoutWidget extends AbstractWidgetContainer {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public static final int UNDEFINED = Integer.MIN_VALUE;
     public static final int ALIGN_BOUNDS = 0;
     public static final int ALIGN_MARGINS = 1;
@@ -332,7 +335,7 @@ public class GridLayoutWidget extends AbstractWidgetContainer {
             validateLayoutParams();
             lastLayoutParamsHashCode = computeLayoutParamsHashCode();
         } else if (lastLayoutParamsHashCode != computeLayoutParamsHashCode()) {
-            AcademyCraft.LOGGER.warn("GridLayout layout parameters were modified between layout operations. This may lead to unexpected results.");
+            LOGGER.warn("GridLayout layout parameters were modified between layout operations. This may lead to unexpected results.");
             invalidateStructure();
             consistencyCheck();
         }
@@ -799,7 +802,7 @@ public class GridLayoutWidget extends AbstractWidgetContainer {
                 if (culprits0[c]) culprits.add(arc);
                 if (!arc.valid) removed.add(arc);
             }
-            AcademyCraft.LOGGER.error("{} constraints: {} are inconsistent; permanently removing: {}. ", axisName, arcsToString(culprits), arcsToString(removed));
+            LOGGER.error("{} constraints: {} are inconsistent; permanently removing: {}. ", axisName, arcsToString(culprits), arcsToString(removed));
         }
 
         private boolean solve(Arc[] arcs, int[] locations) {

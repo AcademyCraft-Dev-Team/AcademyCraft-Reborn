@@ -3,9 +3,9 @@ package org.academy.api.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.LightCoordsUtil;
 import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
 
@@ -33,7 +33,7 @@ public final class CylinderRenderer {
             var x = floats[0];
             var y = floats[1];
             var z = floats[2];
-            vertexConsumer.addVertex(matrix4f, x, y, z).setColor(red, green, blue, alpha).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT);
+            vertexConsumer.addVertex(matrix4f, x, y, z).setColor(red, green, blue, alpha).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightCoordsUtil.FULL_BRIGHT);
         }
     }
 

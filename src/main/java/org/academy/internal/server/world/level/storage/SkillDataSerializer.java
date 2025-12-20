@@ -1,16 +1,20 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.google.gson.*;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
-import org.academy.AcademyCraft;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.common.skilldata.SkillDataTypes;
+import org.slf4j.Logger;
 
 import java.lang.reflect.Type;
 
 public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<T>, JsonDeserializer<T> {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     @Override
     public JsonElement serialize(T data, Type typeOfSrc, JsonSerializationContext context) {
         var json = context.serialize(data).getAsJsonObject();
@@ -27,17 +31,14 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
             try {
                 typeId = Identifier.parse(jsonObject.get("type").getAsString());
             } catch (Exception ignored) {
-                AcademyCraft.LOGGER.error("Failed to parse skill data type from JSON: {}", jsonObject.get("type").getAsString());
+                LOGGER.error("Failed to parse skill data type from JSON: {}", jsonObject.get("type").getAsString());
             }
         }
 
         var dataTypeOptional = Registries.SKILL_DATA_TYPES.get(typeId);
         var dataType = dataTypeOptional.<SkillDataType<?>>map(Holder.Reference::value).orElse(null);
 
-        if (dataType == null) {
-            var defaultTypeOptional = Registries.SKILL_DATA_TYPES.get(CommonSkillData.ID);
-            dataType = defaultTypeOptional.get().value();
-        }
+        if (dataType == null) dataType = SkillDataTypes.COMMON.value();
 
         return context.deserialize(json, dataType.clazz());
     }

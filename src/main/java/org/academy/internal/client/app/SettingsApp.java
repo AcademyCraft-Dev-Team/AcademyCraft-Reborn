@@ -1,10 +1,10 @@
-package org.academy.internal.client.hud.apps;
+package org.academy.internal.client.app;
 
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.*;
-import org.academy.internal.client.hud.DataTerminalHUD;
+import org.academy.api.client.hud.terminal.DataTerminalHUD;
 
 public final class SettingsApp {
     public static FrameLayoutWidget create() {

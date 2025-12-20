@@ -1,10 +1,10 @@
+/*
 package org.academy.internal.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.SuspendedParticle;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import org.academy.api.client.Render;
 
@@ -25,13 +25,9 @@ public class ImagiphaseFluidParticle extends SuspendedParticle {
         setSpriteFromAge(sprites);
     }
 
-    @Override
-    protected int getLightColor(float partialTick) {
-        return LightTexture.FULL_BRIGHT;
-    }
 
     @Override
     public Layer getLayer() {
         return LAYER;
     }
-}
+}*/

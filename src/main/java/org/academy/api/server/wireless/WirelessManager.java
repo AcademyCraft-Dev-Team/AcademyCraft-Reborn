@@ -1,10 +1,10 @@
 package org.academy.api.server.wireless;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.apache.commons.lang3.tuple.Pair;
@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 public class WirelessManager {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     public static void initServer() {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(WirelessManager.class);
         MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(WirelessManager.class);
@@ -88,7 +91,7 @@ public class WirelessManager {
 
         var oldCfg = data.getNodeConfig(nodePos);
         if (oldCfg == null) {
-            AcademyCraft.LOGGER.warn("Player {} tried to rename nonexistent node at {}",
+            LOGGER.warn("Player {} tried to rename nonexistent node at {}",
                     player.getGameProfile().name(), nodePos);
             return;
         }
@@ -96,12 +99,12 @@ public class WirelessManager {
         var oldName = oldCfg.name;
         if (!data.renameNode(nodePos, newName)) {
             var existingNodePos = data.findNodePositionByName(newName);
-            AcademyCraft.LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken by node at {}",
+            LOGGER.warn("Player {} tried to rename node at {} to '{}', but that name is already taken by node at {}",
                     player.getGameProfile().name(), nodePos, newName, existingNodePos);
             return;
         }
 
-        AcademyCraft.LOGGER.debug("Player {} renamed node at {} from '{}' to '{}'",
+        LOGGER.debug("Player {} renamed node at {} from '{}' to '{}'",
                 player.getGameProfile().name(), nodePos, oldName, newName);
     }
 
@@ -116,14 +119,14 @@ public class WirelessManager {
 
         var cfg = data.getNodeConfig(nodePos);
         if (cfg == null) {
-            AcademyCraft.LOGGER.warn("Player {} tried to change password of nonexistent node at {}",
+            LOGGER.warn("Player {} tried to change password of nonexistent node at {}",
                     player.getGameProfile().name(), nodePos);
             return;
         }
 
         cfg.password = newPass;
         data.setDirty();
-        AcademyCraft.LOGGER.debug("Player {} changed password of node '{}' at {}",
+        LOGGER.debug("Player {} changed password of node '{}' at {}",
                 player.getGameProfile().name(), cfg.name, nodePos);
     }
 
@@ -132,43 +135,43 @@ public class WirelessManager {
 
         var nodePos = networkData.findNodePositionByName(targetNodeName);
         if (nodePos == null) {
-            AcademyCraft.LOGGER.warn("Player {} failed connecting user at {}: Node '{}' not found.", player.getGameProfile().name(), userPos, targetNodeName);
+            LOGGER.warn("Player {} failed connecting user at {}: Node '{}' not found.", player.getGameProfile().name(), userPos, targetNodeName);
             return;
         }
 
         var nodeConfig = networkData.getNodeConfig(nodePos);
 
         if (nodeConfig == null) {
-            AcademyCraft.LOGGER.error("Node position {} found for '{}' but NodeConfig is missing!", nodePos, targetNodeName);
+            LOGGER.error("Node position {} found for '{}' but NodeConfig is missing!", nodePos, targetNodeName);
             return;
         }
 
         if (nodeConfig.connectedUsers.size() >= nodeConfig.maxConnections) {
-            AcademyCraft.LOGGER.warn("Node '{}' has reached its maximum connection limit. User at {} cannot connect.", targetNodeName, userPos);
+            LOGGER.warn("Node '{}' has reached its maximum connection limit. User at {} cannot connect.", targetNodeName, userPos);
             return;
         }
 
         var userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
-            AcademyCraft.LOGGER.warn("Player {} tried to connect invalid block at {} to node '{}'. Block is not a WirelessUser.", player.getGameProfile().name(), userPos, targetNodeName);
+            LOGGER.warn("Player {} tried to connect invalid block at {} to node '{}'. Block is not a WirelessUser.", player.getGameProfile().name(), userPos, targetNodeName);
             return;
         }
 
         if (nodePos.distSqr(userPos) > (double) nodeConfig.radius * nodeConfig.radius) {
-            AcademyCraft.LOGGER.warn("User at {} is too far from node '{}' (Radius: {}).", userPos, targetNodeName, nodeConfig.radius);
+            LOGGER.warn("User at {} is too far from node '{}' (Radius: {}).", userPos, targetNodeName, nodeConfig.radius);
             return;
         }
 
         if (!nodeConfig.checkPassword(passwordAttempt)) {
-            AcademyCraft.LOGGER.warn("Incorrect password provided by {} for node '{}' from user at {}.", player.getGameProfile().name(), targetNodeName, userPos);
+            LOGGER.warn("Incorrect password provided by {} for node '{}' from user at {}.", player.getGameProfile().name(), targetNodeName, userPos);
             return;
         }
 
         if (networkData.connectUserToNode(nodePos, userPos)) {
             wirelessUser.setConnectedNodePosition(nodePos);
-            AcademyCraft.LOGGER.debug("User at {} successfully connected to node '{}' (at {}).", userPos, targetNodeName, nodePos);
+            LOGGER.debug("User at {} successfully connected to node '{}' (at {}).", userPos, targetNodeName, nodePos);
         } else {
-            AcademyCraft.LOGGER.warn("Failed connecting user {} to node '{}': Node likely full or user already connected elsewhere.", userPos, targetNodeName);
+            LOGGER.warn("Failed connecting user {} to node '{}': Node likely full or user already connected elsewhere.", userPos, targetNodeName);
         }
     }
 
@@ -176,7 +179,7 @@ public class WirelessManager {
         var userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
             var playerName = (player != null) ? player.getGameProfile().name() : "System";
-            AcademyCraft.LOGGER.warn("{} tried to disconnect invalid block at {}.", playerName, userPos);
+            LOGGER.warn("{} tried to disconnect invalid block at {}.", playerName, userPos);
             return;
         }
 
@@ -186,16 +189,16 @@ public class WirelessManager {
             var networkData = WirelessNetworkData.get(level);
             var removedFromData = networkData.disconnectUserFromNode(connectedNodePosition, userPos);
             if (removedFromData) {
-                AcademyCraft.LOGGER.debug("Successfully removed user {} from node {}'s list in SavedData.", userPos, connectedNodePosition);
+                LOGGER.debug("Successfully removed user {} from node {}'s list in SavedData.", userPos, connectedNodePosition);
             } else {
-                AcademyCraft.LOGGER.debug("Attempted to remove user {} from node {}'s list in SavedData, but the association was not found (possibly already removed or node unregistered).", userPos, connectedNodePosition);
+                LOGGER.debug("Attempted to remove user {} from node {}'s list in SavedData, but the association was not found (possibly already removed or node unregistered).", userPos, connectedNodePosition);
             }
         } else {
-            AcademyCraft.LOGGER.debug("User at {} was not connected to any node according to its own state.", userPos);
+            LOGGER.debug("User at {} was not connected to any node according to its own state.", userPos);
         }
 
         wirelessUser.setConnectedNodePosition(null);
-        AcademyCraft.LOGGER.debug("User at {} connection state (WirelessUser instance) cleared.", userPos);
+        LOGGER.debug("User at {} connection state (WirelessUser instance) cleared.", userPos);
     }
 
     public static List<String> getAvailableNodes(ServerLevel level, BlockPos requesterPos) {

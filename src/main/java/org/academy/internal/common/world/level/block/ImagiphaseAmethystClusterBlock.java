@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.Codec;
@@ -103,17 +104,21 @@ public final class ImagiphaseAmethystClusterBlock extends ImagiphaseAmethystBloc
                 .setValue(FACING, context.getClickedFace());
     }
 
-    /**
+    */
+/**
      * Returns the blockstate with the given rotation from the passed blockstate. If inapplicable, returns the passed blockstate.
-     */
+     *//*
+
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
-    /**
+    */
+/**
      * Returns the blockstate with the given mirror of the passed blockstate. If inapplicable, returns the passed blockstate.
-     */
+     *//*
+
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
@@ -129,3 +134,4 @@ public final class ImagiphaseAmethystClusterBlock extends ImagiphaseAmethystBloc
         builder.add(WATERLOGGED, FACING);
     }
 }
+*/

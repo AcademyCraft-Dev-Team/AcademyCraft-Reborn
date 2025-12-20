@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -25,4 +26,4 @@ public class SmallArcParticle extends SuspendedParticle {
     protected int getLightColor(float partialTick) {
         return LightTexture.FULL_BRIGHT;
     }
-}
+}*/

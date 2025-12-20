@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.level.block;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -25,15 +26,16 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.AcademyCraft;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
-import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 public final class WirelessNodeBlock extends BaseEntityBlock {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     public static final MapCodec<WirelessNodeBlock> CODEC = simpleCodec(WirelessNodeBlock::new);
     public static final String WIRELESS_NODE_SCREEN = "wireless_node_screen";
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
@@ -50,7 +52,7 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(CONNECTED, ENERGY);
     }
 
@@ -68,9 +70,9 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
             var radius = 32;
             var maxConnections = 8;
             if (WirelessNetworkData.get(serverLevel).registerNode(pos, nodeName, password, radius, maxConnections)) {
-                AcademyCraft.LOGGER.debug("Registered wireless node at {} with name '{}'.", pos, nodeName);
+                LOGGER.debug("Registered wireless node at {} with name '{}'.", pos, nodeName);
             } else {
-                AcademyCraft.LOGGER.warn("Failed to register wireless node at {} with name '{}'.", pos, nodeName);
+                LOGGER.warn("Failed to register wireless node at {} with name '{}'.", pos, nodeName);
             }
         }
     }
@@ -105,8 +107,8 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     }
 
     @Override
-    public <T extends BlockEntity> @NotNull BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return (level1, pos, state1, blockEntity) -> {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+        return (_, pos, _, blockEntity) -> {
             if (blockEntity instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
                 wirelessNodeBlockEntity.ticks++;
                 if (wirelessNodeBlockEntity.getLevel() instanceof ServerLevel serverLevel) {
@@ -119,7 +121,7 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     @Override
     public @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof WirelessNodeBlockEntity wirelessNodeBlockEntity) {
-            return new SimpleMenuProvider((containerId, playerInventory, player) ->
+            return new SimpleMenuProvider((containerId, playerInventory, _) ->
                     new WirelessNodeMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), wirelessNodeBlockEntity), Component.empty());
         }
         return null;

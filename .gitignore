@@ -1,5 +1,6 @@
 # User-specific stuff
-.idea/
+.idea/*
+!.idea/icon.svg
 
 *.iml
 *.ipr
@@ -124,3 +125,5 @@ runs/
 *.py
 *.txt
 *.exe
+
+.vscode

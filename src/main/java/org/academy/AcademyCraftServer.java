@@ -1,5 +1,6 @@
 package org.academy;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -12,6 +13,7 @@ import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.util.concurrent.ScheduledFuture;
@@ -22,6 +24,8 @@ import java.util.concurrent.TimeUnit;
  */
 @EventBusSubscriber
 public final class AcademyCraftServer {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     @Nullable
     public static AcademyCraftConfig serverConfig;
     @Nullable
@@ -66,16 +70,16 @@ public final class AcademyCraftServer {
 
         if (worldDataSaveTask != null) worldDataSaveTask.cancel(false);
 
-        worldDataSaveTask = AcademyCraft.executorService.scheduleAtFixedRate(
+        worldDataSaveTask = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
                 WorldData::saveData, 5, 5, TimeUnit.MINUTES
         );
-        AcademyCraft.LOGGER.info("Scheduled periodic world data saving.");
+        LOGGER.info("Scheduled periodic world data saving.");
     }
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         if (worldDataSaveTask != null) worldDataSaveTask.cancel(false);
-        AcademyCraft.LOGGER.info("Server stopping. Performing final data saves...");
+        LOGGER.info("Server stopping. Performing final data saves...");
         WorldData.saveData();
         if (serverConfig != null) serverConfig.save();
     }

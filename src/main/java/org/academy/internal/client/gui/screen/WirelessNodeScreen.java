@@ -12,7 +12,7 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.screen.ContainerUIScreen;
+import org.academy.api.client.gui.screen.ContainerUiScreen;
 import org.academy.api.client.gui.util.InfoAreaUtil;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
@@ -28,15 +28,15 @@ import java.util.function.Consumer;
 
 import static org.academy.api.client.gui.util.InfoAreaUtil.*;
 
-public final class WirelessNodeScreen extends ContainerUIScreen<WirelessNodeMenu> {
+public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu> {
     private final BlockPos mainPos;
     private final WirelessNodeBlockEntity wirelessNodeBlockEntity;
     private int ticks;
-    private Consumer<String> energyValueSetter = s -> {
+    private Consumer<String> energyValueSetter = _ -> {
     };
-    private Consumer<String> capacityValueSetter = s -> {
+    private Consumer<String> capacityValueSetter = _ -> {
     };
-    private Consumer<String> rangeValueSetter = s -> {
+    private Consumer<String> rangeValueSetter = _ -> {
     };
 
     public WirelessNodeScreen(WirelessNodeMenu menu, Inventory playerInventory, Component title, WirelessNodeBlockEntity blockEntity) {
@@ -107,7 +107,7 @@ public final class WirelessNodeScreen extends ContainerUIScreen<WirelessNodeMenu
         invPage.addChild("effect", effect);
 
         var wirelessPage = WirelessPanelUtil.create(mainPos, true);
-        wirelessPage.setVisible(false);
+        wirelessPage.setVisibility(Widget.Visibility.GONE);
         wirelessPage.setEnabled(false);
         content.addChild("page_wireless", wirelessPage);
 

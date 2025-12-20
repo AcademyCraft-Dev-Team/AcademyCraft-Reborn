@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.level.block.entity;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
@@ -18,16 +19,18 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.*;
 
 public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     private static final int MAX_ENERGY = 2_400_000;
     private static final int TRANSFER_RATE = 20000;
 
@@ -52,7 +55,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
             var networkData = WirelessNetworkData.get(serverLevel);
             cachedConfig = networkData.getNodeConfig(pos);
             if (cachedConfig == null && level != null && level.getGameTime() > 1) {
-                AcademyCraft.LOGGER.warn("Wireless Node BE at {} ticking but not (yet?) registered in SavedData!", pos);
+                LOGGER.warn("Wireless Node BE at {} ticking but not (yet?) registered in SavedData!", pos);
             }
             return;
         }
@@ -86,21 +89,21 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     }
 
     private void handleUserDisconnect(ServerLevel level, BlockPos userPos) {
-        AcademyCraft.LOGGER.warn("Node at {} detected invalid or missing user at {}. Requesting disconnect from SavedData.", worldPosition, userPos);
+        LOGGER.warn("Node at {} detected invalid or missing user at {}. Requesting disconnect from SavedData.", worldPosition, userPos);
         var networkData = WirelessNetworkData.get(level);
         var removed = networkData.disconnectUserFromNode(worldPosition, userPos);
         if (removed) {
             cachedConfig = networkData.getNodeConfig(worldPosition);
-            AcademyCraft.LOGGER.debug("Successfully disconnected user {} from node {} in SavedData.", userPos, worldPosition);
+            LOGGER.debug("Successfully disconnected user {} from node {} in SavedData.", userPos, worldPosition);
         } else {
-            AcademyCraft.LOGGER.warn("Failed request to disconnect user {} from node {} in SavedData.", userPos, worldPosition);
+            LOGGER.warn("Failed request to disconnect user {} from node {} in SavedData.", userPos, worldPosition);
         }
         var userBE = level.getBlockEntity(userPos);
         if (userBE instanceof WirelessUser user) {
             try {
                 user.setConnectedNodePosition(null);
             } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Error notifying potentially invalid user BE at {} about disconnect: {}", userPos, e.getMessage());
+                LOGGER.error("Error notifying potentially invalid user BE at {} about disconnect: {}", userPos, e.getMessage());
             }
         }
     }
@@ -127,7 +130,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         try {
             return user.extractEnergy(maxAmount, simulate);
         } catch (Exception e) {
-            AcademyCraft.LOGGER.error("Error extracting energyCost from user at {}: {}", user, e.getMessage());
+            LOGGER.error("Error extracting energyCost from user at {}: {}", user, e.getMessage());
             return 0;
         }
     }
@@ -137,7 +140,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         try {
             return user.receiveEnergy(maxAmount, simulate);
         } catch (Exception e) {
-            AcademyCraft.LOGGER.error("Error inserting energyCost into user at {}: {}", user, e.getMessage());
+            LOGGER.error("Error inserting energyCost into user at {}: {}", user, e.getMessage());
             return 0;
         }
     }

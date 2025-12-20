@@ -27,7 +27,7 @@ public class ArcRenderer extends EntityRenderer<Arc, ArcRenderState> {
         poseStack.mulPose(matrix4f);
 
         if (renderState.renderData != null) {
-            ArcFactory.render(poseStack, submitNodeCollector, renderState.renderData);
+            ArcFactory.render(poseStack, renderState.renderData);
         }
 
         poseStack.popPose();

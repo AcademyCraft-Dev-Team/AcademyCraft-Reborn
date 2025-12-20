@@ -151,7 +151,7 @@ public class DirStrike extends Skill {
                     var outwardDir = blockCenter.subtract(playerCenter).normalize();
 
                     var yVel = MathUtil.RANDOM.nextDouble(0.2, 0.3);
-                    var outwardVel = 0.1 + level.random.nextDouble();
+                    var outwardVel = 0.1 + level.getRandom().nextDouble();
 
                     var velocity = new Vec3(outwardDir.x * outwardVel, yVel, outwardDir.z * outwardVel);
 

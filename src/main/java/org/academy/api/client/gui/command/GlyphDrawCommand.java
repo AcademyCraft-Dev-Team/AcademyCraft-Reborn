@@ -5,7 +5,8 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.font.TextRenderable;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.util.LightCoordsUtil;
+import org.academy.api.client.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.joml.Matrix4f;
@@ -15,14 +16,14 @@ import java.util.List;
 public class GlyphDrawCommand extends DrawCommand {
     private final TextRenderable renderable;
 
-    public GlyphDrawCommand(TextRenderable renderable ) {
+    public GlyphDrawCommand(TextRenderable renderable) {
         super(renderable.guiPipeline());
         this.renderable = renderable;
     }
 
     @Override
     public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
-        renderable.render(pose, consumer, LightTexture.FULL_BRIGHT, true);
+        renderable.render(pose, consumer, 0, true);
     }
 
     @Override
@@ -35,7 +36,7 @@ public class GlyphDrawCommand extends DrawCommand {
                 ),
                 new TextureBinding(
                         "Sampler2",
-                        Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(),
+                        Render.TextureViews.getInstance().getUiLightmapTextureView(),
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                 )
         );

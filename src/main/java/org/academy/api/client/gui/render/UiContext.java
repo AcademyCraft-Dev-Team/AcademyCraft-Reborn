@@ -6,7 +6,6 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.DynamicUniformStorage;
@@ -19,7 +18,6 @@ import org.academy.api.common.util.UncheckedUtil;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
-import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,9 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * 看情况 close 喵, 像 ScreenDispatcher 这种就没必要 close 了喵
  */
-public class UIContext {
-    private static final Logger LOGGER = LogUtils.getLogger();
-
+public class UiContext {
     private final AtomicReference<@Nullable List<SubmittedCommand>> commandList = new AtomicReference<>();
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -46,11 +42,11 @@ public class UIContext {
     @Nullable
     private GpuBuffer dynamicTransformsUbo;
 
-    public UIContext() {
+    public UiContext() {
         this(3000);
     }
 
-    public UIContext(float layered) {
+    public UiContext(float layered) {
         Minecraft.getInstance().execute(() -> initOnRenderThread(layered));
     }
 
@@ -160,7 +156,7 @@ public class UIContext {
     private <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreateUbo(Class<T> uboClass, int size) {
         return UncheckedUtil.uncheckedCast(dynamicUniformStorages.computeIfAbsent(
                 uboClass,
-                k -> new DynamicUniformStorage<>(uboClass.getSimpleName() + "_UBO", size, 2)
+                _ -> new DynamicUniformStorage<>(uboClass.getSimpleName() + "_UBO", size, 2)
         ));
     }
 

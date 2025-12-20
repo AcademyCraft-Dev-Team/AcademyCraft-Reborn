@@ -6,7 +6,7 @@ import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.render.MatrixStack;
 import org.jetbrains.annotations.NotNull;
 
-public class WindGenWorldGUI {
+public class WindGenWorldGui {
     public static final float WIDTH = 640;
     public static final float HEIGHT = 400;
     public final AbstractWidgetContainer rootContainer = new FrameLayoutWidget();

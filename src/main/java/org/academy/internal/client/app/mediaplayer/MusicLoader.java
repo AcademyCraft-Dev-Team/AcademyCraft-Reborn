@@ -2,9 +2,11 @@ package org.academy.internal.client.app.mediaplayer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mojang.logging.LogUtils;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +16,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 public class MusicLoader implements PreparableReloadListener {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     private static final Gson GSON = new GsonBuilder().create();
     private static final String FILE_PATH = "musics/music_player.json";
 
@@ -32,11 +36,11 @@ public class MusicLoader implements PreparableReloadListener {
                                 combinedMap.putAll(map);
                             }
                         } catch (Exception e) {
-                            AcademyCraft.LOGGER.error("Failed to parse '{}' from resource pack '{}'", FILE_PATH, resource.sourcePackId(), e);
+                            LOGGER.error("Failed to parse '{}' from resource pack '{}'", FILE_PATH, resource.sourcePackId(), e);
                         }
                     }
                 } catch (Exception e) {
-                    AcademyCraft.LOGGER.error("Failed to read '{}' in namespace '{}'", FILE_PATH, namespace, e);
+                    LOGGER.error("Failed to read '{}' in namespace '{}'", FILE_PATH, namespace, e);
                 }
             }
             return combinedMap;

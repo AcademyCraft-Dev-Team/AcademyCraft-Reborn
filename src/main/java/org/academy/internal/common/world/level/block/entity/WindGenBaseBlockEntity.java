@@ -17,7 +17,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.WindGenBaseAnimation;
-import org.academy.internal.client.gui.world.WindGenWorldGUI;
+import org.academy.internal.client.gui.world.WindGenWorldGui;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jspecify.annotations.Nullable;
 
@@ -29,7 +29,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     public final AnimationState setupState = new AnimationState();
     public final AnimationState shutdownState = new AnimationState();
     @Nullable
-    public WindGenWorldGUI windGenWorldGUI;
+    public WindGenWorldGui windGenWorldGUI;
     public Completeness completeness = Completeness.BASE_ONLY;
     private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     @Nullable
@@ -44,7 +44,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     public WindGenBaseBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.WIND_GEN_BASE.get(), pos, blockState);
         if (isMain()) {
-            windGenWorldGUI = new WindGenWorldGUI();
+            windGenWorldGUI = new WindGenWorldGui();
             windGenWorldGUI.onInit();
             shutdownState.start(ticks);
         }

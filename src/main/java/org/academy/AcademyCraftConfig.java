@@ -1,10 +1,12 @@
 package org.academy;
 
 import com.google.gson.*;
+import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.UncheckedUtil;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.FileReader;
@@ -14,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class AcademyCraftConfig {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<String, TypeHandler<?>> HANDLER_MAP = new ConcurrentHashMap<>();
     private static final Gson GSON = new GsonBuilder().create();
 
@@ -70,7 +73,7 @@ public final class AcademyCraftConfig {
             gsonPretty.toJson(rootJsonConfig, writer);
             dirty = false;
         } catch (Throwable e) {
-            AcademyCraft.LOGGER.warn("Failed to save config to {}", configFile.getAbsolutePath(), e);
+            LOGGER.warn("Failed to save config to {}", configFile.getAbsolutePath(), e);
         }
     }
 
@@ -115,11 +118,11 @@ public final class AcademyCraftConfig {
     public void setConfig(String configKey, Object configInstance) {
         var handler = HANDLER_MAP.get(configKey);
         if (handler == null) {
-            AcademyCraft.LOGGER.warn("Attempted to set config for unregistered key: {}", configKey);
+            LOGGER.warn("Attempted to set config for unregistered key: {}", configKey);
             return;
         }
         if (!handler.getTypeClass().isInstance(configInstance)) {
-            AcademyCraft.LOGGER.warn("Attempted to set config with incorrect type for key: {}. Expected {}, got {}",
+            LOGGER.warn("Attempted to set config with incorrect type for key: {}. Expected {}, got {}",
                     configKey, handler.getTypeClass().getName(), configInstance.getClass().getName());
             return;
         }

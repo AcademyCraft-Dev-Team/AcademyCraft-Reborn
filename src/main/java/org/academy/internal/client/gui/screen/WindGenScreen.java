@@ -10,7 +10,7 @@ import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.screen.ContainerUIScreen;
+import org.academy.api.client.gui.screen.ContainerUiScreen;
 import org.academy.api.client.gui.util.InfoAreaUtil;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
@@ -24,17 +24,17 @@ import java.util.function.Consumer;
 import static org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow;
 import static org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow;
 
-public final class WindGenScreen extends ContainerUIScreen<WindGenMenu> {
+public final class WindGenScreen extends ContainerUiScreen<WindGenMenu> {
     private final BlockPos mainPos;
     public final WindGenBaseBlockEntity blockEntity;
-    private Consumer<Float> topAlphaSetter = ignored -> {
+    private Consumer<Float> topAlphaSetter = _ -> {
     };
-    private Consumer<Float> pillarAlphaSetter = ignored -> {
+    private Consumer<Float> pillarAlphaSetter = _ -> {
     };
-    private Consumer<Float> baseAlphaSetter = ignored -> {
+    private Consumer<Float> baseAlphaSetter = _ -> {
     };
     public static final String AF = "%d AF";
-    private Consumer<String> bufferValueSetter = ignored -> {
+    private Consumer<String> bufferValueSetter = _ -> {
     };
 
     public WindGenScreen(WindGenMenu menu, Inventory playerInventory, Component title, WindGenBaseBlockEntity blockEntity) {
@@ -103,7 +103,7 @@ public final class WindGenScreen extends ContainerUIScreen<WindGenMenu> {
         }
 
         var wirelessPage = WirelessPanelUtil.create(mainPos, true);
-        wirelessPage.setVisible(false);
+        wirelessPage.setVisibility(Widget.Visibility.GONE);
         wirelessPage.setEnabled(false);
         content.addChild("page_wireless", wirelessPage);
 

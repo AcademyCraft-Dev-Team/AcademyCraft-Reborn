@@ -93,10 +93,6 @@ public final class ImGuiUIDebugger {
             widget.setTranslationY(translation[1]);
         }
 
-        var visible = new ImBoolean(widget.isVisible());
-        if (ImGui.checkbox("Visible", visible)) {
-            widget.setVisible(visible.get());
-        }
         ImGui.sameLine();
         var enabled = new ImBoolean(widget.isEnabled());
         if (ImGui.checkbox("Enabled", enabled)) {

@@ -1,8 +1,5 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.drawable.ColorDrawable;
-import org.academy.api.client.gui.drawable.StateListDrawable;
-import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.OnClickListener;
 import org.academy.api.client.util.ClientUtil;
@@ -23,12 +20,6 @@ public class ButtonWidget extends FrameLayoutWidget {
      */
     public ButtonWidget() {
         setClickable(true);
-
-        var sld = new StateListDrawable();
-        sld.addState(WidgetState.DEFAULT, new ColorDrawable(0x55000000));
-        sld.addState(WidgetState.HOVERED, new ColorDrawable(0x65FFFFFF));
-        sld.addState(WidgetState.PRESSED, new ColorDrawable(0x85FFFFFF));
-        setBackground(sld);
     }
 
     /**

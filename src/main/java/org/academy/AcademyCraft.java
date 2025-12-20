@@ -15,11 +15,11 @@ import java.util.concurrent.ScheduledExecutorService;
 @Mod(AcademyCraft.MODID)
 public final class AcademyCraft {
     public static final String MODID = "academy";
-    public static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    public static final ScheduledExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadScheduledExecutor();
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static boolean DEBUG_UI = false;
-    public static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);

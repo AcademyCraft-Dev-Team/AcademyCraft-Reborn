@@ -5,7 +5,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -26,6 +25,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
@@ -104,15 +104,22 @@ public final class ArcGenerate extends Skill {
             var currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
             if (currentComputingPower <= 10) return;
 
-            var lookVec = player.getLookAngle();
-            var playerPos = player.position();
+            var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
             var eyePos = player.getEyePosition();
-            var rightVec = lookVec.cross(new Vec3(0, 1, 0)).normalize();
-            var right = (player.getMainArm() == HumanoidArm.RIGHT);
-            var handPos = playerPos.add(rightVec.scale(right ? 0.4 : -0.4f)).add(0, 1.2, 0).add(lookVec.scale(0.5));
+
+            var playerOrientation = new Quaternionf().rotateY(yawRad);
+
+            var look = new Vector3f(0, 0, 1).rotate(playerOrientation);
+            var up = new Vector3f(0, 1, 0).rotate(playerOrientation);
+            var right = new Vector3f(-1, 0, 0).rotate(playerOrientation);
+
+            var handPos = eyePos
+                    .add(new Vec3(right).scale(0.35))
+                    .add(new Vec3(up).scale(-0.8))
+                    .add(new Vec3(look).scale(0.35));
 
             var length = LevelUtil.getValidViewDistance(player, 10);
-            var targetPos = eyePos.add(lookVec.scale(length));
+            var targetPos = eyePos.add(player.getLookAngle().scale(length));
             var trunkLength = (float) handPos.distanceTo(targetPos);
 
             var arc = new ArcEffect(level, 20);

@@ -2,20 +2,22 @@ package org.academy.api.client.gui.widget;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
-import org.academy.AcademyCraft;
 import org.academy.api.client.gui.drawable.StateListDrawable;
 import org.academy.api.client.gui.drawable.TextureDrawable;
-import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.OnClickListener;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 
 public class ImageButtonWidget extends AbstractButtonWidget {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     protected int intrinsicWidth = 0;
     protected int intrinsicHeight = 0;
 
@@ -28,8 +30,8 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         hoveredDrawable.setTintColor(0xFFFFFFFF);
 
         var sld = new StateListDrawable();
-        sld.addState(WidgetState.DEFAULT, defaultDrawable);
-        sld.addState(WidgetState.HOVERED, hoveredDrawable);
+        sld.setDefault(defaultDrawable);
+        sld.addState(State.HOVERED, hoveredDrawable);
 
         setBackground(sld);
     }
@@ -43,8 +45,8 @@ public class ImageButtonWidget extends AbstractButtonWidget {
         hoveredDrawable.setTintColor(0xFFFFFFFF);
 
         var sld = new StateListDrawable();
-        sld.addState(WidgetState.DEFAULT, defaultDrawable);
-        sld.addState(WidgetState.HOVERED, hoveredDrawable);
+        sld.setDefault(defaultDrawable);
+        sld.addState(State.HOVERED, hoveredDrawable);
 
         setBackground(sld);
         resolveIntrinsicSize(textureLocation);
@@ -66,7 +68,7 @@ public class ImageButtonWidget extends AbstractButtonWidget {
                 intrinsicHeight = nativeImage.getHeight();
             }
         } catch (IOException e) {
-            AcademyCraft.LOGGER.error("Failed to resolve intrinsic size for texture {}", textureLocation, e);
+            LOGGER.error("Failed to resolve intrinsic size for texture {}", textureLocation, e);
             intrinsicWidth = 0;
             intrinsicHeight = 0;
         }

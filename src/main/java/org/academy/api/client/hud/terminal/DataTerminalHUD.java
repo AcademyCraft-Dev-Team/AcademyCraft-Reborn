@@ -1,9 +1,9 @@
-package org.academy.internal.client.hud;
+package org.academy.api.client.hud.terminal;
 
-import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -12,6 +12,7 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -23,11 +24,8 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
-import org.academy.api.client.config.KeyBindingConfig;
-import org.academy.api.client.gui.animation.EasingFunctions;
-import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.animation.ValueAnimator;
-import org.academy.api.client.gui.apps.MusicApp;
+import org.academy.api.client.app.App;
+import org.academy.api.client.gui.animation.*;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
@@ -37,16 +35,15 @@ import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
-import org.academy.api.client.gui.render.UIContext;
+import org.academy.api.client.gui.render.UiContext;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
-import org.jetbrains.annotations.NotNull;
+import org.academy.internal.client.app.MusicApp;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -61,6 +58,8 @@ import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class DataTerminalHUD {
@@ -74,32 +73,33 @@ public final class DataTerminalHUD {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final FrameLayoutWidget ROOT = new FrameLayoutWidget();
     @Nullable
-    private static UIContext uiContext;
+    private static UiContext uiContext;
     /**
      * Main 和 Render 线程都需要用喵
      */
     private static final AtomicBoolean ACTIVE = new AtomicBoolean();
     private static volatile double xpos, ypos;
     private static double startXpos, startYpos;
-
+    @Nullable
     private static LinearLayoutWidget contentList;
+    @Nullable
     private static FrameLayoutWidget appContainer;
+    @Nullable
     private static FrameLayoutWidget main;
 
     // 视图切换状态动画相关
     private static float viewStateProgress = 0.0f;// 1.0f:平行于屏幕
-    private static ValueAnimator viewStateAnimator;
 
     @MainThread
     public static void toggleActive() {
         // 保险喵?
         boolean prev;
-        do {
-            prev = ACTIVE.get();
-        } while (!ACTIVE.compareAndSet(prev, !prev));
+        do prev = ACTIVE.get();
+        while (!ACTIVE.compareAndSet(prev, !prev));
 
         var mc = Minecraft.getInstance();
         var w = mc.getWindow();
+        closeApp();
         if (isActive()) {
             ClientUtil.playDownSound();
             var m = mc.mouseHandler;
@@ -111,9 +111,7 @@ public final class DataTerminalHUD {
             startXpos = m.xpos;
             startYpos = m.ypos;
             init();
-        } else {
-            GLFW.glfwSetCursorPos(w.handle(), startXpos, startYpos);
-        }
+        } else GLFW.glfwSetCursorPos(w.handle(), startXpos, startYpos);
     }
 
     public static boolean isActive() {
@@ -140,7 +138,7 @@ public final class DataTerminalHUD {
     }
 
     public static void initRender() {
-        uiContext = new UIContext() {
+        uiContext = new UiContext() {
             @Override
             public void generateCommands(RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick) {
                 super.generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
@@ -258,16 +256,16 @@ public final class DataTerminalHUD {
                         );
                         appRows.addChild("row_one", rowOne);
                         {
-                            rowOne.addChild("settings", createAppIcon(
-                                    "Settings",
+                            rowOne.addChild("settings", createApp(
                                     Resource.Textures.ICON_SETTINGS,
+                                    "Settings",
                                     DataTerminalHUD::closeApp
                             ));
 
-                            rowOne.addChild("music", createAppIcon(
-                                    "Music",
+                            rowOne.addChild("music", createApp(
                                     Resource.Textures.ICON_MUSIC_PLAYER,
-                                    () -> openApp(new MusicApp(Resource.Textures.ICON_MUSIC_PLAYER))
+                                    "Music",
+                                    () -> openApp(MusicApp.INSTANCE)
                             ));
                         }
                     }
@@ -275,7 +273,7 @@ public final class DataTerminalHUD {
             }
             appContainer = new FrameLayoutWidget();
             appContainer.setLayoutParams(new FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT));
-            appContainer.setVisible(false);
+            appContainer.setVisibility(Widget.Visibility.INVISIBLE);
             main.addChild("app_container", appContainer);
         }
     }
@@ -286,11 +284,8 @@ public final class DataTerminalHUD {
 
     @MainThread
     public static void perform(double mouseX, double mouseY, float deltaPartialTick) {
-        if (uiContext != null) {
-            uiContext.perform(ROOT, mouseX, mouseY, deltaPartialTick);
-        } else {
-            hasNotBeenInitialized();
-        }
+        if (uiContext != null) uiContext.perform(ROOT, mouseX, mouseY, deltaPartialTick);
+        else hasNotBeenInitialized();
     }
 
     public static void render(
@@ -325,12 +320,10 @@ public final class DataTerminalHUD {
 
             var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
-            try (
-                    var renderPass = commandEncoder.createRenderPass(
+            try (var renderPass = commandEncoder.createRenderPass(
                             () -> "Blit Pass to " + color + depth,
                             color, OptionalInt.empty(), depth, OptionalDouble.empty()
-                    )
-            ) {
+            )) {
                 renderPass.setPipeline(Render.RenderPipelines.IMAGE_STENCIL);
                 renderPass.bindTexture(
                         "Sampler0",
@@ -363,7 +356,7 @@ public final class DataTerminalHUD {
         viewMatrix.scale(scale, scale, scale);
 
         // 中心对齐
-        var currentWidth = main.getWidth();
+        var currentWidth = main == null ? MAIN_WIDTH : main.getWidth();
         var widgetCenterX = guiWidth - 32 - (currentWidth / 2.0f);
         var screenCenterX = guiWidth / 2.0f;
         var shiftX = viewStateProgress * (screenCenterX - widgetCenterX);
@@ -403,10 +396,8 @@ public final class DataTerminalHUD {
     }
 
     @SuppressWarnings("ConstantConditions")
-    private static void openApp(Widget appWidget) {
-        if (viewStateAnimator != null && viewStateAnimator.isRunning()) viewStateAnimator.cancel();
-
-        viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 1.0f);
+    private static void openApp(App app) {
+        var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 1.0f);
         viewStateAnimator.setDuration(400);
         viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
         viewStateAnimator.addUpdateListener(anim -> {
@@ -421,126 +412,109 @@ public final class DataTerminalHUD {
         viewStateAnimator.start();
 
         if (contentList == null || appContainer == null) return;
-        contentList.setVisible(false);
+        contentList.setVisibility(Widget.Visibility.INVISIBLE);
         appContainer.clearChildren();
-        appContainer.addChild("current_app", appWidget);
-        appContainer.setVisible(true);
+        appContainer.addChild("current_app", app.content());
+        appContainer.setVisibility(Widget.Visibility.VISIBLE);
     }
 
     @SuppressWarnings("ConstantConditions")
     public static void closeApp() {
-        if (viewStateAnimator != null && viewStateAnimator.isRunning()) viewStateAnimator.cancel();
-
-        viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 0.0f);
+        var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 0.0f);
         viewStateAnimator.setDuration(400);
         viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
         viewStateAnimator.addUpdateListener(anim -> {
             viewStateProgress = anim.getAnimatedValue();
-
             if (main != null) {
                 float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
                 float targetWidth = screenWidth * 0.8f;
                 main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
             }
-
-            if (viewStateProgress == 0.0f) {
+        });
+        viewStateAnimator.addListener(new AnimatorListener() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
                 if (appContainer != null) {
-                    appContainer.setVisible(false);
+                    appContainer.setVisibility(Widget.Visibility.INVISIBLE);
                     appContainer.clearChildren();
                 }
                 if (contentList != null) {
-                    contentList.setVisible(true);
+                    contentList.setVisibility(Widget.Visibility.VISIBLE);
                 }
             }
         });
         viewStateAnimator.start();
     }
 
-    private static Widget createAppIcon(String nameStr, Identifier iconRes, Runnable onClick) {
-        var container = new LinearLayoutWidget();
-        container.setSpacing(1);
-        container.setOrientation(Orientation.VERTICAL);
-        container.setLayoutParams(new LinearLayoutWidget.LayoutParams().width(48).heightMode(SizeMode.WRAP_CONTENT));
-        var iconArea = getFrameLayoutWidget(onClick);
-        iconArea.setLayoutParams(new LinearLayoutWidget.LayoutParams().size(48, 48));
-        container.addChild("icon_area", iconArea);
+    public static LinearLayoutWidget createApp(Identifier icon, String name, Runnable onClick) {
+        var size = 48;
+        var layout = new LinearLayoutWidget();
+        layout.setSpacing(1);
+        layout.setOrientation(Orientation.VERTICAL);
+        layout.setLayoutParams(
+                new LinearLayoutWidget.LayoutParams()
+                        .width(size)
+                        .heightMode(SizeMode.WRAP_CONTENT)
+        );
+        {
+            var iconArea = new ButtonWidget();
+            iconArea.setLayoutParams(
+                    new LinearLayoutWidget.LayoutParams()
+                            .size(size, size)
+            );
+            iconArea.setOnClickListener(_ -> onClick.run());
+            layout.addChild("icon_area", iconArea);
+            {
+                var back = new ImageWidget(Resource.Textures.APP_BACK);
+                back.setColor(0.8f, 0.8f, 0.8f);
+                iconArea.addChild("back", back);
 
-        var back = new ImageWidget(Resource.Textures.APP_BACK) {
-            @Override
-            public void render(RenderContext context) {
-                float brightness = iconArea.isMouseOver(xpos, ypos) ? 1.0f : 0.8f;
-                setColor(brightness, brightness, brightness);
-                super.render(context);
+                var iconWidget = new ImageWidget(icon);
+                iconWidget.setColor(0.9f, 0.9f, 0.9f);
+                iconWidget.setLayoutParams(
+                        new FrameLayoutWidget.LayoutParams()
+                                .size(size / 2f, size / 2f)
+                                .gravity(Gravity.CENTER)
+                );
+                iconArea.addChild("icon", iconWidget);
+
+                var progressState = new float[]{0.0f};
+
+                Consumer<Float> updateState = progress -> {
+                    progressState[0] = progress;
+                    iconArea.setScale(1.0f + 0.2f * progress);
+                    back.setBrightness(0.8f + 0.2f * progress);
+                    iconWidget.setBrightness(0.9f + 0.1f * progress);
+                };
+
+                Supplier<Float> getProgress = () -> progressState[0];
+
+                var animator = new StateListAnimator();
+                animator.addState(Widget.State.HOVERED,
+                        ObjectAnimator.ofFloat(getProgress, updateState, 1.0f)
+                                .setDuration(100)
+                                .setInterpolator(EasingFunctions.EASE_OUT_SINE)
+                );
+                animator.addState(Widget.State.NONE,
+                        ObjectAnimator.ofFloat(getProgress, updateState, 0.0f)
+                                .setDuration(100)
+                                .setInterpolator(EasingFunctions.EASE_OUT_SINE)
+                );
+                iconArea.setStateListAnimator(animator);
             }
-        };
-        iconArea.addChild("back", back);
-
-        var icon = new ImageWidget(iconRes) {
-            @Override
-            public void render(RenderContext context) {
-                float brightness = iconArea.isMouseOver(xpos, ypos) ? 1.0f : 0.8f;
-                setColor(brightness, brightness, brightness);
-                super.render(context);
-            }
-        };
-        icon.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(24, 24).gravity(Gravity.CENTER));
-        iconArea.addChild("icon", icon);
-
-        var nameLabel = new LabelWidget(nameStr);
-        nameLabel.setLayoutParams(new LinearLayoutWidget.LayoutParams().gravity(Gravity.CENTER).margin(2, 0));
-        container.addChild("name", nameLabel);
-
-        return container;
+            var nameWidget = new LabelWidget("name");
+            nameWidget.setLayoutParams(
+                    new LinearLayoutWidget.LayoutParams()
+                            .gravity(Gravity.CENTER)
+                            .margin(2, 0)
+            );
+            layout.addChild("name", nameWidget);
+        }
+        return layout;
     }
 
     public static float getViewStateProgress() {
         return viewStateProgress;
-    }
-
-    private static @NotNull FrameLayoutWidget getFrameLayoutWidget(Runnable onClick) {
-        var iconArea = new FrameLayoutWidget() {
-            private boolean overed;
-            private float scale = 1;
-
-            @Override
-            public void render(RenderContext context) {
-                var currentOvered = isMouseOver(xpos, ypos);
-                if (currentOvered != this.overed) {
-                    this.overed = currentOvered;
-                    startAnimation(
-                            ObjectAnimator.ofFloat(
-                                    this::setScale,
-                                    scale,
-                                    overed ? 1.2f : 1f
-                            ).setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
-                    );
-                }
-
-                context.pose().pushPose();
-                var centerX = getWidth() / 2f;
-                var centerY = getHeight() / 2f;
-                context.pose().translate(centerX, centerY, 0);
-                context.pose().scale(scale, scale, 1f);
-                context.pose().translate(-centerX, -centerY, 0);
-                super.render(context);
-                context.pose().popPose();
-            }
-
-            private void setScale(float s) {
-                this.scale = s;
-            }
-
-            @Override
-            protected void onMousePressed(MouseEvent event) {
-                if (isMouseOver(event.getX(), event.getY())) {
-                    ClientUtil.playDownSound();
-                    onClick.run();
-                    event.consume();
-                }
-            }
-        };
-        iconArea.setClickable(true);
-        return iconArea;
     }
 
     @SubscribeEvent
@@ -590,11 +564,9 @@ public final class DataTerminalHUD {
     public static void onMouseScroll(MouseScrollEvent event) {
         if (isActive() && Minecraft.getInstance().screen == null) {
             var options = Minecraft.getInstance().options;
-            var d0 =
-                    (options.discreteMouseScroll().get()
-                            ?
-                            Math.signum(event.yOffset)
-                            : event.yOffset
+            var d0 = (options.discreteMouseScroll().get()
+                    ? Math.signum(event.yOffset)
+                    : event.yOffset
                     ) * options.mouseWheelSensitivity().get();
             ROOT.dispatchEvent(new ScrollEvent(xpos, ypos, d0));
             event.setCanceled(true);
@@ -603,87 +575,50 @@ public final class DataTerminalHUD {
 
     @SubscribeEvent
     public static void onKey(KeyInputEvent event) {
-        if (isActive() && Minecraft.getInstance().screen == null) {
-            var options = Minecraft.getInstance().options;
-            var key = event.key;
-            var scanCode = event.scanCode;
-            var mcKeyEvent = new net.minecraft.client.input.KeyEvent(key, scanCode, event.modifiers);
-            var isMovementKey
-                    = options.keyUp.matches(mcKeyEvent)
-                    || options.keyDown.matches(mcKeyEvent)
-                    || options.keyLeft.matches(mcKeyEvent)
-                    || options.keyRight.matches(mcKeyEvent)
-                    || options.keyJump.matches(mcKeyEvent)
-                    || options.keyShift.matches(mcKeyEvent)
-                    || options.keySprint.matches(mcKeyEvent);
-            var isHotbarKey = false;
+        if (isActive()
+                && Minecraft.getInstance().screen == null
+                && !ignoreKey(event.key, event.scanCode, event.modifiers)
+        ) {
+            var keyEvent = new KeyEvent(
+                    event.action == InputConstants.RELEASE ? EventType.KEY_RELEASED : EventType.KEY_PRESSED,
+                    event.key, event.scanCode, event.modifiers
+            );
+            ROOT.dispatchEvent(keyEvent);
+            if (event.action == InputConstants.RELEASE && !keyEvent.isConsumed()) toggleActive();
+            event.setCanceled(true);
+        }
+    }
 
-            for (var hotbarKey : options.keyHotbarSlots) {
-                if (hotbarKey.matches(mcKeyEvent)) {
-                    isHotbarKey = true;
-                    break;
-                }
-            }
-
-            if (!isMovementKey && !isHotbarKey) {
-                var keyEvent
-                        = event.action == 0
-                        ? new KeyEvent(EventType.KEY_RELEASED, event.key, event.scanCode, event.modifiers)
-                        : new KeyEvent(EventType.KEY_PRESSED, event.key, event.scanCode, event.modifiers);
-                ROOT.dispatchEvent(keyEvent);
-                if (event.action == 0 && !keyEvent.isConsumed()) toggleActive();
-                event.setCanceled(true);
+    private static boolean ignoreKey(
+            @InputConstants.Value int key, int scancode, @InputWithModifiers.Modifiers int modifiers
+    ) {
+        var options = Minecraft.getInstance().options;
+        var event = new net.minecraft.client.input.KeyEvent(key, scancode, modifiers);
+        var isHotbarKey = false;
+        for (var hotbarKey : options.keyHotbarSlots) {
+            if (hotbarKey.matches(event)) {
+                isHotbarKey = true;
+                break;
             }
         }
+        var isMovementKey
+                = options.keyUp.matches(event)
+                || options.keyDown.matches(event)
+                || options.keyLeft.matches(event)
+                || options.keyRight.matches(event)
+                || options.keyJump.matches(event)
+                || options.keyShift.matches(event)
+                || options.keySprint.matches(event);
+        return isHotbarKey || isMovementKey;
     }
 
     @SubscribeEvent
     public static void onScreenChange(ScreenEvent.Opening event) {
-        if (isActive()) {
-            toggleActive();
-        }
+        if (isActive()) toggleActive();
     }
 
     private static void hasNotBeenInitialized() {
         LOGGER.warn("DataTerminalHUD has not been initialized.");
-    }
-
-    public static class DataTerminalConfig extends KeyBindingConfig {
-        @SerializedName("layout")
-        public DataTerminalConfig.LayoutConfig layout = new DataTerminalConfig.LayoutConfig();
-        @SerializedName("blurRadius")
-        public float blurRadius = 10.0F;
-        @SerializedName("enableBlur")
-        public boolean enableBlur = true;
-        @SerializedName("mouseSensitivity")
-        public float mouseSensitivity = 1.0F;
-
-        public static class LayoutConfig {
-            @SerializedName("scale")
-            public float scale = 0.9F;
-            @SerializedName("cursorWidgetSize")
-            public float cursorWidgetSize = 4.0F;
-        }
-
-        public static final class Action implements TypeHandler<DataTerminalConfig> {
-            public static final TypeHandler<DataTerminalConfig> INSTANCE = new DataTerminalConfig.Action();
-
-            private Action() {
-            }
-
-            @Override
-            public DataTerminalConfig getDefault() {
-                return new DataTerminalConfig();
-            }
-
-            @Override
-            public Class<DataTerminalConfig> getTypeClass() {
-                return DataTerminalConfig.class;
-            }
-        }
-    }
-
-    private DataTerminalHUD() {
     }
 
     public record SDFData(Vector4f color, float radius,
@@ -697,5 +632,8 @@ public final class DataTerminalHUD {
                     .putFloat(radius)
                     .putFloat(softness);
         }
+    }
+
+    private DataTerminalHUD() {
     }
 }

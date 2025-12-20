@@ -4,7 +4,6 @@ import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.AnimatorListener;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.widget.ImageWidget;
 import org.academy.api.client.gui.widget.Widget;
 
 public final class AnimationUtil {
@@ -18,7 +17,7 @@ public final class AnimationUtil {
     public static void show(Widget widget) {
         widget.cancelAnimations();
         widget.setAlpha(0f);
-        widget.setVisible(true);
+        widget.setVisibility(Widget.Visibility.VISIBLE);
         widget.setEnabled(true);
 
         moveTranslationYShow(widget);
@@ -59,29 +58,11 @@ public final class AnimationUtil {
         widget.startAnimation(alphaAnim);
     }
 
-    public static void scaleShow(ImageWidget widget) {
-        widget.setWidthScale(SCALE_START);
-        widget.setHeightScale(SCALE_START);
-        widget.startAnimation(ObjectAnimator.ofFloat(val -> {
-            widget.setWidthScale(val);
-            widget.setHeightScale(val);
-        }, SCALE_START, 1.0f).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_OUT_BACK));
-    }
-
-    public static void scaleHide(ImageWidget widget, Runnable onEndCallback) {
-        var anim = ObjectAnimator.ofFloat(val -> {
-            widget.setWidthScale(val);
-            widget.setHeightScale(val);
-        }, 1.0f, SCALE_START).setDuration(DURATION).setInterpolator(EasingFunctions.EASE_IN_BACK);
-        anim.addListener(createHideListener(widget, onEndCallback));
-        widget.startAnimation(anim);
-    }
-
     private static AnimatorListener createHideListener(Widget widget, Runnable onEndCallback) {
         return new AnimatorListener() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                widget.setVisible(false);
+                widget.setVisibility(Widget.Visibility.INVISIBLE);
                 onEndCallback.run();
             }
         };

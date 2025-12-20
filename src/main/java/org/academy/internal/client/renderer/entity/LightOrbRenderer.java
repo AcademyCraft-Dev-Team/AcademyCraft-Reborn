@@ -1,12 +1,12 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.LightCoordsUtil;
 import org.academy.api.client.Render;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.renderer.BallRenderer;
@@ -43,7 +43,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
                 BloomEffect.getBlitToMainPost().getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_POST),
                 HEAD_BUFFER,
                 r, g, b, 1.0f,
-                LightTexture.FULL_BRIGHT,
+                LightCoordsUtil.FULL_BRIGHT,
                 OverlayTexture.NO_OVERLAY
         );
 
@@ -57,7 +57,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
                         vertexConsumer,
                         HEAD_BUFFER,
                         1.0f, 1.0f, 1.0f, 1.0f,
-                        LightTexture.FULL_BRIGHT,
+                        LightCoordsUtil.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY
                 )
         );

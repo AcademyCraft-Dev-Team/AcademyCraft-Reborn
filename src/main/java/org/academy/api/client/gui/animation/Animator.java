@@ -12,6 +12,7 @@ public abstract class Animator {
 
     public void start() {
         if (running) return;
+        running = true;
         AnimationManager.startAnimation(this);
     }
 

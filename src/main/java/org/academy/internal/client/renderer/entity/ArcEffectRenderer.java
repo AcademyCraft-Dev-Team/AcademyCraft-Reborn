@@ -11,7 +11,6 @@ import org.academy.internal.client.renderer.entity.state.ArcEffectRenderState;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class ArcEffectRenderer extends EntityRenderer<ArcEffect, ArcEffectRenderState> {
     public ArcEffectRenderer(EntityRendererProvider.Context context) {
@@ -26,7 +25,7 @@ public class ArcEffectRenderer extends EntityRenderer<ArcEffect, ArcEffectRender
 
         var cameraPos = cameraRenderState.pos.toVector3f();
         var time = renderState.ageInTicks - 1.0f + renderState.partialTick;
-        List<ArcFactory.ArcRenderData> renderDataList = new ArrayList<>(renderState.arcPaths.size());
+        var renderDataList = new ArrayList<ArcFactory.ArcRenderData>(renderState.arcPaths.size());
 
         for (var path : renderState.arcPaths) {
             renderDataList.add(PathProcessor.process(path, time, cameraPos));
@@ -36,7 +35,7 @@ public class ArcEffectRenderer extends EntityRenderer<ArcEffect, ArcEffectRender
         poseStack.translate(-renderState.x, -renderState.y, -renderState.z);
 
         for (var renderData : renderDataList) {
-            ArcFactory.render(poseStack, nodeCollector, renderData);
+            ArcFactory.render(poseStack, renderData);
         }
 
         poseStack.popPose();
