@@ -4,17 +4,20 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.render.RenderContext;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ImageWidget extends AbstractWidget {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     @Nullable
-    protected Identifier textureLocation;
+    protected Identifier textureIdentifier;
     @Nullable
     protected transient GpuTextureView textureView;
     private transient GpuSampler sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
@@ -25,41 +28,36 @@ public class ImageWidget extends AbstractWidget {
     protected float red = 1.0F;
     protected float green = 1.0F;
     protected float blue = 1.0F;
-    protected float widthScale = 1.0F;
-    protected float heightScale = 1.0F;
-    protected boolean centerScale = true;
 
     public ImageWidget(@Nullable GpuTextureView textureView) {
         this.textureView = textureView;
-        textureLocation = null;
+        textureIdentifier = null;
     }
 
-    public ImageWidget(@Nullable Identifier textureLocation) {
-        this.textureLocation = textureLocation;
+    public ImageWidget(@Nullable Identifier textureIdentifier) {
+        this.textureIdentifier = textureIdentifier;
         textureView = null;
     }
 
     public void resolveAndPrepareTexture() {
         if (textureView != null && !textureView.isClosed()) return;
 
-        if (textureLocation == null) {
+        if (textureIdentifier == null) {
             textureView = null;
             return;
         }
 
         try {
-            var texture = Minecraft.getInstance().getTextureManager().getTexture(textureLocation);
+            var texture = Minecraft.getInstance().getTextureManager().getTexture(textureIdentifier);
             textureView = texture.getTextureView();
         } catch (Exception e) {
-            AcademyCraft.LOGGER.error("Failed to resolve texture view for {}", textureLocation, e);
+            LOGGER.error("Failed to resolve texture view for {}", textureIdentifier, e);
             textureView = null;
         }
     }
 
     @Override
-    public void render(RenderContext context) {
-        if (!isVisible()) return;
-
+    protected void renderInternal(RenderContext context) {
         resolveAndPrepareTexture();
         if (textureView == null) return;
 
@@ -70,18 +68,12 @@ public class ImageWidget extends AbstractWidget {
         if (paddedWidth <= 0 || paddedHeight <= 0) return;
 
         var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
-        var scaledWidth = paddedWidth * widthScale;
-        var scaledHeight = paddedHeight * heightScale;
 
         context.pose().pushPose();
         {
             context.pose().translate(lp.paddingLeft, lp.paddingTop, 0);
 
-            if (centerScale) {
-                context.pose().translate((paddedWidth - scaledWidth) / 2.0F, (paddedHeight - scaledHeight) / 2.0F, 0.0F);
-            }
-
-            var command = new ImageDrawCommand(textureView, sampler, scaledWidth, scaledHeight, u0, v0, u1, v1, red, green, blue, finalAlpha);
+            var command = new ImageDrawCommand(textureView, sampler, paddedWidth, paddedHeight, u0, v0, u1, v1, red, green, blue, finalAlpha);
             context.submit(command);
         }
         context.pose().popPose();
@@ -125,13 +117,13 @@ public class ImageWidget extends AbstractWidget {
 
     public ImageWidget setTexture(@Nullable GpuTextureView textureView) {
         this.textureView = textureView;
-        textureLocation = null;
+        textureIdentifier = null;
         requestLayout();
         return this;
     }
 
     public ImageWidget setTexture(@Nullable Identifier textureLocation) {
-        this.textureLocation = textureLocation;
+        textureIdentifier = textureLocation;
         textureView = null;
         requestLayout();
         return this;
@@ -159,25 +151,14 @@ public class ImageWidget extends AbstractWidget {
         return this;
     }
 
-    public ImageWidget setWidthScale(float widthScale) {
-        this.widthScale = widthScale;
-        return this;
+    public float getBrightness() {
+        return red;
     }
 
-    public ImageWidget setHeightScale(float heightScale) {
-        this.heightScale = heightScale;
-        return this;
-    }
-
-    public ImageWidget setCenterScale(boolean centerScale) {
-        this.centerScale = centerScale;
-        return this;
-    }
-
-    public ImageWidget setScale(float widthScale, float heightScale, boolean center) {
-        this.widthScale = widthScale;
-        this.heightScale = heightScale;
-        centerScale = center;
+    public ImageWidget setBrightness(float val) {
+        red = val;
+        green = val;
+        blue = val;
         return this;
     }
 }

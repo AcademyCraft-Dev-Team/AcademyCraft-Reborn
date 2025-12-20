@@ -1,5 +1,6 @@
 package org.academy.api.server.ability;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -13,7 +14,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
-import org.academy.api.common.ability.*;
+import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.AcquireCategoryPacket;
+import org.academy.api.common.ability.LearnSkillPacket;
+import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.pakcet.*;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
@@ -28,6 +32,7 @@ import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
+import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +43,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public final class AbilitySystemServer {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public static final Map<UUID, LivePlayer> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
     private static final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
     private static PlayerDataManager playerDataManager;
@@ -58,14 +65,14 @@ public final class AbilitySystemServer {
 
         var errorCount = new AtomicInteger(0);
 
-        scheduledFuture = AcademyCraft.executorService.scheduleAtFixedRate(
+        scheduledFuture = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
                 () -> {
                     try {
                         AbilitySystemTicker.tick();
                         errorCount.set(0);
                     } catch (Throwable e) {
                         var count = errorCount.incrementAndGet();
-                        AcademyCraft.LOGGER.error(
+                        LOGGER.error(
                                 "[AbilitySystemTicker] Consecutive error #{} - Timestamp: {}, Thread: {}",
                                 count,
                                 System.currentTimeMillis(),
@@ -111,7 +118,7 @@ public final class AbilitySystemServer {
                     outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
                 } else {
                     outputList.add("Error: No ability category could be selected.");
-                    AcademyCraft.LOGGER.error("WeightedRandom returned null for ability category selection.");
+                    LOGGER.error("WeightedRandom returned null for ability category selection.");
                 }
             } else {
                 outputList.add("Insufficient energy to develop ability.");

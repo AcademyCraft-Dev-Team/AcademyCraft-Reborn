@@ -34,7 +34,7 @@ public final class ParticleRenderTypes {
 
     @SubscribeEvent
     public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(ParticleTypes.IMAG_PHASE_FLUID.get(), spriteSet -> (particleType, level, x, y, z, xSpeed, ySpeed, zSpeed, random) -> {
+       /* event.registerSpriteSet(ParticleTypes.IMAG_PHASE_FLUID.get(), spriteSet -> (particleType, level, x, y, z, xSpeed, ySpeed, zSpeed, random) -> {
             var particle = new ImagiphaseFluidParticle(level, spriteSet, x, y, z);
             var rd = MathUtil.RANDOM;
             particle.scale(rd.nextFloat(0.5f, 0.75f));
@@ -54,7 +54,7 @@ public final class ParticleRenderTypes {
 
             particle.setColor(finalR, finalG, finalB);
             return particle;
-        });
+        });*/
     }
 
     private ParticleRenderTypes() {

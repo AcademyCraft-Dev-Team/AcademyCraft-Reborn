@@ -13,10 +13,10 @@ import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.WidgetContainer;
 
-public abstract class UIScreen extends Screen implements RenderRoot {
+public abstract class UiScreen extends Screen implements RenderRoot {
     protected final FrameLayoutWidget root = new FrameLayoutWidget();
 
-    protected UIScreen(Component title) {
+    protected UiScreen(Component title) {
         super(title);
     }
 

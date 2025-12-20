@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinMouseHandler {
     @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void onScroll(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
-        InputSystem.handleMouseScroll(windowPointer, xOffset, yOffset, ci);
+        InputSystem.handleMouseScroll(xOffset, yOffset, ci);
     }
 
     @Inject(method = "onButton", at = @At("HEAD"), cancellable = true)

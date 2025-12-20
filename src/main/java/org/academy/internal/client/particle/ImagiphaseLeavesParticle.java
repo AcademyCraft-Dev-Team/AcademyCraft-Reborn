@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -65,4 +66,4 @@ public class ImagiphaseLeavesParticle extends SingleQuadParticle {
     protected Layer getLayer() {
         return Layer.OPAQUE;
     }
-}
+}*/

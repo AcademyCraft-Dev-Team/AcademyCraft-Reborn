@@ -54,11 +54,11 @@ public final class RenderContext {
     }
 
     public void enableScissor(ScissorRect scissorRect) {
-        scissorStack.push(scissorRect);
+    //    scissorStack.push(scissorRect);
     }
 
     public void disableScissor() {
-        scissorStack.pop();
+    //    scissorStack.pop();
     }
 
     public List<SubmittedCommand> getCommands() {

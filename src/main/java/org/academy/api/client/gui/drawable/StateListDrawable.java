@@ -2,32 +2,42 @@ package org.academy.api.client.gui.drawable;
 
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.widget.Widget;
+import org.jspecify.annotations.Nullable;
 
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class StateListDrawable implements Drawable {
-    private final Map<WidgetState, Drawable> stateMap = new EnumMap<>(WidgetState.class);
+    private record StatePair(int mask, @Nullable Drawable drawable) {
+    }
+
+    private final List<StatePair> stateList = new ArrayList<>();
+    @Nullable
+    private Drawable defaultDrawable;
 
     @Override
     public void draw(RenderContext context, Widget widget) {
-        var drawable = getDrawableForState(widget);
-        if (drawable != null) {
-            drawable.draw(context, widget);
+        var currentState = widget.getWidgetState();
+
+        for (var pair : stateList) {
+            if ((currentState & pair.mask) == pair.mask) {
+                if (pair.drawable != null) {
+                    pair.drawable.draw(context, widget);
+                }
+                return;
+            }
+        }
+
+        if (defaultDrawable != null) {
+            defaultDrawable.draw(context, widget);
         }
     }
 
-    public void addState(WidgetState state, Drawable drawable) {
-        stateMap.put(state, drawable);
+    public void addState(int stateMask, @Nullable Drawable drawable) {
+        stateList.add(new StatePair(stateMask, drawable));
     }
 
-    private Drawable getDrawableForState(Widget widget) {
-        if (!widget.isEnabled()) return stateMap.get(WidgetState.DISABLED);
-        if (widget.isPressed()) return stateMap.get(WidgetState.PRESSED);
-        if (widget.isSelected()) return stateMap.get(WidgetState.SELECTED);
-        if (widget.isHovered()) return stateMap.get(WidgetState.HOVERED);
-        if (widget.isFocused()) return stateMap.get(WidgetState.FOCUSED);
-
-        return stateMap.get(WidgetState.DEFAULT);
+    public void setDefault(@Nullable Drawable drawable) {
+        defaultDrawable = drawable;
     }
 }

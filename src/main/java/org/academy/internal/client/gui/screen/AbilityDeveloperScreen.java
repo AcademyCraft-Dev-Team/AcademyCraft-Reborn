@@ -15,7 +15,7 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.screen.UIScreen;
+import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.common.ability.AbilityCategory;
@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.function.Function;
 
-public final class AbilityDeveloperScreen extends UIScreen {
+public final class AbilityDeveloperScreen extends UiScreen {
     public final BlockPos mainPos;
     @Nullable
     public AbilityDeveloperBlockEntity abilityDeveloperBlockEntity;
@@ -710,7 +710,7 @@ public final class AbilityDeveloperScreen extends UIScreen {
 
         @Override
         public void render(WidgetRenderContext context, double mouseX, double mouseY, float partialTick) {
-            var oT = textureLocation;
+            var oT = textureIdentifier;
             setTexture(Resource.Textures.UI_DEVELOPER_SKILL_ICON_BG);
             targetScale = isHovered() ? 1.25f : 1.0f;
             currentScale = MathUtil.lerpStartEndFactor(currentScale, targetScale, ClientUtil.animationFactor(MathUtil.PI / 1.5f));

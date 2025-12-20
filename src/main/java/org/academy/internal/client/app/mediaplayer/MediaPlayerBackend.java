@@ -1,6 +1,7 @@
 package org.academy.internal.client.app.mediaplayer;
 
 import com.google.gson.reflect.TypeToken;
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -14,6 +15,7 @@ import org.lwjgl.stb.STBVorbis;
 import org.lwjgl.stb.STBVorbisInfo;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -26,6 +28,7 @@ import static org.academy.AcademyCraft.academy;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class MediaPlayerBackend {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int BUFFER_COUNT = 4;
     private static final List<MediaInfo> PLAYLIST = new ArrayList<>();
     public static final Type MUSIC_DATA_MAP_TYPE = new TypeToken<Map<String, MusicData>>() {
@@ -79,7 +82,7 @@ public final class MediaPlayerBackend {
     }
 
     public static void handleContextReset() {
-        AcademyCraft.LOGGER.info("Sound engine reloaded, resetting media player OpenAL resources.");
+        LOGGER.info("Sound engine reloaded, resetting media player OpenAL resources.");
 
         isPlaying.set(false);
         isPaused.set(false);
@@ -126,25 +129,25 @@ public final class MediaPlayerBackend {
             try {
                 iconLocation = Identifier.parse(data.icon());
             } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Invalid icon Identifier '{}' for entry '{}' in {}{}", data.icon(), name, sourceDescription, e);
+                LOGGER.error("Invalid icon Identifier '{}' for entry '{}' in {}{}", data.icon(), name, sourceDescription, e);
                 continue;
             }
 
             var sourcePath = data.source();
             if (sourcePath == null) {
-                AcademyCraft.LOGGER.error("Missing source for entry '{}' in {}", name, sourceDescription);
+                LOGGER.error("Missing source for entry '{}' in {}", name, sourceDescription);
                 continue;
             }
 
             if (sourcePath.toLowerCase(Locale.ROOT).endsWith(".mp3")) {
-                AcademyCraft.LOGGER.error("Unsupported format: MP3 files are not supported. Skipping entry '{}' with source '{}' in {}", name, sourcePath, sourceDescription);
+                LOGGER.error("Unsupported format: MP3 files are not supported. Skipping entry '{}' with source '{}' in {}", name, sourcePath, sourceDescription);
                 continue;
             }
 
             MediaSource source;
             var sourceTypeStr = data.source_type();
             if (sourceTypeStr == null) {
-                AcademyCraft.LOGGER.error("Missing source_type for entry '{}' in {}", name, sourceDescription);
+                LOGGER.error("Missing source_type for entry '{}' in {}", name, sourceDescription);
                 continue;
             }
 
@@ -154,11 +157,11 @@ public final class MediaPlayerBackend {
                 } else if (sourceTypeStr.equalsIgnoreCase("PATH")) {
                     source = MediaSource.fromAbsolutePath(sourcePath);
                 } else {
-                    AcademyCraft.LOGGER.error("Invalid source_type '{}' for entry '{}' in {}", sourceTypeStr, name, sourceDescription);
+                    LOGGER.error("Invalid source_type '{}' for entry '{}' in {}", sourceTypeStr, name, sourceDescription);
                     continue;
                 }
             } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Invalid source path '{}' for entry '{}' in {}", sourcePath, name, sourceDescription);
+                LOGGER.error("Invalid source path '{}' for entry '{}' in {}", sourcePath, name, sourceDescription);
                 continue;
             }
 
@@ -274,7 +277,7 @@ public final class MediaPlayerBackend {
             startPlaybackAtFrame(0, true);
 
         } catch (IOException e) {
-            AcademyCraft.LOGGER.error("Failed to play media: {}", mediaInfo.name(), e);
+            LOGGER.error("Failed to play media: {}", mediaInfo.name(), e);
             stop();
         }
     }
@@ -391,11 +394,11 @@ public final class MediaPlayerBackend {
         var targetFrame = (long) (timeRatio * totalDuration * sampleRate);
         baseSampleOffset = targetFrame;
 
-        AcademyCraft.executorService.submit(() -> {
+        AcademyCraft.EXECUTOR_SERVICE.submit(() -> {
             try {
                 STBVorbis.stb_vorbis_seek_frame(stbVorbisHandle, (int) targetFrame);
             } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Error during background seek", e);
+                LOGGER.error("Error during background seek", e);
             } finally {
                 isSeeking = false;
             }

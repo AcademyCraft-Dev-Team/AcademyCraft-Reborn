@@ -8,10 +8,10 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Unit;
 import org.academy.api.client.Resource;
 
@@ -66,7 +66,7 @@ public class WindGenTurbineModel extends Model<Unit> {
         poseStack.pushPose();
         all.translateAndRotate(poseStack);
         nodeCollector.submitModelPart(main, poseStack, renderType(Resource.Textures.MODEL_WIND_GEN), packedLight, packedOverlay, null);
-        nodeCollector.submitModelPart(tip_li, poseStack, renderType(Resource.Textures.MODEL_WIND_GEN), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
+        nodeCollector.submitModelPart(tip_li, poseStack, renderType(Resource.Textures.MODEL_WIND_GEN), LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
         poseStack.popPose();
     }
 }

@@ -2,8 +2,8 @@ package org.academy.api.client.input;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.input.KeyEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -39,23 +39,22 @@ public final class InputSystem {
         }
     }
 
-    public static void handleKey(int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
+    public static void handleKey(@KeyEvent.Action int action, KeyEvent event, CallbackInfo ci) {
+        var key = event.key();
         currentKeyCode = key;
         currentKeyAction = action;
         KEYBOARD_STATE.put(key, action);
 
-        var event = new KeyInputEvent(key, scanCode, action, modifiers);
-        NeoForge.EVENT_BUS.post(event);
+        var inputEvent = new KeyInputEvent(key, event.scancode(), action, event.modifiers());
+        NeoForge.EVENT_BUS.post(inputEvent);
 
-        if (event.isCanceled()) {
-            if (action == GLFW.GLFW_RELEASE) {
-                KeyMapping.set(key == -1 ? InputConstants.Type.SCANCODE.getOrCreate(scanCode) : InputConstants.Type.KEYSYM.getOrCreate(key), false);
-            }
+        if (inputEvent.isCanceled()) {
+            if (action == InputConstants.RELEASE) KeyMapping.set(InputConstants.getKey(event), false);
             ci.cancel();
             return;
         }
 
-        processBindings(InputType.KEYBOARD, KEYBOARD_STATE, event.key, event.modifiers);
+        processBindings(InputType.KEYBOARD, KEYBOARD_STATE, inputEvent.key, inputEvent.modifiers);
     }
 
     public static void handleMouseButton(int button, int action, int modifiers, CallbackInfo ci) {
@@ -110,15 +109,13 @@ public final class InputSystem {
         });
     }
 
-    public static void handleMouseScroll(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
-        var event = new MouseScrollEvent(windowPointer, xOffset, yOffset);
+    public static void handleMouseScroll(double xOffset, double yOffset, CallbackInfo ci) {
+        var event = new MouseScrollEvent(xOffset, yOffset);
         NeoForge.EVENT_BUS.post(event);
         if (event.isCanceled()) {
             ci.cancel();
             return;
         }
-        windowPointer = event.windowPointer;
-        xOffset = event.xOffset;
         yOffset = event.yOffset;
         if (yOffset != 0 && !scrollListeners.isEmpty()) {
             var finalYOffset = yOffset;
@@ -126,12 +123,12 @@ public final class InputSystem {
         }
     }
 
-    public static void addKeyBinding(@NotNull String keyName, @NotNull InputSystem.InputPair pair, @NotNull Runnable runnable) {
+    public static void addKeyBinding(String keyName, InputSystem.InputPair pair, Runnable runnable) {
         var binding = new KeyBinding(pair, runnable);
         KEY_BINDINGS.put(keyName, binding);
     }
 
-    public static void removeKeyBinding(@NotNull String keyName) {
+    public static void removeKeyBinding(String keyName) {
         KEY_BINDINGS.remove(keyName);
     }
 

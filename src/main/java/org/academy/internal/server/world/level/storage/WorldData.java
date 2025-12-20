@@ -5,10 +5,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import org.academy.AcademyCraft;
+import com.mojang.logging.LogUtils;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
 import org.academy.internal.common.skilldata.SkillData;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.FileReader;
@@ -19,6 +20,8 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class WorldData {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     @SerializedName("players")
     private final Map<UUID, Player> players = new HashMap<>();
 
@@ -57,7 +60,7 @@ public final class WorldData {
         final var gson = createGson();
         if (!isValidFile(file)) {
             var worldData = new WorldData();
-            AcademyCraft.LOGGER.debug("Creating new world data file.");
+            LOGGER.debug("Creating new world data file.");
             try (var fileWriter = new FileWriter(file)) {
                 gson.toJson(worldData, fileWriter);
             } catch (IOException e) {
@@ -81,7 +84,7 @@ public final class WorldData {
 
         if (!hasDirtyData) return;
 
-        AcademyCraft.LOGGER.debug("Dirty data detected, saving world data...");
+        LOGGER.debug("Dirty data detected, saving world data...");
         var gson = createGson();
         var worldDataFile = AcademyCraftServer.worldDataFile;
 
@@ -90,12 +93,12 @@ public final class WorldData {
         try (var fileWriter = new FileWriter(worldDataFile)) {
             gson.toJson(AcademyCraftServer.worldData, fileWriter);
         } catch (IOException e) {
-            AcademyCraft.LOGGER.error("Failed to save world data", e);
+            LOGGER.error("Failed to save world data", e);
             return;
         }
 
         AcademyCraftServer.worldData.getPlayers().values().forEach(Player::clean);
-        AcademyCraft.LOGGER.debug("World data saved and dirty flags cleaned.");
+        LOGGER.debug("World data saved and dirty flags cleaned.");
     }
 
     public Map<UUID, Player> getPlayers() {

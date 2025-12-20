@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.level.block;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.logging.LogUtils;
 import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -27,21 +28,23 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.util.ServerPlayerUtil;
-import org.academy.internal.client.gui.world.WindGenWorldGUI;
+import org.academy.internal.client.gui.world.WindGenWorldGui;
 import org.academy.internal.common.world.inventory.WindGenMenu;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
-import org.jspecify.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.List;
 
 public final class WindGenBaseBlock extends MultiBlock {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public static final MapCodec<WindGenBaseBlock> CODEC = simpleCodec(WindGenBaseBlock::new);
     public static final String WIND_GEN_SCREEN = "wind_gen_screen";
     public static final List<Vec3i> SUB_BLOCKS = List.of(
@@ -93,13 +96,13 @@ public final class WindGenBaseBlock extends MultiBlock {
                     var normX = (localIntersectionPoint.x - (float) aabb.minX) / aabbWidth;
                     var normY = (localIntersectionPoint.y - (float) aabb.minY) / aabbHeight;
 
-                    var guiX = (1.0f - normX) * WindGenWorldGUI.WIDTH;
-                    var guiY = normY * WindGenWorldGUI.HEIGHT;
+                    var guiX = (1.0f - normX) * WindGenWorldGui.WIDTH;
+                    var guiY = normY * WindGenWorldGui.HEIGHT;
 
-                    guiX = Mth.clamp(guiX, (float) 0, WindGenWorldGUI.WIDTH);
-                    guiY = Mth.clamp(guiY, (float) 0, WindGenWorldGUI.HEIGHT);
+                    guiX = Mth.clamp(guiX, (float) 0, WindGenWorldGui.WIDTH);
+                    guiY = Mth.clamp(guiY, (float) 0, WindGenWorldGui.HEIGHT);
 
-                    AcademyCraft.LOGGER.info("Intersection in GUI coords: {}, {}", guiX, guiY);
+                    LOGGER.info("Intersection in GUI coords: {}, {}", guiX, guiY);
                 }
             }
             return InteractionResult.SUCCESS;

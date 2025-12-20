@@ -1,5 +1,7 @@
 package org.academy.api.client.gui.widget;
 
+import com.mojang.logging.LogUtils;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.ARGB;
@@ -17,6 +19,7 @@ import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.util.GlyphCommandGenerator;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +27,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class AbstractWidgetContainer extends AbstractWidget implements WidgetContainer {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     protected final Map<String, Widget> children = new LinkedHashMap<>();
 
     protected boolean isLayoutDirty = true;
@@ -200,19 +205,35 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
 
     @Override
     public void render(RenderContext context) {
-        if (!isVisible()) {
+        if (visibility != Visibility.VISIBLE) {
             return;
         }
 
+        var pivotX = width * originX;
+        var pivotY = height * originY;
+
+        var hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f;
+
         context.pose().pushPose();
         {
+            if (hasTransform) {
+                context.pose().translate(pivotX, pivotY, 0);
+                if (rotation != 0.0f) {
+                    context.pose().mulPose(Axis.ZP.rotationDegrees(rotation));
+                }
+                if (scaleX != 1.0f || scaleY != 1.0f) {
+                    context.pose().scale(scaleX, scaleY, 1.0f);
+                }
+                context.pose().translate(-pivotX, -pivotY, 0);
+            }
+
             context.alpha().push(getAlpha());
             {
                 if (AcademyCraft.DEBUG_UI) {
                     renderDebugLayoutBounds(this, context);
                 }
 
-                super.render(context);
+                renderInternal(context);
                 renderChildren(context);
             }
             context.alpha().pop();
@@ -327,29 +348,42 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
 
     @Override
     public void dispatchEvent(InputEvent event) {
-        if (!isAbsoluteEnabled() || !isVisible()) return;
+        if (!isAbsoluteEnabled() || visibility != Visibility.VISIBLE) return;
 
         if (event.getType() == EventType.MOUSE_MOVED) {
             var newHoveredWidget = findTopWidgetAt(((MouseEvent) event).getX(), ((MouseEvent) event).getY());
             if (hoveredWidget != newHoveredWidget) {
-                if (hoveredWidget instanceof AbstractWidget oldHovered) {
-                    oldHovered.setHovered(false);
+                var current = hoveredWidget;
+                while (current != null) {
+                    if (newHoveredWidget != null && isAncestor(current, newHoveredWidget)) {
+                        break;
+                    }
+                    if (current instanceof AbstractWidget aw) {
+                        aw.setHovered(false);
+                    }
+                    current = current.getParent();
                 }
+
                 hoveredWidget = newHoveredWidget;
-                if (hoveredWidget instanceof AbstractWidget newHovered) {
-                    newHovered.setHovered(true);
+
+                current = hoveredWidget;
+                while (current != null) {
+                    if (current instanceof AbstractWidget aw) {
+                        aw.setHovered(true);
+                    }
+                    current = current.getParent();
                 }
             }
         }
 
         if (gestureTarget != null) {
             if (AcademyCraft.DEBUG_UI) {
-                AcademyCraft.LOGGER.debug("[UI Event] Event routed to gestureTarget '{}'", gestureTarget.getName());
+                LOGGER.debug("[UI Event] Event routed to gestureTarget '{}'", gestureTarget.getName());
             }
             gestureTarget.dispatchEvent(event);
             if (event.getType() == EventType.MOUSE_RELEASED) {
                 if (AcademyCraft.DEBUG_UI) {
-                    AcademyCraft.LOGGER.debug("[UI Event] gestureTarget released.");
+                    LOGGER.debug("[UI Event] gestureTarget released.");
                 }
                 gestureTarget = null;
             }
@@ -368,7 +402,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
 
             if (event.isConsumed()) {
                 if (AcademyCraft.DEBUG_UI) {
-                    AcademyCraft.LOGGER.debug("[UI Event] Event consumed by child '{}'. Stopping propagation in '{}'.", child.getName(), getName());
+                    LOGGER.debug("[UI Event] Event consumed by child '{}'. Stopping propagation in '{}'.", child.getName(), getName());
                 }
                 if (event.getType() == EventType.MOUSE_PRESSED) {
                     gestureTarget = child;
@@ -382,6 +416,16 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
         if (event.isConsumed() && event.getType() == EventType.MOUSE_PRESSED) {
             setFocusedChild(this);
         }
+    }
+
+    private boolean isAncestor(@Nullable Widget ancestor, @Nullable Widget descendant) {
+        if (ancestor == null || descendant == null) return false;
+        var current = descendant;
+        while (current != null) {
+            if (current == ancestor) return true;
+            current = current.getParent();
+        }
+        return false;
     }
 
     @Override

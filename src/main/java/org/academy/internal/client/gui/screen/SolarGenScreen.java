@@ -10,7 +10,7 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.screen.ContainerUIScreen;
+import org.academy.api.client.gui.screen.ContainerUiScreen;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.AnimationUtil;
@@ -20,10 +20,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.function.Consumer;
 
-public final class SolarGenScreen extends ContainerUIScreen<SolarGenMenu> {
+public final class SolarGenScreen extends ContainerUiScreen<SolarGenMenu> {
     private final BlockPos mainPos;
     private final SolarGenBlockEntity blockEntity;
-    private Consumer<SolarGenBlockEntity.State> stateConsumer = state -> {
+    private Consumer<SolarGenBlockEntity.State> stateConsumer = _ -> {
     };
 
     private SolarGenScreen(SolarGenMenu menu, Inventory playerInventory, Component title, SolarGenBlockEntity blockEntity) {
@@ -88,7 +88,7 @@ public final class SolarGenScreen extends ContainerUIScreen<SolarGenMenu> {
         invPage.addChild("effect", effect);
 
         var wirelessPage = WirelessPanelUtil.create(mainPos, true);
-        wirelessPage.setVisible(false);
+        wirelessPage.setVisibility(Widget.Visibility.GONE);
         wirelessPage.setEnabled(false);
         content.addChild("page_wireless", wirelessPage);
 

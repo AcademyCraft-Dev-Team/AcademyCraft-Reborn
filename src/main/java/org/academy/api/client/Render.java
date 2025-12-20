@@ -14,6 +14,7 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.UiLightmap;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.AbstractTexture;
@@ -22,6 +23,7 @@ import net.neoforged.neoforge.client.stencil.StencilFunction;
 import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.academy.api.client.render.post.BloomEffect;
@@ -42,6 +44,7 @@ import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 public final class Render {
     public static void init() {
         Buffers.init();
+        TextureViews.init();
     }
 
     public static void resize() {
@@ -118,6 +121,7 @@ public final class Render {
                                 clearDepth ? OptionalDouble.of(1) : OptionalDouble.empty()
                         )
         ) {
+            IrisCompat.enableBypass();
             renderPass.setPipeline(pipeline);
             for (var texture : textures) {
                 renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
@@ -129,6 +133,7 @@ public final class Render {
             var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
             renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
             renderPass.drawIndexed(0, 0, 6, 1);
+            IrisCompat.resetBypass();
         }
     }
 
@@ -159,9 +164,7 @@ public final class Render {
         }
 
         public static void init() {
-            if (instance == null) {
-                instance = new Buffers();
-            }
+            if (instance == null) instance = new Buffers();
         }
 
         public static void close() {
@@ -299,6 +302,43 @@ public final class Render {
 
         public static CrossFrameResourcePool getResourcePool() {
             return RESOURCE_POOL;
+        }
+    }
+
+    public static final class TextureViews {
+        @Nullable
+        private static TextureViews instance;
+        private final UiLightmap uiLightmap = new UiLightmap();
+
+        public static void init() {
+            if (instance == null) instance = new TextureViews();
+        }
+
+        public static void close() {
+            if (instance != null) {
+                instance.closeInternal();
+                instance = null;
+            }
+        }
+
+        public static TextureViews getInstance() {
+            if (instance == null) {
+                throw new IllegalStateException(
+                        "Render.Buffers has not been initialized."
+                );
+            }
+            return instance;
+        }
+
+        public GpuTextureView getUiLightmapTextureView() {
+            return uiLightmap.getTextureView();
+        }
+
+        private void closeInternal() {
+            uiLightmap.close();
+        }
+
+        private TextureViews() {
         }
     }
 
@@ -636,6 +676,10 @@ public final class Render {
             Minecraft.getInstance().getTextureManager().register(
                     id,
                     new AbstractTexture() {
+                        {
+                            sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+                        }
+
                         @Override
                         public GpuTexture getTexture() {
                             var tex = PostEffect.MAIN_SCENE.getColorTexture();

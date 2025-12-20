@@ -2,13 +2,13 @@ package org.academy.internal.client.renderer.entity.layers.quantum;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
 import org.academy.api.client.Render;
@@ -43,7 +43,7 @@ public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M exten
         model.renderToBuffer(
                 poseStack,
                 vertexConsumer,
-                LightTexture.FULL_BRIGHT,
+                LightCoordsUtil.FULL_BRIGHT,
                 OverlayTexture.NO_OVERLAY,
                 ARGB.colorFromFloat(
                         intensity * Math.abs(Mth.sin(renderState.ageInTicks * 0.1)),

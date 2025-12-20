@@ -8,7 +8,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger;
-import org.academy.api.client.gui.render.UIContext;
+import org.academy.api.client.gui.render.UiContext;
 import org.academy.api.client.thread.RenderThread;
 import org.academy.api.client.vanilla.MainLoopEvent;
 import org.academy.api.client.vanilla.RenderLoopEvent;
@@ -21,13 +21,13 @@ public final class ScreenDispatcher {
     @Nullable
     private static RenderTarget renderTarget;
     @Nullable
-    private static UIContext UI_RENDER_CONTEXT;
+    private static UiContext UI_RENDER_CONTEXT;
 
     @RenderThread
     public static void init() {
         var window = Minecraft.getInstance().getWindow();
         renderTarget = new TextureTarget("Screen", window.getWidth(), window.getHeight(), true);
-        UI_RENDER_CONTEXT = new UIContext();
+        UI_RENDER_CONTEXT = new UiContext();
     }
 
     @RenderThread

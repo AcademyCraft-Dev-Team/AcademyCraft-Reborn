@@ -1,13 +1,10 @@
-import xyz.wagyourtail.jvmdg.gradle.task.DowngradeJar
-
 plugins {
     idea
     `java-library`
-    id("net.neoforged.moddev") version "2.0.124"
-    id ("xyz.wagyourtail.jvmdowngrader") version "1.3.4"
+    id("net.neoforged.moddev") version "2.0.131"
 }
 
-val neoVersion: String = "21.11.6-beta"
+val neoVersion: String = "26.1.0-alpha.26.1-snapshot-1.20251220.085055"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
@@ -24,17 +21,13 @@ java {
     }
 }
 
-jvmdg {
-    downgradeTo = JavaVersion.VERSION_21
-}
-
 val generateModMetadata by tasks.registering(ProcessResources::class) {
     val replaceProperties = mapOf(
         "minecraft_version" to project.property("minecraft_version"),
         "minecraft_version_range" to project.property("minecraft_version_range"),
+        "misaka_network_version_range" to project.property("misaka_network_version_range"),
         "neo_version" to neoVersion,
         "neo_version_range" to neoVersion,
-        "loader_version_range" to project.property("loader_version_range"),
         "mod_id" to modId,
         "mod_name" to project.property("mod_name"),
         "mod_license" to project.property("mod_license"),
@@ -114,10 +107,6 @@ repositories {
 neoForge {
     version = neoVersion
     ideSyncTask(generateModMetadata)
-    parchment {
-        minecraftVersion = "1.21.10"
-        mappingsVersion = "2025.10.12"
-    }
     runs {
         register("client") {
             client()
@@ -147,7 +136,7 @@ neoForge {
 }
 
 dependencies {
-    val misaka = "org.academy:misaka-network:21.11.1-rc2"
+    val misaka = "org.academy:misaka-network:26.1-beta"
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)
@@ -157,8 +146,8 @@ dependencies {
 
     //  implementation("maven.modrinth:better-modlist:2.0.0-beta.8")
     //  implementation("maven.modrinth:jade:20.0.5+neoforge")
-    implementation("maven.modrinth:sodium:mc1.21.11-0.8.0-neoforge")
-    implementation("maven.modrinth:iris:1.10.2+1.21.11-neoforge")
+    compileOnly("maven.modrinth:sodium:mc1.21.11-0.8.0-neoforge")
+    compileOnly("maven.modrinth:iris:1.10.3+1.21.11-neoforge")
     //  compileOnly("maven.modrinth:sodium-extra:mc1.21.8-0.7.0+neoforge")
     //  implementation("maven.modrinth:lithium:mc1.21.10-0.20.0-neoforge")
     //  implementation("curse.maven:configured-457570:7090441")
@@ -204,16 +193,4 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-Xmaxerrs", "10000"))
     options.compilerArgs.add("-Amisaka.provider.fqcn=org.academy.MisakaHandlersProviderImpl")
-}
-
-val finalDowngrade by tasks.registering(DowngradeJar::class) {
-    group = "build"
-    description = "Downgrades to Java 21"
-
-    inputFile.set(tasks.named<Jar>("jar").flatMap { it.archiveFile })
-    classpath + sourceSets.main.get().compileClasspath
-}
-
-tasks.named("assemble") {
-    dependsOn(finalDowngrade)
 }

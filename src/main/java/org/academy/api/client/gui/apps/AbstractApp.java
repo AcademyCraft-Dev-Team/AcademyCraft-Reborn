@@ -11,11 +11,10 @@ import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.internal.client.hud.DataTerminalHUD;
+import org.academy.api.client.hud.terminal.DataTerminalHUD;
 import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractApp extends LinearLayoutWidget {
-
     protected final ImageWidget appIcon;
     protected final FrameLayoutWidget contentContainer;
     private boolean contentFadedIn = false;
@@ -70,7 +69,7 @@ public abstract class AbstractApp extends LinearLayoutWidget {
                     .gravity(Gravity.CENTER_VERTICAL));
 
             if (iconRes == null) {
-                appIcon.setVisible(false);
+                appIcon.setVisibility(Visibility.INVISIBLE);
             }
             centerGroup.addChild("icon", appIcon);
         }

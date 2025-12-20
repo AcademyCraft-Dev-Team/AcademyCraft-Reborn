@@ -20,7 +20,6 @@ import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.drawable.StateListDrawable;
 import org.academy.api.client.gui.drawable.TextureDrawable;
-import org.academy.api.client.gui.drawable.WidgetState;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.layout.Orientation;
@@ -31,7 +30,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements RenderRoot {
+public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements RenderRoot {
     protected final FrameLayoutWidget root = new FrameLayoutWidget();
 
     private boolean handleContainer = true;
@@ -41,7 +40,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
     private Consumer<Boolean> invVisibleSetter = ignore -> {
     };
 
-    protected ContainerUIScreen(T menu, Inventory playerInventory, Component title) {
+    protected ContainerUiScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
     }
 
@@ -110,7 +109,7 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
                 var invPage = new FrameLayoutWidget();
                 invTranslationYSupplier = invPage::getTranslationY;
                 invHeightSupplier = invPage::getHeight;
-                invVisibleSetter = invPage::setVisible;
+                invVisibleSetter = visible -> invPage.setVisibility(visible ? Widget.Visibility.VISIBLE : Widget.Visibility.GONE);
                 invPage.setLayoutParams(
                         new FrameLayoutWidget.LayoutParams()
                                 .widthMode(SizeMode.MATCH_PARENT)
@@ -157,11 +156,11 @@ public abstract class ContainerUIScreen<T extends AbstractContainerMenu> extends
         hoveredDrawable.setTintColor(0xFFFFFFFF);
 
         var sld = new StateListDrawable();
-        sld.addState(WidgetState.DEFAULT, defaultDrawable);
-        sld.addState(WidgetState.FOCUSED, hoveredDrawable);
-        sld.addState(WidgetState.SELECTED, hoveredDrawable);
-        sld.addState(WidgetState.HOVERED, hoveredDrawable);
-        sld.addState(WidgetState.PRESSED, hoveredDrawable);
+        sld.setDefault(defaultDrawable);
+        sld.addState(Widget.State.FOCUSED, hoveredDrawable);
+        sld.addState(Widget.State.SELECTED, hoveredDrawable);
+        sld.addState(Widget.State.HOVERED, hoveredDrawable);
+        sld.addState(Widget.State.PRESSED, hoveredDrawable);
 
         widget.setBackground(sld);
         return widget;

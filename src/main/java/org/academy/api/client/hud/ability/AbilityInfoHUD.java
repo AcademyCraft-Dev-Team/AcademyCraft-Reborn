@@ -1,4 +1,4 @@
-package org.academy.internal.client.hud;
+package org.academy.api.client.hud.ability;
 
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.neoforged.api.distmarker.Dist;
@@ -13,7 +13,8 @@ public final class AbilityInfoHUD {
     private static final FrameLayoutWidget ROOT = new FrameLayoutWidget();
 
     private static void init() {
-
+        ROOT.setName("root");
+        ROOT.clearChildren();
     }
 
     public static void resize() {

@@ -3,7 +3,6 @@ package org.academy.mixin.common;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.damagesource.CombatTracker;
 import net.minecraft.world.entity.LivingEntity;
-import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;

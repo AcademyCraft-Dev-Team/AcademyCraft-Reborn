@@ -1,29 +1,36 @@
 package org.academy.api.client.compatibility;
 
 import net.irisshaders.iris.api.v0.IrisApi;
-import net.irisshaders.iris.pipeline.IrisPipelines;
-import net.irisshaders.iris.pipeline.programs.ShaderKey;
 import net.irisshaders.iris.shadows.ShadowRenderer;
+import net.irisshaders.iris.vertices.ImmediateState;
 import net.neoforged.fml.ModList;
-import org.academy.api.client.Render;
 
 public final class IrisCompat {
-    private static final boolean HAS_IRIS = ModList.get().isLoaded("iris");
+    private static boolean bypass;
 
-    static {
-        if (HAS_IRIS) {
-            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR, ShaderKey.SKY_TEXTURED_COLOR);
-        }
-    }
-
-    private IrisCompat() {
+    public static boolean hasIris() {
+        return ModList.get().isLoaded("iris");
     }
 
     public static boolean isShaderPackInUse() {
-        return HAS_IRIS && IrisApi.getInstance().isShaderPackInUse();
+        return hasIris() && IrisApi.getInstance().isShaderPackInUse();
     }
 
     public static boolean isShadowRendererActive() {
-        return HAS_IRIS && ShadowRenderer.ACTIVE;
+        return hasIris() && ShadowRenderer.ACTIVE;
+    }
+
+    public static void enableBypass() {
+        if (hasIris()) {
+            bypass = ImmediateState.bypass;
+            ImmediateState.bypass = true;
+        }
+    }
+
+    public static void resetBypass() {
+        if (hasIris()) ImmediateState.bypass = bypass;
+    }
+
+    private IrisCompat() {
     }
 }

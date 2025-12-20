@@ -1,7 +1,9 @@
 package org.academy.api.client.gui.widget;
 
+import com.mojang.math.Axis;
 import org.academy.api.client.gui.animation.Animator;
 import org.academy.api.client.gui.animation.AnimatorListener;
+import org.academy.api.client.gui.animation.StateListAnimator;
 import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.layout.MeasureSpec;
@@ -20,12 +22,20 @@ public abstract class AbstractWidget implements Widget {
     protected float x = 0, y = 0, z = 0, width = 0, height = 0;
     protected float translationX = 0;
     protected float translationY = 0;
-    protected boolean visible = true;
+    protected float scaleX = 1.0f;
+    protected float scaleY = 1.0f;
+    protected float rotation = 0.0f;
+    protected float originX = 0.5f;
+    protected float originY = 0.5f;
+
+    protected Visibility visibility = Visibility.VISIBLE;
     protected boolean enabled = true;
     @Nullable
     protected WidgetContainer parent = null;
     protected boolean hovered = false;
     protected boolean focused = false;
+    protected boolean pressed = false;
+    protected boolean selected = false;
     protected boolean clickable = false;
     protected float alpha = 1.0f;
     protected float scrollX = 0f;
@@ -40,8 +50,36 @@ public abstract class AbstractWidget implements Widget {
     @Nullable
     protected Drawable foreground = null;
 
+    @Nullable
+    private StateListAnimator stateListAnimator;
+
     @Override
     public void render(RenderContext context) {
+        if (visibility != Visibility.VISIBLE) return;
+
+        var pivotX = width * originX;
+        var pivotY = height * originY;
+
+        var hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f;
+
+        context.pose().pushPose();
+        if (hasTransform) {
+            context.pose().translate(pivotX, pivotY, 0);
+            if (rotation != 0.0f) {
+                context.pose().mulPose(Axis.ZP.rotationDegrees(rotation));
+            }
+            if (scaleX != 1.0f || scaleY != 1.0f) {
+                context.pose().scale(scaleX, scaleY, 1.0f);
+            }
+            context.pose().translate(-pivotX, -pivotY, 0);
+        }
+
+        renderInternal(context);
+
+        context.pose().popPose();
+    }
+
+    protected void renderInternal(RenderContext context) {
         if (background != null) {
             background.draw(context, this);
         }
@@ -52,7 +90,7 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public void dispatchEvent(InputEvent event) {
-        if (!isAbsoluteEnabled() || !isVisible()) {
+        if (!isAbsoluteEnabled() || visibility != Visibility.VISIBLE) {
             return;
         }
 
@@ -70,11 +108,15 @@ public abstract class AbstractWidget implements Widget {
 
     protected void onMousePressed(MouseEvent event) {
         if (isClickable() && isMouseOver(event.getX(), event.getY())) {
+            pressed = true;
+            updateStateAnimator();
             event.consume();
         }
     }
 
     protected void onMouseReleased(MouseEvent event) {
+        pressed = false;
+        updateStateAnimator();
         if (isMouseOver(event.getX(), event.getY())) {
             event.consume();
         }
@@ -100,6 +142,10 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public void measure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
+        if (visibility == Visibility.GONE) {
+            setMeasuredDimension(0, 0);
+            return;
+        }
         onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
@@ -250,19 +296,24 @@ public abstract class AbstractWidget implements Widget {
     }
 
     @Override
-    public boolean isVisible() {
-        return visible;
+    public Visibility getVisibility() {
+        return visibility;
     }
 
     @Override
-    public Widget setVisible(boolean visible) {
-        if (this.visible != visible) {
-            this.visible = visible;
+    public Widget setVisibility(Visibility visibility) {
+        if (this.visibility != visibility) {
+            this.visibility = visibility;
             if (parent != null) {
                 parent.requestLayout();
             }
         }
         return this;
+    }
+
+    @Override
+    public boolean isVisible() {
+        return visibility == Visibility.VISIBLE;
     }
 
     @Override
@@ -273,6 +324,7 @@ public abstract class AbstractWidget implements Widget {
     @Override
     public Widget setEnabled(boolean enabled) {
         this.enabled = enabled;
+        updateStateAnimator();
         return this;
     }
 
@@ -296,6 +348,7 @@ public abstract class AbstractWidget implements Widget {
     public Widget setFocused(boolean focused) {
         if (this.focused != focused && canFocus()) {
             this.focused = focused;
+            updateStateAnimator();
             if (focused) onFocusGained();
             else onFocusLost();
         }
@@ -310,20 +363,54 @@ public abstract class AbstractWidget implements Widget {
     @Override
     public void setHovered(boolean hovered) {
         this.hovered = hovered;
+        updateStateAnimator();
     }
 
     @Override
     public boolean isPressed() {
-        return false;
+        return pressed;
     }
 
     @Override
     public boolean isSelected() {
-        return false;
+        return selected;
     }
 
     @Override
     public void setSelected(boolean selected) {
+        this.selected = selected;
+        updateStateAnimator();
+    }
+
+    @Override
+    public int getWidgetState() {
+        var state = State.NONE;
+        if (!enabled) state |= State.DISABLED;
+        if (hovered) state |= State.HOVERED;
+        if (pressed) state |= State.PRESSED;
+        if (focused) state |= State.FOCUSED;
+        if (selected) state |= State.SELECTED;
+        return state;
+    }
+
+    @Override
+    public void setStateListAnimator(@Nullable StateListAnimator animator) {
+        stateListAnimator = animator;
+        if (isAttached && animator != null) {
+            animator.jumpToCurrentState();
+            updateStateAnimator();
+        }
+    }
+
+    @Override
+    public @Nullable StateListAnimator getStateListAnimator() {
+        return stateListAnimator;
+    }
+
+    private void updateStateAnimator() {
+        if (stateListAnimator != null) {
+            stateListAnimator.setState(getWidgetState());
+        }
     }
 
     @Override
@@ -334,6 +421,80 @@ public abstract class AbstractWidget implements Widget {
     @Override
     public Widget setAlpha(float alpha) {
         this.alpha = alpha;
+        return this;
+    }
+
+    @Override
+    public float getScaleX() {
+        return scaleX;
+    }
+
+    @Override
+    public Widget setScaleX(float scaleX) {
+        this.scaleX = scaleX;
+        return this;
+    }
+
+    @Override
+    public float getScaleY() {
+        return scaleY;
+    }
+
+    @Override
+    public Widget setScaleY(float scaleY) {
+        this.scaleY = scaleY;
+        return this;
+    }
+
+    @Override
+    public Widget setScale(float scale) {
+        scaleX = scale;
+        scaleY = scale;
+        return this;
+    }
+
+    @Override
+    public float getScale() {
+        return scaleX;
+    }
+
+    @Override
+    public float getRotation() {
+        return rotation;
+    }
+
+    @Override
+    public Widget setRotation(float rotation) {
+        this.rotation = rotation;
+        return this;
+    }
+
+    @Override
+    public float getOriginX() {
+        return originX;
+    }
+
+    @Override
+    public Widget setOriginX(float originX) {
+        this.originX = originX;
+        return this;
+    }
+
+    @Override
+    public float getOriginY() {
+        return originY;
+    }
+
+    @Override
+    public Widget setOriginY(float originY) {
+        this.originY = originY;
+        return this;
+    }
+
+    @Override
+    public Widget setOrigin(float originX, float originY) {
+        this.originX = originX;
+        this.originY = originY;
         return this;
     }
 
@@ -489,6 +650,10 @@ public abstract class AbstractWidget implements Widget {
         if (isAttached) return;
         isAttached = true;
         onAttached();
+        if (stateListAnimator != null) {
+            stateListAnimator.jumpToCurrentState();
+            updateStateAnimator();
+        }
     }
 
     @Override

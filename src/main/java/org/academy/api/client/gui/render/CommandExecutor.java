@@ -6,17 +6,20 @@ import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.client.stencil.StencilFunction;
 import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
-import org.academy.AcademyCraft;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.*;
 
 public final class CommandExecutor implements AutoCloseable {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     private static final long INITIAL_CAPACITY = 4L * 1024L * 1024L;
 
     private @Nullable GpuBuffer globalBuffer;
@@ -36,8 +39,7 @@ public final class CommandExecutor implements AutoCloseable {
     ) {
         processRetiredBuffers();
 
-        if (batches.isEmpty())
-            return;
+        if (batches.isEmpty()) return;
 
         var meshAbsoluteOffsets = new long[batches.size()];
         var allocation = tryAllocate(batches, meshAbsoluteOffsets);
@@ -47,9 +49,7 @@ public final class CommandExecutor implements AutoCloseable {
             allocation = tryAllocate(batches, meshAbsoluteOffsets);
         } else if (allocation.needsRotate || allocation.totalSize > globalBuffer.size()) {
             retireCurrentBuffer();
-            if (allocation.totalSize > globalBuffer.size()) {
-                ensureCapacity(allocation.totalSize);
-            }
+            if (allocation.totalSize > globalBuffer.size()) ensureCapacity(allocation.totalSize);
             allocation = tryAllocate(batches, meshAbsoluteOffsets);
         }
 
@@ -58,9 +58,8 @@ public final class CommandExecutor implements AutoCloseable {
 
         try (var mapped = RenderSystem.getDevice().createCommandEncoder()
                 .mapBuffer(
-                        globalBuffer.slice(
-                                allocation.start, allocation.length
-                        ), false, true
+                        globalBuffer.slice(allocation.start, allocation.length),
+                        false, true
                 )
         ) {
 
@@ -130,9 +129,7 @@ public final class CommandExecutor implements AutoCloseable {
                     var screenHeight = (int) (scissor.getHeight() * guiScale);
                     var screenY = (int) (physicalHeight - (pos.y + scissor.getHeight()) * guiScale);
                     renderPass.enableScissor(screenX, screenY, screenWidth, screenHeight);
-                } else {
-                    renderPass.disableScissor();
-                }
+                } else renderPass.disableScissor();
 
                 RenderSystem.bindDefaultUniforms(renderPass);
                 renderPass.setUniform("Projection", projectionUbo);
@@ -141,7 +138,7 @@ public final class CommandExecutor implements AutoCloseable {
                 for (var texture : drawCall.textures()) {
                     var value = texture.view();
                     if (value.isClosed()) {
-                        AcademyCraft.LOGGER.error("Sampler {} has been closed, skipping draw call.", texture.name());
+                        LOGGER.error("Sampler {} has been closed, skipping draw call.", texture.name());
                         continue;
                     }
                     renderPass.bindTexture(texture.name(), value, texture.sampler());
@@ -149,7 +146,7 @@ public final class CommandExecutor implements AutoCloseable {
                 for (var uniform : drawCall.uniforms()) {
                     var since = uniform.slice();
                     if (since.buffer().isClosed()) {
-                        AcademyCraft.LOGGER.error("Uniform {} has been closed, skipping draw call.", uniform.name());
+                        LOGGER.error("Uniform {} has been closed, skipping draw call.", uniform.name());
                     }
                     renderPass.setUniform(uniform.name(), since);
                 }
@@ -192,16 +189,10 @@ public final class CommandExecutor implements AutoCloseable {
             requiredLength = endPtr;
 
             if (globalBuffer != null && endPtr <= globalBuffer.size()) {
-                if (isRegionConflicted(startPtr, endPtr)) {
-                    needsRotate = true;
-                }
-            } else {
-                needsRotate = true;
-            }
+                if (isRegionConflicted(startPtr, endPtr)) needsRotate = true;
+            } else needsRotate = true;
         } else {
-            if (isRegionConflicted(startPtr, endPtr)) {
-                needsRotate = true;
-            }
+            if (isRegionConflicted(startPtr, endPtr)) needsRotate = true;
         }
 
         return new AllocationResult(startPtr, endPtr, requiredLength, requiredLength, needsRotate);
@@ -213,18 +204,14 @@ public final class CommandExecutor implements AutoCloseable {
             if (retired.isReady()) {
                 retired.free();
                 retiredBuffers.pollFirst();
-            } else {
-                break;
-            }
+            } else break;
         }
     }
 
     private boolean isRegionConflicted(long start, long end) {
         cleanupActiveRegions();
         for (var region : activeRegions) {
-            if (region.intersects(start, end)) {
-                return true;
-            }
+            if (region.intersects(start, end)) return true;
         }
         return false;
     }
@@ -235,9 +222,7 @@ public final class CommandExecutor implements AutoCloseable {
             if (region.fence.awaitCompletion(0)) {
                 region.fence.close();
                 activeRegions.pollFirst();
-            } else {
-                break;
-            }
+            } else break;
         }
     }
 
@@ -272,13 +257,9 @@ public final class CommandExecutor implements AutoCloseable {
             globalBuffer.close();
             globalBuffer = null;
         }
-        for (var region : activeRegions) {
-            region.fence.close();
-        }
+        for (var region : activeRegions) region.fence.close();
         activeRegions.clear();
-        for (var retired : retiredBuffers) {
-            retired.free();
-        }
+        for (var retired : retiredBuffers) retired.free();
         retiredBuffers.clear();
         writeOffset = 0L;
     }
@@ -296,9 +277,7 @@ public final class CommandExecutor implements AutoCloseable {
         }
 
         void free() {
-            for (var region : regions) {
-                region.fence.close();
-            }
+            for (var region : regions) region.fence.close();
             regions.clear();
             buffer.close();
         }

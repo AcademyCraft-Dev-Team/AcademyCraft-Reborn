@@ -1,7 +1,6 @@
 package org.academy.api.client;
 
 import net.minecraft.resources.Identifier;
-import org.academy.internal.common.ability.accelerator.skills.VectorAccel_Server_handleDash_DashPacket_3b0f20_MNListener;
 
 import static org.academy.AcademyCraft.academy;
 import static org.academy.AcademyCraft.vanilla;

@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.apps;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -13,6 +14,7 @@ import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.util.ClientUtil;
 import org.joml.Quaternionf;
+import org.slf4j.Logger;
 
 import javax.sound.sampled.*;
 import java.io.BufferedInputStream;
@@ -21,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class MusicApp extends AbstractApp {
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     private static final MusicController musicController = new MusicController();
 
@@ -231,7 +234,7 @@ public class MusicApp extends AbstractApp {
                 if (!l1.isEmpty()) {
                     var currentTrack = l1.get(currentIndex);
                     l2.remove(currentTrack);
-                    l2.add(0, currentTrack);
+                    l2.addFirst(currentTrack);
                 }
 
                 currentPlaylist = l2;
@@ -345,7 +348,7 @@ public class MusicApp extends AbstractApp {
             try {
                 var resource = Minecraft.getInstance().getResourceManager().getResource(resourceLocation);
                 if (resource.isEmpty()) {
-                    AcademyCraft.LOGGER.error("Music file not found: {}", resourceLocation);
+                    LOGGER.error("Music file not found: {}", resourceLocation);
                     return;
                 }
                 var audioStream = AudioSystem.getAudioInputStream(new BufferedInputStream(resource.get().open()));
@@ -377,7 +380,7 @@ public class MusicApp extends AbstractApp {
                 this.isPaused = false;
 
             } catch (Exception e) {
-                AcademyCraft.LOGGER.error("Error playing music: {}", resourceLocation, e);
+                LOGGER.error("Error playing music: {}", resourceLocation, e);
             }
         }
 

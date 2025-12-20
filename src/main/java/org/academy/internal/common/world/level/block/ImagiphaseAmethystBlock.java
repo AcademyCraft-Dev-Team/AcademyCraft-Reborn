@@ -1,3 +1,4 @@
+/*
 package org.academy.internal.common.world.level.block;
 
 import com.mojang.serialization.MapCodec;
@@ -36,4 +37,4 @@ public class ImagiphaseAmethystBlock extends Block {
             level.playSound(null, blockpos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 0.5F + level.random.nextFloat() * 1.2F);
         }
     }
-}
+}*/

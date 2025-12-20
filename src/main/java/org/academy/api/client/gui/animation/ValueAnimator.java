@@ -30,6 +30,10 @@ public class ValueAnimator extends Animator {
         return animatedValue;
     }
 
+    protected float getEndValue() {
+        return endValue;
+    }
+
     @Override
     public ValueAnimator setDuration(long duration) {
         super.setDuration(duration);
