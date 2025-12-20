@@ -2,11 +2,11 @@ package org.academy.internal.client.app;
 
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.Resource;
+import org.academy.api.client.app.App;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.app.App;
 
 public class MusicApp implements App {
     public static final MusicApp INSTANCE = new MusicApp();
@@ -85,24 +85,6 @@ public class MusicApp implements App {
             btns.setSpacing(8);
             btns.setLayoutParams(new LinearLayoutWidget.LayoutParams().gravity(Gravity.CENTER).marginTop(6));
             controls.addChild("btns", btns);
-
-            var loopMode = org.academy.api.client.gui.apps.MusicApp.LoopMode.LIST_LOOP;
-
-/*            var modeIcon = new ImageWidget(getModeTexture(loopMode));
-            modeIcon.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(16, 16).gravity(Gravity.CENTER));
-            btns.addChild("mode", createButton(modeIcon, 24, this::cycleMode));
-
-            var prevIcon = new ImageWidget(Resource.Textures.ICON_PREV);
-            prevIcon.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(16, 16).gravity(Gravity.CENTER));
-            btns.addChild("prev", createButton(prevIcon, 24, this::playPrev));
-
-            var playPauseIcon = new ImageWidget(Resource.Textures.ICON_PLAY);
-            playPauseIcon.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(16, 16).gravity(Gravity.CENTER));
-            btns.addChild("play", createButton(playPauseIcon, 24, this::togglePlayState));
-
-            var nextIcon = new ImageWidget(Resource.Textures.ICON_NEXT);
-            nextIcon.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(16, 16).gravity(Gravity.CENTER));
-            btns.addChild("next", createButton(nextIcon, 24, this::playNext));*/
         }
         return content;
     }

@@ -4,7 +4,7 @@ plugins {
     id("net.neoforged.moddev") version "2.0.131"
 }
 
-val neoVersion: String = "26.1.0-alpha.26.1-snapshot-1.20251220.085055"
+val neoVersion: String = "26.1.0-alpha.26.1-snapshot-1.20251220.132345"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()

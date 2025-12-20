@@ -405,7 +405,7 @@ public final class DataTerminalHUD {
 
             if (main != null) {
                 float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-                float targetWidth = screenWidth * 0.8f;
+                var targetWidth = screenWidth * 0.8f;
                 main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
             }
         });
@@ -427,7 +427,7 @@ public final class DataTerminalHUD {
             viewStateProgress = anim.getAnimatedValue();
             if (main != null) {
                 float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-                float targetWidth = screenWidth * 0.8f;
+                var targetWidth = screenWidth * 0.8f;
                 main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
             }
         });
@@ -502,7 +502,7 @@ public final class DataTerminalHUD {
                 );
                 iconArea.setStateListAnimator(animator);
             }
-            var nameWidget = new LabelWidget("name");
+            var nameWidget = new LabelWidget(name);
             nameWidget.setLayoutParams(
                     new LinearLayoutWidget.LayoutParams()
                             .gravity(Gravity.CENTER)
