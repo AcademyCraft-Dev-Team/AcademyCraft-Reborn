@@ -8,8 +8,10 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.pakcet.*;
+import org.academy.api.common.data.CPData;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -33,9 +35,7 @@ public final class AbilitySystemClient {
     @Nullable
     public static AbilityCategory category;
     private static boolean activeHUD = false;
-    private static float computingPower;
-    private static float maxComputingPower;
-    private static int level;
+    private static CPData cpData = new CPData();
 
     static {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY_ABILITY_SYSTEM, Config.Action.INSTANCE);
@@ -86,18 +86,8 @@ public final class AbilitySystemClient {
     }
 
     @SubscribePacket
-    public static void handleSync(SyncLevelPacket packet) {
-        setLevel(packet.getLevel());
-    }
-
-    @SubscribePacket
-    public static void handleSync(SyncComputingPowerPacket packet) {
-        setComputingPower(packet.getComputingPower());
-    }
-
-    @SubscribePacket
-    public static void handleSync(SyncMaxComputingPowerPacket packet) {
-        setMaxComputingPower(packet.getMaxComputingPower());
+    public static void handleSync(SyncCPDataPacket packet) {
+        cpData = packet.getCPData();
     }
 
     @SubscribePacket
@@ -114,28 +104,16 @@ public final class AbilitySystemClient {
         });
     }
 
-    public static float getComputingPower() {
-        return computingPower;
+    public static float getAvailableCP() {
+        return cpData.getAvailableCP();
     }
 
-    public static void setComputingPower(float computingPower) {
-        AbilitySystemClient.computingPower = computingPower;
+    public static float getMaxCP() {
+        return cpData.getMaxCP();
     }
 
-    public static float getMaxComputingPower() {
-        return maxComputingPower;
-    }
-
-    public static void setMaxComputingPower(float maximumComputingPower) {
-        maxComputingPower = maximumComputingPower;
-    }
-
-    public static int getLevel() {
-        return level;
-    }
-
-    public static void setLevel(int level) {
-        AbilitySystemClient.level = level;
+    public static AbilityLevel getLevel() {
+        return cpData.getLevel();
     }
 
     public static boolean isActiveHUD() {

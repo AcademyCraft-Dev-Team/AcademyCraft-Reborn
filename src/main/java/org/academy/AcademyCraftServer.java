@@ -8,6 +8,7 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.server.ability.PlayerCPManager;
 import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
@@ -25,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 @EventBusSubscriber
 public final class AcademyCraftServer {
     private static final Logger LOGGER = LogUtils.getLogger();
-    
+
     @Nullable
     public static AcademyCraftConfig serverConfig;
     @Nullable
@@ -71,7 +72,10 @@ public final class AcademyCraftServer {
         if (worldDataSaveTask != null) worldDataSaveTask.cancel(false);
 
         worldDataSaveTask = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
-                WorldData::saveData, 5, 5, TimeUnit.MINUTES
+                () -> {
+                    PlayerCPManager.flushAllToData();
+                    WorldData.saveData();
+                }, 5, 5, TimeUnit.MINUTES
         );
         LOGGER.info("Scheduled periodic world data saving.");
     }
@@ -80,6 +84,8 @@ public final class AcademyCraftServer {
     public static void onServerStopping(ServerStoppingEvent event) {
         if (worldDataSaveTask != null) worldDataSaveTask.cancel(false);
         LOGGER.info("Server stopping. Performing final data saves...");
+        PlayerCPManager.flushAllToData();
+        PlayerCPManager.clear();
         WorldData.saveData();
         if (serverConfig != null) serverConfig.save();
     }

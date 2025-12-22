@@ -2,6 +2,7 @@ package org.academy.internal.server.ability;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.level.ServerPlayer;
+import org.academy.api.common.data.CPData;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.slf4j.Logger;
@@ -30,8 +31,9 @@ public final class PlayerDataManager {
         LOGGER.debug("Creating new data entry for player {}", uuid);
         var player = new Player();
         player.setLevel(0);
-        player.setComputingPower(100);
-        player.setMaxComputingPower(100);
+        player.setAvailableCP(100);
+        player.setMaxCP(100);
+        player.setStatus(CPData.Status.NORMAL);
         player.markDirty();
         return player;
     }
