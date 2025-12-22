@@ -101,7 +101,7 @@ public final class ArcGenerate extends Skill {
         public static void handle(GeneratePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var level = player.level();
-            var currentComputingPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
+            var currentComputingPower = AbilitySystemServer.getPlayerAvailableCP(player.getUUID());
             if (currentComputingPower <= 10) return;
 
             var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());

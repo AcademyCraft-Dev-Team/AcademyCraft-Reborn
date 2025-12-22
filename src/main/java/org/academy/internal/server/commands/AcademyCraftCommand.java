@@ -1,7 +1,11 @@
 package org.academy.internal.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -9,6 +13,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -16,9 +21,12 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.PlayerCPManager;
 
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 @EventBusSubscriber
@@ -51,8 +59,173 @@ public final class AcademyCraftCommand {
                         .then(Commands.argument("skill_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestLearnedSkills)
                                 .then(Commands.argument("amount", FloatArgumentType.floatArg(0))
-                                        .executes(AcademyCraftCommand::setSkillExp))))
+                                        .executes(AcademyCraftCommand::setSkillExp)))
+                )
+                .then(Commands.literal("debug")
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(CPDebugCommands.register())
+                )
         );
+    }
+
+    private static class CPDebugCommands {
+
+        static LiteralArgumentBuilder<CommandSourceStack> register() {
+            return Commands.literal("cp")
+                    .then(Commands.literal("info")
+                            .executes(ctx -> info(ctx, ctx.getSource().getPlayerOrException(), false))
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .executes(ctx -> info(ctx, EntityArgument.getPlayer(ctx, "target"), false))
+                                    .then(Commands.argument("broadcast", BoolArgumentType.bool())
+                                            .executes(ctx -> info(ctx, EntityArgument.getPlayer(ctx, "target"), BoolArgumentType.getBool(ctx, "broadcast"))))))
+
+                    .then(Commands.literal("get")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.literal("value").executes(ctx -> get(ctx, "value")))
+                                    .then(Commands.literal("max").executes(ctx -> get(ctx, "max")))
+                                    .then(Commands.literal("curr_sp").executes(ctx -> get(ctx, "curr_sp")))
+                                    .then(Commands.literal("max_sp").executes(ctx -> get(ctx, "max_sp")))
+                                    .then(Commands.literal("level").executes(ctx -> get(ctx, "level")))
+                                    .then(Commands.literal("timer").executes(ctx -> get(ctx, "timer")))
+                                    .then(Commands.literal("status").executes(ctx -> get(ctx, "status")))))
+
+                    .then(Commands.literal("set")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("value", FloatArgumentType.floatArg())
+                                            .executes(ctx -> set(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "value"), false))
+                                            .then(Commands.argument("broadcast", BoolArgumentType.bool())
+                                                    .executes(ctx -> set(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "value"), BoolArgumentType.getBool(ctx, "broadcast")))))))
+
+                    .then(Commands.literal("set_max")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("value", FloatArgumentType.floatArg(0))
+                                            .executes(ctx -> setMax(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "value"), false))
+                                            .then(Commands.argument("broadcast", BoolArgumentType.bool())
+                                                    .executes(ctx -> setMax(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "value"), BoolArgumentType.getBool(ctx, "broadcast")))))))
+
+                    .then(Commands.literal("set_status")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("status", StringArgumentType.word())
+                                            .suggests(CPDebugCommands::suggestStatus)
+                                            .executes(ctx -> setStatus(ctx, EntityArgument.getPlayer(ctx, "target"), StringArgumentType.getString(ctx, "status"), 0, false))
+                                            .then(Commands.argument("timer", IntegerArgumentType.integer(0))
+                                                    .executes(ctx -> setStatus(ctx, EntityArgument.getPlayer(ctx, "target"), StringArgumentType.getString(ctx, "status"), IntegerArgumentType.getInteger(ctx, "timer"), false))
+                                                    .then(Commands.argument("broadcast", BoolArgumentType.bool())
+                                                            .executes(ctx -> setStatus(ctx, EntityArgument.getPlayer(ctx, "target"), StringArgumentType.getString(ctx, "status"), IntegerArgumentType.getInteger(ctx, "timer"), BoolArgumentType.getBool(ctx, "broadcast"))))))))
+
+                    .then(Commands.literal("request")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("amount", FloatArgumentType.floatArg(0))
+                                            .then(Commands.argument("ticks", IntegerArgumentType.integer(0))
+                                                    .then(Commands.argument("is_passive", BoolArgumentType.bool())
+                                                            .executes(ctx -> requestOccupy(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "amount"), IntegerArgumentType.getInteger(ctx, "ticks"), BoolArgumentType.getBool(ctx, "is_passive"), false))
+                                                            .then(Commands.argument("broadcast", BoolArgumentType.bool())
+                                                                    .executes(ctx -> requestOccupy(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "amount"), IntegerArgumentType.getInteger(ctx, "ticks"), BoolArgumentType.getBool(ctx, "is_passive"), BoolArgumentType.getBool(ctx, "broadcast")))))))));
+        }
+
+        private static int info(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, boolean broadcast) {
+            var uuid = player.getUUID();
+            var name = player.getName().getString();
+
+            float current = AbilitySystemServer.getPlayerAvailableCP(uuid);
+            float max = AbilitySystemServer.getPlayerMaxCP(uuid);
+            int level = AbilitySystemServer.getPlayerLevel(uuid);
+            int currSP = AbilitySystemServer.getPlayerCurrSP(uuid);
+            int maxSP = AbilitySystemServer.getPlayerMaxSP(uuid);
+            CPData.Status status = AbilitySystemServer.getPlayerStatus(uuid);
+            int timer = AbilitySystemServer.getPlayerStateTimer(uuid);
+
+            Component message = Component.literal(String.format(
+                    "§e[CP Debug: %s]§r\n" +
+                            "§7UUID: %s§r\n" +
+                            "§fLevel: §d%d§r\n" +
+                            "§fCP: §b%.2f§r / §3%.2f§r\n" +
+                            "§fSP: §e%d§r / §6%d§r\n" +
+                            "§fStatus: §a%s§r (Timer: §6%d§r)",
+                    name, uuid, level, current, max, currSP, maxSP, status, timer
+            ));
+            sendFeedback(context, message, broadcast);
+            return 1;
+        }
+
+        private static int get(CommandContext<CommandSourceStack> context, String type) throws CommandSyntaxException {
+            var target = EntityArgument.getPlayer(context, "target");
+            var uuid = target.getUUID();
+
+            return switch (type) {
+                case "value" -> (int) AbilitySystemServer.getPlayerAvailableCP(uuid);
+                case "max" -> (int) AbilitySystemServer.getPlayerMaxCP(uuid);
+                case "curr_sp" -> AbilitySystemServer.getPlayerCurrSP(uuid);
+                case "max_sp" -> AbilitySystemServer.getPlayerMaxSP(uuid);
+                case "level" -> AbilitySystemServer.getPlayerLevel(uuid);
+                case "timer" -> AbilitySystemServer.getPlayerStateTimer(uuid);
+                case "status" -> AbilitySystemServer.getPlayerStatus(uuid).ordinal();
+                default -> 0;
+            };
+        }
+
+        private static int set(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, float value, boolean broadcast) {
+            var uuid = player.getUUID();
+            AbilitySystemServer.setPlayerAvailableCP(uuid, value);
+
+            Component message = Component.literal(String.format("§e[AC Debug]§r Set Available CP for %s to: %.2f", player.getName().getString(), value));
+            sendFeedback(context, message, broadcast);
+            return 1;
+        }
+
+        private static int setMax(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, float value, boolean broadcast) {
+            var uuid = player.getUUID();
+            AbilitySystemServer.setPlayerMaxCP(uuid, value);
+
+            Component message = Component.literal(String.format("§e[AC Debug]§r Set Max CP for %s to: %.2f", player.getName().getString(), value));
+            sendFeedback(context, message, broadcast);
+            return 1;
+        }
+
+        private static int setStatus(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, String statusName, int timer, boolean broadcast) {
+            var uuid = player.getUUID();
+            try {
+                CPData.Status status = CPData.Status.valueOf(statusName.toUpperCase());
+                AbilitySystemServer.setPlayerStatus(uuid, status);
+                AbilitySystemServer.setPlayerStateTimer(uuid, timer);
+
+                Component message = Component.literal(String.format("§e[AC Debug]§r Set Status for %s to: %s, Timer: %d", player.getName().getString(), status, timer));
+                sendFeedback(context, message, broadcast);
+            } catch (IllegalArgumentException e) {
+                context.getSource().sendFailure(Component.literal("Invalid status: " + statusName));
+                return 0;
+            }
+            return 1;
+        }
+
+        private static int requestOccupy(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, float amount, int ticks, boolean isPassive, boolean broadcast) {
+            var uuid = player.getUUID();
+            boolean success = AbilitySystemServer.requestCPOccupation(uuid, amount, ticks, isPassive);
+
+            if (success) {
+                Component message = Component.literal(String.format("§a[AC Debug] Success: Occupied %.1f CP for %d ticks (Passive: %b) on %s", amount, ticks, isPassive, player.getName().getString()));
+                sendFeedback(context, message, broadcast);
+                return 1;
+            } else {
+                context.getSource().sendFailure(Component.literal("§cFailed: Insufficient CP or Overloaded on target " + player.getName().getString()));
+                return 0;
+            }
+        }
+
+        private static void sendFeedback(CommandContext<CommandSourceStack> context, Component message, boolean broadcast) {
+            if (broadcast) {
+                context.getSource().getServer().getPlayerList().broadcastSystemMessage(message, false);
+            } else {
+                context.getSource().sendSuccess(() -> message, true);
+            }
+        }
+
+        private static CompletableFuture<Suggestions> suggestStatus(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+            return SharedSuggestionProvider.suggest(
+                    Arrays.stream(CPData.Status.values()).map(Enum::name),
+                    builder
+            );
+        }
     }
 
     private static int learnAllSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

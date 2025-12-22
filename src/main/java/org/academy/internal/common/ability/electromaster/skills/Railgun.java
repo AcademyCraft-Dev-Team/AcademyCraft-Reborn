@@ -249,12 +249,6 @@ public final class Railgun extends Skill {
                     arc.setPos(coinPos);
                     level.addFreshEntity(arc);
                 } else {
-                    var uuid = player.getUUID();
-                    var computingPower = AbilitySystemServer.getPlayerComputingPower(uuid);
-
-                    if (!player.isCreative()) {
-                        AbilitySystemServer.setPlayerComputingPower(uuid, computingPower - 100);
-                    }
 
                     var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
                     float length = 50;

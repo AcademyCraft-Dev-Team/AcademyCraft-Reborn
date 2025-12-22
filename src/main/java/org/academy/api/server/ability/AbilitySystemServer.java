@@ -11,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
@@ -19,6 +20,7 @@ import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.pakcet.*;
+import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.util.UncheckedUtil;
@@ -27,6 +29,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import org.academy.internal.server.ability.PlayerCPManager;
 import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
@@ -51,10 +54,11 @@ public final class AbilitySystemServer {
     public static volatile MinecraftServer minecraftServer;
     public static volatile ScheduledFuture<?> scheduledFuture;
 
-    public static void init(final MinecraftServer server, PlayerDataManager manager) {
-        playerDataManager = manager;
+    public static void init(final MinecraftServer server, PlayerDataManager dataManager) {
+        playerDataManager = dataManager;
         MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
         minecraftServer = server;
+        PlayerCPManager.init(dataManager);
 
         for (var category : Registries.ABILITY_CATEGORIES) {
             category.initServer(server);
@@ -209,10 +213,6 @@ public final class AbilitySystemServer {
         }
     }
 
-    public static int getPlayerLevel(UUID uuid) {
-        return getPlayerData(uuid).getLevel();
-    }
-
     @Nullable
     public static <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
         return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
@@ -227,54 +227,83 @@ public final class AbilitySystemServer {
         }
     }
 
+    /**
+     * 请求CP占用
+     *
+     * @param isPassive 是否被动占用（被动占用能使玩家进入个人现实过载状态）
+     * @return 是否成功
+     */
+    public static boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
+        return PlayerCPManager.requestCPOccupation(uuid, amount, iterationTicks, isPassive);
+    }
+
+    public static float getPlayerOccupiedCP(UUID uuid) {
+        return PlayerCPManager.getOccupiedCP(uuid);
+    }
+
+    public static int getPlayerLevel(UUID uuid) {
+        return PlayerCPManager.getLevel(uuid);
+    }
+
     public static void setPlayerLevel(UUID uuid, int level) {
-        getPlayerData(uuid).setLevel(level);
+        PlayerCPManager.setLevel(uuid, level);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
-    public static float getPlayerComputingPower(UUID uuid) {
-        return getPlayerData(uuid).getComputingPower();
+    public static float getPlayerAvailableCP(UUID uuid) {
+        return PlayerCPManager.getAvailableCP(uuid);
     }
 
-    public static void setPlayerComputingPower(UUID uuid, float power) {
-        getPlayerData(uuid).setComputingPower(power);
-        schedulePlayerSync(uuid, SyncTypes.COMPUTING_POWER);
+    public static void setPlayerAvailableCP(UUID uuid, float availableCP) {
+        PlayerCPManager.setAvailableCP(uuid, availableCP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
-    public static float getPlayerMaxComputingPower(UUID uuid) {
-        return getPlayerData(uuid).getMaxComputingPower();
+    public static float getPlayerMaxCP(UUID uuid) {
+        return PlayerCPManager.getMaxCP(uuid);
     }
 
-    public static void setPlayerMaxComputingPower(UUID uuid, float power) {
-        getPlayerData(uuid).setMaxComputingPower(power);
-        schedulePlayerSync(uuid, SyncTypes.MAX_COMPUTING_POWER);
+    public static void setPlayerMaxCP(UUID uuid, float maxCP) {
+        PlayerCPManager.setMaxCP(uuid, maxCP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
-    public static float getPlayerComputingPowerRecoverySpeed(UUID uuid) {
-        return getPlayerData(uuid).getComputingPowerRecoverySpeed();
+    public static CPData.Status getPlayerStatus(UUID uuid) {
+        return PlayerCPManager.getStatus(uuid);
     }
 
-    public static void setPlayerComputingPowerRecoverySpeed(UUID uuid, float speed) {
-        getPlayerData(uuid).setComputingPowerRecoverySpeed(speed);
+    public static void setPlayerStatus(UUID uuid, CPData.Status status) {
+        PlayerCPManager.setStatus(uuid, status);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
-    public static float getPlayerAdditionalComputingPower(UUID uuid) {
-        var playerData = getPlayerData(uuid);
-        if (playerData == null) {
-            return -1;
-        } else {
-            var livePlayer = LIVE_PLAYER_MAP.get(uuid);
-            return livePlayer != null ? livePlayer.additionalComputingPower : 0;
-        }
+    public static int getPlayerStateTimer(UUID uuid) {
+        return PlayerCPManager.getStateTimer(uuid);
     }
 
-    public static void setPlayerAdditionalComputingPower(UUID uuid, float power) {
-        if (getPlayerData(uuid) != null) {
-            var livePlayer = LIVE_PLAYER_MAP.get(uuid);
-            if (livePlayer != null) {
-                livePlayer.additionalComputingPower = power;
-            }
-        }
+    public static void setPlayerStateTimer(UUID uuid, int stateTimer) {
+        PlayerCPManager.setStateTimer(uuid, stateTimer);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
+
+    public static int getPlayerCurrSP(UUID uuid) {
+        return PlayerCPManager.getCurrSP(uuid);
+    }
+
+    public static void setPlayerCurrSP(UUID uuid, int currSP) {
+        PlayerCPManager.setCurrSP(uuid, currSP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public static int getPlayerMaxSP(UUID uuid) {
+        return PlayerCPManager.getMaxSP(uuid);
+    }
+
+    public static void setPlayerMaxSP(UUID uuid, int maxSP) {
+        PlayerCPManager.setMaxSP(uuid, maxSP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
 
     public static float getDamageMultiplier() {
         return AcademyCraftServer.abilityConfig == null
@@ -298,11 +327,11 @@ public final class AbilitySystemServer {
         }
         var uuid = player.getUUID();
         LIVE_PLAYER_MAP.put(uuid, new LivePlayer(uuid, player.connection));
-        schedulePlayerSync(uuid, SyncTypes.LEVEL);
         schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
-        schedulePlayerSync(uuid, SyncTypes.COMPUTING_POWER);
-        schedulePlayerSync(uuid, SyncTypes.MAX_COMPUTING_POWER);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
         schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+
+        PlayerCPManager.loadFromData(uuid, getPlayerData(uuid));
     }
 
     public static final class AbilitySystemTicker {
@@ -319,22 +348,14 @@ public final class AbilitySystemServer {
             final var connection = player.connection;
             final var uuid = player.uuid;
             var syncQueue = player.syncQueue;
-            var levelChanged = syncQueue.contains(SyncTypes.LEVEL);
-            var currentComputingPowerChanged = syncQueue.contains(SyncTypes.COMPUTING_POWER);
-            var maxComputingPowerChanged = syncQueue.contains(SyncTypes.MAX_COMPUTING_POWER);
+
+            var cpDataChanged = syncQueue.contains(SyncTypes.CP_DATA);
             var abilityCategoryChanged = syncQueue.contains(SyncTypes.ABILITY_CATEGORY);
             var skillDataChanged = syncQueue.contains(SyncTypes.SKILL_DATA);
 
-            if (levelChanged) {
-                var packet = new SyncLevelPacket(getPlayerLevel(uuid));
-                MisakaNetworkServer.sendPacket(connection, packet);
-            }
-            if (currentComputingPowerChanged) {
-                var packet = new SyncComputingPowerPacket(getPlayerComputingPower(uuid));
-                MisakaNetworkServer.sendPacket(connection, packet);
-            }
-            if (maxComputingPowerChanged) {
-                var packet = new SyncMaxComputingPowerPacket(getPlayerMaxComputingPower(uuid));
+            if (cpDataChanged) {
+                var cpData = PlayerCPManager.getCPData(uuid);
+                var packet = new SyncCPDataPacket(cpData);
                 MisakaNetworkServer.sendPacket(connection, packet);
             }
             if (abilityCategoryChanged) {
@@ -347,13 +368,6 @@ public final class AbilitySystemServer {
                 MisakaNetworkServer.sendPacket(connection, packet);
             }
             player.syncQueue.clear();
-
-            final var currentComputingPower = getPlayerComputingPower(uuid);
-            final var maxComputingPower = getPlayerMaxComputingPower(uuid);
-            final var computingPowerRecoverySpeed = getPlayerComputingPowerRecoverySpeed(uuid);
-            if (currentComputingPower < maxComputingPower) {
-                setPlayerComputingPower(uuid, Math.min(maxComputingPower, currentComputingPower + computingPowerRecoverySpeed));
-            }
         }
     }
 
@@ -367,6 +381,18 @@ public final class AbilitySystemServer {
                     .collect(Collectors.toSet());
 
             LIVE_PLAYER_MAP.keySet().removeIf(uuid -> !onlinePlayerUUIDs.contains(uuid));
+
+            LIVE_PLAYER_MAP.forEach((uuid, livePlayer) -> {
+                if (PlayerCPManager.tick(uuid)) {
+                    schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+                }
+            });
+        }
+
+        @SubscribeEvent
+        public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+            var uuid = event.getEntity().getUUID();
+            PlayerCPManager.flushToData(uuid);
         }
     }
 
@@ -374,7 +400,6 @@ public final class AbilitySystemServer {
         public final UUID uuid;
         public final Set<Identifier> syncQueue = ConcurrentHashMap.newKeySet();
         private final ServerGamePacketListenerImpl connection;
-        public float additionalComputingPower;
 
         public LivePlayer(final UUID newUuid, final ServerGamePacketListenerImpl newConnection) {
             uuid = newUuid;

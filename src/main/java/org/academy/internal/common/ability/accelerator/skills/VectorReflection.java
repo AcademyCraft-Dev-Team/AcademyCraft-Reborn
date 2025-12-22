@@ -6,6 +6,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.player.Player;
@@ -158,28 +159,29 @@ public class VectorReflection extends Skill {
                 return Pair.of(false, originalDamage);
             }
 
-            var requiredPower = originalDamage * 10f;
-            var currentPower = AbilitySystemServer.getPlayerComputingPower(player.getUUID());
+            var uuid = player.getUUID();
+            var requiredCP = originalDamage * 10f;
+            var currentCP = AbilitySystemServer.getPlayerAvailableCP(uuid);
 
-            if (currentPower > 0) {
+            var clampedCP = Mth.clamp(currentCP, 0f, 200f);
+            var iterationTicks = (int) Mth.map(clampedCP, 0f, 200, 10, 150);
+
+            if (AbilitySystemServer.requestCPOccupation(uuid, requiredCP, iterationTicks, true)) {
+                if (currentCP >= requiredCP) {
+                    player.invulnerableTime = 20;
+                    applyReflection(player, level, source, originalDamage);
+                    return Pair.of(false, 0f);
+                } else {
+                    var effectiveCP = Math.max(0f, currentCP);
+                    var reflectedDamage = effectiveCP / 10f;
+                    var remainingDamage = Math.max(0f, originalDamage - reflectedDamage);
+
+                    applyReflection(player, level, source, reflectedDamage);
+                    return Pair.of(true, remainingDamage);
+                }
             }
 
-            if (currentPower >= requiredPower) {
-                //      AbilitySystemServer.setPlayerComputingPower(player.getUUID(), currentPower - requiredPower);
-                player.invulnerableTime = 20;
-
-                applyReflection(player, level, source, originalDamage);
-
-                return Pair.of(false, 0f);
-            }
-
-            var reflectedDamage = currentPower / 10f;
-            var remainingDamage = Math.max(0f, originalDamage - reflectedDamage);
-            // AbilitySystemServer.setPlayerComputingPower(player.getUUID(), 0);
-
-            applyReflection(player, level, source, reflectedDamage);
-
-            return Pair.of(true, remainingDamage);
+            return Pair.of(false, originalDamage);
         }
 
         private static void applyReflection(Player player, ServerLevel level, DamageSource source, float reflectedDamage) {
