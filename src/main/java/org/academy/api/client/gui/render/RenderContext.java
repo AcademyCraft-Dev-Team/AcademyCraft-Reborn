@@ -4,8 +4,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.SubmittedCommand;
-
 import org.jspecify.annotations.Nullable;
+
 import java.util.*;
 
 public final class RenderContext {
@@ -18,7 +18,9 @@ public final class RenderContext {
 
     @FunctionalInterface
     public interface UboFactory {
-        <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreate(Class<T> uboClass, int size);
+        <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreate(
+                Class<T> uboClass, int size
+        );
     }
 
     public RenderContext(UboFactory uboFactory) {
@@ -37,7 +39,9 @@ public final class RenderContext {
         submittedCommands.add(new SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder));
     }
 
-    public <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getDynamicUbo(Class<T> uboClass, int size) {
+    public <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getDynamicUbo(
+            Class<T> uboClass, int size
+    ) {
         return uboFactory.getOrCreate(uboClass, size);
     }
 
@@ -54,11 +58,11 @@ public final class RenderContext {
     }
 
     public void enableScissor(ScissorRect scissorRect) {
-    //    scissorStack.push(scissorRect);
+        scissorStack.push(scissorRect);
     }
 
     public void disableScissor() {
-    //    scissorStack.pop();
+        scissorStack.pop();
     }
 
     public List<SubmittedCommand> getCommands() {
@@ -87,9 +91,7 @@ public final class RenderContext {
         }
 
         public void pop() {
-            if (stack.size() > 1) {
-                stack.pop();
-            }
+            if (stack.size() > 1) stack.pop();
         }
 
         public float peek() {
@@ -115,9 +117,7 @@ public final class RenderContext {
         }
 
         public void pop() {
-            if (stack.size() > 1) {
-                stack.pop();
-            }
+            if (stack.size() > 1) stack.pop();
         }
 
         public void advance() {
@@ -143,15 +143,11 @@ public final class RenderContext {
             if (currentScissor != null) {
                 var intersection = scissor.intersection(currentScissor);
                 stack.addLast(Objects.requireNonNullElseGet(intersection, ScissorRect::empty));
-            } else {
-                stack.addLast(scissor);
-            }
+            } else stack.addLast(scissor);
         }
 
         public void pop() {
-            if (stack.isEmpty())
-                throw new IllegalStateException("Scissor stack underflow");
-
+            if (stack.isEmpty()) throw new IllegalStateException("Scissor stack underflow");
             stack.removeLast();
         }
 
@@ -161,9 +157,7 @@ public final class RenderContext {
         }
 
         public boolean containsPoint(int x, int y) {
-            if (stack.isEmpty())
-                return true;
-
+            if (stack.isEmpty()) return true;
             return stack.peekLast().containsPoint(x, y);
         }
     }

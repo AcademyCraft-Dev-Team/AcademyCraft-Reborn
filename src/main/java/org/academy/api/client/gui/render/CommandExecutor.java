@@ -191,9 +191,7 @@ public final class CommandExecutor implements AutoCloseable {
             if (globalBuffer != null && endPtr <= globalBuffer.size()) {
                 if (isRegionConflicted(startPtr, endPtr)) needsRotate = true;
             } else needsRotate = true;
-        } else {
-            if (isRegionConflicted(startPtr, endPtr)) needsRotate = true;
-        }
+        } else if (isRegionConflicted(startPtr, endPtr)) needsRotate = true;
 
         return new AllocationResult(startPtr, endPtr, requiredLength, requiredLength, needsRotate);
     }
@@ -210,9 +208,7 @@ public final class CommandExecutor implements AutoCloseable {
 
     private boolean isRegionConflicted(long start, long end) {
         cleanupActiveRegions();
-        for (var region : activeRegions) {
-            if (region.intersects(start, end)) return true;
-        }
+        for (var region : activeRegions) if (region.intersects(start, end)) return true;
         return false;
     }
 

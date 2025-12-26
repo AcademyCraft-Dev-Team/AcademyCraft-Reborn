@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Objects;
 
 public final class BatchProcessor {
-
     public static List<PendingBatch> process(List<SubmittedCommand> commands, float depthEpsilon) {
         if (commands.isEmpty()) return Collections.emptyList();
 
@@ -103,9 +102,7 @@ public final class BatchProcessor {
             var tempPose = new Matrix4f(pose);
             tempPose.translate(0, 0, sequenceId * depthEpsilon);
             command.generateVertices(builder, tempPose);
-        } else {
-            command.generateVertices(builder, pose);
-        }
+        } else command.generateVertices(builder, pose);
     }
 
     private static void finishBatch(

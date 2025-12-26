@@ -12,13 +12,15 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import org.academy.api.client.Render;
+import org.academy.api.client.hud.terminal.DataTerminalHUD;
+import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.thread.RenderThread;
 import org.academy.api.client.vanilla.MainLoopEvent;
-import org.academy.api.client.hud.terminal.DataTerminalHUD;
 import org.slf4j.Logger;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -63,41 +65,55 @@ public final class HUDManager {
         var width = main.width;
         var height = main.height;
 
-        RenderTarget renderTarget = null;
+        RenderTarget temp = null;
+        RenderTarget last = null;
         var pool = Render.Buffers.getResourcePool();
-        var desc = new RenderTargetDescriptor(width, height, true, 0, true);
+        var descTemp = new RenderTargetDescriptor(width, height, true, 0, true);
+        var descLast = new RenderTargetDescriptor(width, height, false, 0, false);
 
         try {
-            renderTarget = pool.acquire(desc);
+            temp = pool.acquire(descTemp);
+            last = pool.acquire(descLast);
 
-            var mainColorView = main.getColorTextureView();
-            var uiColorView = renderTarget.getColorTextureView();
-            var uiDepthView = renderTarget.getDepthTextureView();
-            if (mainColorView == null || uiColorView == null || uiDepthView == null) return;
+            var mainColor = main.getColorTextureView();
+            var uiColor = temp.getColorTextureView();
+            var uiDepth = temp.getDepthTextureView();
+            var lastColor = last.getColorTextureView();
+            if (mainColor == null || uiColor == null || uiDepth == null || lastColor == null) return;
 
             var drew = new AtomicBoolean();
 
-            DataTerminalHUD.render(width, height, uiColorView, uiDepthView, drew);
+            DataTerminalHUD.render(width, height, uiColor, uiDepth, drew);
 
             if (!drew.get()) return;
 
             BlurEffect.apply(
                     width, height,
-                    mainColorView,
-                    mainColorView,
-                    uiDepthView,
+                    mainColor,
+                    lastColor,
+                    uiDepth,
                     20.0f
             );
 
+            Render.runBlitPassNDC(
+                    lastColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
+                    List.of(new TextureBinding("DiffuseSampler", uiColor,
+                            RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+                    ),
+                    List.of(),
+                    false
+            );
+
             guiGraphics.submitBlit(
-                    Render.RenderPipelines.IMAGE, uiColorView,
+                    Render.RenderPipelines.IMAGE, lastColor,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
                     0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
                     0, 1, 1, 0,
                     -1
             );
         } finally {
-            if (renderTarget != null) pool.release(desc, renderTarget);
+            if (temp != null) pool.release(descTemp, temp);
+            if (last != null) pool.release(descLast, last);
         }
     }
 

@@ -29,6 +29,7 @@ import org.academy.api.client.render.UniformBinding;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
@@ -157,6 +158,8 @@ public final class Render {
         private GpuBuffer fullScreenQuadVBSDC;
         private GpuBuffer fullScreenQuadColorVBSDC;
 
+        private Matrix4fc lastProjection;
+
         private Buffers() {
             fullScreenQuadVBNDC = createNDC();
             createSDC();
@@ -274,13 +277,16 @@ public final class Render {
             );
         }
 
-        public GpuBuffer getProjectionUB(Matrix4f matrix4f) {
+        public GpuBuffer getProjectionUB(Matrix4fc projection) {
+            if (projection.equals(lastProjection, 0)) return projectionUB;
             try (var memoryStack = MemoryStack.stackPush()) {
                 var builder = Std140Builder.onStack(memoryStack, PROJECTION_UBO_SIZE);
-                builder.putMat4f(matrix4f);
+                builder.putMat4f(projection);
                 var byteBuffer = builder.get();
                 RenderSystem.getDevice().createCommandEncoder().writeToBuffer(projectionUB.slice(), byteBuffer);
             }
+            // new 是因为 org/joml/Matrix4f.java:13732
+            lastProjection = new Matrix4f(projection);
             return projectionUB;
         }
 
@@ -343,13 +349,6 @@ public final class Render {
     }
 
     public static final class RenderPipelines extends net.minecraft.client.renderer.RenderPipelines {
-        public static final RenderPipeline NO_DEPTH_OPAQUE_PARTICLE = builder(PARTICLE_SNIPPET)
-                .withLocation(academy("pipeline/opaque_particle"))
-                .withCull(false)
-                .withDepthWrite(false)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                .build();
-
         public static final RenderPipeline.Snippet BLIT_SCREEN_SNIPPET = builder()
                 .withLocation(academy("pipeline/blit_screen"))
                 .withVertexShader(Resource.Shaders.SCREEN_BLIT)
@@ -358,30 +357,6 @@ public final class Render {
                 .withDepthWrite(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .buildSnippet();
-
-        public static final RenderPipeline MASKED_BLUR_SHADER = builder()
-                .withLocation(academy("masked_blur_shader"))
-                .withVertexShader(Resource.Shaders.SCREEN_BLIT)
-                .withFragmentShader(Resource.Shaders.Fragment.MASKED_BLUR)
-                .withSampler("DiffuseSampler")
-                .withSampler("MaskSampler")
-                .withUniform("BlurInfo", UniformType.UNIFORM_BUFFER)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthWrite(false)
-                .withCull(false)
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
-                .build();
-
-        public static final RenderPipeline MASK_BRUSH = builder(MATRICES_PROJECTION_SNIPPET)
-                .withLocation(academy("pipeline/pos_color"))
-                .withVertexShader(Resource.Shaders.POS_COLOR)
-                .withFragmentShader(Resource.Shaders.POS_COLOR)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthWrite(false)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
-                .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITH_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
