@@ -38,7 +38,6 @@ public final class Resource {
         public static final class Fragment {
             public static final Identifier BLOOM_BLEND = academy("core/bloom_blend");
             public static final Identifier GAUSSIAN_BLUR = academy("core/gaussian_blur");
-            public static final Identifier MASKED_BLUR = academy(("core/masked_blur"));
             public static final Identifier GLOW_CIRCLE = academy("core/glow_circle");
             public static final Identifier SDF_CIRCLE_GLOW = academy("core/sdf_circle_glow");
             public static final Identifier SDF_SHARP_MARGIN = academy("core/sdf_sharp_margin");

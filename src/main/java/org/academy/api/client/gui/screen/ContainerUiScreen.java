@@ -352,6 +352,6 @@ public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends
 
     @Override
     protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop) {
-        return mouseX < (double) guiLeft || mouseY < (double) guiTop - 22 || mouseX >= (double) (guiLeft + imageWidth) || mouseY >= (double) (guiTop + 187);
+        return mouseX < guiLeft || mouseY < guiTop - 22 || mouseX >= guiLeft + imageWidth || mouseY >= guiTop + 187;
     }
 }

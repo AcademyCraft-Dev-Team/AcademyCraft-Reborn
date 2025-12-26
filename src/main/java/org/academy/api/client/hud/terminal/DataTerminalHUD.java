@@ -88,7 +88,7 @@ public final class DataTerminalHUD {
     private static FrameLayoutWidget main;
 
     // 视图切换状态动画相关
-    private static float viewStateProgress = 0.0f;// 1.0f:平行于屏幕
+    private static float viewStateProgress = 0.0f; // 1.0f:平行于屏幕
 
     @MainThread
     public static void toggleActive() {
@@ -328,7 +328,7 @@ public final class DataTerminalHUD {
                 renderPass.bindTexture(
                         "Sampler0",
                         terminalView,
-                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
                 );
                 renderPass.setUniform("Projection", projectionUBSlice);
                 renderPass.setUniform("DynamicTransforms", dynamicTransformsSlice);
@@ -355,7 +355,6 @@ public final class DataTerminalHUD {
         viewMatrix.translate(0.0F, 0.0F, z);
         viewMatrix.scale(scale, scale, scale);
 
-        // 中心对齐
         var currentWidth = main == null ? MAIN_WIDTH : main.getWidth();
         var widgetCenterX = guiWidth - 32 - (currentWidth / 2.0f);
         var screenCenterX = guiWidth / 2.0f;
@@ -418,7 +417,6 @@ public final class DataTerminalHUD {
         appContainer.setVisibility(Widget.Visibility.VISIBLE);
     }
 
-    @SuppressWarnings("ConstantConditions")
     public static void closeApp() {
         var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 0.0f);
         viewStateAnimator.setDuration(400);

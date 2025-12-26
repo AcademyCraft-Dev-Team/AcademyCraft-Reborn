@@ -25,9 +25,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * 看情况 close 喵, 像 ScreenDispatcher 这种就没必要 close 了喵
- */
 public class UiContext {
     private final AtomicReference<@Nullable List<SubmittedCommand>> commandList = new AtomicReference<>();
 
@@ -42,47 +39,15 @@ public class UiContext {
     @Nullable
     private GpuBuffer dynamicTransformsUbo;
 
+    private final float layered;
+
     public UiContext() {
         this(3000);
     }
 
     public UiContext(float layered) {
-        Minecraft.getInstance().execute(() -> initOnRenderThread(layered));
-    }
-
-    private void initOnRenderThread(float layered) {
-        projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("gui", -layered, 0.0F, true);
-        var device = RenderSystem.getDevice();
-        var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
-
-        try (var memoryStack = MemoryStack.stackPush()) {
-            var size = new Std140SizeCalculator().putMat4f().putVec4().putVec3().putMat4f().putFloat().get();
-            var builder = Std140Builder.onStack(memoryStack, size);
-            var identityMatrix = new Matrix4f();
-            builder.putMat4f(identityMatrix);
-            builder.putVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            builder.putVec3(0.0f, 0.0f, 0.0f);
-            builder.putMat4f(identityMatrix);
-            builder.putFloat(1.0f);
-            var byteBuffer = builder.get();
-            dynamicTransformsUbo = device.createBuffer(() -> "UI DynamicTransforms UBO", uboUsage, byteBuffer);
-        }
-    }
-
-    private float calculateDepthEpsilon(GpuTexture depthTexture) {
-        var format = depthTexture.getFormat();
-
-        if (!format.hasDepthAspect()) return 0;
-
-        var depthBits = switch (format) {
-            case DEPTH32, DEPTH32_STENCIL8 -> 32;
-            case DEPTH24_STENCIL8 -> 24;
-            default -> 0;
-        };
-
-        if (depthBits == 0) return 0;
-
-        return 1f / ((1L << depthBits) - 1);
+        this.layered = layered;
+        Minecraft.getInstance().execute(this::initOnRenderThread);
     }
 
     @MainThread
@@ -103,19 +68,6 @@ public class UiContext {
         var context = new RenderContext(this::getOrCreateUbo);
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
         commandList.set(context.getCommands());
-    }
-
-    public void generateCommands(
-            RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
-    ) {
-        context.pose().pushPose();
-        {
-            context.pose().translate(rootWidget.getX(), rootWidget.getY(), rootWidget.getZ());
-            context.pose().translate(rootWidget.getTranslationX(), rootWidget.getTranslationY(), 0);
-
-            rootWidget.render(context);
-        }
-        context.pose().popPose();
     }
 
     @RenderThread
@@ -139,7 +91,7 @@ public class UiContext {
 
         if (commands == null || commands.isEmpty()) return;
 
-        var depthEpsilon = calculateDepthEpsilon(depthTexture);
+        var depthEpsilon = calculateDepthEpsilon(depthTexture) * layered;
         var meshesToDraw = BatchProcessor.process(commands, depthEpsilon);
 
         var effectiveScale = (float) Minecraft.getInstance().getWindow().getGuiScale();
@@ -153,11 +105,67 @@ public class UiContext {
         );
     }
 
+    @MainThread
     private <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreateUbo(Class<T> uboClass, int size) {
         return UncheckedUtil.uncheckedCast(dynamicUniformStorages.computeIfAbsent(
                 uboClass,
                 _ -> new DynamicUniformStorage<>(uboClass.getSimpleName() + "_UBO", size, 2)
         ));
+    }
+
+    public void generateCommands(
+            RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
+    ) {
+        context.pose().pushPose();
+        {
+            context.pose().translate(rootWidget.getX(), rootWidget.getY(), rootWidget.getZ());
+            context.pose().translate(rootWidget.getTranslationX(), rootWidget.getTranslationY(), 0);
+
+            rootWidget.render(context);
+        }
+        context.pose().popPose();
+    }
+
+    private float calculateDepthEpsilon(GpuTexture depthTexture) {
+        var format = depthTexture.getFormat();
+
+        if (!format.hasDepthAspect()) return 0;
+
+        var depthBits = switch (format) {
+            case DEPTH32, DEPTH32_STENCIL8 -> 32;
+            case DEPTH24_STENCIL8 -> 24;
+            default -> 0;
+        };
+
+        if (depthBits == 0) return 0;
+
+        return 1f / ((1L << depthBits) - 1);
+    }
+
+    @RenderThread
+    private void initOnRenderThread() {
+        /*
+         * Map: z [0, layered] -> NDC [1, -1] :: Depth [1, 0]
+         * Eq : ndc = z * 2 / (zNear - zFar) + (zNear + zFar) / (zNear - zFar)
+         * z=0 => ndc= 1 => (zNear + zFar) / (zNear - zFar) = 1 => zFar = 0
+         * z=layered => ndc=-1 => layered * 2 / zNear + 1 = -1 => zNear = -layered
+         */
+        projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("gui", -layered, 0.0F, true);
+        var device = RenderSystem.getDevice();
+        var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
+
+        try (var memoryStack = MemoryStack.stackPush()) {
+            var size = new Std140SizeCalculator().putMat4f().putVec4().putVec3().putMat4f().putFloat().get();
+            var builder = Std140Builder.onStack(memoryStack, size);
+            var identityMatrix = new Matrix4f();
+            builder.putMat4f(identityMatrix);
+            builder.putVec4(1.0f, 1.0f, 1.0f, 1.0f);
+            builder.putVec3(0.0f, 0.0f, 0.0f);
+            builder.putMat4f(identityMatrix);
+            builder.putFloat(1.0f);
+            var byteBuffer = builder.get();
+            dynamicTransformsUbo = device.createBuffer(() -> "UI DynamicTransforms UBO", uboUsage, byteBuffer);
+        }
     }
 
     public void close() {
@@ -167,14 +175,12 @@ public class UiContext {
     }
 
     public void closeOnRenderThread() {
-        if (projectionMatrixBuffer == null || dynamicTransformsUbo == null) return;
+        if (projectionMatrixBuffer != null) projectionMatrixBuffer.close();
+        if (dynamicTransformsUbo != null) dynamicTransformsUbo.close();
 
         commandExecutor.close();
-
-        projectionMatrixBuffer.close();
         for (var ubo : dynamicUniformStorages.values()) ubo.close();
         dynamicUniformStorages.clear();
-        dynamicTransformsUbo.close();
         closed.set(true);
         closing.set(false);
     }

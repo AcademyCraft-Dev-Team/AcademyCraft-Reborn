@@ -31,8 +31,6 @@ import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
-import org.academy.api.client.thread.MainThread;
-import org.academy.api.client.thread.RenderThread;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.gui.screen.Screens;
@@ -59,7 +57,6 @@ public final class AcademyCraftClient {
         modEventBus.register(ModBusSubscriber.class);
     }
 
-    @MainThread
     public static void initMain() {
         Screens.register();
         HUDManager.initMain();
@@ -68,7 +65,6 @@ public final class AcademyCraftClient {
         ClientSyncManager.init();
     }
 
-    @RenderThread
     public static void initRender() {
         Render.init();
         BloomEffect.init();
@@ -90,7 +86,6 @@ public final class AcademyCraftClient {
 
     public static void resize(int width, int height) {
         Render.resize();
-        ScreenDispatcher.resize(width, height);
         PostEffect.resize(width, height);
         BloomEffect.resize(width, height);
         HUDManager.resize(width, height);
