@@ -2,7 +2,6 @@ package org.academy.internal.common.world.level.levelgen.feature;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import static org.academy.AcademyCraft.MODID;

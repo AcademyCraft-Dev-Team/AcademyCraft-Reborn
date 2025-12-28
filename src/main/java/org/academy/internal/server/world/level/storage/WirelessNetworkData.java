@@ -1,6 +1,5 @@
 package org.academy.internal.server.world.level.storage;
 
-import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Keyable;
@@ -9,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
+import org.academy.AcademyCraft;
 import org.academy.api.server.wireless.WirelessManager;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -21,7 +21,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 public final class WirelessNetworkData extends SavedData {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     
     private static final Codec<BlockPos> BLOCKPOS_AS_STRING_CODEC = Codec.STRING.flatXmap(
             s -> {
@@ -193,7 +193,7 @@ public final class WirelessNetworkData extends SavedData {
             this.password = password;
             this.radius = radius;
             this.maxConnections = maxConnections;
-            this.connectedUsers = connectedUsers;
+            this.connectedUsers = new HashMap<>(connectedUsers);
         }
 
         public boolean checkPassword(String attempt) {

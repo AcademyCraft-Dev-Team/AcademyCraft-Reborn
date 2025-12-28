@@ -20,6 +20,7 @@ public final class Resource {
         /**
          * AcademyCraft
          */
+        public static final Identifier IMAGE = academy("core/image");
         public static final Identifier SCREEN_BLIT = academy("core/screen_blit");
         public static final Identifier DISTORTION_RING = academy("core/distortion_ring");
 
@@ -41,7 +42,7 @@ public final class Resource {
             public static final Identifier GLOW_CIRCLE = academy("core/glow_circle");
             public static final Identifier SDF_CIRCLE_GLOW = academy("core/sdf_circle_glow");
             public static final Identifier SDF_SHARP_MARGIN = academy("core/sdf_sharp_margin");
-
+            public static final Identifier IMAGE_CIRCLE = academy("core/image_circle");
 
             private Fragment() {
             }
@@ -98,23 +99,22 @@ public final class Resource {
         /**
          * Common
          */
+        public static final Identifier ARROW_BACK = academy("textures/gui/icon/arrow_back.png");
         public static final Identifier LOGO_TECH = academy("textures/gui/element/logo_tech.png");
         public static final Identifier ELEMENT_LINE = academy("textures/gui/element/line.png");
         public static final Identifier UI_INVENTORY = academy("textures/gui/element/ui_inventory.png");
         public static final Identifier UI_GEN = academy("textures/gui/element/ui_gen.png");
-        public static final Identifier UI_BACKGROUND_LIGHT = academy("textures/gui/element/element_background_light.png");
         public static final Identifier ICON_OPEN_WIRELESS_PANEL = academy("textures/gui/icon/icon_tonode.png");
         public static final Identifier ICON_NODE = academy("textures/gui/icon/icon_node.png");
         public static final Identifier ICON_CONNECTED = academy("textures/gui/icon/icon_connected.png");
         public static final Identifier ICON_UNCONNECTED = academy("textures/gui/icon/icon_unconnected.png");
         public static final Identifier ICON_INV = academy("textures/gui/icon/icon_inv.png");
         public static final Identifier ICON_WIRELESS = academy("textures/gui/icon/icon_wireless.png");
-        public static final Identifier UI_BUTTON_LEARN = academy("textures/gui/element/button.png");
         public static final Identifier ICON_BOX = academy("textures/gui/icon/icon_box.png");
         /**
-         * Data Terminal
+         * Terminal
          */
-        public static final Identifier ICON_DATA_TERMINAL = academy("textures/gui/icon/icon_data_terminal.png");
+        public static final Identifier ICON_TERMINAL = academy("textures/gui/terminal/icon.png");
         public static final Identifier APP_BACK = academy("textures/gui/element/app_back.png");
         /**
          * Electromaster
@@ -148,16 +148,17 @@ public final class Resource {
         /**
          * Music Player
          */
-        public static final Identifier ICON_MUSIC_PLAYER = academy("textures/gui/icon/icon_music_player.png");
-        public static final Identifier ICON_CYCLE = academy("textures/gui/icon/icon_cycle.png");
-        public static final Identifier ICON_RANDOM = academy("textures/gui/icon/icon_random.png");
-        public static final Identifier ICON_SINGLE_CYCLE = academy("textures/gui/icon/icon_single_cycle.png");
-        public static final Identifier ICON_NEXT = academy("textures/gui/icon/icon_next.png");
-        public static final Identifier ICON_PREV = academy("textures/gui/icon/icon_previous.png");
-        public static final Identifier ICON_PAUSE = academy("textures/gui/icon/icon_pause.png");
-        public static final Identifier ICON_PLAY = academy("textures/gui/icon/icon_play.png");
-        public static final Identifier ICON_MUSIC_VINYL = academy("textures/apps/music/vinyl.png");
-        public static final Identifier ICON_MUSIC_NEEDLE = academy("textures/apps/music/needle.png");
+        private static final String MUSIC = "textures/gui/app/music/";
+        public static final Identifier ICON_NOW_PLAYING = academy(MUSIC + "now_playing.png");
+        public static final Identifier ICON_MUSIC_PLAYER = academy(MUSIC + "icon.png");
+        public static final Identifier ICON_CYCLE = academy(MUSIC + "cycle.png");
+        public static final Identifier ICON_RANDOM_PLAY = academy(MUSIC + "random_play.png");
+        public static final Identifier ICON_SINGLE_CYCLE = academy(MUSIC + "single_cycle.png");
+        public static final Identifier ICON_NEXT = academy(MUSIC + "next.png");
+        public static final Identifier ICON_PREV = academy(MUSIC + "previous.png");
+        public static final Identifier ICON_PAUSE = academy(MUSIC + "pause.png");
+        public static final Identifier ICON_PLAY = academy(MUSIC + "play.png");
+        public static final Identifier ICON_VOLUME = academy(MUSIC + "volume.png");
         /**
          * Settings
          */

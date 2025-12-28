@@ -2,11 +2,11 @@ package org.academy.api.client.gui.screen;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.AcademyCraft;
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.render.UiContext;
 import org.academy.api.client.thread.RenderThread;
@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public final class ScreenDispatcher {
-    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = AcademyCraft.getLogger();
     @Nullable
     private static ScreenDispatcher INSTANCE;
     private final RenderTarget renderTarget;
@@ -68,7 +68,7 @@ public final class ScreenDispatcher {
         var mc = Minecraft.getInstance();
 
         if (mc.screen instanceof RenderRoot screen) {
-            uiContext.upload(renderTarget, true, false);
+            uiContext.upload(renderTarget, true);
             ImGuiUIDebugger.render(renderTarget, screen.getRoot());
         }
     }

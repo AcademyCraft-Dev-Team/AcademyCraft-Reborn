@@ -2,7 +2,11 @@ package org.academy.api.client.gui.command;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformPayload;
 import org.joml.Matrix4f;
+
+import java.util.List;
 
 public abstract class PosColorRectDrawCommand extends DrawCommand {
     protected final float width;
@@ -19,9 +23,11 @@ public abstract class PosColorRectDrawCommand extends DrawCommand {
             float red,
             float green,
             float blue,
-            float alpha
+            float alpha,
+            List<TextureBinding> textures,
+            List<UniformPayload<?>> uniforms
     ) {
-        super(pipeline);
+        super(pipeline, textures, uniforms);
         this.width = width;
         this.height = height;
         this.red = red;

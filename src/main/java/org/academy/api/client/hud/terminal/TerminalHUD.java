@@ -10,7 +10,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.renderer.DynamicUniformStorage;
@@ -19,13 +18,18 @@ import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.app.App;
-import org.academy.api.client.gui.animation.*;
+import org.academy.api.client.gui.animation.EasingFunctions;
+import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.animation.StateListAnimator;
+import org.academy.api.client.gui.animation.ValueAnimator;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
@@ -38,8 +42,7 @@ import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.render.UiContext;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.input.*;
-import org.academy.api.client.render.TextureBinding;
-import org.academy.api.client.render.UniformBinding;
+import org.academy.api.client.render.UniformPayload;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
@@ -62,15 +65,16 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @EventBusSubscriber(Dist.CLIENT)
-public final class DataTerminalHUD {
+public final class TerminalHUD {
     public static final int COLOR = 0x40000000;
     public static final float MAIN_WIDTH = 150;
+    public static final float UNFOLDED_MAIN_WIDTH = 384;
     public static final float MAIN_HEIGHT = 200;
-    public static final String CONFIG_KEY_DATA_TERMINAL = "data_terminal_hud_config";
-    public static final String KEY_NAME_TOGGLE = "data_terminal_hud_config_toggle";
+    public static final String CONFIG_KEY = "terminal_hud_config";
+    public static final String KEY_NAME_TOGGLE = "terminal_hud_config_toggle";
     @Nullable
-    private static DataTerminalConfig config;
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static TerminalConfig config;
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final FrameLayoutWidget ROOT = new FrameLayoutWidget();
     @Nullable
     private static UiContext uiContext;
@@ -81,7 +85,7 @@ public final class DataTerminalHUD {
     private static volatile double xpos, ypos;
     private static double startXpos, startYpos;
     @Nullable
-    private static LinearLayoutWidget contentList;
+    private static LinearLayoutWidget content;
     @Nullable
     private static FrameLayoutWidget appContainer;
     @Nullable
@@ -110,7 +114,7 @@ public final class DataTerminalHUD {
             GLFW.glfwSetCursorPos(w.handle(), w.getWidth() / 2.0, w.getHeight() / 2.0);
             startXpos = m.xpos;
             startYpos = m.ypos;
-            init();
+            initContent();
         } else GLFW.glfwSetCursorPos(w.handle(), startXpos, startYpos);
     }
 
@@ -119,8 +123,8 @@ public final class DataTerminalHUD {
     }
 
     public static void initMain() {
-        AcademyCraftConfig.registerTypeHandler(CONFIG_KEY_DATA_TERMINAL, DataTerminalConfig.Action.INSTANCE);
-        config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY_DATA_TERMINAL);
+        AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE);
+        config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY);
 
         var toggleKeys = new LinkedHashSet<Integer>();
         toggleKeys.add(GLFW.GLFW_KEY_RIGHT_ALT);
@@ -133,7 +137,7 @@ public final class DataTerminalHUD {
         InputSystem.addKeyBinding(
                 KEY_NAME_TOGGLE,
                 config.getKeyBinding(KEY_NAME_TOGGLE, defaultKey),
-                DataTerminalHUD::toggleActive
+                TerminalHUD::toggleActive
         );
     }
 
@@ -172,26 +176,16 @@ public final class DataTerminalHUD {
                         0,
                         0,
                         1,
-                        1
-                ) {
-                    @Override
-                    public List<TextureBinding> getTextures() {
-                        return List.of();
-                    }
-
-                    @Override
-                    public List<UniformBinding> getUniforms() {
-                        var uboStorage = context.getDynamicUbo(SDFData.class, SDFData.UBO_SIZE);
-                        var uboSlice = uboStorage.writeUniform(sdfData);
-                        return List.of(new UniformBinding("GlowUniforms", uboSlice));
-                    }
-                };
+                        1,
+                        List.of(),
+                        List.of(new UniformPayload<>("GlowUniforms", SDFData.class, sdfData, SDFData.UBO_SIZE))
+                ) {};
                 context.submit(glowCommand);
             }
         };
     }
 
-    private static void init() {
+    private static void initContent() {
         ROOT.setName("root");
         ROOT.clearChildren();
 
@@ -206,19 +200,19 @@ public final class DataTerminalHUD {
         {
             var background = new FillWidget(COLOR);
             main.addChild("back", background);
-            contentList = new LinearLayoutWidget();
-            contentList.setOrientation(Orientation.VERTICAL);
-            contentList.setSpacing(2);
-            main.addChild("content", contentList);
+            content = new LinearLayoutWidget();
+            content.setOrientation(Orientation.VERTICAL);
+            content.setSpacing(2);
+            main.addChild("content", content);
             {
-                var logo = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
+                var logo = new ImageWidget(Resource.Textures.ICON_TERMINAL);
                 logo.setLayoutParams(
                         new LinearLayoutWidget.LayoutParams()
                                 .size(16, 16)
                                 .gravity(Gravity.START)
                                 .margin(2, 2, 0, 0)
                 );
-                contentList.addChild("icon", logo);
+                content.addChild("icon", logo);
 
                 var splitLine = new FillWidget(0xFFFFFFFF);
                 splitLine.setLayoutParams(
@@ -227,7 +221,7 @@ public final class DataTerminalHUD {
                                 .widthMode(SizeMode.MATCH_PARENT)
                                 .padding(2, 0)
                 );
-                contentList.addChild("splitLine", splitLine);
+                content.addChild("split_line", splitLine);
 
                 var apps = new ScrollPanelWidget();
                 apps.setLayoutParams(
@@ -237,7 +231,7 @@ public final class DataTerminalHUD {
                                 .gravity(Gravity.CENTER)
                                 .padding(4, 4, 4, 2)
                 );
-                contentList.addChild("apps", apps);
+                content.addChild("apps", apps);
                 {
                     var appRows = new LinearLayoutWidget();
                     appRows.setOrientation(Orientation.VERTICAL);
@@ -259,7 +253,7 @@ public final class DataTerminalHUD {
                             rowOne.addChild("settings", createApp(
                                     Resource.Textures.ICON_SETTINGS,
                                     "Settings",
-                                    DataTerminalHUD::closeApp
+                                    TerminalHUD::closeApp
                             ));
 
                             rowOne.addChild("music", createApp(
@@ -272,14 +266,17 @@ public final class DataTerminalHUD {
                 }
             }
             appContainer = new FrameLayoutWidget();
-            appContainer.setLayoutParams(new FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT));
-            appContainer.setVisibility(Widget.Visibility.INVISIBLE);
+            appContainer.setLayoutParams(
+                    new FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+            );
+            appContainer.setVisibility(Widget.Visibility.GONE);
             main.addChild("app_container", appContainer);
         }
     }
 
     public static void resize() {
-        init();
+        initContent();
     }
 
     @MainThread
@@ -303,7 +300,7 @@ public final class DataTerminalHUD {
         var terminalTarget = Render.Buffers.getResourcePool().acquire(desc);
 
         try {
-            uiContext.upload(terminalTarget, false, false);
+            uiContext.upload(terminalTarget, false);
 
             var terminalView = terminalTarget.getColorTextureView();
             if (terminalView == null) return;
@@ -324,11 +321,11 @@ public final class DataTerminalHUD {
                             () -> "Blit Pass to " + color + depth,
                             color, OptionalInt.empty(), depth, OptionalDouble.empty()
             )) {
-                renderPass.setPipeline(Render.RenderPipelines.IMAGE_STENCIL);
+                renderPass.setPipeline(Render.RenderPipelines.IMAGE_STENCIL_PREMULTIPLIED_ALPHA);
                 renderPass.bindTexture(
                         "Sampler0",
                         terminalView,
-                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                 );
                 renderPass.setUniform("Projection", projectionUBSlice);
                 renderPass.setUniform("DynamicTransforms", dynamicTransformsSlice);
@@ -394,30 +391,47 @@ public final class DataTerminalHUD {
         return Render.Buffers.getInstance().getProjectionUB(projectionMatrix).slice();
     }
 
-    @SuppressWarnings("ConstantConditions")
     private static void openApp(App app) {
+        if (content == null || appContainer == null) return;
+        content.setEnabled(false);
+        content.setVisibility(Widget.Visibility.GONE);
+        content.cancelAnimations();
+        content.startAnimation(
+                ObjectAnimator.ofFloat(content::setAlpha, content.getAlpha(), 0)
+                        .setDuration(200)
+        );
+        appContainer.clearChildren();
+        appContainer.setVisibility(Widget.Visibility.VISIBLE);
+        appContainer.addChild("current_app", app.context().create());
+        appContainer.startAnimation(
+                ObjectAnimator.ofFloat(appContainer::setAlpha, appContainer.getAlpha(), 1)
+                        .setDuration(100)
+                        .setStartDelay(200)
+        );
+
         var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 1.0f);
         viewStateAnimator.setDuration(400);
         viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
         viewStateAnimator.addUpdateListener(anim -> {
             viewStateProgress = anim.getAnimatedValue();
-
-            if (main != null) {
-                float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-                var targetWidth = screenWidth * 0.8f;
-                main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
-            }
+            if (main != null) main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, UNFOLDED_MAIN_WIDTH));
         });
         viewStateAnimator.start();
-
-        if (contentList == null || appContainer == null) return;
-        contentList.setVisibility(Widget.Visibility.INVISIBLE);
-        appContainer.clearChildren();
-        appContainer.addChild("current_app", app.content());
-        appContainer.setVisibility(Widget.Visibility.VISIBLE);
     }
 
     public static void closeApp() {
+        if (content == null || appContainer == null) return;
+        content.setEnabled(true);
+        content.setVisibility(Widget.Visibility.VISIBLE);
+        content.cancelAnimations();
+        content.startAnimation(
+                ObjectAnimator.ofFloat(content::setAlpha, content.getAlpha(), 1)
+                        .setDuration(200)
+        );
+
+        appContainer.setVisibility(Widget.Visibility.GONE);
+        appContainer.clearChildren();
+
         var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 0.0f);
         viewStateAnimator.setDuration(400);
         viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
@@ -427,18 +441,6 @@ public final class DataTerminalHUD {
                 float screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
                 var targetWidth = screenWidth * 0.8f;
                 main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, targetWidth));
-            }
-        });
-        viewStateAnimator.addListener(new AnimatorListener() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                if (appContainer != null) {
-                    appContainer.setVisibility(Widget.Visibility.INVISIBLE);
-                    appContainer.clearChildren();
-                }
-                if (contentList != null) {
-                    contentList.setVisibility(Widget.Visibility.VISIBLE);
-                }
             }
         });
         viewStateAnimator.start();
@@ -515,6 +517,10 @@ public final class DataTerminalHUD {
         return viewStateProgress;
     }
 
+    @SubscribeEvent
+    public static void onTick(ClientTickEvent.Post event) {
+        ROOT.tick();
+    }
     @SubscribeEvent
     public static void onMouseMove(MouseMoveEvent event) {
         if (isActive() && Minecraft.getInstance().screen == null) {
@@ -616,7 +622,7 @@ public final class DataTerminalHUD {
     }
 
     private static void hasNotBeenInitialized() {
-        LOGGER.warn("DataTerminalHUD has not been initialized.");
+        LOGGER.warn("TerminalHUD has not been initialized.");
     }
 
     public record SDFData(Vector4f color, float radius,
@@ -632,6 +638,6 @@ public final class DataTerminalHUD {
         }
     }
 
-    private DataTerminalHUD() {
+    private TerminalHUD() {
     }
 }

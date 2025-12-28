@@ -1,4 +1,4 @@
-package org.academy.internal.client.app.mediaplayer;
+package org.academy.internal.client.app.music;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
@@ -8,13 +8,13 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-public record MediaSource(Object path) {
-    public static MediaSource fromIdentifier(Identifier location) {
-        return new MediaSource(location);
+public record MusicSource(Object path) {
+    public static MusicSource fromIdentifier(Identifier location) {
+        return new MusicSource(location);
     }
 
-    public static MediaSource fromAbsolutePath(String absolutePath) {
-        return new MediaSource(absolutePath);
+    public static MusicSource fromAbsolutePath(String absolutePath) {
+        return new MusicSource(absolutePath);
     }
 
     public ByteBuffer getData() throws IOException {

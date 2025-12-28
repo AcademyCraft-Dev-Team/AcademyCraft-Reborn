@@ -4,17 +4,18 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
+import org.academy.AcademyCraft;
+import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.render.RenderContext;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class ImageWidget extends AbstractWidget {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     
     @Nullable
     protected Identifier textureIdentifier;
@@ -28,6 +29,9 @@ public class ImageWidget extends AbstractWidget {
     protected float red = 1.0F;
     protected float green = 1.0F;
     protected float blue = 1.0F;
+
+    public ImageWidget() {
+    }
 
     public ImageWidget(@Nullable GpuTextureView textureView) {
         this.textureView = textureView;
@@ -58,6 +62,7 @@ public class ImageWidget extends AbstractWidget {
 
     @Override
     protected void renderInternal(RenderContext context) {
+        super.renderInternal(context);
         resolveAndPrepareTexture();
         if (textureView == null) return;
 
@@ -73,10 +78,20 @@ public class ImageWidget extends AbstractWidget {
         {
             context.pose().translate(lp.paddingLeft, lp.paddingTop, 0);
 
-            var command = new ImageDrawCommand(textureView, sampler, paddedWidth, paddedHeight, u0, v0, u1, v1, red, green, blue, finalAlpha);
+            var command = generateDrawCommand(textureView, sampler, paddedWidth, paddedHeight, u0, v0, u1, v1, red, green, blue, finalAlpha);
             context.submit(command);
         }
         context.pose().popPose();
+    }
+
+    protected DrawCommand generateDrawCommand(GpuTextureView texture, GpuSampler sampler,
+                                              float width, float height,
+                                              float u0, float v0, float u1, float v1,
+                                              float red, float green, float blue, float alpha
+    ) {
+        return new ImageDrawCommand(
+                texture, sampler, width, height, u0, v0, u1, v1, red, green, blue, alpha
+        );
     }
 
     public float getRed() {

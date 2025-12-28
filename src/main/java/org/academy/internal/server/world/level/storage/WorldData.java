@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import com.mojang.logging.LogUtils;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.util.GsonUtil;
 import org.academy.internal.common.skilldata.SkillData;
@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class WorldData {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     
     @SerializedName("players")
     private final Map<UUID, Player> players = new HashMap<>();

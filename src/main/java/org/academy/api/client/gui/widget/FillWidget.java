@@ -1,7 +1,9 @@
 package org.academy.api.client.gui.widget;
 
 import org.academy.api.client.gui.drawable.ColorDrawable;
+import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.render.RenderContext;
+import org.jspecify.annotations.Nullable;
 
 public class FillWidget extends AbstractWidget {
     public FillWidget(int color) {
@@ -21,10 +23,11 @@ public class FillWidget extends AbstractWidget {
         return 0;
     }
 
-    /**
-     * @deprecated Use {@code setBackground(new ColorDrawable(color))} or {@code if (getBackground() instanceof ColorDrawable cd) cd.setColor(color);} instead.
-     */
-    @Deprecated
+    @Override
+    public void setBackground(@Nullable Drawable background) {
+        if (background instanceof ColorDrawable) super.setBackground(background);
+    }
+
     public FillWidget setColor(int color) {
         if (getBackground() instanceof ColorDrawable colorDrawable) {
             colorDrawable.setColor(color);

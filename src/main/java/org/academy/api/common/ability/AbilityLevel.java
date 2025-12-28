@@ -26,7 +26,7 @@ public enum AbilityLevel {
     }
 
     public static AbilityLevel fromLevelCode(int levelCode) {
-        for (AbilityLevel level : values()) {
+        for (var level : values()) {
             if (level.getLevelCode() == levelCode) {
                 return level;
             }

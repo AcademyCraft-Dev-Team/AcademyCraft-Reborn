@@ -1,9 +1,9 @@
 package org.academy.api.client.gui.imgui;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.logging.LogUtils;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
+import org.academy.AcademyCraft;
 import org.academy.Dev;
 import org.academy.internal.client.gui.imgui.ImGuiUtilInternal;
 import org.jspecify.annotations.Nullable;
@@ -13,7 +13,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 public final class ImGuiUtilApi {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     public static final Runnable EMPTY_RUNNABLE = () -> {
     };
     public static final BiConsumer<Object, Object> EMPTY_BI_CONSUMER = (_, _) -> {

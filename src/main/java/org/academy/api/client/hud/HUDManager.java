@@ -4,15 +4,15 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import org.academy.AcademyCraft;
 import org.academy.api.client.Render;
-import org.academy.api.client.hud.terminal.DataTerminalHUD;
+import org.academy.api.client.hud.terminal.TerminalHUD;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.post.BlurEffect;
 import org.academy.api.client.thread.MainThread;
@@ -28,21 +28,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class HUDManager {
-    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = AcademyCraft.getLogger();
 
     @RenderThread
     public static void initRender() {
-        DataTerminalHUD.initRender();
+        TerminalHUD.initRender();
     }
 
     @MainThread
     public static void initMain() {
-        DataTerminalHUD.initMain();
+        TerminalHUD.initMain();
     }
 
     @RenderThread
     public static void resize(int width, int height) {
-        DataTerminalHUD.resize();
+        TerminalHUD.resize();
     }
 
     /**
@@ -56,7 +56,7 @@ public final class HUDManager {
         var mouseX = m.getScaledXPos(w);
         var mouseY = m.getScaledYPos(w);
         var deltaPartialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        DataTerminalHUD.perform(mouseX, mouseY, deltaPartialTick);
+        TerminalHUD.perform(mouseX, mouseY, deltaPartialTick);
     }
 
     public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
@@ -83,7 +83,7 @@ public final class HUDManager {
 
             var drew = new AtomicBoolean();
 
-            DataTerminalHUD.render(width, height, uiColor, uiDepth, drew);
+            TerminalHUD.render(width, height, uiColor, uiDepth, drew);
 
             if (!drew.get()) return;
 

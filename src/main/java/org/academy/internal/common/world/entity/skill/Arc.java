@@ -13,8 +13,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.renderer.ArcFactory;
-import org.academy.api.client.renderer.ArcStyles;
-import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.EntityTypes;
 
 public class Arc extends Entity {

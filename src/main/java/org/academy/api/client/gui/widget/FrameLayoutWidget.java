@@ -1,9 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.render.RenderContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +16,7 @@ public class FrameLayoutWidget extends AbstractWidgetContainer {
 
     @Override
     public LayoutParams generateDefaultLayoutParams() {
-        return new LayoutParams(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT);
+        return new LayoutParams();
     }
 
     @Override
@@ -180,26 +180,14 @@ public class FrameLayoutWidget extends AbstractWidgetContainer {
 
     public static class LayoutParams extends WidgetContainer.LayoutParams {
         public static final int UNSPECIFIED_GRAVITY = -1;
-        public int gravity = UNSPECIFIED_GRAVITY;
 
         public LayoutParams() {
-        }
-
-        public LayoutParams(SizeMode widthMode, SizeMode heightMode) {
-            sizeMode(widthMode, heightMode);
+            gravity = UNSPECIFIED_GRAVITY;
+            sizeMode(SizeMode.MATCH_PARENT);
         }
 
         public LayoutParams(WidgetContainer.LayoutParams source) {
             super(source);
-            if (source instanceof LayoutParams frameLp) {
-                gravity = frameLp.gravity;
-            }
-        }
-
-        @Override
-        public LayoutParams gravity(int gravity) {
-            this.gravity = gravity;
-            return this;
         }
     }
 }

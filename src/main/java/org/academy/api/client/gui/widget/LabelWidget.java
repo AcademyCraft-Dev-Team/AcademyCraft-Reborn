@@ -83,6 +83,7 @@ public class LabelWidget extends AbstractWidget {
 
     @Override
     public void render(RenderContext context) {
+        super.render(context);
         if (!isVisible() || component.getString().isEmpty()) return;
 
         var lp = getLayoutParams();
@@ -104,20 +105,29 @@ public class LabelWidget extends AbstractWidget {
         var alignmentOffsetX = 0f;
         var horizontalGravity = (lp.gravity >> Gravity.AXIS_X_SHIFT) & 0x7;
         if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f;
-        else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0)
+        else if ((horizontalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
             alignmentOffsetX = availableWidth - visualTextWidth;
+        }
 
         var alignmentOffsetY = 0f;
         var verticalGravity = (lp.gravity >> Gravity.AXIS_Y_SHIFT) & 0x7;
         if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY = (availableHeight - visualTextHeight) / 2.0f;
-        else if ((verticalGravity & Gravity.AXIS_PULL_AFTER) != 0)
+        else if ((verticalGravity & Gravity.AXIS_PULL_AFTER) != 0) {
             alignmentOffsetY = availableHeight - visualTextHeight;
+        }
 
         var finalAlpha = getAlpha() * context.getAccumulatedAlpha();
 
         context.pose().pushPose();
+        context.drawOrder().push();
         {
-            context.pose().translate(lp.paddingLeft + alignmentOffsetX, lp.paddingTop + alignmentOffsetY + 1, 0);
+            context.drawOrder().advance();
+
+            context.pose().translate(
+                    lp.paddingLeft + alignmentOffsetX,
+                    lp.paddingTop + alignmentOffsetY + 1,
+                    0
+            );
 
             context.pose().translate(visualTextWidth / 2.0f, visualTextHeight / 2.0f, 0);
             context.pose().scale(finalScale, finalScale, 1.0f);
@@ -135,6 +145,7 @@ public class LabelWidget extends AbstractWidget {
 
             for (var command : drawCommands) context.submit(command);
         }
+        context.drawOrder().pop();
         context.pose().popPose();
     }
 

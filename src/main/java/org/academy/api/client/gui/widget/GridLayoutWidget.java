@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.logging.LogUtils;
+import org.academy.AcademyCraft;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.Orientation;
 import org.jspecify.annotations.Nullable;
@@ -12,7 +12,7 @@ import java.util.*;
 import static org.academy.api.client.gui.layout.Gravity.*;
 
 public class GridLayoutWidget extends AbstractWidgetContainer {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     public static final int UNDEFINED = Integer.MIN_VALUE;
     public static final int ALIGN_BOUNDS = 0;

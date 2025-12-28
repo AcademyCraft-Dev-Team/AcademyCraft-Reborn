@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.level.block.entity;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
@@ -19,6 +18,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.wireless.WirelessManager;
@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import java.util.*;
 
 public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     
     private static final int MAX_ENERGY = 2_400_000;
     private static final int TRANSFER_RATE = 20000;

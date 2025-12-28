@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 plugins {
     idea
     `java-library`
@@ -17,6 +19,7 @@ base {
 
 java {
     toolchain {
+        vendor = JvmVendorSpec.JETBRAINS
         languageVersion = JavaLanguageVersion.of(25)
     }
 }
@@ -125,6 +128,7 @@ neoForge {
         configureEach {
             logLevel = org.slf4j.event.Level.DEBUG
             systemProperty("terminal.ansi", "true")
+            jvmArgument("-XX:+AllowEnhancedClassRedefinition")
         }
     }
 
@@ -136,7 +140,7 @@ neoForge {
 }
 
 dependencies {
-    val misaka = "org.academy:misaka-network:26.1-beta"
+    val misaka = "org.academy:misaka-network:26.1-alpha"
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)

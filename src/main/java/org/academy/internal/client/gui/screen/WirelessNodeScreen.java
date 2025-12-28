@@ -163,11 +163,13 @@ public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu
             info.addChild("range_layout", rangeLayout);
 
             var nameTextBox = new TextBoxWidget(12);
+            nameTextBox.setBackground(null);
             nameTextBox.setWhenEnter(s -> MisakaNetworkClient.sendPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
             var nameLayout = createAttributeRow("Node Name", createInputRow(nameTextBox), 0.65f);
             info.addChild("name_layout", nameLayout);
 
             var passTextBox = new TextBoxWidget(12);
+            passTextBox.setBackground(null);
             passTextBox.setWhenEnter(s -> MisakaNetworkClient.sendPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
             var passLayout = createAttributeRow("Password", createInputRow(passTextBox), 0.65f);
             info.addChild("pass_layout", passLayout);

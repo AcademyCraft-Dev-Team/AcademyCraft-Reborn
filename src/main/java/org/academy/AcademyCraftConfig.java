@@ -1,7 +1,6 @@
 package org.academy;
 
 import com.google.gson.*;
-import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.academy.api.common.gson.TypeHandler;
@@ -16,7 +15,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class AcademyCraftConfig {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final Map<String, TypeHandler<?>> HANDLER_MAP = new ConcurrentHashMap<>();
     private static final Gson GSON = new GsonBuilder().create();
 

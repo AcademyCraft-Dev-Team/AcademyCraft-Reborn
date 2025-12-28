@@ -1,10 +1,10 @@
 package org.academy.api.server.wireless;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.apache.commons.lang3.tuple.Pair;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 public class WirelessManager {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     
     public static void initServer() {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(WirelessManager.class);

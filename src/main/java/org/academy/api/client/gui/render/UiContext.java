@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.render;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -12,8 +13,10 @@ import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.widget.WidgetContainer;
+import org.academy.api.client.render.UniformPayload;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.thread.RenderThread;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
@@ -47,7 +50,7 @@ public class UiContext {
 
     public UiContext(float layered) {
         this.layered = layered;
-        Minecraft.getInstance().execute(this::initOnRenderThread);
+        ClientUtil.getRenderEventLoop().execute(this::initOnRenderThread);
     }
 
     @MainThread
@@ -65,13 +68,13 @@ public class UiContext {
             rootWidget.measure(widthSpec, heightSpec);
             rootWidget.layout(0, 0, width, height);
         }
-        var context = new RenderContext(this::getOrCreateUbo);
+        var context = new RenderContext();
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
         commandList.set(context.getCommands());
     }
 
     @RenderThread
-    public void upload(RenderTarget target, boolean clear, boolean stencilTest) {
+    public void upload(RenderTarget target, boolean clear) {
         for (var ubo : dynamicUniformStorages.values()) ubo.endFrame();
 
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
@@ -92,7 +95,8 @@ public class UiContext {
         if (commands == null || commands.isEmpty()) return;
 
         var depthEpsilon = calculateDepthEpsilon(depthTexture) * layered;
-        var meshesToDraw = BatchProcessor.process(commands, depthEpsilon);
+
+        var meshesToDraw = BatchProcessor.process(commands, depthEpsilon, this::uploadPayload);
 
         var effectiveScale = (float) Minecraft.getInstance().getWindow().getGuiScale();
         var window = Minecraft.getInstance().getWindow();
@@ -101,8 +105,12 @@ public class UiContext {
         var projectionBufferSlice = projectionMatrixBuffer.getBuffer(guiScaledWidth, guiScaledHeight);
         commandExecutor.execute(
                 meshesToDraw, colorTextureView, depthTextureView,
-                projectionBufferSlice, dynamicTransformsUbo, effectiveScale, stencilTest
+                projectionBufferSlice, dynamicTransformsUbo, effectiveScale
         );
+    }
+
+    private <T extends DynamicUniformStorage.DynamicUniform> GpuBufferSlice uploadPayload(UniformPayload<T> payload) {
+        return getOrCreateUbo(payload.type(), payload.size()).writeUniform(payload.data());
     }
 
     @MainThread
@@ -171,7 +179,7 @@ public class UiContext {
     public void close() {
         if (closing.get() || closed.get()) return;
         closing.set(true);
-        Minecraft.getInstance().execute(this::closeOnRenderThread);
+        ClientUtil.getRenderEventLoop().execute(this::closeOnRenderThread);
     }
 
     public void closeOnRenderThread() {

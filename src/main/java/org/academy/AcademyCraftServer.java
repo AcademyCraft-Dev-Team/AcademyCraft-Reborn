@@ -1,6 +1,5 @@
 package org.academy;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -25,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 @EventBusSubscriber
 public final class AcademyCraftServer {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     @Nullable
     public static AcademyCraftConfig serverConfig;

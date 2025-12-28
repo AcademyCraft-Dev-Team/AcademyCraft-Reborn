@@ -1,18 +1,19 @@
 package org.academy.internal.server.ability;
 
-import com.mojang.logging.LogUtils;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.data.CPData;
 import org.academy.internal.server.world.level.storage.Player;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerCPManager {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static PlayerDataManager playerDataManager;
     private static final Map<UUID, CPContext> playerCpContextMap = new ConcurrentHashMap<>();
     private static final AbilityLevel[] CACHED_LEVELS = AbilityLevel.values();
@@ -46,7 +47,7 @@ public class PlayerCPManager {
         if (context == null) return;
 
         if (playerDataManager != null) {
-            Player data = playerDataManager.getData(uuid);
+            var data = playerDataManager.getData(uuid);
             if (data != null) {
                 context.exportTo(data);
                 data.markDirty();
@@ -55,8 +56,8 @@ public class PlayerCPManager {
     }
 
     public static void flushAllToData() {
-        for (Map.Entry<UUID, CPContext> entry : playerCpContextMap.entrySet()) {
-            UUID uuid = entry.getKey();
+        for (var entry : playerCpContextMap.entrySet()) {
+            var uuid = entry.getKey();
             flushToData(uuid);
         }
     }
@@ -87,7 +88,7 @@ public class PlayerCPManager {
             data.setLevel(cpData.getLevel().ordinal());
             data.setAvailableCP(cpData.getAvailableCP());
             data.setMaxCP(cpData.getMaxCP());
-            data.setCPOccupations(new ArrayList<>(this.occupationList));
+            data.setCPOccupations(new ArrayList<>(occupationList));
             data.setStatus(cpData.getStatus());
             data.setCPOverloadTimer(cpData.getStateTimer());
         }
@@ -97,16 +98,16 @@ public class PlayerCPManager {
         }
 
         public synchronized boolean tick() {
-            boolean dirty = false;
+            var dirty = false;
 
-            boolean stateChanged = switch (cpData.getStatus()) {
+            var stateChanged = switch (cpData.getStatus()) {
                 case NORMAL -> tickNormal();
                 case PERSONAL_REALITY_OVERLOAD -> tickWarning();
                 case OVERLOAD -> tickOverload();
             };
             dirty |= stateChanged;
 
-            boolean iterationChanged = false;
+            var iterationChanged = false;
             if (cpData.getStatus() != CPData.Status.OVERLOAD) {
                 iterationChanged = processOccupations();
             }
@@ -148,7 +149,7 @@ public class PlayerCPManager {
         }
 
         private boolean processOccupations() {
-            boolean dirty = false;
+            var dirty = false;
             var it = occupationList.iterator();
             while (it.hasNext()) {
                 var occupation = it.next();
@@ -170,7 +171,7 @@ public class PlayerCPManager {
 
         public synchronized void updateMaxCP(float newMaxCP) {
             if (Float.compare(cpData.getMaxCP(), newMaxCP) != 0) {
-                float newAvailableCP = Math.min(newMaxCP, cpData.getAvailableCP() + (newMaxCP - cpData.getMaxCP()));
+                var newAvailableCP = Math.min(newMaxCP, cpData.getAvailableCP() + (newMaxCP - cpData.getMaxCP()));
                 cpData.setAvailableCP(newAvailableCP);
                 cpData.setMaxCP(newMaxCP);
                 checkAndUpgradeLevel();
@@ -178,12 +179,12 @@ public class PlayerCPManager {
         }
 
         private void checkAndUpgradeLevel() {
-            float currentMaxCP = cpData.getMaxCP();
-            float effectiveCP = currentMaxCP - CONFIG_Z;
+            var currentMaxCP = cpData.getMaxCP();
+            var effectiveCP = currentMaxCP - CONFIG_Z;
 
-            AbilityLevel newLevel = AbilityLevel.LEVEL0;
-            for (int i = CACHED_LEVELS.length - 1; i >= 0; i--) {
-                AbilityLevel lvl = CACHED_LEVELS[i];
+            var newLevel = AbilityLevel.LEVEL0;
+            for (var i = CACHED_LEVELS.length - 1; i >= 0; i--) {
+                var lvl = CACHED_LEVELS[i];
                 if (effectiveCP >= lvl.getBasicCP()) {
                     newLevel = lvl;
                     break;
@@ -202,7 +203,7 @@ public class PlayerCPManager {
         }
 
         public synchronized void addOccupation(CPData.CPOccupationData data) {
-            this.occupationList.add(data);
+            occupationList.add(data);
             cpData.setAvailableCP(cpData.getAvailableCP() - data.getAmount());
         }
     }
@@ -239,7 +240,7 @@ public class PlayerCPManager {
     }
 
     public static void setAvailableCP(UUID uuid, float availableCP) {
-        var clampedCP = Math.min(PlayerCPManager.getMaxCP(uuid), availableCP);
+        var clampedCP = Math.min(getMaxCP(uuid), availableCP);
         if (Float.isNaN(clampedCP) || Float.isInfinite(clampedCP)) {
             clampedCP = 0;
         }

@@ -1,4 +1,4 @@
-package org.academy.api.client.gui.apps;
+package org.academy.api.client.gui.app;
 
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.Resource;
@@ -10,8 +10,8 @@ import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.widget.*;
+import org.academy.api.client.hud.terminal.TerminalHUD;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.client.hud.terminal.DataTerminalHUD;
 import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractApp extends LinearLayoutWidget {
@@ -40,7 +40,7 @@ public abstract class AbstractApp extends LinearLayoutWidget {
                     .gravity(Gravity.LEFT | Gravity.CENTER_VERTICAL));
             header.addChild("left_group", leftGroup);
 
-            var logo = new ImageWidget(Resource.Textures.ICON_DATA_TERMINAL);
+            var logo = new ImageWidget(Resource.Textures.ICON_TERMINAL);
             logo.setLayoutParams(new LinearLayoutWidget.LayoutParams()
                     .size(16, 16)
                     .gravity(Gravity.CENTER_VERTICAL));
@@ -91,7 +91,7 @@ public abstract class AbstractApp extends LinearLayoutWidget {
 
     @Override
     public void render(RenderContext context) {
-        var progress = DataTerminalHUD.getViewStateProgress();
+        var progress = TerminalHUD.getViewStateProgress();
 
         // 打开时淡入
         if (progress == 1.0f) {
@@ -131,7 +131,7 @@ public abstract class AbstractApp extends LinearLayoutWidget {
             protected void onMousePressed(MouseEvent event) {
                 if (isMouseOver(event.getX(), event.getY())) {
                     ClientUtil.playDownSound();
-                    DataTerminalHUD.closeApp();
+                    TerminalHUD.closeApp();
                     event.consume();
                 }
             }

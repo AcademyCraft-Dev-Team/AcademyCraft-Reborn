@@ -55,7 +55,7 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public void render(RenderContext context) {
-        if (visibility != Visibility.VISIBLE) return;
+        if (!isVisible()) return;
 
         var pivotX = width * originX;
         var pivotY = height * originY;
@@ -691,9 +691,7 @@ public abstract class AbstractWidget implements Widget {
 
     @Override
     public void cancelAnimations() {
-        for (var anim : new ArrayList<>(attachedAnimators)) {
-            anim.cancel();
-        }
+        for (var anim : new ArrayList<>(attachedAnimators)) anim.cancel();
         attachedAnimators.clear();
     }
 }

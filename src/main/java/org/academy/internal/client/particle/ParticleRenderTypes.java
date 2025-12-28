@@ -1,12 +1,10 @@
 package org.academy.internal.client.particle;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
-import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.misaka.MisakaNetworkClient;

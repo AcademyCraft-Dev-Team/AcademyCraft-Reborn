@@ -3,20 +3,25 @@ package org.academy.api.client.gui.command;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.academy.api.client.render.TextureBinding;
-import org.academy.api.client.render.UniformBinding;
+import org.academy.api.client.render.UniformPayload;
 import org.joml.Matrix4f;
 
 import java.util.List;
 
-/**
- * 看情况选择内部类或外部类喵, 独占选择内部类喵, 可复用选择外部类喵
- */
 public abstract class DrawCommand {
     protected final RenderPipeline pipeline;
+    protected final List<TextureBinding> textures;
+    protected final List<UniformPayload<?>> uniforms;
 
-    protected DrawCommand(RenderPipeline pipeline) {
+    protected DrawCommand(
+            RenderPipeline pipeline,
+            List<TextureBinding> textures,
+            List<UniformPayload<?>> uniforms
+    ) {
         validatePipelineMode(pipeline);
         this.pipeline = pipeline;
+        this.textures = textures;
+        this.uniforms = uniforms;
     }
 
     private static void validatePipelineMode(RenderPipeline pipeline) {
@@ -28,13 +33,17 @@ public abstract class DrawCommand {
             );
     }
 
-    public RenderPipeline getPipeline() {
+    public final RenderPipeline getPipeline() {
         return pipeline;
     }
 
+    public final List<TextureBinding> getTextures() {
+        return textures;
+    }
+
+    public final List<UniformPayload<?>> getUniforms() {
+        return uniforms;
+    }
+
     public abstract void generateVertices(VertexConsumer consumer, Matrix4f pose);
-
-    public abstract List<TextureBinding> getTextures();
-
-    public abstract List<UniformBinding> getUniforms();
 }

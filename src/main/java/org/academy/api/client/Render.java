@@ -158,6 +158,7 @@ public final class Render {
         private GpuBuffer fullScreenQuadVBSDC;
         private GpuBuffer fullScreenQuadColorVBSDC;
 
+        @Nullable
         private Matrix4fc lastProjection;
 
         private Buffers() {
@@ -349,9 +350,14 @@ public final class Render {
     }
 
     public static final class RenderPipelines extends net.minecraft.client.renderer.RenderPipelines {
+        public static final RenderPipeline.Snippet PROJECTION_SNIPPET = builder()
+                .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                .buildSnippet();
+
         public static final RenderPipeline.Snippet BLIT_SCREEN_SNIPPET = builder()
                 .withLocation(academy("pipeline/blit_screen"))
                 .withVertexShader(Resource.Shaders.SCREEN_BLIT)
+                .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withCull(false)
                 .withDepthWrite(false)
@@ -392,7 +398,6 @@ public final class Render {
                 )
                 .build();
 
-
         public static final RenderPipeline GAUSSIAN_BLUR = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/gaussian_blur"))
                 .withFragmentShader(Resource.Shaders.Fragment.GAUSSIAN_BLUR)
@@ -432,33 +437,38 @@ public final class Render {
 
         public static final RenderPipeline IMAGE = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/image"))
-                .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
-                .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
+                .withVertexShader(Resource.Shaders.IMAGE)
+                .withFragmentShader(Resource.Shaders.IMAGE)
                 .withSampler("Sampler0")
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withCull(true)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withDepthWrite(false)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
-        public static final RenderPipeline IMAGE_NO_DEPTH = builder(MATRICES_PROJECTION_SNIPPET)
+        public static final RenderPipeline IMAGE_CIRCLE = builder(MATRICES_PROJECTION_SNIPPET)
+                .withLocation(academy("pipeline/image_circle"))
+                .withVertexShader(Resource.Shaders.IMAGE)
+                .withFragmentShader(Resource.Shaders.Fragment.IMAGE_CIRCLE)
+                .withSampler("Sampler0")
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withCull(true)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthWrite(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
+                .build();
+
+        public static final RenderPipeline IMAGE_STENCIL_PREMULTIPLIED_ALPHA = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/image"))
                 .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withSampler("Sampler0")
-                .withDepthWrite(false)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withCull(true)
+                .withBlend(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA)
+                .withDepthWrite(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
-                .build();
-
-        public static final RenderPipeline IMAGE_STENCIL = builder(MATRICES_PROJECTION_SNIPPET)
-                .withLocation(academy("pipeline/image"))
-                .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
-                .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
-                .withSampler("Sampler0")
-                .withDepthWrite(false)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withStencilTest(
                         new StencilTest(
                                 new StencilPerFaceTest(
@@ -472,22 +482,21 @@ public final class Render {
                                 1
                         )
                 )
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
         public static final RenderPipeline POS_COLOR = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/pos_color"))
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
+                .withCull(true)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
         public static final RenderPipeline SDF_SHARP_MARGIN = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/sdf_sharp_margin"))
-                .withFragmentShader(Resource.Shaders.Fragment.SDF_SHARP_MARGIN)
                 .withVertexShader(Resource.Shaders.POS_TEX)
+                .withFragmentShader(Resource.Shaders.Fragment.SDF_SHARP_MARGIN)
                 .withUniform("SdfUniforms", UniformType.UNIFORM_BUFFER)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
@@ -496,8 +505,8 @@ public final class Render {
 
         public static final RenderPipeline GLOW_CIRCLE = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/glow_circle"))
-                .withFragmentShader(Resource.Shaders.Fragment.GLOW_CIRCLE)
                 .withVertexShader(Resource.Shaders.POS_TEX)
+                .withFragmentShader(Resource.Shaders.Fragment.GLOW_CIRCLE)
                 .withUniform("Uniforms", UniformType.UNIFORM_BUFFER)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
@@ -506,30 +515,30 @@ public final class Render {
 
         public static final RenderPipeline SDF_CIRCLE_GLOW = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/sdf_circle_glow"))
-                .withFragmentShader(Resource.Shaders.Fragment.SDF_CIRCLE_GLOW)
                 .withVertexShader(Resource.Shaders.POS_TEX)
+                .withFragmentShader(Resource.Shaders.Fragment.SDF_CIRCLE_GLOW)
                 .withUniform("GlowUniforms", UniformType.UNIFORM_BUFFER)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withDepthWrite(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .build();
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color"))
-                .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
-                .withCull(false)
+                .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withSampler("Sampler0")
+                .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color"))
-                .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withVertexShader(Resource.Shaders.POS_COLOR)
+                .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
@@ -537,8 +546,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color"))
-                .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withVertexShader(Resource.Shaders.POS_COLOR)
+                .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
@@ -546,11 +555,11 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES_NO_DEPTH = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color"))
-                .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withVertexShader(Resource.Shaders.POS_COLOR)
+                .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
-                .withDepthWrite(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthWrite(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
                 .build();
 
@@ -561,18 +570,20 @@ public final class Render {
                 .withSampler("Sampler0")
                 .withCull(false)
                 .withBlend(BlendFunction.TRANSLUCENT)
-                .withVertexFormat(VertexFormat.builder()
-                        .add("Position", VertexFormatElement.POSITION)
-                        .add("UV0", VertexFormatElement.UV0)
-                        .add("Normal", VertexFormatElement.NORMAL)
-                        .padding(1)
-                        .build(), VertexFormat.Mode.QUADS)
+                .withVertexFormat(
+                        VertexFormat.builder()
+                                .add("Position", VertexFormatElement.POSITION)
+                                .add("UV0", VertexFormatElement.UV0)
+                                .add("Normal", VertexFormatElement.NORMAL)
+                                .padding(1)
+                                .build(),
+                        VertexFormat.Mode.QUADS
+                )
                 .build();
 
         private RenderPipelines() {
         }
     }
-
 
     public abstract static class RenderTypes extends net.minecraft.client.renderer.rendertype.RenderTypes {
         public static final RenderType ARC = create(

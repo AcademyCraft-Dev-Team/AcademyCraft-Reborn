@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.jspecify.annotations.Nullable;
@@ -27,6 +28,10 @@ public interface WidgetContainer extends Widget {
     LayoutParams generateLayoutParams(LayoutParams p);
 
     boolean checkLayoutParams(LayoutParams p);
+
+    default boolean onInterceptEvent(InputEvent event) {
+        return false;
+    }
 
     class LayoutParams {
         /**

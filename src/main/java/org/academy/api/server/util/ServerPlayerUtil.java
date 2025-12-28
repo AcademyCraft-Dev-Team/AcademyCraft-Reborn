@@ -6,8 +6,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
-import org.misaka.api.common.network.packet.S2CPacket;
 import org.academy.api.common.vanilla.OpenScreenPacket;
+import org.misaka.api.common.network.packet.S2CPacket;
 
 import java.util.function.Consumer;
 

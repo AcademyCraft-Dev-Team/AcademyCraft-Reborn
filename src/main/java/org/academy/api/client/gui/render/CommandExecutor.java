@@ -6,19 +6,15 @@ import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.client.stencil.StencilFunction;
-import net.neoforged.neoforge.client.stencil.StencilOperation;
-import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
-import net.neoforged.neoforge.client.stencil.StencilTest;
+import org.academy.AcademyCraft;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.*;
 
 public final class CommandExecutor implements AutoCloseable {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     private static final long INITIAL_CAPACITY = 4L * 1024L * 1024L;
 
@@ -34,8 +30,7 @@ public final class CommandExecutor implements AutoCloseable {
             GpuTextureView depth,
             GpuBufferSlice projectionUbo,
             GpuBuffer dynamicTransformsUbo,
-            float guiScale,
-            boolean stencilTest
+            float guiScale
     ) {
         processRetiredBuffers();
 
@@ -103,20 +98,6 @@ public final class CommandExecutor implements AutoCloseable {
 
             for (var drawCall : drawCalls) {
                 var pipeline = drawCall.pipeline();
-                if (stencilTest) {
-                    var perFaceTest = new StencilPerFaceTest(
-                            StencilOperation.KEEP,
-                            StencilOperation.KEEP,
-                            StencilOperation.REPLACE,
-                            StencilFunction.ALWAYS
-                    );
-                    var stencilTestConfig = new StencilTest(
-                            perFaceTest, 0xFF, 0xFF, 1
-                    );
-                    pipeline = pipeline.toBuilder()
-                            .withStencilTest(stencilTestConfig)
-                            .build();
-                }
                 renderPass.setPipeline(pipeline);
 
                 renderPass.setVertexBuffer(0, globalBuffer);

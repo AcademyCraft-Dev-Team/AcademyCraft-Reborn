@@ -1,15 +1,15 @@
 package org.academy.api.common.ability;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import org.academy.internal.common.network.PacketTypes;
+import org.jetbrains.annotations.NotNull;
+import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.misaka.api.common.network.ThreadType;
-import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 
 @PacketTarget(ThreadType.CLIENT)
 public final class PlayerSyncPacket extends Packet<ClientPacketListener, PlayerSyncPacket> {

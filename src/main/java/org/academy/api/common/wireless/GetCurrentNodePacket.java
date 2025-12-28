@@ -1,15 +1,15 @@
 package org.academy.api.common.wireless;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.internal.common.network.PacketTypes;
 import org.misaka.api.common.network.future.packet.RequestPacket;
 import org.misaka.api.common.network.future.packet.ResponsePacket;
 import org.misaka.api.common.network.packet.PacketType;
-import org.academy.internal.common.network.PacketTypes;
 
 public class GetCurrentNodePacket extends RequestPacket<ServerGamePacketListenerImpl, GetCurrentNodePacket, ClientPacketListener, GetCurrentNodePacket.Response> {
     public static final StreamCodec<ByteBuf, GetCurrentNodePacket> CODEC = StreamCodec.composite(

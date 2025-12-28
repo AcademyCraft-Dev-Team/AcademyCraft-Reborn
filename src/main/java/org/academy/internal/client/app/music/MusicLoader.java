@@ -1,8 +1,7 @@
-package org.academy.internal.client.app.mediaplayer;
+package org.academy.internal.client.app.music;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.mojang.logging.LogUtils;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import org.academy.AcademyCraft;
 import org.jetbrains.annotations.NotNull;
@@ -16,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 public class MusicLoader implements PreparableReloadListener {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     
     private static final Gson GSON = new GsonBuilder().create();
     private static final String FILE_PATH = "musics/music_player.json";
@@ -31,7 +30,7 @@ public class MusicLoader implements PreparableReloadListener {
                 try {
                     for (var resource : manager.getResourceStack(AcademyCraft.custom(namespace, FILE_PATH))) {
                         try (var reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
-                            var map = GSON.<Map<String, MusicData>>fromJson(reader, MediaPlayerBackend.MUSIC_DATA_MAP_TYPE);
+                            var map = GSON.<Map<String, MusicData>>fromJson(reader, MusicPlayerBackend.MUSIC_DATA_MAP_TYPE);
                             if (map != null) {
                                 combinedMap.putAll(map);
                             }
@@ -46,6 +45,6 @@ public class MusicLoader implements PreparableReloadListener {
             return combinedMap;
         }, backgroundExecutor);
 
-        return future.thenCompose(barrier::wait).thenAcceptAsync(data -> MediaPlayerBackend.updatePlaylistFromData(data, "All Resource Packs"), gameExecutor);
+        return future.thenCompose(barrier::wait).thenAcceptAsync(data -> MusicPlayerBackend.updatePlaylistFromData(data, "All Resource Packs"), gameExecutor);
     }
 }

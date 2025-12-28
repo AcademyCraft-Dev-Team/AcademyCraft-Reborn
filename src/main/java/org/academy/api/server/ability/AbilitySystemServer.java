@@ -1,6 +1,5 @@
 package org.academy.api.server.ability;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -19,7 +18,9 @@ import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.SyncTypes;
-import org.academy.api.common.ability.pakcet.*;
+import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
+import org.academy.api.common.ability.pakcet.SyncCPDataPacket;
+import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
@@ -46,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public final class AbilitySystemServer {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     public static final Map<UUID, LivePlayer> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
     private static final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();

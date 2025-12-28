@@ -14,7 +14,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 @PacketTarget(ThreadType.CLIENT)
 public final class SyncCPDataPacket extends Packet<ClientPacketListener, SyncCPDataPacket> {
-
     public static final StreamCodec<ByteBuf, SyncCPDataPacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.FLOAT, p -> p.cpData.getMaxCP(),
             ByteBufCodecs.FLOAT, p -> p.cpData.getAvailableCP(),
@@ -31,7 +30,7 @@ public final class SyncCPDataPacket extends Packet<ClientPacketListener, SyncCPD
     }
 
     private static SyncCPDataPacket create(float maxCP, float availableCP, int levelOrd, int statusOrd, int stateTimer) {
-        CPData data = CPData.builder()
+        var data = CPData.builder()
                 .maxCP(maxCP)
                 .availableCP(availableCP)
                 .level(AbilityLevel.values()[levelOrd])
