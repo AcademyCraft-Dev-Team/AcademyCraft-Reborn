@@ -11,8 +11,7 @@ import org.academy.api.client.Resource;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.render.RenderContext;
-import org.academy.api.client.render.TextureBinding;
-import org.academy.api.client.render.UniformBinding;
+import org.academy.api.client.render.UniformPayload;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
@@ -56,24 +55,21 @@ public class BlendQuadWidget extends AbstractWidget {
                         0.0f,
                         0.0f,
                         1.0f,
-                        1.0f
-                ) {
-                    @Override
-                    public List<TextureBinding> getTextures() {
-                        return List.of();
-                    }
-
-                    @Override
-                    public List<UniformBinding> getUniforms() {
-                        var uboStorage = context.getDynamicUbo(SDFData.class, SDFData.UBO_SIZE);
-                        var size = new Vector2f(paddedWidth, paddedHeight);
-                        var margins = new Vector4f(marginLeft, marginTop, marginRight, marginBottom);
-                        var fillColor = new Vector4f(red, green, blue, finalAlpha);
-                        var sdfData = new SDFData(size, margins, fillColor);
-                        var uboSlice = uboStorage.writeUniform(sdfData);
-                        return List.of(new UniformBinding("SdfUniforms", uboSlice));
-                    }
-                };
+                        1.0f,
+                        List.of(),
+                        List.of(new UniformPayload<>(
+                                        "SdfUniforms",
+                                SDFData.class, new SDFData(
+                                                new Vector2f(paddedWidth, paddedHeight),
+                                                new Vector4f(
+                                                        marginLeft, marginTop, marginRight, marginBottom
+                                                ),
+                                                new Vector4f(red, green, blue, finalAlpha)
+                                        ),
+                                SDFData.UBO_SIZE
+                                )
+                        )
+                );
                 context.submit(sdfCommand);
             }
 
@@ -104,7 +100,8 @@ public class BlendQuadWidget extends AbstractWidget {
         }
     }
 
-    public record SDFData(Vector2f size, Vector4f margins, Vector4f fillColor) implements DynamicUniformStorage.DynamicUniform {
+    public record SDFData(Vector2f size, Vector4f margins,
+                          Vector4f fillColor) implements DynamicUniformStorage.DynamicUniform {
         public static final int UBO_SIZE = new Std140SizeCalculator().putVec2().putVec4().putVec4().get();
 
         @Override

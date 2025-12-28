@@ -21,11 +21,10 @@ public class ScrollBarWidget extends DragBarWidget {
         var finalAlpha = getAbsoluteAlpha() * context.getAccumulatedAlpha();
 
         context.pose().pushPose();
-
-        if (showBackground) renderTrack(context, finalAlpha);
-
-        renderThumb(context, finalAlpha);
-
+        {
+            if (showBackground) renderTrack(context, finalAlpha);
+            renderThumb(context, finalAlpha);
+        }
         context.pose().popPose();
     }
 
@@ -77,23 +76,20 @@ public class ScrollBarWidget extends DragBarWidget {
     @Override
     protected float getThumbPosition() {
         var maxScroll = panel.getMaxScroll();
-        if (maxScroll <= 0.0f)
-            return 0.0f;
+        if (maxScroll <= 0.0f) return 0.0f;
 
         var track = getTrackSize() - getThumbSize();
         var ratio = panel.getScrollY() / maxScroll;
-        return ratio * track;
+        return Mth.clamp(ratio * track, 0, track);
     }
 
     @Override
     protected void updateTargetFromMouse(float mouse) {
         var maxScroll = panel.getMaxScroll();
-        if (maxScroll <= 0.0f)
-            return;
+        if (maxScroll <= 0.0f) return;
 
         var track = getTrackSize() - getThumbSize();
-        if (track <= 0.0f)
-            return;
+        if (track <= 0.0f) return;
 
         var ratio = Mth.clamp((mouse - dragOffset) / track, 0.0f, 1.0f);
         panel.setScrollTarget(ratio * maxScroll);

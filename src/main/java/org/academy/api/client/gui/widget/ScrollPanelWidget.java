@@ -7,8 +7,8 @@ import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.ScrollEvent;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.Orientation;
-import org.academy.api.client.gui.render.ScissorRect;
 import org.academy.api.client.gui.render.RenderContext;
+import org.academy.api.client.gui.render.ScissorRect;
 import org.academy.api.client.util.ClientUtil;
 import org.jspecify.annotations.Nullable;
 
@@ -44,15 +44,12 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
         return p instanceof FrameLayoutWidget.LayoutParams;
     }
 
-    public void setContent(@Nullable Widget newContent) {
-        if (content == newContent) return;
+    public void setContent(@Nullable Widget content) {
+        if (this.content == content) return;
 
         clearChildren();
 
-        if (newContent != null) {
-            content = newContent;
-            addChild(newContent.getName(), newContent);
-        }
+        if (content != null) addChild("content", content);
     }
 
     @Override
@@ -67,9 +64,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
 
     @Override
     public void removeChild(String name) {
-        if (content != null && content.getName().equals(name)) {
-            clearChildren();
-        }
+        if (content != null && content.getName().equals(name)) clearChildren();
     }
 
     @Override
@@ -118,13 +113,25 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
     @Override
     protected void onLayout() {
         if (content != null && content.isVisible()) {
-            var lp = getLayoutParams();
-            var contentLp = content.getLayoutParams();
-            var left = lp.paddingLeft + contentLp.marginLeft;
-            var top = lp.paddingTop + contentLp.marginTop;
-            var right = left + content.getMeasuredWidth();
-            var bottom = top + content.getMeasuredHeight();
-            content.layout(left, top, right, bottom);
+            content.layout(0, 0, content.getMeasuredWidth(), content.getMeasuredHeight());
+
+            var maxScrollX = Math.max(0, content.getWidth() - getWidth());
+            var maxScrollY = Math.max(0, content.getHeight() - getHeight());
+
+            var currentScrollX = getScrollX();
+            var currentScrollY = getScrollY();
+
+            var needsClamping = false;
+            if (currentScrollX > maxScrollX) {
+                currentScrollX = maxScrollX;
+                needsClamping = true;
+            }
+            if (currentScrollY > maxScrollY) {
+                currentScrollY = maxScrollY;
+                needsClamping = true;
+            }
+
+            if (needsClamping) scrollTo(currentScrollX, currentScrollY);
         }
     }
 
@@ -140,8 +147,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
 
             if (gestureTarget != null) {
                 gestureTarget.dispatchEvent(event);
-                if (event.getType() == EventType.MOUSE_RELEASED)
-                    gestureTarget = null;
+                if (event.getType() == EventType.MOUSE_RELEASED) gestureTarget = null;
             }
             return;
         }
@@ -161,9 +167,7 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
         }
 
         super.dispatchEvent(event);
-        if (event.isConsumed() && event.getType() == EventType.MOUSE_PRESSED) {
-            setFocusedChild(this);
-        }
+        if (event.isConsumed() && event.getType() == EventType.MOUSE_PRESSED) setFocusedChild(this);
     }
 
     private InputEvent transformEvent(InputEvent event) {
@@ -256,5 +260,26 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
     public ScrollPanelWidget setScrollSpeed(float scrollSpeed) {
         this.scrollSpeed = scrollSpeed;
         return this;
+    }
+
+    @Override
+    public void scrollTo(float x, float y) {
+        if (content == null) {
+            super.scrollTo(x, y);
+            return;
+        }
+
+        var maxScrollX = Math.max(0, content.getWidth() - getWidth());
+        var maxScrollY = Math.max(0, content.getHeight() - getHeight());
+
+        var finalX = Math.max(0, Math.min(x, maxScrollX));
+        var finalY = Math.max(0, Math.min(y, maxScrollY));
+
+        super.scrollTo(finalX, finalY);
+    }
+
+    @Override
+    public void scrollBy(float dx, float dy) {
+        scrollTo(getScrollX() + dx, getScrollY() + dy);
     }
 }

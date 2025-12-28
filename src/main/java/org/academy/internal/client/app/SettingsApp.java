@@ -4,13 +4,13 @@ import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.*;
-import org.academy.api.client.hud.terminal.DataTerminalHUD;
+import org.academy.api.client.hud.terminal.TerminalHUD;
 
 public final class SettingsApp {
     public static FrameLayoutWidget create() {
         var root = new FrameLayoutWidget();
         {
-            var back = new FillWidget(DataTerminalHUD.COLOR);
+            var back = new FillWidget(TerminalHUD.COLOR);
             back.setLayoutParams(
                     new FrameLayoutWidget.LayoutParams()
                             .sizeMode(SizeMode.MATCH_PARENT)

@@ -7,7 +7,7 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.sounds.SoundEvents;
 
-public class ClientUtil {
+public final class ClientUtil {
     private ClientUtil() {
     }
 
@@ -31,11 +31,11 @@ public class ClientUtil {
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.SELECT, 1.0F));
     }
 
-    public static ReentrantBlockableEventLoop<?> getRenderThreadEventLoop() {
+    public static ReentrantBlockableEventLoop<?> getRenderEventLoop() {
         return Minecraft.getInstance();
     }
 
-    public static ReentrantBlockableEventLoop<?> getMainThreadEventLoop() {
+    public static ReentrantBlockableEventLoop<?> getMainEventLoop() {
         return Minecraft.getInstance();
     }
 }

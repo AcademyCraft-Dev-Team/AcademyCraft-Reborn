@@ -1,9 +1,9 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.google.gson.*;
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import org.academy.AcademyCraft;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import java.lang.reflect.Type;
 
 public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<T>, JsonDeserializer<T> {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     @Override
     public JsonElement serialize(T data, Type typeOfSrc, JsonSerializationContext context) {

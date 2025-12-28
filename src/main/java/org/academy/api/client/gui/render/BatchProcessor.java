@@ -1,11 +1,14 @@
 package org.academy.api.client.gui.render;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.Render;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
+import org.academy.api.client.render.UniformPayload;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
@@ -15,7 +18,16 @@ import java.util.List;
 import java.util.Objects;
 
 public final class BatchProcessor {
-    public static List<PendingBatch> process(List<SubmittedCommand> commands, float depthEpsilon) {
+    @FunctionalInterface
+    public interface UboUploader {
+        <T extends DynamicUniformStorage.DynamicUniform> GpuBufferSlice upload(UniformPayload<T> payload);
+    }
+
+    public static List<PendingBatch> process(
+            List<SubmittedCommand> commands,
+            float depthEpsilon,
+            UboUploader uploader
+    ) {
         if (commands.isEmpty()) return Collections.emptyList();
 
         commands.sort(BatchProcessor::compareCommands);
@@ -28,7 +40,7 @@ public final class BatchProcessor {
         var currentScissor = firstCommand.getScissorRect();
         var currentResourceKey = firstCommand.getResourceKey();
         var currentTextures = firstCommand.getCommand().getTextures();
-        var currentUniforms = firstCommand.getCommand().getUniforms();
+        var currentUniformPayloads = firstCommand.getCommand().getUniforms();
 
         var currentBuilder = new BufferBuilder(
                 Render.Buffers.getByteBufferBuilder(),
@@ -47,13 +59,13 @@ public final class BatchProcessor {
                     || !Objects.equals(submittedCommand.getScissorRect(), currentScissor);
 
             if (shouldBreakBatch) {
-                finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniforms);
+                finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniformPayloads, uploader);
 
                 currentPipeline = command.getPipeline();
                 currentScissor = submittedCommand.getScissorRect();
                 currentResourceKey = submittedCommand.getResourceKey();
                 currentTextures = command.getTextures();
-                currentUniforms = command.getUniforms();
+                currentUniformPayloads = command.getUniforms();
 
                 currentBuilder = new BufferBuilder(
                         Render.Buffers.getByteBufferBuilder(),
@@ -65,7 +77,7 @@ public final class BatchProcessor {
             applyVertices(currentBuilder, submittedCommand, depthEpsilon);
         }
 
-        finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniforms);
+        finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniformPayloads, uploader);
 
         return batches;
     }
@@ -111,10 +123,18 @@ public final class BatchProcessor {
             RenderPipeline pipeline,
             @Nullable ScissorRect scissor,
             List<TextureBinding> textures,
-            List<UniformBinding> uniforms
+            List<UniformPayload<?>> payloads,
+            UboUploader uploader
     ) {
         var meshData = builder.build();
-        if (meshData != null) batches.add(new PendingBatch(meshData, pipeline, scissor, textures, uniforms));
+        if (meshData != null) {
+            var bindings = new ArrayList<UniformBinding>(payloads.size());
+            for (var payload : payloads) {
+                var slice = uploader.upload(payload);
+                bindings.add(new UniformBinding(payload.name(), slice));
+            }
+            batches.add(new PendingBatch(meshData, pipeline, scissor, textures, bindings));
+        }
     }
 
     private BatchProcessor() {

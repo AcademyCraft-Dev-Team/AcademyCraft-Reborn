@@ -21,13 +21,13 @@ public class CPData {
     }
 
     public CPData(CPData source) {
-        this.maxCP = source.maxCP;
-        this.availableCP = source.availableCP;
-        this.status = source.status;
-        this.stateTimer = source.stateTimer;
-        this.level = source.level;
-        this.currSP = source.currSP;
-        this.maxSP = source.maxSP;
+        maxCP = source.maxCP;
+        availableCP = source.availableCP;
+        status = source.status;
+        stateTimer = source.stateTimer;
+        level = source.level;
+        currSP = source.currSP;
+        maxSP = source.maxSP;
     }
 
     public CPData() {

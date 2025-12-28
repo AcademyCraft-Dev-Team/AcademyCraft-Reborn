@@ -1,77 +1,146 @@
 package org.academy.api.client.gui.widget;
 
 import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
+import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.render.RenderContext;
 
-import java.util.function.Supplier;
-
-/**
- * A widget that displays progress as a horizontal bar. The progress value is
- * dynamically obtained from a provided Supplier.
- */
 public class ProgressBarWidget extends AbstractWidget {
-    protected Supplier<Float> progressSupplier;
-    protected boolean backgroundVisible = true;
-    protected int backgroundColor = 0x20000000;
-    protected int progressBarColor = 0xFFfcd932;
+    protected float max = 100;
+    protected float min = 0;
+    protected float progress = 0;
 
-    public ProgressBarWidget(float x, float y, float width, float height, Supplier<Float> progressSupplier) {
-        this.progressSupplier = progressSupplier;
+    protected int backgroundColor = 0x40000000;
+    protected int progressColor = 0xFFFFFFFF;
+
+    protected Orientation orientation = Orientation.HORIZONTAL;
+
+    public ProgressBarWidget() {
     }
 
     @Override
-    public void render(RenderContext context) {
-        if (!isVisible()) return;
+    protected void renderInternal(RenderContext context) {
+        super.renderInternal(context);
 
-        var progress = progressSupplier.get();
-        progress = Math.max(0.0f, Math.min(1.0f, progress));
+        var width = getWidth();
+        var height = getHeight();
 
-        context.pose().pushPose();
-        context.pose().translate(getX(), getY(), getZ());
+        if (width <= 0 || height <= 0) return;
 
-        var absoluteAlpha = context.getAccumulatedAlpha() * getAlpha();
+        var bgRed = ARGB.red(backgroundColor) / 255.0f;
+        var bgGreen = ARGB.green(backgroundColor) / 255.0f;
+        var bgBlue = ARGB.blue(backgroundColor) / 255.0f;
+        var bgAlpha = ARGB.alpha(backgroundColor) / 255.0f;
+        context.submit(generateBackDrawCommand(width, height, bgRed, bgGreen, bgBlue, bgAlpha * context.getAccumulatedAlpha()));
 
-        if (backgroundVisible) {
-            var command = new FillRectDrawCommand(getWidth(), getHeight(),
-                    ARGB.redFloat(backgroundColor),
-                    ARGB.greenFloat(backgroundColor),
-                    ARGB.blueFloat(backgroundColor),
-                    ARGB.alphaFloat(backgroundColor) * absoluteAlpha
-            );
-            context.submit(command);
+        var range = max - min;
+        var ratio = range > 0 ? (progress - min) / range : 0.0f;
+        ratio = Mth.clamp(ratio, 0.0f, 1.0f);
+
+        var fgRed = ARGB.red(progressColor) / 255.0f;
+        var fgGreen = ARGB.green(progressColor) / 255.0f;
+        var fgBlue = ARGB.blue(progressColor) / 255.0f;
+        var fgAlpha = ARGB.alpha(progressColor) / 255.0f;
+
+        if (orientation == Orientation.HORIZONTAL) {
+            var progressWidth = width * ratio;
+            if (progressWidth > 0) {
+                context.submit(generateProgressDrawCommand(progressWidth, height, fgRed, fgGreen, fgBlue, fgAlpha * context.getAccumulatedAlpha()));
+            }
+        } else {
+            var progressHeight = height * ratio;
+            if (progressHeight > 0) {
+                context.pose().pushPose();
+                context.pose().translate(0, height - progressHeight, 0.1f);
+                context.submit(generateProgressDrawCommand(width, progressHeight, fgRed, fgGreen, fgBlue, fgAlpha * context.getAccumulatedAlpha()));
+                context.pose().popPose();
+            }
         }
-
-        var progressWidth = getWidth() * progress;
-        progressWidth = Math.max(0.0f, Math.min(getWidth(), progressWidth));
-        context.pose().translate(0, 0, 0.1f);
-        var command = new FillRectDrawCommand(progressWidth, getHeight(),
-                ARGB.redFloat(progressBarColor),
-                ARGB.greenFloat(progressBarColor),
-                ARGB.blueFloat(progressBarColor),
-                ARGB.alphaFloat(progressBarColor) * absoluteAlpha
-        );
-        context.submit(command);
-
-        context.pose().popPose();
     }
 
-    public void setProgressSupplier(Supplier<Float> progressSupplier) {
-        this.progressSupplier = progressSupplier;
+    protected DrawCommand generateBackDrawCommand(
+            float width, float height,
+            float red, float green, float blue, float alpha
+    ) {
+        return new FillRectDrawCommand(width, height, red, green, blue, alpha);
     }
 
-    public ProgressBarWidget setBackgroundVisible(boolean visible) {
-        backgroundVisible = visible;
+    protected DrawCommand generateProgressDrawCommand(
+            float width, float height,
+            float red, float green, float blue, float alpha
+    ) {
+        return new FillRectDrawCommand(width, height, red, green, blue, alpha);
+    }
+
+    public float getMax() {
+        return max;
+    }
+
+    public ProgressBarWidget setMax(float max) {
+        if (max < min) {
+            max = min;
+        }
+        if (this.max != max) {
+            this.max = max;
+            setProgress(progress);
+        }
         return this;
     }
 
-    public ProgressBarWidget setBackgroundColor(int color) {
-        backgroundColor = color;
+    public float getMin() {
+        return min;
+    }
+
+    public ProgressBarWidget setMin(float min) {
+        if (min > max) {
+            min = max;
+        }
+        if (this.min != min) {
+            this.min = min;
+            setProgress(progress);
+        }
         return this;
     }
 
-    public ProgressBarWidget setProgressBarColor(int color) {
-        progressBarColor = color;
+    public float getProgress() {
+        return progress;
+    }
+
+    public ProgressBarWidget setProgress(float progress) {
+        var clampedProgress = Mth.clamp(progress, min, max);
+        if (this.progress != clampedProgress) {
+            this.progress = clampedProgress;
+        }
+        return this;
+    }
+
+    public int getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public ProgressBarWidget setBackgroundColor(int backgroundColor) {
+        this.backgroundColor = backgroundColor;
+        return this;
+    }
+
+    public int getProgressColor() {
+        return progressColor;
+    }
+
+    public ProgressBarWidget setProgressColor(int progressColor) {
+        this.progressColor = progressColor;
+        return this;
+    }
+
+    public Orientation getOrientation() {
+        return orientation;
+    }
+
+    public ProgressBarWidget setOrientation(Orientation orientation) {
+        this.orientation = orientation;
+        requestLayout();
         return this;
     }
 }

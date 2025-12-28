@@ -9,7 +9,6 @@ import org.academy.api.client.gui.widget.Widget;
 public final class AnimationUtil {
     public static final long DURATION = 350L;
     private static final float Y_OFFSET = 20f;
-    private static final float SCALE_START = 0.5f;
 
     private AnimationUtil() {
     }

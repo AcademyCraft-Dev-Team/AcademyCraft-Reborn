@@ -1,11 +1,11 @@
 package org.academy;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import org.academy.internal.client.data.AcademyCraftClientData;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,12 +14,16 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Mod(AcademyCraft.MODID)
 public final class AcademyCraft {
+    private static final StackWalker STACK_WALKER =
+            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+
     public static final String MODID = "academy";
     public static final ScheduledExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadScheduledExecutor();
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static boolean DEBUG_UI = false;
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = getLogger();
+
 
     public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
@@ -62,5 +66,9 @@ public final class AcademyCraft {
 
     public static Identifier academy(String name) {
         return Identifier.fromNamespaceAndPath(MOD_ID, name);
+    }
+
+    public static Logger getLogger() {
+        return LoggerFactory.getLogger("academy/" + STACK_WALKER.getCallerClass().getSimpleName());
     }
 }

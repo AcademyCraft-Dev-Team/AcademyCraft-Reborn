@@ -17,6 +17,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -24,7 +25,6 @@ import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.PlayerCPManager;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -123,17 +123,17 @@ public final class AcademyCraftCommand {
                                                                     .executes(ctx -> requestOccupy(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "amount"), IntegerArgumentType.getInteger(ctx, "ticks"), BoolArgumentType.getBool(ctx, "is_passive"), BoolArgumentType.getBool(ctx, "broadcast")))))))));
         }
 
-        private static int info(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, boolean broadcast) {
+        private static int info(CommandContext<CommandSourceStack> context, ServerPlayer player, boolean broadcast) {
             var uuid = player.getUUID();
             var name = player.getName().getString();
 
-            float current = AbilitySystemServer.getPlayerAvailableCP(uuid);
-            float max = AbilitySystemServer.getPlayerMaxCP(uuid);
-            int level = AbilitySystemServer.getPlayerLevel(uuid);
-            int currSP = AbilitySystemServer.getPlayerCurrSP(uuid);
-            int maxSP = AbilitySystemServer.getPlayerMaxSP(uuid);
-            CPData.Status status = AbilitySystemServer.getPlayerStatus(uuid);
-            int timer = AbilitySystemServer.getPlayerStateTimer(uuid);
+            var current = AbilitySystemServer.getPlayerAvailableCP(uuid);
+            var max = AbilitySystemServer.getPlayerMaxCP(uuid);
+            var level = AbilitySystemServer.getPlayerLevel(uuid);
+            var currSP = AbilitySystemServer.getPlayerCurrSP(uuid);
+            var maxSP = AbilitySystemServer.getPlayerMaxSP(uuid);
+            var status = AbilitySystemServer.getPlayerStatus(uuid);
+            var timer = AbilitySystemServer.getPlayerStateTimer(uuid);
 
             Component message = Component.literal(String.format(
                     "§e[CP Debug: %s]§r\n" +
@@ -164,7 +164,7 @@ public final class AcademyCraftCommand {
             };
         }
 
-        private static int set(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, float value, boolean broadcast) {
+        private static int set(CommandContext<CommandSourceStack> context, ServerPlayer player, float value, boolean broadcast) {
             var uuid = player.getUUID();
             AbilitySystemServer.setPlayerAvailableCP(uuid, value);
 
@@ -173,7 +173,7 @@ public final class AcademyCraftCommand {
             return 1;
         }
 
-        private static int setMax(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, float value, boolean broadcast) {
+        private static int setMax(CommandContext<CommandSourceStack> context, ServerPlayer player, float value, boolean broadcast) {
             var uuid = player.getUUID();
             AbilitySystemServer.setPlayerMaxCP(uuid, value);
 
@@ -182,10 +182,10 @@ public final class AcademyCraftCommand {
             return 1;
         }
 
-        private static int setStatus(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, String statusName, int timer, boolean broadcast) {
+        private static int setStatus(CommandContext<CommandSourceStack> context, ServerPlayer player, String statusName, int timer, boolean broadcast) {
             var uuid = player.getUUID();
             try {
-                CPData.Status status = CPData.Status.valueOf(statusName.toUpperCase());
+                var status = CPData.Status.valueOf(statusName.toUpperCase());
                 AbilitySystemServer.setPlayerStatus(uuid, status);
                 AbilitySystemServer.setPlayerStateTimer(uuid, timer);
 
@@ -198,9 +198,9 @@ public final class AcademyCraftCommand {
             return 1;
         }
 
-        private static int requestOccupy(CommandContext<CommandSourceStack> context, net.minecraft.server.level.ServerPlayer player, float amount, int ticks, boolean isPassive, boolean broadcast) {
+        private static int requestOccupy(CommandContext<CommandSourceStack> context, ServerPlayer player, float amount, int ticks, boolean isPassive, boolean broadcast) {
             var uuid = player.getUUID();
-            boolean success = AbilitySystemServer.requestCPOccupation(uuid, amount, ticks, isPassive);
+            var success = AbilitySystemServer.requestCPOccupation(uuid, amount, ticks, isPassive);
 
             if (success) {
                 Component message = Component.literal(String.format("§a[AC Debug] Success: Occupied %.1f CP for %d ticks (Passive: %b) on %s", amount, ticks, isPassive, player.getName().getString()));

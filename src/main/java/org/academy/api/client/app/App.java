@@ -1,10 +1,10 @@
 package org.academy.api.client.app;
 
 import net.minecraft.resources.Identifier;
-import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.client.gui.widget.WidgetContext;
 
 public interface App {
-    Widget content();
+    WidgetContext context();
 
     String name();
 

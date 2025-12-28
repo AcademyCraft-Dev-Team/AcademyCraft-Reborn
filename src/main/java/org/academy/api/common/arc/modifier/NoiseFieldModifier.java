@@ -12,7 +12,6 @@ import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.internal.common.arc.PathModifierTypes;
 import org.joml.Vector3f;
-import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.List;

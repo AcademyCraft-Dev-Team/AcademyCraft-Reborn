@@ -2,9 +2,13 @@ package org.academy.api.client.gui.command;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import org.academy.api.client.render.TextureBinding;
+import org.academy.api.client.render.UniformPayload;
 import org.joml.Matrix4f;
 
-public abstract class PosTexRectDrawCommand  extends DrawCommand{
+import java.util.List;
+
+public class PosTexRectDrawCommand extends DrawCommand {
     protected final float width;
     protected final float height;
     protected final float u0;
@@ -12,16 +16,18 @@ public abstract class PosTexRectDrawCommand  extends DrawCommand{
     protected final float u1;
     protected final float v1;
 
-    protected PosTexRectDrawCommand(
+    public PosTexRectDrawCommand(
             RenderPipeline pipeline,
             float width,
             float height,
             float u0,
             float v0,
             float u1,
-            float v1
+            float v1,
+            List<TextureBinding> textures,
+            List<UniformPayload<?>> uniforms
     ) {
-        super(pipeline);
+        super(pipeline, textures, uniforms);
         this.width = width;
         this.height = height;
         this.u0 = u0;

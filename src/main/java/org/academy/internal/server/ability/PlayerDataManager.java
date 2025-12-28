@@ -1,7 +1,7 @@
 package org.academy.internal.server.ability;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.server.level.ServerPlayer;
+import org.academy.AcademyCraft;
 import org.academy.api.common.data.CPData;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class PlayerDataManager {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     private final Map<UUID, Player> playerDataMap;
 

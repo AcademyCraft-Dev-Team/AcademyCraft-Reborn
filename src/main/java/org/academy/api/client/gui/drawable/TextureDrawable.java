@@ -4,10 +4,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
+import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.widget.Widget;
@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class TextureDrawable implements Drawable {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     @Nullable
     protected final Identifier textureLocation;

@@ -1,5 +1,7 @@
 package org.academy.api.client.gui.widget;
 
+import org.academy.api.client.gui.event.EventType;
+import org.academy.api.client.gui.event.InputEvent;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.OnClickListener;
 import org.academy.api.client.util.ClientUtil;
@@ -46,6 +48,12 @@ public class ButtonWidget extends FrameLayoutWidget {
     }
 
     @Override
+    public boolean onInterceptEvent(InputEvent event) {
+        return event.getType() == EventType.MOUSE_PRESSED
+                || event.getType() == EventType.MOUSE_RELEASED;
+    }
+
+    @Override
     protected void onMousePressed(MouseEvent event) {
         if (event.getButton() == 0 && isMouseOver(event.getX(), event.getY())) {
             isPointerDown = true;
@@ -55,16 +63,12 @@ public class ButtonWidget extends FrameLayoutWidget {
 
     @Override
     protected void onMouseReleased(MouseEvent event) {
-        if (event.getButton() == 0) {
-            isPointerDown = false;
-        }
+        if (event.getButton() == 0) isPointerDown = false;
     }
 
     protected void handlePress(MouseEvent event) {
         ClientUtil.playDownSound();
-        if (onClickListener != null) {
-            onClickListener.onClick(this);
-        }
+        if (onClickListener != null) onClickListener.onClick(this);
         event.consume();
     }
 }

@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.DynamicUniformStorage;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.jspecify.annotations.Nullable;
@@ -14,22 +13,13 @@ public final class RenderContext {
     private final ScissorStack scissorStack;
     private final DrawOrderStack drawOrderStack;
     private final AlphaStack alphaStack;
-    private final UboFactory uboFactory;
 
-    @FunctionalInterface
-    public interface UboFactory {
-        <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreate(
-                Class<T> uboClass, int size
-        );
-    }
-
-    public RenderContext(UboFactory uboFactory) {
+    public RenderContext() {
         submittedCommands = new ArrayList<>();
         pose = new PoseStack();
         scissorStack = new ScissorStack();
         drawOrderStack = new DrawOrderStack();
         alphaStack = new AlphaStack();
-        this.uboFactory = uboFactory;
     }
 
     public void submit(DrawCommand command) {
@@ -37,12 +27,6 @@ public final class RenderContext {
         var currentScissor = scissorStack.peek();
         var currentDrawOrder = drawOrderStack.peek();
         submittedCommands.add(new SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder));
-    }
-
-    public <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getDynamicUbo(
-            Class<T> uboClass, int size
-    ) {
-        return uboFactory.getOrCreate(uboClass, size);
     }
 
     public PoseStack pose() {

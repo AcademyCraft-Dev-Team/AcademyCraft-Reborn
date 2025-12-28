@@ -2,9 +2,9 @@ package org.academy.internal.client.gui.screen;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.client.multiplayer.ClientPacketListener;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.level.block.*;
@@ -97,7 +97,7 @@ public final class Screens {
     @SubscribePacket
     public static void handle(OpenScreenPacket packet) {
         var handler = SCREEN_HANDLERS.get(packet.getScreenName());
-        if (handler != null && packet.getDataPayload() != null) {
+        if (handler != null) {
             var buffer = new FriendlyByteBuf(Unpooled.wrappedBuffer(packet.getDataPayload()));
             handler.accept(packet.getPacketListener(), buffer);
         }

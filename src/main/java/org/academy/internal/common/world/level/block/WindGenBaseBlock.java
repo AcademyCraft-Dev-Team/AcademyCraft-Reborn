@@ -1,7 +1,6 @@
 package org.academy.internal.common.world.level.block;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.logging.LogUtils;
 import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -28,6 +27,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.academy.AcademyCraft;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.client.gui.world.WindGenWorldGui;
@@ -43,7 +43,7 @@ import org.slf4j.Logger;
 import java.util.List;
 
 public final class WindGenBaseBlock extends MultiBlock {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     public static final MapCodec<WindGenBaseBlock> CODEC = simpleCodec(WindGenBaseBlock::new);
     public static final String WIND_GEN_SCREEN = "wind_gen_screen";

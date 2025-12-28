@@ -15,8 +15,6 @@ import net.minecraft.world.level.Level;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Optional;
-
 public final class OmniCraftingMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final CraftingContainer craftSlots;

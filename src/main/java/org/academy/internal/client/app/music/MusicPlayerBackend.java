@@ -1,7 +1,6 @@
-package org.academy.internal.client.app.mediaplayer;
+package org.academy.internal.client.app.music;
 
 import com.google.gson.reflect.TypeToken;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -9,6 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.academy.AcademyCraft;
 import org.lwjgl.openal.AL11;
 import org.lwjgl.stb.STBVorbis;
@@ -27,10 +27,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.academy.AcademyCraft.academy;
 
 @EventBusSubscriber(Dist.CLIENT)
-public final class MediaPlayerBackend {
-    private static final Logger LOGGER = LogUtils.getLogger();
+public final class MusicPlayerBackend {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final int BUFFER_COUNT = 4;
-    private static final List<MediaInfo> PLAYLIST = new ArrayList<>();
+    private static final List<MusicInfo> PLAYLIST = new ArrayList<>();
     public static final Type MUSIC_DATA_MAP_TYPE = new TypeToken<Map<String, MusicData>>() {
     }.getType();
 
@@ -53,20 +53,16 @@ public final class MediaPlayerBackend {
     private static int format = 0;
     private static int channels = 0;
 
-    public enum PlaybackMode {REPEAT_LIST, REPEAT_ONE, SHUFFLE}
+    public enum PlaybackMode {
+        REPEAT_LIST, REPEAT_ONE, SHUFFLE
+    }
 
     private static PlaybackMode playbackMode = PlaybackMode.REPEAT_LIST;
     private static final List<Integer> shuffledPlaylist = new ArrayList<>();
     private static int shuffleIndex = -1;
 
-    private enum FadeState {NONE, FADING_IN, FADING_OUT}
 
-    private static FadeState fadeState = FadeState.NONE;
-    private static long fadeStartTime;
-    private static final float FADE_DURATION_SECONDS = 0.75f;
-    private static boolean isStoppingAfterFadeOut = false;
-
-    private MediaPlayerBackend() {
+    private MusicPlayerBackend() {
     }
 
     @SubscribeEvent
@@ -81,14 +77,17 @@ public final class MediaPlayerBackend {
         }
     }
 
+    @SubscribeEvent
+    public static void onTick(ClientTickEvent.Pre event) {
+        update();
+    }
+
     public static void handleContextReset() {
         LOGGER.info("Sound engine reloaded, resetting media player OpenAL resources.");
 
         isPlaying.set(false);
         isPaused.set(false);
         isSeeking = false;
-        fadeState = FadeState.NONE;
-        isStoppingAfterFadeOut = false;
 
         if (stbVorbisInfo != null) {
             stbVorbisInfo.free();
@@ -120,7 +119,7 @@ public final class MediaPlayerBackend {
             return;
         }
 
-        var newPlaylist = new ArrayList<MediaInfo>();
+        var newPlaylist = new ArrayList<MusicInfo>();
         for (var entry : musicMap.entrySet()) {
             var name = entry.getKey();
             var data = entry.getValue();
@@ -144,7 +143,7 @@ public final class MediaPlayerBackend {
                 continue;
             }
 
-            MediaSource source;
+            MusicSource source;
             var sourceTypeStr = data.source_type();
             if (sourceTypeStr == null) {
                 LOGGER.error("Missing source_type for entry '{}' in {}", name, sourceDescription);
@@ -153,9 +152,9 @@ public final class MediaPlayerBackend {
 
             try {
                 if (sourceTypeStr.equalsIgnoreCase("RESOURCE_LOCATION")) {
-                    source = MediaSource.fromIdentifier(Identifier.parse(sourcePath));
+                    source = MusicSource.fromIdentifier(Identifier.parse(sourcePath));
                 } else if (sourceTypeStr.equalsIgnoreCase("PATH")) {
-                    source = MediaSource.fromAbsolutePath(sourcePath);
+                    source = MusicSource.fromAbsolutePath(sourcePath);
                 } else {
                     LOGGER.error("Invalid source_type '{}' for entry '{}' in {}", sourceTypeStr, name, sourceDescription);
                     continue;
@@ -165,17 +164,13 @@ public final class MediaPlayerBackend {
                 continue;
             }
 
-            newPlaylist.add(new MediaInfo(iconLocation, source, name, data.subtitle()));
+            newPlaylist.add(new MusicInfo(iconLocation, source, name, data.subtitle()));
         }
         PLAYLIST.addAll(newPlaylist);
     }
 
     public static void update() {
-        if (isSeeking || (stbVorbisHandle == 0 && !isStoppingAfterFadeOut)) return;
-
-        if (fadeState != FadeState.NONE) {
-            handleFade();
-        }
+        if (isSeeking || stbVorbisHandle == 0) return;
 
         if (!isPlaying.get() || isPaused.get()) {
             return;
@@ -238,7 +233,6 @@ public final class MediaPlayerBackend {
         audioDataBuffer = null;
         isPlaying.set(false);
         isPaused.set(false);
-        fadeState = FadeState.NONE;
         baseSampleOffset = 0;
     }
 
@@ -274,7 +268,7 @@ public final class MediaPlayerBackend {
             var pcmBufferSizeInFrames = sampleRate / 2;
             pcmBuffer = MemoryUtil.memAlloc(pcmBufferSizeInFrames * channels * 2);
 
-            startPlaybackAtFrame(0, true);
+            startPlaybackAtFrame(0);
 
         } catch (IOException e) {
             LOGGER.error("Failed to play media: {}", mediaInfo.name(), e);
@@ -282,7 +276,7 @@ public final class MediaPlayerBackend {
         }
     }
 
-    private static void startPlaybackAtFrame(long frame, boolean shouldFadeIn) {
+    private static void startPlaybackAtFrame(long frame) {
         STBVorbis.stb_vorbis_seek_frame(stbVorbisHandle, (int) frame);
         baseSampleOffset = frame;
 
@@ -294,30 +288,17 @@ public final class MediaPlayerBackend {
         isPlaying.set(true);
         isPaused.set(false);
 
-        if (shouldFadeIn) {
-            AL11.alSourcef(alSource, AL11.AL_GAIN, 0f);
-            fadeState = FadeState.FADING_IN;
-            fadeStartTime = System.nanoTime();
-        } else {
             AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
-            fadeState = FadeState.NONE;
-        }
     }
 
     public static void stop() {
         initializeAudio();
-        if (!isPlaying.get() && !isPaused.get()) return;
-        isStoppingAfterFadeOut = true;
-        fadeState = FadeState.FADING_OUT;
-        fadeStartTime = System.nanoTime();
+        performStop();
     }
 
     public static void togglePlayPause() {
         initializeAudio();
-        if (!isPlaying.get()) {
-            play(currentTrackIndex != -1 ? currentTrackIndex : 0);
-            return;
-        }
+        if (!isPlaying.get()) return;
 
         isPaused.set(!isPaused.get());
 
@@ -327,7 +308,6 @@ public final class MediaPlayerBackend {
             AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
             AL11.alSourcePlay(alSource);
         }
-        fadeState = FadeState.NONE;
     }
 
     public static void playNext() {
@@ -407,7 +387,6 @@ public final class MediaPlayerBackend {
 
     public static void setVolume(float value) {
         volume = value;
-        if (fadeState != FadeState.NONE) return;
         if (alSource != -1) {
             AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
         }
@@ -434,27 +413,6 @@ public final class MediaPlayerBackend {
             }
         }
         shuffleIndex = 0;
-    }
-
-    private static void handleFade() {
-        var elapsedNanos = System.nanoTime() - fadeStartTime;
-        var progress = Math.min(1.0f, elapsedNanos / (FADE_DURATION_SECONDS * 1_000_000_000.0f));
-
-        if (fadeState == FadeState.FADING_IN) {
-            AL11.alSourcef(alSource, AL11.AL_GAIN, volume * progress);
-            if (progress >= 1.0f) {
-                fadeState = FadeState.NONE;
-            }
-        } else if (fadeState == FadeState.FADING_OUT) {
-            AL11.alSourcef(alSource, AL11.AL_GAIN, volume * (1.0f - progress));
-            if (progress >= 1.0f) {
-                fadeState = FadeState.NONE;
-                if (isStoppingAfterFadeOut) {
-                    performStop();
-                    isStoppingAfterFadeOut = false;
-                }
-            }
-        }
     }
 
     private static void swapBuffers() {
@@ -501,7 +459,7 @@ public final class MediaPlayerBackend {
         return ((float) baseSampleOffset / sampleRate) + AL11.alGetSourcef(alSource, AL11.AL_SEC_OFFSET);
     }
 
-    public static List<MediaInfo> getPlaylist() {
+    public static List<MusicInfo> getPlaylist() {
         return Collections.unmodifiableList(PLAYLIST);
     }
 
@@ -523,5 +481,9 @@ public final class MediaPlayerBackend {
 
     public static int getCurrentTrackIndex() {
         return currentTrackIndex;
+    }
+
+    public static float getVolume() {
+        return volume;
     }
 }

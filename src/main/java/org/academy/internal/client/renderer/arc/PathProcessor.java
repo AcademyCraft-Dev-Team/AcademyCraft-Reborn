@@ -3,7 +3,6 @@ package org.academy.internal.client.renderer.arc;
 import org.academy.api.client.renderer.ArcFactory;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.BasePath;
-import org.academy.api.common.arc.Branch;
 import org.academy.api.common.arc.PathModifier;
 import org.academy.api.common.arc.data.PathData;
 import org.academy.api.common.arc.data.PathFrame;

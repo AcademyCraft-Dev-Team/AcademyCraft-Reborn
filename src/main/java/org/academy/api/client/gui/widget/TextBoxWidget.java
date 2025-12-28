@@ -8,7 +8,6 @@ import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.drawable.ColorDrawable;
-import org.academy.api.client.gui.drawable.Drawable;
 import org.academy.api.client.gui.drawable.StateListDrawable;
 import org.academy.api.client.gui.event.CharTypedEvent;
 import org.academy.api.client.gui.event.KeyEvent;
@@ -274,15 +273,6 @@ public class TextBoxWidget extends LabelWidget {
         if (textWidth > availableWidth && textWidth > 0 && availableWidth > 0)
             scale = availableWidth / textWidth;
         else scale = 1.0f;
-    }
-
-    /**
-     * @deprecated Use {@link #setBackground(Drawable)} to provide a custom background.
-     */
-    @Deprecated
-    public TextBoxWidget setShowBackground(boolean show) {
-        if (!show) setBackground(null);
-        return this;
     }
 
     public TextBoxWidget setWhenEnter(@Nullable Consumer<String> callback) {

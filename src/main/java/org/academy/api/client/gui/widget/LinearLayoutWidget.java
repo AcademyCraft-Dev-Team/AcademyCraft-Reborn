@@ -1,8 +1,8 @@
 package org.academy.api.client.gui.widget;
 
-import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
+import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 
 public class LinearLayoutWidget extends AbstractWidgetContainer {

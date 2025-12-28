@@ -10,13 +10,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
+import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.misaka.api.common.network.ThreadType;
-import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.sounds.SoundEvents;
 
 public class CoinItem extends Item {
     public CoinItem(Properties properties) {

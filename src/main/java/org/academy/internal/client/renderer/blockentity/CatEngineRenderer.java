@@ -12,8 +12,8 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.Render;
 import org.academy.internal.client.renderer.blockentity.state.CatEngineRenderState;
 import org.academy.internal.common.world.level.block.entity.CatEngineBlockEntity;
-import org.jspecify.annotations.Nullable;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 
 public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlockEntity, CatEngineRenderState> {
     public static final CatEngineRenderer INSTANCE = new CatEngineRenderer();

@@ -1,13 +1,9 @@
 package org.academy.api.client.gui.widget;
 
-import com.mojang.logging.LogUtils;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.ARGB;
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
@@ -27,7 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class AbstractWidgetContainer extends AbstractWidget implements WidgetContainer {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     
     protected final Map<String, Widget> children = new LinkedHashMap<>();
 
@@ -350,65 +346,79 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
     public void dispatchEvent(InputEvent event) {
         if (!isAbsoluteEnabled() || visibility != Visibility.VISIBLE) return;
 
-        if (event.getType() == EventType.MOUSE_MOVED) {
-            var newHoveredWidget = findTopWidgetAt(((MouseEvent) event).getX(), ((MouseEvent) event).getY());
-            if (hoveredWidget != newHoveredWidget) {
-                var current = hoveredWidget;
-                while (current != null) {
-                    if (newHoveredWidget != null && isAncestor(current, newHoveredWidget)) {
-                        break;
+        var intercepted = onInterceptEvent(event);
+        if (!intercepted) {
+            if (event.getType() == EventType.MOUSE_MOVED) {
+                var newHoveredWidget = findTopWidgetAt(((MouseEvent) event).getX(), ((MouseEvent) event).getY());
+                if (hoveredWidget != newHoveredWidget) {
+                    var current = hoveredWidget;
+                    while (current != null) {
+                        if (newHoveredWidget != null && isAncestor(current, newHoveredWidget)) {
+                            break;
+                        }
+                        if (current instanceof AbstractWidget aw) {
+                            aw.setHovered(false);
+                        }
+                        current = current.getParent();
                     }
+
+                    hoveredWidget = newHoveredWidget;
+
+                    current = hoveredWidget;
+                    while (current != null) {
+                        if (current instanceof AbstractWidget aw) {
+                            aw.setHovered(true);
+                        }
+                        current = current.getParent();
+                    }
+                }
+            }
+
+            if (gestureTarget != null) {
+                if (AcademyCraft.DEBUG_UI) {
+                    LOGGER.debug("[UI Event] Event routed to gestureTarget '{}'", gestureTarget.getName());
+                }
+                gestureTarget.dispatchEvent(event);
+                if (event.getType() == EventType.MOUSE_RELEASED) {
+                    if (AcademyCraft.DEBUG_UI) {
+                        LOGGER.debug("[UI Event] gestureTarget released.");
+                    }
+                    gestureTarget = null;
+                }
+                return;
+            }
+
+            var childrenList = new ArrayList<>(children.values());
+            Collections.reverse(childrenList);
+
+            for (var child : childrenList) {
+                if (!child.isVisible() || !child.isAbsoluteEnabled()) {
+                    continue;
+                }
+
+                child.dispatchEvent(event);
+
+                if (event.isConsumed()) {
+                    if (AcademyCraft.DEBUG_UI) {
+                        LOGGER.debug("[UI Event] Event consumed by child '{}'. Stopping propagation in '{}'.", child.getName(), getName());
+                    }
+                    if (event.getType() == EventType.MOUSE_PRESSED) {
+                        gestureTarget = child;
+                        setFocusedChild(child.canFocus() ? child : this);
+                    }
+                    return;
+                }
+            }
+        } else {
+            if (hoveredWidget != null) {
+                var current = hoveredWidget;
+                while (current != null && current != this) {
                     if (current instanceof AbstractWidget aw) {
                         aw.setHovered(false);
                     }
                     current = current.getParent();
                 }
-
-                hoveredWidget = newHoveredWidget;
-
-                current = hoveredWidget;
-                while (current != null) {
-                    if (current instanceof AbstractWidget aw) {
-                        aw.setHovered(true);
-                    }
-                    current = current.getParent();
-                }
-            }
-        }
-
-        if (gestureTarget != null) {
-            if (AcademyCraft.DEBUG_UI) {
-                LOGGER.debug("[UI Event] Event routed to gestureTarget '{}'", gestureTarget.getName());
-            }
-            gestureTarget.dispatchEvent(event);
-            if (event.getType() == EventType.MOUSE_RELEASED) {
-                if (AcademyCraft.DEBUG_UI) {
-                    LOGGER.debug("[UI Event] gestureTarget released.");
-                }
-                gestureTarget = null;
-            }
-            return;
-        }
-
-        var childrenList = new ArrayList<>(children.values());
-        Collections.reverse(childrenList);
-
-        for (var child : childrenList) {
-            if (!child.isVisible() || !child.isAbsoluteEnabled()) {
-                continue;
-            }
-
-            child.dispatchEvent(event);
-
-            if (event.isConsumed()) {
-                if (AcademyCraft.DEBUG_UI) {
-                    LOGGER.debug("[UI Event] Event consumed by child '{}'. Stopping propagation in '{}'.", child.getName(), getName());
-                }
-                if (event.getType() == EventType.MOUSE_PRESSED) {
-                    gestureTarget = child;
-                    setFocusedChild(child.canFocus() ? child : this);
-                }
-                return;
+                hoveredWidget = null;
             }
         }
 
@@ -514,11 +524,6 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
             return;
         }
 
-        var containerSetFocusedChildEvent = new ContainerSetFocusedChildEvent(child);
-        NeoForge.EVENT_BUS.post(containerSetFocusedChildEvent);
-        if (containerSetFocusedChildEvent.isCanceled()) return;
-        child = containerSetFocusedChildEvent.child;
-
         if (focusedChild == child) {
             return;
         }
@@ -566,14 +571,5 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
             child.dispatchDetached();
         }
         super.dispatchDetached();
-    }
-
-    public static class ContainerSetFocusedChildEvent extends Event implements ICancellableEvent {
-        @Nullable
-        public Widget child;
-
-        public ContainerSetFocusedChildEvent(@Nullable Widget widget) {
-            child = widget;
-        }
     }
 }

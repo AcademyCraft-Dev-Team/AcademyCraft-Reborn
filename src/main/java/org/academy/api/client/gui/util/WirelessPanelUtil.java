@@ -3,6 +3,8 @@ package org.academy.api.client.gui.util;
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.Event;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.gui.drawable.StateListDrawable;
+import org.academy.api.client.gui.drawable.TextureDrawable;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
@@ -107,7 +109,7 @@ public final class WirelessPanelUtil {
                     nodeList.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                             .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
                     );
-                    scrollPanel.addChild("node_list", nodeList);
+                    scrollPanel.setContent(nodeList);
 
                     updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList);
                 }
@@ -203,18 +205,38 @@ public final class WirelessPanelUtil {
                                     .size(46, 10)
                     );
                     inputBox.setWhenEnter(connectAction);
-                    inputBox.setShowBackground(true);
                     itemContent.addChild("input", inputBox);
 
-                    var connectButton = new ImageButtonWidget(ICON_UNCONNECTED, source -> connectAction.accept(inputBox.getText()));
+                    var connectButton = new ButtonWidget();
                     connectButton.setLayoutParams(
                             new LinearLayoutWidget.LayoutParams()
                                     .gravity(Gravity.CENTER)
                                     .size(14, 14)
                     );
+                    connectButton.setOnClickListener(_ -> connectAction.accept(inputBox.getText()));
                     itemContent.addChild("button", connectButton);
+                    {
+                        var content = new ImageWidget();
+                        var defaultDrawable = new TextureDrawable(ICON_UNCONNECTED);
+                        defaultDrawable.setTintColor(0xFFBBBBBB);
+
+                        var hoveredDrawable = new TextureDrawable(ICON_UNCONNECTED);
+                        hoveredDrawable.setTintColor(0xFFFFFFFF);
+
+                        var sld = new StateListDrawable();
+                        sld.setDefault(defaultDrawable);
+                        sld.addState(Widget.State.HOVERED, hoveredDrawable);
+
+                        content.setBackground(sld);
+                        content.setLayoutParams(
+                                new FrameLayoutWidget.LayoutParams()
+                                        .sizeMode(SizeMode.MATCH_PARENT)
+                        );
+                        connectButton.addChild("content", content);
+                    }
                 } else if (!isNull) {
-                    var disconnectButton = new ImageButtonWidget(ICON_CONNECTED, source -> {
+                    var disconnectButton = new ButtonWidget();
+                    disconnectButton.setOnClickListener(_ -> {
                         MisakaNetworkClient.sendPacket(new DisconnectNodePacket(position));
                         updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList);
                     });
@@ -224,6 +246,25 @@ public final class WirelessPanelUtil {
                                     .size(14, 14)
                     );
                     itemContent.addChild("button", disconnectButton);
+                    {
+                        var content = new ImageWidget();
+                        var defaultDrawable = new TextureDrawable(ICON_CONNECTED);
+                        defaultDrawable.setTintColor(0xFFBBBBBB);
+
+                        var hoveredDrawable = new TextureDrawable(ICON_CONNECTED);
+                        hoveredDrawable.setTintColor(0xFFFFFFFF);
+
+                        var sld = new StateListDrawable();
+                        sld.setDefault(defaultDrawable);
+                        sld.addState(Widget.State.HOVERED, hoveredDrawable);
+
+                        content.setBackground(sld);
+                        content.setLayoutParams(
+                                new FrameLayoutWidget.LayoutParams()
+                                        .sizeMode(SizeMode.MATCH_PARENT)
+                        );
+                        disconnectButton.addChild("content", content);
+                    }
                 }
             }
         }
