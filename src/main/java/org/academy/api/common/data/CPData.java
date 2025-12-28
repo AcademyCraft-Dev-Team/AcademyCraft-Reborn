@@ -11,8 +11,8 @@ public class CPData {
     private int stateTimer = 0;
 
     // SP
-    private int currSP = 0;
-    private int maxSP = 1000;
+    private int currSP = 2000;
+    private int maxSP = 2000;
 
     public enum Status {
         NORMAL,
