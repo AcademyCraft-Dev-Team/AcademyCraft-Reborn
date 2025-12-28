@@ -1,11 +1,14 @@
 package org.academy.api.server.ability;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -27,6 +30,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -59,7 +63,7 @@ public final class AbilitySystemServer {
         playerDataManager = dataManager;
         MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
         minecraftServer = server;
-        PlayerCPManager.init(dataManager);
+        PlayerCPManager.init(dataManager, AcademyCraftServer.abilityConfig);
 
         for (var category : Registries.ABILITY_CATEGORIES) {
             category.initServer(server);
@@ -305,6 +309,16 @@ public final class AbilitySystemServer {
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
+    public static float getSPReductionRate(LivingEntity entity) {
+        return entity.getData(AttachmentTypes.SP_REDUCTION_RATE);
+    }
+
+    public static void setSPReductionRate(LivingEntity entity, float rate) {
+        float clamped = Mth.clamp(rate, 0.0f, 1.0f);
+        if (Float.compare(entity.getData(AttachmentTypes.SP_REDUCTION_RATE), clamped) != 0) {
+            entity.setData(AttachmentTypes.SP_REDUCTION_RATE, clamped);
+        }
+    }
 
     public static float getDamageMultiplier() {
         return AcademyCraftServer.abilityConfig == null
@@ -355,9 +369,11 @@ public final class AbilitySystemServer {
             var skillDataChanged = syncQueue.contains(SyncTypes.SKILL_DATA);
 
             if (cpDataChanged) {
-                var cpData = PlayerCPManager.getCPData(uuid);
-                var packet = new SyncCPDataPacket(cpData);
-                MisakaNetworkServer.sendPacket(connection, packet);
+                var cpData = PlayerCPManager.getCPDataOptional(uuid);
+                cpData.ifPresentOrElse(
+                        data -> MisakaNetworkServer.sendPacket(connection, new SyncCPDataPacket(data)),
+                        () -> LOGGER.warn("CPData is null for player {}", uuid)
+                );
             }
             if (abilityCategoryChanged) {
                 var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
@@ -384,8 +400,11 @@ public final class AbilitySystemServer {
             LIVE_PLAYER_MAP.keySet().removeIf(uuid -> !onlinePlayerUUIDs.contains(uuid));
 
             LIVE_PLAYER_MAP.forEach((uuid, livePlayer) -> {
-                if (PlayerCPManager.tick(uuid)) {
-                    schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+                var player = server.getPlayerList().getPlayer(uuid);
+                if (player != null) {
+                    if (PlayerCPManager.tick(player)) {
+                        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+                    }
                 }
             });
         }
@@ -393,7 +412,7 @@ public final class AbilitySystemServer {
         @SubscribeEvent
         public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
             var uuid = event.getEntity().getUUID();
-            PlayerCPManager.flushToData(uuid);
+            PlayerCPManager.onPlayerLoggedOut(uuid);
         }
     }
 

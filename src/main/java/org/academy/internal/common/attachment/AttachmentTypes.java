@@ -43,4 +43,13 @@ public final class AttachmentTypes {
                     .sync(QuantumData.CODEC)
                     .build()
     );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Float>> SP_REDUCTION_RATE = REGISTER.register(
+            "sp_reduction_rate",
+            () -> AttachmentType
+                    .builder(() -> 1.0f)
+                    .sync(ByteBufCodecs.FLOAT)
+                    .build()
+    );
+
+
 }

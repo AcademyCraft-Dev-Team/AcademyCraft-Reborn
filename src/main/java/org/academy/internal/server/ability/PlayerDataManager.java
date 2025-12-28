@@ -2,7 +2,6 @@ package org.academy.internal.server.ability;
 
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.AcademyCraft;
-import org.academy.api.common.data.CPData;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.slf4j.Logger;
@@ -30,10 +29,6 @@ public final class PlayerDataManager {
     private Player createDefaultPlayerData(UUID uuid) {
         LOGGER.debug("Creating new data entry for player {}", uuid);
         var player = new Player();
-        player.setLevel(0);
-        player.setAvailableCP(100);
-        player.setMaxCP(100);
-        player.setStatus(CPData.Status.NORMAL);
         player.markDirty();
         return player;
     }

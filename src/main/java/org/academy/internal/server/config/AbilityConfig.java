@@ -18,10 +18,11 @@ public class AbilityConfig {
     public final Map<String, List<String>> metalBlocks = new HashMap<>();
     @SerializedName("skills")
     public final Map<String, SkillSettings> skills = new HashMap<>();
+
     @SerializedName("damageMultiplier")
     public float damageMultiplier = 1.0f;
-    @SerializedName("cpRecoverSpeed")
-    public float cpRecoverSpeed = 1.0f;
+    @SerializedName("cpRatingOffset")
+    public float cpRatingOffset = 0.0f;
 
     public static class SkillSettings {
         @SerializedName("booleanMap")
