@@ -14,18 +14,18 @@ public class GsonUtil {
     public static boolean isValidField(JsonObject jsonObject, Field[] fields) {
         if (jsonObject == null) return false;
 
-        for (Field field : fields) {
-            int modifiers = field.getModifiers();
+        for (var field : fields) {
+            var modifiers = field.getModifiers();
             if (Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) {
                 continue;
             }
 
-            String fieldName = getSerializedName(field);
+            var fieldName = getSerializedName(field);
             if (!jsonObject.has(fieldName)) {
                 return false;
             }
 
-            JsonElement element = jsonObject.get(fieldName);
+            var element = jsonObject.get(fieldName);
             if (!isTypeCompatible(field.getType(), element)) {
                 return false;
             }
@@ -34,7 +34,7 @@ public class GsonUtil {
     }
 
     private static String getSerializedName(Field field) {
-        SerializedName annotation = field.getAnnotation(SerializedName.class);
+        var annotation = field.getAnnotation(SerializedName.class);
         return (annotation != null) ? annotation.value() : field.getName();
     }
 

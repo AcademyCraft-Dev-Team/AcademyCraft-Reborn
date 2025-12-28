@@ -3,6 +3,7 @@ package org.academy.api.client.util;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.InputWithModifiers;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -51,7 +52,7 @@ public final class ClientUtil {
             @InputConstants.Value int key, int scancode, @InputWithModifiers.Modifiers int modifiers
     ) {
         var options = Minecraft.getInstance().options;
-        var event = new net.minecraft.client.input.KeyEvent(key, scancode, modifiers);
+        var event = new KeyEvent(key, scancode, modifiers);
         var isHotbarKey = false;
         for (var hotbarKey : options.keyHotbarSlots) {
             if (hotbarKey.matches(event)) {

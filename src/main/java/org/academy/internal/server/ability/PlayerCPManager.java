@@ -100,7 +100,7 @@ public class PlayerCPManager {
         private int spRegenTimer = 0;
 
         public void exportTo(Player data) {
-            data.setCpData(new CPData(this.cpData));
+            data.setCpData(new CPData(cpData));
             synchronized (occupationList) {
                 data.setCpOccupations(new ArrayList<>(occupationList));
             }
@@ -280,7 +280,7 @@ public class PlayerCPManager {
         }
 
         public synchronized void addOccupation(CPData.CPOccupationData data) {
-            this.occupationList.add(data);
+            occupationList.add(data);
             cpData.setAvailableCP(cpData.getAvailableCP() - data.getAmount());
         }
 
@@ -329,10 +329,10 @@ public class PlayerCPManager {
     }
 
     public static void setAvailableCP(UUID uuid, float availableCP) {
-        float safeCP = Float.isFinite(availableCP) ? availableCP : 0f;
+        var safeCP = Float.isFinite(availableCP) ? availableCP : 0f;
 
         getCPDataOptional(uuid).ifPresent(data -> {
-            float clamped = Math.min(data.getMaxCP(), safeCP);
+            var clamped = Math.min(data.getMaxCP(), safeCP);
             if (Float.compare(data.getAvailableCP(), clamped) != 0) {
                 data.setAvailableCP(clamped);
             }

@@ -314,7 +314,7 @@ public final class AbilitySystemServer {
     }
 
     public static void setSPReductionRate(LivingEntity entity, float rate) {
-        float clamped = Mth.clamp(rate, 0.0f, 1.0f);
+        var clamped = Mth.clamp(rate, 0.0f, 1.0f);
         if (Float.compare(entity.getData(AttachmentTypes.SP_REDUCTION_RATE), clamped) != 0) {
             entity.setData(AttachmentTypes.SP_REDUCTION_RATE, clamped);
         }
