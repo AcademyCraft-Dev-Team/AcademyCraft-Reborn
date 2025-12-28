@@ -53,6 +53,8 @@ import static org.academy.AcademyCraft.academy;
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 @EventBusSubscriber(Dist.CLIENT)
 public final class AcademyCraftClient {
+    private static boolean renderInitialized = false;
+
     public AcademyCraftClient(IEventBus modEventBus) {
         modEventBus.register(ModBusSubscriber.class);
     }
@@ -70,6 +72,11 @@ public final class AcademyCraftClient {
         BloomEffect.init();
         ScreenDispatcher.init();
         HUDManager.initRender();
+        renderInitialized = true;
+    }
+
+    public static boolean isRenderInitialized() {
+        return renderInitialized;
     }
 
     @SubscribeEvent

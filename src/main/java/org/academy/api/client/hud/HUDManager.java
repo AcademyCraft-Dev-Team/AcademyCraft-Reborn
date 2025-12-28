@@ -11,6 +11,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
 import org.academy.api.client.Render;
 import org.academy.api.client.hud.terminal.TerminalHUD;
 import org.academy.api.client.render.TextureBinding;
@@ -45,7 +46,6 @@ public final class HUDManager {
 
     @RenderThread
     public static void resize(int width, int height) {
-        TerminalHUD.resize();
     }
 
     /**
@@ -53,16 +53,20 @@ public final class HUDManager {
      */
     @SubscribeEvent
     public static void onMainLoop(MainLoopEvent event) {
+        if (!AcademyCraftClient.isRenderInitialized()) return;
+
         var mc = Minecraft.getInstance();
         var w = mc.getWindow();
         var m = mc.mouseHandler;
         var mouseX = m.getScaledXPos(w);
         var mouseY = m.getScaledYPos(w);
         var deltaPartialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        TerminalHUD.perform(mouseX, mouseY, deltaPartialTick);
+        TerminalHUD.getInstance().perform(mouseX, mouseY, deltaPartialTick);
     }
 
     public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+        if (!AcademyCraftClient.isRenderInitialized()) return;
+
         var mc = Minecraft.getInstance();
         var main = mc.getMainRenderTarget();
         var width = main.width;
@@ -86,7 +90,7 @@ public final class HUDManager {
 
             var drew = new AtomicBoolean();
 
-            TerminalHUD.render(width, height, uiColor, uiDepth, drew);
+            TerminalHUD.getInstance().render(width, height, uiColor, uiDepth, drew);
 
             if (!drew.get()) return;
 

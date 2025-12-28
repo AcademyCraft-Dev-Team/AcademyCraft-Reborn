@@ -34,9 +34,7 @@ public abstract class UiScreen extends Screen implements RenderRoot {
 
         onInit();
 
-        if (!root.isAttached()) {
-            root.dispatchAttached();
-        }
+        if (!root.isAttached()) root.dispatchAttached();
     }
 
     protected abstract void onInit();
@@ -60,9 +58,7 @@ public abstract class UiScreen extends Screen implements RenderRoot {
     @Override
     public void removed() {
         super.removed();
-        if (root.isAttached()) {
-            root.dispatchDetached();
-        }
+        if (root.isAttached()) root.dispatchDetached();
     }
 
     @Override

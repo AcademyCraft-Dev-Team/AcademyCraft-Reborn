@@ -4,7 +4,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.widget.WidgetContext;
 
 public interface App {
-    WidgetContext context();
+    WidgetContext createContext();
 
     String name();
 
