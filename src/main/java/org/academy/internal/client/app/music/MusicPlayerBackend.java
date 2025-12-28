@@ -112,9 +112,7 @@ public final class MusicPlayerBackend {
         currentTrackIndex = -1;
         shuffleIndex = -1;
 
-        if (musicMap == null) {
-            return;
-        }
+        if (musicMap == null) return;
 
         var newPlaylist = new ArrayList<MusicInfo>();
         for (var entry : musicMap.entrySet()) {
@@ -125,7 +123,10 @@ public final class MusicPlayerBackend {
             try {
                 iconLocation = Identifier.parse(data.icon());
             } catch (Exception e) {
-                LOGGER.error("Invalid icon Identifier '{}' for entry '{}' in {}{}", data.icon(), name, sourceDescription, e);
+                LOGGER.error(
+                        "Invalid icon Identifier '{}' for entry '{}' in {}{}",
+                        data.icon(), name, sourceDescription, e
+                );
                 continue;
             }
 
@@ -136,7 +137,10 @@ public final class MusicPlayerBackend {
             }
 
             if (sourcePath.toLowerCase(Locale.ROOT).endsWith(".mp3")) {
-                LOGGER.error("Unsupported format: MP3 files are not supported. Skipping entry '{}' with source '{}' in {}", name, sourcePath, sourceDescription);
+                LOGGER.error(
+                        "Unsupported format: MP3 files are not supported. Skipping entry '{}' with source '{}' in {}",
+                        name, sourcePath, sourceDescription
+                );
                 continue;
             }
 
@@ -169,29 +173,19 @@ public final class MusicPlayerBackend {
     public static void update() {
         if (isSeeking || stbVorbisHandle == 0) return;
 
-        if (!isPlaying.get() || isPaused.get()) {
-            return;
-        }
+        if (!isPlaying.get() || isPaused.get()) return;
 
         swapBuffers();
 
         if (AL11.alGetSourcei(alSource, AL11.AL_SOURCE_STATE) != AL11.AL_PLAYING) {
             var queued = AL11.alGetSourcei(alSource, AL11.AL_BUFFERS_QUEUED);
-            if (queued > 0) {
-                AL11.alSourcePlay(alSource);
-            } else if (isPlaying.get()) {
+            if (queued > 0) AL11.alSourcePlay(alSource);
+            else if (isPlaying.get()) {
                 var hasMoreData = false;
-                for (var bufferId : alBuffers) {
-                    if (forward(bufferId)) {
-                        hasMoreData = true;
-                    }
-                }
+                for (var bufferId : alBuffers) if (forward(bufferId)) hasMoreData = true;
 
-                if (hasMoreData) {
-                    AL11.alSourcePlay(alSource);
-                } else {
-                    playNext();
-                }
+                if (hasMoreData) AL11.alSourcePlay(alSource);
+                else playNext();
             }
         }
     }
@@ -277,15 +271,12 @@ public final class MusicPlayerBackend {
         STBVorbis.stb_vorbis_seek_frame(stbVorbisHandle, (int) frame);
         baseSampleOffset = frame;
 
-        for (var bufferId : alBuffers) {
-            forward(bufferId);
-        }
+        for (var bufferId : alBuffers) forward(bufferId);
 
         AL11.alSourcePlay(alSource);
         isPlaying.set(true);
         isPaused.set(false);
-
-            AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
+        AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
     }
 
     public static void stop() {
@@ -299,9 +290,9 @@ public final class MusicPlayerBackend {
 
         isPaused.set(!isPaused.get());
 
-        if (isPaused.get()) {
+        if (isPaused.get())
             AL11.alSourcePause(alSource);
-        } else {
+        else {
             AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
             AL11.alSourcePlay(alSource);
         }
@@ -313,19 +304,14 @@ public final class MusicPlayerBackend {
         var nextIndex = switch (playbackMode) {
             case REPEAT_ONE -> currentTrackIndex;
             case SHUFFLE -> {
-                if (shuffledPlaylist.isEmpty() || ++shuffleIndex >= shuffledPlaylist.size()) {
-                    generateShuffledPlaylist();
-                }
+                if (shuffledPlaylist.isEmpty() || ++shuffleIndex >= shuffledPlaylist.size()) generateShuffledPlaylist();
                 yield shuffledPlaylist.isEmpty() ? -1 : shuffledPlaylist.get(shuffleIndex);
             }
             case REPEAT_LIST -> (currentTrackIndex + 1) % PLAYLIST.size();
         };
 
-        if (nextIndex != -1) {
-            play(nextIndex);
-        } else {
-            stop();
-        }
+        if (nextIndex != -1) play(nextIndex);
+        else stop();
     }
 
     public static void playPrevious() {
@@ -334,16 +320,10 @@ public final class MusicPlayerBackend {
         var prevIndex = switch (playbackMode) {
             case REPEAT_ONE -> currentTrackIndex;
             case SHUFFLE -> {
-                if (shuffledPlaylist.isEmpty()) {
-                    generateShuffledPlaylist();
-                }
-                if (shuffledPlaylist.isEmpty()) {
-                    yield -1;
-                }
+                if (shuffledPlaylist.isEmpty()) generateShuffledPlaylist();
+                if (shuffledPlaylist.isEmpty()) yield -1;
                 shuffleIndex--;
-                if (shuffleIndex < 0) {
-                    shuffleIndex = shuffledPlaylist.size() - 1;
-                }
+                if (shuffleIndex < 0) shuffleIndex = shuffledPlaylist.size() - 1;
                 yield shuffledPlaylist.get(shuffleIndex);
             }
             case REPEAT_LIST -> (currentTrackIndex - 1 + PLAYLIST.size()) % PLAYLIST.size();
@@ -355,9 +335,7 @@ public final class MusicPlayerBackend {
     }
 
     public static void seek(float timeRatio) {
-        if (stbVorbisHandle == 0 || sampleRate == 0 || isSeeking) {
-            return;
-        }
+        if (stbVorbisHandle == 0 || sampleRate == 0 || isSeeking) return;
 
         isSeeking = true;
         AL11.alSourceStop(alSource);
@@ -384,9 +362,7 @@ public final class MusicPlayerBackend {
 
     public static void setVolume(float value) {
         volume = value;
-        if (alSource != -1) {
-            AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
-        }
+        if (alSource != -1) AL11.alSourcef(alSource, AL11.AL_GAIN, volume);
     }
 
     public static void cyclePlaybackMode() {
@@ -399,15 +375,11 @@ public final class MusicPlayerBackend {
     private static void generateShuffledPlaylist() {
         shuffledPlaylist.clear();
         if (PLAYLIST.isEmpty()) return;
-        for (var i = 0; i < PLAYLIST.size(); i++) {
-            shuffledPlaylist.add(i);
-        }
+        for (var i = 0; i < PLAYLIST.size(); i++) shuffledPlaylist.add(i);
         Collections.shuffle(shuffledPlaylist, new Random());
         if (currentTrackIndex != -1) {
             var currentItemPos = shuffledPlaylist.indexOf(currentTrackIndex);
-            if (currentItemPos != -1) {
-                Collections.swap(shuffledPlaylist, 0, currentItemPos);
-            }
+            if (currentItemPos != -1) Collections.swap(shuffledPlaylist, 0, currentItemPos);
         }
         shuffleIndex = 0;
     }
@@ -450,9 +422,7 @@ public final class MusicPlayerBackend {
     }
 
     public static float getCurrentTime() {
-        if (alSource == -1 || !AL11.alIsSource(alSource) || sampleRate == 0) {
-            return 0;
-        }
+        if (alSource == -1 || !AL11.alIsSource(alSource) || sampleRate == 0) return 0;
         return ((float) baseSampleOffset / sampleRate) + AL11.alGetSourcef(alSource, AL11.AL_SEC_OFFSET);
     }
 

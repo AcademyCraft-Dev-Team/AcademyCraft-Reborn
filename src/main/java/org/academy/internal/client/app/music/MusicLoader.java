@@ -45,6 +45,10 @@ public class MusicLoader implements PreparableReloadListener {
             return combinedMap;
         }, backgroundExecutor);
 
-        return future.thenCompose(barrier::wait).thenAcceptAsync(data -> MusicPlayerBackend.updatePlaylistFromData(data, "All Resource Packs"), gameExecutor);
+        return future.thenCompose(barrier::wait).thenAcceptAsync(
+                data -> MusicPlayerBackend.updatePlaylistFromData(
+                        data, "All Resource Packs"
+                ), gameExecutor
+        );
     }
 }

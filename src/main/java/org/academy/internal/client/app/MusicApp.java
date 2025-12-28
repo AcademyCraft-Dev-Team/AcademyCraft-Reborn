@@ -39,7 +39,7 @@ public final class MusicApp implements App {
     }
 
     @Override
-    public WidgetContext context() {
+    public WidgetContext createContext() {
         return new Context();
     }
 
@@ -58,7 +58,7 @@ public final class MusicApp implements App {
         private final ImageWidget playPauseIcon = new ImageWidget(getPlayPauseIcon());
         private final ImageWidget playbackModeIcon = new ImageWidget(getPlaybackModeIcon());
         private final ObjectAnimator rot;
-
+        
         {
             rot = ObjectAnimator
                     .ofFloat(vinyl::getRotation, vinyl::setRotation, 360)
@@ -68,9 +68,11 @@ public final class MusicApp implements App {
             rot.setRepeatCount(ValueAnimator.INFINITE);
         }
 
+        private final FrameLayoutWidget content = createContent();
+
         @Override
-        public Widget create() {
-            return createContent();
+        public Widget get() {
+            return content;
         }
 
         private FrameLayoutWidget createContent() {
@@ -103,7 +105,7 @@ public final class MusicApp implements App {
                                         .margin(2, 2, 2, 0)
                                         .size(16, 16)
                         );
-                        backButton.setOnClickListener(_ -> TerminalHUD.closeApp());
+                        backButton.setOnClickListener(_ -> TerminalHUD.getInstance().closeApp());
                         topBar.addChild("back_button", backButton);
                         {
                             var arrow = new ImageWidget(Resource.Textures.ARROW_BACK);
