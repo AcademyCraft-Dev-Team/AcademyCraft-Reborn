@@ -34,7 +34,8 @@ public class UiContext {
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicBoolean closing = new AtomicBoolean(false);
 
-    private final Map<Class<? extends DynamicUniformStorage.DynamicUniform>, DynamicUniformStorage<?>> dynamicUniformStorages = new HashMap<>();
+    private final Map<Class<? extends DynamicUniformStorage.DynamicUniform>, DynamicUniformStorage<?>>
+            dynamicUniformStorages = new HashMap<>();
     private final CommandExecutor commandExecutor = new CommandExecutor();
 
     @Nullable
@@ -109,18 +110,6 @@ public class UiContext {
         );
     }
 
-    private <T extends DynamicUniformStorage.DynamicUniform> GpuBufferSlice uploadPayload(UniformPayload<T> payload) {
-        return getOrCreateUbo(payload.type(), payload.size()).writeUniform(payload.data());
-    }
-
-    @MainThread
-    private <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreateUbo(Class<T> uboClass, int size) {
-        return UncheckedUtil.uncheckedCast(dynamicUniformStorages.computeIfAbsent(
-                uboClass,
-                _ -> new DynamicUniformStorage<>(uboClass.getSimpleName() + "_UBO", size, 2)
-        ));
-    }
-
     public void generateCommands(
             RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
     ) {
@@ -134,7 +123,25 @@ public class UiContext {
         context.pose().popPose();
     }
 
-    private float calculateDepthEpsilon(GpuTexture depthTexture) {
+    private <T extends DynamicUniformStorage.DynamicUniform> GpuBufferSlice uploadPayload(
+            UniformPayload<T> payload
+    ) {
+        return getOrCreateUbo(payload.type(), payload.size()).writeUniform(payload.data());
+    }
+
+    @MainThread
+    private <T extends DynamicUniformStorage.DynamicUniform> DynamicUniformStorage<T> getOrCreateUbo(
+            Class<T> uboClass, int size
+    ) {
+        return UncheckedUtil.uncheckedCast(dynamicUniformStorages.computeIfAbsent(
+                uboClass,
+                _ -> new DynamicUniformStorage<>(
+                        uboClass.getSimpleName() + "_UBO", size, 2
+                )
+        ));
+    }
+
+    private static float calculateDepthEpsilon(GpuTexture depthTexture) {
         var format = depthTexture.getFormat();
 
         if (!format.hasDepthAspect()) return 0;
@@ -158,7 +165,9 @@ public class UiContext {
          * z=0 => ndc= 1 => (zNear + zFar) / (zNear - zFar) = 1 => zFar = 0
          * z=layered => ndc=-1 => layered * 2 / zNear + 1 = -1 => zNear = -layered
          */
-        projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("gui", -layered, 0.0F, true);
+        projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer(
+                "gui", -layered, 0.0F, true
+        );
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
 
@@ -172,7 +181,9 @@ public class UiContext {
             builder.putMat4f(identityMatrix);
             builder.putFloat(1.0f);
             var byteBuffer = builder.get();
-            dynamicTransformsUbo = device.createBuffer(() -> "UI DynamicTransforms UBO", uboUsage, byteBuffer);
+            dynamicTransformsUbo = device.createBuffer(
+                    () -> "UI DynamicTransforms UBO", uboUsage, byteBuffer
+            );
         }
     }
 

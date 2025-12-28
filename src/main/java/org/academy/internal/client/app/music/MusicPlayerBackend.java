@@ -1,7 +1,6 @@
 package org.academy.internal.client.app.music;
 
 import com.google.gson.reflect.TypeToken;
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -72,9 +71,7 @@ public final class MusicPlayerBackend {
 
     @SubscribeEvent
     public static void onClientPauseChangePost(ClientPauseChangeEvent.Post event) {
-        if (Minecraft.getInstance().level == null || event.isPaused()) {
-            stop();
-        }
+        togglePlayPause();
     }
 
     @SubscribeEvent

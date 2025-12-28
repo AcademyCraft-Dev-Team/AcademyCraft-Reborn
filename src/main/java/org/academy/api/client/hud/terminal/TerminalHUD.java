@@ -144,7 +144,9 @@ public final class TerminalHUD {
     public static void initRender() {
         uiContext = new UiContext() {
             @Override
-            public void generateCommands(RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick) {
+            public void generateCommands(
+                    RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
+            ) {
                 super.generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
 
                 context.pose().pushPose();
@@ -178,7 +180,9 @@ public final class TerminalHUD {
                         1,
                         1,
                         List.of(),
-                        List.of(new UniformPayload<>("GlowUniforms", SDFData.class, sdfData, SDFData.UBO_SIZE))
+                        List.of(new UniformPayload<>(
+                                "GlowUniforms", SDFData.class, sdfData, SDFData.UBO_SIZE)
+                        )
                 ) {};
                 context.submit(glowCommand);
             }
@@ -270,7 +274,8 @@ public final class TerminalHUD {
                     new FrameLayoutWidget.LayoutParams()
                             .sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
             );
-            appContainer.setVisibility(Widget.Visibility.GONE);
+            appContainer.setEnabled(false);
+            appContainer.setAlpha(0);
             main.addChild("app_container", appContainer);
         }
     }
@@ -367,8 +372,12 @@ public final class TerminalHUD {
         var centerX = (guiWidth / 2.0F) - 32 - MAIN_WIDTH / 2f;
 
         viewMatrix.translate(centerX, 0, 0.0F);
-        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), rotateY));
-        viewMatrix.rotate(new Quaternionf().fromAxisAngleDeg(new Vector3f(1.0F, 0.0F, 0.0F), rotateX));
+        viewMatrix.rotate(
+                new Quaternionf().fromAxisAngleDeg(new Vector3f(0.0F, 1.0F, 0.0F), rotateY)
+        );
+        viewMatrix.rotate(
+                new Quaternionf().fromAxisAngleDeg(new Vector3f(1.0F, 0.0F, 0.0F), rotateX)
+        );
         viewMatrix.translate(-centerX, 0, 0.0F);
 
         viewMatrix.translate(-(guiWidth / 2.0F), -(guiHeight / 2.0F), 0.0F);
@@ -394,17 +403,19 @@ public final class TerminalHUD {
     private static void openApp(App app) {
         if (content == null || appContainer == null) return;
         content.setEnabled(false);
-        content.setVisibility(Widget.Visibility.GONE);
         content.cancelAnimations();
         content.startAnimation(
                 ObjectAnimator.ofFloat(content::setAlpha, content.getAlpha(), 0)
-                        .setDuration(200)
+                        .setDuration(100)
         );
+
+        appContainer.setEnabled(true);
         appContainer.clearChildren();
-        appContainer.setVisibility(Widget.Visibility.VISIBLE);
         appContainer.addChild("current_app", app.context().create());
         appContainer.startAnimation(
-                ObjectAnimator.ofFloat(appContainer::setAlpha, appContainer.getAlpha(), 1)
+                ObjectAnimator.ofFloat(
+                                appContainer::setAlpha, appContainer.getAlpha(), 1
+                        )
                         .setDuration(100)
                         .setStartDelay(200)
         );
@@ -414,7 +425,9 @@ public final class TerminalHUD {
         viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
         viewStateAnimator.addUpdateListener(anim -> {
             viewStateProgress = anim.getAnimatedValue();
-            if (main != null) main.setWidth(Mth.lerp(viewStateProgress, MAIN_WIDTH, UNFOLDED_MAIN_WIDTH));
+            if (main != null) main.setWidth(Mth.lerp(
+                    viewStateProgress, MAIN_WIDTH, UNFOLDED_MAIN_WIDTH
+            ));
         });
         viewStateAnimator.start();
     }
@@ -422,15 +435,20 @@ public final class TerminalHUD {
     public static void closeApp() {
         if (content == null || appContainer == null) return;
         content.setEnabled(true);
-        content.setVisibility(Widget.Visibility.VISIBLE);
         content.cancelAnimations();
         content.startAnimation(
                 ObjectAnimator.ofFloat(content::setAlpha, content.getAlpha(), 1)
-                        .setDuration(200)
+                        .setStartDelay(200)
+                        .setDuration(100)
         );
 
-        appContainer.setVisibility(Widget.Visibility.GONE);
-        appContainer.clearChildren();
+        appContainer.setEnabled(false);
+        appContainer.startAnimation(
+                ObjectAnimator.ofFloat(
+                                appContainer::setAlpha, appContainer.getAlpha(), 0
+                        )
+                        .setDuration(100)
+        );
 
         var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 0.0f);
         viewStateAnimator.setDuration(400);
@@ -521,9 +539,10 @@ public final class TerminalHUD {
     public static void onTick(ClientTickEvent.Post event) {
         ROOT.tick();
     }
+
     @SubscribeEvent
     public static void onMouseMove(MouseMoveEvent event) {
-        if (isActive() && Minecraft.getInstance().screen == null) {
+        if (isActive() && ClientUtil.hasNoScreen()) {
             var guiScale = Minecraft.getInstance().getWindow().getGuiScale();
             var deltaGuiX = event.xpos / guiScale;
             var deltaGuiY = event.ypos / guiScale;
@@ -566,7 +585,7 @@ public final class TerminalHUD {
 
     @SubscribeEvent
     public static void onMouseScroll(MouseScrollEvent event) {
-        if (isActive() && Minecraft.getInstance().screen == null) {
+        if (isActive() && ClientUtil.hasNoScreen()) {
             var options = Minecraft.getInstance().options;
             var d0 = (options.discreteMouseScroll().get()
                     ? Math.signum(event.yOffset)
@@ -580,8 +599,8 @@ public final class TerminalHUD {
     @SubscribeEvent
     public static void onKey(KeyInputEvent event) {
         if (isActive()
-                && Minecraft.getInstance().screen == null
-                && !ignoreKey(event.key, event.scanCode, event.modifiers)
+                && ClientUtil.hasNoScreen()
+                && !ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)
         ) {
             var keyEvent = new KeyEvent(
                     event.action == InputConstants.RELEASE ? EventType.KEY_RELEASED : EventType.KEY_PRESSED,
@@ -591,29 +610,6 @@ public final class TerminalHUD {
             if (event.action == InputConstants.RELEASE && !keyEvent.isConsumed()) toggleActive();
             event.setCanceled(true);
         }
-    }
-
-    private static boolean ignoreKey(
-            @InputConstants.Value int key, int scancode, @InputWithModifiers.Modifiers int modifiers
-    ) {
-        var options = Minecraft.getInstance().options;
-        var event = new net.minecraft.client.input.KeyEvent(key, scancode, modifiers);
-        var isHotbarKey = false;
-        for (var hotbarKey : options.keyHotbarSlots) {
-            if (hotbarKey.matches(event)) {
-                isHotbarKey = true;
-                break;
-            }
-        }
-        var isMovementKey
-                = options.keyUp.matches(event)
-                || options.keyDown.matches(event)
-                || options.keyLeft.matches(event)
-                || options.keyRight.matches(event)
-                || options.keyJump.matches(event)
-                || options.keyShift.matches(event)
-                || options.keySprint.matches(event);
-        return isHotbarKey || isMovementKey;
     }
 
     @SubscribeEvent

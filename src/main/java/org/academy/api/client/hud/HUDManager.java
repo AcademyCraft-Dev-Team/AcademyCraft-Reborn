@@ -30,6 +30,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class HUDManager {
     public static final Logger LOGGER = AcademyCraft.getLogger();
 
+    private HUDManager() {
+    }
+
     @RenderThread
     public static void initRender() {
         TerminalHUD.initRender();
@@ -115,8 +118,5 @@ public final class HUDManager {
             if (temp != null) pool.release(descTemp, temp);
             if (last != null) pool.release(descLast, last);
         }
-    }
-
-    private HUDManager() {
     }
 }
