@@ -71,7 +71,7 @@ public final class MusicPlayerBackend {
 
     @SubscribeEvent
     public static void onClientPauseChangePost(ClientPauseChangeEvent.Post event) {
-        togglePlayPause();
+        if (event.isPaused()) stop();
     }
 
     @SubscribeEvent
