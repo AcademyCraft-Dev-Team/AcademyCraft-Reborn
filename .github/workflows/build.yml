@@ -12,12 +12,20 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v6
 
+      - name: Cache JBR
+        id: cache-jbr
+        uses: actions/cache@v4
+        with:
+          path: ./jbrsdk.tar.gz
+          key: jbr-sdk-25-b176.4
+
       - name: Download JBR
+        if: steps.cache-jbr.outputs.cache-hit != 'true'
         run: |
           wget -O jbrsdk.tar.gz "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-25-linux-x64-b176.4.tar.gz"
 
       - name: Install JBR
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'jdkfile'
           jdkFile: ./jbrsdk.tar.gz
