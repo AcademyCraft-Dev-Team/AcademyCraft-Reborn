@@ -35,9 +35,22 @@ public final class MusicApp implements App {
         return String.format("%02d:%02d", minutes, seconds);
     };
 
+    private MusicApp() {
+    }
+
     @Override
     public WidgetContext context() {
         return new Context();
+    }
+
+    @Override
+    public String name() {
+        return "Music";
+    }
+
+    @Override
+    public Identifier icon() {
+        return Resource.Textures.ICON_MUSIC_PLAYER;
     }
 
     private static class Context implements WidgetContext {
@@ -534,13 +547,13 @@ public final class MusicApp implements App {
             pauseRot();
         }
 
-        private void pauseRot() {
-            if (rot.isRunning()) rot.pause();
-        }
-
         private void startRot() {
             if (!rot.isRunning()) rot.start();
             else if (rot.isPaused()) rot.resume();
+        }
+
+        private void pauseRot() {
+            if (rot.isRunning()) rot.pause();
         }
 
         private void selectTrackIndex(int trackIndex) {
@@ -560,18 +573,5 @@ public final class MusicApp implements App {
                 vinyl.setSampler(FilterMode.LINEAR, false);
             }
         }
-    }
-
-    @Override
-    public String name() {
-        return "Music";
-    }
-
-    @Override
-    public Identifier icon() {
-        return Resource.Textures.ICON_MUSIC_PLAYER;
-    }
-
-    private MusicApp() {
     }
 }

@@ -12,11 +12,16 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v6
 
-      - name: Set up JDK
+      - name: Download JBR
+        run: |
+          wget -O jbrsdk.tar.gz "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-25-linux-x64-b176.4.tar.gz"
+
+      - name: Install JBR
         uses: actions/setup-java@v5
         with:
+          distribution: 'jdkfile'
+          jdkFile: ./jbrsdk.tar.gz
           java-version: '25'
-          distribution: 'jetbrains'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
