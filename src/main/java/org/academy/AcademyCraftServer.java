@@ -3,7 +3,6 @@ package org.academy;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -108,8 +107,7 @@ public final class AcademyCraftServer {
 
     @SubscribeEvent
     public static void init(ServerStartedEvent event) {
-        var instance = new AcademyCraftServer((MinecraftServerContext) event.getServer());
-        NeoForge.EVENT_BUS.register(instance);
+        new AcademyCraftServer((MinecraftServerContext) event.getServer());
     }
 
     @SubscribeEvent

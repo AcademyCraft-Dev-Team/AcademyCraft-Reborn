@@ -62,13 +62,13 @@ public final class AcademyCraftClient {
     }
 
     public static void initMain() {
+        TerminalHUD.addApp(MusicApp.INSTANCE);
+
         Screens.register();
         HUDManager.initMain();
         ParticleRenderTypes.init();
         AbilitySystemClient.init();
         ClientSyncManager.init();
-
-        TerminalHUD.addApp(MusicApp.INSTANCE);
     }
 
     public static void initRender() {
