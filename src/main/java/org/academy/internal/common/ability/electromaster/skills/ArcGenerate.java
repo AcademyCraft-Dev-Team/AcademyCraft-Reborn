@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.electromaster.skills;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -20,6 +19,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
@@ -65,7 +65,7 @@ public final class ArcGenerate extends Skill {
     }
 
     @Override
-    public void initServer(MinecraftServer server) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
@@ -167,9 +167,8 @@ public final class ArcGenerate extends Skill {
             arc.playSound(SoundEvents.ARC_WEAK.get());
 
             var radius = 0.25f;
-            var damage = BASE_DAMAGE * AbilitySystemServer.getDamageMultiplier();
             var src = player.damageSources().playerAttack(player);
-            LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, damage);
+            LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, BASE_DAMAGE);
         }
     }
 

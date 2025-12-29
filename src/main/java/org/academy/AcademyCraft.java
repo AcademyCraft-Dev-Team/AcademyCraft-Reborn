@@ -24,7 +24,6 @@ public final class AcademyCraft {
     public static boolean DEBUG_UI = false;
     private static final Logger LOGGER = getLogger();
 
-
     public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
         modEventBus.addListener(AcademyCraftClientData::dataSetup);

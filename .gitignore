@@ -2,6 +2,7 @@
 .idea/*
 !.idea/icon.svg
 !.idea/dictionaries
+!.idea/inspectionProfiles
 
 *.iml
 *.ipr

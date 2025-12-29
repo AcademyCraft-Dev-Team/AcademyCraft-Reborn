@@ -38,16 +38,20 @@ import static org.academy.AcademyCraft.MOD_NAME;
 import static org.academy.api.common.registries.Registries.*;
 
 public final class AcademyCraftRegister {
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
+            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     @SuppressWarnings("unused")
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CREATIVE_MODE_TAB = CREATIVE_MODE_TABS.register("all", () -> CreativeModeTab.builder().icon(() -> new ItemStack(Items.ICON)).displayItems((itemDisplayParameters, output) -> {
-        for (var key : Items.ITEMS.getEntries()) {
-            var item = key.get();
-            if (!(item == Items.ICON.get())) {
-                output.accept(item);
-            }
-        }
-    }).title(Component.literal(MOD_NAME)).build());
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CREATIVE_MODE_TAB =
+            CREATIVE_MODE_TABS.register("all", () -> CreativeModeTab.builder()
+                    .icon(() -> new ItemStack(Items.ICON))
+                    .displayItems((_, output) -> {
+                        for (var key : Items.ITEMS.getEntries()) {
+                            var item = key.get();
+                            if (!(item == Items.ICON.get())) {
+                                output.accept(item);
+                            }
+                        }
+                    }).title(Component.literal(MOD_NAME)).build());
 
     private AcademyCraftRegister() {
     }
@@ -81,7 +85,6 @@ public final class AcademyCraftRegister {
 
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
-     //   modEventBus.addListener(AcademyCraftRegister::onFMLLoadComplete);
     }
 
     private static void onNewRegistry(NewRegistryEvent event) {
@@ -100,9 +103,4 @@ public final class AcademyCraftRegister {
             ABILITY_CATEGORIES.forEach(AbilityCategory::seal);
         });
     }
-
-/*    private static void onFMLLoadComplete(final FMLLoadCompleteEvent event) {
-        event.enqueueWork(() ->
-                MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(ImagiphaseDowsingRodItem.class));
-    }*/
 }

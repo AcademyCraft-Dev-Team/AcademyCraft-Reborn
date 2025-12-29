@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -35,6 +34,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
 import org.academy.api.server.sync.ServerSyncManager;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -70,10 +70,12 @@ public final class Railgun extends Skill {
     }
 
     @Override
-    public void initServer(MinecraftServer server) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
         var key = SyncKeys.RAILGUN_CHARGING.get();
-        Server.chargingSyncManager = new DataSyncManager<>(key, DataTypes.BOOL.get(), server.getPlayerList());
+        Server.chargingSyncManager = new DataSyncManager<>(
+                key, DataTypes.BOOL.get(), context.getMinecraftServer().getPlayerList()
+        );
         ServerSyncManager.register(key, Server.chargingSyncManager);
     }
 

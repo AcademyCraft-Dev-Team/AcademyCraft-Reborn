@@ -42,7 +42,6 @@ import org.academy.api.client.render.UniformPayload;
 import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.client.app.MusicApp;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -51,13 +50,10 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.nio.ByteBuffer;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public final class TerminalHUD {
     public static final int COLOR = 0x40000000;
@@ -66,27 +62,51 @@ public final class TerminalHUD {
     public static final float MAIN_HEIGHT = 200;
     public static final String CONFIG_KEY = "terminal_hud_config";
     public static final String KEY_NAME_TOGGLE = "terminal_hud_config_toggle";
-    @Nullable
-    private static TerminalConfig config;
-    /**
-     * Main 和 Render 线程都需要用喵
-     */
-    private static final AtomicBoolean ACTIVE = new AtomicBoolean();
+    private static volatile boolean active = false;
 
     @Nullable
     private static TerminalHUD INSTANCE;
 
-    private volatile double xpos, ypos;
-    private double startXpos, startYpos;
+    private static final List<App> APPS = new ArrayList<>();
 
-    // 视图切换状态动画相关
-    private float viewStateProgress = 0.0f; // 1.0f:平行于屏幕
-
+    private final TerminalConfig config;
     private final Context context = new Context();
     private final UiContext uiContext;
 
+    /**
+     * 0.0f : 面向鼠标喵
+     * <br>
+     * 1.0f : 平行于屏幕喵
+     */
+    private float viewStateProgress = 0.0f;
+    private volatile double xpos, ypos;
+    private double startXpos, startYpos;
+
     private TerminalHUD() {
-        uiContext = new UiContext() {
+        AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE);
+        config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY);
+
+        var toggleKeys = new LinkedHashSet<Integer>();
+        toggleKeys.add(GLFW.GLFW_KEY_RIGHT_ALT);
+        var defaultKey = new InputSystem.InputPair(
+                InputSystem.InputType.KEYBOARD,
+                new InputSystem.KeyInfo(
+                        toggleKeys, 0, new LinkedHashSet<>()
+                )
+        );
+        InputSystem.addKeyBinding(
+                KEY_NAME_TOGGLE,
+                config.getKeyBinding(KEY_NAME_TOGGLE, defaultKey),
+                () -> {
+                    if (INSTANCE != null) INSTANCE.toggleActive();
+                }
+        );
+
+        uiContext = createUiContext();
+    }
+
+    private UiContext createUiContext() {
+        return new UiContext() {
             @Override
             public void generateCommands(
                     RenderContext context, WidgetContainer rootWidget, double mouseX, double mouseY, float partialTick
@@ -134,40 +154,19 @@ public final class TerminalHUD {
     }
 
     public static TerminalHUD getInstance() {
-        if (INSTANCE == null) hasNotBeenInitialized();
+        if (INSTANCE == null) throw new IllegalStateException("TerminalHUD has not been initialized.");
         return INSTANCE;
     }
 
-    private static void hasNotBeenInitialized() {
-        throw new IllegalStateException("TerminalHUD has not been initialized.");
+    public static void addApp(App app) {
+        APPS.add(app);
     }
 
     public static boolean isActive() {
-        return ACTIVE.get();
+        return active;
     }
 
     public static void initMain() {
-        AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE);
-        config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY);
-
-        var toggleKeys = new LinkedHashSet<Integer>();
-        toggleKeys.add(GLFW.GLFW_KEY_RIGHT_ALT);
-        var defaultKey = new InputSystem.InputPair(
-                InputSystem.InputType.KEYBOARD,
-                new InputSystem.KeyInfo(
-                        toggleKeys, 0, new LinkedHashSet<>()
-                )
-        );
-        InputSystem.addKeyBinding(
-                KEY_NAME_TOGGLE,
-                config.getKeyBinding(KEY_NAME_TOGGLE, defaultKey),
-                () -> {
-                    if (INSTANCE != null) INSTANCE.toggleActive();
-                }
-        );
-    }
-
-    public static void initRender() {
         INSTANCE = new TerminalHUD();
         NeoForge.EVENT_BUS.register(INSTANCE);
     }
@@ -189,10 +188,7 @@ public final class TerminalHUD {
 
     @MainThread
     public void toggleActive() {
-        // 保险喵?
-        boolean prev;
-        do prev = ACTIVE.get();
-        while (!ACTIVE.compareAndSet(prev, !prev));
+        active = !active;
 
         var mc = Minecraft.getInstance();
         var w = mc.getWindow();
@@ -261,7 +257,7 @@ public final class TerminalHUD {
                 renderPass.setUniform("Projection", projectionUBSlice);
                 renderPass.setUniform("DynamicTransforms", dynamicTransformsSlice);
 
-                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFullScreenQuadColorVBSDC());
+                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFSQuadColorVBSDC());
                 var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
                 renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
                 renderPass.drawIndexed(0, 0, 6, 1);
@@ -483,7 +479,9 @@ public final class TerminalHUD {
                                 );
                                 appRows.addChild("row_one", rowOne);
                                 {
-                                    rowOne.addChild("music", createApp(MusicApp.INSTANCE));
+                                    for (var app : APPS) {
+                                        rowOne.addChild(app.name(), createApp(app));
+                                    }
                                 }
                             }
                         }
@@ -519,17 +517,7 @@ public final class TerminalHUD {
                             .setStartDelay(200)
             );
 
-            var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 1.0f);
-            viewStateAnimator.setDuration(400);
-            viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
-            viewStateAnimator.addUpdateListener(anim -> {
-                viewStateProgress = anim.getAnimatedValue();
-                main.setWidth(Mth.lerp(
-                        viewStateProgress, MAIN_WIDTH, UNFOLDED_MAIN_WIDTH
-                ));
-            });
-            main.cancelAnimations();
-            main.startAnimation(viewStateAnimator);
+            animateMainWidthTransition(1);
         }
 
         public void closeApp() {
@@ -549,7 +537,11 @@ public final class TerminalHUD {
                             .setDuration(100)
             );
 
-            var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, 0.0f);
+            animateMainWidthTransition(0);
+        }
+
+        private void animateMainWidthTransition(float target) {
+            var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, target);
             viewStateAnimator.setDuration(400);
             viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
             viewStateAnimator.addUpdateListener(anim -> {
@@ -597,25 +589,22 @@ public final class TerminalHUD {
                     );
                     iconArea.addChild("icon", iconWidget);
 
-                    var progressState = new float[]{0.0f};
-
+                    var progressState = new AtomicReference<>(0f);
                     Consumer<Float> updateState = progress -> {
-                        progressState[0] = progress;
+                        progressState.set(progress);
                         iconArea.setScale(1.0f + 0.2f * progress);
                         back.setBrightness(0.8f + 0.2f * progress);
                         iconWidget.setBrightness(0.9f + 0.1f * progress);
                     };
 
-                    Supplier<Float> getProgress = () -> progressState[0];
-
                     var animator = new StateListAnimator();
                     animator.addState(Widget.State.HOVERED,
-                            ObjectAnimator.ofFloat(getProgress, updateState, 1.0f)
+                            ObjectAnimator.ofFloat(progressState::get, updateState, 1.0f)
                                     .setDuration(100)
                                     .setInterpolator(EasingFunctions.EASE_OUT_SINE)
                     );
                     animator.addState(Widget.State.NONE,
-                            ObjectAnimator.ofFloat(getProgress, updateState, 0.0f)
+                            ObjectAnimator.ofFloat(progressState::get, updateState, 0.0f)
                                     .setDuration(100)
                                     .setInterpolator(EasingFunctions.EASE_OUT_SINE)
                     );

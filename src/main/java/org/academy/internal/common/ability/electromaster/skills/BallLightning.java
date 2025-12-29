@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.electromaster.skills;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
@@ -32,6 +31,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
@@ -82,7 +82,7 @@ public class BallLightning extends Skill {
     }
 
     @Override
-    public void initServer(MinecraftServer server) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 

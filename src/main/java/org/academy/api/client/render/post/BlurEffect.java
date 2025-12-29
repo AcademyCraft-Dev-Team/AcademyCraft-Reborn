@@ -115,14 +115,14 @@ public final class BlurEffect {
                     swap, depth,
                     false, false,
                     Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR,
-                    Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
+                    Render.Buffers.getInstance().getFSQuadVBNDC(),
                     textures, uniforms
             );
             Render.runBlitPass(
                     swap, depth,
                     false, false,
                     Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT,
-                    Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
+                    Render.Buffers.getInstance().getFSQuadVBNDC(),
                     textures, List.of()
             );
             writeBlurUniforms(vec2, 0.0F, 1.0F, radius);
@@ -130,7 +130,7 @@ public final class BlurEffect {
                     output, depth,
                     false, false,
                     Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR,
-                    Render.Buffers.getInstance().getFullScreenQuadVBNDC(),
+                    Render.Buffers.getInstance().getFSQuadVBNDC(),
                     List.of(new TextureBinding("DiffuseSampler", swap, gpuSampler)), uniforms
             );
         } finally {

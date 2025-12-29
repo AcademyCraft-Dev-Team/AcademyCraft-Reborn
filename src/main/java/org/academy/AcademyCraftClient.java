@@ -27,12 +27,14 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.HUDManager;
+import org.academy.api.client.hud.terminal.TerminalHUD;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.UncheckedUtil;
+import org.academy.internal.client.app.MusicApp;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.particle.ParticleRenderTypes;
@@ -65,6 +67,8 @@ public final class AcademyCraftClient {
         ParticleRenderTypes.init();
         AbilitySystemClient.init();
         ClientSyncManager.init();
+
+        TerminalHUD.addApp(MusicApp.INSTANCE);
     }
 
     public static void initRender() {
@@ -72,6 +76,7 @@ public final class AcademyCraftClient {
         BloomEffect.init();
         ScreenDispatcher.init();
         HUDManager.initRender();
+
         renderInitialized = true;
     }
 
@@ -115,7 +120,13 @@ public final class AcademyCraftClient {
         var base = state.getBlock() == Blocks.WIND_GEN_BASE.get();
         var top = state.getBlock() == Blocks.WIND_GEN_TOP.get();
         if (pillar || base || top) {
-            event.addCustomRenderer((blockOutlineRenderState, bufferSource, poseStack, _, levelRenderState) -> {
+            event.addCustomRenderer((
+                    blockOutlineRenderState,
+                    bufferSource,
+                    poseStack,
+                    _,
+                    levelRenderState
+            ) -> {
                 poseStack.pushPose();
                 var pos = blockOutlineRenderState.pos();
                 var cam = levelRenderState.cameraRenderState.pos;
@@ -123,17 +134,22 @@ public final class AcademyCraftClient {
                 var camY = cam.y;
                 var camZ = cam.z;
                 poseStack.translate(pos.getX() - camX + 0.5f, pos.getY() - camY, pos.getZ() - camZ + 0.5f);
-                if (top) {
-                    poseStack.scale(1, 1f / 16f, 1);
-                }
+                if (top) poseStack.scale(1, 1f / 16f, 1);
                 if (base && state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.MAIN) {
                     poseStack.scale(1, 15 / 16f, 1);
                     poseStack.translate(0, 1 / 16f, 0);
                 }
                 poseStack.mulPose(Axis.YN.rotationDegrees(22.5f));
-                CylinderRenderer.renderCylinderWireframe(poseStack, bufferSource.getBuffer(RenderTypes.lines()), WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER, 0, 0, 0, 0.4f);
+                CylinderRenderer.renderCylinderWireframe(
+                        poseStack,
+                        bufferSource.getBuffer(RenderTypes.lines()),
+                        WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER,
+                        0, 0, 0, 0.4f
+                );
                 poseStack.popPose();
-                return pillar || (base && (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT));
+                return pillar || (
+                        base && (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT)
+                );
             });
         }
     }
@@ -156,7 +172,8 @@ public final class AcademyCraftClient {
         }
     }
 
-    private static <T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> void addQuantumLayerIfPossible(
+    private static <T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>>
+    void addQuantumLayerIfPossible(
             LivingEntityRenderer<T, S, M> renderer
     ) {
         renderer.addLayer(new QuantumInterferenceLayer<>(renderer));
@@ -167,7 +184,10 @@ public final class AcademyCraftClient {
         public static final AcademyCraftConfig INSTANCE;
 
         static {
-            CLIENT_CONFIG_FILE = new File(Minecraft.getInstance().gameDirectory, "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json");
+            CLIENT_CONFIG_FILE = new File(
+                    Minecraft.getInstance().gameDirectory,
+                    "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json"
+            );
             AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
             INSTANCE = new AcademyCraftConfig(CLIENT_CONFIG_FILE);
         }
@@ -225,18 +245,42 @@ public final class AcademyCraftClient {
 
         @SubscribeEvent
         public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
-            event.register(academy("wireless_node"), WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(academy("wind_gen_base"), WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(academy("wind_gen_pillar"), WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(academy("wind_gen_top"), WindGenTopSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(academy("ability_developer"), AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(academy("omni_crafting_table"), OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC);
-            event.register(academy("solar_gen"), SolarGenSpecialRenderer.Unbaked.MAP_CODEC);
+            event.register(
+                    academy("wireless_node"),
+                    WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC
+            );
+            event.register(
+                    academy("wind_gen_base"),
+                    WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC
+            );
+            event.register(
+                    academy("wind_gen_pillar"),
+                    WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC
+            );
+            event.register(
+                    academy("wind_gen_top"),
+                    WindGenTopSpecialRenderer.Unbaked.MAP_CODEC
+            );
+            event.register(
+                    academy("ability_developer"),
+                    AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC
+            );
+            event.register(
+                    academy("omni_crafting_table"),
+                    OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC
+            );
+            event.register(
+                    academy("solar_gen"),
+                    SolarGenSpecialRenderer.Unbaked.MAP_CODEC
+            );
         }
 
         @SubscribeEvent
         public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
-            event.register(Blocks.WIND_GEN_PILLAR.get(), WindGenPillarSpecialRenderer.Unbaked.INSTANCE);
+            event.register(
+                    Blocks.WIND_GEN_PILLAR.get(),
+                    WindGenPillarSpecialRenderer.Unbaked.INSTANCE
+            );
         }
     }
 }

@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.accelerator.skills;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -25,6 +24,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.sync.DataSyncManager;
 import org.academy.api.server.sync.ServerSyncManager;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -76,10 +76,12 @@ public class VectorReflection extends Skill {
     }
 
     @Override
-    public void initServer(MinecraftServer server) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
         var key = SyncKeys.VECTOR_REFLECTION_ACTIVE.get();
-        Server.activeSyncManager = new DataSyncManager<>(key, DataTypes.BOOL.get(), server.getPlayerList());
+        Server.activeSyncManager = new DataSyncManager<>(
+                key, DataTypes.BOOL.get(), context.getMinecraftServer().getPlayerList()
+        );
         ServerSyncManager.register(key, Server.activeSyncManager);
     }
 
