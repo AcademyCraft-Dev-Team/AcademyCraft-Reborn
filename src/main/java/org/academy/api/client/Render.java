@@ -60,7 +60,7 @@ public final class Render {
             List<TextureBinding> textures, List<UniformBinding> uniforms,
             boolean clear
     ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadVBNDC(), textures, uniforms, clear);
+        runBlitPass(color, pipeline, Buffers.getInstance().getFSQuadVBNDC(), textures, uniforms, clear);
     }
 
     public static void runBlitPassSDC(
@@ -68,7 +68,7 @@ public final class Render {
             List<TextureBinding> textures, List<UniformBinding> uniforms,
             boolean clear
     ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadVBSDC(), textures, uniforms, clear);
+        runBlitPass(color, pipeline, Buffers.getInstance().getFSQuadVBSDC(), textures, uniforms, clear);
     }
 
     public static void runBlitPassColorSDC(
@@ -76,7 +76,7 @@ public final class Render {
             List<TextureBinding> textures, List<UniformBinding> uniforms,
             boolean clear
     ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFullScreenQuadColorVBSDC(), textures, uniforms, clear);
+        runBlitPass(color, pipeline, Buffers.getInstance().getFSQuadColorVBSDC(), textures, uniforms, clear);
     }
 
     public static void runBlitPass(
@@ -291,15 +291,15 @@ public final class Render {
             return projectionUB;
         }
 
-        public GpuBuffer getFullScreenQuadVBNDC() {
+        public GpuBuffer getFSQuadVBNDC() {
             return fullScreenQuadVBNDC;
         }
 
-        public GpuBuffer getFullScreenQuadVBSDC() {
+        public GpuBuffer getFSQuadVBSDC() {
             return fullScreenQuadVBSDC;
         }
 
-        public GpuBuffer getFullScreenQuadColorVBSDC() {
+        public GpuBuffer getFSQuadColorVBSDC() {
             return fullScreenQuadColorVBSDC;
         }
 

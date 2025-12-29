@@ -16,7 +16,6 @@ import org.academy.api.client.Render;
 import org.academy.api.client.hud.terminal.TerminalHUD;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.post.BlurEffect;
-import org.academy.api.client.thread.MainThread;
 import org.academy.api.client.thread.RenderThread;
 import org.academy.api.client.vanilla.MainLoopEvent;
 import org.slf4j.Logger;
@@ -34,12 +33,9 @@ public final class HUDManager {
     private HUDManager() {
     }
 
-    @RenderThread
     public static void initRender() {
-        TerminalHUD.initRender();
     }
 
-    @MainThread
     public static void initMain() {
         TerminalHUD.initMain();
     }
@@ -72,19 +68,19 @@ public final class HUDManager {
         var width = main.width;
         var height = main.height;
 
-        RenderTarget temp = null;
+        RenderTarget ui = null;
         RenderTarget last = null;
         var pool = Render.Buffers.getResourcePool();
         var descTemp = new RenderTargetDescriptor(width, height, true, 0, true);
         var descLast = new RenderTargetDescriptor(width, height, false, 0, false);
 
         try {
-            temp = pool.acquire(descTemp);
+            ui = pool.acquire(descTemp);
             last = pool.acquire(descLast);
 
             var mainColor = main.getColorTextureView();
-            var uiColor = temp.getColorTextureView();
-            var uiDepth = temp.getDepthTextureView();
+            var uiColor = ui.getColorTextureView();
+            var uiDepth = ui.getDepthTextureView();
             var lastColor = last.getColorTextureView();
             if (mainColor == null || uiColor == null || uiDepth == null || lastColor == null) return;
 
@@ -102,6 +98,12 @@ public final class HUDManager {
                     20.0f
             );
 
+            /*
+            * BlurEffect 仅支持渲染到 TextureView 喵
+            * 为了兼容原版 GUI 层级需要最终使用 GuiGraphics 渲染喵
+            * 如果 blur 渲染到 main, ui 通过 GuiGraphics 渲染, 会导致 blur 与 ui 有一单位左右的像素偏差喵
+            * 解决方案为将 blur 和 ui 绘制到 last, last 最终通过 GuiGraphics 渲染喵
+            */
             Render.runBlitPassNDC(
                     lastColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
                     List.of(new TextureBinding("DiffuseSampler", uiColor,
@@ -119,7 +121,7 @@ public final class HUDManager {
                     -1
             );
         } finally {
-            if (temp != null) pool.release(descTemp, temp);
+            if (ui != null) pool.release(descTemp, ui);
             if (last != null) pool.release(descLast, last);
         }
     }

@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.meltdowner.skills;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -11,12 +10,12 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -43,7 +42,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
         var skillKeyConfig = AcademyCraftClient.Config.INSTANCE.<Client.Config>getConfig(key);
 
-        Client.KEY = skillKeyConfig.getKeyBinding(
+        InputSystem.addKeyBinding(Client.KEY_NAME_SHOOT, skillKeyConfig.getKeyBinding(
                 Client.KEY_NAME_SHOOT,
                 new InputSystem.InputPair(
                         InputSystem.InputType.MOUSE,
@@ -53,18 +52,16 @@ public class SingleHighSpeedElectronBeam extends Skill {
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT))
                         )
                 )
-        );
-        InputSystem.addKeyBinding(Client.KEY_NAME_SHOOT, Client.KEY, Client::handleKey);
+        ), Client::handleKey);
     }
 
     @Override
-    public void initServer(MinecraftServer server) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
     }
 
     public static final class Client {
         public static final String KEY_NAME_SHOOT = SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM + "_shoot";
-        public static InputSystem.InputPair KEY;
 
         public static void handleKey() {
             MisakaNetworkClient.sendPacket(ShootPacket.INSTANCE);
@@ -78,12 +75,12 @@ public class SingleHighSpeedElectronBeam extends Skill {
                 }
 
                 @Override
-                public @NotNull SingleHighSpeedElectronBeam.Client.Config getDefault() {
+                public SingleHighSpeedElectronBeam.Client.Config getDefault() {
                     return new Config();
                 }
 
                 @Override
-                public @NotNull Class<Config> getTypeClass() {
+                public Class<Config> getTypeClass() {
                     return Config.class;
                 }
             }

@@ -1,9 +1,7 @@
 package org.academy.api.server.ability;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
@@ -16,7 +14,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
-import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
@@ -29,6 +26,7 @@ import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.skilldata.CommonSkillData;
@@ -53,31 +51,30 @@ import java.util.stream.Collectors;
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
-    public static final Map<UUID, LivePlayer> LIVE_PLAYER_MAP = new ConcurrentHashMap<>();
-    private static final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
-    private static PlayerDataManager playerDataManager;
-    public static volatile MinecraftServer minecraftServer;
-    public static volatile ScheduledFuture<?> scheduledFuture;
+    private final Map<UUID, LivePlayer> livePlayerMap = new ConcurrentHashMap<>();
+    private final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
+    private final PlayerDataManager playerDataManager;
+    private final ScheduledFuture<?> scheduledFuture;
+    private final MinecraftServerContext context;
 
-    public static void init(final MinecraftServer server, PlayerDataManager dataManager) {
-        playerDataManager = dataManager;
-        MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
-        minecraftServer = server;
-        PlayerCPManager.init(dataManager, AcademyCraftServer.abilityConfig);
+    public AbilitySystemServer(MinecraftServerContext context, PlayerDataManager playerDataManager) {
+        this.context = context;
 
-        for (var category : Registries.ABILITY_CATEGORIES) {
-            category.initServer(server);
-        }
-        for (var skill : Registries.SKILLS) {
-            skill.initServer(server);
-        }
+        var academyCraftServer = context.getAcademyCraftServer();
+
+        this.playerDataManager = playerDataManager;
+        PlayerCPManager.init(playerDataManager, academyCraftServer.getAbilityConfig());
+
+        for (var category : Registries.ABILITY_CATEGORIES) category.initServer(context);
+
+        for (var skill : Registries.SKILLS) skill.initServer(context);
 
         var errorCount = new AtomicInteger(0);
-
+        var abilitySystemTicker = new AbilitySystemTicker();
         scheduledFuture = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
                 () -> {
                     try {
-                        AbilitySystemTicker.tick();
+                        abilitySystemTicker.tick();
                         errorCount.set(0);
                     } catch (Throwable e) {
                         var count = errorCount.incrementAndGet();
@@ -94,9 +91,15 @@ public final class AbilitySystemServer {
                 50,
                 TimeUnit.MILLISECONDS
         );
+
+        MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
     }
 
-    public static Player getPlayerData(UUID uuid) {
+    public void halt() {
+        scheduledFuture.cancel(true);
+    }
+
+    public Player getPlayerData(UUID uuid) {
         return playerDataManager.getData(uuid);
     }
 
@@ -121,9 +124,13 @@ public final class AbilitySystemServer {
                         weightedRandom.addItem(category, category.getProbability());
                     }
                 }
+
+                var serverContext = (MinecraftServerContext) level.getServer();
+                var instance = serverContext.getAcademyCraftServer().getAbilitySystemServer();
+
                 var abilityCategory = weightedRandom.getRandomItem();
                 if (abilityCategory != null) {
-                    setPlayerAbilityCategory(player.getUUID(), abilityCategory);
+                    instance.setPlayerAbilityCategory(player.getUUID(), abilityCategory);
                     outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
                 } else {
                     outputList.add("Error: No ability category could be selected.");
@@ -154,17 +161,20 @@ public final class AbilitySystemServer {
                 var skill = skillReference.get().value();
                 var energy = skill.getEnergyCostToLearn();
                 var depLearned = true;
+                var serverContext = (MinecraftServerContext) level.getServer();
+                var instance = serverContext.getAcademyCraftServer().getAbilitySystemServer();
+
                 for (var dep : skill.getDependencies()) {
-                    if (!getPlayerData(player.getUUID()).isSkillLearned(dep.getKeyString())) {
+                    if (!instance.getPlayerData(player.getUUID()).isSkillLearned(dep.getKeyString())) {
                         depLearned = false;
                         break;
                     }
                 }
-                var learned = getPlayerData(player.getUUID()).isSkillLearned(skillKey);
+                var learned = instance.getPlayerData(player.getUUID()).isSkillLearned(skillKey);
                 var canLearn = user.getEnergyStored() >= energy && depLearned && !learned;
                 if (canLearn) {
                     user.extractEnergy(energy, false);
-                    addPlayerSkill(player.getUUID(), skillKey);
+                    instance.addPlayerSkill(player.getUUID(), skillKey);
                 }
                 return new LearnSkillPacket.Response(canLearn);
             }
@@ -172,7 +182,7 @@ public final class AbilitySystemServer {
         return new LearnSkillPacket.Response(false);
     }
 
-    public static AbilityCategory getPlayerAbilityCategory(UUID uuid) {
+    public AbilityCategory getPlayerAbilityCategory(UUID uuid) {
         var abilityCategory = getPlayerData(uuid).getAbilityCategory();
         AbilityCategory category;
         if (abilityCategory == null) {
@@ -185,7 +195,7 @@ public final class AbilitySystemServer {
         return category;
     }
 
-    public static void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+    public void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
         var categoryKey = Registries.ABILITY_CATEGORIES.getKey(abilityCategory);
         if (categoryKey != null) {
             getPlayerData(uuid).setAbilityCategory(categoryKey.toString());
@@ -193,7 +203,7 @@ public final class AbilitySystemServer {
         }
     }
 
-    public static void addPlayerSkill(UUID uuid, String skillKey) {
+    public void addPlayerSkill(UUID uuid, String skillKey) {
         var playerData = getPlayerData(uuid);
         if (playerData.getSkillData().putIfAbsent(skillKey, new CommonSkillData(0)) == null) {
             var skill = Registries.SKILLS.get(Identifier.parse(skillKey));
@@ -202,7 +212,7 @@ public final class AbilitySystemServer {
         }
     }
 
-    public static void addPlayerSkillData(UUID uuid, String skillKey, SkillData skillData) {
+    public void addPlayerSkillData(UUID uuid, String skillKey, SkillData skillData) {
         var playerData = getPlayerData(uuid);
         var oldValue = playerData.getSkillData().put(skillKey, skillData);
         if (!Objects.equals(oldValue, skillData)) {
@@ -210,7 +220,7 @@ public final class AbilitySystemServer {
         }
     }
 
-    public static void removePlayerSkill(UUID uuid, String skillKey) {
+    public void removePlayerSkill(UUID uuid, String skillKey) {
         var playerData = getPlayerData(uuid);
         if (playerData.getSkillData().remove(skillKey) != null) {
             playerData.markDirty();
@@ -219,11 +229,11 @@ public final class AbilitySystemServer {
     }
 
     @Nullable
-    public static <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
+    public <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
         return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
     }
 
-    public static float getPlayerSkillExp(UUID uuid, String skillKey) {
+    public float getPlayerSkillExp(UUID uuid, String skillKey) {
         var skillData = getPlayerData(uuid).getSkillData().get(skillKey);
         if (skillData == null) {
             return 0;
@@ -233,7 +243,7 @@ public final class AbilitySystemServer {
     }
 
     /**
-     * 请求CP占用
+     * 请求 CP 占用
      *
      * @param isPassive 是否被动占用（被动占用能使玩家进入个人现实过载状态）
      * @return 是否成功
@@ -250,7 +260,7 @@ public final class AbilitySystemServer {
         return PlayerCPManager.getLevel(uuid);
     }
 
-    public static void setPlayerLevel(UUID uuid, int level) {
+    public void setPlayerLevel(UUID uuid, int level) {
         PlayerCPManager.setLevel(uuid, level);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
@@ -259,7 +269,7 @@ public final class AbilitySystemServer {
         return PlayerCPManager.getAvailableCP(uuid);
     }
 
-    public static void setPlayerAvailableCP(UUID uuid, float availableCP) {
+    public void setPlayerAvailableCP(UUID uuid, float availableCP) {
         PlayerCPManager.setAvailableCP(uuid, availableCP);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
@@ -268,7 +278,7 @@ public final class AbilitySystemServer {
         return PlayerCPManager.getMaxCP(uuid);
     }
 
-    public static void setPlayerMaxCP(UUID uuid, float maxCP) {
+    public void setPlayerMaxCP(UUID uuid, float maxCP) {
         PlayerCPManager.setMaxCP(uuid, maxCP);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
@@ -277,7 +287,7 @@ public final class AbilitySystemServer {
         return PlayerCPManager.getStatus(uuid);
     }
 
-    public static void setPlayerStatus(UUID uuid, CPData.Status status) {
+    public void setPlayerStatus(UUID uuid, CPData.Status status) {
         PlayerCPManager.setStatus(uuid, status);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
@@ -286,7 +296,7 @@ public final class AbilitySystemServer {
         return PlayerCPManager.getStateTimer(uuid);
     }
 
-    public static void setPlayerStateTimer(UUID uuid, int stateTimer) {
+    public void setPlayerStateTimer(UUID uuid, int stateTimer) {
         PlayerCPManager.setStateTimer(uuid, stateTimer);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
@@ -295,7 +305,7 @@ public final class AbilitySystemServer {
         return PlayerCPManager.getCurrSP(uuid);
     }
 
-    public static void setPlayerCurrSP(UUID uuid, int currSP) {
+    public void setPlayerCurrSP(UUID uuid, int currSP) {
         PlayerCPManager.setCurrSP(uuid, currSP);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
@@ -304,7 +314,7 @@ public final class AbilitySystemServer {
         return PlayerCPManager.getMaxSP(uuid);
     }
 
-    public static void setPlayerMaxSP(UUID uuid, int maxSP) {
+    public void setPlayerMaxSP(UUID uuid, int maxSP) {
         PlayerCPManager.setMaxSP(uuid, maxSP);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
@@ -320,28 +330,22 @@ public final class AbilitySystemServer {
         }
     }
 
-    public static float getDamageMultiplier() {
-        return AcademyCraftServer.abilityConfig == null
-                ? 1
-                : AcademyCraftServer.abilityConfig.damageMultiplier;
-    }
-
-    public static void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
-        if (LIVE_PLAYER_MAP.containsKey(uuid)) {
-            LIVE_PLAYER_MAP.get(uuid).syncQueue.add(syncType);
+    public void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
+        if (livePlayerMap.containsKey(uuid)) {
+            livePlayerMap.get(uuid).syncQueue.add(syncType);
         }
     }
 
-    public static void addTask(Runnable runnable) {
+    public void addTask(Runnable runnable) {
         pendingTasks.add(runnable);
     }
 
-    public static void onPlayerLogin(ServerPlayer player) {
+    public void onPlayerLogin(ServerPlayer player) {
         if (playerDataManager != null) {
             playerDataManager.onPlayerLogin(player);
         }
         var uuid = player.getUUID();
-        LIVE_PLAYER_MAP.put(uuid, new LivePlayer(uuid, player.connection));
+        livePlayerMap.put(uuid, new LivePlayer(uuid, player.connection));
         schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
         schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
@@ -349,17 +353,17 @@ public final class AbilitySystemServer {
         PlayerCPManager.loadFromData(uuid, getPlayerData(uuid));
     }
 
-    public static final class AbilitySystemTicker {
-        public static void tick() {
-            if (minecraftServer.isPaused()) return;
+    public final class AbilitySystemTicker {
+        public void tick() {
+            if (context.getMinecraftServer().isPaused()) return;
             pendingTasks.forEach(Runnable::run);
             pendingTasks.clear();
-            for (var player : LIVE_PLAYER_MAP.values()) {
+            for (var player : livePlayerMap.values()) {
                 tickPlayer(player);
             }
         }
 
-        public static void tickPlayer(LivePlayer player) {
+        public void tickPlayer(LivePlayer player) {
             final var connection = player.connection;
             final var uuid = player.uuid;
             var syncQueue = player.syncQueue;
@@ -393,17 +397,19 @@ public final class AbilitySystemServer {
         @SubscribeEvent
         public static void tickMinecraftServerThread(ServerTickEvent.Pre event) {
             var server = event.getServer();
+            var context = (MinecraftServerContext) server;
+            var instance = context.getAcademyCraftServer().getAbilitySystemServer();
             var onlinePlayerUUIDs = server.getPlayerList().getPlayers().stream()
                     .map(Entity::getUUID)
                     .collect(Collectors.toSet());
 
-            LIVE_PLAYER_MAP.keySet().removeIf(uuid -> !onlinePlayerUUIDs.contains(uuid));
+            instance.livePlayerMap.keySet().removeIf(uuid -> !onlinePlayerUUIDs.contains(uuid));
 
-            LIVE_PLAYER_MAP.forEach((uuid, livePlayer) -> {
+            instance.livePlayerMap.forEach((uuid, _) -> {
                 var player = server.getPlayerList().getPlayer(uuid);
                 if (player != null) {
                     if (PlayerCPManager.tick(player)) {
-                        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+                        instance.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
                     }
                 }
             });

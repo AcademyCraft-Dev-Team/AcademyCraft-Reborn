@@ -8,32 +8,17 @@
 
 ## 下载与社区
 
-* **最新构建**: [GitHub Actions](https://github.com/AcademyCraft-Dev-Team/AcademyCraft-Reborn/actions) (推荐)
+* **最新构建**: [GitHub Actions](https://github.com/AcademyCraft-Dev-Team/AcademyCraft-Reborn/actions)
 * **社区 (QQ 群)**: `217327418`
 
 ## 开发者指南
+仅支持 IntelliJ IDEA，并且需要 JetBrains Runtime 25。
 
 ### 如何构建？
 
 ```bash
 
 ./gradlew build
-```
-
-### IDEA 设置
-
-如果你正在使用 IntelliJ IDEA，建议在你的 `.idea/misc.xml` 文件中添加或替换以下部分：
-
-```xml
-
-<component name="EntryPointsManager">
-    <list size="2">
-        <item index="0" class="java.lang.String"
-              itemvalue="org.misaka.api.common.network.annotation.SubscribePacket"/>
-        <item index="1" class="java.lang.String"
-              itemvalue="org.misaka.api.common.network.future.annotation.HandleFuture"/>
-    </list>
-</component>
 ```
 
 ## 许可证

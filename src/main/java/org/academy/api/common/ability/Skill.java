@@ -15,6 +15,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 
 import java.util.*;
 
@@ -59,7 +60,10 @@ public abstract class Skill {
     public void initClient() {
     }
 
-    public void initServer(MinecraftServer server) {
+    /**
+     * 要注意服务器不一定只初始化一次喵
+     */
+    public void initServer(MinecraftServerContext context) {
     }
 
     public AbilityLevel getRecommendedLevel() {
