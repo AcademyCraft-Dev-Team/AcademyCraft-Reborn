@@ -21,11 +21,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.server.ability.PlayerCPManager;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +37,28 @@ public final class AcademyCraftCommand {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         register(event.getDispatcher());
+    }
+
+    public static final class CommandUtils {
+        private CommandUtils() {
+        }
+
+        public static AcademyCraftServer getServer(CommandContext<CommandSourceStack> context) {
+            var server = context.getSource().getServer();
+            return ((MinecraftServerContext) server).getAcademyCraftServer();
+        }
+
+        public static AbilitySystemServer getSystem(CommandContext<CommandSourceStack> context) {
+            return getServer(context).getAbilitySystemServer();
+        }
+
+        public static ServerPlayer getPlayer(CommandContext<CommandSourceStack> context) {
+            try {
+                return context.getSource().getPlayerOrException();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -127,14 +151,15 @@ public final class AcademyCraftCommand {
         private static int info(CommandContext<CommandSourceStack> context, ServerPlayer player, boolean broadcast) {
             var uuid = player.getUUID();
             var name = player.getName().getString();
+            var system = CommandUtils.getSystem(context);
 
-            var current = AbilitySystemServer.getPlayerAvailableCP(uuid);
-            var max = AbilitySystemServer.getPlayerMaxCP(uuid);
-            var level = AbilitySystemServer.getPlayerLevel(uuid);
-            var currSP = AbilitySystemServer.getPlayerCurrSP(uuid);
-            var maxSP = AbilitySystemServer.getPlayerMaxSP(uuid);
-            var status = AbilitySystemServer.getPlayerStatus(uuid);
-            var timer = AbilitySystemServer.getPlayerStateTimer(uuid);
+            var current = system.getPlayerAvailableCP(uuid);
+            var max = system.getPlayerMaxCP(uuid);
+            var level = system.getPlayerLevel(uuid);
+            var currSP = system.getPlayerCurrSP(uuid);
+            var maxSP = system.getPlayerMaxSP(uuid);
+            var status = system.getPlayerStatus(uuid);
+            var timer = system.getPlayerStateTimer(uuid);
 
             Component message = Component.literal(String.format(
                     """
@@ -153,15 +178,16 @@ public final class AcademyCraftCommand {
         private static int get(CommandContext<CommandSourceStack> context, String type) throws CommandSyntaxException {
             var target = EntityArgument.getPlayer(context, "target");
             var uuid = target.getUUID();
+            var system = CommandUtils.getSystem(context);
 
             return switch (type) {
-                case "value" -> (int) AbilitySystemServer.getPlayerAvailableCP(uuid);
-                case "max" -> (int) AbilitySystemServer.getPlayerMaxCP(uuid);
-                case "curr_sp" -> AbilitySystemServer.getPlayerCurrSP(uuid);
-                case "max_sp" -> AbilitySystemServer.getPlayerMaxSP(uuid);
-                case "level" -> AbilitySystemServer.getPlayerLevel(uuid);
-                case "timer" -> AbilitySystemServer.getPlayerStateTimer(uuid);
-                case "status" -> AbilitySystemServer.getPlayerStatus(uuid).ordinal();
+                case "value" -> (int) system.getPlayerAvailableCP(uuid);
+                case "max" -> (int) system.getPlayerMaxCP(uuid);
+                case "curr_sp" -> system.getPlayerCurrSP(uuid);
+                case "max_sp" -> system.getPlayerMaxSP(uuid);
+                case "level" -> system.getPlayerLevel(uuid);
+                case "timer" -> system.getPlayerStateTimer(uuid);
+                case "status" -> system.getPlayerStatus(uuid).ordinal();
                 default -> 0;
             };
         }
@@ -208,7 +234,8 @@ public final class AcademyCraftCommand {
 
         private static int requestOccupy(CommandContext<CommandSourceStack> context, ServerPlayer player, float amount, int ticks, boolean isPassive, boolean broadcast) {
             var uuid = player.getUUID();
-            var success = AbilitySystemServer.requestCPOccupation(uuid, amount, ticks, isPassive);
+            var system = CommandUtils.getSystem(context);
+            var success = system.requestCPOccupation(uuid, amount, ticks, isPassive);
 
             if (success) {
                 Component message = Component.literal(String.format("§a[AC Debug] Success: Occupied %.1f CP for %d ticks (Passive: %b) on %s", amount, ticks, isPassive, player.getName().getString()));

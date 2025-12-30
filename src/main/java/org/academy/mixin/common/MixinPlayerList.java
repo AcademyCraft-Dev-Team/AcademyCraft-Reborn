@@ -22,4 +22,10 @@ public abstract class MixinPlayerList {
         var context = (MinecraftServerContext) getServer();
         context.getAcademyCraftServer().getAbilitySystemServer().onPlayerLogin(player);
     }
+
+    @Inject(method = "remove", at = @At("HEAD"))
+    private void onPlayerDisconnect(ServerPlayer player, CallbackInfo ci) {
+        var context = (MinecraftServerContext) getServer();
+        context.getAcademyCraftServer().getAbilitySystemServer().onPlayerLogout(player);
+    }
 }

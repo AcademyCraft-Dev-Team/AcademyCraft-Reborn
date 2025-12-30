@@ -2,6 +2,7 @@ package org.academy.api.server.ability;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
@@ -11,7 +12,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
@@ -34,6 +34,7 @@ import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.PlayerCPManager;
 import org.academy.internal.server.ability.PlayerDataManager;
+import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
@@ -54,20 +55,24 @@ public final class AbilitySystemServer {
     private final Map<UUID, LivePlayer> livePlayerMap = new ConcurrentHashMap<>();
     private final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
     private final PlayerDataManager playerDataManager;
+    private final PlayerCPManager playerCPManager;
     private final ScheduledFuture<?> scheduledFuture;
     private final MinecraftServerContext context;
 
-    public AbilitySystemServer(MinecraftServerContext context, PlayerDataManager playerDataManager) {
+    public AbilitySystemServer(MinecraftServerContext context, PlayerDataManager playerDataManager, AbilityConfig abilityConfig) {
         this.context = context;
-
-        var academyCraftServer = context.getAcademyCraftServer();
-
         this.playerDataManager = playerDataManager;
-        PlayerCPManager.init(playerDataManager, academyCraftServer.getAbilityConfig());
 
-        for (var category : Registries.ABILITY_CATEGORIES) category.initServer(context);
+        this.playerCPManager = new PlayerCPManager(playerDataManager, abilityConfig);
+        NeoForge.EVENT_BUS.register(this.playerCPManager);
 
-        for (var skill : Registries.SKILLS) skill.initServer(context);
+        for (var category : Registries.ABILITY_CATEGORIES) {
+            category.initServer(context);
+        }
+
+        for (var skill : Registries.SKILLS) {
+            skill.initServer(context);
+        }
 
         var errorCount = new AtomicInteger(0);
         var abilitySystemTicker = new AbilitySystemTicker();
@@ -228,106 +233,14 @@ public final class AbilitySystemServer {
         }
     }
 
-    @Nullable
-    public <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
-        return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
-    }
-
-    public float getPlayerSkillExp(UUID uuid, String skillKey) {
-        var skillData = getPlayerData(uuid).getSkillData().get(skillKey);
-        if (skillData == null) {
-            return 0;
-        } else {
-            return skillData.exp;
-        }
-    }
-
     /**
      * 请求 CP 占用
      *
      * @param isPassive 是否被动占用（被动占用能使玩家进入个人现实过载状态）
      * @return 是否成功
      */
-    public static boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
-        return PlayerCPManager.requestCPOccupation(uuid, amount, iterationTicks, isPassive);
-    }
-
-    public static float getPlayerOccupiedCP(UUID uuid) {
-        return PlayerCPManager.getOccupiedCP(uuid);
-    }
-
-    public static int getPlayerLevel(UUID uuid) {
-        return PlayerCPManager.getLevel(uuid);
-    }
-
-    public void setPlayerLevel(UUID uuid, int level) {
-        PlayerCPManager.setLevel(uuid, level);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-    }
-
-    public static float getPlayerAvailableCP(UUID uuid) {
-        return PlayerCPManager.getAvailableCP(uuid);
-    }
-
-    public void setPlayerAvailableCP(UUID uuid, float availableCP) {
-        PlayerCPManager.setAvailableCP(uuid, availableCP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-    }
-
-    public static float getPlayerMaxCP(UUID uuid) {
-        return PlayerCPManager.getMaxCP(uuid);
-    }
-
-    public void setPlayerMaxCP(UUID uuid, float maxCP) {
-        PlayerCPManager.setMaxCP(uuid, maxCP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-    }
-
-    public static CPData.Status getPlayerStatus(UUID uuid) {
-        return PlayerCPManager.getStatus(uuid);
-    }
-
-    public void setPlayerStatus(UUID uuid, CPData.Status status) {
-        PlayerCPManager.setStatus(uuid, status);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-    }
-
-    public static int getPlayerStateTimer(UUID uuid) {
-        return PlayerCPManager.getStateTimer(uuid);
-    }
-
-    public void setPlayerStateTimer(UUID uuid, int stateTimer) {
-        PlayerCPManager.setStateTimer(uuid, stateTimer);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-    }
-
-    public static int getPlayerCurrSP(UUID uuid) {
-        return PlayerCPManager.getCurrSP(uuid);
-    }
-
-    public void setPlayerCurrSP(UUID uuid, int currSP) {
-        PlayerCPManager.setCurrSP(uuid, currSP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-    }
-
-    public static int getPlayerMaxSP(UUID uuid) {
-        return PlayerCPManager.getMaxSP(uuid);
-    }
-
-    public void setPlayerMaxSP(UUID uuid, int maxSP) {
-        PlayerCPManager.setMaxSP(uuid, maxSP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-    }
-
-    public static float getSPReductionRate(LivingEntity entity) {
-        return entity.getData(AttachmentTypes.SP_REDUCTION_RATE);
-    }
-
-    public static void setSPReductionRate(LivingEntity entity, float rate) {
-        var clamped = Mth.clamp(rate, 0.0f, 1.0f);
-        if (Float.compare(entity.getData(AttachmentTypes.SP_REDUCTION_RATE), clamped) != 0) {
-            entity.setData(AttachmentTypes.SP_REDUCTION_RATE, clamped);
-        }
+    public boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
+        return playerCPManager.requestCPOccupation(uuid, amount, iterationTicks, isPassive);
     }
 
     public void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
@@ -350,7 +263,12 @@ public final class AbilitySystemServer {
         schedulePlayerSync(uuid, SyncTypes.CP_DATA);
         schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
 
-        PlayerCPManager.loadFromData(uuid, getPlayerData(uuid));
+        playerCPManager.loadFromData(uuid, getPlayerData(uuid));
+    }
+
+    public void onPlayerLogout(ServerPlayer player) {
+        var uuid = player.getUUID();
+        playerCPManager.onPlayerLoggedOut(uuid);
     }
 
     public final class AbilitySystemTicker {
@@ -373,7 +291,7 @@ public final class AbilitySystemServer {
             var skillDataChanged = syncQueue.contains(SyncTypes.SKILL_DATA);
 
             if (cpDataChanged) {
-                var cpData = PlayerCPManager.getCPDataOptional(uuid);
+                var cpData = playerCPManager.getCPDataOptional(uuid);
                 cpData.ifPresentOrElse(
                         data -> MisakaNetworkServer.sendPacket(connection, new SyncCPDataPacket(data)),
                         () -> LOGGER.warn("CPData is null for player {}", uuid)
@@ -408,17 +326,11 @@ public final class AbilitySystemServer {
             instance.livePlayerMap.forEach((uuid, _) -> {
                 var player = server.getPlayerList().getPlayer(uuid);
                 if (player != null) {
-                    if (PlayerCPManager.tick(player)) {
+                    if (instance.playerCPManager.tick(player)) {
                         instance.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
                     }
                 }
             });
-        }
-
-        @SubscribeEvent
-        public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-            var uuid = event.getEntity().getUUID();
-            PlayerCPManager.onPlayerLoggedOut(uuid);
         }
     }
 
@@ -441,5 +353,116 @@ public final class AbilitySystemServer {
     public static void unregisterContext(ServerContext serverContext) {
         NeoForge.EVENT_BUS.unregister(serverContext);
         MisakaNetworkServer.NETWORK_MANAGER.unregisterPacketListener(serverContext);
+    }
+
+    public void flushToData() {
+        playerCPManager.flushAllToData();
+    }
+
+    public void onServerStopping() {
+        playerCPManager.flushAllToData();
+        playerCPManager.clear();
+        NeoForge.EVENT_BUS.unregister(playerCPManager);
+    }
+
+    public static AbilitySystemServer getSystem(Entity entity) {
+        if (entity.level() instanceof ServerLevel serverLevel) {
+            return ((MinecraftServerContext) serverLevel.getServer())
+                    .getAcademyCraftServer()
+                    .getAbilitySystemServer();
+        }
+        throw new IllegalStateException("Entity is not in a ServerLevel");
+    }
+
+    @Nullable
+    public <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
+        return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
+    }
+
+    public float getPlayerSkillExp(UUID uuid, String skillKey) {
+        var skillData = getPlayerData(uuid).getSkillData().get(skillKey);
+        if (skillData == null) {
+            return 0;
+        } else {
+            return skillData.exp;
+        }
+    }
+
+    public float getPlayerOccupiedCP(UUID uuid) {
+        return playerCPManager.getOccupiedCP(uuid);
+    }
+
+    public int getPlayerLevel(UUID uuid) {
+        return playerCPManager.getLevel(uuid);
+    }
+
+    public void setPlayerLevel(UUID uuid, int level) {
+        playerCPManager.setLevel(uuid, level);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public float getPlayerAvailableCP(UUID uuid) {
+        return playerCPManager.getAvailableCP(uuid);
+    }
+
+    public void setPlayerAvailableCP(UUID uuid, float availableCP) {
+        playerCPManager.setAvailableCP(uuid, availableCP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public float getPlayerMaxCP(UUID uuid) {
+        return playerCPManager.getMaxCP(uuid);
+    }
+
+    public void setPlayerMaxCP(UUID uuid, float maxCP) {
+        playerCPManager.setMaxCP(uuid, maxCP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public CPData.Status getPlayerStatus(UUID uuid) {
+        return playerCPManager.getStatus(uuid);
+    }
+
+    public void setPlayerStatus(UUID uuid, CPData.Status status) {
+        playerCPManager.setStatus(uuid, status);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public int getPlayerStateTimer(UUID uuid) {
+        return playerCPManager.getStateTimer(uuid);
+    }
+
+    public void setPlayerStateTimer(UUID uuid, int stateTimer) {
+        playerCPManager.setStateTimer(uuid, stateTimer);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public int getPlayerCurrSP(UUID uuid) {
+        return playerCPManager.getCurrSP(uuid);
+    }
+
+    public void setPlayerCurrSP(UUID uuid, int currSP) {
+        playerCPManager.setCurrSP(uuid, currSP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public int getPlayerMaxSP(UUID uuid) {
+        return playerCPManager.getMaxSP(uuid);
+    }
+
+    public void setPlayerMaxSP(UUID uuid, int maxSP) {
+        playerCPManager.setMaxSP(uuid, maxSP);
+        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public static float getSPReductionRate(LivingEntity entity) {
+        return entity.getData(AttachmentTypes.SP_REDUCTION_RATE);
+    }
+
+    public static void setSPReductionRate(LivingEntity entity, float rate) {
+        var clamped = Mth.clamp(rate, 0.0f, 1.0f);
+        if (Float.compare(entity.getData(AttachmentTypes.SP_REDUCTION_RATE), clamped) != 0) {
+            entity.setData(AttachmentTypes.SP_REDUCTION_RATE, clamped);
+        }
     }
 }
