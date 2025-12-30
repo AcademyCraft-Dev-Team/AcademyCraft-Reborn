@@ -8,7 +8,6 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.server.ability.PlayerCPManager;
 import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
@@ -66,12 +65,12 @@ public final class AcademyCraftServer {
         worldData = WorldData.getWorldData(worldDataFile);
         playerDataManager = new PlayerDataManager(worldData);
 
-        abilitySystemServer = new AbilitySystemServer(context, playerDataManager);
+        abilitySystemServer = new AbilitySystemServer(context, playerDataManager, abilityConfig);
         WirelessManager.initServer();
 
         worldDataSaveTask = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
                 () -> {
-                    PlayerCPManager.flushAllToData();
+                    abilitySystemServer.flushToData();
                     saveData();
                 }, 5, 5, TimeUnit.MINUTES
         );
@@ -116,8 +115,7 @@ public final class AcademyCraftServer {
         var instance = context.getAcademyCraftServer();
         instance.worldDataSaveTask.cancel(false);
         LOGGER.info("Server stopping. Performing final data saves...");
-        PlayerCPManager.flushAllToData();
-        PlayerCPManager.clear();
+        instance.abilitySystemServer.onServerStopping();
         instance.saveData();
         instance.serverConfig.save();
     }

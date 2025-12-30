@@ -4,6 +4,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Context;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.packet.Packet;
 
@@ -26,4 +27,5 @@ public abstract class ServerContext implements Context {
     public void unregister() {
         AbilitySystemServer.unregisterContext(this);
     }
+
 }

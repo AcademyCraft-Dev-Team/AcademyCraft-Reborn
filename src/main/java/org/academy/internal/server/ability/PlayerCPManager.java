@@ -4,10 +4,8 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.data.CPData;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -19,33 +17,31 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerCPManager {
-    private static final Map<UUID, CPContext> CONTEXTS = new ConcurrentHashMap<>();
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static PlayerDataManager playerDataManager;
     private static final AbilityLevel[] CACHED_LEVELS = AbilityLevel.values();
-
     private static final int PERSONAL_REALITY_OVERLOAD_TICKS = 100;
     private static final int OVERLOAD_TICKS = 600;
 
-    private static float CP_RATING_OFFSET = 0.0f;//等级评定修正值(Z)
-    private static float DAMAGE_MULTIPLIER = 1.0f;//伤害修正值(X)
+    private final Map<UUID, CPContext> contexts = new ConcurrentHashMap<>();
+    private final PlayerDataManager playerDataManager;
+    private final float CP_RATING_OFFSET;//等级评定修正值(Z)
+    private final float DAMAGE_MULTIPLIER;//伤害修正值(X)
 
-    public static void init(PlayerDataManager manager, AbilityConfig config) {
+    public PlayerCPManager(PlayerDataManager manager, AbilityConfig config) {
         playerDataManager = manager;
-
         CP_RATING_OFFSET = config.cpRatingOffset;
         DAMAGE_MULTIPLIER = config.damageMultiplier;
     }
 
-    public static void loadFromData(UUID uuid, Player savedData) {
+    public void loadFromData(UUID uuid, Player savedData) {
         var cpData = savedData.getCpData();
         var currCPContext = new CPContext(cpData);
         currCPContext.occupationList.addAll(savedData.getCpOccupations());
-        CONTEXTS.put(uuid, currCPContext);
+        contexts.put(uuid, currCPContext);
     }
 
-    public static void onPlayerLoggedOut(UUID uuid) {
-        var context = CONTEXTS.remove(uuid);
+    public void onPlayerLoggedOut(UUID uuid) {
+        var context = contexts.remove(uuid);
         if (context != null && playerDataManager != null) {
             var data = playerDataManager.getData(uuid);
             if (data != null) {
@@ -55,8 +51,8 @@ public class PlayerCPManager {
         }
     }
 
-    public static void flushToData(UUID uuid) {
-        var context = CONTEXTS.get(uuid);
+    public void flushToData(UUID uuid) {
+        var context = contexts.get(uuid);
         if (context == null) return;
 
         if (playerDataManager != null) {
@@ -68,21 +64,21 @@ public class PlayerCPManager {
         }
     }
 
-    public static void flushAllToData() {
-        for (var entry : CONTEXTS.entrySet()) {
+    public void flushAllToData() {
+        for (var entry : contexts.entrySet()) {
             var uuid = entry.getKey();
             flushToData(uuid);
         }
     }
 
-    public static boolean tick(ServerPlayer player) {
-        var cpContext = CONTEXTS.get(player.getUUID());
+    public boolean tick(ServerPlayer player) {
+        var cpContext = contexts.get(player.getUUID());
         if (cpContext == null) return false;
         return cpContext.tick(player);
     }
 
-    public static boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
-        var cpContext = CONTEXTS.get(uuid);
+    public boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
+        var cpContext = contexts.get(uuid);
         if (cpContext == null) return false;
         var cpData = cpContext.getCpData();
 
@@ -93,9 +89,9 @@ public class PlayerCPManager {
         return true;
     }
 
-    private static class CPContext {
+    private class CPContext {
         private final List<CPData.CPOccupationData> occupationList = new ArrayList<>();
-        private CPData cpData;
+        private final CPData cpData;
         boolean dirty = false;
         private int spRegenTimer = 0;
 
@@ -181,7 +177,7 @@ public class PlayerCPManager {
 
                 // 非过载状态下的CP迭代
                 if (cpData.getStatus() == CPData.Status.NORMAL) {
-                    occupation.setIterationTicks(occupation.getIterationTicks() - 1);
+                    occupation.setIterationTicks(Math.max(occupation.getIterationTicks() - 1, 0));
                 }
 
                 // 迭代完成的CP归还
@@ -214,46 +210,6 @@ public class PlayerCPManager {
             cpData.setAvailableCP(newAvailableCP);
             cpData.setMaxCP(newMaxCP);
             checkAndUpgradeLevel();
-        }
-
-        @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
-        public static class SPRegenEvents {
-            @SubscribeEvent
-            public static void onPlayerEat(LivingEntityUseItemEvent.Finish event) {
-                if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
-                    var itemStack = event.getItem();
-                    if (itemStack.has(DataComponents.FOOD)) {
-                        var food = itemStack.get(DataComponents.FOOD);
-                        if (food != null) {
-                            var saturationGained = food.nutrition() * food.saturation() * 2.0f;
-
-                            if (saturationGained > 0) {
-                                var spRecovery = (int) (saturationGained * 5);
-                                restoreSP(player.getUUID(), spRecovery);
-                            }
-                        }
-                    }
-                }
-            }
-
-            @SubscribeEvent
-            public static void onPlayerWakeUp(PlayerWakeUpEvent event) {
-                if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
-                    if (event.updateLevel()) {
-                        var context = CONTEXTS.get(player.getUUID());
-                        if (context != null) {
-                            context.fullRestoreSP();
-                        }
-                    }
-                }
-            }
-
-            private static void restoreSP(UUID uuid, int amount) {
-                var context = CONTEXTS.get(uuid);
-                if (context != null) {
-                    context.addSP(amount);
-                }
-            }
         }
 
         private void checkAndUpgradeLevel() {
@@ -297,38 +253,78 @@ public class PlayerCPManager {
         }
     }
 
-    public static void clear() {
-        CONTEXTS.clear();
+    private void restoreSP(UUID uuid, int amount) {
+        var context = contexts.get(uuid);
+        if (context != null) {
+            context.addSP(amount);
+        }
     }
 
-    public static int getLevel(UUID uuid) {
+    private void fullRestoreSP(UUID uuid) {
+        var context = contexts.get(uuid);
+        if (context != null) {
+            context.fullRestoreSP();
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerEat(LivingEntityUseItemEvent.Finish event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
+            var itemStack = event.getItem();
+            if (itemStack.has(DataComponents.FOOD)) {
+                var food = itemStack.get(DataComponents.FOOD);
+                if (food != null) {
+                    var saturationGained = food.nutrition() * food.saturation() * 2.0f;
+                    if (saturationGained > 0) {
+                        var spRecovery = (int) (saturationGained * 5);
+                        restoreSP(player.getUUID(), spRecovery);
+                    }
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerWakeUp(PlayerWakeUpEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
+            if (event.updateLevel()) {
+                fullRestoreSP(player.getUUID());
+            }
+        }
+    }
+
+    public void clear() {
+        contexts.clear();
+    }
+
+    public int getLevel(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getLevel).map(AbilityLevel::getLevelCode).orElse(0);
     }
 
-    public static void setLevel(UUID uuid, int levelCode) {
+    public void setLevel(UUID uuid, int levelCode) {
         getCPDataOptional(uuid).ifPresent(data -> data.setLevel(AbilityLevel.fromLevelCode(levelCode)));
     }
 
-    public static float getBasicCP(int levelCode) {
+    public float getBasicCP(int levelCode) {
         return AbilityLevel.values()[levelCode].getBasicCP();
     }
 
-    public static float getMaxCP(UUID uuid) {
+    public float getMaxCP(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getMaxCP).orElse(0f);
     }
 
-    public static void setMaxCP(UUID uuid, float maxCP) {
-        var context = CONTEXTS.get(uuid);
+    public void setMaxCP(UUID uuid, float maxCP) {
+        var context = contexts.get(uuid);
         if (context != null) {
             context.updateMaxCP(maxCP);
         }
     }
 
-    public static float getAvailableCP(UUID uuid) {
+    public float getAvailableCP(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getAvailableCP).orElse(0f);
     }
 
-    public static void setAvailableCP(UUID uuid, float availableCP) {
+    public void setAvailableCP(UUID uuid, float availableCP) {
         var safeCP = Float.isFinite(availableCP) ? availableCP : 0f;
 
         getCPDataOptional(uuid).ifPresent(data -> {
@@ -339,44 +335,44 @@ public class PlayerCPManager {
         });
     }
 
-    public static float getOccupiedCP(UUID uuid) {
+    public float getOccupiedCP(UUID uuid) {
         return getMaxCP(uuid) - getAvailableCP(uuid);
     }
 
-    public static CPData.Status getStatus(UUID uuid) {
+    public CPData.Status getStatus(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getStatus).orElse(CPData.Status.NORMAL);
     }
 
-    public static void setStatus(UUID uuid, CPData.Status status) {
+    public void setStatus(UUID uuid, CPData.Status status) {
         getCPDataOptional(uuid).ifPresent(data -> data.setStatus(status));
     }
 
-    public static int getStateTimer(UUID uuid) {
+    public int getStateTimer(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getStateTimer).orElse(0);
     }
 
-    public static void setStateTimer(UUID uuid, int stateTimer) {
+    public void setStateTimer(UUID uuid, int stateTimer) {
         getCPDataOptional(uuid).ifPresent(data -> data.setStateTimer(stateTimer));
     }
 
-    public static int getCurrSP(UUID uuid) {
+    public int getCurrSP(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getCurrSP).orElse(0);
     }
 
-    public static void setCurrSP(UUID uuid, int currSP) {
+    public void setCurrSP(UUID uuid, int currSP) {
         getCPDataOptional(uuid).ifPresent(data -> data.setCurrSP(currSP));
     }
 
-    public static int getMaxSP(UUID uuid) {
+    public int getMaxSP(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getMaxSP).orElse(0);
     }
 
-    public static void setMaxSP(UUID uuid, int maxSP) {
+    public void setMaxSP(UUID uuid, int maxSP) {
         getCPDataOptional(uuid).ifPresent(data -> data.setMaxSP(maxSP));
     }
 
-    public static Optional<CPData> getCPDataOptional(UUID uuid) {
-        return Optional.ofNullable(CONTEXTS.get(uuid))
+    public Optional<CPData> getCPDataOptional(UUID uuid) {
+        return Optional.ofNullable(contexts.get(uuid))
                 .map(CPContext::getCpData);
     }
 }

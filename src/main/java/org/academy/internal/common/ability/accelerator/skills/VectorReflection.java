@@ -161,14 +161,15 @@ public class VectorReflection extends Skill {
                 return Pair.of(false, originalDamage);
             }
 
+            var system = AbilitySystemServer.getSystem(player);
             var uuid = player.getUUID();
             var requiredCP = originalDamage * 10f;
-            var currentCP = AbilitySystemServer.getPlayerAvailableCP(uuid);
+            var currentCP = system.getPlayerAvailableCP(uuid);
 
             var clampedCP = Mth.clamp(currentCP, 0f, 200f);
             var iterationTicks = (int) Mth.map(clampedCP, 0f, 200, 10, 150);
 
-            if (AbilitySystemServer.requestCPOccupation(uuid, requiredCP, iterationTicks, true)) {
+            if (system.requestCPOccupation(uuid, requiredCP, iterationTicks, true)) {
                 if (currentCP >= requiredCP) {
                     player.invulnerableTime = 20;
                     applyReflection(player, level, source, originalDamage);
