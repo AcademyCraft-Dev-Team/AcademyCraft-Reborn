@@ -1,4 +1,4 @@
-package org.academy.internal.client.app.music;
+package org.academy.internal.client.app.music.backend;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
@@ -26,9 +26,7 @@ public record MusicSource(Object path) {
         } else if (path instanceof String strPath) {
             var filePath = Path.of(strPath);
             bytes = Files.readAllBytes(filePath);
-        } else {
-            throw new IOException("Unsupported media source type: " + path.getClass().getName());
-        }
+        } else throw new IOException("Unsupported media source type: " + path.getClass().getName());
 
         var buffer = ByteBuffer.allocateDirect(bytes.length);
         buffer.put(bytes).flip();

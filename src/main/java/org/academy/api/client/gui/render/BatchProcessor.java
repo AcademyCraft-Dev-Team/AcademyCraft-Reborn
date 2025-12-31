@@ -34,50 +34,26 @@ public final class BatchProcessor {
 
         var batches = new ArrayList<PendingBatch>();
         var iterator = commands.iterator();
+
+        if (!iterator.hasNext()) return batches;
+
         var firstCommand = iterator.next();
+        var state = new BatchState(firstCommand);
 
-        var currentPipeline = firstCommand.getCommand().getPipeline();
-        var currentScissor = firstCommand.getScissorRect();
-        var currentResourceKey = firstCommand.getResourceKey();
-        var currentTextures = firstCommand.getCommand().getTextures();
-        var currentUniformPayloads = firstCommand.getCommand().getUniforms();
-
-        var currentBuilder = new BufferBuilder(
-                Render.Buffers.getByteBufferBuilder(),
-                currentPipeline.getVertexFormatMode(),
-                currentPipeline.getVertexFormat()
-        );
-
-        applyVertices(currentBuilder, firstCommand, depthEpsilon);
+        applyVertices(state.builder, firstCommand, depthEpsilon);
 
         while (iterator.hasNext()) {
-            var submittedCommand = iterator.next();
-            var command = submittedCommand.getCommand();
+            var command = iterator.next();
 
-            var shouldBreakBatch = command.getPipeline() != currentPipeline
-                    || submittedCommand.getResourceKey() != currentResourceKey
-                    || !Objects.equals(submittedCommand.getScissorRect(), currentScissor);
-
-            if (shouldBreakBatch) {
-                finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniformPayloads, uploader);
-
-                currentPipeline = command.getPipeline();
-                currentScissor = submittedCommand.getScissorRect();
-                currentResourceKey = submittedCommand.getResourceKey();
-                currentTextures = command.getTextures();
-                currentUniformPayloads = command.getUniforms();
-
-                currentBuilder = new BufferBuilder(
-                        Render.Buffers.getByteBufferBuilder(),
-                        currentPipeline.getVertexFormatMode(),
-                        currentPipeline.getVertexFormat()
-                );
+            if (state.shouldBreakBatch(command)) {
+                finishBatch(batches, state, uploader);
+                state.reset(command);
             }
 
-            applyVertices(currentBuilder, submittedCommand, depthEpsilon);
+            applyVertices(state.builder, command, depthEpsilon);
         }
 
-        finishBatch(batches, currentBuilder, currentPipeline, currentScissor, currentTextures, currentUniformPayloads, uploader);
+        finishBatch(batches, state, uploader);
 
         return batches;
     }
@@ -119,21 +95,51 @@ public final class BatchProcessor {
 
     private static void finishBatch(
             List<PendingBatch> batches,
-            BufferBuilder builder,
-            RenderPipeline pipeline,
-            @Nullable ScissorRect scissor,
-            List<TextureBinding> textures,
-            List<UniformPayload<?>> payloads,
+            BatchState state,
             UboUploader uploader
     ) {
-        var meshData = builder.build();
+        var meshData = state.builder.build();
         if (meshData != null) {
-            var bindings = new ArrayList<UniformBinding>(payloads.size());
-            for (var payload : payloads) {
+            var bindings = new ArrayList<UniformBinding>(state.uniforms.size());
+            for (var payload : state.uniforms) {
                 var slice = uploader.upload(payload);
                 bindings.add(new UniformBinding(payload.name(), slice));
             }
-            batches.add(new PendingBatch(meshData, pipeline, scissor, textures, bindings));
+            batches.add(new PendingBatch(meshData, state.pipeline, state.scissor, state.textures, bindings));
+        }
+    }
+
+    private static final class BatchState {
+        private RenderPipeline pipeline;
+        private @Nullable ScissorRect scissor;
+        private long resourceKey;
+        private List<TextureBinding> textures;
+        private List<UniformPayload<?>> uniforms;
+        private BufferBuilder builder;
+
+        private BatchState(SubmittedCommand initialCommand) {
+            reset(initialCommand);
+        }
+
+        private void reset(SubmittedCommand command) {
+            var innerCommand = command.getCommand();
+            pipeline = innerCommand.getPipeline();
+            scissor = command.getScissorRect();
+            resourceKey = command.getResourceKey();
+            textures = innerCommand.getTextures();
+            uniforms = innerCommand.getUniforms();
+            builder = new BufferBuilder(
+                    Render.Buffers.getByteBufferBuilder(),
+                    pipeline.getVertexFormatMode(),
+                    pipeline.getVertexFormat()
+            );
+        }
+
+        private boolean shouldBreakBatch(SubmittedCommand nextCommand) {
+            var nextInner = nextCommand.getCommand();
+            return nextInner.getPipeline() != pipeline
+                    || nextCommand.getResourceKey() != resourceKey
+                    || !Objects.equals(nextCommand.getScissorRect(), scissor);
         }
     }
 

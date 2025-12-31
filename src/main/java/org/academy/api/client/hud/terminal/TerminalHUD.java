@@ -69,7 +69,6 @@ public final class TerminalHUD {
 
     private static final List<App> APPS = new ArrayList<>();
 
-    private final TerminalConfig config;
     private final Context context = new Context();
     private final UiContext uiContext;
 
@@ -84,7 +83,7 @@ public final class TerminalHUD {
 
     private TerminalHUD() {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE);
-        config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY);
+        var config = AcademyCraftClient.Config.INSTANCE.<TerminalConfig>getConfig(CONFIG_KEY);
 
         var toggleKeys = new LinkedHashSet<Integer>();
         toggleKeys.add(GLFW.GLFW_KEY_RIGHT_ALT);
@@ -186,6 +185,7 @@ public final class TerminalHUD {
         return Render.Buffers.getInstance().getProjectionUB(projectionMatrix).slice();
     }
 
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     @MainThread
     public void toggleActive() {
         active = !active;

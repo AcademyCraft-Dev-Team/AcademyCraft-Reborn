@@ -1,4 +1,4 @@
-package org.academy.internal.client.app;
+package org.academy.internal.client.app.music;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -19,7 +19,7 @@ import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.terminal.TerminalHUD;
-import org.academy.internal.client.app.music.MusicPlayerBackend;
+import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 
 import java.util.function.Function;
 
@@ -55,10 +55,20 @@ public final class MusicApp implements App {
 
     private static class Context implements WidgetContext {
         private final ImageWidget vinyl = createVinyl();
-        private final ImageWidget playPauseIcon = new ImageWidget(getPlayPauseIcon());
-        private final ImageWidget playbackModeIcon = new ImageWidget(getPlaybackModeIcon());
+        private final ImageWidget playPauseIcon = new ImageWidget(getPlayPauseIcon()) {
+            @Override
+            public void tick() {
+                updatePlayPauseIcon();
+            }
+        };
+        private final ImageWidget playbackModeIcon = new ImageWidget(getPlaybackModeIcon()) {
+            @Override
+            public void tick() {
+                updatePlaybackModeIcon();
+            }
+        };
         private final ObjectAnimator rot;
-        
+
         {
             rot = ObjectAnimator
                     .ofFloat(vinyl::getRotation, vinyl::setRotation, 360)
@@ -68,11 +78,9 @@ public final class MusicApp implements App {
             rot.setRepeatCount(ValueAnimator.INFINITE);
         }
 
-        private final FrameLayoutWidget content = createContent();
-
         @Override
         public Widget get() {
-            return content;
+            return createContent();
         }
 
         private FrameLayoutWidget createContent() {
@@ -203,7 +211,7 @@ public final class MusicApp implements App {
                         var currentTime = new LabelWidget("00:00") {
                             @Override
                             public void tick() {
-                                setText(FORMAT_TIME.apply(MusicPlayerBackend.getCurrentTime()));
+                                setText(FORMAT_TIME.apply(MusicPlayerBackend.getInstance().getCurrentTime()));
                             }
                         };
                         currentTime.setLayoutParams(p);
@@ -214,7 +222,7 @@ public final class MusicApp implements App {
                         var musicDuration = new LabelWidget("00:00") {
                             @Override
                             public void tick() {
-                                setText(FORMAT_TIME.apply(MusicPlayerBackend.getTotalDuration()));
+                                setText(FORMAT_TIME.apply(MusicPlayerBackend.getInstance().getTotalDuration()));
                             }
                         };
                         musicDuration.setLayoutParams(p);
@@ -250,10 +258,9 @@ public final class MusicApp implements App {
                                             .size(16, 16)
                                             .gravity(Gravity.CENTER_RIGHT)
                             );
-                            playbackModeButton.setOnClickListener(_ -> {
-                                MusicPlayerBackend.cyclePlaybackMode();
-                                updatePlaybackModeIcon();
-                            });
+                            playbackModeButton.setOnClickListener(
+                                    _ -> MusicPlayerBackend.getInstance().cyclePlaybackMode()
+                            );
                             left.addChild("playback_mode", playbackModeButton);
                             {
                                 playbackModeIcon.setSampler(FilterMode.LINEAR, false);
@@ -264,10 +271,7 @@ public final class MusicApp implements App {
                         var previousButton = new ButtonWidget();
                         previousButton.setLayoutParams(p);
                         previousButton.setOnClickListener(
-                                _ -> {
-                                    MusicPlayerBackend.playPrevious();
-                                    selectTrackIndex(MusicPlayerBackend.getCurrentTrackIndex());
-                                }
+                                _ -> MusicPlayerBackend.getInstance().playPrevious()
                         );
                         controlArea.addChild("previous", previousButton);
                         {
@@ -278,14 +282,9 @@ public final class MusicApp implements App {
 
                         var playPauseButton = new ButtonWidget();
                         playPauseButton.setLayoutParams(p);
-                        playPauseButton.setOnClickListener(_ -> {
-                            if (MusicPlayerBackend.isPlaying()) {
-                                MusicPlayerBackend.togglePlayPause();
-                            } else MusicPlayerBackend.play(MusicPlayerBackend.getCurrentTrackIndex());
-
-                            updatePlayPauseIcon();
-                            updateRot();
-                        });
+                        playPauseButton.setOnClickListener(
+                                _ -> MusicPlayerBackend.getInstance().togglePlayPause()
+                        );
                         controlArea.addChild("play_pause", playPauseButton);
                         {
                             playPauseIcon.setSampler(FilterMode.LINEAR, false);
@@ -295,10 +294,7 @@ public final class MusicApp implements App {
                         var nextButton = new ButtonWidget();
                         nextButton.setLayoutParams(p);
                         nextButton.setOnClickListener(
-                                _ -> {
-                                    MusicPlayerBackend.playNext();
-                                    selectTrackIndex(MusicPlayerBackend.getCurrentTrackIndex());
-                                }
+                                _ -> MusicPlayerBackend.getInstance().playNext()
                         );
                         controlArea.addChild("next", nextButton);
                         {
@@ -327,16 +323,14 @@ public final class MusicApp implements App {
                             .sizeMode(SizeMode.WRAP_CONTENT)
             );
             {
-                var playlist = MusicPlayerBackend.getPlaylist();
-                for (var i = 0; i < playlist.size(); i++) {
-                    var mediaInfo = playlist.get(i);
+                var playlist = MusicPlayerBackend.getInstance().getPlaylist();
+                for (var mediaInfo : playlist) {
                     var musicButton = new ButtonWidget();
                     musicButton.setLayoutParams(
                             new LinearLayoutWidget.LayoutParams()
                                     .sizeMode(SizeMode.WRAP_CONTENT)
                     );
-                    var trackIndex = i;
-                    musicButton.setOnClickListener(_ -> selectTrackIndex(trackIndex));
+                    musicButton.setOnClickListener(_ -> MusicPlayerBackend.getInstance().play(mediaInfo));
                     musicList.addChild(mediaInfo.name(), musicButton);
                     {
                         var back = new FillWidget(COLOR);
@@ -416,6 +410,7 @@ public final class MusicApp implements App {
 
                 @Override
                 public void tick() {
+                    updateRot();
                     updateVinylIcon();
                 }
             };
@@ -426,7 +421,8 @@ public final class MusicApp implements App {
                 @Override
                 public void tick() {
                     if (!isDragging) {
-                        var progress = MusicPlayerBackend.getCurrentTime() / MusicPlayerBackend.getTotalDuration();
+                        var musicPlayerBackend = MusicPlayerBackend.getInstance();
+                        var progress = musicPlayerBackend.getCurrentTime() / musicPlayerBackend.getTotalDuration();
                         setProgress(getMin() + progress * (getMax() - getMin()));
                     }
                 }
@@ -449,7 +445,8 @@ public final class MusicApp implements App {
 
                 @Override
                 public void onStopTrackingTouch(SeekBarWidget seekBar) {
-                    MusicPlayerBackend.seek(progressBar.getProgress() / progressBar.getMax());
+                    var musicPlayerBackend = MusicPlayerBackend.getInstance();
+                    musicPlayerBackend.seek(progressBar.getProgress() / progressBar.getMax());
                 }
             });
             return progressBar;
@@ -494,7 +491,8 @@ public final class MusicApp implements App {
 
                 @Override
                 public void tick() {
-                    if (!isDragging) setProgress(getMin() + MusicPlayerBackend.getVolume() * (getMax() - getMin()));
+                    var musicPlayerBackend = MusicPlayerBackend.getInstance();
+                    if (!isDragging) setProgress(getMin() + musicPlayerBackend.getVolume() * (getMax() - getMin()));
                 }
             };
             volumeBar.setLayoutParams(
@@ -505,7 +503,8 @@ public final class MusicApp implements App {
             volumeBar.setOnSeekBarChangeListener(new SeekBarWidget.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBarWidget seekBar, float progress, boolean fromUser) {
-                    MusicPlayerBackend.setVolume(progress / volumeBar.getMax());
+                    var musicPlayerBackend = MusicPlayerBackend.getInstance();
+                    musicPlayerBackend.setVolume(progress / volumeBar.getMax());
                 }
 
                 @Override
@@ -519,14 +518,20 @@ public final class MusicApp implements App {
             return volumeBar;
         }
 
+        private boolean isPlaying() {
+            var musicPlayerBackend = MusicPlayerBackend.getInstance();
+            return musicPlayerBackend.isPlaying() && !musicPlayerBackend.isPaused();
+        }
+
         private Identifier getPlayPauseIcon() {
-            return MusicPlayerBackend.isPlaying() && !MusicPlayerBackend.isPaused()
+            return isPlaying()
                     ? Resource.Textures.ICON_PAUSE
                     : Resource.Textures.ICON_PLAY;
         }
 
         private Identifier getPlaybackModeIcon() {
-            return switch (MusicPlayerBackend.getPlaybackMode()) {
+            var musicPlayerBackend = MusicPlayerBackend.getInstance();
+            return switch (musicPlayerBackend.getPlaybackMode()) {
                 case REPEAT_LIST -> Resource.Textures.ICON_CYCLE;
                 case REPEAT_ONE -> Resource.Textures.ICON_SINGLE_CYCLE;
                 case SHUFFLE -> Resource.Textures.ICON_RANDOM_PLAY;
@@ -542,7 +547,7 @@ public final class MusicApp implements App {
         }
 
         private void updateRot() {
-            if (MusicPlayerBackend.isPlaying() && !MusicPlayerBackend.isPaused()) {
+            if (isPlaying()) {
                 startRot();
                 return;
             }
@@ -558,19 +563,10 @@ public final class MusicApp implements App {
             if (rot.isRunning()) rot.pause();
         }
 
-        private void selectTrackIndex(int trackIndex) {
-            MusicPlayerBackend.play(trackIndex);
-            MusicPlayerBackend.togglePlayPause();
-            updatePlayPauseIcon();
-            updateVinylIcon();
-            updateRot();
-        }
-
         private void updateVinylIcon() {
-            var playList = MusicPlayerBackend.getPlaylist();
-            var index = MusicPlayerBackend.getCurrentTrackIndex();
-            if (-1 < index && index < playList.size()) {
-                var mediaInfo = playList.get(index);
+            var musicPlayerBackend = MusicPlayerBackend.getInstance();
+            var mediaInfo = musicPlayerBackend.getCurrentMusicInfo();
+            if (mediaInfo != null) {
                 vinyl.setTexture(mediaInfo.icon());
                 vinyl.setSampler(FilterMode.LINEAR, false);
             }

@@ -1,4 +1,4 @@
-package org.academy.internal.client.app.music;
+package org.academy.internal.client.app.music.backend;
 
 import net.minecraft.resources.Identifier;
 
