@@ -21,7 +21,6 @@ import org.academy.internal.common.ability.electromaster.skills.BallLightning;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
-import org.academy.internal.common.core.particles.SpawnArcMediumParticlePacket;
 import org.academy.internal.common.world.item.CoinItem;
 import org.misaka.api.common.network.packet.PacketType;
 import org.misaka.api.common.registries.MisakaNetworkRegistries;
@@ -121,10 +120,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BloodflowReverse.ReverseBloodflowPacket>>
             REVERSE_BLOODFLOW = PACKET_TYPES.register("reverse_bloodflow",
             () -> new PacketType<>(BloodflowReverse.ReverseBloodflowPacket.class, BloodflowReverse.ReverseBloodflowPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpawnArcMediumParticlePacket>>
-            SPAWN_ARC_MEDIUM_PARTICLE = PACKET_TYPES.register("spawn_arc_medium_particle",
-            () -> new PacketType<>(SpawnArcMediumParticlePacket.class, SpawnArcMediumParticlePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AcquireCategoryPacket>>
             ACQUIRE_CATEGORY = PACKET_TYPES.register("acquire_category",

@@ -7,8 +7,6 @@ import org.academy.internal.client.data.AcademyCraftClientData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -22,37 +20,10 @@ public final class AcademyCraft {
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static boolean DEBUG_UI = false;
-    private static final Logger LOGGER = getLogger();
 
     public AcademyCraft(IEventBus modEventBus) {
         AcademyCraftRegister.register(modEventBus);
         modEventBus.addListener(AcademyCraftClientData::dataSetup);
-    }
-
-    public static void checkFile(File file) {
-        String errorMessage = null;
-
-        try {
-            if (file.exists()) {
-                LOGGER.debug("File already exists: {}", file.getAbsolutePath());
-                return;
-            }
-
-            var parentDir = file.getParentFile();
-            if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
-                errorMessage = "Failed to create directories: " + parentDir.getAbsolutePath();
-            } else if (!file.createNewFile()) {
-                errorMessage = "Failed to create new file: " + file.getAbsolutePath();
-            } else {
-                LOGGER.debug("Successfully created new file: {}", file.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            errorMessage = "An error occurred while creating the file: " + file.getAbsolutePath() + " - " + e.getMessage();
-        }
-
-        if (errorMessage != null) {
-            throw new RuntimeException(errorMessage);
-        }
     }
 
     public static Identifier custom(String namespace, String path) {

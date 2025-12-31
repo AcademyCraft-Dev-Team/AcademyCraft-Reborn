@@ -29,9 +29,6 @@ import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
-import org.academy.internal.common.world.level.levelgen.feature.Features;
-import org.academy.internal.common.world.level.material.FluidTypes;
-import org.academy.internal.common.world.level.material.Fluids;
 
 import static org.academy.AcademyCraft.MODID;
 import static org.academy.AcademyCraft.MOD_NAME;
@@ -64,10 +61,7 @@ public final class AcademyCraftRegister {
         EntityDataSerializers.ENTITY_DATA_SERIALIZERS.register(modEventBus);
         SoundEvents.SOUND_EVENTS.register(modEventBus);
         MenuTypes.MENU_TYPES.register(modEventBus);
-        Fluids.FLUIDS.register(modEventBus);
-        FluidTypes.FLUID_TYPES.register(modEventBus);
         ParticleTypes.PARTICLE_TYPES.register(modEventBus);
-        Features.FEATURES.register(modEventBus);
 
         CREATIVE_MODE_TABS.register(modEventBus);
 

@@ -27,7 +27,6 @@ import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.server.ability.PlayerCPManager;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
