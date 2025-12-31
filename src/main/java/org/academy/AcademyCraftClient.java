@@ -32,12 +32,12 @@ import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
+import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.app.music.MusicApp;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.model.WindGenBaseModel;
-import org.academy.internal.client.particle.ParticleRenderTypes;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
@@ -63,7 +63,6 @@ public final class AcademyCraftClient {
         MusicPlayerBackend.init();
         Screens.register();
         HUDManager.initMain();
-        ParticleRenderTypes.init();
         AbilitySystemClient.init();
         ClientSyncManager.init();
     }
@@ -185,7 +184,7 @@ public final class AcademyCraftClient {
                     Minecraft.getInstance().gameDirectory,
                     "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json"
             );
-            AcademyCraft.checkFile(CLIENT_CONFIG_FILE);
+            FileUtil.checkFile(CLIENT_CONFIG_FILE);
             INSTANCE = new AcademyCraftConfig(CLIENT_CONFIG_FILE);
         }
 

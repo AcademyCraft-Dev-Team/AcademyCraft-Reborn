@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import org.academy.AcademyCraft;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.Map;
@@ -22,6 +23,7 @@ public final class PlayerDataManager {
         playerDataMap.computeIfAbsent(serverPlayer.getUUID(), this::createDefaultPlayerData);
     }
 
+    @Nullable
     public Player getData(UUID playerUUID) {
         return playerDataMap.get(playerUUID);
     }

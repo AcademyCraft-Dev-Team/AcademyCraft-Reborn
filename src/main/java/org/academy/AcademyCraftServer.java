@@ -5,6 +5,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.wireless.WirelessManager;
@@ -22,48 +23,46 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Logic server, not physical.
+ * MinecraftServer, 不区分 IntegratedServer 或 DedicatedServer
  */
 @EventBusSubscriber
 public final class AcademyCraftServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
-    private final File serverConfigFile;
     private final File worldDataFile;
 
     private final AcademyCraftConfig serverConfig;
-    private final PlayerDataManager playerDataManager;
-    private final AbilityConfig abilityConfig;
-    private final GenericConfig genericConfig;
     private final WorldData worldData;
     private final AbilitySystemServer abilitySystemServer;
 
     private final ScheduledFuture<?> worldDataSaveTask;
 
+    /**
+     * 一个 MinecraftServer 实例对应一个 MinecraftServerContext
+     */
     private AcademyCraftServer(MinecraftServerContext context) {
         context.setAcademyCraftServer(this);
         var server = context.getMinecraftServer();
 
-        serverConfigFile = new File(
+        var serverConfigFile = new File(
                 server.getServerDirectory().toFile(),
                 "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json"
         );
         worldDataFile = server.getWorldPath(
                 LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json"
         ).toFile();
-        AcademyCraft.checkFile(serverConfigFile);
-        AcademyCraft.checkFile(worldDataFile);
+        FileUtil.checkFile(serverConfigFile);
+        FileUtil.checkFile(worldDataFile);
 
         serverConfig = new AcademyCraftConfig(serverConfigFile);
 
         AcademyCraftConfig.registerTypeHandler(AbilityConfig.KEY, AbilityConfig.Action.INSTANCE);
         AcademyCraftConfig.registerTypeHandler(GenericConfig.KEY, GenericConfig.Action.INSTANCE);
-        abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
-        genericConfig = serverConfig.getConfig(GenericConfig.KEY);
+        AbilityConfig abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
         serverConfig.save();
 
         worldData = WorldData.getWorldData(worldDataFile);
-        playerDataManager = new PlayerDataManager(worldData);
+        var playerDataManager = new PlayerDataManager(worldData);
 
         abilitySystemServer = new AbilitySystemServer(context, playerDataManager, abilityConfig);
         WirelessManager.initServer();
@@ -74,10 +73,6 @@ public final class AcademyCraftServer {
                     saveData();
                 }, 5, 5, TimeUnit.MINUTES
         );
-    }
-
-    public AbilityConfig getAbilityConfig() {
-        return abilityConfig;
     }
 
     public AbilitySystemServer getAbilitySystemServer() {

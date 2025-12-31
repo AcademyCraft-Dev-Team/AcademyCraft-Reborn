@@ -42,7 +42,7 @@ public class PlayerCPManager {
 
     public void onPlayerLoggedOut(UUID uuid) {
         var context = contexts.remove(uuid);
-        if (context != null && playerDataManager != null) {
+        if (context != null) {
             var data = playerDataManager.getData(uuid);
             if (data != null) {
                 context.exportTo(data);
@@ -55,12 +55,10 @@ public class PlayerCPManager {
         var context = contexts.get(uuid);
         if (context == null) return;
 
-        if (playerDataManager != null) {
-            var data = playerDataManager.getData(uuid);
-            if (data != null) {
-                context.exportTo(data);
-                data.markDirty();
-            }
+        var data = playerDataManager.getData(uuid);
+        if (data != null) {
+            context.exportTo(data);
+            data.markDirty();
         }
     }
 
