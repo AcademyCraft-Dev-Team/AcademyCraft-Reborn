@@ -8,6 +8,7 @@ import com.google.gson.annotations.SerializedName;
 import org.academy.AcademyCraft;
 import org.academy.api.common.util.GsonUtil;
 import org.academy.internal.common.skilldata.SkillData;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -32,20 +33,18 @@ public final class WorldData {
     }
 
     private static boolean isValidFile(File file) {
-        final var gson = createGson();
+        var gson = createGson();
 
         try (var fileReader = new FileReader(file)) {
-            final JsonObject jsonObject;
+            JsonObject jsonObject;
 
             try {
-                jsonObject = gson.fromJson(fileReader, JsonObject.class);
+                jsonObject = gson.<@Nullable JsonObject>fromJson(fileReader, JsonObject.class);
             } catch (JsonSyntaxException e) {
                 return false;
             }
 
-            if (jsonObject == null) {
-                return false;
-            }
+            if (jsonObject == null) return false;
 
             var fields = WorldData.class.getDeclaredFields();
 
@@ -56,7 +55,7 @@ public final class WorldData {
     }
 
     public static WorldData getWorldData(File file) {
-        final var gson = createGson();
+        var gson = createGson();
         if (!isValidFile(file)) {
             var worldData = new WorldData();
             LOGGER.debug("Creating new world data file.");

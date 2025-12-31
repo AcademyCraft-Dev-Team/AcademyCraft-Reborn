@@ -26,6 +26,11 @@ import java.util.function.Function;
 import static org.academy.api.client.hud.terminal.TerminalHUD.COLOR;
 
 public final class MusicApp implements App {
+    /**
+     * 0 ~ 1
+     */
+    private static final float VOLUME_SCALE = 0.35F;
+
     public static final MusicApp INSTANCE = new MusicApp();
 
     private static final Function<Float, String> FORMAT_TIME = (totalSeconds) -> {
@@ -492,7 +497,9 @@ public final class MusicApp implements App {
                 @Override
                 public void tick() {
                     var musicPlayerBackend = MusicPlayerBackend.getInstance();
-                    if (!isDragging) setProgress(getMin() + musicPlayerBackend.getVolume() * (getMax() - getMin()));
+                    if (!isDragging) {
+                        setProgress(getMin() + musicPlayerBackend.getVolume() * (1 / VOLUME_SCALE) * (getMax() - getMin()));
+                    }
                 }
             };
             volumeBar.setLayoutParams(
@@ -504,7 +511,7 @@ public final class MusicApp implements App {
                 @Override
                 public void onProgressChanged(SeekBarWidget seekBar, float progress, boolean fromUser) {
                     var musicPlayerBackend = MusicPlayerBackend.getInstance();
-                    musicPlayerBackend.setVolume(progress / volumeBar.getMax());
+                    musicPlayerBackend.setVolume(progress / volumeBar.getMax() * VOLUME_SCALE);
                 }
 
                 @Override
