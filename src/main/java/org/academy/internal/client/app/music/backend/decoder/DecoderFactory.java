@@ -21,7 +21,10 @@ public final class DecoderFactory {
         try {
             if (isOgg(audioData)) return new VorbisAudioStream(audioData);
             else if (isFlac(audioData)) return new FlacAudioStream(audioData);
-            else return new Mp3AudioStream(audioData);
+            else if (isMp3(audioData)) return new Mp3AudioStream(audioData);
+
+            LOGGER.error("Unsupported audio format.");
+            return null;
         } catch (IOException e) {
             LOGGER.error("Failed to initialize audio decoder.", e);
             return null;
@@ -44,5 +47,16 @@ public final class DecoderFactory {
                 data.get(pos + 1) == 'L' &&
                 data.get(pos + 2) == 'a' &&
                 data.get(pos + 3) == 'C';
+    }
+
+    private static boolean isMp3(ByteBuffer data) {
+        if (data.remaining() < 3) return false;
+        var pos = data.position();
+
+        if (data.get(pos) == 'I' &&
+                data.get(pos + 1) == 'D' &&
+                data.get(pos + 2) == '3') return true;
+
+        return (data.get(pos) & 0xFF) == 0xFF && (data.get(pos + 1) & 0xE0) == 0xE0;
     }
 }

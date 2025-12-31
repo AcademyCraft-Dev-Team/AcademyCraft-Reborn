@@ -57,9 +57,7 @@ public final class DecoderThread implements Runnable {
     }
 
     private void performInitialSeek() throws IOException {
-        if (startFrame > 0) {
-            stream.seek(startFrame);
-        }
+        if (startFrame > 0) stream.seek(startFrame);
     }
 
     private ByteBuffer allocateStagingBuffer() {
