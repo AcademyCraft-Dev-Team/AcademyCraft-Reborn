@@ -13,7 +13,6 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
@@ -34,7 +33,8 @@ import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.UncheckedUtil;
-import org.academy.internal.client.app.MusicApp;
+import org.academy.internal.client.app.music.MusicApp;
+import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.particle.ParticleRenderTypes;
@@ -57,13 +57,10 @@ import static org.academy.AcademyCraft.academy;
 public final class AcademyCraftClient {
     private static boolean renderInitialized = false;
 
-    public AcademyCraftClient(IEventBus modEventBus) {
-        modEventBus.register(ModBusSubscriber.class);
-    }
-
     public static void initMain() {
         TerminalHUD.addApp(MusicApp.INSTANCE);
 
+        MusicPlayerBackend.init();
         Screens.register();
         HUDManager.initMain();
         ParticleRenderTypes.init();
@@ -196,91 +193,86 @@ public final class AcademyCraftClient {
         }
     }
 
-    private static final class ModBusSubscriber {
-        private ModBusSubscriber() {
-        }
+    @SubscribeEvent
+    public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
+        event.registerEntityModifier(
+                UncheckedUtil.uncheckedCast(AvatarRenderer.class), avatar()
+        );
+        event.registerEntityModifier(
+                new TypeToken<LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>>() {},
+                living()
+        );
+    }
 
-        @SubscribeEvent
-        public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
-            event.registerEntityModifier(
-                    UncheckedUtil.uncheckedCast(AvatarRenderer.class), avatar()
+    private static <AvatarlikeEntity extends Avatar & ClientAvatarEntity>
+    BiConsumer<AvatarlikeEntity, AvatarRenderState> avatar() {
+        return (avatarlikeEntity, avatarRenderState) -> {
+            avatarRenderState.setRenderData(
+                    StormWingEffectRenderer.CONTEXT_KEY,
+                    avatarlikeEntity.getData(AttachmentTypes.ACTIVATED_STORM_WING)
             );
-            event.registerEntityModifier(
-                    new TypeToken<LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>>() {},
-                    living()
+            avatarRenderState.setRenderData(
+                    RailgunEffectRenderer.CONTEXT_KEY,
+                    avatarlikeEntity.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA)
             );
-        }
+        };
+    }
 
-        private static <AvatarlikeEntity extends Avatar & ClientAvatarEntity>
-        BiConsumer<AvatarlikeEntity, AvatarRenderState> avatar() {
-            return (avatarlikeEntity, avatarRenderState) -> {
-                avatarRenderState.setRenderData(
-                        StormWingEffectRenderer.CONTEXT_KEY,
-                        avatarlikeEntity.getData(AttachmentTypes.ACTIVATED_STORM_WING)
+    private static BiConsumer<LivingEntity, LivingEntityRenderState> living() {
+        return (livingEntity, livingEntityRenderState) ->
+                livingEntityRenderState.setRenderData(
+                        QuantumInterferenceLayer.CONTEXT_KEY,
+                        livingEntity.getExistingDataOrNull(AttachmentTypes.QUANTUM_DATA.get())
                 );
-                avatarRenderState.setRenderData(
-                        RailgunEffectRenderer.CONTEXT_KEY,
-                        avatarlikeEntity.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA)
-                );
-            };
-        }
+    }
 
-        private static BiConsumer<LivingEntity, LivingEntityRenderState> living() {
-            return (livingEntity, livingEntityRenderState) ->
-                    livingEntityRenderState.setRenderData(
-                            QuantumInterferenceLayer.CONTEXT_KEY,
-                            livingEntity.getExistingDataOrNull(AttachmentTypes.QUANTUM_DATA.get())
-                    );
-        }
+    @SubscribeEvent
+    public static void onRegisterRenderPipelines(RegisterRenderPipelinesEvent event) {
+        event.registerPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR);
+    }
 
-        @SubscribeEvent
-        public static void onRegisterRenderPipelines(RegisterRenderPipelinesEvent event) {
-            event.registerPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR);
-        }
+    @SubscribeEvent
+    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAbove(VanillaGuiLayers.CROSSHAIR, academy("hud"), HUDManager::render);
+    }
 
-        @SubscribeEvent
-        public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
-            event.registerAbove(VanillaGuiLayers.CROSSHAIR, academy("hud"), HUDManager::render);
-        }
+    @SubscribeEvent
+    public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
+        event.register(
+                academy("wireless_node"),
+                WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC
+        );
+        event.register(
+                academy("wind_gen_base"),
+                WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC
+        );
+        event.register(
+                academy("wind_gen_pillar"),
+                WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC
+        );
+        event.register(
+                academy("wind_gen_top"),
+                WindGenTopSpecialRenderer.Unbaked.MAP_CODEC
+        );
+        event.register(
+                academy("ability_developer"),
+                AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC
+        );
+        event.register(
+                academy("omni_crafting_table"),
+                OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC
+        );
+        event.register(
+                academy("solar_gen"),
+                SolarGenSpecialRenderer.Unbaked.MAP_CODEC
+        );
+    }
 
-        @SubscribeEvent
-        public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
-            event.register(
-                    academy("wireless_node"),
-                    WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC
-            );
-            event.register(
-                    academy("wind_gen_base"),
-                    WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC
-            );
-            event.register(
-                    academy("wind_gen_pillar"),
-                    WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC
-            );
-            event.register(
-                    academy("wind_gen_top"),
-                    WindGenTopSpecialRenderer.Unbaked.MAP_CODEC
-            );
-            event.register(
-                    academy("ability_developer"),
-                    AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC
-            );
-            event.register(
-                    academy("omni_crafting_table"),
-                    OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC
-            );
-            event.register(
-                    academy("solar_gen"),
-                    SolarGenSpecialRenderer.Unbaked.MAP_CODEC
-            );
-        }
-
-        @SubscribeEvent
-        public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
-            event.register(
-                    Blocks.WIND_GEN_PILLAR.get(),
-                    WindGenPillarSpecialRenderer.Unbaked.INSTANCE
-            );
-        }
+    @SubscribeEvent
+    public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
+        event.register(
+                Blocks.WIND_GEN_PILLAR.get(),
+                WindGenPillarSpecialRenderer.Unbaked.INSTANCE
+        );
     }
 }

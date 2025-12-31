@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Set;
 
 public class LevelUtil {
-    @SuppressWarnings("resource")
     public static double getValidViewDistance(Entity entity, double targetDistance) {
         var startPos = entity.position();
         var direction = Vec3.directionFromRotation(entity.getXRot(), entity.getYRot()).scale(targetDistance);
@@ -55,6 +54,7 @@ public class LevelUtil {
     public static Pair<Boolean, Double> destroyBlocksAlongPath(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean dropBlock, boolean spawnParticles, boolean canBlock, boolean simulate) {
         var pathLength = start.distanceTo(end);
         var collectedBlocks = collectBlocksOptimized(level, start, end, radius, miningLevel, canBlock);
+
         var breakableBlocks = collectedBlocks.getLeft();
         var unbreakableBlocks = collectedBlocks.getRight();
         var minBlockedDist = calculateMinBlockedDistance(level, unbreakableBlocks, start, end, radius, pathLength, canBlock);
@@ -65,16 +65,24 @@ public class LevelUtil {
         return Pair.of(minBlockedDist < pathLength, minBlockedDist);
     }
 
+    // Context object to avoid passing 10+ arguments meow
+    private record BlockCollectionContext(
+            Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock,
+            List<BlockPos> breakable, List<BlockPos> unbreakable,
+            LongOpenHashSet visited, BlockPos.MutableBlockPos mutablePos
+    ) {}
+
     private static Pair<List<BlockPos>, List<BlockPos>> collectBlocksOptimized(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock) {
-        var breakable = new ArrayList<BlockPos>();
-        var unbreakable = new ArrayList<BlockPos>();
+        var context = new BlockCollectionContext(
+                level, start, end, radius, miningLevel, canBlock,
+                new ArrayList<>(), new ArrayList<>(),
+                new LongOpenHashSet(), new BlockPos.MutableBlockPos()
+        );
 
         var dir = end.subtract(start).normalize();
         var length = start.distanceTo(end);
+        // Step size heuristic: ensure we don't skip blocks meow
         var step = Math.max(0.5, radius * 0.8);
-
-        var visited = new LongOpenHashSet();
-        var mutablePos = new BlockPos.MutableBlockPos();
 
         ChunkAccess currentChunk = null;
         var currentChunkX = Integer.MAX_VALUE;
@@ -85,8 +93,6 @@ public class LevelUtil {
 
             var minX = Mth.floor(samplePoint.x - radius);
             var maxX = Mth.floor(samplePoint.x + radius);
-            var minY = Mth.floor(samplePoint.y - radius);
-            var maxY = Mth.floor(samplePoint.y + radius);
             var minZ = Mth.floor(samplePoint.z - radius);
             var maxZ = Mth.floor(samplePoint.z + radius);
 
@@ -95,6 +101,7 @@ public class LevelUtil {
                     var chunkX = SectionPos.blockToSectionCoord(x);
                     var chunkZ = SectionPos.blockToSectionCoord(z);
 
+                    // Cache chunk lookup to avoid repeated map access meow
                     if (chunkX != currentChunkX || chunkZ != currentChunkZ) {
                         currentChunk = level.getChunk(chunkX, chunkZ, ChunkStatus.FULL, false);
                         currentChunkX = chunkX;
@@ -103,31 +110,42 @@ public class LevelUtil {
 
                     if (currentChunk == null) continue;
 
-                    for (var y = minY; y <= maxY; y++) {
-                        var posPacked = BlockPos.asLong(x, y, z);
-                        if (!visited.add(posPacked)) continue;
+                    var minY = Mth.floor(samplePoint.y - radius);
+                    var maxY = Mth.floor(samplePoint.y + radius);
 
-                        var blockState = getBlockStateFast(currentChunk, level, x, y, z);
-
-                        if (blockState.isAir()) continue;
-
-                        mutablePos.set(x, y, z);
-                        var shape = blockState.getCollisionShape(level, mutablePos);
-                        if (shape.isEmpty()) continue;
-
-                        var blockAABB = shape.bounds().move(x, y, z);
-                        if (getIntersectionT(start, end, blockAABB.inflate(radius)) <= 1.0) {
-                            if (canBreakBlock(blockState, miningLevel)) {
-                                breakable.add(mutablePos.immutable());
-                            } else if (canBlock) {
-                                unbreakable.add(mutablePos.immutable());
-                            }
-                        }
-                    }
+                    processChunkColumn(context, currentChunk, x, z, minY, maxY);
                 }
             }
         }
-        return Pair.of(breakable, unbreakable);
+        return Pair.of(context.breakable, context.unbreakable);
+    }
+
+    private static void processChunkColumn(BlockCollectionContext ctx, ChunkAccess chunk, int x, int z, int minY, int maxY) {
+        for (var y = minY; y <= maxY; y++) {
+            var posPacked = BlockPos.asLong(x, y, z);
+            if (!ctx.visited.add(posPacked)) continue;
+
+            var blockState = getBlockStateFast(chunk, ctx.level, x, y, z);
+            if (blockState.isAir()) continue;
+
+            checkAndCollectBlock(ctx, blockState, x, y, z);
+        }
+    }
+
+    private static void checkAndCollectBlock(BlockCollectionContext ctx, BlockState state, int x, int y, int z) {
+        ctx.mutablePos.set(x, y, z);
+        var shape = state.getCollisionShape(ctx.level, ctx.mutablePos);
+        if (shape.isEmpty()) return;
+
+        var blockAABB = shape.bounds().move(x, y, z);
+        // Sphere-AABB intersection check meow
+        if (getIntersectionT(ctx.start, ctx.end, blockAABB.inflate(ctx.radius)) <= 1.0) {
+            if (canBreakBlock(state, ctx.miningLevel)) {
+                ctx.breakable.add(ctx.mutablePos.immutable());
+            } else if (ctx.canBlock) {
+                ctx.unbreakable.add(ctx.mutablePos.immutable());
+            }
+        }
     }
 
     private static BlockState getBlockStateFast(ChunkAccess chunk, Level level, int x, int y, int z) {
@@ -140,7 +158,6 @@ public class LevelUtil {
         if (section.hasOnlyAir()) {
             return Blocks.AIR.defaultBlockState();
         }
-
         return section.getBlockState(x & 15, y & 15, z & 15);
     }
 
@@ -152,6 +169,7 @@ public class LevelUtil {
         for (var pos : unbreakableBlocks) {
             var shape = level.getBlockState(pos).getCollisionShape(level, pos);
             if (shape.isEmpty()) continue;
+
             var t = getIntersectionT(start, end, shape.bounds().move(pos).inflate(radius));
             if (t < minT) {
                 minT = t;
@@ -171,7 +189,9 @@ public class LevelUtil {
 
             if (dist < minBlockedDist) {
                 var blockState = level.getBlockState(pos);
+                // Capture BE before setting block to air meow
                 var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
+
                 if (dropBlock) {
                     Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
                 }
@@ -209,6 +229,10 @@ public class LevelUtil {
         return getIntersectionTPrimitive(start.x, start.y, start.z, end.x, end.y, end.z, aabb.minX, aabb.minY, aabb.minZ, aabb.maxX, aabb.maxY, aabb.maxZ);
     }
 
+    /**
+     * Slab method for Ray-AABB intersection.
+     * Calculates the entry time 't' along the ray direction.
+     */
     private static double getIntersectionTPrimitive(double startX, double startY, double startZ, double endX, double endY, double endZ, double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
         var dirX = endX - startX;
         var dirY = endY - startY;
@@ -217,40 +241,38 @@ public class LevelUtil {
         var tMin = 0.0;
         var tMax = 1.0;
 
-        if (Math.abs(dirX) < 1.0E-7) {
-            if (startX < minX || startX > maxX) return Double.MAX_VALUE;
-        } else {
-            var invDir = 1.0 / dirX;
-            var t1 = (minX - startX) * invDir;
-            var t2 = (maxX - startX) * invDir;
-            tMin = Math.max(tMin, Math.min(t1, t2));
-            tMax = Math.min(tMax, Math.max(t1, t2));
-        }
+        // X Axis meow
+        tMin = Math.max(tMin, getAxisEntryT(startX, dirX, minX, maxX));
+        tMax = Math.min(tMax, getAxisExitT(startX, dirX, minX, maxX));
 
-        if (Math.abs(dirY) < 1.0E-7) {
-            if (startY < minY || startY > maxY) return Double.MAX_VALUE;
-        } else {
-            var invDir = 1.0 / dirY;
-            var t1 = (minY - startY) * invDir;
-            var t2 = (maxY - startY) * invDir;
-            tMin = Math.max(tMin, Math.min(t1, t2));
-            tMax = Math.min(tMax, Math.max(t1, t2));
-        }
+        // Y Axis meow
+        tMin = Math.max(tMin, getAxisEntryT(startY, dirY, minY, maxY));
+        tMax = Math.min(tMax, getAxisExitT(startY, dirY, minY, maxY));
 
-        if (Math.abs(dirZ) < 1.0E-7) {
-            if (startZ < minZ || startZ > maxZ) return Double.MAX_VALUE;
-        } else {
-            var invDir = 1.0 / dirZ;
-            var t1 = (minZ - startZ) * invDir;
-            var t2 = (maxZ - startZ) * invDir;
-            tMin = Math.max(tMin, Math.min(t1, t2));
-            tMax = Math.min(tMax, Math.max(t1, t2));
-        }
+        // Z Axis meow
+        tMin = Math.max(tMin, getAxisEntryT(startZ, dirZ, minZ, maxZ));
+        tMax = Math.min(tMax, getAxisExitT(startZ, dirZ, minZ, maxZ));
 
-        if (tMin > tMax) {
-            return Double.MAX_VALUE;
-        }
+        if (tMin > tMax) return Double.MAX_VALUE;
 
         return tMin;
+    }
+
+    private static double getAxisEntryT(double start, double dir, double min, double max) {
+        if (Math.abs(dir) < 1.0E-7)
+            // Parallel and outside: Entry is +Infinity (forces failure)
+            // Parallel and inside: Entry is -Infinity (no constraint)
+            return (start < min || start > max) ? Double.MAX_VALUE : -Double.MAX_VALUE;
+        var invDir = 1.0 / dir;
+        return Math.min((min - start) * invDir, (max - start) * invDir);
+    }
+
+    private static double getAxisExitT(double start, double dir, double min, double max) {
+        if (Math.abs(dir) < 1.0E-7)
+            // Parallel and outside: Exit is -Infinity (forces failure)
+            // Parallel and inside: Exit is +Infinity (no constraint)
+            return (start < min || start > max) ? -Double.MAX_VALUE : Double.MAX_VALUE;
+        var invDir = 1.0 / dir;
+        return Math.max((min - start) * invDir, (max - start) * invDir);
     }
 }

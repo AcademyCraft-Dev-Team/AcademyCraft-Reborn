@@ -105,6 +105,12 @@ repositories {
             includeGroup("icyllis.modernui")
         }
     }
+    maven {
+        url = uri("https://jitpack.io")
+        content {
+            includeGroup("com.github.umjammer")
+        }
+    }
 }
 
 neoForge {
@@ -144,6 +150,14 @@ dependencies {
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)
+
+    val jlayer = "com.github.umjammer:jlayer:1.0.3"
+    implementation(jlayer)
+    jarJar(jlayer)
+
+    var jflac = "org.jflac:jflac-codec:1.5.2"
+    implementation(jflac)
+    jarJar(jflac)
 
     compileOnly("mezz.jei:jei-1.21.10-neoforge-api:${project.property("jei_version")}")
     //  implementation("mezz.jei:jei-1.21.10-neoforge:${project.property("jei_version")}")
