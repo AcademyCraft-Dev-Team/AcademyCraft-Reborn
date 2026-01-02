@@ -1,46 +1,71 @@
 package org.academy.internal.server.ability;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.common.ability.pakcet.SyncCPDataPacket;
 import org.academy.api.common.data.CPData;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
+import org.misaka.MisakaNetworkServer;
 import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class PlayerCPManager {
-    private static final Logger LOGGER = LogUtils.getLogger();
+public class PlayerCPManager implements SyncManager.AbilitySubsystem {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final AbilityLevel[] CACHED_LEVELS = AbilityLevel.values();
     private static final int PERSONAL_REALITY_OVERLOAD_TICKS = 100;
     private static final int OVERLOAD_TICKS = 600;
 
     private final Map<UUID, CPContext> contexts = new ConcurrentHashMap<>();
     private final PlayerDataManager playerDataManager;
+    private final SyncManager syncManager;
+
     private final float CP_RATING_OFFSET;//等级评定修正值(Z)
     private final float DAMAGE_MULTIPLIER;//伤害修正值(X)
 
-    public PlayerCPManager(PlayerDataManager manager, AbilityConfig config) {
+    public PlayerCPManager(PlayerDataManager manager, AbilityConfig config, SyncManager syncManager) {
         playerDataManager = manager;
+        this.syncManager = syncManager;
+
         CP_RATING_OFFSET = config.cpRatingOffset;
         DAMAGE_MULTIPLIER = config.damageMultiplier;
     }
 
-    public void loadFromData(UUID uuid, Player savedData) {
-        var cpData = savedData.getCpData();
-        var currCPContext = new CPContext(cpData);
-        currCPContext.occupationList.addAll(savedData.getCpOccupations());
-        contexts.put(uuid, currCPContext);
+    @Override
+    public void onPlayerLogin(ServerPlayer player) {
+        var uuid = player.getUUID();
+        var savedData = playerDataManager.getData(uuid);
+        if (savedData != null) {
+            loadFromData(uuid, savedData);
+        }
+        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
-    public void onPlayerLoggedOut(UUID uuid) {
+    @Override
+    public void tick(ServerPlayer player) {
+        var cpContext = contexts.get(player.getUUID());
+        if (cpContext == null) {
+            LOGGER.error("Player {} has no CPContext", player.getUUID());
+            return;
+        }
+        if (cpContext.tick(player)) {
+            syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);
+        }
+    }
+
+    @Override
+    public void onPlayerLogout(ServerPlayer player) {
+        var uuid = player.getUUID();
         var context = contexts.remove(uuid);
         if (context != null) {
             var data = playerDataManager.getData(uuid);
@@ -49,6 +74,23 @@ public class PlayerCPManager {
                 data.markDirty();
             }
         }
+    }
+
+    @Override
+    public void processSync(ServerPlayer player, Identifier type) {
+        if (SyncTypes.CP_DATA.equals(type)) {
+            getCPDataOptional(player.getUUID()).ifPresentOrElse(
+                    data -> MisakaNetworkServer.sendPacket(player, new SyncCPDataPacket(data)),
+                    () -> LOGGER.warn("CPData is null for player {}", player.getUUID())
+            );
+        }
+    }
+
+    public void loadFromData(UUID uuid, Player savedData) {
+        var cpData = savedData.getCpData();
+        var currCPContext = new CPContext(cpData);
+        currCPContext.occupationList.addAll(savedData.getCpOccupations());
+        contexts.put(uuid, currCPContext);
     }
 
     public void flushToData(UUID uuid) {
@@ -69,12 +111,6 @@ public class PlayerCPManager {
         }
     }
 
-    public boolean tick(ServerPlayer player) {
-        var cpContext = contexts.get(player.getUUID());
-        if (cpContext == null) return false;
-        return cpContext.tick(player);
-    }
-
     public boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
         var cpContext = contexts.get(uuid);
         if (cpContext == null) return false;
@@ -93,11 +129,9 @@ public class PlayerCPManager {
         boolean dirty = false;
         private int spRegenTimer = 0;
 
-        public void exportTo(Player data) {
+        public synchronized void exportTo(Player data) {
             data.setCpData(new CPData(cpData));
-            synchronized (occupationList) {
-                data.setCpOccupations(new ArrayList<>(occupationList));
-            }
+            data.setCpOccupations(new ArrayList<>(occupationList));
         }
 
         public CPContext(CPData cpData) {
@@ -105,6 +139,7 @@ public class PlayerCPManager {
         }
 
         public synchronized boolean tick(ServerPlayer player) {
+            dirty = false;
             var stateChanged = switch (cpData.getStatus()) {
                 case NORMAL -> tickNormal();
                 case PERSONAL_REALITY_OVERLOAD -> tickWarning();
@@ -121,6 +156,8 @@ public class PlayerCPManager {
             var spRegen = spRegen(player);
             dirty |= spRegen;
 
+            dirty |= cpData.isDirty();
+            cpData.clean();
             return dirty;
         }
 

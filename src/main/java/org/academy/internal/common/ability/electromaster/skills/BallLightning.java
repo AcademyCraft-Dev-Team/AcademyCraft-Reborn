@@ -172,7 +172,6 @@ public class BallLightning extends Skill {
                 level.addFreshEntity(visualEntity);
             }
 
-
             @SubscribeEvent
             public void onTick(ServerTickEvent.Post event) {
                 if (player.hasDisconnected() || existedTicks++ >= MAX_DURATION_TICKS || visualEntity.isRemoved()) {

@@ -29,7 +29,7 @@ import java.util.Set;
 
 public class LevelUtil {
     public static double getValidViewDistance(Entity entity, double targetDistance) {
-        var startPos = entity.position();
+        var startPos = entity.getEyePosition();
         var direction = Vec3.directionFromRotation(entity.getXRot(), entity.getYRot()).scale(targetDistance);
         var targetPos = startPos.add(direction);
         var hitResult = entity.level().clip(new ClipContext(startPos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
