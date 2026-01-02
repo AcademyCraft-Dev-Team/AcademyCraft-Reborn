@@ -19,7 +19,6 @@ import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
-import org.academy.api.common.ability.pakcet.SyncCPDataPacket;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
@@ -34,37 +33,52 @@ import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.PlayerCPManager;
 import org.academy.internal.server.ability.PlayerDataManager;
+import org.academy.internal.server.ability.SyncManager;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.slf4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
-    private final Map<UUID, LivePlayer> livePlayerMap = new ConcurrentHashMap<>();
-    private final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
-    private final ScheduledFuture<?> scheduledFuture;
-    private final MinecraftServerContext context;
+    private final SyncManager syncManager;
 
-    public AbilitySystemServer(MinecraftServerContext context, PlayerDataManager playerDataManager, AbilityConfig abilityConfig) {
-        this.context = context;
-        this.playerDataManager = playerDataManager;
+    public AbilitySystemServer(MinecraftServerContext context, PlayerDataManager dataManager, AbilityConfig abilityConfig) {
+        playerDataManager = dataManager;
+        syncManager = new SyncManager(context);
+        playerCPManager = new PlayerCPManager(playerDataManager, abilityConfig, syncManager);
+        NeoForge.EVENT_BUS.register(playerCPManager);
 
-        this.playerCPManager = new PlayerCPManager(playerDataManager, abilityConfig);
-        NeoForge.EVENT_BUS.register(this.playerCPManager);
+        syncManager.register(playerCPManager);
+        this.syncManager.register(new SyncManager.AbilitySubsystem() {
+            @Override
+            public void onPlayerLogin(@NotNull ServerPlayer player) {
+                playerDataManager.onPlayerLogin(player);
+                var uuid = player.getUUID();
+                syncManager.schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
+                syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+            }
+
+            @Override
+            public void processSync(@NotNull ServerPlayer player, @NotNull Identifier type) {
+                var uuid = player.getUUID();
+                if (SyncTypes.ABILITY_CATEGORY.equals(type)) {
+                    var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
+                    MisakaNetworkServer.sendPacket(player, packet);
+                } else if (SyncTypes.SKILL_DATA.equals(type)) {
+                    var skills = getPlayerData(uuid).getSkillData();
+                    var packet = new SyncSkillDataPacket(skills);
+                    MisakaNetworkServer.sendPacket(player, packet);
+                }
+            }
+        });
 
         for (var category : Registries.ABILITY_CATEGORIES) {
             category.initServer(context);
@@ -74,34 +88,7 @@ public final class AbilitySystemServer {
             skill.initServer(context);
         }
 
-        var errorCount = new AtomicInteger(0);
-        var abilitySystemTicker = new AbilitySystemTicker();
-        scheduledFuture = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
-                () -> {
-                    try {
-                        abilitySystemTicker.tick();
-                        errorCount.set(0);
-                    } catch (Throwable e) {
-                        var count = errorCount.incrementAndGet();
-                        LOGGER.error(
-                                "[AbilitySystemTicker] Consecutive error #{} - Timestamp: {}, Thread: {}",
-                                count,
-                                System.currentTimeMillis(),
-                                Thread.currentThread().getName(),
-                                e
-                        );
-                    }
-                },
-                0,
-                50,
-                TimeUnit.MILLISECONDS
-        );
-
         MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
-    }
-
-    public void halt() {
-        scheduledFuture.cancel(true);
     }
 
     public Player getPlayerData(UUID uuid) {
@@ -244,70 +231,26 @@ public final class AbilitySystemServer {
     }
 
     public void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
-        if (livePlayerMap.containsKey(uuid)) {
-            livePlayerMap.get(uuid).syncQueue.add(syncType);
-        }
+        syncManager.schedulePlayerSync(uuid, syncType);
     }
 
     public void addTask(Runnable runnable) {
-        pendingTasks.add(runnable);
+        syncManager.addTask(runnable);
+    }
+
+    public void halt() {
+        syncManager.halt();
     }
 
     public void onPlayerLogin(ServerPlayer player) {
         if (playerDataManager != null) {
             playerDataManager.onPlayerLogin(player);
         }
-        var uuid = player.getUUID();
-        livePlayerMap.put(uuid, new LivePlayer(uuid, player.connection));
-        schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-        schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
-
-        playerCPManager.loadFromData(uuid, getPlayerData(uuid));
+        syncManager.onPlayerLogin(player);
     }
 
     public void onPlayerLogout(ServerPlayer player) {
-        var uuid = player.getUUID();
-        playerCPManager.onPlayerLoggedOut(uuid);
-    }
-
-    public final class AbilitySystemTicker {
-        public void tick() {
-            if (context.getMinecraftServer().isPaused()) return;
-            pendingTasks.forEach(Runnable::run);
-            pendingTasks.clear();
-            for (var player : livePlayerMap.values()) {
-                tickPlayer(player);
-            }
-        }
-
-        public void tickPlayer(LivePlayer player) {
-            final var connection = player.connection;
-            final var uuid = player.uuid;
-            var syncQueue = player.syncQueue;
-
-            var cpDataChanged = syncQueue.contains(SyncTypes.CP_DATA);
-            var abilityCategoryChanged = syncQueue.contains(SyncTypes.ABILITY_CATEGORY);
-            var skillDataChanged = syncQueue.contains(SyncTypes.SKILL_DATA);
-
-            if (cpDataChanged) {
-                var cpData = playerCPManager.getCPDataOptional(uuid);
-                cpData.ifPresentOrElse(
-                        data -> MisakaNetworkServer.sendPacket(connection, new SyncCPDataPacket(data)),
-                        () -> LOGGER.warn("CPData is null for player {}", uuid)
-                );
-            }
-            if (abilityCategoryChanged) {
-                var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
-                MisakaNetworkServer.sendPacket(connection, packet);
-            }
-            if (skillDataChanged) {
-                var skills = getPlayerData(uuid).getSkillData();
-                var packet = new SyncSkillDataPacket(skills);
-                MisakaNetworkServer.sendPacket(connection, packet);
-            }
-            player.syncQueue.clear();
-        }
+        syncManager.onPlayerLogout(player);
     }
 
     @EventBusSubscriber
@@ -317,32 +260,12 @@ public final class AbilitySystemServer {
             var server = event.getServer();
             var context = (MinecraftServerContext) server;
             var instance = context.getAcademyCraftServer().getAbilitySystemServer();
-            var onlinePlayerUUIDs = server.getPlayerList().getPlayers().stream()
-                    .map(Entity::getUUID)
-                    .collect(Collectors.toSet());
-
-            instance.livePlayerMap.keySet().removeIf(uuid -> !onlinePlayerUUIDs.contains(uuid));
-
-            instance.livePlayerMap.forEach((uuid, _) -> {
-                var player = server.getPlayerList().getPlayer(uuid);
-                if (player != null) {
-                    if (instance.playerCPManager.tick(player)) {
-                        instance.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-                    }
-                }
-            });
+            instance.getSyncManager().tick();
         }
     }
 
-    public static class LivePlayer {
-        public final UUID uuid;
-        public final Set<Identifier> syncQueue = ConcurrentHashMap.newKeySet();
-        private final ServerGamePacketListenerImpl connection;
-
-        public LivePlayer(final UUID newUuid, final ServerGamePacketListenerImpl newConnection) {
-            uuid = newUuid;
-            connection = newConnection;
-        }
+    public SyncManager getSyncManager() {
+        return syncManager;
     }
 
     public static void registerContext(ServerContext serverContext) {
@@ -374,7 +297,6 @@ public final class AbilitySystemServer {
         throw new IllegalStateException("Entity is not in a ServerLevel");
     }
 
-    @Nullable
     public <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
         return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
     }
@@ -398,7 +320,6 @@ public final class AbilitySystemServer {
 
     public void setPlayerLevel(UUID uuid, int level) {
         playerCPManager.setLevel(uuid, level);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public float getPlayerAvailableCP(UUID uuid) {
@@ -416,7 +337,6 @@ public final class AbilitySystemServer {
 
     public void setPlayerMaxCP(UUID uuid, float maxCP) {
         playerCPManager.setMaxCP(uuid, maxCP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public CPData.Status getPlayerStatus(UUID uuid) {
@@ -434,7 +354,6 @@ public final class AbilitySystemServer {
 
     public void setPlayerStateTimer(UUID uuid, int stateTimer) {
         playerCPManager.setStateTimer(uuid, stateTimer);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public int getPlayerCurrSP(UUID uuid) {
@@ -443,7 +362,6 @@ public final class AbilitySystemServer {
 
     public void setPlayerCurrSP(UUID uuid, int currSP) {
         playerCPManager.setCurrSP(uuid, currSP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public int getPlayerMaxSP(UUID uuid) {
@@ -452,7 +370,6 @@ public final class AbilitySystemServer {
 
     public void setPlayerMaxSP(UUID uuid, int maxSP) {
         playerCPManager.setMaxSP(uuid, maxSP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public static float getSPReductionRate(LivingEntity entity) {

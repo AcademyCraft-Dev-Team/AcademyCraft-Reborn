@@ -14,6 +14,8 @@ public class CPData {
     private int currSP = 2000;
     private int maxSP = 2000;
 
+    private boolean isDirty = false;
+
     public enum Status {
         NORMAL,
         PERSONAL_REALITY_OVERLOAD,
@@ -28,69 +30,89 @@ public class CPData {
         level = source.level;
         currSP = source.currSP;
         maxSP = source.maxSP;
+        isDirty = source.isDirty;
     }
 
     public CPData() {
+    }
+
+    public void markDirty() {
+        isDirty = true;
+    }
+
+    public void clean() {
+        isDirty = false;
+    }
+
+    public boolean isDirty() {
+        return isDirty;
     }
 
     public float getMaxCP() {
         return maxCP;
     }
 
+    public void setMaxCP(float maxCP) {
+        this.maxCP = maxCP;
+        markDirty();
+    }
+
     public float getAvailableCP() {
         return availableCP;
+    }
+
+    public void setAvailableCP(float availableCP) {
+        this.availableCP = availableCP;
+        markDirty();
     }
 
     public AbilityLevel getLevel() {
         return level;
     }
 
+    public void setLevel(AbilityLevel level) {
+        this.level = level;
+        markDirty();
+    }
+
     public Status getStatus() {
         return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+        markDirty();
     }
 
     public int getStateTimer() {
         return stateTimer;
     }
 
-    public void setMaxCP(float maxCP) {
-        this.maxCP = maxCP;
-    }
-
-    public void setAvailableCP(float availableCP) {
-        this.availableCP = availableCP;
-    }
-
-    public void setLevel(AbilityLevel level) {
-        this.level = level;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
     public void setStateTimer(int stateTimer) {
         this.stateTimer = stateTimer;
+        markDirty();
     }
 
     public int getCurrSP() {
         return currSP;
     }
 
+    public void setCurrSP(int currSP) {
+        this.currSP = currSP;
+        markDirty();
+    }
+
     public int getMaxSP() {
         return maxSP;
     }
 
-    public void setCurrSP(int currSP) {
-        this.currSP = currSP;
-    }
-
     public void setMaxSP(int maxSP) {
         this.maxSP = maxSP;
+        markDirty();
     }
 
     public static class Builder {
-        private CPData cpData;
+        private final CPData cpData;
 
         public Builder() {
             cpData = new CPData();

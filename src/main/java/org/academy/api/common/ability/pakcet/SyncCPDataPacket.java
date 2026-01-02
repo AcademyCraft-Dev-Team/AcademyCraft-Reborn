@@ -20,6 +20,8 @@ public final class SyncCPDataPacket extends Packet<ClientPacketListener, SyncCPD
             ByteBufCodecs.VAR_INT, p -> p.cpData.getLevel().ordinal(),
             ByteBufCodecs.VAR_INT, p -> p.cpData.getStatus().ordinal(),
             ByteBufCodecs.VAR_INT, p -> p.cpData.getStateTimer(),
+            ByteBufCodecs.VAR_INT, p -> p.cpData.getCurrSP(),
+            ByteBufCodecs.VAR_INT, p -> p.cpData.getMaxSP(),
             SyncCPDataPacket::create
     );
 
@@ -29,13 +31,15 @@ public final class SyncCPDataPacket extends Packet<ClientPacketListener, SyncCPD
         this.cpData = cpData;
     }
 
-    private static SyncCPDataPacket create(float maxCP, float availableCP, int levelOrd, int statusOrd, int stateTimer) {
+    private static SyncCPDataPacket create(float maxCP, float availableCP, int levelOrd, int statusOrd, int stateTimer, int currSP, int maxSP) {
         var data = CPData.builder()
                 .maxCP(maxCP)
                 .availableCP(availableCP)
                 .level(AbilityLevel.values()[levelOrd])
                 .status(CPData.Status.values()[statusOrd])
                 .stateTimer(stateTimer)
+                .currSP(currSP)
+                .maxSP(maxSP)
                 .build();
         return new SyncCPDataPacket(data);
     }
