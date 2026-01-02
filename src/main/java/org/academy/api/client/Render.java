@@ -6,6 +6,8 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.DestFactor;
+import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.resource.CrossFrameResourcePool;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -19,6 +21,7 @@ import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.stencil.StencilFunction;
 import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
@@ -31,6 +34,7 @@ import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.List;
@@ -435,6 +439,21 @@ public final class Render {
                 .withUniform("BloomInfo", UniformType.UNIFORM_BUFFER)
                 .build();
 
+        public static final BlendFunction ADDITIVE_BLEND = new BlendFunction(
+                SourceFactor.SRC_ALPHA, DestFactor.ONE,
+                SourceFactor.SRC_ALPHA, DestFactor.ONE
+        );
+
+        public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_color_additive"))
+                .withVertexShader(Resource.Shaders.POS_COLOR)
+                .withFragmentShader(Resource.Shaders.POS_COLOR)
+                .withCull(false)
+                .withBlend(ADDITIVE_BLEND)
+                .withDepthWrite(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
+                .build();
+
         public static final RenderPipeline IMAGE = builder(MATRICES_PROJECTION_SNIPPET)
                 .withLocation(academy("pipeline/image"))
                 .withVertexShader(Resource.Shaders.IMAGE)
@@ -610,6 +629,13 @@ public final class Render {
                         .createRenderSetup()
         );
 
+        public static final RenderType POS_COLOR_TRANGLES_BLOOM_ADDITIVE = create(
+                "pos_color_trangles_bloom_additive",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES_ADDITIVE)
+                        .setOutputTarget(BLOOM_TARGET)
+                        .createRenderSetup()
+        );
+
         // 记得使用对应的 BufferSource 喵
 
         /**
@@ -705,9 +731,23 @@ public final class Render {
             PostEffect.addFixedBuffer(POS_COLOR_TRANGLES_BLOOM);
             BloomEffect.addFixedBuffer(POS_COLOR_QUADS_BLOOM_POST);
             BloomEffect.addFixedBuffer(POS_COLOR_TRANGLES_BLOOM_POST);
+            BloomEffect.addFixedBuffer(POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
         }
 
         private RenderTypes() {
+        }
+
+        public static RenderType getBloomTexture(Identifier identifier) {
+            return create(
+                    "bloom_texture",
+                    RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR)
+                            .withTexture(
+                                    "Sampler0", identifier,
+                                    () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                            )
+                            .setOutputTarget(BLOOM_TARGET)
+                            .createRenderSetup()
+            );
         }
     }
 

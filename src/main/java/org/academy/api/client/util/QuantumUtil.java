@@ -43,15 +43,20 @@ public class QuantumUtil {
         var maxHealth = self.getMaxHealth();
         var currentHealth = self.getHealth();
 
+        if (currentHealth <= 2.0f) {
+            return;
+        }
+
         var amplitude = Math.max(maxHealth * 0.05f, 1.0f);
         var randomFactor = self.getRandom().nextFloat();
+        var change = (randomFactor - 0.75f) * amplitude - 0.2f;
 
-        var change = (randomFactor - 0.65f) * amplitude - 0.2f;
         var nextHealth = currentHealth + change;
-
-        if (nextHealth <= 0.0f) {
-            self.invulnerableTime = 0;
-            self.hurtServer(level, self.damageSources().generic(), Float.MAX_VALUE);
-        } else self.setHealth(Math.min(nextHealth, maxHealth));
+        if (change < 0) {
+            if (nextHealth < 1.0f) return;
+            self.setHealth(nextHealth);
+        } else if (change > 0) {
+            self.setHealth(Math.min(nextHealth, maxHealth));
+        }
     }
 }

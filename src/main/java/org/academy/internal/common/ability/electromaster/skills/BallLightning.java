@@ -121,19 +121,9 @@ public class BallLightning extends Skill {
         }
 
         public static class Context extends ServerContext {
-            private final ArcEffect visualEntity;
-            private int existedTicks = 0;
-            private Vec3 position;
-            private Vec3 velocity;
-            private boolean hasTarget = false;
-            @Nullable
-            private Entity targetEntity = null;
-            private LightOrb coreOrb;
-
-            private static final float BASE_SCALE = 0.4F;
+            private static final float BASE_SCALE = 0.2F;
             private static final int RING_COUNT = 8;
-            private static final int RING_SEGMENTS = 10;
-
+            private static final int RING_SEGMENTS = 12;
             private static final AttributeCurve TAPER_CURVE = new AttributeCurve(List.of(
                     new Knot(0.0f, 0.0f), new Knot(0.5f, 1.0f), new Knot(1.0f, 0.0f)
             ));
@@ -141,31 +131,48 @@ public class BallLightning extends Skill {
                     new Knot(0f, 0.8f), new Knot(1f, 0.8f)
             ));
 
+            private final ArcEffect visualEntity;
+            private final LightOrb coreOrb;
+            private final float timeSeed;
+
+            private int existedTicks = 0;
+            private Vec3 position;
+            private Vec3 velocity;
+            @Nullable
+            private Vec3 roamTarget;
+            private int strafeDir = 1;
+
+            private boolean hasTarget = false;
+            @Nullable
+            private Entity targetEntity = null;
+
+            private BehaviorState currentState;
+            private int stateTimer = 0;
+
+            private enum BehaviorState {
+                START,
+                ROAMING,
+                TRACK,
+                STAY,
+                SLIDE,
+                DASH
+            }
+
             public Context(ServerPlayer player) {
                 super(player);
-                position = player.position().add(0, 4, 0);
-                velocity = new Vec3(
-                        (MathUtil.RANDOM.nextDouble() - 0.5) * 0.1,
-                        0,
-                        (MathUtil.RANDOM.nextDouble() - 0.5) * 0.1
-                );
+                this.position = player.getEyePosition().add(0, 1, 0);
+                this.timeSeed = (float) (MathUtil.RANDOM.nextDouble() * 10000);
+
+                Vec3 look = player.getLookAngle();
+                this.velocity = look.scale(0.5f);
+
+                this.currentState = BehaviorState.START;
+                this.stateTimer = 12;
+
                 var level = level();
-                visualEntity = new ArcEffect(level, MAX_DURATION_TICKS);
-                coreOrb = new LightOrb(level, MAX_DURATION_TICKS, 0.15f, () -> {
-                    var lifeTime = coreOrb.getLifeTime();
+                this.visualEntity = new ArcEffect(level, MAX_DURATION_TICKS);
+                this.coreOrb = new LightOrb(level, MAX_DURATION_TICKS, 0.15f, this::updateCoreOrb);
 
-                    if (lifeTime <= 5) {
-                        coreOrb.setScale(coreOrb.getScale() * 0.5f);
-                    } else if (lifeTime <= 10) {
-                        coreOrb.setScale(coreOrb.getScale() * 2f);
-                    } else {
-                        var scale = 0.1f + 0.2f * Mth.sin(lifeTime * 0.2f);
-                        coreOrb.setScale(scale);
-
-                        var bluePulse = 0.6f + 0.4f * Mth.sin(lifeTime * 0.1f);
-                        coreOrb.setColor(0.3f, 0.6f, bluePulse);
-                    }
-                });
                 visualEntity.setPos(position);
                 coreOrb.setPos(position);
                 level.addFreshEntity(coreOrb);
@@ -179,57 +186,196 @@ public class BallLightning extends Skill {
                     return;
                 }
 
+                updateTarget();
+                updateStateTransition();
+                updatePhysics();
+                checkImpact();
+                updateVisuals();
+            }
+
+            private void updateCoreOrb() {
+                var lifeTime = coreOrb.getLifeTime();
+                if (lifeTime <= 5) {
+                    coreOrb.setScale(coreOrb.getScale() * 0.5f);
+                } else if (lifeTime <= 10) {
+                    coreOrb.setScale(coreOrb.getScale() * 2f);
+                } else {
+                    var scale = 0.1f + 0.2f * Mth.sin(lifeTime * 0.2f);
+                    coreOrb.setScale(scale);
+                    var bluePulse = 0.6f + 0.4f * Mth.sin(lifeTime * 0.1f);
+                    coreOrb.setColor(0.3f, 0.6f, bluePulse);
+                }
+            }
+
+            private void updateTarget() {
                 if (targetEntity != null && (targetEntity.isRemoved() || !targetEntity.isAlive())) {
                     hasTarget = false;
                     targetEntity = null;
                 }
-                var level = level();
-                if (!hasTarget) {
-                    var entities = MathUtil.getEntitiesInSphereByHP(level, position, MAX_RADIUS,
-                            entity -> entity != player);
+
+                if (!hasTarget && currentState != BehaviorState.START) {
+                    var entities = MathUtil.getEntitiesInSphereByHP(level(), position, MAX_RADIUS, e -> e != player);
                     if (!entities.isEmpty()) {
                         targetEntity = entities.getFirst();
                         hasTarget = true;
                     }
                 }
+            }
 
-                move();
-
-                if (targetEntity != null && position.distanceTo(targetEntity.position()) <= 4) {
-                    var entities = MathUtil.getEntitiesInSphereByHP(level, position, 4.0,
-                            entity -> entity != player);
-
-                    var damageSource = new DamageSource(level.damageSources().damageTypes.getOrThrow(DamageTypes.MAGIC));
-
-                    for (var entity : entities) {
-                        var newHealth = entity.getHealth() * 0.7f;
-                        entity.setHealth(newHealth);
-                        entity.hurtServer(level, damageSource, 10f);
-                        QuantumUtil.enableQuantum(entity, 0.5f, 0x3366FF);
-                    }
-
-                    end();
+            private void updateStateTransition() {
+                if (stateTimer > 0) {
+                    stateTimer--;
                     return;
                 }
 
+                switch (currentState) {
+                    case START -> {
+                        currentState = BehaviorState.ROAMING;
+                        stateTimer = 0;
+                    }
+                    case ROAMING -> {
+                        if (hasTarget) {
+                            currentState = BehaviorState.TRACK;
+                        } else {
+                            double rx = position.x + (MathUtil.RANDOM.nextDouble() - 0.5) * 40;
+                            double rz = position.z + (MathUtil.RANDOM.nextDouble() - 0.5) * 40;
+                            double ry = position.y + (MathUtil.RANDOM.nextDouble() - 0.5) * 10;
+                            roamTarget = new Vec3(rx, ry, rz);
+                            stateTimer = 40 + MathUtil.RANDOM.nextInt(40);
+                        }
+                    }
+                    case TRACK -> {
+                        if (!hasTarget) {
+                            currentState = BehaviorState.ROAMING;
+                            return;
+                        }
+                        double dist = position.distanceTo(targetEntity.getBoundingBox().getCenter());
+                        if (dist <= 12.0) {
+                            selectCombatState();
+                        } else {
+                            stateTimer = 5;
+                        }
+                    }
+                    case STAY, SLIDE, DASH -> {
+                        if (!hasTarget) {
+                            currentState = BehaviorState.ROAMING;
+                        } else {
+                            currentState = BehaviorState.TRACK;
+                            stateTimer = 0;
+                        }
+                    }
+                }
+            }
+
+            private void selectCombatState() {
+                float rng = MathUtil.RANDOM.nextFloat();
+                if (rng < 0.2f) {
+                    currentState = BehaviorState.SLIDE;
+                    stateTimer = 20 + MathUtil.RANDOM.nextInt(30);
+                    strafeDir = MathUtil.RANDOM.nextBoolean() ? 1 : -1;
+                } else if (rng < 0.6f) {
+                    currentState = BehaviorState.STAY;
+                    stateTimer = 15 + MathUtil.RANDOM.nextInt(25);
+                } else {
+                    currentState = BehaviorState.DASH;
+                    stateTimer = 30 + MathUtil.RANDOM.nextInt(15);
+                }
+            }
+
+            private void updatePhysics() {
+                Vec3 force = Vec3.ZERO;
+                float drag = 0.96f;
+                double maxSpeed = 0.5;
+
+                if (currentState == BehaviorState.ROAMING) {
+                    if (roamTarget != null) {
+                        Vec3 toRoam = roamTarget.subtract(position);
+                        force = toRoam.normalize().scale(0.03);
+                    }
+                }
+
+                if (hasTarget) {
+                    Vec3 toTarget = targetEntity.getBoundingBox().getCenter().subtract(position);
+
+                    switch (currentState) {
+                        case TRACK -> {
+                            force = toTarget.normalize().scale(0.08);
+                            maxSpeed = 1.2;
+                            drag = 0.92f;
+                        }
+                        case STAY -> {
+                            double t = existedTicks * 0.15 + timeSeed;
+                            Vec3 noise = new Vec3(Math.sin(t), Math.cos(t * 0.8), Math.sin(t * 1.2)).scale(0.04);
+                            force = noise.add(toTarget.normalize().scale(0.015));
+                            drag = 0.85f;
+                            maxSpeed = 0.1;
+                        }
+                        case SLIDE -> {
+                            Vec3 up = new Vec3(0, 1, 0);
+                            Vec3 tangent = toTarget.cross(up).normalize().scale(strafeDir);
+                            force = tangent.scale(0.12).add(toTarget.normalize().scale(0.04));
+                            double heightDiff = targetEntity.getY() + targetEntity.getBbHeight() / 2.0 - position.y;
+                            force = force.add(0, heightDiff * 0.03, 0);
+                            drag = 0.95f;
+                        }
+                        case DASH -> {
+                            force = toTarget.normalize().scale(0.25);
+                            drag = 0.99f;
+                            maxSpeed = 2.0;
+                        }
+                    }
+                }
+
+                velocity = velocity.add(force);
+                if (velocity.lengthSqr() > maxSpeed * maxSpeed) {
+                    velocity = velocity.normalize().scale(maxSpeed);
+                }
+
+                velocity = velocity.scale(drag);
+                position = position.add(velocity);
+
+                visualEntity.setPos(position);
+                visualEntity.setDeltaMovement(velocity);
+                coreOrb.setPos(position);
+                coreOrb.setDeltaMovement(velocity);
+            }
+
+            private void checkImpact() {
+                if (targetEntity != null && position.distanceTo(targetEntity.position()) <= 4.0) {
+                    var level = level();
+                    var entities = MathUtil.getEntitiesInSphereByHP(level, position, 5.0, e -> e != player);
+                    var damageSource = new DamageSource(level.damageSources().damageTypes.getOrThrow(DamageTypes.MAGIC));
+
+                    for (var entity : entities) {
+                        entity.setHealth(entity.getHealth() * 0.7f);
+                        entity.hurtServer(level, damageSource, 10f);
+                        QuantumUtil.enableQuantum(entity, 0.5f, 0x3366FF);
+                    }
+                    end();
+                }
+            }
+
+            private void end() {
+                unregister();
+                visualEntity.discard();
+                coreOrb.setLifeTime(10);
+            }
+
+            private void updateVisuals() {
                 List<ArcPath> paths = new ArrayList<>();
                 var time = existedTicks * 0.1f;
 
                 for (var i = 0; i < RING_COUNT; i++) {
                     var breath = (float) Math.sin(time * 0.5f + i * 0.785f);
                     var currentRadius = BASE_SCALE * (1.0f + 0.8f * breath);
-
                     var rotSpeed = 1f + 0.6f * ((i * 12345L) % 100 / 100f);
                     var seed = 1000L + i * 123L;
+
                     var ax = ((seed * 31 % 100) / 50f) - 1f;
                     var ay = ((seed * 53 % 100) / 50f) - 1f;
                     var az = ((seed * 17 % 100) / 50f) - 1f;
 
-                    var rotation = new AxisAngle4f(
-                            time * rotSpeed + i,
-                            ax, ay, az
-                    ).normalize();
-
+                    var rotation = new AxisAngle4f(time * rotSpeed + i, ax, ay, az).normalize();
                     addRing(paths, rotation, currentRadius, time, i);
                 }
 
@@ -245,13 +391,12 @@ public class BallLightning extends Skill {
                     ));
                 }
 
-                //电弧逸散
-                var branchCount = MathUtil.RANDOM.nextInt(1, 4);
+                int branchCount = MathUtil.RANDOM.nextInt(1, 4);
                 for (var i = 0; i < branchCount; i++) {
                     if (MathUtil.RANDOM.nextFloat() < 0.6f) {
-                        var r = 2.0 + Math.abs(MathUtil.RANDOM.nextGaussian() * 4.0);
+                        double r = 2.0 + Math.abs(MathUtil.RANDOM.nextGaussian() * 4.0);
                         if (r <= 6f) {
-                            var ang = Math.random() * 6.28;
+                            double ang = Math.random() * 6.28;
                             var target = position.add(r * Math.cos(ang), MathUtil.RANDOM.nextDouble(-2, 2), r * Math.sin(ang));
                             paths.add(new ArcPath(
                                     new LinePath(position.toVector3f(), target.toVector3f()),
@@ -269,48 +414,8 @@ public class BallLightning extends Skill {
                 visualEntity.setArcPaths(paths);
             }
 
-            private void end() {
-                unregister();
-                visualEntity.discard();
-                coreOrb.setLifeTime(10);
-            }
-
-            private void move() {
-                velocity = velocity.scale(MathUtil.RANDOM.nextDouble() * 0.45 + 0.6);
-
-                if (MathUtil.RANDOM.nextFloat() < 0.7f) {
-                    velocity = velocity.add(
-                            (MathUtil.RANDOM.nextDouble(-1, 1)) * 0.3,
-                            (MathUtil.RANDOM.nextDouble(-1, 1)) * 0.2,
-                            (MathUtil.RANDOM.nextDouble(-1, 1)) * 0.3
-                    );
-                }
-
-                if (hasTarget && targetEntity != null) {
-                    var targetCenter = targetEntity.getBoundingBox().getCenter();
-                    var toTarget = targetCenter.subtract(position);
-
-                    var dir = toTarget.normalize();
-                    var trackingStrength = 0.6;
-                    velocity = velocity.add(dir.scale(trackingStrength));
-                }
-
-                var maxSpeed = 0.6;
-                if (MathUtil.RANDOM.nextDouble() < 0.8 && velocity.lengthSqr() > maxSpeed * maxSpeed) {
-                    velocity = velocity.normalize().scale(maxSpeed);
-                }
-
-                position = position.add(velocity);
-
-                visualEntity.setPos(position);
-                visualEntity.setDeltaMovement(velocity);
-                coreOrb.setPos(position);
-                coreOrb.setDeltaMovement(velocity);
-            }
-
             private void addRing(List<ArcPath> paths, AxisAngle4f rot, float radius, float time, int seedIndex) {
                 var q = new Quaternionf(rot);
-
                 for (var i = 0; i < RING_SEGMENTS; i++) {
                     var a1 = (float) (i * 6.28 / RING_SEGMENTS);
                     var a2 = (float) ((i + 1) * 6.28 / RING_SEGMENTS);
@@ -335,35 +440,13 @@ public class BallLightning extends Skill {
                 }
             }
 
-            //生成范围指示环
-            //        private void spawnRadiusRing(List<ArcPath> paths, double radius) {
-            //            int segments = (int) (12 + radius * 2);
-            //            double step = (Math.PI * 2) / segments;
-            //            float ringY = (float) player.getY() + 0.1f;
-            //
-            //            for (int i = 0; i < segments; i++) {
-            //                double a1 = i * step;
-            //                double a2 = (i + 1) * step;
-            //                Vector3f p1 = new Vector3f((float) (position.x + radius * Math.cos(a1)), ringY, (float) (position.z + radius * Math.sin(a1)));
-            //                Vector3f p2 = new Vector3f((float) (position.x + radius * Math.cos(a2)), ringY, (float) (position.z + radius * Math.sin(a2)));
-            //
-            //                paths.add(new ArcPath(
-            //                        new LinePath(p1, p2),
-            //                        List.of(new JaggedModifier(0.3f, 2, MathUtil.RANDOM.nextLong())),
-            //                        2.0f,
-            //                        List.of()
-            //                ));
-            //            }
-            //        }
-
             private List<Branch> generateSmallAngleBranches(Vector3f mainTangent, float scale) {
                 List<Branch> branches = new ArrayList<>();
-
                 if (MathUtil.RANDOM.nextFloat() < 0.6f) {
                     var angle = MathUtil.RANDOM.nextFloat() * 0.1f;
                     var rotAxis = generateOrthoVector(mainTangent);
                     var branchDir = new Vector3f(mainTangent).rotateAxis(angle, rotAxis.x, rotAxis.y, rotAxis.z)
-                            .normalize().mul(scale * 0.7f);
+                            .normalize().mul(scale * 0.4f);
 
                     var mainBranchPath = new ArcPath(
                             new LinePath(new Vector3f(), branchDir),
@@ -374,16 +457,14 @@ public class BallLightning extends Skill {
                             0.6f,
                             List.of()
                     );
-
                     branches.add(new Branch(0.3f + MathUtil.RANDOM.nextFloat() * 0.4f, mainBranchPath));
 
                     if (MathUtil.RANDOM.nextFloat() < 0.5f) {
                         var subBranchProgress = 0.4f + MathUtil.RANDOM.nextFloat() * 0.4f;
                         var subRotAxis = generateOrthoVector(branchDir);
-
                         var subAngle = 0.1f + MathUtil.RANDOM.nextFloat() * 0.2f;
                         var subDir = new Vector3f(branchDir).rotateAxis(subAngle, subRotAxis.x, subRotAxis.y, subRotAxis.z)
-                                .normalize().mul(scale * 0.4f);
+                                .normalize().mul(scale * 0.2f);
 
                         var subBranchPath = new ArcPath(
                                 new LinePath(new Vector3f(), subDir),
