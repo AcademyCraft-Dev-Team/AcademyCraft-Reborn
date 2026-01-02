@@ -13,7 +13,6 @@ import org.jspecify.annotations.Nullable;
 
 public class LightOrb extends RenderOnlyEntity {
     private int lifeTime = -1;
-    private int maxLifeTime = -1;
     @Nullable
     private Runnable run;
 
@@ -31,7 +30,6 @@ public class LightOrb extends RenderOnlyEntity {
     public LightOrb(Level level, int lifeTime, float scale, Runnable run) {
         this(EntityTypes.LIGHT_ORB.get(), level);
         this.lifeTime = lifeTime;
-        maxLifeTime = lifeTime;
         setScale(scale);
         this.run = run;
     }
@@ -39,20 +37,13 @@ public class LightOrb extends RenderOnlyEntity {
     @Override
     public void tick() {
         super.tick();
-
         if (!level().isClientSide()) {
-            if (lifeTime > 0) {
-                lifeTime--;
-            }
-
+            if (lifeTime > 0) lifeTime--;
             if (lifeTime <= 0) {
                 discard();
                 return;
             }
-
-            if (run != null) {
-                run.run();
-            }
+            if (run != null) run.run();
         }
     }
 
@@ -86,11 +77,7 @@ public class LightOrb extends RenderOnlyEntity {
         this.lifeTime = lifeTime;
     }
 
-    public int getMaxLifeTime() {
-        return maxLifeTime;
-    }
-
-    public void setMaxLifeTime(int maxLifeTime) {
-        this.maxLifeTime = maxLifeTime;
+    public void setRun(@Nullable Runnable run) {
+        this.run = run;
     }
 }
