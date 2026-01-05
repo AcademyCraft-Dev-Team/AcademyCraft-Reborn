@@ -1,10 +1,13 @@
 package org.academy.internal.server.ability;
 
+import net.minecraft.advancements.AdvancementType;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
+import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
@@ -19,8 +22,9 @@ import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
-public class PlayerCPManager implements SyncManager.AbilitySubsystem {
+public class PlayerCPManager implements AbilitySubsystem {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final AbilityLevel[] CACHED_LEVELS = AbilityLevel.values();
     private static final int PERSONAL_REALITY_OVERLOAD_TICKS = 100;
@@ -112,15 +116,27 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
     }
 
     public boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
-        var cpContext = contexts.get(uuid);
-        if (cpContext == null) return false;
-        var cpData = cpContext.getCpData();
+        var ctx = contexts.get(uuid);
+        if (ctx == null) return false;
 
-        if (cpData.getStatus() == CPData.Status.OVERLOAD) return false;
-        if (!isPassive && cpData.getAvailableCP() < amount) return false;
+        synchronized (ctx) {
+            CPData cpData = ctx.getCpData();
+            if (cpData.getStatus() == CPData.Status.OVERLOAD) return false;
+            if (!isPassive && cpData.getAvailableCP() < amount) return false;
 
-        cpContext.addOccupation(new CPData.CPOccupationData(amount, iterationTicks));
-        return true;
+            ctx.addOccupation(new CPData.CPOccupationData(amount, iterationTicks));
+            return true;
+        }
+    }
+
+    /**
+     * 带锁的写操作专用
+     */
+    private void managedUpdate(UUID uuid, Consumer<CPData> action) {
+        CPContext ctx = contexts.get(uuid);
+        if (ctx != null) {
+            ctx.compute(action);
+        }
     }
 
     private class CPContext {
@@ -129,9 +145,23 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
         boolean dirty = false;
         private int spRegenTimer = 0;
 
+        public synchronized void compute(Consumer<CPData> action) {
+            action.accept(this.cpData);
+            markDirty();
+        }
+
+        public void markDirty() {
+            dirty = true;
+        }
+
+        public void clean() {
+            dirty = false;
+        }
+
         public synchronized void exportTo(Player data) {
             data.setCpData(new CPData(cpData));
             data.setCpOccupations(new ArrayList<>(occupationList));
+            data.markDirty();
         }
 
         public CPContext(CPData cpData) {
@@ -139,7 +169,7 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
         }
 
         public synchronized boolean tick(ServerPlayer player) {
-            dirty = false;
+            clean();
             var stateChanged = switch (cpData.getStatus()) {
                 case NORMAL -> tickNormal();
                 case PERSONAL_REALITY_OVERLOAD -> tickWarning();
@@ -159,17 +189,6 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
             dirty |= cpData.isDirty();
             cpData.clean();
             return dirty;
-        }
-
-        private boolean spRegen(ServerPlayer player) {
-            if (cpData.getCurrSP() >= cpData.getMaxSP()) return false;
-            if (player.getFoodData().getSaturationLevel() <= 0) return false;
-            if (++spRegenTimer >= 20) {
-                spRegenTimer = 0;
-                cpData.setCurrSP(cpData.getCurrSP() + 1);
-                return true;
-            }
-            return false;
         }
 
         private boolean tickNormal() {
@@ -230,7 +249,85 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
             return dirty;
         }
 
-        public synchronized void updateMaxCP(float newMaxCP) {
+        public CPData getCpData() {
+            return cpData;
+        }
+
+        private boolean spRegen(ServerPlayer player) {
+            if (cpData.getCurrSP() >= cpData.getMaxSP()) return false;
+            if (player.getFoodData().getSaturationLevel() <= 0) return false;
+            if (++spRegenTimer >= 20) {
+                spRegenTimer = 0;
+                cpData.setCurrSP(cpData.getCurrSP() + 1);
+                return true;
+            }
+            return false;
+        }
+
+        public synchronized void addOccupation(CPData.CPOccupationData data) {
+            occupationList.add(data);
+            cpData.setAvailableCP(cpData.getAvailableCP() - data.getAmount());
+            markDirty();
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerEat(LivingEntityUseItemEvent.Finish event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
+            var itemStack = event.getItem();
+            if (itemStack.has(DataComponents.FOOD)) {
+                var food = itemStack.get(DataComponents.FOOD);
+                if (food != null) {
+                    var saturationGained = food.nutrition() * food.saturation() * 2.0f;
+                    if (saturationGained > 0) {
+                        var uuid = player.getUUID();
+                        var spRecovery = (int) (saturationGained * 5);
+                        var newSP = Math.min(getMaxSP(uuid), getCurrSP(uuid) + spRecovery);
+                        setCurrSP(uuid, newSP);
+                    }
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerWakeUp(PlayerWakeUpEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
+            long dayTime = player.level().getDayTime() % 24000;
+            boolean isMorning = dayTime >= 0 && dayTime < 2000;
+            if (isMorning) {
+                setCurrSP(player.getUUID(), getMaxSP(player.getUUID()));
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onAdvancementEarn(AdvancementEvent.AdvancementEarnEvent event) {
+        var display = event.getAdvancement().value().display().orElse(null);
+        if (display != null && display.getType() == AdvancementType.CHALLENGE) {
+            UUID uuid = event.getEntity().getUUID();
+            setMaxCP(uuid, getMaxCP(uuid) + 5f);
+        }
+    }
+
+    public void clear() {
+        contexts.clear();
+    }
+
+    public int getLevel(UUID uuid) {
+        return getCPDataOptional(uuid).map(CPData::getLevel).map(AbilityLevel::getLevelCode).orElse(0);
+    }
+
+    public void setLevel(UUID uuid, int levelCode) {
+        managedUpdate(uuid, data -> data.setLevel(AbilityLevel.fromLevelCode(levelCode)));
+    }
+
+    public float getBasicCP(int levelCode) {
+        return AbilityLevel.values()[levelCode].getBasicCP();
+    }
+
+    public void setMaxCP(UUID uuid, float newMaxCP) {
+        managedUpdate(uuid, cpData -> {
             var maxCP = cpData.getMaxCP();
             if (Float.compare(maxCP, newMaxCP) == 0) return;
 
@@ -244,115 +341,32 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
 
             cpData.setAvailableCP(newAvailableCP);
             cpData.setMaxCP(newMaxCP);
-            checkAndUpgradeLevel();
-        }
+            syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+            checkAndUpgradeLevel(uuid, cpData);
+        });
+    }
 
-        private void checkAndUpgradeLevel() {
-            var currentMaxCP = cpData.getMaxCP();
-            var newLevel = AbilityLevel.LEVEL0;
+    private void checkAndUpgradeLevel(UUID uuid, CPData cpData) {
+        var currentMaxCP = cpData.getMaxCP();
+        var newLevel = AbilityLevel.LEVEL0;
 
-            for (var i = CACHED_LEVELS.length - 1; i >= 0; i--) {
-                var lvl = CACHED_LEVELS[i];
-                if (currentMaxCP >= lvl.getBasicCP() - CP_RATING_OFFSET) {
-                    newLevel = lvl;
-                    break;
-                }
-            }
-
-            if (newLevel != cpData.getLevel()) {
-                LOGGER.info("Player Level Changed: {} -> {} (MaxCP: {})", cpData.getLevel(), newLevel, currentMaxCP);
-                cpData.setLevel(newLevel);
-            }
-
-        }
-
-        public CPData getCpData() {
-            return cpData;
-        }
-
-        public synchronized void addOccupation(CPData.CPOccupationData data) {
-            occupationList.add(data);
-            cpData.setAvailableCP(cpData.getAvailableCP() - data.getAmount());
-        }
-
-        public void addSP(int amount) {
-            cpData.setCurrSP(Math.min(cpData.getMaxSP(), cpData.getCurrSP() + amount));
-            dirty = true;
-        }
-
-        public void fullRestoreSP() {
-            if (cpData.getCurrSP() != cpData.getMaxSP()) {
-                cpData.setCurrSP(cpData.getMaxSP());
-                dirty = true;
+        for (var i = CACHED_LEVELS.length - 1; i >= 0; i--) {
+            var lvl = CACHED_LEVELS[i];
+            if (currentMaxCP >= lvl.getBasicCP() - CP_RATING_OFFSET) {
+                newLevel = lvl;
+                break;
             }
         }
-    }
 
-    private void restoreSP(UUID uuid, int amount) {
-        var context = contexts.get(uuid);
-        if (context != null) {
-            context.addSP(amount);
+        if (newLevel != cpData.getLevel()) {
+            LOGGER.info("Player Level Changed: {} -> {} (MaxCP: {})", cpData.getLevel(), newLevel, currentMaxCP);
+            cpData.setLevel(newLevel);
+            syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
         }
-    }
-
-    private void fullRestoreSP(UUID uuid) {
-        var context = contexts.get(uuid);
-        if (context != null) {
-            context.fullRestoreSP();
-        }
-    }
-
-    @SubscribeEvent
-    public void onPlayerEat(LivingEntityUseItemEvent.Finish event) {
-        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
-            var itemStack = event.getItem();
-            if (itemStack.has(DataComponents.FOOD)) {
-                var food = itemStack.get(DataComponents.FOOD);
-                if (food != null) {
-                    var saturationGained = food.nutrition() * food.saturation() * 2.0f;
-                    if (saturationGained > 0) {
-                        var spRecovery = (int) (saturationGained * 5);
-                        restoreSP(player.getUUID(), spRecovery);
-                    }
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void onPlayerWakeUp(PlayerWakeUpEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
-            if (event.updateLevel()) {
-                fullRestoreSP(player.getUUID());
-            }
-        }
-    }
-
-    public void clear() {
-        contexts.clear();
-    }
-
-    public int getLevel(UUID uuid) {
-        return getCPDataOptional(uuid).map(CPData::getLevel).map(AbilityLevel::getLevelCode).orElse(0);
-    }
-
-    public void setLevel(UUID uuid, int levelCode) {
-        getCPDataOptional(uuid).ifPresent(data -> data.setLevel(AbilityLevel.fromLevelCode(levelCode)));
-    }
-
-    public float getBasicCP(int levelCode) {
-        return AbilityLevel.values()[levelCode].getBasicCP();
     }
 
     public float getMaxCP(UUID uuid) {
         return getCPDataOptional(uuid).map(CPData::getMaxCP).orElse(0f);
-    }
-
-    public void setMaxCP(UUID uuid, float maxCP) {
-        var context = contexts.get(uuid);
-        if (context != null) {
-            context.updateMaxCP(maxCP);
-        }
     }
 
     public float getAvailableCP(UUID uuid) {
@@ -361,11 +375,10 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
 
     public void setAvailableCP(UUID uuid, float availableCP) {
         var safeCP = Float.isFinite(availableCP) ? availableCP : 0f;
-
-        getCPDataOptional(uuid).ifPresent(data -> {
-            var clamped = Math.min(data.getMaxCP(), safeCP);
-            if (Float.compare(data.getAvailableCP(), clamped) != 0) {
-                data.setAvailableCP(clamped);
+        managedUpdate(uuid, cpData -> {
+            var clamped = Math.min(cpData.getMaxCP(), safeCP);
+            if (Float.compare(cpData.getAvailableCP(), clamped) != 0) {
+                cpData.setAvailableCP(clamped);
             }
         });
     }
@@ -379,7 +392,7 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
     }
 
     public void setStatus(UUID uuid, CPData.Status status) {
-        getCPDataOptional(uuid).ifPresent(data -> data.setStatus(status));
+        managedUpdate(uuid, cpData -> cpData.setStatus(status));
     }
 
     public int getStateTimer(UUID uuid) {
@@ -387,7 +400,7 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
     }
 
     public void setStateTimer(UUID uuid, int stateTimer) {
-        getCPDataOptional(uuid).ifPresent(data -> data.setStateTimer(stateTimer));
+        managedUpdate(uuid, cpData -> cpData.setStateTimer(stateTimer));
     }
 
     public int getCurrSP(UUID uuid) {
@@ -395,7 +408,7 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
     }
 
     public void setCurrSP(UUID uuid, int currSP) {
-        getCPDataOptional(uuid).ifPresent(data -> data.setCurrSP(currSP));
+        managedUpdate(uuid, cpData -> cpData.setCurrSP(currSP));
     }
 
     public int getMaxSP(UUID uuid) {
@@ -403,10 +416,10 @@ public class PlayerCPManager implements SyncManager.AbilitySubsystem {
     }
 
     public void setMaxSP(UUID uuid, int maxSP) {
-        getCPDataOptional(uuid).ifPresent(data -> data.setMaxSP(maxSP));
+        managedUpdate(uuid, cpData -> cpData.setMaxSP(maxSP));
     }
 
-    public Optional<CPData> getCPDataOptional(UUID uuid) {
+    private Optional<CPData> getCPDataOptional(UUID uuid) {
         return Optional.ofNullable(contexts.get(uuid))
                 .map(CPContext::getCpData);
     }
