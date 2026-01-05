@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,6 +30,7 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import org.academy.internal.server.ability.AbilitySubsystem;
 import org.academy.internal.server.ability.PlayerCPManager;
 import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.ability.SyncManager;
@@ -57,7 +57,7 @@ public final class AbilitySystemServer {
         NeoForge.EVENT_BUS.register(playerCPManager);
 
         syncManager.register(playerCPManager);
-        this.syncManager.register(new SyncManager.AbilitySubsystem() {
+        this.syncManager.register(new AbilitySubsystem() {
             @Override
             public void onPlayerLogin(@NotNull ServerPlayer player) {
                 playerDataManager.onPlayerLogin(player);
@@ -328,7 +328,6 @@ public final class AbilitySystemServer {
 
     public void setPlayerAvailableCP(UUID uuid, float availableCP) {
         playerCPManager.setAvailableCP(uuid, availableCP);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public float getPlayerMaxCP(UUID uuid) {
@@ -345,7 +344,6 @@ public final class AbilitySystemServer {
 
     public void setPlayerStatus(UUID uuid, CPData.Status status) {
         playerCPManager.setStatus(uuid, status);
-        schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public int getPlayerStateTimer(UUID uuid) {

@@ -17,7 +17,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SyncManager {
+public class SyncManager{
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
     private final Map<UUID, LivePlayer> livePlayerMap = new ConcurrentHashMap<>();
@@ -90,19 +90,6 @@ public class SyncManager {
             }
         }
         livePlayer.syncQueue.clear();
-    }
-
-    public interface AbilitySubsystem {
-        default void tick(ServerPlayer player) {
-        }
-
-        default void onPlayerLogin(@NotNull ServerPlayer player) {
-        }
-
-        default void onPlayerLogout(@NotNull ServerPlayer player) {
-        }
-
-        void processSync(@NotNull ServerPlayer player, @NotNull Identifier type);
     }
 
     private static class LivePlayer {
