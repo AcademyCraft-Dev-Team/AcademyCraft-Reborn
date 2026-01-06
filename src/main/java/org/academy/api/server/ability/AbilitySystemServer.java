@@ -362,6 +362,10 @@ public final class AbilitySystemServer {
         playerCPManager.setCurrSP(uuid, currSP);
     }
 
+    public void addPlayerCurrSP(UUID uuid, int currSP) {
+        playerCPManager.addCurrSP(uuid, currSP);
+    }
+
     public int getPlayerMaxSP(UUID uuid) {
         return playerCPManager.getMaxSP(uuid);
     }

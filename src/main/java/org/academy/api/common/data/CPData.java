@@ -2,6 +2,8 @@ package org.academy.api.common.data;
 
 import org.academy.api.common.ability.AbilityLevel;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class CPData {
     // CP
     private float maxCP = 100;
@@ -11,8 +13,8 @@ public class CPData {
     private int stateTimer = 0;
 
     // SP
-    private int currSP = 2000;
-    private int maxSP = 2000;
+    private final AtomicInteger currSP = new AtomicInteger(2000);
+    private volatile int maxSP = 2000;
 
     private boolean isDirty = false;
 
@@ -28,7 +30,7 @@ public class CPData {
         status = source.status;
         stateTimer = source.stateTimer;
         level = source.level;
-        currSP = source.currSP;
+        currSP.set(source.currSP.get());
         maxSP = source.maxSP;
         isDirty = source.isDirty;
     }
@@ -94,11 +96,16 @@ public class CPData {
     }
 
     public int getCurrSP() {
-        return currSP;
+        return currSP.get();
     }
 
     public void setCurrSP(int currSP) {
-        this.currSP = currSP;
+        this.currSP.set(Math.max(0, Math.min(maxSP, currSP)));
+        markDirty();
+    }
+
+    public void addSP(int amount) {
+        currSP.updateAndGet(c -> Math.max(0, Math.min(maxSP, c + amount)));
         markDirty();
     }
 
@@ -144,7 +151,7 @@ public class CPData {
         }
 
         public Builder currSP(int currSP) {
-            cpData.currSP = currSP;
+            cpData.currSP.set(currSP);
             return this;
         }
 
