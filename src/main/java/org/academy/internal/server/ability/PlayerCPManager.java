@@ -120,7 +120,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (ctx == null) return false;
 
         synchronized (ctx) {
-            CPData cpData = ctx.getCpData();
+            var cpData = ctx.getCpData();
             if (cpData.getStatus() == CPData.Status.OVERLOAD) return false;
             if (!isPassive && cpData.getAvailableCP() < amount) return false;
 
@@ -133,7 +133,7 @@ public class PlayerCPManager implements AbilitySubsystem {
      * 带锁的写操作专用
      */
     private void managedUpdate(UUID uuid, Consumer<CPData> action) {
-        CPContext ctx = contexts.get(uuid);
+        var ctx = contexts.get(uuid);
         if (ctx != null) {
             ctx.compute(action);
         }
@@ -280,10 +280,8 @@ public class PlayerCPManager implements AbilitySubsystem {
                 if (food != null) {
                     var saturationGained = food.nutrition() * food.saturation() * 2.0f;
                     if (saturationGained > 0) {
-                        var uuid = player.getUUID();
                         var spRecovery = (int) (saturationGained * 5);
-                        var newSP = Math.min(getMaxSP(uuid), getCurrSP(uuid) + spRecovery);
-                        setCurrSP(uuid, newSP);
+                        addCurrSP(player.getUUID(), spRecovery);
                     }
                 }
             }
@@ -293,8 +291,8 @@ public class PlayerCPManager implements AbilitySubsystem {
     @SubscribeEvent
     public void onPlayerWakeUp(PlayerWakeUpEvent event) {
         if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
-            long dayTime = player.level().getDayTime() % 24000;
-            boolean isMorning = dayTime >= 0 && dayTime < 2000;
+            var dayTime = player.level().getDayTime() % 24000;
+            var isMorning = dayTime >= 0 && dayTime < 2000;
             if (isMorning) {
                 setCurrSP(player.getUUID(), getMaxSP(player.getUUID()));
             }
@@ -305,7 +303,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     public void onAdvancementEarn(AdvancementEvent.AdvancementEarnEvent event) {
         var display = event.getAdvancement().value().display().orElse(null);
         if (display != null && display.getType() == AdvancementType.CHALLENGE) {
-            UUID uuid = event.getEntity().getUUID();
+            var uuid = event.getEntity().getUUID();
             setMaxCP(uuid, getMaxCP(uuid) + 5f);
         }
     }
@@ -408,7 +406,11 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public void setCurrSP(UUID uuid, int currSP) {
-        managedUpdate(uuid, cpData -> cpData.setCurrSP(currSP));
+        getCPDataOptional(uuid).ifPresent(cpData -> cpData.setCurrSP(currSP));
+    }
+
+    public void addCurrSP(UUID uuid, int addSP) {
+        getCPDataOptional(uuid).ifPresent(cpData -> cpData.addSP(addSP));
     }
 
     public int getMaxSP(UUID uuid) {

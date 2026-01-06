@@ -18,8 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SyncManager{
-    private static final Logger LOGGER = AcademyCraft.getLogger();
-
     private final Map<UUID, LivePlayer> livePlayerMap = new ConcurrentHashMap<>();
     private final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
     private final List<AbilitySubsystem> subsystems = new CopyOnWriteArrayList<>();
