@@ -6,6 +6,10 @@ import org.academy.AcademyCraft;
 public class CommonSkillData extends SkillData {
     public static final Identifier ID = AcademyCraft.academy("common");
 
+    public CommonSkillData() {
+        super();
+    }
+
     public CommonSkillData(float exp) {
         super(exp);
     }

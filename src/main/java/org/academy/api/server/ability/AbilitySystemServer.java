@@ -16,68 +16,53 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
-import org.academy.api.common.ability.SyncTypes;
-import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
-import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
-import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.skilldata.CommonSkillData;
-import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.academy.internal.server.ability.AbilitySubsystem;
 import org.academy.internal.server.ability.PlayerCPManager;
 import org.academy.internal.server.ability.PlayerDataManager;
+import org.academy.internal.server.ability.SkillDataManager;
 import org.academy.internal.server.ability.SyncManager;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
-import org.jetbrains.annotations.NotNull;
+import org.academy.internal.server.world.level.storage.WorldData;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.UUID;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
+    private final SkillDataManager skillDataManager;
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
     private final SyncManager syncManager;
 
-    public AbilitySystemServer(MinecraftServerContext context, PlayerDataManager dataManager, AbilityConfig abilityConfig) {
-        playerDataManager = dataManager;
+    public AbilitySystemServer(MinecraftServerContext context, WorldData worldData, AbilityConfig abilityConfig) {
         syncManager = new SyncManager(context);
+
+        playerDataManager = new PlayerDataManager(worldData, syncManager);
+        syncManager.register(playerDataManager);
+
         playerCPManager = new PlayerCPManager(playerDataManager, abilityConfig, syncManager);
         NeoForge.EVENT_BUS.register(playerCPManager);
-
         syncManager.register(playerCPManager);
-        this.syncManager.register(new AbilitySubsystem() {
-            @Override
-            public void onPlayerLogin(@NotNull ServerPlayer player) {
-                playerDataManager.onPlayerLogin(player);
-                var uuid = player.getUUID();
-                syncManager.schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
-                syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
-            }
 
-            @Override
-            public void processSync(@NotNull ServerPlayer player, @NotNull Identifier type) {
-                var uuid = player.getUUID();
-                if (SyncTypes.ABILITY_CATEGORY.equals(type)) {
-                    var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
-                    MisakaNetworkServer.sendPacket(player, packet);
-                } else if (SyncTypes.SKILL_DATA.equals(type)) {
-                    var skills = getPlayerData(uuid).getSkillData();
-                    var packet = new SyncSkillDataPacket(skills);
-                    MisakaNetworkServer.sendPacket(player, packet);
-                }
-            }
+        skillDataManager = new SkillDataManager(playerDataManager, syncManager);
+        syncManager.register(skillDataManager);
+        skillDataManager.setOnSkillLevelUp((player, levelsGained) -> {
+            UUID uuid = player.getUUID();
+            float currentMax = playerCPManager.getMaxCP(uuid);
+            playerCPManager.setMaxCP(uuid, currentMax + (5.0f * levelsGained));
         });
 
         for (var category : Registries.ABILITY_CATEGORIES) {
@@ -89,10 +74,6 @@ public final class AbilitySystemServer {
         }
 
         MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
-    }
-
-    public Player getPlayerData(UUID uuid) {
-        return playerDataManager.getData(uuid);
     }
 
     @HandleFuture
@@ -166,7 +147,7 @@ public final class AbilitySystemServer {
                 var canLearn = user.getEnergyStored() >= energy && depLearned && !learned;
                 if (canLearn) {
                     user.extractEnergy(energy, false);
-                    instance.addPlayerSkill(player.getUUID(), skillKey);
+                    instance.addPlayerSkill(player, skillKey);
                 }
                 return new LearnSkillPacket.Response(canLearn);
             }
@@ -174,72 +155,8 @@ public final class AbilitySystemServer {
         return new LearnSkillPacket.Response(false);
     }
 
-    public AbilityCategory getPlayerAbilityCategory(UUID uuid) {
-        var abilityCategory = getPlayerData(uuid).getAbilityCategory();
-        AbilityCategory category;
-        if (abilityCategory == null) {
-            category = AbilityCategories.LEVEL0.get();
-        } else {
-            var categoryKey = Identifier.parse(abilityCategory);
-            category = Registries.ABILITY_CATEGORIES.get(categoryKey).orElseThrow().value();
-        }
-
-        return category;
-    }
-
-    public void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
-        var categoryKey = Registries.ABILITY_CATEGORIES.getKey(abilityCategory);
-        if (categoryKey != null) {
-            getPlayerData(uuid).setAbilityCategory(categoryKey.toString());
-            schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
-        }
-    }
-
-    public void addPlayerSkill(UUID uuid, String skillKey) {
-        var playerData = getPlayerData(uuid);
-        if (playerData.getSkillData().putIfAbsent(skillKey, new CommonSkillData(0)) == null) {
-            var skill = Registries.SKILLS.get(Identifier.parse(skillKey));
-            playerData.markDirty();
-            schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
-        }
-    }
-
-    public void addPlayerSkillData(UUID uuid, String skillKey, SkillData skillData) {
-        var playerData = getPlayerData(uuid);
-        var oldValue = playerData.getSkillData().put(skillKey, skillData);
-        if (!Objects.equals(oldValue, skillData)) {
-            playerData.markDirty();
-        }
-    }
-
-    public void removePlayerSkill(UUID uuid, String skillKey) {
-        var playerData = getPlayerData(uuid);
-        if (playerData.getSkillData().remove(skillKey) != null) {
-            playerData.markDirty();
-            schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
-        }
-    }
-
-    /**
-     * 请求 CP 占用
-     *
-     * @param isPassive 是否被动占用（被动占用能使玩家进入个人现实过载状态）
-     * @return 是否成功
-     */
-    public boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
-        return playerCPManager.requestCPOccupation(uuid, amount, iterationTicks, isPassive);
-    }
-
     public void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
         syncManager.schedulePlayerSync(uuid, syncType);
-    }
-
-    public void addTask(Runnable runnable) {
-        syncManager.addTask(runnable);
-    }
-
-    public void halt() {
-        syncManager.halt();
     }
 
     public void onPlayerLogin(ServerPlayer player) {
@@ -268,6 +185,10 @@ public final class AbilitySystemServer {
         return syncManager;
     }
 
+    public Player getPlayerData(UUID uuid) {
+        return playerDataManager.getData(uuid);
+    }
+
     public static void registerContext(ServerContext serverContext) {
         NeoForge.EVENT_BUS.register(serverContext);
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(serverContext);
@@ -278,13 +199,7 @@ public final class AbilitySystemServer {
         MisakaNetworkServer.NETWORK_MANAGER.unregisterPacketListener(serverContext);
     }
 
-    public void flushToData() {
-        playerCPManager.flushAllToData();
-    }
-
     public void onServerStopping() {
-        playerCPManager.flushAllToData();
-        playerCPManager.clear();
         NeoForge.EVENT_BUS.unregister(playerCPManager);
     }
 
@@ -297,25 +212,63 @@ public final class AbilitySystemServer {
         throw new IllegalStateException("Entity is not in a ServerLevel");
     }
 
-    public <T extends SkillData> T getPlayerSkillData(UUID uuid, String skillKey) {
-        return UncheckedUtil.uncheckedCast(getPlayerData(uuid).getSkillData().get(skillKey));
+    public void addTask(Runnable runnable) {
+        syncManager.addTask(runnable);
     }
 
-    public float getPlayerSkillExp(UUID uuid, String skillKey) {
-        var skillData = getPlayerData(uuid).getSkillData().get(skillKey);
-        if (skillData == null) {
-            return 0;
-        } else {
-            return skillData.exp;
-        }
+    public void halt() {
+        syncManager.halt();
     }
 
+    public AbilityCategory getPlayerAbilityCategory(UUID uuid) {
+        return playerDataManager.getPlayerAbilityCategory(uuid);
+    }
+
+    public void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        playerDataManager.setPlayerAbilityCategory(uuid, abilityCategory);
+    }
+
+
+    /**
+     * 技能数据相关方法
+     */
+    public float getPlayerSkillExp(ServerPlayer serverPlayer, String skillKey) {
+        return skillDataManager.getSkillExp(serverPlayer, skillKey);
+    }
+
+    public void addPlayerSkillExp(ServerPlayer serverPlayer, String skillKey, SkillDataManager.ExpEvent expEvent) {
+        skillDataManager.addSkillExp(serverPlayer, skillKey, expEvent);
+    }
+
+    public void addPlayerSkill(ServerPlayer serverPlayer, String skillKey) {
+        skillDataManager.addSkill(serverPlayer, skillKey);
+    }
+
+    public void removePlayerSkill(ServerPlayer serverPlayer, String skillKey) {
+        skillDataManager.removeSkill(serverPlayer, skillKey);
+    }
+
+
+
+    /**
+     * CP相关方法
+     */
     public float getPlayerOccupiedCP(UUID uuid) {
         return playerCPManager.getOccupiedCP(uuid);
     }
 
     public int getPlayerLevel(UUID uuid) {
         return playerCPManager.getLevel(uuid);
+    }
+
+    /**
+     * 请求 CP 占用
+     *
+     * @param isPassive 是否被动占用（被动占用能使玩家进入个人现实过载状态）
+     * @return 是否成功
+     */
+    public boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
+        return playerCPManager.requestCPOccupation(uuid, amount, iterationTicks, isPassive);
     }
 
     public void setPlayerLevel(UUID uuid, int level) {

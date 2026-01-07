@@ -20,7 +20,6 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.network.syncher.EntityDataSerializers;
-import org.academy.internal.common.skilldata.SkillDataTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
@@ -75,7 +74,6 @@ public final class AcademyCraftRegister {
         SyncKeys.SYNC_KEYS.register(modEventBus);
         PathTypes.PATH_TYPES.register(modEventBus);
         PathModifierTypes.PATH_MODIFIER_TYPES.register(modEventBus);
-        SkillDataTypes.SKILL_DATA_TYPES.register(modEventBus);
 
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
@@ -88,7 +86,6 @@ public final class AcademyCraftRegister {
         event.register(DATA_TYPES);
         event.register(PATH_TYPES);
         event.register(PATH_MODIFIER_TYPES);
-        event.register(SKILL_DATA_TYPES);
     }
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {

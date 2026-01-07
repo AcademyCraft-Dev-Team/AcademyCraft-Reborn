@@ -10,7 +10,6 @@ import org.academy.api.common.arc.PathModifierType;
 import org.academy.api.common.arc.PathType;
 import org.academy.api.common.sync.DataType;
 import org.academy.api.common.sync.SyncKey;
-import org.academy.internal.server.world.level.storage.SkillDataType;
 
 public final class Registries {
     public static final Registry<AbilityCategory> ABILITY_CATEGORIES =
@@ -25,8 +24,6 @@ public final class Registries {
             new RegistryBuilder<>(Keys.PATH_TYPES).sync(true).create();
     public static final Registry<PathModifierType<?>> PATH_MODIFIER_TYPES =
             new RegistryBuilder<>(Keys.PATH_MODIFIER_TYPES).sync(true).create();
-    public static final Registry<SkillDataType<?>> SKILL_DATA_TYPES =
-            new RegistryBuilder<>(Keys.SKILL_DATA_TYPES).sync(true).create();
 
     public static final class Keys {
         public static final ResourceKey<Registry<AbilityCategory>> ABILITY_CATEGORIES = key("ability_category");
@@ -35,7 +32,6 @@ public final class Registries {
         public static final ResourceKey<Registry<DataType<?>>> DATA_TYPES = key("data_type");
         public static final ResourceKey<Registry<PathType<?>>> PATH_TYPES = key("path_type");
         public static final ResourceKey<Registry<PathModifierType<?>>> PATH_MODIFIER_TYPES = key("path_modifier_type");
-        public static final ResourceKey<Registry<SkillDataType<?>>> SKILL_DATA_TYPES = key("skill_data_type");
 
         private static <T> ResourceKey<Registry<T>> key(String name) {
             return ResourceKey.createRegistryKey(AcademyCraft.academy(name));

@@ -2,8 +2,6 @@ package org.academy.api.common.data;
 
 import org.academy.api.common.ability.AbilityLevel;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 public class CPData {
     // CP
     private float maxCP = 100;
@@ -13,8 +11,9 @@ public class CPData {
     private int stateTimer = 0;
 
     // SP
-    private final AtomicInteger currSP = new AtomicInteger(2000);
-    private volatile int maxSP = 2000;
+    private int currSP = 2000;
+    private int maxSP = 2000;
+    private int setSpRegenTimer = 0;
 
     private boolean isDirty = false;
 
@@ -22,17 +21,6 @@ public class CPData {
         NORMAL,
         PERSONAL_REALITY_OVERLOAD,
         OVERLOAD
-    }
-
-    public CPData(CPData source) {
-        maxCP = source.maxCP;
-        availableCP = source.availableCP;
-        status = source.status;
-        stateTimer = source.stateTimer;
-        level = source.level;
-        currSP.set(source.currSP.get());
-        maxSP = source.maxSP;
-        isDirty = source.isDirty;
     }
 
     public CPData() {
@@ -96,16 +84,16 @@ public class CPData {
     }
 
     public int getCurrSP() {
-        return currSP.get();
+        return currSP;
     }
 
     public void setCurrSP(int currSP) {
-        this.currSP.set(Math.max(0, Math.min(maxSP, currSP)));
+        this.currSP = Math.max(0, Math.min(maxSP, currSP));
         markDirty();
     }
 
     public void addSP(int amount) {
-        currSP.updateAndGet(c -> Math.max(0, Math.min(maxSP, c + amount)));
+        currSP = Math.max(0, Math.min(maxSP, currSP + amount));
         markDirty();
     }
 
@@ -116,6 +104,14 @@ public class CPData {
     public void setMaxSP(int maxSP) {
         this.maxSP = maxSP;
         markDirty();
+    }
+
+    public int getSpRegenTimer() {
+        return setSpRegenTimer;
+    }
+
+    public void setSpRegenTimer(int setSpRegenTimer) {
+        this.setSpRegenTimer = setSpRegenTimer;
     }
 
     public static class Builder {
@@ -151,7 +147,7 @@ public class CPData {
         }
 
         public Builder currSP(int currSP) {
-            cpData.currSP.set(currSP);
+            cpData.currSP = currSP;
             return this;
         }
 
