@@ -1,5 +1,6 @@
 package org.academy;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -9,11 +10,11 @@ import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.server.ability.PlayerDataManager;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -34,7 +35,7 @@ public final class AcademyCraftServer {
     private final AcademyCraftConfig serverConfig;
     private final WorldData worldData;
     private final AbilitySystemServer abilitySystemServer;
-
+    private final MinecraftServer server;
     private final ScheduledFuture<?> worldDataSaveTask;
 
     /**
@@ -42,7 +43,7 @@ public final class AcademyCraftServer {
      */
     private AcademyCraftServer(MinecraftServerContext context) {
         context.setAcademyCraftServer(this);
-        var server = context.getMinecraftServer();
+        server = context.getMinecraftServer();
 
         var serverConfigFile = new File(
                 server.getServerDirectory().toFile(),
@@ -62,16 +63,12 @@ public final class AcademyCraftServer {
         serverConfig.save();
 
         worldData = WorldData.getWorldData(worldDataFile);
-        var playerDataManager = new PlayerDataManager(worldData);
-
-        abilitySystemServer = new AbilitySystemServer(context, playerDataManager, abilityConfig);
+        abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
         WirelessManager.initServer();
 
         worldDataSaveTask = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
-                () -> {
-                    abilitySystemServer.flushToData();
-                    saveData();
-                }, 5, 5, TimeUnit.MINUTES
+                this::scheduleSaveTask
+                , 5, 5, TimeUnit.MINUTES
         );
     }
 
@@ -79,24 +76,51 @@ public final class AcademyCraftServer {
         return abilitySystemServer;
     }
 
-    public void saveData() {
-        var hasDirtyData = worldData.getPlayers().values().stream()
+    private void scheduleSaveTask() {
+        server.execute(this::asyncSave);
+    }
+
+    private void asyncSave() {
+        String snapshot = createSnapshotAndClean();
+        if (snapshot == null) return;
+        AcademyCraft.EXECUTOR_SERVICE.submit(() -> writeToFile(snapshot));
+    }
+
+    private void saveData() {
+        LOGGER.info("Saving world data...");
+        String snapshot = createSnapshotAndClean();
+        writeToFile(snapshot);
+    }
+
+    /**
+     * @return JSON快照，没有脏数据则返回null
+     */
+    private @Nullable String createSnapshotAndClean() {
+        boolean hasDirtyData = worldData.getPlayers().values().stream()
                 .anyMatch(Player::isDirty);
+        if (!hasDirtyData) return null;
 
-        if (!hasDirtyData) return;
-
-        LOGGER.debug("Dirty data detected, saving world data...");
-        var gson = WorldData.createGson();
-
-        try (var fileWriter = new FileWriter(worldDataFile)) {
-            gson.toJson(worldData, fileWriter);
-        } catch (IOException e) {
-            LOGGER.error("Failed to save world data", e);
-            return;
+        String jsonSnapshot;
+        try {
+            var gson = WorldData.createGson();
+            jsonSnapshot = gson.toJson(worldData);
+        } catch (Exception e) {
+            LOGGER.error("Failed to serialize WorldData", e);
+            return null;
         }
 
         worldData.getPlayers().values().forEach(Player::clean);
-        LOGGER.debug("World data saved and dirty flags cleaned.");
+        return jsonSnapshot;
+    }
+
+    private void writeToFile(@Nullable String jsonSnapshot) {
+        if (jsonSnapshot == null) return;
+        try (var writer = new FileWriter(worldDataFile)) {
+            writer.write(jsonSnapshot);
+            LOGGER.debug("WorldData saved successfully.");
+        } catch (IOException e) {
+            LOGGER.error("Failed to write WorldData to disk", e);
+        }
     }
 
     @SubscribeEvent
@@ -108,9 +132,9 @@ public final class AcademyCraftServer {
     public static void onServerStopping(ServerStoppingEvent event) {
         var context = (MinecraftServerContext) event.getServer();
         var instance = context.getAcademyCraftServer();
+        instance.abilitySystemServer.onServerStopping();
         instance.worldDataSaveTask.cancel(false);
         LOGGER.info("Server stopping. Performing final data saves...");
-        instance.abilitySystemServer.onServerStopping();
         instance.saveData();
         instance.serverConfig.save();
     }

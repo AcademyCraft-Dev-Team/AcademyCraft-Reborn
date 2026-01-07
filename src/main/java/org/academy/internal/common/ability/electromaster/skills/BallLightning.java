@@ -27,6 +27,7 @@ import org.academy.api.common.arc.modifier.TaperModifier;
 import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.arc.property.Knot;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -34,6 +35,7 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.common.world.entity.skill.LightOrb;
@@ -344,8 +346,7 @@ public class BallLightning extends Skill {
                 if (targetEntity != null && position.distanceTo(targetEntity.position()) <= 4.0) {
                     var level = level();
                     var entities = MathUtil.getEntitiesInSphereByHP(level, position, 5.0, e -> e != player);
-                    var damageSource = new DamageSource(level.damageSources().damageTypes.getOrThrow(DamageTypes.MAGIC));
-
+                    var damageSource = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
                     for (var entity : entities) {
                         entity.setHealth(entity.getHealth() * 0.7f);
                         entity.hurtServer(level, damageSource, 10f);

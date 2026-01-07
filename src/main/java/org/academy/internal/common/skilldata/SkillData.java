@@ -8,7 +8,13 @@ public abstract class SkillData {
     public float exp;
 
     @SerializedName("maxExp")
-    public int maxExp = 200;
+    public int maxExp = 1000;
+
+    @SerializedName("level")
+    public int level = 0;
+
+    @SerializedName("maxLevel")
+    public int maxLevel = 3;
 
     public SkillData() {
         exp = 0;
@@ -18,9 +24,10 @@ public abstract class SkillData {
         this.exp = exp;
     }
 
-    public SkillData(float exp, int maxExp) {
+    public SkillData(float exp, int maxExp, int maxLevel) {
         this.exp = exp;
         this.maxExp = maxExp;
+        this.maxLevel = maxLevel;
     }
 
     public boolean isMaxExp() {
@@ -41,6 +48,10 @@ public abstract class SkillData {
 
     public void setExp(float exp) {
         this.exp = exp;
+    }
+
+    public boolean isMaxLevel() {
+        return level >= maxLevel;
     }
 
     public abstract Identifier getType();

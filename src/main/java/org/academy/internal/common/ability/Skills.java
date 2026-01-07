@@ -29,7 +29,7 @@ public final class Skills {
      * Electromaster
      */
     public static final DeferredHolder<Skill, ArcGenerate> ARC_GENERATE = SKILLS.register(SkillNames.ARC_GENERATE, ArcGenerate::new);
-    public static final DeferredHolder<Skill, BallLightning> LIGHTNING_NOVA = SKILLS.register(SkillNames.BALL_LIGHTNING, BallLightning::new);
+    public static final DeferredHolder<Skill, BallLightning> BALL_LIGHTNING = SKILLS.register(SkillNames.BALL_LIGHTNING, BallLightning::new);
     public static final DeferredHolder<Skill, MagnetManipulation> MAGNET_MANIPULATION = SKILLS.register(SkillNames.MAGNET_MANIPULATION, MagnetManipulation::new);
     public static final DeferredHolder<Skill, Railgun> RAILGUN = SKILLS.register(SkillNames.RAILGUN, Railgun::new);
     /**

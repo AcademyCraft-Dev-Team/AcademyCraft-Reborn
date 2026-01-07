@@ -50,6 +50,6 @@ public final class SyncCPDataPacket extends Packet<ClientPacketListener, SyncCPD
 
     @Override
     public PacketType<ClientPacketListener, SyncCPDataPacket> getPacketType() {
-        return PacketTypes.SYNC_COMPUTING_POWER.get();
+        return PacketTypes.SYNC_CP_DATA.get();
     }
 }

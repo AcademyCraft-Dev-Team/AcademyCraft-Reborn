@@ -7,7 +7,6 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
-import org.academy.api.common.ability.PlayerSyncPacket;
 import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
 import org.academy.api.common.ability.pakcet.SyncCPDataPacket;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
@@ -40,11 +39,8 @@ public final class PacketTypes {
             SYNC_ABILITY_CATEGORY = PACKET_TYPES.register("sync_ability_category",
             () -> new PacketType<>(SyncAbilityCategoryPacket.class, SyncAbilityCategoryPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncCPDataPacket>>
-            SYNC_COMPUTING_POWER = PACKET_TYPES.register("sync_computing_power",
+            SYNC_CP_DATA = PACKET_TYPES.register("sync_cp_data",
             () -> new PacketType<>(SyncCPDataPacket.class, SyncCPDataPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerSyncPacket>>
-            PLAYER_SYNC = PACKET_TYPES.register("player_sync",
-            () -> new PacketType<>(PlayerSyncPacket.class, PlayerSyncPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillDataPacket>>
             SYNC_SKILL_DATA = PACKET_TYPES.register("sync_skill_data",
             () -> new PacketType<>(SyncSkillDataPacket.class, SyncSkillDataPacket.CODEC));

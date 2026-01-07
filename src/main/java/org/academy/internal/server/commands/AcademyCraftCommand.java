@@ -279,7 +279,7 @@ public final class AcademyCraftCommand {
         }
 
         for (var skill : currentCategory.getSkills()) {
-            abilitySystemServer.addPlayerSkill(playerUuid, skill.getKeyString());
+            abilitySystemServer.addPlayerSkill(player, skill.getKeyString());
         }
 
         context.getSource().sendSuccess(() -> Component.literal("All skills from ability category " + categoryName + " have been learned."), true);
@@ -334,7 +334,7 @@ public final class AcademyCraftCommand {
             return 0;
         }
 
-        abilitySystemServer.addPlayerSkill(playerUuid, skillIdentifier.toString());
+        abilitySystemServer.addPlayerSkill(player, skillIdentifier.toString());
         context.getSource().sendSuccess(() -> Component.literal("Successfully learned skill: " + skillIdentifier), true);
         return 1;
     }

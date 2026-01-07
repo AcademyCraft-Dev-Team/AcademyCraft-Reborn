@@ -7,15 +7,21 @@ import net.minecraft.locale.Language;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Util;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.skilldata.CommonSkillData;
+import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.server.ability.SkillDataManager;
+import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 
 import java.util.*;
 
@@ -26,17 +32,23 @@ public abstract class Skill {
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
     );
-
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
     private final AbilityCategory category;
     private Set<Skill> dependencies = new HashSet<>();
+    private final DataFactory dataFactory;
+    private final int maxSkillLevel;
 
     protected Skill(Builder builder) {
         recommendedLevel = builder.recommendedLevel;
         energyCostToLearn = builder.energyCostToLearn;
+        maxSkillLevel = builder.maxSkillLevel;
         category = builder.category;
         category.addSkill(this);
+
+        dataFactory = builder.dataFactory;
+        Class<? extends SkillData> dataClass = builder.dataClass;
+        SkillDataSerializer.registerType(builder.dataTypeId, dataClass);
 
         if (builder.dependencyHolders.isEmpty()) {
             dependencies = ImmutableSet.of();
@@ -44,6 +56,28 @@ public abstract class Skill {
             var dependencyResolver = new DependencyResolver(this, builder.dependencyHolders);
             NeoForge.EVENT_BUS.register(dependencyResolver);
         }
+    }
+
+    /**
+     * 技能击中目标时触发，默认行为为增加经验。
+     * 重写时建议调用super.onHurt()
+     */
+    public void onHurt(ServerPlayer attacker, LivingEntity target, float amount) {
+        AbilitySystemServer.getSystem(attacker)
+                .addPlayerSkillExp(attacker, this.getKeyString(), SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+    }
+
+    /**
+     * 技能击杀目标时触发，默认行为为增加经验。
+     * 重写时建议调用super.onKill()
+     */
+    public void onKill(ServerPlayer killer, LivingEntity target) {
+        AbilitySystemServer.getSystem(killer)
+                .addPlayerSkillExp(killer, this.getKeyString(), SkillDataManager.ExpEvent.KILL_ENTITY);
+    }
+
+    public SkillData createData(ServerPlayer player, float initialExp) {
+        return dataFactory.create(player, initialExp);
     }
 
     public static <T extends Context> Map<Player, T> createContextMap() {
@@ -86,6 +120,10 @@ public abstract class Skill {
         return key;
     }
 
+    public int getMaxSkillLevel() {
+        return maxSkillLevel;
+    }
+
     public String getKeyString() {
         return getKey().toString();
     }
@@ -124,6 +162,11 @@ public abstract class Skill {
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
         private final Set<DeferredHolder<Skill, ? extends Skill>> dependencyHolders = new HashSet<>();
+        private int maxSkillLevel = 3;
+
+        private DataFactory dataFactory = (player, exp) -> new CommonSkillData(exp);
+        private Class<? extends SkillData> dataClass = CommonSkillData.class;
+        private Identifier dataTypeId = CommonSkillData.ID;
 
         private Builder(AbilityCategory category) {
             this.category = category;
@@ -139,6 +182,22 @@ public abstract class Skill {
             return this;
         }
 
+        public Builder maxSkillLevel(int maxSkillLevel) {
+            this.maxSkillLevel = maxSkillLevel;
+            return this;
+        }
+
+        public <T extends SkillData> Builder withCustomData(
+                Identifier typeId,
+                Class<T> clazz,
+                DataFactory factory
+        ) {
+            this.dataTypeId = typeId;
+            this.dataClass = clazz;
+            this.dataFactory = factory;
+            return this;
+        }
+
         @SafeVarargs
         public final Builder dependsOn(DeferredHolder<Skill, ? extends Skill>... dependencies) {
             Collections.addAll(dependencyHolders, dependencies);
@@ -148,5 +207,10 @@ public abstract class Skill {
         public static Builder of(AbilityCategory category) {
             return new Builder(category);
         }
+    }
+
+    @FunctionalInterface
+    public interface DataFactory {
+        SkillData create(ServerPlayer player, float initialExp);
     }
 }
