@@ -59,30 +59,6 @@ public final class Render {
         }
     }
 
-    public static void runBlitPassNDC(
-            GpuTextureView color, RenderPipeline pipeline,
-            List<TextureBinding> textures, List<UniformBinding> uniforms,
-            boolean clear
-    ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFSQuadVBNDC(), textures, uniforms, clear);
-    }
-
-    public static void runBlitPassSDC(
-            GpuTextureView color, RenderPipeline pipeline,
-            List<TextureBinding> textures, List<UniformBinding> uniforms,
-            boolean clear
-    ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFSQuadVBSDC(), textures, uniforms, clear);
-    }
-
-    public static void runBlitPassColorSDC(
-            GpuTextureView color, RenderPipeline pipeline,
-            List<TextureBinding> textures, List<UniformBinding> uniforms,
-            boolean clear
-    ) {
-        runBlitPass(color, pipeline, Buffers.getInstance().getFSQuadColorVBSDC(), textures, uniforms, clear);
-    }
-
     public static void runBlitPass(
             GpuTextureView color, RenderPipeline pipeline, GpuBuffer fullscreenQuadVertexBuffer,
             List<TextureBinding> textures, List<UniformBinding> uniforms,
@@ -128,12 +104,10 @@ public final class Render {
         ) {
             IrisCompat.enableBypass();
             renderPass.setPipeline(pipeline);
-            for (var texture : textures) {
-                renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
-            }
-            for (var uniform : uniforms) {
-                renderPass.setUniform(uniform.name(), uniform.slice());
-            }
+
+            for (var texture : textures) renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
+            for (var uniform : uniforms) renderPass.setUniform(uniform.name(), uniform.slice());
+
             renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer);
             var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
             renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
@@ -153,20 +127,24 @@ public final class Render {
         /**
          * -1~1
          */
-        private final GpuBuffer fullScreenQuadVBNDC;
         private final GpuBuffer projectionUB;
+        private final GpuBuffer fullScreenQuadVBNDC;
+        private final GpuBuffer fullScreenQuadUvVBNDC;
+        private final GpuBuffer fullScreenQuadUvColorVBNDC;
 
         /**
          * 0~scaled
          */
-        private GpuBuffer fullScreenQuadVBSDC;
-        private GpuBuffer fullScreenQuadColorVBSDC;
+        private GpuBuffer fullScreenQuadUvVBSDC;
+        private GpuBuffer fullScreenQuadUvColorVBSDC;
 
         @Nullable
         private Matrix4fc lastProjection;
 
         private Buffers() {
             fullScreenQuadVBNDC = createNDC();
+            fullScreenQuadUvVBNDC = createUvNDC();
+            fullScreenQuadUvColorVBNDC = createUvColorNDC();
             createSDC();
             projectionUB = createProjection();
         }
@@ -192,15 +170,15 @@ public final class Render {
         }
 
         private void closeInternal() {
-            fullScreenQuadVBNDC.close();
-            fullScreenQuadVBSDC.close();
-            fullScreenQuadColorVBSDC.close();
+            fullScreenQuadUvVBNDC.close();
+            fullScreenQuadUvVBSDC.close();
+            fullScreenQuadUvColorVBSDC.close();
             projectionUB.close();
         }
 
         public void recreateSDC() {
-            fullScreenQuadVBSDC.close();
-            fullScreenQuadColorVBSDC.close();
+            fullScreenQuadUvVBSDC.close();
+            fullScreenQuadUvColorVBSDC.close();
             createSDC();
         }
 
@@ -224,7 +202,7 @@ public final class Render {
                 bufferBuilder.addVertex(0, height, 0.0F).setUv(0.0F, 1.0F);
 
                 try (var meshData = bufferBuilder.buildOrThrow()) {
-                    fullScreenQuadVBSDC = RenderSystem.getDevice().createBuffer(
+                    fullScreenQuadUvVBSDC = RenderSystem.getDevice().createBuffer(
                             () -> "Fullscreen Quad SDC", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
                     );
                 }
@@ -245,7 +223,7 @@ public final class Render {
                 bufferBuilder.addVertex(width, height, 0.0F).setUv(1.0F, 1.0F).setColor(white);
 
                 try (var meshData = bufferBuilder.buildOrThrow()) {
-                    fullScreenQuadColorVBSDC = RenderSystem.getDevice().createBuffer(
+                    fullScreenQuadUvColorVBSDC = RenderSystem.getDevice().createBuffer(
                             () -> "Fullscreen Quad Color SDC", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
                     );
                 }
@@ -253,6 +231,28 @@ public final class Render {
         }
 
         private GpuBuffer createNDC() {
+            try (
+                    var byteBufferBuilder = ByteBufferBuilder.exactlySized(
+                            DefaultVertexFormat.POSITION.getVertexSize() * 4
+                    )
+            ) {
+                var bufferBuilder = new BufferBuilder(
+                        byteBufferBuilder, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION
+                );
+                bufferBuilder.addVertex(-1.0F, -1.0F, 0.0F);
+                bufferBuilder.addVertex(1.0F, -1.0F, 0.0F);
+                bufferBuilder.addVertex(1.0F, 1.0F, 0.0F);
+                bufferBuilder.addVertex(-1.0F, 1.0F, 0.0F);
+
+                try (var meshData = bufferBuilder.buildOrThrow()) {
+                    return RenderSystem.getDevice().createBuffer(
+                            () -> "Fullscreen Quad NDC", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
+                    );
+                }
+            }
+        }
+
+        private GpuBuffer createUvNDC() {
             try (
                     var byteBufferBuilder = ByteBufferBuilder.exactlySized(
                             DefaultVertexFormat.POSITION_TEX.getVertexSize() * 4
@@ -265,6 +265,29 @@ public final class Render {
                 bufferBuilder.addVertex(1.0F, -1.0F, 0.0F).setUv(1.0F, 0.0F);
                 bufferBuilder.addVertex(1.0F, 1.0F, 0.0F).setUv(1.0F, 1.0F);
                 bufferBuilder.addVertex(-1.0F, 1.0F, 0.0F).setUv(0.0F, 1.0F);
+
+                try (var meshData = bufferBuilder.buildOrThrow()) {
+                    return RenderSystem.getDevice().createBuffer(
+                            () -> "Fullscreen Quad NDC", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
+                    );
+                }
+            }
+        }
+
+        private GpuBuffer createUvColorNDC() {
+            try (
+                    var byteBufferBuilder = ByteBufferBuilder.exactlySized(
+                            DefaultVertexFormat.POSITION_TEX_COLOR.getVertexSize() * 4
+                    )
+            ) {
+                var bufferBuilder = new BufferBuilder(
+                        byteBufferBuilder, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR
+                );
+                var white = -1;
+                bufferBuilder.addVertex(-1.0F, -1.0F, 0.0F).setUv(0.0F, 0.0F).setColor(white);
+                bufferBuilder.addVertex(1.0F, -1.0F, 0.0F).setUv(1.0F, 0.0F).setColor(white);
+                bufferBuilder.addVertex(1.0F, 1.0F, 0.0F).setUv(1.0F, 1.0F).setColor(white);
+                bufferBuilder.addVertex(-1.0F, 1.0F, 0.0F).setUv(0.0F, 1.0F).setColor(white);
 
                 try (var meshData = bufferBuilder.buildOrThrow()) {
                     return RenderSystem.getDevice().createBuffer(
@@ -295,16 +318,24 @@ public final class Render {
             return projectionUB;
         }
 
+        public GpuBuffer getFSQuadUvVBNDC() {
+            return fullScreenQuadUvVBNDC;
+        }
+
         public GpuBuffer getFSQuadVBNDC() {
             return fullScreenQuadVBNDC;
         }
 
-        public GpuBuffer getFSQuadVBSDC() {
-            return fullScreenQuadVBSDC;
+        public GpuBuffer getFSQuadUvVBSDC() {
+            return fullScreenQuadUvVBSDC;
         }
 
-        public GpuBuffer getFSQuadColorVBSDC() {
-            return fullScreenQuadColorVBSDC;
+        public GpuBuffer getFSQuadUvColorVBSDC() {
+            return fullScreenQuadUvColorVBSDC;
+        }
+
+        public GpuBuffer getFSQuadColorVBNDC() {
+            return fullScreenQuadUvColorVBNDC;
         }
 
         public static ByteBufferBuilder getByteBufferBuilder() {
@@ -365,26 +396,23 @@ public final class Render {
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withCull(false)
                 .withDepthWrite(false)
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS)
                 .buildSnippet();
 
         public static final RenderPipeline BLIT_SCREEN_WITH_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
-                .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
                 .withSampler("DiffuseSampler")
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
-                .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
                 .withSampler("DiffuseSampler")
                 .withoutBlend()
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
-                .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
                 .withSampler("DiffuseSampler")
                 .withoutBlend()
                 .withStencilTest(
@@ -545,7 +573,7 @@ public final class Render {
                 .build();
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                .withLocation(academy("pipeline/level_pos_color"))
+                .withLocation(academy("pipeline/level_pos_tex_color"))
                 .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withSampler("Sampler0")

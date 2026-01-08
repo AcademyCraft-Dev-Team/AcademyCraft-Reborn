@@ -1,16 +1,17 @@
 package org.academy.internal.client.renderer.effect;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
+import org.academy.api.client.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.util.VertexUtil;
@@ -18,6 +19,7 @@ import org.academy.api.common.util.ImprovedNoise;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
+import static net.minecraft.client.renderer.rendertype.RenderType.create;
 import static org.academy.AcademyCraft.academy;
 
 @SuppressWarnings("SuspiciousNameCombination")
@@ -27,7 +29,16 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     public static final Identifier TEXTURE = academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
     public static final int RING_SEGMENTS = 4;
     private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, -0.25f);
-    private static final RenderType RENDER_TYPE = RenderTypes.entityTranslucent(TEXTURE);
+    private static final RenderType RENDER_TYPE = create(
+            "storm_wing",
+            RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
+                    .withTexture(
+                            "Sampler0", TEXTURE,
+                            () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                    )
+                    .sortOnUpload()
+                    .createRenderSetup()
+    );
     private static final int NUM_RINGS = 24;
     private static final float HEIGHT = 3.5f;
     private static final float SIZE = 1.0f;
@@ -80,30 +91,29 @@ public final class StormWingEffectRenderer implements EffectRenderer {
 
         poseStack.pushPose();
         poseStack.mulPose(BASE_MATRIX);
-        submitNodeCollector.submitCustomGeometry(poseStack, RENDER_TYPE, (pose, vertexConsumer) -> {
-            var time = renderState.ageInTicks;
-            var poseStack1 = new PoseStack();
-            poseStack1.last().set(pose);
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
-            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_1);
-            poseStack1.popPose();
+        var vertexConsumer = PostEffect.BUFFER_SOURCE_PRE.getBuffer(RENDER_TYPE);
+        var time = renderState.ageInTicks;
 
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
-            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_2);
-            poseStack1.popPose();
+        poseStack.pushPose();
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
+        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_1);
+        poseStack.popPose();
 
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_3);
-            poseStack1.popPose();
+        poseStack.pushPose();
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
+        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_2);
+        poseStack.popPose();
 
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-            renderSingleTornado(poseStack1, vertexConsumer, time + TORNADO_OFFSET_4);
-            poseStack1.popPose();
-        });
+        poseStack.pushPose();
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_3);
+        poseStack.popPose();
+
+        poseStack.pushPose();
+        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_4);
+        poseStack.popPose();
+
         poseStack.popPose();
     }
 
@@ -249,10 +259,10 @@ public final class StormWingEffectRenderer implements EffectRenderer {
             var v2 = vertexBuffer[i][2];
             var v3 = vertexBuffer[i][3];
 
-            vertexConsumer.addVertex(matrix, v0[0], v0[1], v0[2]).setColor(red, green, blue, alpha).setUv(v0[3], 0).setLight(LightCoordsUtil.FULL_BRIGHT).setOverlay(OverlayTexture.NO_OVERLAY).setNormal(0, 1, 0);
-            vertexConsumer.addVertex(matrix, v1[0], v1[1], v1[2]).setColor(red, green, blue, alpha).setUv(v1[3], 0).setLight(LightCoordsUtil.FULL_BRIGHT).setOverlay(OverlayTexture.NO_OVERLAY).setNormal(0, 1, 0);
-            vertexConsumer.addVertex(matrix, v2[0], v2[1], v2[2]).setColor(red, green, blue, alpha).setUv(v2[3], 1).setLight(LightCoordsUtil.FULL_BRIGHT).setOverlay(OverlayTexture.NO_OVERLAY).setNormal(0, 1, 0);
-            vertexConsumer.addVertex(matrix, v3[0], v3[1], v3[2]).setColor(red, green, blue, alpha).setUv(v3[3], 1).setLight(LightCoordsUtil.FULL_BRIGHT).setOverlay(OverlayTexture.NO_OVERLAY).setNormal(0, 1, 0);
+            vertexConsumer.addVertex(matrix, v0[0], v0[1], v0[2]).setUv(v0[3], 0).setColor(red, green, blue, alpha);
+            vertexConsumer.addVertex(matrix, v1[0], v1[1], v1[2]).setUv(v1[3], 0).setColor(red, green, blue, alpha);
+            vertexConsumer.addVertex(matrix, v2[0], v2[1], v2[2]).setUv(v2[3], 1).setColor(red, green, blue, alpha);
+            vertexConsumer.addVertex(matrix, v3[0], v3[1], v3[2]).setUv(v3[3], 1).setColor(red, green, blue, alpha);
         }
     }
 

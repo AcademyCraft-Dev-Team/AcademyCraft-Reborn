@@ -185,10 +185,12 @@ public final class TerminalHUD {
         return Render.Buffers.getInstance().getProjectionUB(projectionMatrix).slice();
     }
 
-    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     @MainThread
     public void toggleActive() {
-        active = !active;
+        if (ClientUtil.hasScreen()) return;
+
+        var last = active;
+        active = !last;
 
         var mc = Minecraft.getInstance();
         var w = mc.getWindow();
@@ -257,7 +259,7 @@ public final class TerminalHUD {
                 renderPass.setUniform("Projection", projectionUBSlice);
                 renderPass.setUniform("DynamicTransforms", dynamicTransformsSlice);
 
-                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFSQuadColorVBSDC());
+                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFSQuadUvColorVBSDC());
                 var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
                 renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
                 renderPass.drawIndexed(0, 0, 6, 1);

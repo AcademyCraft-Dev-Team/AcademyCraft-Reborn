@@ -15,13 +15,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-@SuppressWarnings("unused")
 public final class Screens {
     public static final Map<String, BiConsumer<ClientPacketListener, FriendlyByteBuf>> SCREEN_HANDLERS = new HashMap<>();
 
     static {
         SCREEN_HANDLERS.put(WindGenBaseBlock.WIND_GEN_SCREEN,
-                (listener, buf) -> {
+                (_, buf) -> {
                     var containerId = buf.readVarInt();
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();
@@ -37,12 +36,12 @@ public final class Screens {
                     }
                 });
         SCREEN_HANDLERS.put(AbilityDeveloperBlock.ABILITY_DEVELOPER_SCREEN,
-                (listener, buf) -> {
+                (_, buf) -> {
                     var pos = buf.readBlockPos();
                     Minecraft.getInstance().setScreen(new AbilityDeveloperScreen(pos));
                 });
         SCREEN_HANDLERS.put(WirelessNodeBlock.WIRELESS_NODE_SCREEN,
-                (ClientPacketListener, buf) -> {
+                (_, buf) -> {
                     var containerId = buf.readVarInt();
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();
@@ -58,7 +57,7 @@ public final class Screens {
                     }
                 });
         SCREEN_HANDLERS.put(OmniCraftingTableBlock.OMNI_CRAFTING_TABLE_SCREEN,
-                (ClientPacketListener, buf) -> {
+                (_, buf) -> {
                     var containerId = buf.readVarInt();
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();
@@ -70,7 +69,7 @@ public final class Screens {
                     }
                 });
         SCREEN_HANDLERS.put(SolarGenBlock.SOLAR_GEN_SCREEN,
-                (listener, buf) -> {
+                (_, buf) -> {
                     var containerId = buf.readVarInt();
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();

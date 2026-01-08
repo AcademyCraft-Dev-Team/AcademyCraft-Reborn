@@ -13,6 +13,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.api.client.Render;
+import org.academy.api.client.hud.ability.AbilityInfoHUD;
 import org.academy.api.client.hud.terminal.TerminalHUD;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.post.BlurEffect;
@@ -38,6 +39,7 @@ public final class HUDManager {
 
     public static void initMain() {
         TerminalHUD.initMain();
+        AbilityInfoHUD.initMain();
     }
 
     @RenderThread
@@ -58,6 +60,7 @@ public final class HUDManager {
         var mouseY = m.getScaledYPos(w);
         var deltaPartialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         TerminalHUD.getInstance().perform(mouseX, mouseY, deltaPartialTick);
+        AbilityInfoHUD.getInstance().perform(mouseX, mouseY, deltaPartialTick);
     }
 
     public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
@@ -87,6 +90,7 @@ public final class HUDManager {
             var drew = new AtomicBoolean();
 
             TerminalHUD.getInstance().render(width, height, uiColor, uiDepth, drew);
+            AbilityInfoHUD.getInstance().render(width, height, uiColor, uiDepth, drew);
 
             if (!drew.get()) return;
 
@@ -104,12 +108,13 @@ public final class HUDManager {
             * 如果 blur 渲染到 main, ui 通过 GuiGraphics 渲染, 会导致 blur 与 ui 有一单位左右的像素偏差喵
             * 解决方案为将 blur 和 ui 绘制到 last, last 最终通过 GuiGraphics 渲染喵
             */
-            Render.runBlitPassNDC(
+            var textures = List.of(new TextureBinding("DiffuseSampler", uiColor,
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+            );
+            Render.runBlitPass(
                     lastColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
-                    List.of(new TextureBinding("DiffuseSampler", uiColor,
-                            RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
-                    ),
-                    List.of(),
+                    Render.Buffers.getInstance().getFSQuadVBNDC(),
+                    textures, List.of(),
                     false
             );
 
