@@ -296,6 +296,7 @@ public class MathUtil {
             map.put(totalWeight, item);
         }
 
+        @Nullable
         public T getRandomItem() {
             if (totalWeight <= 0) return null;
             var r = RANDOM.nextDouble() * totalWeight;

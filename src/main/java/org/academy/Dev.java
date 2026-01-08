@@ -11,7 +11,7 @@ public final class Dev {
         try {
             ImGui.class.getClass();
             hasImGui = true;
-        } catch (Throwable ignored) {
+        } catch (Throwable _) {
         }
         HAS_IM_GUI = hasImGui;
     }

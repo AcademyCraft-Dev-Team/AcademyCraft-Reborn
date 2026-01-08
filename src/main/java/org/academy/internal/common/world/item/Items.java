@@ -8,7 +8,6 @@ import org.academy.internal.common.world.level.block.Blocks;
 
 import static org.academy.AcademyCraft.MODID;
 
-@SuppressWarnings("unused")
 public final class Items {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     public static final DeferredHolder<Item, Item> ICON =

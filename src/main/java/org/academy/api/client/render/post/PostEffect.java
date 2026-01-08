@@ -50,11 +50,11 @@ public final class PostEffect {
         var sceneDepth = sceneDepthView.texture();
 
         RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(sceneColor, 0, sceneDepth, 1);
-        Render.runBlitPassNDC(
-                sceneColorView,
-                Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
-                List.of(new TextureBinding("DiffuseSampler", main, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))),
-                List.of(),
+        var textures = List.of(new TextureBinding("DiffuseSampler", main, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)));
+        Render.runBlitPass(
+                sceneColorView, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
+                Render.Buffers.getInstance().getFSQuadVBNDC(),
+                textures, List.of(),
                 false
         );
         BUFFER_SOURCE_PRE.endBatch();

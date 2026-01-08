@@ -161,11 +161,21 @@ public final class BloomEffect {
         writeBlurUniforms(outSize, dirX, dirY, radius);
         var blurUboSlice = blurUniformsBuffer.slice();
 
-        Render.runBlitPassNDC(
-                output,
-                Render.RenderPipelines.GAUSSIAN_BLUR,
-                List.of(new TextureBinding("DiffuseSampler", input, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))),
-                List.of(new UniformBinding("BlurInfo", blurUboSlice)), true
+        var textures = List.of(
+                new TextureBinding(
+                        "DiffuseSampler",
+                        input,
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                )
+        );
+        var uniforms = List.of(
+                new UniformBinding("BlurInfo", blurUboSlice)
+        );
+        Render.runBlitPass(
+                output, Render.RenderPipelines.GAUSSIAN_BLUR,
+                Render.Buffers.getInstance().getFSQuadVBNDC(),
+                textures, uniforms,
+                true
         );
     }
 
@@ -218,9 +228,11 @@ public final class BloomEffect {
 
                 input.copyDepthFrom(depthTarget);
                 var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-                Render.runBlitPassNDC(
+                var textures = List.of(new TextureBinding("DiffuseSampler", inputView, sampler));
+                Render.runBlitPass(
                         main, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
-                        List.of(new TextureBinding("DiffuseSampler", inputView, sampler)), List.of(),
+                        Render.Buffers.getInstance().getFSQuadVBNDC(),
+                        textures, List.of(),
                         false
                 );
                 BLIT_TO_MAIN_POST.endBatch();
@@ -294,14 +306,16 @@ public final class BloomEffect {
                         new TextureBinding("BlurTexture2", pongQuarterView, sampler),
                         new TextureBinding("BlurTexture3", pongEighthView, sampler)
                 );
-                Render.runBlitPassNDC(
+                Render.runBlitPass(
                         main, Render.RenderPipelines.BLOOM_BLEND,
+                        Render.Buffers.getInstance().getFSQuadVBNDC(),
                         blendSamplers,
                         List.of(new UniformBinding("BloomInfo", bloomUniformsBuffer.slice())),
                         false
                 );
-                Render.runBlitPassNDC(
+                Render.runBlitPass(
                         scene, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
+                        Render.Buffers.getInstance().getFSQuadVBNDC(),
                         List.of(new TextureBinding("DiffuseSampler", main, sampler)),
                         List.of(),
                         false
