@@ -68,5 +68,6 @@ public final class Player {
 
     public void setCpOccupations(List<CPData.CPOccupationData> cpOccupations) {
         this.cpOccupations = cpOccupations;
+        markDirty();
     }
 }

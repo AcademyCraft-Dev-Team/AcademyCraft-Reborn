@@ -4,6 +4,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.CopyOnWriteArrayList;
+
 public interface AbilitySubsystem {
     default void tick(ServerPlayer player) {
     }
@@ -14,5 +16,5 @@ public interface AbilitySubsystem {
     default void onPlayerLogout(@NotNull ServerPlayer player) {
     }
 
-    void processSync(@NotNull ServerPlayer player, @NotNull Identifier type);
+    void processSync(@NotNull ServerPlayer player);
 }

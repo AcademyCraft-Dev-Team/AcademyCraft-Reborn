@@ -2,10 +2,8 @@ package org.academy.internal.server.ability;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import org.academy.AcademyCraft;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.Map;
@@ -13,22 +11,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
-public class SyncManager{
-    private final Map<UUID, LivePlayer> livePlayerMap = new ConcurrentHashMap<>();
+public class SyncManager {
+    private final Map<UUID, Set<Identifier>> playerSyncQueueMap = new ConcurrentHashMap<>();
     private final List<Runnable> pendingTasks = new CopyOnWriteArrayList<>();
-    private final List<AbilitySubsystem> subsystems = new CopyOnWriteArrayList<>();
     private final MinecraftServerContext context;
 
     public SyncManager(MinecraftServerContext context) {
         this.context = context;
-    }
-
-    public void register(AbilitySubsystem subsystem) {
-        subsystems.add(subsystem);
     }
 
     public void addTask(Runnable runnable) {
@@ -36,66 +27,42 @@ public class SyncManager{
     }
 
     public void halt() {
-        livePlayerMap.clear();
+        playerSyncQueueMap.clear();
         pendingTasks.clear();
     }
 
     public void onPlayerLogin(ServerPlayer player) {
         var uuid = player.getUUID();
-        livePlayerMap.put(uuid, new LivePlayer(uuid));
-        for (var sub : subsystems) {
-            sub.onPlayerLogin(player);
-        }
+        playerSyncQueueMap.put(uuid, ConcurrentHashMap.newKeySet());
     }
 
     public void onPlayerLogout(ServerPlayer player) {
         var uuid = player.getUUID();
-        livePlayerMap.remove(uuid);
-        for (var sub : subsystems) {
-            sub.onPlayerLogout(player);
-        }
+        playerSyncQueueMap.remove(uuid);
     }
 
     public void schedulePlayerSync(UUID uuid, Identifier syncType) {
-        if (livePlayerMap.containsKey(uuid)) {
-            livePlayerMap.get(uuid).syncQueue.add(syncType);
-        }
+        playerSyncQueueMap.get(uuid).add(syncType);
     }
 
-    public void tick() {
-        if (context.getMinecraftServer().isPaused()) return;
-
+    public void processPendingTasks() {
         if (!pendingTasks.isEmpty()) {
             pendingTasks.forEach(Runnable::run);
             pendingTasks.clear();
         }
-
-        for (var livePlayer : livePlayerMap.values()) {
-            var player = context.getMinecraftServer().getPlayerList().getPlayer(livePlayer.uuid);
-            if (player != null) {
-                for (var sub : subsystems) {
-                    sub.tick(player);
-                }
-                tickPlayerSync(livePlayer, player);
-            }
-        }
     }
 
-    private void tickPlayerSync(LivePlayer livePlayer, ServerPlayer player) {
-        for (var type : livePlayer.syncQueue) {
-            for (var sub : subsystems) {
-                sub.processSync(player, type);
-            }
-        }
-        livePlayer.syncQueue.clear();
-    }
+    public void tick(ServerPlayer player) {
+        if (context.getMinecraftServer().isPaused()) return;
+        if (!playerSyncQueueMap.containsKey(player.getUUID())) return;
 
-    private static class LivePlayer {
-        public final UUID uuid;
-        public final Set<Identifier> syncQueue = ConcurrentHashMap.newKeySet();
+        var syncQueue = playerSyncQueueMap.get(player.getUUID());
+        if (syncQueue == null || syncQueue.isEmpty()) return;
 
-        public LivePlayer(final UUID newUuid) {
-            uuid = newUuid;
+        for (var identifier : syncQueue) {
+            AbilitySystemServer.SubsystemRegistry.getHandler(identifier)
+                    .ifPresent(subsystem -> subsystem.processSync(player));
         }
+        syncQueue.clear();
     }
 }

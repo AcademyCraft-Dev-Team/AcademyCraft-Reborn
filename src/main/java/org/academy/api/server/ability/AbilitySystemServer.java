@@ -16,6 +16,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AcquireCategoryPacket;
 import org.academy.api.common.ability.LearnSkillPacket;
+import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
@@ -24,20 +25,17 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.academy.internal.server.ability.PlayerCPManager;
-import org.academy.internal.server.ability.PlayerDataManager;
-import org.academy.internal.server.ability.SkillDataManager;
-import org.academy.internal.server.ability.SyncManager;
+import org.academy.internal.server.ability.*;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
+import org.jetbrains.annotations.NotNull;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -51,14 +49,14 @@ public final class AbilitySystemServer {
         syncManager = new SyncManager(context);
 
         playerDataManager = new PlayerDataManager(worldData, syncManager);
-        syncManager.register(playerDataManager);
+        SubsystemRegistry.registerSubsystem(playerDataManager, SyncTypes.ABILITY_CATEGORY);
 
         playerCPManager = new PlayerCPManager(playerDataManager, abilityConfig, syncManager);
         NeoForge.EVENT_BUS.register(playerCPManager);
-        syncManager.register(playerCPManager);
+        SubsystemRegistry.registerSubsystem(playerCPManager, SyncTypes.CP_DATA);
 
         skillDataManager = new SkillDataManager(playerDataManager, syncManager);
-        syncManager.register(skillDataManager);
+        SubsystemRegistry.registerSubsystem(skillDataManager, SyncTypes.SKILL_DATA);
         skillDataManager.setOnSkillLevelUp((player, levelsGained) -> {
             UUID uuid = player.getUUID();
             float currentMax = playerCPManager.getMaxCP(uuid);
@@ -74,6 +72,22 @@ public final class AbilitySystemServer {
         }
 
         MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
+    }
+
+    public static final class SubsystemRegistry {
+        private static final Map<Identifier, AbilitySubsystem> SYNC_ROUTERS = new ConcurrentHashMap<>();
+
+        public static void registerSubsystem(@NotNull AbilitySubsystem subsystem, Identifier syncType) {
+            SYNC_ROUTERS.put(syncType, subsystem);
+        }
+
+        public static Optional<AbilitySubsystem> getHandler(Identifier type) {
+            return Optional.ofNullable(SYNC_ROUTERS.get(type));
+        }
+
+        public static List<AbilitySubsystem> getSubsystems() {
+            return List.copyOf(SYNC_ROUTERS.values());
+        }
     }
 
     @HandleFuture
@@ -164,10 +178,16 @@ public final class AbilitySystemServer {
             playerDataManager.onPlayerLogin(player);
         }
         syncManager.onPlayerLogin(player);
+        for (var sub : SubsystemRegistry.getSubsystems()) {
+            sub.onPlayerLogin(player);
+        }
     }
 
     public void onPlayerLogout(ServerPlayer player) {
         syncManager.onPlayerLogout(player);
+        for (var sub : SubsystemRegistry.getSubsystems()) {
+            sub.onPlayerLogout(player);
+        }
     }
 
     @EventBusSubscriber
@@ -177,7 +197,15 @@ public final class AbilitySystemServer {
             var server = event.getServer();
             var context = (MinecraftServerContext) server;
             var instance = context.getAcademyCraftServer().getAbilitySystemServer();
-            instance.getSyncManager().tick();
+
+            var syncManager = instance.getSyncManager();
+            syncManager.processPendingTasks();
+
+            var playerList = server.getPlayerList().getPlayers();
+            playerList.forEach(serverPlayer -> {
+                SubsystemRegistry.getSubsystems().forEach(abilitySubsystem -> abilitySubsystem.tick(serverPlayer));
+                instance.getSyncManager().tick(serverPlayer);
+            });
         }
     }
 
@@ -247,7 +275,6 @@ public final class AbilitySystemServer {
     public void removePlayerSkill(ServerPlayer serverPlayer, String skillKey) {
         skillDataManager.removeSkill(serverPlayer, skillKey);
     }
-
 
 
     /**
