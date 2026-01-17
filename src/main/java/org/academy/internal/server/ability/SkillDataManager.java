@@ -29,8 +29,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     @Override
-    public void processSync(@NotNull ServerPlayer player, @NotNull Identifier type) {
-        if (!type.equals(SyncTypes.SKILL_DATA)) return;
+    public void processSync(@NotNull ServerPlayer player) {
         var playerData = playerDataManager.getData(player.getUUID());
         if (playerData == null) return;
 

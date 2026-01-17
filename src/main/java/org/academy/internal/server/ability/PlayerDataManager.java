@@ -37,12 +37,10 @@ public final class PlayerDataManager implements AbilitySubsystem {
     }
 
     @Override
-    public void processSync(@NotNull ServerPlayer player, @NotNull Identifier type) {
+    public void processSync(@NotNull ServerPlayer player) {
         var uuid = player.getUUID();
-        if (SyncTypes.ABILITY_CATEGORY.equals(type)) {
-            var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
-            MisakaNetworkServer.sendPacket(player, packet);
-        }
+        var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
+        MisakaNetworkServer.sendPacket(player, packet);
     }
 
     public AbilityCategory getPlayerAbilityCategory(UUID uuid) {

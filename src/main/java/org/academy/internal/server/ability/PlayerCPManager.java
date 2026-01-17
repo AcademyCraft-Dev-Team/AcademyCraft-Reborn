@@ -72,19 +72,18 @@ public class PlayerCPManager implements AbilitySubsystem {
         dirty |= tickSpRegen(player, cpData);
 
         if (dirty || cpData.isDirty()) {
-            cpData.clean();
             playerData.markDirty();
             syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);
         }
     }
 
     @Override
-    public void processSync(ServerPlayer serverPlayer, Identifier type) {
-        if (!type.equals(SyncTypes.CP_DATA)) return;
+    public void processSync(ServerPlayer serverPlayer) {
         Player player = playerDataManager.getData(serverPlayer.getUUID());
         if (player == null) return;
         var cpData = player.getCpData();
         MisakaNetworkServer.sendPacket(serverPlayer, new SyncCPDataPacket(cpData));
+        cpData.clean();
     }
 
     private boolean tickNormal(CPData cpData) {
@@ -140,7 +139,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         while (it.hasNext()) {
             var occupation = it.next();
             // 正常状态下的cp迭代
-            if (cpData.getStatus() == CPData.Status.NORMAL) {
+            if (cpData.getStatus() != CPData.Status.OVERLOAD) {
                 occupation.setIterationTicks(Math.max(occupation.getIterationTicks() - 1, 0));
             }
 
@@ -171,9 +170,6 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         occupations.add(new CPData.CPOccupationData(amount, iterationTicks));
         cpData.setAvailableCP(cpData.getAvailableCP() - amount);
-
-        playerData.markDirty();
-        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
         return true;
     }
 
@@ -220,9 +216,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             var cpData = playerData.getCpData();
             action.accept(cpData);
             if (cpData.isDirty()) {
-                cpData.clean();
                 playerData.markDirty();
-                syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
             }
         }
     }
@@ -257,7 +251,6 @@ public class PlayerCPManager implements AbilitySubsystem {
 
             cpData.setAvailableCP(newAvailableCP);
             cpData.setMaxCP(newMaxCP);
-            syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
             checkAndUpgradeLevel(uuid, cpData);
         });
     }
@@ -277,7 +270,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (newLevel != cpData.getLevel()) {
             LOGGER.info("Player Level Changed: {} -> {} (MaxCP: {})", cpData.getLevel(), newLevel, currentMaxCP);
             cpData.setLevel(newLevel);
-            syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
         }
     }
 
