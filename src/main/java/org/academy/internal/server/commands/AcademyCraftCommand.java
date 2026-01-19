@@ -27,6 +27,7 @@ import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.ability.Skills;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -231,13 +232,13 @@ public final class AcademyCraftCommand {
             return 1;
         }
 
-        private static int requestOccupy(CommandContext<CommandSourceStack> context, ServerPlayer player, float amount, int ticks, boolean isPassive, boolean broadcast) {
+        private static int requestOccupy(CommandContext<CommandSourceStack> context, ServerPlayer player, float amount, int ticks, boolean isPermanent, boolean broadcast) {
             var uuid = player.getUUID();
             var system = CommandUtils.getSystem(context);
-            var success = system.requestCPOccupation(uuid, amount, ticks, isPassive);
+            var success = system.tryActiveOccupation(uuid, amount, Skills.VECTOR_REFLECTION.get(), ticks, isPermanent);
 
             if (success) {
-                Component message = Component.literal(String.format("§a[AC Debug] Success: Occupied %.1f CP for %d ticks (Passive: %b) on %s", amount, ticks, isPassive, player.getName().getString()));
+                Component message = Component.literal(String.format("§a[AC Debug] Success: Occupied %.1f CP for %d ticks (isPermanent: %b) on %s", amount, ticks, isPermanent, player.getName().getString()));
                 sendFeedback(context, message, broadcast);
                 return 1;
             } else {
@@ -292,7 +293,7 @@ public final class AcademyCraftCommand {
         var serverContext = (MinecraftServerContext) player.level().getServer();
 
         var learnedSkills = serverContext.getAcademyCraftServer()
-                .getAbilitySystemServer().getPlayerData(playerUuid).getSkillData();
+                .getAbilitySystemServer().getPlayerData(playerUuid).getSkillDataMap();
 
         if (learnedSkills.isEmpty()) {
             context.getSource().sendSuccess(() -> Component.literal("You have not learned any skills yet."), false);
@@ -354,7 +355,7 @@ public final class AcademyCraftCommand {
         var serverContext = (MinecraftServerContext) player.level().getServer();
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
         abilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet.get().value());
-        var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillData();
+        var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
         if (learnedSkills != null) {
             learnedSkills.clear();
             var playerData = abilitySystemServer.getPlayerData(playerUuid);
@@ -378,7 +379,7 @@ public final class AcademyCraftCommand {
             var serverContext = (MinecraftServerContext) player.level().getServer();
             var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
             var currentCategory = abilitySystemServer.getPlayerAbilityCategory(playerUuid);
-            var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillData();
+            var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
 
             return SharedSuggestionProvider.suggest(
                     currentCategory.getSkills().stream()
@@ -408,7 +409,7 @@ public final class AcademyCraftCommand {
             return 0;
         }
 
-        var skillData = playerData.getSkillData().get(skillKey);
+        var skillData = playerData.getSkillDataMap().get(skillKey);
         skillData.setExp(amount);
 
         playerData.markDirty();
@@ -431,7 +432,7 @@ public final class AcademyCraftCommand {
             var playerUuid = player.getUUID();
             var serverContext = (MinecraftServerContext) player.level().getServer();
             var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
-            var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillData();
+            var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
 
             return SharedSuggestionProvider.suggest(
                     learnedSkills.keySet(),

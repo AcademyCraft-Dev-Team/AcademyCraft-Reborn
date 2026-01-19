@@ -14,7 +14,7 @@ public final class Player {
 
     // CP
     @SerializedName("cpOccupations")
-    private List<CPData.CPOccupationData> cpOccupations = new ArrayList<>();
+    private List<CPData.CpOccupationData> cpOccupations = new ArrayList<>();
     @SerializedName("cpData")
     private CPData cpData = new CPData();
 
@@ -43,7 +43,7 @@ public final class Player {
         }
     }
 
-    public Map<String, SkillData> getSkillData() {
+    public Map<String, SkillData> getSkillDataMap() {
         return skillDataMap;
     }
 
@@ -62,11 +62,11 @@ public final class Player {
         }
     }
 
-    public List<CPData.CPOccupationData> getCpOccupations() {
+    public List<CPData.CpOccupationData> getCpOccupations() {
         return cpOccupations;
     }
 
-    public void setCpOccupations(List<CPData.CPOccupationData> cpOccupations) {
+    public void setCpOccupations(List<CPData.CpOccupationData> cpOccupations) {
         this.cpOccupations = cpOccupations;
         markDirty();
     }

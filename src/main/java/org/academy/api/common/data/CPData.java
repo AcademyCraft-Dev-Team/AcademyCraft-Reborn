@@ -8,14 +8,14 @@ public class CPData {
     private float availableCP = 100;
     private AbilityLevel level = AbilityLevel.LEVEL0;
     private Status status = Status.NORMAL;
-    private int stateTimer = 0;
+    private int stateTimer = 0;// 状态定时器，大于零时每tick自减
 
     // SP
     private int currSP = 2000;
     private int maxSP = 2000;
-    private int setSpRegenTimer = 0;
+    private int spRegenTimer = 0;// 每tick自增，到20时，SP增加1
 
-    private boolean isDirty = false;
+    private transient boolean isDirty = false;
 
     public enum Status {
         NORMAL,
@@ -30,12 +30,30 @@ public class CPData {
         isDirty = true;
     }
 
-    public void clean() {
+    public void clearDirty() {
         isDirty = false;
     }
 
     public boolean isDirty() {
         return isDirty;
+    }
+
+    public void tickStateTimer() {
+        if (stateTimer > 0) {
+            stateTimer--;
+        }
+    }
+
+    public boolean tickSpRegenTimer() {
+        var threshold = 20;
+
+        spRegenTimer++;
+        if (spRegenTimer >= threshold) {
+            spRegenTimer = 0;
+            addSP(1);
+            return true;
+        }
+        return false;
     }
 
     public float getMaxCP() {
@@ -52,7 +70,7 @@ public class CPData {
     }
 
     public void setAvailableCP(float availableCP) {
-        this.availableCP = availableCP;
+        this.availableCP = Math.min(availableCP, maxCP);
         markDirty();
     }
 
@@ -107,11 +125,11 @@ public class CPData {
     }
 
     public int getSpRegenTimer() {
-        return setSpRegenTimer;
+        return spRegenTimer;
     }
 
     public void setSpRegenTimer(int setSpRegenTimer) {
-        this.setSpRegenTimer = setSpRegenTimer;
+        this.spRegenTimer = setSpRegenTimer;
     }
 
     public static class Builder {
@@ -165,13 +183,17 @@ public class CPData {
         return new Builder();
     }
 
-    public static class CPOccupationData {
-        float amount;
-        int iterationTicks;
+    public static class CpOccupationData {
+        private final float amount;
+        private int iterationTicks;
+        private final String skillId;
+        private final boolean isPermanent;
 
-        public CPOccupationData(float amount, int iterationTicks) {
+        public CpOccupationData(float amount, int iterationTicks, String skillId, boolean isPermanent) {
             this.amount = amount;
             this.iterationTicks = iterationTicks;
+            this.skillId = skillId;
+            this.isPermanent = isPermanent;
         }
 
         public boolean isFree() {
@@ -182,16 +204,20 @@ public class CPData {
             return amount;
         }
 
-        public void setAmount(float amount) {
-            this.amount = amount;
-        }
-
         public int getIterationTicks() {
             return iterationTicks;
         }
 
         public void setIterationTicks(int iterationTicks) {
             this.iterationTicks = iterationTicks;
+        }
+
+        public String getSkillId() {
+            return skillId;
+        }
+
+        public boolean isPermanent() {
+            return isPermanent;
         }
     }
 }
