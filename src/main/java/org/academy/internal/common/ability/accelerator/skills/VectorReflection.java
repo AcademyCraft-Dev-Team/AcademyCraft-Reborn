@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.accelerator.skills;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -51,7 +52,11 @@ public class VectorReflection extends Skill {
     public VectorReflection() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL2)
+                .level(AbilityLevel.LEVEL4)
+                .iterationTicks(200)
+                .maintenanceCost(50)
+                .passive()
+                .maxStacks(NO_STACK_LIMIT)
         );
     }
 
@@ -78,11 +83,6 @@ public class VectorReflection extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
-        var key = SyncKeys.VECTOR_REFLECTION_ACTIVE.get();
-        Server.activeSyncManager = new DataSyncManager<>(
-                key, DataTypes.BOOL.get(), context.getMinecraftServer().getPlayerList()
-        );
-        ServerSyncManager.register(key, Server.activeSyncManager);
     }
 
     public static final class Client {
@@ -133,58 +133,48 @@ public class VectorReflection extends Skill {
     }
 
     public static final class Server {
-        @Nullable
-        private static DataSyncManager<Boolean> activeSyncManager;
-        public static final Map<UUID, Boolean> ACTIVE_REFLECTION_MAP = new LinkedHashMap<>();
-
         @SubscribePacket
         public static void toggleReflection(TogglePacket packet) {
-            var uuid = packet.getPacketListener().getPlayer().getUUID();
-            ACTIVE_REFLECTION_MAP.compute(uuid, (_, value) -> value == null || !value);
+            ServerPlayer player = packet.getPacketListener().getPlayer();
+            var skill = Skills.VECTOR_REFLECTION.get();
+            skill.toggleEnabled(player);
         }
 
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
-            if (player.isCreative() || player.isSpectator()) {
-                return false;
-            }
-            final var uuid = player.getUUID();
-            if (ACTIVE_REFLECTION_MAP.containsKey(uuid)) return ACTIVE_REFLECTION_MAP.get(uuid);
-            return !damageSource.is(DamageTypes.STARVE) && !damageSource.is(DamageTypes.DROWN) && !damageSource.is(DamageTypes.GENERIC_KILL);
+            if (player.isCreative() || player.isSpectator()) return false;
+
+            return !damageSource.is(DamageTypes.STARVE)
+                    && !damageSource.is(DamageTypes.DROWN)
+                    && !damageSource.is(DamageTypes.GENERIC_KILL);
         }
 
         public static Pair<Boolean, Float> hurtServer(Player player, ServerLevel level, DamageSource source, float originalDamage) {
-            if (player.invulnerableTime > 0) {
-                return Pair.of(false, 0f);
-            }
+            if (player.invulnerableTime > 0) return Pair.of(false, 0f);
+            if (!shouldReflection(player, source)) return Pair.of(false, originalDamage);
 
-            if (!shouldReflection(player, source)) {
-                return Pair.of(false, originalDamage);
-            }
-
+            var skill = Skills.VECTOR_REFLECTION.get();
             var system = AbilitySystemServer.getSystem(player);
-            var uuid = player.getUUID();
-            var requiredCP = originalDamage * 10f;
-            var currentCP = system.getPlayerAvailableCP(uuid);
+            var currentCP = system.getPlayerAvailableCP(player.getUUID());
+            var requiredCP = originalDamage * 3f;
 
-            var clampedCP = Mth.clamp(currentCP, 0f, 200f);
-            var iterationTicks = (int) Mth.map(clampedCP, 0f, 200, 10, 150);
+            final float[] remainingDamage = {originalDamage};
+            final boolean[] reflected = {false};
 
-            if (system.requestCPOccupation(uuid, requiredCP, iterationTicks, true)) {
+            skill.executeActive((ServerPlayer) player, requiredCP, () -> {
                 if (currentCP >= requiredCP) {
                     player.invulnerableTime = 20;
                     applyReflection(player, level, source, originalDamage);
-                    return Pair.of(false, 0f);
+                    remainingDamage[0] = 0f;
                 } else {
                     var effectiveCP = Math.max(0f, currentCP);
-                    var reflectedDamage = effectiveCP / 10f;
-                    var remainingDamage = Math.max(0f, originalDamage - reflectedDamage);
-
-                    applyReflection(player, level, source, reflectedDamage);
-                    return Pair.of(true, remainingDamage);
+                    var reflectedPart = effectiveCP / 10f;
+                    applyReflection(player, level, source, reflectedPart);
+                    remainingDamage[0] = Math.max(0f, originalDamage - reflectedPart);
                 }
-            }
+                reflected[0] = true;
+            });
 
-            return Pair.of(false, originalDamage);
+            return Pair.of(reflected[0] && remainingDamage[0] > 0, remainingDamage[0]);
         }
 
         private static void applyReflection(Player player, ServerLevel level, DamageSource source, float reflectedDamage) {

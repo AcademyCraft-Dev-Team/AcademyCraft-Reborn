@@ -13,10 +13,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.AcquireCategoryPacket;
-import org.academy.api.common.ability.LearnSkillPacket;
-import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.common.ability.*;
+import org.academy.api.common.ability.event.AbilityOverloadEvent;
+import org.academy.api.common.ability.event.AbilityRecoveryEvent;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
@@ -39,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
+    private final Map<UUID, Set<ServerContext>> activeContexts;
 
     private final SkillDataManager skillDataManager;
     private final PlayerDataManager playerDataManager;
@@ -57,8 +57,7 @@ public final class AbilitySystemServer {
 
         skillDataManager = new SkillDataManager(playerDataManager, syncManager);
         SubsystemRegistry.registerSubsystem(skillDataManager, SyncTypes.SKILL_DATA);
-        skillDataManager.setOnSkillLevelUp((player, levelsGained) -> {
-            UUID uuid = player.getUUID();
+        skillDataManager.setOnSkillLevelUp((uuid, levelsGained) -> {
             float currentMax = playerCPManager.getMaxCP(uuid);
             playerCPManager.setMaxCP(uuid, currentMax + (5.0f * levelsGained));
         });
@@ -70,6 +69,9 @@ public final class AbilitySystemServer {
         for (var skill : Registries.SKILLS) {
             skill.initServer(context);
         }
+
+        activeContexts = new ConcurrentHashMap<>();
+        NeoForge.EVENT_BUS.register(this);
 
         MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
     }
@@ -174,10 +176,10 @@ public final class AbilitySystemServer {
     }
 
     public void onPlayerLogin(ServerPlayer player) {
+        syncManager.onPlayerLogin(player);
         if (playerDataManager != null) {
             playerDataManager.onPlayerLogin(player);
         }
-        syncManager.onPlayerLogin(player);
         for (var sub : SubsystemRegistry.getSubsystems()) {
             sub.onPlayerLogin(player);
         }
@@ -188,6 +190,15 @@ public final class AbilitySystemServer {
         for (var sub : SubsystemRegistry.getSubsystems()) {
             sub.onPlayerLogout(player);
         }
+
+        var contexts = this.activeContexts.remove(player.getUUID());
+        if (contexts == null) return;
+        contexts.forEach(NeoForge.EVENT_BUS::unregister);
+
+        contexts.forEach(ctx -> {
+            NeoForge.EVENT_BUS.unregister(ctx);
+            MisakaNetworkServer.NETWORK_MANAGER.unregisterPacketListener(ctx);
+        });
     }
 
     @EventBusSubscriber
@@ -218,17 +229,70 @@ public final class AbilitySystemServer {
     }
 
     public static void registerContext(ServerContext serverContext) {
+        var player = serverContext.player;
+        if (player == null) return;
+
+        var instance = getSystem(player);
+        instance.activeContexts.computeIfAbsent(player.getUUID(), k -> ConcurrentHashMap.newKeySet())
+                .add(serverContext);
+
         NeoForge.EVENT_BUS.register(serverContext);
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
+        var player = serverContext.player;
+        if (player == null) return;
+
+        var instance = getSystem(player);
+        var contexts = instance.activeContexts.get(player.getUUID());
+        if (contexts == null) return;
+
+        contexts.remove(serverContext);
+        if (contexts.isEmpty()) instance.activeContexts.remove(player.getUUID());
+
         NeoForge.EVENT_BUS.unregister(serverContext);
         MisakaNetworkServer.NETWORK_MANAGER.unregisterPacketListener(serverContext);
     }
 
+    @SubscribeEvent
+    public void onPlayerOverload(AbilityOverloadEvent event) {
+        var uuid = event.getEntity().getUUID();
+        var contexts = this.activeContexts.get(uuid);
+
+        if (contexts != null) {
+            var copy = List.copyOf(contexts);
+            copy.forEach(ServerContext::unregister);
+            LOGGER.info("Player {} overloaded: Force terminated {} contexts.", event.getEntity().getName().getString(), copy.size());
+        }
+    }
+
+    @SubscribeEvent
+    public void onOverloadRecovered(AbilityRecoveryEvent event) {
+        var player = event.getEntity();
+        var uuid = player.getUUID();
+        var playerData = getPlayerData(uuid);
+        if (playerData == null) return;
+
+        // 恢复所有已启用的技能占用
+        playerData.getSkillDataMap().forEach((skillId, data) -> {
+            if (!data.isEnabled()) return;
+            Registries.SKILLS.get(Identifier.parse(skillId)).ifPresent(skillRef -> {
+                var skill = skillRef.value();
+                if (skill.getMaintenanceCost() > 0) {
+                    this.tryActiveOccupation(uuid, skill.getMaintenanceCost(), skill, 0,true);
+                }
+            });
+        });
+        LOGGER.info("player {} recovered from overload.", player.getName().getString());
+    }
+
     public void onServerStopping() {
         NeoForge.EVENT_BUS.unregister(playerCPManager);
+        NeoForge.EVENT_BUS.unregister(this);
+        activeContexts.values().forEach(set ->
+                set.forEach(NeoForge.EVENT_BUS::unregister));
+        activeContexts.clear();
     }
 
     public static AbilitySystemServer getSystem(Entity entity) {
@@ -260,20 +324,28 @@ public final class AbilitySystemServer {
     /**
      * 技能数据相关方法
      */
-    public float getPlayerSkillExp(ServerPlayer serverPlayer, String skillKey) {
-        return skillDataManager.getSkillExp(serverPlayer, skillKey);
+    public float getPlayerSkillExp(UUID uuid, String skillKey) {
+        return skillDataManager.getSkillExp(uuid, skillKey);
     }
 
-    public void addPlayerSkillExp(ServerPlayer serverPlayer, String skillKey, SkillDataManager.ExpEvent expEvent) {
-        skillDataManager.addSkillExp(serverPlayer, skillKey, expEvent);
+    public void addPlayerSkillExp(UUID uuid, Skill skill, SkillDataManager.ExpEvent expEvent) {
+        skillDataManager.addSkillExp(uuid, skill, expEvent);
     }
 
     public void addPlayerSkill(ServerPlayer serverPlayer, String skillKey) {
         skillDataManager.addSkill(serverPlayer, skillKey);
     }
 
-    public void removePlayerSkill(ServerPlayer serverPlayer, String skillKey) {
-        skillDataManager.removeSkill(serverPlayer, skillKey);
+    public void removePlayerSkill(UUID uuid, String skillKey) {
+        skillDataManager.removeSkill(uuid, skillKey);
+    }
+
+    public void toggleSkillEnabled(UUID uuid, String skillId) {
+        this.skillDataManager.toggleSkillEnabled(uuid, skillId);
+    }
+
+    public void releaseMaintenanceOccupation(UUID uuid, String skillId) {
+        playerCPManager.releaseMaintenanceOccupation(uuid, skillId);
     }
 
 
@@ -291,11 +363,10 @@ public final class AbilitySystemServer {
     /**
      * 请求 CP 占用
      *
-     * @param isPassive 是否被动占用（被动占用能使玩家进入个人现实过载状态）
      * @return 是否成功
      */
-    public boolean requestCPOccupation(UUID uuid, float amount, int iterationTicks, boolean isPassive) {
-        return playerCPManager.requestCPOccupation(uuid, amount, iterationTicks, isPassive);
+    public boolean tryActiveOccupation(UUID uuid, float amount, Skill skill, int iterationTicks, boolean isPermanent) {
+        return playerCPManager.tryActiveOccupation(uuid, amount, skill, iterationTicks, isPermanent);
     }
 
     public void setPlayerLevel(UUID uuid, int level) {

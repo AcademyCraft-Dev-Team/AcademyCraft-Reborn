@@ -15,6 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
+import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -26,6 +27,8 @@ import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import java.util.*;
 
 public abstract class Skill {
+    public static final int NO_STACK_LIMIT = -1;
+
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
     public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
@@ -38,6 +41,10 @@ public abstract class Skill {
     private Set<Skill> dependencies = new HashSet<>();
     private final DataFactory dataFactory;
     private final int maxSkillLevel;
+    private final int iterationTicks;// 技能迭代时间间隔，单位为tick
+    private final int maxStacks;// 技能堆栈数量
+    private final float maintenanceCost;// 持续性技能所占用的cp
+    private final boolean isPassive;
 
     protected Skill(Builder builder) {
         recommendedLevel = builder.recommendedLevel;
@@ -45,6 +52,10 @@ public abstract class Skill {
         maxSkillLevel = builder.maxSkillLevel;
         category = builder.category;
         category.addSkill(this);
+        iterationTicks = builder.iterationTicks;
+        maxStacks = builder.maxStacks;
+        maintenanceCost = builder.maintenanceCost;
+        isPassive = builder.isPassive;
 
         dataFactory = builder.dataFactory;
         Class<? extends SkillData> dataClass = builder.dataClass;
@@ -60,24 +71,67 @@ public abstract class Skill {
 
     /**
      * 技能击中目标时触发，默认行为为增加经验。
+     * 伤害类型需要设置为 SkillDamageSource 才能自动触发此事件
      * 重写时建议调用super.onHurt()
      */
     public void onHurt(ServerPlayer attacker, LivingEntity target, float amount) {
         AbilitySystemServer.getSystem(attacker)
-                .addPlayerSkillExp(attacker, this.getKeyString(), SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+                .addPlayerSkillExp(attacker.getUUID(), this, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
     }
 
     /**
      * 技能击杀目标时触发，默认行为为增加经验。
+     * 伤害类型需要设置为 SkillDamageSource 才能自动触发此事件
      * 重写时建议调用super.onKill()
      */
     public void onKill(ServerPlayer killer, LivingEntity target) {
         AbilitySystemServer.getSystem(killer)
-                .addPlayerSkillExp(killer, this.getKeyString(), SkillDataManager.ExpEvent.KILL_ENTITY);
+                .addPlayerSkillExp(killer.getUUID(), this, SkillDataManager.ExpEvent.KILL_ENTITY);
     }
 
-    public SkillData createData(ServerPlayer player, float initialExp) {
-        return dataFactory.create(player, initialExp);
+    protected final void executeActive(ServerPlayer player, float cpCost, Runnable action) {
+        if (!isEnabled(player)) return;
+
+        var system = AbilitySystemServer.getSystem(player);
+        var uuid = player.getUUID();
+        if (system.getPlayerStatus(uuid) == CPData.Status.OVERLOAD) return;
+
+        if (system.tryActiveOccupation(uuid, cpCost, this, this.getIterationTicks(), false)) {
+            action.run();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <T extends SkillData> Optional<T> getRuntimeData(ServerPlayer player) {
+        var system = AbilitySystemServer.getSystem(player);
+        SkillData data = system.getPlayerData(player.getUUID()).getSkillDataMap().get(this.getKeyString());
+        return Optional.ofNullable((T) data);
+    }
+
+    public final void toggleEnabled(ServerPlayer player) {
+        if (this.maintenanceCost <= 0) return;
+        var uuid = player.getUUID();
+        var system = AbilitySystemServer.getSystem(player);
+        var goingToEnable = !this.isEnabled(player);
+
+        // 部分技能启用时需要占用cp
+        if (goingToEnable) {
+            if (system.tryActiveOccupation(uuid, this.maintenanceCost, this, 0, true)) {
+                system.toggleSkillEnabled(uuid, this.getKeyString());
+            }
+        } else {
+            system.toggleSkillEnabled(uuid, this.getKeyString());
+            system.releaseMaintenanceOccupation(uuid, this.getKeyString());
+        }
+    }
+
+    public final boolean isEnabled(ServerPlayer player) {
+        return getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
+    }
+
+    // 考虑到后续可能需要传入上下文，因此传入ServerPlayer
+    public SkillData createData(ServerPlayer player) {
+        return dataFactory.create(player);
     }
 
     public static <T extends Context> Map<Player, T> createContextMap() {
@@ -124,6 +178,14 @@ public abstract class Skill {
         return maxSkillLevel;
     }
 
+    public float getMaintenanceCost() {
+        return maintenanceCost;
+    }
+
+    public boolean isPassive() {
+        return isPassive;
+    }
+
     public String getKeyString() {
         return getKey().toString();
     }
@@ -140,6 +202,14 @@ public abstract class Skill {
         var key = getKey();
         var skillName = Util.makeDescriptionId("key", key);
         return skillName + "." + name;
+    }
+
+    public int getIterationTicks() {
+        return iterationTicks;
+    }
+
+    public int getMaxStacks() {
+        return maxStacks;
     }
 
     private record DependencyResolver(Skill target, Set<DeferredHolder<Skill, ? extends Skill>> holders) {
@@ -163,8 +233,12 @@ public abstract class Skill {
         private int energyCostToLearn = 5000;
         private final Set<DeferredHolder<Skill, ? extends Skill>> dependencyHolders = new HashSet<>();
         private int maxSkillLevel = 3;
+        private int iterationTicks = 20;
+        private int maxStacks = 2;
+        private float maintenanceCost = 0f;
+        private boolean isPassive = false;
 
-        private DataFactory dataFactory = (player, exp) -> new CommonSkillData(exp);
+        private DataFactory dataFactory = player -> new CommonSkillData();
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
 
@@ -177,6 +251,11 @@ public abstract class Skill {
             return this;
         }
 
+        public Builder passive() {
+            isPassive = true;
+            return this;
+        }
+
         public Builder energyCost(int cost) {
             energyCostToLearn = cost;
             return this;
@@ -184,6 +263,30 @@ public abstract class Skill {
 
         public Builder maxSkillLevel(int maxSkillLevel) {
             this.maxSkillLevel = maxSkillLevel;
+            return this;
+        }
+
+        /**
+         * 技能迭代tick
+         */
+        public Builder iterationTicks(int iterationTicks) {
+            this.iterationTicks = iterationTicks;
+            return this;
+        }
+
+        /**
+         * 技能最大叠加层数，可传入Skill.NO_STACK_LIMIT 表示不限制
+         */
+        public Builder maxStacks(int maxStacks) {
+            this.maxStacks = maxStacks;
+            return this;
+        }
+
+        /**
+         * 被动类技能开启时的持续占用CP值
+         */
+        public Builder maintenanceCost(float maintenanceCost) {
+            this.maintenanceCost = maintenanceCost;
             return this;
         }
 
@@ -211,6 +314,6 @@ public abstract class Skill {
 
     @FunctionalInterface
     public interface DataFactory {
-        SkillData create(ServerPlayer player, float initialExp);
+        SkillData create(ServerPlayer player);
     }
 }
