@@ -61,6 +61,27 @@ public class VectorReflection extends Skill {
     }
 
     @Override
+    public int getIterationTicks(int skillLevel) {
+        if (skillLevel >= 1) return 160;
+        return super.getIterationTicks(skillLevel);
+    }
+
+    public float getMaxAbsorptionRate(int level) {
+        if (level >= 3) return 0.08f;
+        return 0.05f;
+    }
+
+    public float getReflectionCostFactor(int level) {
+        if (level >= 2) return 2.5f;
+        return 3.0f;
+    }
+
+    public float getReflectionDamageFactor(int level) {
+        if (level >= 1) return 1.5f;
+        return 1f;
+    }
+
+    @Override
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
@@ -135,9 +156,8 @@ public class VectorReflection extends Skill {
     public static final class Server {
         @SubscribePacket
         public static void toggleReflection(TogglePacket packet) {
-            ServerPlayer player = packet.getPacketListener().getPlayer();
-            var skill = Skills.VECTOR_REFLECTION.get();
-            skill.toggleEnabled(player);
+            var player = packet.getPacketListener().getPlayer();
+            Skills.VECTOR_REFLECTION.get().toggleEnabled(player);
         }
 
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
@@ -151,30 +171,31 @@ public class VectorReflection extends Skill {
         public static Pair<Boolean, Float> hurtServer(Player player, ServerLevel level, DamageSource source, float originalDamage) {
             if (player.invulnerableTime > 0) return Pair.of(false, 0f);
             if (!shouldReflection(player, source)) return Pair.of(false, originalDamage);
-
             var skill = Skills.VECTOR_REFLECTION.get();
-            var system = AbilitySystemServer.getSystem(player);
-            var currentCP = system.getPlayerAvailableCP(player.getUUID());
-            var requiredCP = originalDamage * 3f;
 
-            final float[] remainingDamage = {originalDamage};
-            final boolean[] reflected = {false};
+            final var remainingDamage = new float[]{originalDamage};
+            var success = skill.executeActive((ServerPlayer) player,
+                    ctx -> {
+                        var limit = ctx.system().getPlayerMaxCP(player.getUUID()) * skill.getMaxAbsorptionRate(ctx.level());
+                        var target = Math.min(originalDamage, limit);
+                        return target * skill.getReflectionCostFactor(ctx.level());
+                    },
+                    (ctx, actualCost) -> {
+                        var factor = skill.getReflectionCostFactor(ctx.level());
+                        var targetDamage = actualCost / factor;
+                        var canFullyAfford = ctx.availableCP() >= actualCost - 1E-3f;
 
-            skill.executeActive((ServerPlayer) player, requiredCP, () -> {
-                if (currentCP >= requiredCP) {
-                    player.invulnerableTime = 20;
-                    applyReflection(player, level, source, originalDamage);
-                    remainingDamage[0] = 0f;
-                } else {
-                    var effectiveCP = Math.max(0f, currentCP);
-                    var reflectedPart = effectiveCP / 10f;
-                    applyReflection(player, level, source, reflectedPart);
-                    remainingDamage[0] = Math.max(0f, originalDamage - reflectedPart);
-                }
-                reflected[0] = true;
-            });
-
-            return Pair.of(reflected[0] && remainingDamage[0] > 0, remainingDamage[0]);
+                        if (canFullyAfford) {
+                            player.invulnerableTime = 20;
+                            remainingDamage[0] = Math.max(0, originalDamage - targetDamage);
+                        } else {
+                            var absorbed = ctx.availableCP() / factor;
+                            remainingDamage[0] = originalDamage - absorbed;
+                        }
+                        applyReflection(player, level, source, targetDamage);
+                    }
+            );
+            return Pair.of(success && remainingDamage[0] <= 1E-3f, remainingDamage[0]);
         }
 
         private static void applyReflection(Player player, ServerLevel level, DamageSource source, float reflectedDamage) {

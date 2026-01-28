@@ -23,8 +23,10 @@ import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.server.ability.SkillDataManager;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
@@ -35,6 +37,10 @@ public abstract class Skill {
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
     );
+
+    @Nullable
+    private String cachedKeyString;
+
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
     private final AbilityCategory category;
@@ -69,6 +75,8 @@ public abstract class Skill {
         }
     }
 
+    public record SkillContext(int level, float availableCP, AbilitySystemServer system) {}
+
     /**
      * 技能击中目标时触发，默认行为为增加经验。
      * 伤害类型需要设置为 SkillDamageSource 才能自动触发此事件
@@ -89,16 +97,23 @@ public abstract class Skill {
                 .addPlayerSkillExp(killer.getUUID(), this, SkillDataManager.ExpEvent.KILL_ENTITY);
     }
 
-    protected final void executeActive(ServerPlayer player, float cpCost, Runnable action) {
-        if (!isEnabled(player)) return;
+    protected final boolean executeActive(ServerPlayer player,CostCalculator calculator, SkillAction action) {
+        if (!isEnabled(player)) return false;
 
         var system = AbilitySystemServer.getSystem(player);
         var uuid = player.getUUID();
-        if (system.getPlayerStatus(uuid) == CPData.Status.OVERLOAD) return;
+        if (system.getPlayerStatus(uuid) == CPData.Status.OVERLOAD) return false;
+        var level = system.getPlayerSkillLevel(uuid, this.getKeyString());
 
-        if (system.tryActiveOccupation(uuid, cpCost, this, this.getIterationTicks(), false)) {
-            action.run();
+        var ctx = new SkillContext(level, system.getPlayerAvailableCP(uuid), system);
+        float cpCost = calculator.calculate(ctx);
+
+        if (system.tryActiveOccupation(uuid, cpCost, this, this.getIterationTicks(level), false)) {
+            action.execute(ctx, cpCost);
+            system.addPlayerSkillExp(uuid, this, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+            return true;
         }
+        return false;
     }
 
     @SuppressWarnings("unchecked")
@@ -178,16 +193,32 @@ public abstract class Skill {
         return maxSkillLevel;
     }
 
-    public float getMaintenanceCost() {
+    public final int getLevel(ServerPlayer player) {
+        return AbilitySystemServer.getSystem(player).getPlayerSkillLevel(player.getUUID(), this.getKeyString());
+    }
+
+    public float getMaintenanceCost(int skillLevel) {
         return maintenanceCost;
     }
 
-    public boolean isPassive() {
+    public boolean isPassive(int skillLevel) {
         return isPassive;
     }
 
-    public String getKeyString() {
-        return getKey().toString();
+    public int getIterationTicks(int skillLevel) {
+        return iterationTicks;
+    }
+
+    public int getMaxStacks(int skillLevel) {
+        return maxStacks;
+    }
+
+
+    public final String getKeyString() {
+        if (cachedKeyString == null) {
+            cachedKeyString = getKey().toString();
+        }
+        return cachedKeyString;
     }
 
     public String getDescriptionId() {
@@ -202,14 +233,6 @@ public abstract class Skill {
         var key = getKey();
         var skillName = Util.makeDescriptionId("key", key);
         return skillName + "." + name;
-    }
-
-    public int getIterationTicks() {
-        return iterationTicks;
-    }
-
-    public int getMaxStacks() {
-        return maxStacks;
     }
 
     private record DependencyResolver(Skill target, Set<DeferredHolder<Skill, ? extends Skill>> holders) {
@@ -315,5 +338,15 @@ public abstract class Skill {
     @FunctionalInterface
     public interface DataFactory {
         SkillData create(ServerPlayer player);
+    }
+
+    @FunctionalInterface
+    public interface CostCalculator {
+        float calculate(SkillContext ctx);
+    }
+
+    @FunctionalInterface
+    public interface SkillAction {
+        void execute(SkillContext ctx, float actualCost);
     }
 }

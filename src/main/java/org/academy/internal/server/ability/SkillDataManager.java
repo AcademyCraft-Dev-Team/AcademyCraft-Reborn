@@ -64,6 +64,12 @@ public class SkillDataManager implements AbilitySubsystem {
         action.accept(data);
     }
 
+    public int getSkillLevel(UUID uuid, String skillKey) {
+        final int[] result = {0};
+        query(uuid, skillKey, data -> result[0] = data.getLevel());
+        return result[0];
+    }
+
     public void addSkillExp(UUID uuid, Skill skill, ExpEvent event) {
         modify(uuid, skill.getKeyString(), skillData -> {
             var maxLevel = skill.getMaxSkillLevel();
