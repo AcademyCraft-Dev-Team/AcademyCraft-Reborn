@@ -181,15 +181,17 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         var cpData = playerData.getCpData();
         var occupations = playerData.getCpOccupations();
+        var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
+        int level = (skillData != null) ? skillData.getLevel() : 0;
 
         if (cpData.getStatus() == CPData.Status.OVERLOAD) return false;
-        if (!skill.isPassive() && cpData.getAvailableCP() < amount) return false;
+        if (!skill.isPassive(level) && cpData.getAvailableCP() < amount) return false;
 
-        if (!isPermanent && skill.getMaxStacks() != Skill.NO_STACK_LIMIT) {
+        if (!isPermanent && skill.getMaxStacks(level) != Skill.NO_STACK_LIMIT) {
             long currentStacks = occupations.stream()
                     .filter(occ -> skill.getKeyString().equals(occ.getSkillId()))
                     .count();
-            if (currentStacks >= skill.getMaxStacks()) return false;
+            if (currentStacks >= skill.getMaxStacks(level)) return false;
         }
 
         occupations.add(new CPData.CpOccupationData(amount, iterationTicks, skill.getKeyString(), isPermanent));

@@ -279,8 +279,9 @@ public final class AbilitySystemServer {
             if (!data.isEnabled()) return;
             Registries.SKILLS.get(Identifier.parse(skillId)).ifPresent(skillRef -> {
                 var skill = skillRef.value();
-                if (skill.getMaintenanceCost() > 0) {
-                    this.tryActiveOccupation(uuid, skill.getMaintenanceCost(), skill, 0,true);
+                var level = getPlayerSkillLevel(uuid, skillId);
+                if (skill.getMaintenanceCost(level) > 0) {
+                    this.tryActiveOccupation(uuid, skill.getMaintenanceCost(level), skill, 0, true);
                 }
             });
         });
@@ -346,6 +347,10 @@ public final class AbilitySystemServer {
 
     public void releaseMaintenanceOccupation(UUID uuid, String skillId) {
         playerCPManager.releaseMaintenanceOccupation(uuid, skillId);
+    }
+
+    public int getPlayerSkillLevel(UUID uuid, String skillKey) {
+        return skillDataManager.getSkillLevel(uuid, skillKey);
     }
 
 
