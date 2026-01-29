@@ -1,4 +1,4 @@
-package org.academy.internal.common.ability.accelerator.skills;
+package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;

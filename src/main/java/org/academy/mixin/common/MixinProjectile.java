@@ -3,7 +3,7 @@ package org.academy.mixin.common;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
-import org.academy.internal.common.ability.accelerator.skills.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -27,18 +27,16 @@ public abstract class MixinProjectile {
     ) {
         var projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide()) return;
-        if (KineticEnergyApplied.Server.SKILL_STATS.containsKey(shooter.getUUID()) && KineticEnergyApplied.Server.SKILL_STATS.get(shooter.getUUID())) {
-            velocity = KineticEnergyApplied.Server.onProjectileShoot(projectile,shooter, velocity);
+        velocity = KineticEnergyApplied.Server.onProjectileShoot(projectile, shooter, velocity);
 
-            var f = -Mth.sin(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
-            var f1 = -Mth.sin((x + z) * ((float) Math.PI / 180F));
-            var f2 = Mth.cos(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
+        var f = -Mth.sin(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
+        var f1 = -Mth.sin((x + z) * ((float) Math.PI / 180F));
+        var f2 = Mth.cos(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
 
-            projectile.shoot(f, f1, f2, velocity, inaccuracy);
+        projectile.shoot(f, f1, f2, velocity, inaccuracy);
 
-            var vec3 = shooter.getDeltaMovement();
-            projectile.setDeltaMovement(projectile.getDeltaMovement().add(vec3.x, shooter.onGround() ? 0.0D : vec3.y, vec3.z));
-            ci.cancel();
-        }
+        var vec3 = shooter.getDeltaMovement();
+        projectile.setDeltaMovement(projectile.getDeltaMovement().add(vec3.x, shooter.onGround() ? 0.0D : vec3.y, vec3.z));
+        ci.cancel();
     }
 }

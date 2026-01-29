@@ -1,10 +1,15 @@
-package org.academy.internal.common.ability.accelerator.skills;
+package org.academy.internal.common.ability.accelerator.skills.lv1;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -15,6 +20,8 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -34,7 +41,33 @@ public class KineticEnergyApplied extends Skill {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL1)
+                .cpCost(10)
+                .iterationTicks(100)
+                .passive()
+                .maxStacks(10)
         );
+    }
+
+    public float getVelocityMultiplier(int level) {
+        if (level >= 1) return 8.0f;
+        return 3.0f;
+    }
+
+    public float getExtraDamage(int level) {
+        if (level >= 2) return 5.0f;
+        return 2.0f;
+    }
+
+    @Override
+    public int getIterationTicks(int skillLevel) {
+        if (skillLevel >= 3) return 20;
+        return super.getIterationTicks(skillLevel);
+    }
+
+    @Override
+    public int getMaxStacks(int skillLevel) {
+        if (skillLevel >= 3) return NO_STACK_LIMIT;
+        return super.getMaxStacks(skillLevel);
     }
 
     @Override
@@ -89,22 +122,37 @@ public class KineticEnergyApplied extends Skill {
     }
 
     public static final class Server {
-        public static final Map<UUID, Boolean> SKILL_STATS = new HashMap<>();
-
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            SKILL_STATS.compute(player.getUUID(), (_, aBoolean) -> aBoolean == null || !aBoolean);
+            Skills.KINETIC_ENERGY_APPLIED.get().toggle(player);
         }
 
         public static float onProjectileShoot(Projectile projectile, Entity shooter, float velocity) {
+            if (!(shooter instanceof ServerPlayer player)) return velocity;
+
+            var skill = Skills.KINETIC_ENERGY_APPLIED.get();
+            var level = skill.getLevel(player);
+            final float[] resultVelocity = {velocity};
+
+            skill.executeActive(player,
+                    (ctx, actualCost) -> {
+                        resultVelocity[0] = velocity * skill.getVelocityMultiplier(level);
+                        var damage = skill.getExtraDamage(level);
+                        projectile.setData(AttachmentTypes.PROJECTILE_EXTRA_DAMAGE, damage);
+                        spawnEffects(projectile, player);
+                    }
+            );
+            return resultVelocity[0];
+        }
+
+        private static void spawnEffects(Projectile projectile, Entity shooter) {
             var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), shooter.level());
-            var vec3 = shooter.getLookAngle().scale(1);
-            glowCircle.setPos(projectile.getX() + vec3.x, projectile.getY() + vec3.y, projectile.getZ() + vec3.z);
+            var lookVec = shooter.getLookAngle().scale(0.5);
+            glowCircle.setPos(projectile.getX() + lookVec.x, projectile.getY() + lookVec.y, projectile.getZ() + lookVec.z);
             glowCircle.setYRot(shooter.getYRot());
             glowCircle.setXRot(shooter.getXRot());
             shooter.level().addFreshEntity(glowCircle);
-            return velocity * 2;
         }
     }
 
@@ -119,6 +167,22 @@ public class KineticEnergyApplied extends Skill {
         @Override
         public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.KINETIC_ENERGY_APPLIED_TOGGLE.get();
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        @SubscribeEvent
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            var source = event.getSource();
+            var directEntity = source.getDirectEntity();
+
+            if (directEntity instanceof Projectile projectile) {
+                if (projectile.hasData(AttachmentTypes.PROJECTILE_EXTRA_DAMAGE)) {
+                    var bonus = projectile.getData(AttachmentTypes.PROJECTILE_EXTRA_DAMAGE);
+                    event.setAmount(event.getAmount() + bonus);
+                }
+            }
         }
     }
 }

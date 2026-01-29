@@ -1,4 +1,4 @@
-package org.academy.internal.common.ability.accelerator.skills;
+package org.academy.internal.common.ability.accelerator.skills.lv4;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.player.Player;
@@ -22,21 +21,16 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
-import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.sync.DataSyncManager;
-import org.academy.api.server.sync.ServerSyncManager;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -157,7 +151,7 @@ public class VectorReflection extends Skill {
         @SubscribePacket
         public static void toggleReflection(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.VECTOR_REFLECTION.get().toggleEnabled(player);
+            Skills.VECTOR_REFLECTION.get().toggle(player);
         }
 
         public static boolean shouldReflection(Player player, DamageSource damageSource) {

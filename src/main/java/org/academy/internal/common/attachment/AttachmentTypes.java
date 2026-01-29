@@ -51,5 +51,12 @@ public final class AttachmentTypes {
                     .build()
     );
 
-
+    //KineticEnergyApplied的投射物增伤
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Float>> PROJECTILE_EXTRA_DAMAGE = REGISTER.register(
+            "projectile_extra_damage",
+            () -> AttachmentType
+                    .builder(() -> 0.0f)
+                    .sync(ByteBufCodecs.FLOAT)
+                    .build()
+    );
 }
