@@ -175,7 +175,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         return dirty;
     }
 
-    public boolean tryActiveOccupation(UUID uuid, float amount, Skill skill, int iterationTicks, boolean isPermanent) {
+    public boolean tryOccupation(UUID uuid, float amount, Skill skill, int iterationTicks, boolean isPermanent) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
 

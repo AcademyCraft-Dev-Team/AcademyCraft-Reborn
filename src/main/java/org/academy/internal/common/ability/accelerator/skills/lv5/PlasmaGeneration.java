@@ -1,4 +1,4 @@
-package org.academy.internal.common.ability.accelerator.skills;
+package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;

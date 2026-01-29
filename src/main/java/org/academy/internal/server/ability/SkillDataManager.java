@@ -121,7 +121,7 @@ public class SkillDataManager implements AbilitySubsystem {
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
     }
 
-    public void toggleSkillEnabled(UUID uuid, String skillId) {
+    public void toggleSkill(UUID uuid, String skillId) {
         modify(uuid, skillId, SkillData::toggleEnabled);
     }
 

@@ -15,7 +15,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
-import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -26,7 +25,6 @@ import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
@@ -51,6 +49,7 @@ public abstract class Skill {
     private final int maxStacks;// 技能堆栈数量
     private final float maintenanceCost;// 持续性技能所占用的cp
     private final boolean isPassive;
+    private final float cpCost;
 
     protected Skill(Builder builder) {
         recommendedLevel = builder.recommendedLevel;
@@ -62,6 +61,7 @@ public abstract class Skill {
         maxStacks = builder.maxStacks;
         maintenanceCost = builder.maintenanceCost;
         isPassive = builder.isPassive;
+        cpCost = builder.cpCost;
 
         dataFactory = builder.dataFactory;
         Class<? extends SkillData> dataClass = builder.dataClass;
@@ -75,7 +75,8 @@ public abstract class Skill {
         }
     }
 
-    public record SkillContext(int level, float availableCP, AbilitySystemServer system) {}
+    public record SkillContext(int level, float availableCP, AbilitySystemServer system) {
+    }
 
     /**
      * 技能击中目标时触发，默认行为为增加经验。
@@ -97,23 +98,17 @@ public abstract class Skill {
                 .addPlayerSkillExp(killer.getUUID(), this, SkillDataManager.ExpEvent.KILL_ENTITY);
     }
 
-    protected final boolean executeActive(ServerPlayer player,CostCalculator calculator, SkillAction action) {
+    /**
+     * 技能逻辑执行，CostCalculator 用于动态计算技能消耗的CP
+     */
+    protected final boolean executeActive(ServerPlayer player, CostCalculator calculator, SkillAction action) {
         if (!isEnabled(player)) return false;
+        return AbilitySystemServer.getSystem(player)
+                .castCpIfPossible(player, this, calculator, action);
+    }
 
-        var system = AbilitySystemServer.getSystem(player);
-        var uuid = player.getUUID();
-        if (system.getPlayerStatus(uuid) == CPData.Status.OVERLOAD) return false;
-        var level = system.getPlayerSkillLevel(uuid, this.getKeyString());
-
-        var ctx = new SkillContext(level, system.getPlayerAvailableCP(uuid), system);
-        float cpCost = calculator.calculate(ctx);
-
-        if (system.tryActiveOccupation(uuid, cpCost, this, this.getIterationTicks(level), false)) {
-            action.execute(ctx, cpCost);
-            system.addPlayerSkillExp(uuid, this, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
-            return true;
-        }
-        return false;
+    protected final boolean executeActive(ServerPlayer player, SkillAction action) {
+        return executeActive(player, ctx -> this.cpCost, action);
     }
 
     @SuppressWarnings("unchecked")
@@ -123,19 +118,25 @@ public abstract class Skill {
         return Optional.ofNullable((T) data);
     }
 
-    public final void toggleEnabled(ServerPlayer player) {
-        if (this.maintenanceCost <= 0) return;
+    public final void toggle(ServerPlayer player) {
         var uuid = player.getUUID();
         var system = AbilitySystemServer.getSystem(player);
-        var goingToEnable = !this.isEnabled(player);
+        var level = system.getPlayerSkillLevel(uuid, this.getKeyString());
+        var cost = getMaintenanceCost(level);
 
-        // 部分技能启用时需要占用cp
+        boolean goingToEnable = !this.isEnabled(player);
+
+        if (cost <= 0) {
+            system.toggleSkill(uuid, this.getKeyString());
+            return;
+        }
+
         if (goingToEnable) {
-            if (system.tryActiveOccupation(uuid, this.maintenanceCost, this, 0, true)) {
-                system.toggleSkillEnabled(uuid, this.getKeyString());
+            if (system.tryPermanentOccupation(uuid, cost, this)) {
+                system.toggleSkill(uuid, this.getKeyString());
             }
         } else {
-            system.toggleSkillEnabled(uuid, this.getKeyString());
+            system.toggleSkill(uuid, this.getKeyString());
             system.releaseMaintenanceOccupation(uuid, this.getKeyString());
         }
     }
@@ -195,6 +196,10 @@ public abstract class Skill {
 
     public final int getLevel(ServerPlayer player) {
         return AbilitySystemServer.getSystem(player).getPlayerSkillLevel(player.getUUID(), this.getKeyString());
+    }
+
+    public float getCpCost(int skillLevel) {
+        return cpCost;
     }
 
     public float getMaintenanceCost(int skillLevel) {
@@ -260,6 +265,7 @@ public abstract class Skill {
         private int maxStacks = 2;
         private float maintenanceCost = 0f;
         private boolean isPassive = false;
+        private float cpCost = 0;
 
         private DataFactory dataFactory = player -> new CommonSkillData();
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
@@ -276,6 +282,11 @@ public abstract class Skill {
 
         public Builder passive() {
             isPassive = true;
+            return this;
+        }
+
+        public Builder cpCost(int cpCost) {
+            this.cpCost = cpCost;
             return this;
         }
 

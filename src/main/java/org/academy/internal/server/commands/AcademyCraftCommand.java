@@ -136,16 +136,7 @@ public final class AcademyCraftCommand {
                                             .then(Commands.argument("timer", IntegerArgumentType.integer(0))
                                                     .executes(ctx -> setStatus(ctx, EntityArgument.getPlayer(ctx, "target"), StringArgumentType.getString(ctx, "status"), IntegerArgumentType.getInteger(ctx, "timer"), false))
                                                     .then(Commands.argument("broadcast", BoolArgumentType.bool())
-                                                            .executes(ctx -> setStatus(ctx, EntityArgument.getPlayer(ctx, "target"), StringArgumentType.getString(ctx, "status"), IntegerArgumentType.getInteger(ctx, "timer"), BoolArgumentType.getBool(ctx, "broadcast"))))))))
-
-                    .then(Commands.literal("request")
-                            .then(Commands.argument("target", EntityArgument.player())
-                                    .then(Commands.argument("amount", FloatArgumentType.floatArg(0))
-                                            .then(Commands.argument("ticks", IntegerArgumentType.integer(0))
-                                                    .then(Commands.argument("is_passive", BoolArgumentType.bool())
-                                                            .executes(ctx -> requestOccupy(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "amount"), IntegerArgumentType.getInteger(ctx, "ticks"), BoolArgumentType.getBool(ctx, "is_passive"), false))
-                                                            .then(Commands.argument("broadcast", BoolArgumentType.bool())
-                                                                    .executes(ctx -> requestOccupy(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "amount"), IntegerArgumentType.getInteger(ctx, "ticks"), BoolArgumentType.getBool(ctx, "is_passive"), BoolArgumentType.getBool(ctx, "broadcast")))))))));
+                                                            .executes(ctx -> setStatus(ctx, EntityArgument.getPlayer(ctx, "target"), StringArgumentType.getString(ctx, "status"), IntegerArgumentType.getInteger(ctx, "timer"), BoolArgumentType.getBool(ctx, "broadcast"))))))));
         }
 
         private static int info(CommandContext<CommandSourceStack> context, ServerPlayer player, boolean broadcast) {
@@ -230,21 +221,6 @@ public final class AcademyCraftCommand {
                 return 0;
             }
             return 1;
-        }
-
-        private static int requestOccupy(CommandContext<CommandSourceStack> context, ServerPlayer player, float amount, int ticks, boolean isPermanent, boolean broadcast) {
-            var uuid = player.getUUID();
-            var system = CommandUtils.getSystem(context);
-            var success = system.tryActiveOccupation(uuid, amount, Skills.VECTOR_REFLECTION.get(), ticks, isPermanent);
-
-            if (success) {
-                Component message = Component.literal(String.format("§a[AC Debug] Success: Occupied %.1f CP for %d ticks (isPermanent: %b) on %s", amount, ticks, isPermanent, player.getName().getString()));
-                sendFeedback(context, message, broadcast);
-                return 1;
-            } else {
-                context.getSource().sendFailure(Component.literal("§cFailed: Insufficient CP or Overloaded on target " + player.getName().getString()));
-                return 0;
-            }
         }
 
         private static void sendFeedback(CommandContext<CommandSourceStack> context, Component message, boolean broadcast) {

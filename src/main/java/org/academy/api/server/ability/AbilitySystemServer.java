@@ -58,7 +58,7 @@ public final class AbilitySystemServer {
         skillDataManager = new SkillDataManager(playerDataManager, syncManager);
         SubsystemRegistry.registerSubsystem(skillDataManager, SyncTypes.SKILL_DATA);
         skillDataManager.setOnSkillLevelUp((uuid, levelsGained) -> {
-            float currentMax = playerCPManager.getMaxCP(uuid);
+            var currentMax = playerCPManager.getMaxCP(uuid);
             playerCPManager.setMaxCP(uuid, currentMax + (5.0f * levelsGained));
         });
 
@@ -280,8 +280,8 @@ public final class AbilitySystemServer {
             Registries.SKILLS.get(Identifier.parse(skillId)).ifPresent(skillRef -> {
                 var skill = skillRef.value();
                 var level = getPlayerSkillLevel(uuid, skillId);
-                if (skill.getMaintenanceCost(level) > 0) {
-                    this.tryActiveOccupation(uuid, skill.getMaintenanceCost(level), skill, 0, true);
+                if (skill.getMaintenanceCost(level) <= 0) {
+                    this.tryPermanentOccupation(uuid, skill.getMaintenanceCost(level), skill);
                 }
             });
         });
@@ -341,8 +341,8 @@ public final class AbilitySystemServer {
         skillDataManager.removeSkill(uuid, skillKey);
     }
 
-    public void toggleSkillEnabled(UUID uuid, String skillId) {
-        this.skillDataManager.toggleSkillEnabled(uuid, skillId);
+    public void toggleSkill(UUID uuid, String skillId) {
+        this.skillDataManager.toggleSkill(uuid, skillId);
     }
 
     public void releaseMaintenanceOccupation(UUID uuid, String skillId) {
@@ -366,12 +366,43 @@ public final class AbilitySystemServer {
     }
 
     /**
-     * 请求 CP 占用
-     *
-     * @return 是否成功
+     * 请求CP占用，cost为动态计算
      */
-    public boolean tryActiveOccupation(UUID uuid, float amount, Skill skill, int iterationTicks, boolean isPermanent) {
-        return playerCPManager.tryActiveOccupation(uuid, amount, skill, iterationTicks, isPermanent);
+    public boolean castCpIfPossible(ServerPlayer player, Skill skill,
+                                    Skill.CostCalculator calculator,
+                                    Skill.SkillAction action) {
+        var uuid = player.getUUID();
+        var level = this.getPlayerSkillLevel(uuid, skill.getKeyString());
+        var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
+        var actualCost = calculator.calculate(ctx);
+
+        if (playerCPManager.tryOccupation(uuid, actualCost, skill, skill.getIterationTicks(level), false)) {
+            action.execute(ctx, actualCost);
+            this.addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 请求CP占用cost为静态值
+     */
+    public boolean castCpIfPossible(ServerPlayer player, Skill skill,
+                                    float cost,
+                                    Skill.SkillAction action) {
+        var uuid = player.getUUID();
+        var level = this.getPlayerSkillLevel(uuid, skill.getKeyString());
+        var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
+        if (playerCPManager.tryOccupation(uuid, cost, skill, skill.getIterationTicks(level), false)) {
+            action.execute(ctx, cost);
+            this.addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean tryPermanentOccupation(UUID uuid, float amount, Skill skill) {
+        return playerCPManager.tryOccupation(uuid, amount, skill, 0, true);
     }
 
     public void setPlayerLevel(UUID uuid, int level) {
