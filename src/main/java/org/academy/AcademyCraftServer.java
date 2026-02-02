@@ -81,14 +81,14 @@ public final class AcademyCraftServer {
     }
 
     private void asyncSave() {
-        String snapshot = createSnapshotAndClean();
+        var snapshot = createSnapshotAndClean();
         if (snapshot == null) return;
         AcademyCraft.EXECUTOR_SERVICE.submit(() -> writeToFile(snapshot));
     }
 
     private void saveData() {
         LOGGER.info("Saving world data...");
-        String snapshot = createSnapshotAndClean();
+        var snapshot = createSnapshotAndClean();
         writeToFile(snapshot);
     }
 
@@ -96,7 +96,7 @@ public final class AcademyCraftServer {
      * @return JSON快照，没有脏数据则返回null
      */
     private @Nullable String createSnapshotAndClean() {
-        boolean hasDirtyData = worldData.getPlayers().values().stream()
+        var hasDirtyData = worldData.getPlayers().values().stream()
                 .anyMatch(Player::isDirty);
         if (!hasDirtyData) return null;
 

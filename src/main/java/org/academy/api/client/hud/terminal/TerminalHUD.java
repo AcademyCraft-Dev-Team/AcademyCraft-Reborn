@@ -218,7 +218,7 @@ public final class TerminalHUD {
             int width, int height,
             GpuTextureView color,
             GpuTextureView depth,
-            AtomicBoolean drew
+            AtomicBoolean drewStencil
     ) {
         if (!isActive()) return;
 
@@ -264,7 +264,7 @@ public final class TerminalHUD {
                 renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
                 renderPass.drawIndexed(0, 0, 6, 1);
             }
-            drew.set(true);
+            drewStencil.set(true);
         } finally {
             Render.Buffers.getResourcePool().release(desc, terminalTarget);
         }

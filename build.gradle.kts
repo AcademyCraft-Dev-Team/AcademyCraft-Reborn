@@ -1,12 +1,15 @@
 @file:Suppress("UnstableApiUsage")
 
+import org.slf4j.event.Level
+
+
 plugins {
     idea
     `java-library`
-    id("net.neoforged.moddev") version "2.0.131"
+    id("net.neoforged.moddev") version "2.0.140"
 }
 
-val neoVersion: String = "26.1.0.0-alpha.5+snapshot-2"
+val neoVersion: String = "26.1.0.0-alpha.8+snapshot-4"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
@@ -14,13 +17,13 @@ val modId = project.property("mod_id").toString()
 base {
     version = "${project.property("mod_version")}" + (if (isDev) "-dev" else "-release")
     group = "${project.property("mod_group_id")}"
-    archivesName = "${modId}-${project.property("minecraft_version")}"
+    archivesName.set("${modId}-${project.property("minecraft_version")}")
 }
 
 java {
     toolchain {
-        vendor = JvmVendorSpec.JETBRAINS
-        languageVersion = JavaLanguageVersion.of(25)
+        vendor.set(JvmVendorSpec.JETBRAINS)
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -56,8 +59,8 @@ repositories {
     mavenLocal()
     maven {
         name = "AC Dev Team's maven"
-        //   url = uri("D:/Project/maven-repo")
-        url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
+        url = uri("D:/Project/maven-repo")
+        //url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
         content {
             includeGroup("org.academy")
             //includeGroup("net.neoforged")
@@ -132,9 +135,14 @@ neoForge {
             environment("IS_DEV", "true")
         }
         configureEach {
-            logLevel = org.slf4j.event.Level.DEBUG
+            logLevel.set(Level.DEBUG)
             systemProperty("terminal.ansi", "true")
-            jvmArgument("-XX:+AllowEnhancedClassRedefinition")
+            jvmArguments.addAll(
+                "-XX:+IgnoreUnrecognizedVMOptions",
+                "-XX:+AllowEnhancedClassRedefinition",
+                "-XX:TieredStopAtLevel=1",
+                "-Xverify:none"
+            )
         }
     }
 
@@ -146,10 +154,12 @@ neoForge {
 }
 
 dependencies {
-    val misaka = "org.academy:misaka-network:26.1.0.0-alpha.1+snapshot-2"
+    val misaka = "org.academy:misaka-network:26.1.0.0-alpha.1+snapshot-4"
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)
+
+    annotationProcessor("com.google.auto.service:auto-service:1.1.1")
 
     val jlayer = "com.github.umjammer:jlayer:1.0.3"
     implementation(jlayer)
@@ -210,5 +220,4 @@ idea {
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-Xmaxerrs", "10000"))
-    options.compilerArgs.add("-Amisaka.provider.fqcn=org.academy.MisakaHandlersProviderImpl")
 }

@@ -133,7 +133,7 @@ public class KineticEnergyApplied extends Skill {
 
             var skill = Skills.KINETIC_ENERGY_APPLIED.get();
             var level = skill.getLevel(player);
-            final float[] resultVelocity = {velocity};
+            final var resultVelocity = new float[]{velocity};
 
             skill.executeActive(player,
                     (ctx, actualCost) -> {

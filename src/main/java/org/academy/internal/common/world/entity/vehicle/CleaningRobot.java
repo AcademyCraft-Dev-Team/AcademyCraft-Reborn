@@ -3,19 +3,15 @@ package org.academy.internal.common.world.entity.vehicle;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
 public class CleaningRobot extends Entity {
@@ -25,7 +21,7 @@ public class CleaningRobot extends Entity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.@NotNull Builder builder) {
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
     }
 
     @Override
@@ -35,24 +31,12 @@ public class CleaningRobot extends Entity {
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
-
     }
 
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
-
     }
 
-    @Override
-    public @NotNull InteractionResult interact(Player player, @NotNull InteractionHand hand) {
-        if (player.isSecondaryUseActive()) {
-            return InteractionResult.PASS;
-        } else if (!level().isClientSide()) {
-            return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
-        } else {
-            return InteractionResult.SUCCESS;
-        }
-    }
     @Override
     public float getPickRadius() {
         return 0.5F;

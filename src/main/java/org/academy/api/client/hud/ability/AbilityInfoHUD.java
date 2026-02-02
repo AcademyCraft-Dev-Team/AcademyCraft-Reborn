@@ -1,27 +1,34 @@
 package org.academy.api.client.hud.ability;
 
-import com.mojang.blaze3d.resource.RenderTargetDescriptor;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.gui.animation.Animator;
+import org.academy.api.client.gui.animation.AnimatorListener;
+import org.academy.api.client.gui.animation.EasingFunctions;
+import org.academy.api.client.gui.animation.ObjectAnimator;
+import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.render.UiContext;
-import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.ImageWidget;
-import org.academy.api.client.gui.widget.WidgetContainer;
-import org.academy.api.client.gui.widget.WidgetContext;
+import org.academy.api.client.gui.widget.*;
+import org.academy.api.client.render.TextureBinding;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class AbilityInfoHUD {
     @Nullable
@@ -40,63 +47,21 @@ public final class AbilityInfoHUD {
 
     public static void initMain() {
         INSTANCE = new AbilityInfoHUD();
+        NeoForge.EVENT_BUS.register(INSTANCE);
     }
 
     public void perform(double mouseX, double mouseY, float deltaPartialTick) {
         uiContext.perform(context.get(), mouseX, mouseY, deltaPartialTick);
     }
 
-    public void render(
-            int width, int height,
-            GpuTextureView color,
-            GpuTextureView depth,
-            AtomicBoolean drew
-    ) {
+    public void render(RenderTarget target) {
         if (!AbilitySystemClient.isActiveHUD()) return;
+        uiContext.upload(target, false);
+    }
 
-        var desc = new RenderTargetDescriptor(
-                width, height,
-                true, 0
-        );
-        var terminalTarget = Render.Buffers.getResourcePool().acquire(desc);
-
-        try {
-            uiContext.upload(terminalTarget, false);
-
-            var hudView = terminalTarget.getColorTextureView();
-            if (hudView == null) return;
-
-            var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-
-            var dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
-                    new Matrix4f(), new Vector4f(1),
-                    new Vector3f(), new Matrix4f()
-            );
-
-            var projection = Render.Buffers.getInstance().getProjectionUB(new Matrix4f()).slice();
-            try (var renderPass = commandEncoder.createRenderPass(
-                    () -> "Blit Pass to " + color + depth,
-                    color, OptionalInt.empty(), depth, OptionalDouble.empty()
-            )) {
-                renderPass.setPipeline(Render.RenderPipelines.IMAGE_STENCIL_PREMULTIPLIED_ALPHA);
-                renderPass.bindTexture(
-                        "Sampler0",
-                        hudView,
-                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                );
-                RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.setUniform("Projection", projection);
-                renderPass.setUniform("DynamicTransforms", dynamicTransforms);
-
-                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().getFSQuadColorVBNDC());
-                var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-                renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
-                renderPass.drawIndexed(0, 0, 6, 1);
-            }
-            drew.set(true);
-        } finally {
-            Render.Buffers.getResourcePool().release(desc, terminalTarget);
-        }
+    @SubscribeEvent
+    public void onTick(ClientTickEvent.Post event) {
+        context.get().tick();
     }
 
     private static class Context implements WidgetContext {
@@ -110,13 +75,206 @@ public final class AbilityInfoHUD {
         private FrameLayoutWidget createRoot() {
             var root = new FrameLayoutWidget();
             {
-                var icon = new ImageWidget(Resource.Textures.LOGO_TECH);
-                icon.setLayoutParams(
+                var cp = new FrameLayoutWidget();
+                cp.setLayoutParams(
                         new FrameLayoutWidget.LayoutParams()
-                                .size(128, 64)
-                                .gravity(Gravity.START)
+                                .size(240, 27)
+                                .margin(0, 4, 4, 0)
+                                .gravity(Gravity.TOP_RIGHT)
                 );
-                root.addChild("icon", icon);
+                root.addChild("cp", cp);
+                {
+                    var back = new ImageWidget(Resource.Textures.CP_BAR_BACKGROUND);
+                    back.setLayoutParams(
+                            new FrameLayoutWidget.LayoutParams()
+                                    .sizeMode(SizeMode.MATCH_PARENT)
+                    );
+                    cp.addChild("back", back);
+
+                    var content = new AbstractWidget() {
+                        private @Nullable GpuTextureView textureView;
+                        private final GpuSampler sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
+                        private final List<Particle> particles = new ArrayList<>();
+                        private float lastCp = AbilitySystemClient.getAvailableCP();
+                        private float visualCp = AbilitySystemClient.getAvailableCP();
+
+                        @Override
+                        protected void renderInternal(RenderContext context) {
+                            super.renderInternal(context);
+                            if (textureView == null || textureView.isClosed()) {
+                                try {
+                                    var tex = Minecraft.getInstance().getTextureManager().getTexture(Resource.Textures.CP_BAR_VALUE);
+                                    textureView = tex.getTextureView();
+                                } catch (Exception e) {
+                                    return;
+                                }
+                            }
+                            if (textureView == null) return;
+
+                            var spacing = 7f / 4f;
+                            var topPadding = 21f / 4f;
+                            var bottomPadding = 56f / 4f;
+                            var leftPadding = 107f / 4f;
+                            var rightPadding = 130f / 4f;
+
+                            // because tan(45°) = 1
+                            var progress = visualCp / AbilitySystemClient.getMaxCP();
+                            var offset = height - topPadding - bottomPadding;
+                            var i = 10 - (int) Math.ceil(progress / 0.1f);
+                            var barWidth = width - leftPadding - rightPadding - offset - 9 * spacing;
+                            var progressOffsetX = (1 - progress) * barWidth + i * spacing;
+
+                            var topPaddingU = topPadding / height;
+                            var bottomPaddingU = bottomPadding / height;
+
+                            var topLeft = leftPadding + progressOffsetX;
+                            var bottomLeft = topLeft + offset;
+                            var topRight = width - rightPadding - offset;
+                            var bottomRight = topRight + offset;
+
+                            var topLeftU = topLeft / width;
+                            var bottomLeftU = bottomLeft / width;
+                            var topRightU = topRight / width;
+                            var bottomRightU = bottomRight / width;
+
+                            var alpha = getAlpha() * context.getAccumulatedAlpha();
+
+                            context.submit(new DrawCommand(
+                                    Render.RenderPipelines.IMAGE,
+                                    List.of(new TextureBinding("Sampler0", textureView, sampler)),
+                                    List.of()
+                            ) {
+                                @Override
+                                public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
+                                    consumer.addVertex(pose, topLeft, topPadding, 0).setUv(topLeftU, topPaddingU).setColor(1, 1, 1, alpha);
+                                    consumer.addVertex(pose, bottomLeft, height - bottomPadding, 0).setUv(bottomLeftU, 1 - bottomPaddingU).setColor(1, 1, 1, alpha);
+                                    consumer.addVertex(pose, bottomRight, height - bottomPadding, 0).setUv(bottomRightU, 1 - bottomPaddingU).setColor(1, 1, 1, alpha);
+                                    consumer.addVertex(pose, topRight, topPadding, 0).setUv(topRightU, topPaddingU).setColor(1, 1, 1, alpha);
+                                }
+                            });
+
+                            for (var particle : particles) {
+                                var currentI = 10 - (int) Math.ceil(particle.current / 0.1f);
+                                var lastI = 10 - (int) Math.ceil(particle.last / 0.1f);
+                                var currentOffsetX = (1 - particle.current) * barWidth + currentI * spacing;
+                                var lastOffsetX = (1 - particle.last) * barWidth + lastI * spacing;
+
+                                var leftX = particle.increase ? currentOffsetX : lastOffsetX;
+                                var rightX = particle.increase ? lastOffsetX : currentOffsetX;
+
+                                var particleTopLeft = leftPadding + leftX;
+                                var particleTopRight = leftPadding + rightX;
+                                var particleBottomLeft = particleTopLeft + offset;
+                                var particleBottomRight = particleTopRight + offset;
+
+                                var particleTopLeftU = particleTopLeft / width;
+                                var particleTopRightU = particleTopRight / width;
+                                var particleBottomLeftU = particleBottomLeft / width;
+                                var particleBottomRightU = particleBottomRight / width;
+
+                                context.pose().pushPose();
+                                {
+                                    context.pose().translate(particle.posOffset, particle.posOffset, 0);
+
+                                    context.submit(new DrawCommand(
+                                            Render.RenderPipelines.IMAGE,
+                                            List.of(new TextureBinding("Sampler0", textureView, sampler)),
+                                            List.of()
+                                    ) {
+                                        @Override
+                                        public void generateVertices(VertexConsumer consumer, Matrix4f pose) {
+                                            consumer.addVertex(pose, particleTopLeft, topPadding, 0).setUv(particleTopLeftU, topPaddingU).setColor(1, 1, 1, particle.alpha);
+                                            consumer.addVertex(pose, particleBottomLeft, height - bottomPadding, 0).setUv(particleBottomLeftU, 1 - bottomPaddingU).setColor(1, 1, 1, particle.alpha);
+                                            consumer.addVertex(pose, particleBottomRight, height - bottomPadding, 0).setUv(particleBottomRightU, 1 - bottomPaddingU).setColor(1, 1, 1, particle.alpha);
+                                            consumer.addVertex(pose, particleTopRight, topPadding, 0).setUv(particleTopRightU, topPaddingU).setColor(1, 1, 1, particle.alpha);
+                                        }
+                                    });
+                                }
+                                context.pose().popPose();
+                            }
+                        }
+
+                        @Override
+                        public void tick() {
+                            var animationTime = 750L;
+                            var currentCp = AbilitySystemClient.getAvailableCP();
+
+                            if (currentCp != lastCp) {
+                                var maxCp = AbilitySystemClient.getMaxCP();
+                                var lastProgress = lastCp / maxCp;
+                                var currentProgress = currentCp / maxCp;
+                                var deltaProgress = currentProgress - lastProgress;
+                                var increase = deltaProgress > 0;
+
+                                if (!increase) visualCp = currentCp;
+
+                                var progressTracker = lastProgress;
+                                var i = 0;
+                                while (true) {
+                                    var start = progressTracker;
+                                    float end;
+
+                                    if (increase) {
+                                        var nextBoundary = (float) (Math.floor(start / 0.1f) + 1) * 0.1f;
+                                        end = Math.min(nextBoundary, currentProgress);
+                                    } else {
+                                        var nextBoundary = (float) Math.ceil(start / 0.1f - 1) * 0.1f;
+                                        end = Math.max(nextBoundary, currentProgress);
+                                    }
+
+                                    var progressChanged = Math.abs(start - end) > 0;
+                                    if (!progressChanged) break;
+
+                                    var particle = new Particle(start, end, increase);
+                                    var animation = ObjectAnimator
+                                            .ofFloat(particle::setProgress, 0, 1)
+                                            .setDuration(animationTime).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
+                                            .setStartDelay(i * animationTime / 10);
+
+                                    animation.addListener(new AnimatorListener() {
+                                        @Override
+                                        public void onAnimationEnd(Animator animation) {
+                                            particles.remove(particle);
+                                            if (particle.increase) {
+                                                visualCp = end * maxCp;
+                                            }
+                                        }
+                                    });
+                                    animation.start();
+                                    particles.add(particle);
+
+                                    progressTracker = end;
+                                    i++;
+
+                                    if (progressTracker == currentProgress) break;
+                                }
+                                lastCp = currentCp;
+                            }
+                        }
+
+                        private static class Particle {
+                            public final float last, current;
+                            public final boolean increase;
+                            public float posOffset, alpha = 1;
+
+                            public Particle(float last, float current, boolean increase) {
+                                this.last = last;
+                                this.current = current;
+                                this.increase = increase;
+                            }
+
+                            public void setProgress(float progress) {
+                                posOffset = increase ? -10 + progress * 10 : progress * -10;
+                                alpha = increase ? progress : 1 - progress;
+                            }
+                        }
+                    };
+                    content.setLayoutParams(
+                            new FrameLayoutWidget.LayoutParams()
+                                    .sizeMode(SizeMode.MATCH_PARENT)
+                    );
+                    cp.addChild("content", content);
+                }
             }
             return root;
         }

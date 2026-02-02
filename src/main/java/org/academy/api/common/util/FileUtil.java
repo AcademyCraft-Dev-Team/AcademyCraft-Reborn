@@ -5,6 +5,7 @@ import java.io.IOException;
 
 public final class FileUtil {
     public static void checkFile(File file) {
+
         try {
             var parent = file.getParentFile();
             if (parent != null && !parent.exists() && !parent.mkdirs()) throw new RuntimeException(

@@ -129,7 +129,7 @@ public class CPData {
     }
 
     public void setSpRegenTimer(int setSpRegenTimer) {
-        this.spRegenTimer = setSpRegenTimer;
+        spRegenTimer = setSpRegenTimer;
     }
 
     public static class Builder {

@@ -28,14 +28,14 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
 
     @Override
     public void submit(LightOrbRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        float scale = renderState.scale;
+        var scale = renderState.scale;
 
-        float r = 0.2f;
-        float g = 0.8f;
-        float b = 1.0f;
+        var r = 0.2f;
+        var g = 0.8f;
+        var b = 1.0f;
 
         var bufferSource = BloomEffect.getBlitToMainPost();
-        VertexConsumer additiveBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
+        var additiveBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
 
         random.setSeed(System.currentTimeMillis() / 40);
         var cameraRotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
@@ -63,7 +63,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
         // 内层辉光
         poseStack.pushPose();
         poseStack.mulPose(cameraRotation);
-        float pulse = 1.0f + random.nextFloat() * 0.1f;
+        var pulse = 1.0f + random.nextFloat() * 0.1f;
         poseStack.scale(0.7f * pulse, 0.7f * pulse, 0.7f * pulse);
         BallRenderer.renderBall(
                 poseStack.last(), additiveBuilder, HEAD_BUFFER,
@@ -86,7 +86,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
         // 外层辉光
         poseStack.pushPose();
         poseStack.mulPose(cameraRotation);
-        float outerScale = 3.0f + random.nextFloat() * 0.5f;
+        var outerScale = 3.0f + random.nextFloat() * 0.5f;
         poseStack.scale(outerScale, outerScale, outerScale);
         BallRenderer.renderBall(
                 poseStack.last(), additiveBuilder, HEAD_BUFFER,

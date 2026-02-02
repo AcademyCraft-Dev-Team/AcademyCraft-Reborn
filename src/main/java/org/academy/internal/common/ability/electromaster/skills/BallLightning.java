@@ -162,18 +162,18 @@ public class BallLightning extends Skill {
 
             public Context(ServerPlayer player) {
                 super(player);
-                this.position = player.getEyePosition().add(0, 1, 0);
-                this.timeSeed = (float) (MathUtil.RANDOM.nextDouble() * 10000);
+                position = player.getEyePosition().add(0, 1, 0);
+                timeSeed = (float) (MathUtil.RANDOM.nextDouble() * 10000);
 
-                Vec3 look = player.getLookAngle();
-                this.velocity = look.scale(0.5f);
+                var look = player.getLookAngle();
+                velocity = look.scale(0.5f);
 
-                this.currentState = BehaviorState.START;
-                this.stateTimer = 12;
+                currentState = BehaviorState.START;
+                stateTimer = 12;
 
                 var level = level();
-                this.visualEntity = new ArcEffect(level, MAX_DURATION_TICKS);
-                this.coreOrb = new LightOrb(level, MAX_DURATION_TICKS, 0.15f, this::updateCoreOrb);
+                visualEntity = new ArcEffect(level, MAX_DURATION_TICKS);
+                coreOrb = new LightOrb(level, MAX_DURATION_TICKS, 0.15f, this::updateCoreOrb);
 
                 visualEntity.setPos(position);
                 coreOrb.setPos(position);
@@ -239,9 +239,9 @@ public class BallLightning extends Skill {
                         if (hasTarget) {
                             currentState = BehaviorState.TRACK;
                         } else {
-                            double rx = position.x + (MathUtil.RANDOM.nextDouble() - 0.5) * 40;
-                            double rz = position.z + (MathUtil.RANDOM.nextDouble() - 0.5) * 40;
-                            double ry = position.y + (MathUtil.RANDOM.nextDouble() - 0.5) * 10;
+                            var rx = position.x + (MathUtil.RANDOM.nextDouble() - 0.5) * 40;
+                            var rz = position.z + (MathUtil.RANDOM.nextDouble() - 0.5) * 40;
+                            var ry = position.y + (MathUtil.RANDOM.nextDouble() - 0.5) * 10;
                             roamTarget = new Vec3(rx, ry, rz);
                             stateTimer = 40 + MathUtil.RANDOM.nextInt(40);
                         }
@@ -251,7 +251,7 @@ public class BallLightning extends Skill {
                             currentState = BehaviorState.ROAMING;
                             return;
                         }
-                        double dist = position.distanceTo(targetEntity.getBoundingBox().getCenter());
+                        var dist = position.distanceTo(targetEntity.getBoundingBox().getCenter());
                         if (dist <= 12.0) {
                             selectCombatState();
                         } else {
@@ -270,7 +270,7 @@ public class BallLightning extends Skill {
             }
 
             private void selectCombatState() {
-                float rng = MathUtil.RANDOM.nextFloat();
+                var rng = MathUtil.RANDOM.nextFloat();
                 if (rng < 0.2f) {
                     currentState = BehaviorState.SLIDE;
                     stateTimer = 20 + MathUtil.RANDOM.nextInt(30);
@@ -285,19 +285,19 @@ public class BallLightning extends Skill {
             }
 
             private void updatePhysics() {
-                Vec3 force = Vec3.ZERO;
-                float drag = 0.96f;
-                double maxSpeed = 0.5;
+                var force = Vec3.ZERO;
+                var drag = 0.96f;
+                var maxSpeed = 0.5;
 
                 if (currentState == BehaviorState.ROAMING) {
                     if (roamTarget != null) {
-                        Vec3 toRoam = roamTarget.subtract(position);
+                        var toRoam = roamTarget.subtract(position);
                         force = toRoam.normalize().scale(0.03);
                     }
                 }
 
                 if (hasTarget) {
-                    Vec3 toTarget = targetEntity.getBoundingBox().getCenter().subtract(position);
+                    var toTarget = targetEntity.getBoundingBox().getCenter().subtract(position);
 
                     switch (currentState) {
                         case TRACK -> {
@@ -306,17 +306,17 @@ public class BallLightning extends Skill {
                             drag = 0.92f;
                         }
                         case STAY -> {
-                            double t = existedTicks * 0.15 + timeSeed;
-                            Vec3 noise = new Vec3(Math.sin(t), Math.cos(t * 0.8), Math.sin(t * 1.2)).scale(0.04);
+                            var t = existedTicks * 0.15 + timeSeed;
+                            var noise = new Vec3(Math.sin(t), Math.cos(t * 0.8), Math.sin(t * 1.2)).scale(0.04);
                             force = noise.add(toTarget.normalize().scale(0.015));
                             drag = 0.85f;
                             maxSpeed = 0.1;
                         }
                         case SLIDE -> {
-                            Vec3 up = new Vec3(0, 1, 0);
-                            Vec3 tangent = toTarget.cross(up).normalize().scale(strafeDir);
+                            var up = new Vec3(0, 1, 0);
+                            var tangent = toTarget.cross(up).normalize().scale(strafeDir);
                             force = tangent.scale(0.12).add(toTarget.normalize().scale(0.04));
-                            double heightDiff = targetEntity.getY() + targetEntity.getBbHeight() / 2.0 - position.y;
+                            var heightDiff = targetEntity.getY() + targetEntity.getBbHeight() / 2.0 - position.y;
                             force = force.add(0, heightDiff * 0.03, 0);
                             drag = 0.95f;
                         }
@@ -392,12 +392,12 @@ public class BallLightning extends Skill {
                     ));
                 }
 
-                int branchCount = MathUtil.RANDOM.nextInt(1, 4);
+                var branchCount = MathUtil.RANDOM.nextInt(1, 4);
                 for (var i = 0; i < branchCount; i++) {
                     if (MathUtil.RANDOM.nextFloat() < 0.6f) {
-                        double r = 2.0 + Math.abs(MathUtil.RANDOM.nextGaussian() * 4.0);
+                        var r = 2.0 + Math.abs(MathUtil.RANDOM.nextGaussian() * 4.0);
                         if (r <= 6f) {
-                            double ang = Math.random() * 6.28;
+                            var ang = Math.random() * 6.28;
                             var target = position.add(r * Math.cos(ang), MathUtil.RANDOM.nextDouble(-2, 2), r * Math.sin(ang));
                             paths.add(new ArcPath(
                                     new LinePath(position.toVector3f(), target.toVector3f()),
