@@ -13,7 +13,9 @@ import org.academy.api.common.wireless.ConnectNodePacket;
 import org.academy.api.common.wireless.DisconnectNodePacket;
 import org.academy.api.common.wireless.GetAvailableNodesPacket;
 import org.academy.api.common.wireless.GetCurrentNodePacket;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
+import org.misaka.api.common.network.NetworkSystem;
 
 import java.util.function.Consumer;
 
@@ -72,6 +74,7 @@ public final class WirelessPanelUtil {
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(LIST_ITEM_HEIGHT)
                         .marginTop(SPACING_MINOR - SPACING_MAJOR)
+                        .marginRight(SCROLLBAR_WIDTH + SPACING_MINOR)
                 );
                 content.addChild("connected_node_container", connectedNodeContainer);
 
@@ -121,7 +124,7 @@ public final class WirelessPanelUtil {
     private static void updateConnectedNodeDisplay(BlockPos position, FrameLayoutWidget connectedNodeContainer, LinearLayoutWidget nodeList) {
         var requestPayload = new GetCurrentNodePacket(position);
         MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(requestPayload,
-                (GetCurrentNodePacket.Response response) -> {
+                (GetCurrentNodePacket.@Nullable Response response) -> {
                     if (response == null) return;
 
                     connectedNodeContainer.clearChildren();

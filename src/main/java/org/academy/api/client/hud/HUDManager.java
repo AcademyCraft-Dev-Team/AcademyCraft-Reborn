@@ -87,27 +87,27 @@ public final class HUDManager {
             var lastColor = last.getColorTextureView();
             if (mainColor == null || uiColor == null || uiDepth == null || lastColor == null) return;
 
-            var drew = new AtomicBoolean();
+            var drewStencil = new AtomicBoolean();
 
-            TerminalHUD.getInstance().render(width, height, uiColor, uiDepth, drew);
-            AbilityInfoHUD.getInstance().render(width, height, uiColor, uiDepth, drew);
+            TerminalHUD.getInstance().render(width, height, uiColor, uiDepth, drewStencil);
+            AbilityInfoHUD.getInstance().render(ui);
 
-            if (!drew.get()) return;
-
-            BlurEffect.apply(
-                    width, height,
-                    mainColor,
-                    lastColor,
-                    uiDepth,
-                    20.0f
-            );
+            if (drewStencil.get()) {
+                BlurEffect.apply(
+                        width, height,
+                        mainColor,
+                        lastColor,
+                        uiDepth,
+                        20.0f
+                );
+            }
 
             /*
-            * BlurEffect 仅支持渲染到 TextureView 喵
-            * 为了兼容原版 GUI 层级需要最终使用 GuiGraphics 渲染喵
-            * 如果 blur 渲染到 main, ui 通过 GuiGraphics 渲染, 会导致 blur 与 ui 有一单位左右的像素偏差喵
-            * 解决方案为将 blur 和 ui 绘制到 last, last 最终通过 GuiGraphics 渲染喵
-            */
+             * BlurEffect 仅支持渲染到 TextureView 喵
+             * 为了兼容原版 GUI 层级需要最终使用 GuiGraphics 渲染喵
+             * 如果 blur 渲染到 main, ui 通过 GuiGraphics 渲染, 会导致 blur 与 ui 有一单位左右的像素偏差喵
+             * 解决方案为将 blur 和 ui 绘制到 last, last 最终通过 GuiGraphics 渲染喵
+             */
             var textures = List.of(new TextureBinding("DiffuseSampler", uiColor,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
             );

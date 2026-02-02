@@ -191,7 +191,7 @@ public final class AbilitySystemServer {
             sub.onPlayerLogout(player);
         }
 
-        var contexts = this.activeContexts.remove(player.getUUID());
+        var contexts = activeContexts.remove(player.getUUID());
         if (contexts == null) return;
         contexts.forEach(NeoForge.EVENT_BUS::unregister);
 
@@ -258,7 +258,7 @@ public final class AbilitySystemServer {
     @SubscribeEvent
     public void onPlayerOverload(AbilityOverloadEvent event) {
         var uuid = event.getEntity().getUUID();
-        var contexts = this.activeContexts.get(uuid);
+        var contexts = activeContexts.get(uuid);
 
         if (contexts != null) {
             var copy = List.copyOf(contexts);
@@ -281,7 +281,7 @@ public final class AbilitySystemServer {
                 var skill = skillRef.value();
                 var level = getPlayerSkillLevel(uuid, skillId);
                 if (skill.getMaintenanceCost(level) <= 0) {
-                    this.tryPermanentOccupation(uuid, skill.getMaintenanceCost(level), skill);
+                    tryPermanentOccupation(uuid, skill.getMaintenanceCost(level), skill);
                 }
             });
         });
@@ -342,7 +342,7 @@ public final class AbilitySystemServer {
     }
 
     public void toggleSkill(UUID uuid, String skillId) {
-        this.skillDataManager.toggleSkill(uuid, skillId);
+        skillDataManager.toggleSkill(uuid, skillId);
     }
 
     public void releaseMaintenanceOccupation(UUID uuid, String skillId) {
@@ -372,13 +372,13 @@ public final class AbilitySystemServer {
                                     Skill.CostCalculator calculator,
                                     Skill.SkillAction action) {
         var uuid = player.getUUID();
-        var level = this.getPlayerSkillLevel(uuid, skill.getKeyString());
+        var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
         var actualCost = calculator.calculate(ctx);
 
         if (playerCPManager.tryOccupation(uuid, actualCost, skill, skill.getIterationTicks(level), false)) {
             action.execute(ctx, actualCost);
-            this.addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+            addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
             return true;
         }
         return false;
@@ -391,11 +391,11 @@ public final class AbilitySystemServer {
                                     float cost,
                                     Skill.SkillAction action) {
         var uuid = player.getUUID();
-        var level = this.getPlayerSkillLevel(uuid, skill.getKeyString());
+        var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
         if (playerCPManager.tryOccupation(uuid, cost, skill, skill.getIterationTicks(level), false)) {
             action.execute(ctx, cost);
-            this.addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+            addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
             return true;
         }
         return false;

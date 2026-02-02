@@ -16,7 +16,6 @@ import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
-import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.List;
@@ -87,7 +86,7 @@ public final class BlurEffect {
             int width, int height,
             GpuTextureView sampler,
             GpuTextureView output,
-            @Nullable GpuTextureView depth,
+            GpuTextureView depth,
             float radius
     ) {
         if (radius < 0.1f) return;

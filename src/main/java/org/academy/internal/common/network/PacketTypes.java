@@ -14,7 +14,7 @@ import org.academy.api.common.sync.packet.SyncDataPacket;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
-import org.academy.internal.common.ability.accelerator.skills.*;
+import org.academy.internal.common.ability.accelerator.skills.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
@@ -153,16 +153,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, GetCurrentNodePacket.Response>>
             GET_CURRENT_NODE_RESPONSE = PACKET_TYPES.register("get_current_node_response",
             () -> new PacketType<>(GetCurrentNodePacket.Response.class, GetCurrentNodePacket.Response.CODEC));
-
-/*
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket>>
-            GET_LEVEL_CHUNK_SECTIONS = PACKET_TYPES.register("get_level_chunk_sections",
-            () -> new PacketType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response>>
-            GET_LEVEL_CHUNK_SECTIONS_RESPONSE = PACKET_TYPES.register("get_level_chunk_sections_response",
-            () -> new PacketType<>(ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response.class, ImagiphaseDowsingRodItem.GetLevelChunkSectionsPacket.Response.CODEC));
-*/
 
     private PacketTypes() {
     }

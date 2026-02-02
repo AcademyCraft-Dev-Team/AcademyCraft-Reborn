@@ -67,7 +67,6 @@ public final class Resource {
         /**
          * HUD
          */
-        public static final Identifier CP_BAR = academy("textures/hud/cp_bar.png");
         public static final Identifier CP_BAR_VALUE = academy("textures/hud/cp_bar_value.png");
         public static final Identifier CP_BAR_BACKGROUND = academy("textures/hud/cp_bar_background.png");
         /**

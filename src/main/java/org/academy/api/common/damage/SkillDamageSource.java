@@ -31,7 +31,7 @@ public class SkillDamageSource extends DamageSource {
      * @return 技能伤害源
      */
     public static SkillDamageSource of(ServerPlayer player, Skill skill) {
-        DamageSource original = player.damageSources().playerAttack(player);
+        var original = player.damageSources().playerAttack(player);
         return new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
     }
 

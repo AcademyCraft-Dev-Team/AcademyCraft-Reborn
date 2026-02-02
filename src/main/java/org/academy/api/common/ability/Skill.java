@@ -64,7 +64,7 @@ public abstract class Skill {
         cpCost = builder.cpCost;
 
         dataFactory = builder.dataFactory;
-        Class<? extends SkillData> dataClass = builder.dataClass;
+        var dataClass = builder.dataClass;
         SkillDataSerializer.registerType(builder.dataTypeId, dataClass);
 
         if (builder.dependencyHolders.isEmpty()) {
@@ -108,36 +108,36 @@ public abstract class Skill {
     }
 
     protected final boolean executeActive(ServerPlayer player, SkillAction action) {
-        return executeActive(player, ctx -> this.cpCost, action);
+        return executeActive(player, ctx -> cpCost, action);
     }
 
     @SuppressWarnings("unchecked")
     public final <T extends SkillData> Optional<T> getRuntimeData(ServerPlayer player) {
         var system = AbilitySystemServer.getSystem(player);
-        SkillData data = system.getPlayerData(player.getUUID()).getSkillDataMap().get(this.getKeyString());
+        var data = system.getPlayerData(player.getUUID()).getSkillDataMap().get(getKeyString());
         return Optional.ofNullable((T) data);
     }
 
     public final void toggle(ServerPlayer player) {
         var uuid = player.getUUID();
         var system = AbilitySystemServer.getSystem(player);
-        var level = system.getPlayerSkillLevel(uuid, this.getKeyString());
+        var level = system.getPlayerSkillLevel(uuid, getKeyString());
         var cost = getMaintenanceCost(level);
 
-        boolean goingToEnable = !this.isEnabled(player);
+        var goingToEnable = !isEnabled(player);
 
         if (cost <= 0) {
-            system.toggleSkill(uuid, this.getKeyString());
+            system.toggleSkill(uuid, getKeyString());
             return;
         }
 
         if (goingToEnable) {
             if (system.tryPermanentOccupation(uuid, cost, this)) {
-                system.toggleSkill(uuid, this.getKeyString());
+                system.toggleSkill(uuid, getKeyString());
             }
         } else {
-            system.toggleSkill(uuid, this.getKeyString());
-            system.releaseMaintenanceOccupation(uuid, this.getKeyString());
+            system.toggleSkill(uuid, getKeyString());
+            system.releaseMaintenanceOccupation(uuid, getKeyString());
         }
     }
 
@@ -195,7 +195,7 @@ public abstract class Skill {
     }
 
     public final int getLevel(ServerPlayer player) {
-        return AbilitySystemServer.getSystem(player).getPlayerSkillLevel(player.getUUID(), this.getKeyString());
+        return AbilitySystemServer.getSystem(player).getPlayerSkillLevel(player.getUUID(), getKeyString());
     }
 
     public float getCpCost(int skillLevel) {
@@ -329,9 +329,9 @@ public abstract class Skill {
                 Class<T> clazz,
                 DataFactory factory
         ) {
-            this.dataTypeId = typeId;
-            this.dataClass = clazz;
-            this.dataFactory = factory;
+            dataTypeId = typeId;
+            dataClass = clazz;
+            dataFactory = factory;
             return this;
         }
 

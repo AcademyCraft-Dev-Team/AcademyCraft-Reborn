@@ -65,7 +65,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public int getSkillLevel(UUID uuid, String skillKey) {
-        final int[] result = {0};
+        final var result = new int[]{0};
         query(uuid, skillKey, data -> result[0] = data.getLevel());
         return result[0];
     }
@@ -91,7 +91,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public float getSkillExp(UUID uuid, String skillKey) {
-        final float[] result = {0.0f};
+        final var result = new float[]{0.0f};
         query(uuid, skillKey, data -> result[0] = data.getExp());
         return result[0];
     }

@@ -2,13 +2,14 @@ package org.academy.internal.server.ability;
 
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
+import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
@@ -19,7 +20,6 @@ import org.academy.api.common.ability.pakcet.SyncCPDataPacket;
 import org.academy.api.common.data.CPData;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.server.config.AbilityConfig;
-import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;
 import org.slf4j.Logger;
 
@@ -62,7 +62,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         var cpData = playerData.getCpData();
         var occupations = playerData.getCpOccupations();
 
-        boolean dirty = false;
+        var dirty = false;
 
         dirty |= switch (cpData.getStatus()) {
             case NORMAL -> tickNormal(cpData);
@@ -84,7 +84,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
     @Override
     public void processSync(ServerPlayer serverPlayer) {
-        Player player = playerDataManager.getData(serverPlayer.getUUID());
+        var player = playerDataManager.getData(serverPlayer.getUUID());
         if (player == null) return;
         var cpData = player.getCpData();
         MisakaNetworkServer.sendPacket(serverPlayer, new SyncCPDataPacket(cpData));
@@ -147,7 +147,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private boolean processOccupations(ServerPlayer player, CPData cpData, List<CPData.CpOccupationData> occupations) {
-        boolean dirty = false;
+        var dirty = false;
         var it = occupations.iterator();
         while (it.hasNext()) {
             var occupation = it.next();
@@ -182,13 +182,13 @@ public class PlayerCPManager implements AbilitySubsystem {
         var cpData = playerData.getCpData();
         var occupations = playerData.getCpOccupations();
         var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
-        int level = (skillData != null) ? skillData.getLevel() : 0;
+        var level = (skillData != null) ? skillData.getLevel() : 0;
 
         if (cpData.getStatus() == CPData.Status.OVERLOAD) return false;
         if (!skill.isPassive(level) && cpData.getAvailableCP() < amount) return false;
 
         if (!isPermanent && skill.getMaxStacks(level) != Skill.NO_STACK_LIMIT) {
-            long currentStacks = occupations.stream()
+            var currentStacks = occupations.stream()
                     .filter(occ -> skill.getKeyString().equals(occ.getSkillId()))
                     .count();
             if (currentStacks >= skill.getMaxStacks(level)) return false;
@@ -235,11 +235,9 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     @SubscribeEvent
-    public void onPlayerWakeUp(PlayerWakeUpEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide()) {
-            var dayTime = player.level().getDayTime() % 24000;
-            var isMorning = dayTime >= 0 && dayTime < 2000;
-            if (isMorning) {
+    public void onSleepFinishedTimeEvent(SleepFinishedTimeEvent event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            for (var player : level.players()) {
                 modify(player.getUUID(), data -> data.setCurrSP(data.getMaxSP()));
             }
         }
@@ -290,8 +288,8 @@ public class PlayerCPManager implements AbilitySubsystem {
             var maxCP = cpData.getMaxCP();
             if (Float.compare(maxCP, newMaxCP) == 0) return;
 
-            float diff = newMaxCP - maxCP;
-            float newAvailableCP = cpData.getAvailableCP() + diff;
+            var diff = newMaxCP - maxCP;
+            var newAvailableCP = cpData.getAvailableCP() + diff;
 
             cpData.setAvailableCP(newAvailableCP);
             cpData.setMaxCP(newMaxCP);

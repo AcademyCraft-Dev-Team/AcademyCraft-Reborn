@@ -60,15 +60,14 @@ public class UiContext {
 
         var window = Minecraft.getInstance().getWindow();
 
-        if (rootWidget.isLayoutDirty()) {
-            var width = window.getGuiScaledWidth();
-            var height = window.getGuiScaledHeight();
+        var width = window.getGuiScaledWidth();
+        var height = window.getGuiScaledHeight();
 
-            var widthSpec = new MeasureSpec(MeasureSpec.Mode.EXACTLY, width);
-            var heightSpec = new MeasureSpec(MeasureSpec.Mode.EXACTLY, height);
-            rootWidget.measure(widthSpec, heightSpec);
-            rootWidget.layout(0, 0, width, height);
-        }
+        var widthSpec = new MeasureSpec(MeasureSpec.Mode.EXACTLY, width);
+        var heightSpec = new MeasureSpec(MeasureSpec.Mode.EXACTLY, height);
+        rootWidget.measure(widthSpec, heightSpec);
+        rootWidget.layout(0, 0, width, height);
+
         var context = new RenderContext();
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick);
         commandList.set(context.getCommands());
