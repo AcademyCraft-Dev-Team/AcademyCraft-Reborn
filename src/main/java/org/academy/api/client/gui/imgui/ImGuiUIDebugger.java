@@ -197,11 +197,6 @@ public final class ImGuiUIDebugger {
                 label.setText(textBuffer.get());
             }
 
-            var color = colorToFloat4(label.getColor());
-            if (ImGui.colorEdit4("Color", color)) {
-                label.setColor(float4ToColor(color));
-            }
-
             var scale = new float[]{label.getScale()};
             if (ImGui.dragFloat("Scale", scale, 0.05f, 0.1f, 5.0f)) {
                 label.setScale(scale[0]);

@@ -194,7 +194,7 @@ public final class MusicApp implements App {
                 infoArea.setLayoutParams(
                         new FrameLayoutWidget.LayoutParams()
                                 .gravity(Gravity.CENTER_BOTTOM)
-                                .size(192, 32)
+                                .size(224, 32)
                                 .margin(0, 0, 0, 12)
                 );
                 infoArea.setOrientation(Orientation.VERTICAL);
@@ -207,11 +207,13 @@ public final class MusicApp implements App {
                                     .widthMode(SizeMode.MATCH_PARENT)
                     );
                     progressInfoArea.setOrientation(Orientation.HORIZONTAL);
+                    progressInfoArea.setSpacing(4);
                     infoArea.addChild("progress_info_area", progressInfoArea);
                     {
                         var p = new LinearLayoutWidget.LayoutParams()
                                 .weight(1)
-                                .gravity(Gravity.CENTER);
+                                .width(0)
+                                .gravity(Gravity.CENTER_TOP);
 
                         var currentTime = new LabelWidget("00:00") {
                             @Override
@@ -371,12 +373,13 @@ public final class MusicApp implements App {
                                             .gravity(Gravity.CENTER)
                             );
                             text.setOrientation(Orientation.VERTICAL);
-                            info.addChild("text", text);
+                            info.addChild("stringBuilder", text);
                             {
                                 var name = new LabelWidget(mediaInfo.name());
                                 name.setLayoutParams(
                                         new LinearLayoutWidget.LayoutParams()
-                                                .width(48)
+                                                .weight(1)
+                                                .size(48, 0)
                                                 .gravity(Gravity.CENTER_LEFT)
                                 );
                                 text.addChild("name", name);
@@ -384,7 +387,8 @@ public final class MusicApp implements App {
                                 var subtitle = new LabelWidget(mediaInfo.subtitle());
                                 subtitle.setLayoutParams(
                                         new LinearLayoutWidget.LayoutParams()
-                                                .width(32)
+                                                .weight(1)
+                                                .size(32, 0)
                                                 .gravity(Gravity.CENTER_LEFT)
                                 );
                                 text.addChild("subtitle", subtitle);
@@ -434,9 +438,7 @@ public final class MusicApp implements App {
             };
             progressBar.setLayoutParams(
                     new WidgetContainer.LayoutParams()
-                            .width(128)
-                            .heightMode(SizeMode.MATCH_PARENT)
-                            .margin(0, 6)
+                            .size(128, 6)
                             .gravity(Gravity.CENTER)
             );
             progressBar.setOnSeekBarChangeListener(new SeekBarWidget.OnSeekBarChangeListener() {

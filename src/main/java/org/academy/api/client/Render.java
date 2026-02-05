@@ -389,6 +389,19 @@ public final class Render {
                 .withUniform("Projection", UniformType.UNIFORM_BUFFER)
                 .buildSnippet();
 
+        public static final  RenderPipeline MSDF_TEXT = builder(MATRICES_PROJECTION_SNIPPET)
+                .withLocation(academy("pipeline/msdf_text"))
+                .withVertexShader(Resource.Shaders.IMAGE)
+                .withFragmentShader(Resource.Shaders.Fragment.MSDF_TEXT)
+                .withSampler("Sampler0")
+                .withUniform("MsdfUniforms", UniformType.UNIFORM_BUFFER)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withCull(true)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthWrite(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
+                .build();
+
         public static final RenderPipeline.Snippet BLIT_SCREEN_SNIPPET = builder()
                 .withLocation(academy("pipeline/blit_screen"))
                 .withVertexShader(Resource.Shaders.SCREEN_BLIT)

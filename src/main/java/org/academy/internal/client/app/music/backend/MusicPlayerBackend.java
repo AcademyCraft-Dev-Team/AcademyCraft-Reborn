@@ -6,6 +6,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
+import org.academy.api.client.gui.msdf.font.MsdfFontService;
 import org.academy.api.client.vanilla.MainLoopEvent;
 import org.academy.internal.client.app.music.backend.engine.AudioPlayer;
 import org.jspecify.annotations.Nullable;
@@ -93,6 +94,19 @@ public final class MusicPlayerBackend {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toList());
+
+        // 初始化以避免 MusicApp 第一次打开时卡顿喵
+        for (var info : newPlaylist) {
+            var codePoints = info.name().codePoints().toArray();
+            for (var cp : codePoints) {
+                var font = MsdfFontService.getFont(cp);
+                var atlas = font.getAtlas();
+                var face = font.getFace();
+
+                atlas.getOrGenerate(face, cp);
+            }
+            Minecraft.getInstance().getTextureManager().getTexture(info.icon());
+        }
 
         runOnSoundEngine(() -> {
             performStop();

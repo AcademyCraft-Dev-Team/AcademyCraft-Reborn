@@ -7,6 +7,7 @@ import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -120,7 +121,7 @@ public final class AbilityInfoHUD {
                             // because tan(45°) = 1
                             var progress = visualCp / AbilitySystemClient.getMaxCP();
                             var offset = height - topPadding - bottomPadding;
-                            var i = 10 - (int) Math.ceil(progress / 0.1f);
+                            var i = 10 - Mth.ceil(progress / 0.1f);
                             var barWidth = width - leftPadding - rightPadding - offset - 9 * spacing;
                             var progressOffsetX = (1 - progress) * barWidth + i * spacing;
 
@@ -154,8 +155,8 @@ public final class AbilityInfoHUD {
                             });
 
                             for (var particle : particles) {
-                                var currentI = 10 - (int) Math.ceil(particle.current / 0.1f);
-                                var lastI = 10 - (int) Math.ceil(particle.last / 0.1f);
+                                var currentI = 10 - Mth.ceil(particle.current / 0.1f);
+                                var lastI = 10 - Mth.ceil(particle.last / 0.1f);
                                 var currentOffsetX = (1 - particle.current) * barWidth + currentI * spacing;
                                 var lastOffsetX = (1 - particle.last) * barWidth + lastI * spacing;
 
@@ -215,10 +216,10 @@ public final class AbilityInfoHUD {
                                     float end;
 
                                     if (increase) {
-                                        var nextBoundary = (float) (Math.floor(start / 0.1f) + 1) * 0.1f;
+                                        var nextBoundary = (float) (Mth.floor(start / 0.1f) + 1) * 0.1f;
                                         end = Math.min(nextBoundary, currentProgress);
                                     } else {
-                                        var nextBoundary = (float) Math.ceil(start / 0.1f - 1) * 0.1f;
+                                        var nextBoundary = (float) Mth.ceil(start / 0.1f - 1) * 0.1f;
                                         end = Math.max(nextBoundary, currentProgress);
                                     }
 

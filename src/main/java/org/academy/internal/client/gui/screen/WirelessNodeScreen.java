@@ -12,6 +12,9 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.msdf.atlas.MsdfAtlasDebugger;
+import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
+import org.academy.api.client.gui.msdf.font.MsdfFontService;
 import org.academy.api.client.gui.screen.ContainerUiScreen;
 import org.academy.api.client.gui.util.InfoAreaUtil;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
@@ -24,6 +27,7 @@ import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEnt
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 
+import java.util.ArrayList;
 import java.util.function.Consumer;
 
 import static org.academy.api.client.gui.util.InfoAreaUtil.*;
@@ -55,6 +59,11 @@ public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu
 
     @Nullable
     public static WirelessNodeScreen create(WirelessNodeMenu menu, Inventory playerInventory, Component title, BlockPos mainPos) {
+        var set = new ArrayList<>(MsdfFontService.getInstance().getLoadedFonts().keySet());
+        for (var i = 0; i < set.size(); i++) {
+            MsdfAtlasDebugger.dumpAtlas(MsdfAtlasManager.getInstance().getAtlas(set.get(i)), "" + i);
+        }
+
         if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(mainPos) instanceof WirelessNodeBlockEntity blockEntity) {
             return new WirelessNodeScreen(menu, playerInventory, title, blockEntity);
         } else {
@@ -158,20 +167,24 @@ public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu
 
             var rangeValueLabel = new LabelWidget("0");
             rangeValueSetter = rangeValueLabel::setText;
-            rangeValueLabel.setScale(0.75f);
-            var rangeLayout = createAttributeRow("Trans. Range", rangeValueLabel, 0.65f);
+            rangeValueLabel.setLayoutParams(
+                    new WidgetContainer.LayoutParams()
+                            .size(12, 12)
+                            .gravity(Gravity.CENTER)
+            );
+            var rangeLayout = createAttributeRow("Trans. Range", rangeValueLabel, 52);
             info.addChild("range_layout", rangeLayout);
 
             var nameTextBox = new TextBoxWidget(12);
             nameTextBox.setBackground(null);
             nameTextBox.setWhenEnter(s -> MisakaNetworkClient.sendPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
-            var nameLayout = createAttributeRow("Node Name", createInputRow(nameTextBox), 0.65f);
+            var nameLayout = createAttributeRow("Node Name", createInputRow(nameTextBox), 48);
             info.addChild("name_layout", nameLayout);
 
             var passTextBox = new TextBoxWidget(12);
             passTextBox.setBackground(null);
             passTextBox.setWhenEnter(s -> MisakaNetworkClient.sendPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
-            var passLayout = createAttributeRow("Password", createInputRow(passTextBox), 0.65f);
+            var passLayout = createAttributeRow("Password", createInputRow(passTextBox), 42);
             info.addChild("pass_layout", passLayout);
         }
 

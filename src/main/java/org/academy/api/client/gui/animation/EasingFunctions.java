@@ -1,11 +1,13 @@
 package org.academy.api.client.gui.animation;
 
+import net.minecraft.util.Mth;
+
 @SuppressWarnings("unused")
 public final class EasingFunctions {
     public static final TimeInterpolator LINEAR = input -> input;
 
     public static final TimeInterpolator EASE_IN_SINE = input ->
-            1 - (float) Math.cos((input * Math.PI) / 2);
+            1 - Mth.cos((input * Math.PI) / 2);
     public static final TimeInterpolator EASE_IN_QUAD = input ->
             input * input;
     public static final TimeInterpolator EASE_IN_EXPO = input ->
@@ -20,10 +22,10 @@ public final class EasingFunctions {
     public static final TimeInterpolator EASE_IN_ELASTIC = input -> {
         var c4 = (float) (2 * Math.PI) / 3;
         return input == 0 ? 0 : input == 1 ? 1 :
-                -(float) Math.pow(2, 10 * input - 10) * (float) Math.sin((input * 10 - 10.75) * c4);
+                                -(float) Math.pow(2, 10 * input - 10) * Mth.sin((input * 10 - 10.75) * c4);
     };
     public static final TimeInterpolator EASE_IN_OUT_SINE = input ->
-            -0.5f * ((float) Math.cos(Math.PI * input) - 1);
+            -0.5f * (Mth.cos(Math.PI * input) - 1);
     public static final TimeInterpolator EASE_IN_OUT_QUAD = input ->
             input < 0.5f ? 2 * input * input : 1 - (float) Math.pow(-2 * input + 2, 2) / 2;
     public static final TimeInterpolator EASE_IN_OUT_BACK = input -> {
@@ -41,16 +43,16 @@ public final class EasingFunctions {
             input < 0.5f ? 4 * input * input * input : 1 - (float) Math.pow(-2 * input + 2, 3) / 2;
 
     public static final TimeInterpolator EASE_IN_OUT_ELASTIC = input -> {
-        var c5 = (float) (2 * Math.PI) / 4.5f;
-        var sin = Math.sin((20 * input - 11.125) * c5);
+        var c5 = (2 * Mth.PI) / 4.5f;
+        var sin = Mth.sin((20 * input - 11.125) * c5);
         return input == 0 ? 0 : input == 1 ? 1 :
                 input < 0.5f ?
-                        -((float) Math.pow(2, 20 * input - 10) * (float) sin) / 2 :
-                        ((float) Math.pow(2, -20 * input + 10) * (float) sin) / 2 + 1;
+                -((float) Math.pow(2, 20 * input - 10) * sin) / 2 :
+                ((float) Math.pow(2, -20 * input + 10) * sin) / 2 + 1;
     };
 
     public static final TimeInterpolator EASE_OUT_SINE = input ->
-            (float) Math.sin((input * Math.PI) / 2);
+            Mth.sin((input * Math.PI) / 2);
 
     public static final TimeInterpolator EASE_OUT_QUAD = input ->
             1 - (1 - input) * (1 - input);
@@ -69,7 +71,7 @@ public final class EasingFunctions {
     public static final TimeInterpolator EASE_OUT_ELASTIC = input -> {
         var c4 = (float) (2 * Math.PI) / 3;
         return input == 0 ? 0 : input == 1 ? 1 :
-                (float) Math.pow(2, -10 * input) * (float) Math.sin((input * 10 - 0.75) * c4) + 1;
+                                (float) Math.pow(2, -10 * input) * Mth.sin((input * 10 - 0.75) * c4) + 1;
     };
 
     public static TimeInterpolator createExpoOut(float strength) {

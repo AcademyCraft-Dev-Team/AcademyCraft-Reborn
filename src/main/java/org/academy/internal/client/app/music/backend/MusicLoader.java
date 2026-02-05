@@ -39,14 +39,14 @@ public final class MusicLoader implements PreparableReloadListener {
 
     @Override
     public CompletableFuture<Void> reload(
-            SharedState sharedState,
-            Executor backgroundExecutor,
-            PreparationBarrier barrier,
-            Executor gameExecutor
+            SharedState currentReload,
+            Executor taskExecutor,
+            PreparationBarrier preparationBarrier,
+            Executor reloadExecutor
     ) {
-        var manager = sharedState.resourceManager();
-        var future = CompletableFuture.supplyAsync(() -> loadAllMusicData(manager), backgroundExecutor);
-        return future.thenCompose(barrier::wait).thenAcceptAsync(this::applyToBackend, gameExecutor);
+        var manager = currentReload.resourceManager();
+        var future = CompletableFuture.supplyAsync(() -> loadAllMusicData(manager), taskExecutor);
+        return future.thenCompose(preparationBarrier::wait).thenAcceptAsync(this::applyToBackend, reloadExecutor);
     }
 
     private Map<String, MusicData> loadAllMusicData(ResourceManager manager) {

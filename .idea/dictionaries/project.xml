@@ -2,10 +2,16 @@
   <dictionary name="project">
     <words>
       <w>Avatarlike</w>
+      <w>Chlumsky</w>
       <w>Compat</w>
+      <w>Msdf</w>
       <w>cpdata</w>
       <w>jdkfile</w>
+      <w>misans</w>
       <w>modid</w>
+      <w>msdf</w>
+      <w>msdfgen</w>
+      <w>thirdparty</w>
       <w>unqueue</w>
     </words>
   </dictionary>

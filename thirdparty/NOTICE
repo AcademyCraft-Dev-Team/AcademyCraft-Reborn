@@ -1,0 +1,14 @@
+Third-Party License Notice
+=======================================
+
+This project contains source code based upon, or includes source code from, the following third-party
+projects.
+
+The complete text for each software license can be found in the directory "thirdparty/licenses".
+
+* msdfgen
+  * Copyright (c) 2014 - 2025 Viktor Chlumsky
+  * Code Location: src/main/java/org/academy/api/client/gui/msdf/core
+  * License Location: thirdparty/licenses/LICENSE-msdfgen
+  * Original Source:
+    * https://github.com/Chlumsky/msdfgen

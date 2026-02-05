@@ -149,8 +149,12 @@ public final class WindGenScreen extends ContainerUiScreen<WindGenMenu> {
 
             var altitudeValue = blockEntity.altitude + "";
             var altitudeValueLabel = new LabelWidget(altitudeValue);
-            altitudeValueLabel.setScale(0.75f);
-            var altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel, 0.65f);
+            altitudeValueLabel.setLayoutParams(
+                    new WidgetContainer.LayoutParams()
+                            .gravity(Gravity.CENTER)
+                            .size(12, 12)
+            );
+            var altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel, 32);
             info.addChild("altitude_layout", altitudeLayout);
         }
 

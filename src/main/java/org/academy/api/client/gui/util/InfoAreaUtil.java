@@ -83,10 +83,9 @@ public final class InfoAreaUtil {
         return layout;
     }
 
-    public static LinearLayoutWidget createAttributeRow(String labelText, Widget valueWidget, float scale) {
+    public static LinearLayoutWidget createAttributeRow(String labelText, Widget valueWidget, float labelWidth) {
         var layout = new LinearLayoutWidget();
         layout.setOrientation(Orientation.HORIZONTAL);
-        layout.setSpacing(8);
         layout.setLayoutParams(
                 new WidgetContainer.LayoutParams()
                         .width(128)
@@ -95,12 +94,12 @@ public final class InfoAreaUtil {
         );
         {
             var label = new LabelWidget(labelText);
-            label.setScale(scale);
             label.setLayoutParams(
                     new LinearLayoutWidget.LayoutParams()
+                            .width(labelWidth)
                             .gravity(Gravity.CENTER_VERTICAL)
             );
-            layout.addChild(labelText.toLowerCase().replace(" ", "_") + "_label", label);
+            layout.addChild(labelText + "_label", label);
 
             var empty = new EmptyWidget();
             empty.setLayoutParams(

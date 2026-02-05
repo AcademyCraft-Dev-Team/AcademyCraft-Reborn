@@ -43,6 +43,7 @@ public final class Resource {
             public static final Identifier SDF_CIRCLE_GLOW = academy("core/sdf_circle_glow");
             public static final Identifier SDF_SHARP_MARGIN = academy("core/sdf_sharp_margin");
             public static final Identifier IMAGE_CIRCLE = academy("core/image_circle");
+            public static final Identifier MSDF_TEXT = academy("core/msdf_text");
 
             private Fragment() {
             }
