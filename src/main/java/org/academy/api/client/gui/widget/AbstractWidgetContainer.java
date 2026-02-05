@@ -1,8 +1,6 @@
 package org.academy.api.client.gui.widget;
 
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.ARGB;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.command.FillRectDrawCommand;
@@ -13,7 +11,6 @@ import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.render.RenderContext;
-import org.academy.api.client.gui.util.GlyphCommandGenerator;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -79,7 +76,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
     }
 
     private void renderDebugInfo(Widget widget, RenderContext context) {
-        var font = Minecraft.getInstance().font;
+      /*  var font = Minecraft.getInstance().font;
         var namePart = widget.getName().isEmpty() ? "" : "'" + widget.getName() + "'";
         var infoText = String.format(
                 "[%s] %s\nPos: (%.1f, %.1f) Size: (%.1f, %.1f) Alpha: %.2f",
@@ -119,7 +116,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
             }
             context.pose().popPose();
         }
-        context.pose().popPose();
+        context.pose().popPose();*/
     }
 
     @Nullable
@@ -375,9 +372,6 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
             }
 
             if (gestureTarget != null) {
-                if (AcademyCraft.DEBUG_UI) {
-                    LOGGER.debug("[UI Event] Event routed to gestureTarget '{}'", gestureTarget.getName());
-                }
                 gestureTarget.dispatchEvent(event);
                 if (event.getType() == EventType.MOUSE_RELEASED) {
                     if (AcademyCraft.DEBUG_UI) {

@@ -24,6 +24,8 @@ import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEve
 import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
+import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
+import org.academy.api.client.gui.msdf.font.MsdfFontService;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.hud.terminal.TerminalHUD;
@@ -72,6 +74,7 @@ public final class AcademyCraftClient {
         BloomEffect.init();
         ScreenDispatcher.init();
         HUDManager.initRender();
+        MsdfFontService.genDefaultGlyph();
 
         renderInitialized = true;
     }
@@ -107,6 +110,8 @@ public final class AcademyCraftClient {
     @SubscribeEvent
     public static void onClientStopped(ClientStoppedEvent event) {
         ImGuiUtilApi.close();
+        MsdfFontService.getInstance().close();
+        MsdfAtlasManager.getInstance().closeAll();
     }
 
     @SubscribeEvent

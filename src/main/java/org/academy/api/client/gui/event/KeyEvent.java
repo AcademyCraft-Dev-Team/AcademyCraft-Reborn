@@ -1,5 +1,7 @@
 package org.academy.api.client.gui.event;
 
+import net.minecraft.client.input.InputQuirks;
+
 public final class KeyEvent extends InputEvent {
     private final int keyCode;
     private final int scanCode;
@@ -25,5 +27,21 @@ public final class KeyEvent extends InputEvent {
 
     public int getModifiers() {
         return modifiers;
+    }
+
+    public boolean hasAltDown() {
+        return (getModifiers() & 4) != 0;
+    }
+
+    public boolean hasShiftDown() {
+        return (getModifiers() & 1) != 0;
+    }
+
+    public boolean hasControlDown() {
+        return (getModifiers() & 2) != 0;
+    }
+
+    public boolean hasControlDownWithQuirk() {
+        return (getModifiers() & InputQuirks.EDIT_SHORTCUT_KEY_MODIFIER) != 0;
     }
 }

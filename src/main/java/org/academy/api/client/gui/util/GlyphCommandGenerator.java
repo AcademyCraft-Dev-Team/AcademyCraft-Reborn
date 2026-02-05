@@ -1,11 +1,9 @@
 package org.academy.api.client.gui.util;
 
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.font.TextRenderable;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.GlyphDrawCommand;
+import org.academy.api.client.gui.msdf.core.MsdfConstants;
+import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,57 +13,28 @@ public final class GlyphCommandGenerator {
     }
 
     public static List<DrawCommand> generate(
-            Font font,
-            FormattedCharSequence text,
-            float x,
-            float y,
-            int color,
-            boolean shadow
-    ) {
-        var visitor = new CommandGlyphVisitor();
-        var preparedText = font.prepareText(text, x, y, color, shadow, false, 0);
-        preparedText.visit(visitor);
-        return visitor.getCommands();
-    }
-
-    public static List<DrawCommand> generate(
-            Font font,
-            Component text,
-            float x,
-            float y,
-            int color,
-            boolean shadow
-    ) {
-        var orderedText = text.getVisualOrderText();
-        return generate(font, orderedText, x, y, color, shadow);
-    }
-
-    public static List<DrawCommand> generate(
-            Font font,
             String text,
-            float x,
-            float y,
-            int color,
-            boolean shadow
+            float fontSize, float thickness,
+            float red, float green, float blue, float alpha
     ) {
-        return generate(font, Component.literal(text), x, y, color, shadow);
-    }
+        List<DrawCommand> commands = new ArrayList<>();
+        var instances = MsdfTextProcessor.layout(text, fontSize);
 
-    private static class CommandGlyphVisitor implements Font.GlyphVisitor {
-        private final List<DrawCommand> commandList = new ArrayList<>();
+        for (var instance : instances) {
 
-        public List<DrawCommand> getCommands() {
-            return commandList;
+            commands.add(new GlyphDrawCommand(
+                    instance.textureView(),
+                    instance.x(),
+                    instance.y(),
+                    instance.quadWidth(),
+                    instance.quadHeight(),
+                    instance.u0(), instance.v0(), instance.u1(), instance.v1(),
+                    red, green, blue, alpha,
+                    MsdfConstants.DEFAULT_PX_RANGE,
+                    thickness
+            ));
         }
 
-        @Override
-        public void acceptGlyph(TextRenderable.Styled styled) {
-            commandList.add(new GlyphDrawCommand(styled));
-        }
-
-        @Override
-        public void acceptEffect(TextRenderable textRenderable) {
-            commandList.add(new GlyphDrawCommand(textRenderable));
-        }
+        return commands;
     }
 }

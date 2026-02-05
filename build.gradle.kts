@@ -45,6 +45,10 @@ val generateModMetadata by tasks.registering(ProcessResources::class) {
     expand(replaceProperties)
     from("src/main/templates")
     into("build/generated/sources/modMetadata")
+
+    from("thirdparty") {
+        into("thirdparty")
+    }
 }
 
 sourceSets.named("main") {
@@ -59,8 +63,8 @@ repositories {
     mavenLocal()
     maven {
         name = "AC Dev Team's maven"
-        url = uri("D:/Project/maven-repo")
-        //url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
+        //url = uri("D:/Project/maven-repo")
+        url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
         content {
             includeGroup("org.academy")
             //includeGroup("net.neoforged")
@@ -154,7 +158,7 @@ neoForge {
 }
 
 dependencies {
-    val misaka = "org.academy:misaka-network:26.1.0.0-alpha.1+snapshot-4"
+    val misaka = "org.academy:misaka-network:26.1.0.0-alpha.3+snapshot-4"
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)

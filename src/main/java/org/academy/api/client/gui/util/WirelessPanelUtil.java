@@ -15,7 +15,6 @@ import org.academy.api.common.wireless.GetAvailableNodesPacket;
 import org.academy.api.common.wireless.GetCurrentNodePacket;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
-import org.misaka.api.common.network.NetworkSystem;
 
 import java.util.function.Consumer;
 
@@ -188,10 +187,10 @@ public final class WirelessPanelUtil {
                         .size(14, 14));
                 itemContent.addChild("icon", nodeIcon);
 
-                var nodeNameLabel = new HoverLabelWidget(nodeName);
+                var nodeNameLabel = new LabelWidget(nodeName);
                 nodeNameLabel.setLayoutParams(new LinearLayoutWidget.LayoutParams()
                         .weight(1)
-                        .sizeMode(SizeMode.MATCH_PARENT)
+                        .height(10)
                         .gravity(Gravity.CENTER_VERTICAL)
                 );
                 itemContent.addChild("node_name", nodeNameLabel);

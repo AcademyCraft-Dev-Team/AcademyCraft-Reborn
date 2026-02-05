@@ -129,13 +129,14 @@ public final class CommandExecutor implements AutoCloseable {
             renderPass.setIndexBuffer(indexBuffer, indexType);
 
             for (var drawCall : drawCalls) {
-                configureDrawCall(renderPass, drawCall, projectionUbo, dynamicTransformsUbo, guiScale, physicalHeight, buffer);
-                renderPass.drawIndexed(drawCall.baseVertex(), 0, drawCall.indexCount(), 1);
+                if (configureDrawCall(
+                        renderPass, drawCall, projectionUbo, dynamicTransformsUbo, guiScale, physicalHeight, buffer
+                )) renderPass.drawIndexed(drawCall.baseVertex(), 0, drawCall.indexCount(), 1);
             }
         }
     }
 
-    private void configureDrawCall(
+    private boolean configureDrawCall(
             RenderPass renderPass,
             DrawCall drawCall,
             GpuBufferSlice projectionUbo, GpuBuffer dynamicTransformsUbo,
@@ -159,15 +160,15 @@ public final class CommandExecutor implements AutoCloseable {
         renderPass.setUniform("Projection", projectionUbo);
         renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo);
 
-        bindResources(renderPass, drawCall);
+        return bindResources(renderPass, drawCall);
     }
 
-    private void bindResources(RenderPass renderPass, DrawCall drawCall) {
+    private boolean bindResources(RenderPass renderPass, DrawCall drawCall) {
         for (var texture : drawCall.textures()) {
             var value = texture.view();
             if (value.isClosed()) {
                 LOGGER.error("Sampler {} has been closed, skipping draw call.", texture.name());
-                continue;
+                return false;
             }
             renderPass.bindTexture(texture.name(), value, texture.sampler());
         }
@@ -175,9 +176,11 @@ public final class CommandExecutor implements AutoCloseable {
             var since = uniform.slice();
             if (since.buffer().isClosed()) {
                 LOGGER.error("Uniform {} has been closed, skipping draw call.", uniform.name());
+                return false;
             }
             renderPass.setUniform(uniform.name(), since);
         }
+        return true;
     }
 
     private void recordFence(AllocationResult allocation) {

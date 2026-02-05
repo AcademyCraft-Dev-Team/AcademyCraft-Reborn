@@ -22,10 +22,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.app.App;
-import org.academy.api.client.gui.animation.EasingFunctions;
-import org.academy.api.client.gui.animation.ObjectAnimator;
-import org.academy.api.client.gui.animation.StateListAnimator;
-import org.academy.api.client.gui.animation.ValueAnimator;
+import org.academy.api.client.gui.animation.*;
 import org.academy.api.client.gui.command.PosTexRectDrawCommand;
 import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
@@ -211,6 +208,7 @@ public final class TerminalHUD {
 
     @MainThread
     public void perform(double mouseX, double mouseY, float deltaPartialTick) {
+        if (!isActive()) return;
         uiContext.perform(context.get(), mouseX, mouseY, deltaPartialTick);
     }
 
@@ -493,7 +491,7 @@ public final class TerminalHUD {
                                     .sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
                     );
                     appContainer.setEnabled(false);
-                    appContainer.setAlpha(0);
+                    appContainer.setVisibility(Widget.Visibility.INVISIBLE);
                     main.addChild("app_container", appContainer);
                 }
             }
@@ -503,12 +501,19 @@ public final class TerminalHUD {
         private void openApp(App app) {
             content.setEnabled(false);
             content.cancelAnimations();
-            content.startAnimation(
-                    ObjectAnimator.ofFloat(content::setAlpha, content.getAlpha(), 0)
-                            .setDuration(100)
-            );
+            var animation = ObjectAnimator
+                    .ofFloat(content::setAlpha, content.getAlpha(), 0)
+                    .setDuration(100);
+            animation.addListener(new AnimatorListener() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    content.setVisibility(Widget.Visibility.INVISIBLE);
+                }
+            });
+            content.startAnimation(animation);
 
             appContainer.setEnabled(true);
+            appContainer.setVisibility(Widget.Visibility.VISIBLE);
             appContainer.clearChildren();
             appContainer.addChild("current_app", app.createContext().get());
             appContainer.startAnimation(
@@ -524,6 +529,7 @@ public final class TerminalHUD {
 
         public void closeApp() {
             content.setEnabled(true);
+            content.setVisibility(Widget.Visibility.VISIBLE);
             content.cancelAnimations();
             content.startAnimation(
                     ObjectAnimator.ofFloat(content::setAlpha, content.getAlpha(), 1)
@@ -531,13 +537,20 @@ public final class TerminalHUD {
                             .setDuration(100)
             );
 
+            if (appContainer.getVisibility() == Widget.Visibility.INVISIBLE) return;
+
             appContainer.setEnabled(false);
-            appContainer.startAnimation(
-                    ObjectAnimator.ofFloat(
-                                    appContainer::setAlpha, appContainer.getAlpha(), 0
-                            )
-                            .setDuration(100)
-            );
+            appContainer.setVisibility(Widget.Visibility.VISIBLE);
+            var animation = ObjectAnimator
+                    .ofFloat(appContainer::setAlpha, appContainer.getAlpha(), 0)
+                    .setDuration(100);
+            animation.addListener(new AnimatorListener() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    appContainer.setVisibility(Widget.Visibility.INVISIBLE);
+                }
+            });
+            appContainer.startAnimation(animation);
 
             animateMainWidthTransition(0);
         }
@@ -561,13 +574,13 @@ public final class TerminalHUD {
             var name = app.name();
 
             var size = 48;
+            var height = 62;
             var layout = new LinearLayoutWidget();
             layout.setSpacing(1);
             layout.setOrientation(Orientation.VERTICAL);
             layout.setLayoutParams(
                     new LinearLayoutWidget.LayoutParams()
-                            .width(size)
-                            .heightMode(SizeMode.WRAP_CONTENT)
+                            .size(size, height)
             );
             {
                 var iconArea = new ButtonWidget();
@@ -615,8 +628,9 @@ public final class TerminalHUD {
                 var nameWidget = new LabelWidget(name);
                 nameWidget.setLayoutParams(
                         new LinearLayoutWidget.LayoutParams()
+                                .weight(1)
+                                .height(0)
                                 .gravity(Gravity.CENTER)
-                                .margin(2, 0)
                 );
                 layout.addChild("name", nameWidget);
             }
