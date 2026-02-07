@@ -12,9 +12,6 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.msdf.atlas.MsdfAtlasDebugger;
-import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
-import org.academy.api.client.gui.msdf.font.MsdfFontService;
 import org.academy.api.client.gui.screen.ContainerUiScreen;
 import org.academy.api.client.gui.util.InfoAreaUtil;
 import org.academy.api.client.gui.util.WirelessPanelUtil;
@@ -27,7 +24,6 @@ import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEnt
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 
-import java.util.ArrayList;
 import java.util.function.Consumer;
 
 import static org.academy.api.client.gui.util.InfoAreaUtil.*;
@@ -59,11 +55,6 @@ public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu
 
     @Nullable
     public static WirelessNodeScreen create(WirelessNodeMenu menu, Inventory playerInventory, Component title, BlockPos mainPos) {
-        var set = new ArrayList<>(MsdfFontService.getInstance().getLoadedFonts().keySet());
-        for (var i = 0; i < set.size(); i++) {
-            MsdfAtlasDebugger.dumpAtlas(MsdfAtlasManager.getInstance().getAtlas(set.get(i)), "" + i);
-        }
-
         if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(mainPos) instanceof WirelessNodeBlockEntity blockEntity) {
             return new WirelessNodeScreen(menu, playerInventory, title, blockEntity);
         } else {
@@ -147,12 +138,16 @@ public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu
 
         var info = InfoAreaUtil.create(this, leftPos + imageWidth, topPos - 22);
         {
+            var p = new WidgetContainer.LayoutParams()
+                    .gravity(Gravity.CENTER_RIGHT);
             var energyValueLabel = new LabelWidget("0 AF");
+            energyValueLabel.setLayoutParams(p);
             energyValueSetter = energyValueLabel::setText;
             var energyLayout = createInfoRow("ENERGY", "icon_energy", 0xFF25C4FF, energyValueLabel);
             info.addChild("energy_layout", energyLayout);
 
             var capacityValueLabel = new LabelWidget("0 / 0");
+            capacityValueLabel.setLayoutParams(p);
             capacityValueSetter = capacityValueLabel::setText;
             var capacityLayout = createInfoRow("CAPACITY", "icon_capacity", 0xFFFF6C00, capacityValueLabel);
             info.addChild("capacity_layout", capacityLayout);

@@ -134,7 +134,11 @@ public final class WindGenScreen extends ContainerUiScreen<WindGenMenu> {
 
         var info = InfoAreaUtil.create(this, leftPos + imageWidth, topPos - 22);
         {
+            var p = new WidgetContainer.LayoutParams()
+                    .gravity(Gravity.CENTER_RIGHT);
+
             var bufferValueLabel = new LabelWidget("0 AF");
+            bufferValueLabel.setLayoutParams(p);
             bufferValueSetter = bufferValueLabel::setText;
             var bufferLayout = createInfoRow("BUFFER", "icon_buffer", 0xFF25C4FF, bufferValueLabel);
             info.addChild("energy_layout", bufferLayout);
@@ -151,7 +155,7 @@ public final class WindGenScreen extends ContainerUiScreen<WindGenMenu> {
             var altitudeValueLabel = new LabelWidget(altitudeValue);
             altitudeValueLabel.setLayoutParams(
                     new WidgetContainer.LayoutParams()
-                            .gravity(Gravity.CENTER)
+                            .gravity(Gravity.CENTER_RIGHT)
                             .size(12, 12)
             );
             var altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel, 32);

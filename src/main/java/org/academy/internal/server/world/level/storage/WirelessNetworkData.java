@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static org.academy.AcademyCraft.academy;
+
 public final class WirelessNetworkData extends SavedData {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     
@@ -50,7 +52,7 @@ public final class WirelessNetworkData extends SavedData {
     );
 
     public static final SavedDataType<WirelessNetworkData> SAVED_DATA_TYPE = new SavedDataType<>(
-            "academy_wireless",
+            academy("wireless"),
             WirelessNetworkData::new,
             CODEC
     );

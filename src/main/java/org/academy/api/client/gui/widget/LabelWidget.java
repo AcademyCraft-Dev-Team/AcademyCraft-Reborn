@@ -99,6 +99,7 @@ public class LabelWidget extends AbstractWidget {
     protected void onMeasure(MeasureSpec widthMeasureSpec, MeasureSpec heightMeasureSpec) {
         var lp = getLayoutParams();
         if (text.isEmpty()) {
+            layoutScale = 1;
             setMeasuredDimension(resolveSize(lp.paddingLeft + lp.paddingRight, widthMeasureSpec),
                     resolveSize(lp.paddingTop + lp.paddingBottom, heightMeasureSpec));
             return;

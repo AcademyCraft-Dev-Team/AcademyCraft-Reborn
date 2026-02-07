@@ -27,7 +27,7 @@ public class WindGenTurbineModel extends Model<Unit> {
     public final ModelPart tip_li;
 
     private WindGenTurbineModel(ModelPart root) {
-        super(root.getChild("all"), RenderTypes::entityCutoutNoCull);
+        super(root.getChild("all"), RenderTypes::entityCutoutCull);
         all = root.getChild("all");
         main = all.getChild("main");
         tip_li = all.getChild("tip_li");
