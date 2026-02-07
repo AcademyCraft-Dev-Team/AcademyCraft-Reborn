@@ -9,7 +9,7 @@ plugins {
     id("net.neoforged.moddev") version "2.0.140"
 }
 
-val neoVersion: String = "26.1.0.0-alpha.8+snapshot-4"
+val neoVersion: String = "26.1.0.0-alpha.0+snapshot-6.20260207.040922"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
@@ -67,7 +67,7 @@ repositories {
         url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
         content {
             includeGroup("org.academy")
-            //includeGroup("net.neoforged")
+            includeGroup("net.neoforged")
         }
     }
     maven {

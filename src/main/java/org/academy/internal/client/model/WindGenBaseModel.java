@@ -34,7 +34,7 @@ public class WindGenBaseModel extends Model<WindGenBaseRenderState> {
     private final KeyframeAnimation shut;
 
     public WindGenBaseModel(ModelPart root) {
-        super(root, RenderTypes::entityCutoutNoCull);
+        super(root, RenderTypes::entityCutoutCull);
         var all = root.getChild("all");
         var parts = all.getChild("parts");
         var screen = parts.getChild("screen");

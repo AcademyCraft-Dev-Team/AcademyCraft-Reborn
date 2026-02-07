@@ -76,9 +76,9 @@ public class TextBoxWidget extends LabelWidget {
         var finalScale = layoutScale * scale;
         var textBeforeCaret = stringBuilder.substring(0, getCodeUnitIndexForCodePoint(caretPos));
         var caretXOffset = getTextWidth(textBeforeCaret) * finalScale;
-        var visualTextHeight = getTextHeight(stringBuilder.toString()) * 0.65f * finalScale;
-        var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
         var availableHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
+        var visualTextHeight = availableHeight * finalScale;
+        var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
 
         var alignmentOffsetX = 0f;
         var horizontalGravity = (lp.gravity >> Gravity.AXIS_X_SHIFT) & 0x7;
@@ -97,7 +97,7 @@ public class TextBoxWidget extends LabelWidget {
 
         context.pose().pushPose();
         context.pose().translate(finalX, finalY, 0);
-        context.submit(new FillRectDrawCommand(0.75f, visualTextHeight, 1, 1, 1, getAlpha() * context.getAccumulatedAlpha()));
+        context.submit(new FillRectDrawCommand(0.5f, visualTextHeight, 1, 1, 1, getAlpha() * context.getAccumulatedAlpha()));
         context.pose().popPose();
     }
 
@@ -115,9 +115,9 @@ public class TextBoxWidget extends LabelWidget {
         var selectedText = fullText.substring(getCodeUnitIndexForCodePoint(start),
                 getCodeUnitIndexForCodePoint(end));
 
-        var startXOffset = getTextWidth(textBeforeStart) * finalScale;
+        var startXOffset = getTextWidth(textBeforeStart) * finalScale + 0.5f;
         var selectionWidth = getTextWidth(selectedText) * finalScale;
-        var visualTextHeight = getTextHeight(fullText) * 0.65f * finalScale;
+        var visualTextHeight = getTextHeight(fullText) * finalScale;
 
         var availableWidth = getWidth() - lp.paddingLeft - lp.paddingRight;
         var availableHeight = getHeight() - lp.paddingTop - lp.paddingBottom;
