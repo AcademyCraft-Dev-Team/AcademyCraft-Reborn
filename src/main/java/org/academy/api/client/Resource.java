@@ -23,6 +23,7 @@ public final class Resource {
         public static final Identifier IMAGE = academy("core/image");
         public static final Identifier SCREEN_BLIT = academy("core/screen_blit");
         public static final Identifier DISTORTION_RING = academy("core/distortion_ring");
+        public static final Identifier DISTORTION_TUBE = academy("core/distortion_tube");
 
         /**
          * Vert only.
@@ -44,6 +45,7 @@ public final class Resource {
             public static final Identifier SDF_SHARP_MARGIN = academy("core/sdf_sharp_margin");
             public static final Identifier IMAGE_CIRCLE = academy("core/image_circle");
             public static final Identifier MSDF_TEXT = academy("core/msdf_text");
+            public static final Identifier HELLFLARE_STEAM = academy("core/hellflare_steam");
 
             private Fragment() {
             }

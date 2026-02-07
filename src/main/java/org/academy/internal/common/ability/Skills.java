@@ -5,8 +5,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.registries.Registries;
-import org.academy.internal.common.ability.accelerator.skills.*;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
@@ -16,6 +16,7 @@ import org.academy.internal.common.ability.electromaster.skills.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.BallLightning;
 import org.academy.internal.common.ability.electromaster.skills.MagnetManipulation;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
+import org.academy.internal.common.ability.meltdowner.skills.HellFlare;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 
@@ -42,6 +43,7 @@ public final class Skills {
      * Meltdowner
      */
     public static final DeferredHolder<Skill, SingleHighSpeedElectronBeam> SINGLE_HIGH_SPEED_ELECTRON_BEAM = SKILLS.register(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM, SingleHighSpeedElectronBeam::new);
+    public static final DeferredHolder<Skill, HellFlare> HELL_FLARE_RAY = SKILLS.register(SkillNames.HELL_FLARE_RAY, HellFlare::new);
     /**
      * Teleport
      */

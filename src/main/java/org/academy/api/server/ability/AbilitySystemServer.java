@@ -385,7 +385,7 @@ public final class AbilitySystemServer {
     }
 
     /**
-     * 请求CP占用cost为静态值
+     * 请求CP占用，cost为静态值
      */
     public boolean castCpIfPossible(ServerPlayer player, Skill skill,
                                     float cost,
