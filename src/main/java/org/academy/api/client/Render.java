@@ -105,8 +105,12 @@ public final class Render {
             IrisCompat.enableBypass();
             renderPass.setPipeline(pipeline);
 
-            for (var texture : textures) renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
-            for (var uniform : uniforms) renderPass.setUniform(uniform.name(), uniform.slice());
+            for (var texture : textures) {
+                renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
+            }
+            for (var uniform : uniforms) {
+                renderPass.setUniform(uniform.name(), uniform.slice());
+            }
 
             renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer);
             var sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
@@ -595,6 +599,28 @@ public final class Render {
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
+        public static final RenderPipeline LEVEL_POS_TEX_COLOR_HELLFLARE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_tex_color_hellflare"))
+                .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
+                .withFragmentShader(Resource.Shaders.Fragment.HELLFLARE_STEAM)
+                .withSampler("Sampler0")
+                .withCull(false)
+                .withBlend(ADDITIVE_BLEND)
+                .withDepthWrite(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
+                .build();
+
+        public static final RenderPipeline LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_tex_color_hellflare_additive"))
+                .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
+                .withFragmentShader(Resource.Shaders.Fragment.HELLFLARE_STEAM)
+                .withSampler("Sampler0")
+                .withCull(false)
+                .withBlend(ADDITIVE_BLEND)
+                .withDepthWrite(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
+                .build();
+
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color"))
                 .withVertexShader(Resource.Shaders.POS_COLOR)
@@ -629,6 +655,24 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.DISTORTION_RING)
                 .withSampler("Sampler0")
                 .withCull(false)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withVertexFormat(
+                        VertexFormat.builder()
+                                .add("Position", VertexFormatElement.POSITION)
+                                .add("UV0", VertexFormatElement.UV0)
+                                .add("Normal", VertexFormatElement.NORMAL)
+                                .padding(1)
+                                .build(),
+                        VertexFormat.Mode.QUADS
+                )
+                .build();
+
+        public static final RenderPipeline DISTORTION_TUBE = builder(MATRICES_PROJECTION_SNIPPET)
+                .withLocation(academy("pipeline/distortion_tube"))
+                .withVertexShader(Resource.Shaders.DISTORTION_TUBE)
+                .withFragmentShader(Resource.Shaders.DISTORTION_TUBE)
+                .withSampler("Sampler0")
+                .withCull(true)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withVertexFormat(
                         VertexFormat.builder()
@@ -719,7 +763,9 @@ public final class Render {
                         .createRenderSetup()
         );
 
+
         public static final RenderType DISTORTION_RING;
+        public static final RenderType DISTORTION_TUBE_TYPE;
         public static final RenderType ABILITY_DEVELOPER = entityTranslucent(Resource.Textures.MODEL_ABILITY_DEVELOPER);
         public static final RenderType CAT_ENGINE = entityTranslucent(Resource.Textures.CAT_ENGINE);
         public static final RenderType CLEANING_ROBOT = entitySolid(Resource.Textures.CLEANING_ROBOT);
@@ -766,6 +812,40 @@ public final class Render {
                             .withTexture("Sampler0", id)
                             .createRenderSetup()
             );
+
+
+            var tubeId = academy("render/distortion_tube");
+            Minecraft.getInstance().getTextureManager().register(
+                    tubeId,
+                    new AbstractTexture() {
+                        {
+                            sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+                        }
+
+                        @Override
+                        public GpuTexture getTexture() {
+                            var tex = PostEffect.MAIN_SCENE.getColorTexture();
+                            return tex == null
+                                    ? Minecraft.getInstance().getTextureManager().getTexture(MissingTextureAtlasSprite.getLocation()).getTexture()
+                                    : tex;
+                        }
+
+                        @Override
+                        public GpuTextureView getTextureView() {
+                            var tex = PostEffect.MAIN_SCENE.getColorTextureView();
+                            return tex == null
+                                    ? Minecraft.getInstance().getTextureManager().getTexture(MissingTextureAtlasSprite.getLocation()).getTextureView()
+                                    : tex;
+                        }
+                    }
+            );
+            DISTORTION_TUBE_TYPE = create(
+                    "distortion_tube",
+                    RenderSetup.builder(RenderPipelines.DISTORTION_TUBE)
+                            .withTexture("Sampler0", tubeId)
+                            .createRenderSetup()
+            );
+
             PostEffect.addFixedBuffer(POS_COLOR_QUADS);
             PostEffect.addFixedBuffer(POS_COLOR_TRANGLES);
             PostEffect.addFixedBuffer(POS_COLOR_QUADS_BLOOM);
@@ -782,6 +862,31 @@ public final class Render {
             return create(
                     "bloom_texture",
                     RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR)
+                            .withTexture(
+                                    "Sampler0", identifier,
+                                    () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                            )
+                            .setOutputTarget(BLOOM_TARGET)
+                            .createRenderSetup()
+            );
+        }
+
+        public static RenderType getHellFlareSteam(Identifier identifier) {
+            return create(
+                    "hellflare_steam",
+                    RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE)
+                            .withTexture(
+                                    "Sampler0", identifier,
+                                    () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                            )
+                            .createRenderSetup()
+            );
+        }
+
+        public static RenderType getHellFlareSteamBloom(Identifier identifier) {
+            return create(
+                    "hellflare_steam_bloom",
+                    RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE)
                             .withTexture(
                                     "Sampler0", identifier,
                                     () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)

@@ -6,6 +6,7 @@ public final class SkillNames {
     public static final String BALL_LIGHTNING = "ball_lightning";
     public static final String SELF_TELEPORT = "self_teleport";
     public static final String SINGLE_HIGH_SPEED_ELECTRON_BEAM = "single_high_speed_electron_beam";
+    public static final String HELL_FLARE_RAY = "hell_flare_ray";
     public static final String VECTOR_REFLECTION = "vector_reflection";
     public static final String BLOODFLOW_REVERSE = "bloodflow_reverse";
     public static final String STORM_WING = "storm_wing";

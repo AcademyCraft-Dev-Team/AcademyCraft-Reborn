@@ -1,5 +1,7 @@
 package org.academy.internal.common.world.entity;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -35,6 +37,11 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "high_speed_electron_beam", HighSpeedElectronBeam::new, MobCategory.MISC
             );
+    public static final DeferredHolder<EntityType<?>, EntityType<HellFlareRay>> HELL_FLARE_RAY =
+            ENTITY_TYPES.register("hell_flare_ray", (id) ->
+                    EntityType.Builder.<HellFlareRay>of(HellFlareRay::new, MobCategory.MISC)
+                            .build(ResourceKey.create(Registries.ENTITY_TYPE, id))
+            );
     public static final DeferredHolder<EntityType<?>, EntityType<LightOrb>> LIGHT_ORB =
             ENTITY_TYPES.registerEntityType(
                     "light_orb", LightOrb::new, MobCategory.MISC
@@ -51,5 +58,6 @@ public class EntityTypes {
                     "cleaning_robot", CleaningRobot::new, MobCategory.MISC
             );
 
-    private EntityTypes() {}
+    private EntityTypes() {
+    }
 }

@@ -14,8 +14,8 @@ import org.academy.api.common.sync.packet.SyncDataPacket;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
-import org.academy.internal.common.ability.accelerator.skills.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
@@ -23,6 +23,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowRever
 import org.academy.internal.common.ability.electromaster.skills.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.BallLightning;
 import org.academy.internal.common.ability.electromaster.skills.Railgun;
+import org.academy.internal.common.ability.meltdowner.skills.HellFlare;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.world.item.CoinItem;
@@ -101,6 +102,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SingleHighSpeedElectronBeam.ShootPacket>>
             SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT = PACKET_TYPES.register("single_high_speed_electron_beam_shoot",
             () -> new PacketType<>(SingleHighSpeedElectronBeam.ShootPacket.class, SingleHighSpeedElectronBeam.ShootPacket.CODEC));
+
+        public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, HellFlare.TogglePacket>>
+            HELL_FLARE_ACTION = PACKET_TYPES.register("hell_flare_action",
+            () -> new PacketType<>(HellFlare.TogglePacket.class, HellFlare.TogglePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SelfTeleport.SelfTeleportPacket>>
             SELF_TELEPORT = PACKET_TYPES.register("self_teleport",
