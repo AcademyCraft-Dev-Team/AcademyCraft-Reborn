@@ -327,7 +327,7 @@ public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends
     public boolean charTyped(CharacterEvent e) {
         if (ImGuiUtilApi.wantCaptureKeyboard()) return true;
 
-        var event = new CharTypedEvent(e.codepoint(), e.modifiers());
+        var event = new CharTypedEvent(e.codepoint());
         root.dispatchEvent(event);
         if (event.isConsumed()) return true;
         return isHandleContainer() && super.charTyped(e);

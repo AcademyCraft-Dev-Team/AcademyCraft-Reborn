@@ -195,9 +195,6 @@ public final class BloomEffect {
         var levelRenderer = mc.levelRenderer;
         var bloom = frameGraphBuilder.addPass("bloom");
         levelRenderer.targets.main = bloom.readsAndWrites(levelRenderer.targets.main);
-        if (levelRenderer.targets.translucent != null) {
-            levelRenderer.targets.translucent = bloom.readsAndWrites(levelRenderer.targets.translucent);
-        }
         bloom.executes(() -> {
             var mainRenderTarget = mc.getMainRenderTarget();
             var width = mainRenderTarget.width;
@@ -221,12 +218,10 @@ public final class BloomEffect {
                 var scene = MAIN_SCENE.getColorTextureView();
                 var main = mainRenderTarget.getColorTextureView();
                 var inputView = input.getColorTextureView();
-                var translucentTarget = levelRenderer.getTranslucentTarget();
-                var depthTarget = translucentTarget == null ? mainRenderTarget : translucentTarget;
 
                 if (scene == null || main == null || inputView == null) return;
 
-                input.copyDepthFrom(depthTarget);
+                input.copyDepthFrom(mainRenderTarget);
                 var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
                 var textures = List.of(new TextureBinding("DiffuseSampler", inputView, sampler));
                 Render.runBlitPass(

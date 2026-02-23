@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.Render;
@@ -60,30 +61,33 @@ public abstract class MixinGameRenderer {
 
     @Inject(
             method = "renderItemInHand",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;bobHurt(Lcom/mojang/blaze3d/vertex/PoseStack;F)V"),
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;bobHurt(Lnet/minecraft/client/renderer/state/CameraRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;)V"),
             locals = LocalCapture.CAPTURE_FAILSOFT
     )
     private void onRenderItemInHand(
-            float partialTick,
-            boolean sleeping,
-            Matrix4f projectionMatrix,
+            CameraRenderState cameraState,
+            float deltaPartialTick,
+            Matrix4f modelViewMatrix,
             CallbackInfo ci,
             PoseStack poseStack,
-            Matrix4fStack matrix4fStack) {
+            Matrix4fStack modelViewStack
+    ) {
         var player = minecraft.player;
-        if (minecraft.options.getCameraType().isFirstPerson()
-                && !sleeping
-                && !minecraft.options.hideGui
-                && player != null
+        if (player != null
+                && this.minecraft.options.getCameraType().isFirstPerson()
+                && !cameraState.entityRenderState.isSleeping
+                && !this.minecraft.options.hideGui
                 && minecraft.gameMode != null
-                && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR
+                && this.minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR
         ) {
             RendererManager.renderEffectFirstPerson(
                     poseStack,
                     getSubmitNodeStorage(),
                     player,
-                    minecraft.getEntityRenderDispatcher().getPackedLightCoords(player, partialTick),
-                    partialTick
+                    minecraft.getEntityRenderDispatcher().getPackedLightCoords(
+                            player, deltaPartialTick
+                    ),
+                    deltaPartialTick
             );
         }
     }

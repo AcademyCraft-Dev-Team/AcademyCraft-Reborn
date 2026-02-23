@@ -84,7 +84,7 @@ config = "${mod_id}.mixins.json"
     modId="misaka_network"
     type="required"
     # This version range declares a minimum of the current minecraft version up to but not including the next major version
-    versionRange="${misaka_network_version_range}"
+    versionRange="${misaka_version}"
     ordering="NONE"
     side="BOTH"
 

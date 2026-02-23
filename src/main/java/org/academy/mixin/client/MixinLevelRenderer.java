@@ -5,11 +5,12 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.state.LevelRenderState;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.render.LevelRenderEvent;
@@ -34,7 +35,15 @@ public abstract class MixinLevelRenderer {
             )
     )
     private void renderLevel(
-            GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, Matrix4f frustumMatrix, Matrix4f projectionMatrix, Matrix4f cullingProjectionMatrix, GpuBufferSlice shaderFog, Vector4f fogColor, boolean renderSky,
+            GraphicsResourceAllocator resourceAllocator,
+            DeltaTracker deltaTracker,
+            boolean renderOutline,
+            CameraRenderState cameraState,
+            Matrix4f modelViewMatrix,
+            GpuBufferSlice terrainFog,
+            Vector4f fogColor,
+            boolean shouldRenderSky,
+            ChunkSectionsToRender chunkSectionsToRender,
             CallbackInfo ci,
             @Local(ordinal = 0) FrameGraphBuilder frameGraphBuilder
     ) {
@@ -42,14 +51,33 @@ public abstract class MixinLevelRenderer {
     }
 
     @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelTargetBundle;clear()V"))
-    private void post(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, Matrix4f frustumMatrix, Matrix4f projectionMatrix, Matrix4f cullingProjectionMatrix, GpuBufferSlice shaderFog, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
+    private void post(
+            GraphicsResourceAllocator resourceAllocator,
+            DeltaTracker deltaTracker,
+            boolean renderOutline,
+            CameraRenderState cameraState,
+            Matrix4f modelViewMatrix,
+            GpuBufferSlice terrainFog,
+            Vector4f fogColor,
+            boolean shouldRenderSky,
+            ChunkSectionsToRender chunkSectionsToRender,
+            CallbackInfo ci
+    ) {
         PostEffect.pre();
         PostEffect.post();
     }
 
     @Inject(method = "submitEntities", at = @At("HEAD"))
-    private void submitEntities(PoseStack poseStack, LevelRenderState renderState, SubmitNodeCollector nodeCollector, CallbackInfo ci) {
-        var event = new LevelRenderEvent(Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks(), new MatrixStack().setFrom(poseStack.last()));
+    private void submitEntities(
+            PoseStack poseStack,
+            LevelRenderState renderState,
+            SubmitNodeCollector nodeCollector,
+            CallbackInfo ci
+    ) {
+        var event = new LevelRenderEvent(
+                Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks(),
+                new MatrixStack().setFrom(poseStack.last())
+        );
         NeoForge.EVENT_BUS.post(event);
     }
 }
