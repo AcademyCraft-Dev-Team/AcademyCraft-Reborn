@@ -9,7 +9,8 @@ plugins {
     id("net.neoforged.moddev") version "2.0.140"
 }
 
-val neoVersion: String = "26.1.0.0-alpha.0+snapshot-6.20260207.040922"
+val misakaVersion = project.property("misaka_version")
+val neoVersion: String = "26.1.0.0-alpha.0+snapshot-9.20260222.152118"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
@@ -31,7 +32,7 @@ val generateModMetadata by tasks.registering(ProcessResources::class) {
     val replaceProperties = mapOf(
         "minecraft_version" to project.property("minecraft_version"),
         "minecraft_version_range" to project.property("minecraft_version_range"),
-        "misaka_network_version_range" to project.property("misaka_network_version_range"),
+        "misaka_version" to misakaVersion,
         "neo_version" to neoVersion,
         "neo_version_range" to neoVersion,
         "mod_id" to modId,
@@ -158,7 +159,7 @@ neoForge {
 }
 
 dependencies {
-    val misaka = "org.academy:misaka-network:26.1.0.0-alpha.3+snapshot-4"
+    val misaka = "org.academy:misaka-network:$misakaVersion"
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)

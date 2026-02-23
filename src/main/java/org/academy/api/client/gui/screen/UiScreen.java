@@ -136,7 +136,7 @@ public abstract class UiScreen extends Screen implements RenderRoot {
     public boolean charTyped(CharacterEvent e) {
         if (ImGuiUtilApi.wantCaptureKeyboard()) return true;
 
-        var event = new CharTypedEvent(e.codepoint(), e.modifiers());
+        var event = new CharTypedEvent(e.codepoint());
         root.dispatchEvent(event);
         if (event.isConsumed()) return true;
 

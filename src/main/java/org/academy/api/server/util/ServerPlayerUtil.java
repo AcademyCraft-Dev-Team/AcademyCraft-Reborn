@@ -20,7 +20,7 @@ public final class ServerPlayerUtil {
         var abstractContainerMenu = menuProvider.createMenu(serverPlayer.containerCounter, serverPlayer.getInventory(), serverPlayer);
         if (abstractContainerMenu == null) {
             if (serverPlayer.isSpectator()) {
-                serverPlayer.displayClientMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED), true);
+                serverPlayer.sendOverlayMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED));
             }
         } else {
             var payload = new FriendlyByteBuf(Unpooled.buffer());

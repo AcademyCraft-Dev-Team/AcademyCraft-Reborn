@@ -8,8 +8,9 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.DynamicUniformStorage;
+import net.minecraft.client.renderer.Projection;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import org.academy.api.client.gui.command.SubmittedCommand;
 import org.academy.api.client.gui.layout.MeasureSpec;
 import org.academy.api.client.gui.widget.WidgetContainer;
@@ -39,7 +40,8 @@ public class UiContext {
     private final CommandExecutor commandExecutor = new CommandExecutor();
 
     @Nullable
-    private CachedOrthoProjectionMatrixBuffer projectionMatrixBuffer;
+    private ProjectionMatrixBuffer projectionMatrixBuffer;
+    private final Projection projection = new Projection();
     @Nullable
     private GpuBuffer dynamicTransformsUbo;
 
@@ -102,7 +104,14 @@ public class UiContext {
         var window = Minecraft.getInstance().getWindow();
         var guiScaledWidth = window.getWidth() / effectiveScale;
         var guiScaledHeight = window.getHeight() / effectiveScale;
-        var projectionBufferSlice = projectionMatrixBuffer.getBuffer(guiScaledWidth, guiScaledHeight);
+        /*
+         * Map: z [0, layered] -> NDC [1, -1] :: Depth [1, 0]
+         * Eq : ndc = z * 2 / (zNear - zFar) + (zNear + zFar) / (zNear - zFar)
+         * z=0 => ndc= 1 => (zNear + zFar) / (zNear - zFar) = 1 => zFar = 0
+         * z=layered => ndc=-1 => layered * 2 / zNear + 1 = -1 => zNear = -layered
+         */
+        projection.setupOrtho(-layered, 0.0F, guiScaledWidth, guiScaledHeight, true);
+        var projectionBufferSlice = projectionMatrixBuffer.getBuffer(projection);
         commandExecutor.execute(
                 meshesToDraw, colorTextureView, depthTextureView,
                 projectionBufferSlice, dynamicTransformsUbo, effectiveScale
@@ -158,15 +167,7 @@ public class UiContext {
 
     @RenderThread
     private void initOnRenderThread() {
-        /*
-         * Map: z [0, layered] -> NDC [1, -1] :: Depth [1, 0]
-         * Eq : ndc = z * 2 / (zNear - zFar) + (zNear + zFar) / (zNear - zFar)
-         * z=0 => ndc= 1 => (zNear + zFar) / (zNear - zFar) = 1 => zFar = 0
-         * z=layered => ndc=-1 => layered * 2 / zNear + 1 = -1 => zNear = -layered
-         */
-        projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer(
-                "gui", -layered, 0.0F, true
-        );
+        projectionMatrixBuffer = new ProjectionMatrixBuffer("ac_ui");
         var device = RenderSystem.getDevice();
         var uboUsage = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST;
 
