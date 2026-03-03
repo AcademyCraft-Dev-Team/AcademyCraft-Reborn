@@ -15,7 +15,6 @@ public class HellFlareRay extends RenderOnlyEntity {
     private static final EntityDataAccessor<Float> BEAM_LENGTH = SynchedEntityData.defineId(HellFlareRay.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> TARGET_ID = SynchedEntityData.defineId(HellFlareRay.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PHASE = SynchedEntityData.defineId(HellFlareRay.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> PHASE_FORCED = SynchedEntityData.defineId(HellFlareRay.class, EntityDataSerializers.BOOLEAN);
 
     public HellFlareRay(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -35,7 +34,6 @@ public class HellFlareRay extends RenderOnlyEntity {
         builder.define(BEAM_LENGTH, 0f);
         builder.define(TARGET_ID, -1);
         builder.define(PHASE, 1);
-        builder.define(PHASE_FORCED, false);
     }
 
     @Override
@@ -99,22 +97,5 @@ public class HellFlareRay extends RenderOnlyEntity {
 
     public int getPhase() {
         return entityData.get(PHASE);
-    }
-
-    public void setPhaseForced(boolean forced) {
-        entityData.set(PHASE_FORCED, forced);
-    }
-
-    public boolean isPhaseForced() {
-        return entityData.get(PHASE_FORCED);
-    }
-
-    public void setServerControlledPhase(int phase) {
-        setPhase(phase);
-        setPhaseForced(true);
-    }
-
-    public void clearServerControlledPhase() {
-        setPhaseForced(false);
     }
 }

@@ -5,8 +5,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -15,10 +15,15 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.skilldata.HellFlareData;
 import org.academy.internal.common.world.entity.skill.HellFlareRay;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -32,8 +37,6 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class HellFlare extends Skill {
 
@@ -43,6 +46,7 @@ public class HellFlare extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .iterationTicks(1)
                 .maintenanceCost(0)
+                .withCustomData(HellFlareData.ID, HellFlareData.class, player -> new HellFlareData())
         );
     }
 
@@ -68,7 +72,6 @@ public class HellFlare extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
-        NeoForge.EVENT_BUS.register(Server.class);
     }
 
     public static final class Client {
@@ -100,8 +103,7 @@ public class HellFlare extends Skill {
     }
 
     public static final class Server {
-        private static final Map<UUID, HellFlareRay> activeRays = new ConcurrentHashMap<>();
-        private static final Map<UUID, Integer> forcedPhases = new ConcurrentHashMap<>();
+        private static final Map<Player, Context> CONTEXT_MAP = createContextMap();
         private static final double MAX_RANGE = 32.0;
         private static final int PHASE_P1_END = 120;
         private static final int PHASE_P2_END = 240;
@@ -109,71 +111,28 @@ public class HellFlare extends Skill {
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var uuid = player.getUUID();
-            var level = player.level();
+            var skill = Skills.HELL_FLARE.get();
+            skill.toggle(player);
 
-            if (activeRays.containsKey(uuid)) {
-                var ray = activeRays.remove(uuid);
-                if (ray != null) {
-                    ray.discard();
-                }
-                forcedPhases.remove(uuid);
+            if (!skill.isEnabled(player)) {
+                endContext(player);
                 return;
             }
 
-            var ray = new HellFlareRay(level, player);
-            ray.setPhase(getAutoPhase(ray.tickCount));
-            ray.clearServerControlledPhase();
-            level.addFreshEntity(ray);
-            activeRays.put(uuid, ray);
+            if (CONTEXT_MAP.containsKey(player)) return;
+            var context = new Context(player);
+            CONTEXT_MAP.put(player, context);
+            AbilitySystemServer.registerContext(context);
         }
 
-        @SubscribeEvent
-        public static void onServerTick(ServerTickEvent.Pre event) {
-            var iterator = activeRays.entrySet().iterator();
-            while (iterator.hasNext()) {
-                var entry = iterator.next();
-                var ray = entry.getValue();
-                var owner = ray.getOwner();
-                if (!(owner instanceof ServerPlayer player) || !player.isAlive() || ray.isRemoved()) {
-                    ray.discard();
-                    iterator.remove();
-                    forcedPhases.remove(entry.getKey());
-                    continue;
-                }
-
-                applyPhaseControl(player, ray);
-                updateTargeting(player, ray);
-            }
+        private static void endContext(ServerPlayer player) {
+            var context = CONTEXT_MAP.get(player);
+            if (context == null) return;
+            context.end();
         }
 
-        public static void setPhaseControl(ServerPlayer player, int phase) {
-            var clamped = Math.max(1, Math.min(3, phase));
-            forcedPhases.put(player.getUUID(), clamped);
-        }
-
-        public static void clearPhaseControl(ServerPlayer player) {
-            forcedPhases.remove(player.getUUID());
-        }
-
-        private static void applyPhaseControl(ServerPlayer player, HellFlareRay ray) {
-            var forced = forcedPhases.get(player.getUUID());
-            if (forced != null) {
-                ray.setServerControlledPhase(forced);
-                return;
-            }
-            ray.clearServerControlledPhase();
-            ray.setPhase(getAutoPhase(ray.tickCount));
-        }
-
-        private static int getAutoPhase(int ticks) {
-            if (ticks < PHASE_P1_END) {
-                return 1;
-            }
-            if (ticks < PHASE_P2_END) {
-                return 2;
-            }
-            return 3;
+        private static @Nullable HellFlareData getData(ServerPlayer player) {
+            return Skills.HELL_FLARE.get().<HellFlareData>getRuntimeData(player).orElse(null);
         }
 
         private static void updateTargeting(ServerPlayer player, HellFlareRay ray) {
@@ -200,15 +159,11 @@ public class HellFlare extends Skill {
         }
 
         private static boolean isValidTarget(ServerPlayer player, LivingEntity target) {
-            if (target == null || !target.isAlive() || target.isSpectator()) {
-                return false;
-            }
+            if (target == null || !target.isAlive() || target.isSpectator()) return false;
 
             var eyePos = player.getEyePosition();
             var targetCenter = target.position().add(0, target.getBbHeight() * 0.5, 0);
-            if (eyePos.distanceToSqr(targetCenter) > MAX_RANGE * MAX_RANGE) {
-                return false;
-            }
+            if (eyePos.distanceToSqr(targetCenter) > MAX_RANGE * MAX_RANGE) return false;
 
             var hitResult = player.level().clip(new net.minecraft.world.level.ClipContext(
                     eyePos,
@@ -244,9 +199,102 @@ public class HellFlare extends Skill {
             var eyePos = player.getEyePosition();
             var targetCenter = target.position().add(0, target.getBbHeight() * 0.5, 0);
             var dist = (float) eyePos.distanceTo(targetCenter);
-
             ray.setTargetId(target.getId());
             ray.setBeamLength(dist);
+        }
+
+        public static final class Context extends ServerContext {
+            private final HellFlareRay ray;
+            private int lastTargetId = -1;
+            private boolean ended = false;
+
+            private Context(ServerPlayer player) {
+                super(player);
+                ray = new HellFlareRay(level(), player);
+                level().addFreshEntity(ray);
+
+                var data = getData(player);
+                if (data == null) return;
+                data.setLockTicks(0);
+                data.setPhase(1);
+                ray.setPhase(1);
+            }
+
+            @SubscribeEvent
+            public void onTick(ServerTickEvent.Pre event) {
+                var skill = Skills.HELL_FLARE.get();
+                if (!skill.isEnabled(player)) {
+                    end();
+                    return;
+                }
+
+                if (!player.isAlive() || player.hasDisconnected() || ray.isRemoved()) {
+                    skill.toggle(player);
+                    end();
+                    return;
+                }
+
+                var data = getData(player);
+                if (data == null) {
+                    skill.toggle(player);
+                    end();
+                    return;
+                }
+
+                updateTargeting(player, ray);
+                updatePhaseByTarget(data);
+                ray.setPhase(data.getPhase());
+            }
+
+            private void updatePhaseByTarget(HellFlareData data) {
+                var currentTargetId = ray.getTargetId();
+
+                if (currentTargetId == -1) {
+                    lastTargetId = -1;
+                    data.setLockTicks(0);
+                    data.setPhase(1);
+                    return;
+                }
+
+                if (currentTargetId != lastTargetId) {
+                    lastTargetId = currentTargetId;
+                    data.setLockTicks(0);
+                    data.setPhase(1);
+                    return;
+                }
+
+                var lockTicks = data.getLockTicks() + 1;
+                data.setLockTicks(lockTicks);
+
+                if (lockTicks < PHASE_P1_END) {
+                    data.setPhase(1);
+                    return;
+                }
+
+                if (lockTicks < PHASE_P2_END) {
+                    data.setPhase(2);
+                    return;
+                }
+
+                data.setPhase(3);
+            }
+
+            private void end() {
+                if (ended) return;
+                ended = true;
+                CONTEXT_MAP.remove(player);
+
+                var data = getData(player);
+                if (data != null) {
+                    data.setLockTicks(0);
+                    data.setPhase(1);
+                }
+
+                if (!ray.isRemoved()) {
+                    ray.discard();
+                }
+                super.unregister();
+            }
         }
     }
 
