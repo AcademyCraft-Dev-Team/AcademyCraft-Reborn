@@ -12,12 +12,12 @@ import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.common.util.MathUtil;
-import org.academy.internal.common.ability.electromaster.skills.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.item.Items;
 
 import static org.academy.AcademyCraft.academy;
-import static org.academy.internal.common.ability.electromaster.skills.Railgun.CHARGE_TIME;
+import static org.academy.internal.common.ability.electromaster.skills.lv5.Railgun.CHARGE_TIME;
 
 public final class RailgunEffectRenderer implements EffectRenderer {
     public static final RailgunEffectRenderer INSTANCE = new RailgunEffectRenderer();

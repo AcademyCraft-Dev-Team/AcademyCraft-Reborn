@@ -12,10 +12,10 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowReverse;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGeneration;
-import org.academy.internal.common.ability.electromaster.skills.ArcGenerate;
-import org.academy.internal.common.ability.electromaster.skills.BallLightning;
-import org.academy.internal.common.ability.electromaster.skills.MagnetManipulation;
-import org.academy.internal.common.ability.electromaster.skills.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
+import org.academy.internal.common.ability.electromaster.skills.lv5.BallLightning;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
+import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 import org.academy.internal.common.ability.meltdowner.skills.HellFlare;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
@@ -43,7 +43,7 @@ public final class Skills {
      * Meltdowner
      */
     public static final DeferredHolder<Skill, SingleHighSpeedElectronBeam> SINGLE_HIGH_SPEED_ELECTRON_BEAM = SKILLS.register(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM, SingleHighSpeedElectronBeam::new);
-    public static final DeferredHolder<Skill, HellFlare> HELL_FLARE_RAY = SKILLS.register(SkillNames.HELL_FLARE_RAY, HellFlare::new);
+    public static final DeferredHolder<Skill, HellFlare> HELL_FLARE = SKILLS.register(SkillNames.HELL_FLARE, HellFlare::new);
     /**
      * Teleport
      */

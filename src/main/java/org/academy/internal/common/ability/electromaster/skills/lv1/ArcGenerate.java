@@ -1,4 +1,4 @@
-package org.academy.internal.common.ability.electromaster.skills;
+package org.academy.internal.common.ability.electromaster.skills.lv1;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
