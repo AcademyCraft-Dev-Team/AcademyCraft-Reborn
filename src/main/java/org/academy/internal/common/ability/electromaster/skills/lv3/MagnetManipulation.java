@@ -1,4 +1,4 @@
-package org.academy.internal.common.ability.electromaster.skills;
+package org.academy.internal.common.ability.electromaster.skills.lv3;
 
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;

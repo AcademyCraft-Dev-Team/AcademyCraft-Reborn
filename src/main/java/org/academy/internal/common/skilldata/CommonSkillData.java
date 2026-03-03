@@ -9,10 +9,6 @@ public class CommonSkillData extends SkillData {
     public CommonSkillData() {
     }
 
-    public CommonSkillData(float exp) {
-        super(exp);
-    }
-
     @Override
     public Identifier getType() {
         return ID;

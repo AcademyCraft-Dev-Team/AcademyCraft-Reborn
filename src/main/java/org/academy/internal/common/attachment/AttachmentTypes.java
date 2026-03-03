@@ -7,7 +7,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
-import org.academy.internal.common.ability.electromaster.skills.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 
 import java.util.function.Supplier;
 
