@@ -62,6 +62,9 @@ public final class VectorAccel extends Skill {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL1)
+                .cpCost(45)
+                .maxStacks(4)
+                .iterationTicks(80)
         );
     }
 

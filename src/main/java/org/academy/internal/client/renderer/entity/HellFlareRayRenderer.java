@@ -134,7 +134,6 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         state.direction = new Vector3f(state.endPos).sub(state.startPos).normalize();
         state.age = entity.tickCount + partialTick;
         state.phase = entity.getPhase();
-        state.phaseForced = entity.isPhaseForced();
     }
 
     @Override
@@ -347,7 +346,7 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             float dist = scatterR * (0.6f + rand.nextFloat() * 0.4f);
             float x = Mth.cos(ang) * dist;
             float y = Mth.sin(ang) * dist;
-            int baseCol = Geometry.calcColor(p.cCoreS, p.cCoreE, t, 0, step, state.age, state.phase, state.phaseForced, false);
+            int baseCol = Geometry.calcColor(p.cCoreS, p.cCoreE, t, 0, step, state.age, state.phase, false);
             int pCol = (baseCol & 0x00FFFFFF) | ((int)(200 + rand.nextFloat() * 55) << 24);
             if (destruction > 0.01f) {
                 var darkAlpha = (int) Mth.lerp(destruction, (float) ((pCol >> 24) & 0xFF), 0xAA);
@@ -371,7 +370,7 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         for (int i = 0; i < segs; i++) {
             float t1 = (float) i / segs, t2 = (float) (i + 1) / segs;
             float z1 = t1 * len, z2 = t2 * len;
-            float env1 = getEnv(t1, state.age, state.phase, state.phaseForced), env2 = getEnv(t2, state.age, state.phase, state.phaseForced);
+            float env1 = getEnv(t1, state.age, state.phase), env2 = getEnv(t2, state.age, state.phase);
             float r1 = rBase * (1.0f + Mth.sin(t1 * 3.0f - state.age * 0.1f) * 0.1f) * env1;
             float r2 = rBase * (1.0f + Mth.sin(t2 * 3.0f - state.age * 0.1f) * 0.1f) * env2;
             float vOff = -state.age * C.TUBE_FLOW;
@@ -395,11 +394,11 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         return m;
     }
 
-    static float getEnv(float t, float age, int phase, boolean phaseForced) {
+    static float getEnv(float t, float age, int phase) {
         var base = (float) Math.pow(Mth.sin(t * Mth.PI), 0.3);
         var tapered = Mth.lerp(t, C.P2_TAPER_S, C.P2_TAPER_E);
-        var t12 = phaseBlend12(age, phase, phaseForced);
-        var t23 = phaseBlend23(age, phase, phaseForced);
+        var t12 = phaseBlend12(age, phase);
+        var t23 = phaseBlend23(age, phase);
         var p2Weight = t12 * (1.0f - t23);
         var blend = Mth.clamp(p2Weight * 1.35f, 0.0f, 1.0f);
         return Mth.lerp(blend, base, tapered);
@@ -422,20 +421,18 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
     }
 
     private static float phaseBlend12(HellFlareRayRenderState state) {
-        return phaseBlend12(state.age, state.phase, state.phaseForced);
+        return phaseBlend12(state.age, state.phase);
     }
 
     private static float phaseBlend23(HellFlareRayRenderState state) {
-        return phaseBlend23(state.age, state.phase, state.phaseForced);
+        return phaseBlend23(state.age, state.phase);
     }
 
-    private static float phaseBlend12(float age, int phase, boolean phaseForced) {
-        if (!phaseForced) return phaseBlend(age, C.T_P1_END, C.TRANSITION);
+    private static float phaseBlend12(float age, int phase) {
         return phase >= 2 ? 1.0f : 0.0f;
     }
 
-    private static float phaseBlend23(float age, int phase, boolean phaseForced) {
-        if (!phaseForced) return phaseBlend(age, C.T_P2_END, C.TRANSITION);
+    private static float phaseBlend23(float age, int phase) {
         return phase >= 3 ? 1.0f : 0.0f;
     }
 
@@ -455,11 +452,11 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             for (int i = 0; i < segs; i++) {
                 float t1 = (float) i / segs, t2 = (float) (i + 1) / segs;
                 float z1 = t1 * len, z2 = t2 * len;
-                float r1 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t1 * 10)) * getEnv(t1, s.age, s.phase, s.phaseForced);
-                float r2 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t2 * 10)) * getEnv(t2, s.age, s.phase, s.phaseForced);
+                float r1 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t1 * 10)) * getEnv(t1, s.age, s.phase);
+                float r2 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t2 * 10)) * getEnv(t2, s.age, s.phase);
 
-                int c1 = calcColor(cStart, cEnd, t1, 0, true, s.age, s.phase, s.phaseForced, false);
-                int c2 = calcColor(cStart, cEnd, t2, 0, true, s.age, s.phase, s.phaseForced, false);
+                int c1 = calcColor(cStart, cEnd, t1, 0, true, s.age, s.phase, false);
+                int c2 = calcColor(cStart, cEnd, t2, 0, true, s.age, s.phase, false);
                 int c1E = c1 & 0x00FFFFFF;
                 int c2E = c2 & 0x00FFFFFF;
 
@@ -475,8 +472,8 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
                 float rot1 = s.age * rotSpd + t1 * spiral;
                 float rot2 = s.age * rotSpd + t2 * spiral;
                 float wf1 = wave(t1 * frq - s.age * spd), wf2 = wave(t2 * frq - s.age * spd);
-                float r1 = rBase * (1 + wf1 * amp) * getEnv(t1, s.age, s.phase, s.phaseForced), r2 = rBase * (1 + wf2 * amp) * getEnv(t2, s.age, s.phase, s.phaseForced);
-                int col1 = calcColor(cS, cE, t1, wf1, step, s.age, s.phase, s.phaseForced, overload), col2 = calcColor(cS, cE, t2, wf2, step, s.age, s.phase, s.phaseForced, overload);
+                float r1 = rBase * (1 + wf1 * amp) * getEnv(t1, s.age, s.phase), r2 = rBase * (1 + wf2 * amp) * getEnv(t2, s.age, s.phase);
+                int col1 = calcColor(cS, cE, t1, wf1, step, s.age, s.phase, overload), col2 = calcColor(cS, cE, t2, wf2, step, s.age, s.phase, overload);
                 float ox1 = jitter(t1, s.age, seed, nAmp), oy1 = jitter(t1, s.age, seed+13, nAmp);
                 float ox2 = jitter(t2, s.age, seed, nAmp), oy2 = jitter(t2, s.age, seed+13, nAmp);
                 for (int p = 0; p < planes; p++) {
@@ -543,8 +540,8 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
                 for (var i = 0; i < segs; i++) {
                     var t1 = (float) i / segs;
                     var t2 = (float) (i + 1) / segs;
-                    var env1 = (float) Math.pow(getEnv(t1, s.age, s.phase, s.phaseForced), lit ? 0.78f : 0.66f);
-                    var env2 = (float) Math.pow(getEnv(t2, s.age, s.phase, s.phaseForced), lit ? 0.78f : 0.66f);
+                    var env1 = (float) Math.pow(getEnv(t1, s.age, s.phase), lit ? 0.78f : 0.66f);
+                    var env2 = (float) Math.pow(getEnv(t2, s.age, s.phase), lit ? 0.78f : 0.66f);
                     var pulse1 = 0.74f + 0.26f * Mth.sin(t1 * 11.0f - time * (0.11f + layer * 0.013f) + layerPhase);
                     var pulse2 = 0.74f + 0.26f * Mth.sin(t2 * 11.0f - time * (0.11f + layer * 0.013f) + layerPhase);
                     var prominence1 = prominence(t1, time, layerPhase);
@@ -657,17 +654,17 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
 
         static float wave(float x) { return Mth.sin(x)*0.5f + Mth.sin(x*2.3f)*0.3f + Mth.sin(x*4.7f)*0.2f; }
         static float jitter(float t, float a, int s, float amp) { return (1-t) * amp * (Mth.sin(t*80+a*60+s)*0.5f + Mth.cos(t*150-a*40)*0.5f); }
-        static int calcColor(int s, int e, float t, float w, boolean step, float age, int phase, boolean phaseForced, boolean ov) {
+        static int calcColor(int s, int e, float t, float w, boolean step, float age, int phase, boolean ov) {
             var bc = lerp(s, e, step ? Mth.clamp(t * 3.33f, 0, 1) : t);
             var spot = sunspot(t, age * 0.55f, 3.1f);
             var flare = prominence(t, age * 0.75f, 1.7f);
-            var t23 = phaseBlend23(age, phase, phaseForced);
+            var t23 = phaseBlend23(age, phase);
             var spotWeight = Mth.lerp(t23, 0.09f, 0.14f);
             var flareWeight = Mth.lerp(t23, 0.08f, 0.12f);
             var tone = 1.0f - spot * spotWeight + flare * flareWeight;
             bc = scaleRgb(bc, tone);
             if (!ov) return bc;
-            var t12 = phaseBlend12(age, phase, phaseForced);
+            var t12 = phaseBlend12(age, phase);
             var ovMix = Mth.lerp(t23, t12, 1.0f);
             return lerp(bc, 0xFFFFFFFF, Mth.clamp(w, 0, 1) * 0.85f * ovMix);
         }
@@ -731,3 +728,4 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         }
     }
 }
+
