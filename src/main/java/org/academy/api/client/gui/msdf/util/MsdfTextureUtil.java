@@ -26,6 +26,6 @@ public final class MsdfTextureUtil {
     }
 
     private static int clamp(float val) {
-        return Math.max(0, Math.min(255, (int) (val * 255.0f)));
+        return Math.clamp((int) (val * 255.0f), 0, 255);
     }
 }

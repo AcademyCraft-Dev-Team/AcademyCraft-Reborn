@@ -6,7 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
@@ -38,31 +38,6 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
         renderState.shutdownState = blockEntity.shutdownState;
     }
 
-    /*
-                    if (blockEntity.windGenWorldGUI != null && blockEntity.isDisplayActive) {
-                    var width = 1f;
-                    var scale = width / WindGenWorldGUI.WIDTH;
-
-                    poseStack.pushPose();
-                    poseStack.translate(0, 0.3075, 0.625);
-                    poseStack.mulPose(Axis.XP.rotationDegrees(17.5f));
-
-                    var aabb = new AABB(-0.5, -5.0 / 16.0, -0.05, 0.5, 5.0 / 16.0, 0.05);
-                    LineBoxRenderer.renderWireframeBox(new MatrixStack().setFrom(poseStack.last()), bufferSource, aabb, 1f, 1f, 1f, 1f);
-
-                    poseStack.mulPose(Axis.XP.rotationDegrees(180));
-                    poseStack.translate(0, 0, -0.0575f);
-                    poseStack.scale(-scale, -scale, scale);
-                    poseStack.translate(-WindGenWorldGUI.WIDTH / 2, -WindGenWorldGUI.HEIGHT / 2, 0);
-
-                    var matrixStack = new MatrixStack();
-                    matrixStack.setFrom(poseStack.last());
-
-                    blockEntity.windGenWorldGUI.render(matrixStack, bufferSource, partialTick);
-
-                    poseStack.popPose();
-                }
-         */
     @Override
     public void submit(WindGenBaseRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();

@@ -353,9 +353,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
                         if (newHoveredWidget != null && isAncestor(current, newHoveredWidget)) {
                             break;
                         }
-                        if (current instanceof AbstractWidget aw) {
-                            aw.setHovered(false);
-                        }
+                        current.setHovered(false);
                         current = current.getParent();
                     }
 
@@ -363,9 +361,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
 
                     current = hoveredWidget;
                     while (current != null) {
-                        if (current instanceof AbstractWidget aw) {
-                            aw.setHovered(true);
-                        }
+                        current.setHovered(true);
                         current = current.getParent();
                     }
                 }
@@ -407,9 +403,7 @@ public abstract class AbstractWidgetContainer extends AbstractWidget implements 
             if (hoveredWidget != null) {
                 var current = hoveredWidget;
                 while (current != null && current != this) {
-                    if (current instanceof AbstractWidget aw) {
-                        aw.setHovered(false);
-                    }
+                    current.setHovered(false);
                     current = current.getParent();
                 }
                 hoveredWidget = null;

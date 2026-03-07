@@ -42,12 +42,12 @@ public final class SolarGenSpecialRenderer implements NoDataSpecialModelRenderer
         poseStack.popPose();
     }
 
-    public record Unbaked() implements SpecialModelRenderer.Unbaked {
+    public record Unbaked() implements SpecialModelRenderer.Unbaked<Void> {
         public static final SolarGenSpecialRenderer.Unbaked INSTANCE = new SolarGenSpecialRenderer.Unbaked();
         public static final MapCodec<SolarGenSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
+        public SpecialModelRenderer<Void> bake(SpecialModelRenderer.BakingContext context) {
             return SolarGenSpecialRenderer.INSTANCE;
         }
 

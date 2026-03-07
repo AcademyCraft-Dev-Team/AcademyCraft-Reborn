@@ -114,7 +114,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
     }
 
     public void setEnergyStored(int newEnergy) {
-        var clamped = Math.max(0, Math.min(newEnergy, getMaxEnergyStorage()));
+        var clamped = Math.clamp(newEnergy, 0, getMaxEnergyStorage());
         if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();

@@ -225,7 +225,7 @@ public final class BloomEffect {
                 var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
                 var textures = List.of(new TextureBinding("DiffuseSampler", inputView, sampler));
                 Render.runBlitPass(
-                        main, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
+                        main, Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,
                         Render.Buffers.getInstance().getFSQuadVBNDC(),
                         textures, List.of(),
                         false

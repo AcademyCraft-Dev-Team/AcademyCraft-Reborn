@@ -116,7 +116,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     @Override
     public void setEnergyStored(int energy) {
         double oldEnergy = energyStored;
-        energyStored = Math.max(0, Math.min(energy, getMaxEnergyStorage()));
+        energyStored = Math.clamp(energy, 0, getMaxEnergyStorage());
         if (oldEnergy != energyStored) {
             setChanged();
             if (level != null && !level.isClientSide()) {

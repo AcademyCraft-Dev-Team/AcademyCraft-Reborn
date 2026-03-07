@@ -2,7 +2,6 @@
 
 import org.slf4j.event.Level
 
-
 plugins {
     idea
     `java-library`
@@ -10,7 +9,7 @@ plugins {
 }
 
 val misakaVersion = project.property("misaka_version")
-val neoVersion: String = "26.1.0.0-alpha.0+snapshot-9.20260222.152118"
+val neoVersion: String = "26.1.0.0-alpha.0+snapshot-11.20260307.044334"
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
@@ -145,7 +144,6 @@ neoForge {
             jvmArguments.addAll(
                 "-XX:+IgnoreUnrecognizedVMOptions",
                 "-XX:+AllowEnhancedClassRedefinition",
-                "-XX:TieredStopAtLevel=1",
                 "-Xverify:none"
             )
         }

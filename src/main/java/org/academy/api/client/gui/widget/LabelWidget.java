@@ -46,7 +46,7 @@ public class LabelWidget extends AbstractWidget {
 
         var finalScale = Math.min(scaleX, scaleY);
 
-        return Math.max(0.0f, Math.min(1.0f, finalScale));
+        return Math.clamp(finalScale, 0.0f, 1.0f);
     }
 
     protected float getTextWidth(String text) {

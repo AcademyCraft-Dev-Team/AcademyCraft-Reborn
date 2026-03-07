@@ -6,8 +6,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import org.academy.api.client.Render;
 import org.academy.api.client.gui.event.*;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
@@ -47,7 +47,7 @@ public abstract class UiScreen extends Screen implements RenderRoot {
         if (colorTextureView == null) return;
 
         guiGraphics.submitBlit(
-                RenderPipelines.GUI_TEXTURED,
+                Render.RenderPipelines.IMAGE_PREMULTIPLIED_ALPHA,
                 colorTextureView,
                 RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
                 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),

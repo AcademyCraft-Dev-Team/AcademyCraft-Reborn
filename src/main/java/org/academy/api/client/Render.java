@@ -4,10 +4,10 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.resource.CrossFrameResourcePool;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -22,7 +22,6 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.stencil.StencilFunction;
 import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
@@ -34,10 +33,10 @@ import org.academy.api.client.render.post.PostEffect;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
@@ -399,10 +398,9 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.Fragment.MSDF_TEXT)
                 .withSampler("Sampler0")
                 .withUniform("MsdfUniforms", UniformType.UNIFORM_BUFFER)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(true)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
@@ -410,35 +408,39 @@ public final class Render {
                 .withLocation(academy("pipeline/blit_screen"))
                 .withVertexShader(Resource.Shaders.SCREEN_BLIT)
                 .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withCull(false)
-                .withDepthWrite(false)
                 .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS)
                 .buildSnippet();
 
         public static final RenderPipeline BLIT_SCREEN_WITH_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
                 .withSampler("DiffuseSampler")
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .build();
+
+        public static final RenderPipeline BLIT_SCREEN_PREMULTIPLIED_ALPHA = builder(BLIT_SCREEN_SNIPPET)
+                .withLocation(academy("pipeline/blit_screen"))
+                .withSampler("DiffuseSampler")
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
                 .withSampler("DiffuseSampler")
-                .withoutBlend()
+                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_ALL))
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/blit_screen"))
                 .withSampler("DiffuseSampler")
-                .withoutBlend()
+                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_ALL))
                 .withStencilTest(
                         new StencilTest(
                                 new StencilPerFaceTest(
                                         StencilOperation.KEEP,
                                         StencilOperation.KEEP,
                                         StencilOperation.KEEP,
-                                        StencilFunction.EQUAL
+                                        CompareOp.EQUAL
                                 ),
                                 0XFF,
                                 0XFF,
@@ -452,6 +454,7 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.Fragment.GAUSSIAN_BLUR)
                 .withSampler("DiffuseSampler")
                 .withUniform("BlurInfo", UniformType.UNIFORM_BUFFER)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
                 .build();
 
         public static final RenderPipeline CUTOUT_GAUSSIAN_BLUR = builder(BLIT_SCREEN_SNIPPET)
@@ -465,7 +468,7 @@ public final class Render {
                                         StencilOperation.KEEP,
                                         StencilOperation.KEEP,
                                         StencilOperation.KEEP,
-                                        StencilFunction.EQUAL
+                                        CompareOp.EQUAL
                                 ),
                                 0XFF,
                                 0XFF,
@@ -482,20 +485,16 @@ public final class Render {
                 .withSampler("BlurTexture2")
                 .withSampler("BlurTexture3")
                 .withUniform("BloomInfo", UniformType.UNIFORM_BUFFER)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
                 .build();
-
-        public static final BlendFunction ADDITIVE_BLEND = new BlendFunction(
-                SourceFactor.SRC_ALPHA, DestFactor.ONE,
-                SourceFactor.SRC_ALPHA, DestFactor.ONE
-        );
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_additive"))
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
-                .withBlend(ADDITIVE_BLEND)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
                 .build();
 
@@ -504,10 +503,20 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.IMAGE)
                 .withFragmentShader(Resource.Shaders.IMAGE)
                 .withSampler("Sampler0")
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(true)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
+                .build();
+
+        public static final RenderPipeline IMAGE_PREMULTIPLIED_ALPHA = builder(MATRICES_PROJECTION_SNIPPET)
+                .withLocation(academy("pipeline/image"))
+                .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
+                .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
+                .withSampler("Sampler0")
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+                .withCull(true)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
@@ -516,10 +525,9 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.IMAGE)
                 .withFragmentShader(Resource.Shaders.Fragment.IMAGE_CIRCLE)
                 .withSampler("Sampler0")
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(true)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
@@ -528,10 +536,9 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.POS_TEX_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withSampler("Sampler0")
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(true)
-                .withBlend(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .withStencilTest(
                         new StencilTest(
@@ -539,7 +546,7 @@ public final class Render {
                                         StencilOperation.KEEP,
                                         StencilOperation.KEEP,
                                         StencilOperation.REPLACE,
-                                        StencilFunction.ALWAYS
+                                        CompareOp.ALWAYS_PASS
                                 ),
                                 0XFF,
                                 0XFF,
@@ -553,8 +560,9 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(true)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline SDF_SHARP_MARGIN = builder(MATRICES_PROJECTION_SNIPPET)
@@ -563,8 +571,9 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.Fragment.SDF_SHARP_MARGIN)
                 .withUniform("SdfUniforms", UniformType.UNIFORM_BUFFER)
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline GLOW_CIRCLE = builder(MATRICES_PROJECTION_SNIPPET)
@@ -573,8 +582,9 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.Fragment.GLOW_CIRCLE)
                 .withUniform("Uniforms", UniformType.UNIFORM_BUFFER)
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline SDF_CIRCLE_GLOW = builder(MATRICES_PROJECTION_SNIPPET)
@@ -582,10 +592,9 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.POS_TEX)
                 .withFragmentShader(Resource.Shaders.Fragment.SDF_CIRCLE_GLOW)
                 .withUniform("GlowUniforms", UniformType.UNIFORM_BUFFER)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .build();
 
@@ -595,8 +604,9 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.POS_TEX_COLOR)
                 .withSampler("Sampler0")
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR_HELLFLARE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
@@ -605,8 +615,8 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.Fragment.HELLFLARE_STEAM)
                 .withSampler("Sampler0")
                 .withCull(false)
-                .withBlend(ADDITIVE_BLEND)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
@@ -616,8 +626,8 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.Fragment.HELLFLARE_STEAM)
                 .withSampler("Sampler0")
                 .withCull(false)
-                .withBlend(ADDITIVE_BLEND)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
                 .build();
 
@@ -626,8 +636,9 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
@@ -635,8 +646,9 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES_NO_DEPTH = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
@@ -644,8 +656,8 @@ public final class Render {
                 .withVertexShader(Resource.Shaders.POS_COLOR)
                 .withFragmentShader(Resource.Shaders.POS_COLOR)
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthWrite(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
                 .build();
 
@@ -655,7 +667,7 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.DISTORTION_RING)
                 .withSampler("Sampler0")
                 .withCull(false)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(
                         VertexFormat.builder()
                                 .add("Position", VertexFormatElement.POSITION)
@@ -665,6 +677,7 @@ public final class Render {
                                 .build(),
                         VertexFormat.Mode.QUADS
                 )
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline DISTORTION_TUBE = builder(MATRICES_PROJECTION_SNIPPET)
@@ -673,7 +686,7 @@ public final class Render {
                 .withFragmentShader(Resource.Shaders.DISTORTION_TUBE)
                 .withSampler("Sampler0")
                 .withCull(true)
-                .withBlend(BlendFunction.TRANSLUCENT)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexFormat(
                         VertexFormat.builder()
                                 .add("Position", VertexFormatElement.POSITION)
@@ -683,6 +696,7 @@ public final class Render {
                                 .build(),
                         VertexFormat.Mode.QUADS
                 )
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         private RenderPipelines() {

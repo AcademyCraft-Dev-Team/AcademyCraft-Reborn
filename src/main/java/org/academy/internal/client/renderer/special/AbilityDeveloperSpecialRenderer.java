@@ -46,12 +46,12 @@ public final class AbilityDeveloperSpecialRenderer implements NoDataSpecialModel
         AbilityDeveloperRenderer.MODEL.root().getExtentsForGui(posestack, output);
     }
 
-    public record Unbaked() implements SpecialModelRenderer.Unbaked {
+    public record Unbaked() implements SpecialModelRenderer.Unbaked<Void> {
         public static final Unbaked INSTANCE = new Unbaked();
         public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
+        public SpecialModelRenderer<Void> bake(SpecialModelRenderer.BakingContext context) {
             return AbilityDeveloperSpecialRenderer.INSTANCE;
         }
 

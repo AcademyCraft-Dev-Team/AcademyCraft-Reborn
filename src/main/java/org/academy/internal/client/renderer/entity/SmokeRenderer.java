@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -38,7 +38,7 @@ public class SmokeRenderer extends EntityRenderer<Smoke, SmokeRenderState> {
         var packedLight = renderState.lightCoords;
         var vertexConsumer = PostEffect.BUFFER_SOURCE_PRE.getBuffer(RenderTypes.eyes(TEXTURE));
 
-        var frame = Math.max(0, Math.min(renderState.frame, 3));
+        var frame = Math.clamp(renderState.frame, 0, 3);
         var col = frame % 2;
         var row = frame / 2;
 

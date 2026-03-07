@@ -106,10 +106,10 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
-            var targetStartSeconds = Math.max(0.0f, Math.min(totalDuration, totalDuration - elapsedSeconds));
+            var targetStartSeconds = Math.clamp(totalDuration, 0.0f, totalDuration - elapsedSeconds);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
-            targetAnimationState.start((int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, adjustedStartTick)));
+            targetAnimationState.start((int) Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
         } else {
             targetAnimationState.start(ticks);
         }
@@ -317,7 +317,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     }
 
     public void setEnergyStorage(int energyStorage) {
-        var clamped = Math.max(0, Math.min(energyStorage, getMaxEnergyStorage()));
+        var clamped = Math.clamp(energyStorage, 0, getMaxEnergyStorage());
         if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();

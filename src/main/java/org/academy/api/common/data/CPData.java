@@ -106,12 +106,12 @@ public class CPData {
     }
 
     public void setCurrSP(int currSP) {
-        this.currSP = Math.max(0, Math.min(maxSP, currSP));
+        this.currSP = Math.clamp(maxSP, 0, currSP);
         markDirty();
     }
 
     public void addSP(int amount) {
-        currSP = Math.max(0, Math.min(maxSP, currSP + amount));
+        currSP = Math.clamp(maxSP, 0, currSP + amount);
         markDirty();
     }
 

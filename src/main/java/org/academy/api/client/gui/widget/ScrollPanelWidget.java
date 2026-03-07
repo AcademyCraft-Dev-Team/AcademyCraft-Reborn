@@ -272,8 +272,8 @@ public class ScrollPanelWidget extends AbstractWidgetContainer {
         var maxScrollX = Math.max(0, content.getWidth() - getWidth());
         var maxScrollY = Math.max(0, content.getHeight() - getHeight());
 
-        var finalX = Math.max(0, Math.min(x, maxScrollX));
-        var finalY = Math.max(0, Math.min(y, maxScrollY));
+        var finalX = Math.clamp(x, 0, maxScrollX);
+        var finalY = Math.clamp(y, 0, maxScrollY);
 
         super.scrollTo(finalX, finalY);
     }
