@@ -10,8 +10,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
-import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.client.renderer.state.LevelRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
@@ -30,7 +30,7 @@ public abstract class MixinLevelRenderer {
             method = "renderLevel",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4f;)V",
+                    target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4f;)V",
                     shift = At.Shift.AFTER
             )
     )

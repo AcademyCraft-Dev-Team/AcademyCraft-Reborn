@@ -9,6 +9,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
+import org.jspecify.annotations.Nullable;
 
 public class HellFlareRay extends RenderOnlyEntity {
     private static final EntityDataAccessor<Integer> OWNER_ID = SynchedEntityData.defineId(HellFlareRay.class, EntityDataSerializers.INT);
@@ -59,7 +60,7 @@ public class HellFlareRay extends RenderOnlyEntity {
         entityData.set(OWNER_ID, owner.getId());
     }
 
-    public LivingEntity getOwner() {
+    public @Nullable LivingEntity getOwner() {
         var id = entityData.get(OWNER_ID);
         var entity = level().getEntity(id);
         return entity instanceof LivingEntity living ? living : null;
@@ -85,13 +86,13 @@ public class HellFlareRay extends RenderOnlyEntity {
         return getTargetId() != -1;
     }
 
-    public Entity getTargetEntity() {
+    public @Nullable Entity getTargetEntity() {
         var id = getTargetId();
         return id == -1 ? null : level().getEntity(id);
     }
 
     public void setPhase(int phase) {
-        var clamped = Math.max(1, Math.min(3, phase));
+        var clamped = Math.clamp(phase, 1, 3);
         entityData.set(PHASE, clamped);
     }
 

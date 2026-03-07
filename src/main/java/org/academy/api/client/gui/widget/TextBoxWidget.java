@@ -173,7 +173,7 @@ public class TextBoxWidget extends LabelWidget {
             return;
         }
 
-        caretPos = Math.max(0, Math.min(caretPos, stringBuilder.codePointCount(0, stringBuilder.length())));
+        caretPos = Math.clamp(caretPos, 0, stringBuilder.codePointCount(0, stringBuilder.length()));
 
         if (hasSelection) {
             deleteSelectedText();

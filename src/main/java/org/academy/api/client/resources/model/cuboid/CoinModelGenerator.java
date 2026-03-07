@@ -1,15 +1,21 @@
-package org.academy.api.client.renderer.model;
+package org.academy.api.client.resources.model.cuboid;
 
 import com.mojang.math.Quadrant;
-import net.minecraft.client.renderer.block.model.*;
-import net.minecraft.client.resources.model.*;
+import net.minecraft.client.renderer.block.dispatch.ModelState;
+import net.minecraft.client.resources.model.ModelBaker;
+import net.minecraft.client.resources.model.ModelDebugName;
+import net.minecraft.client.resources.model.UnbakedModel;
+import net.minecraft.client.resources.model.cuboid.FaceBakery;
+import net.minecraft.client.resources.model.cuboid.ItemModelGenerator;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
+import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.core.Direction;
 import net.neoforged.neoforge.client.model.ExtraFaceData;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
-import static net.minecraft.client.renderer.block.model.ItemModelGenerator.MAX_Z;
-import static net.minecraft.client.renderer.block.model.ItemModelGenerator.MIN_Z;
 
 public class CoinModelGenerator implements UnbakedModel {
     public static final CoinModelGenerator INSTANCE = new CoinModelGenerator();
@@ -36,8 +42,8 @@ public class CoinModelGenerator implements UnbakedModel {
                 var frontInfo = modelBakery.interner().spriteInfo(BakedQuad.SpriteInfo.of(front, front.sprite().transparency()));
                 var backInfo = modelBakery.interner().spriteInfo(BakedQuad.SpriteInfo.of(back, back.sprite().transparency()));
                 var interner = modelBakery.interner();
-                var from = new Vector3f(0.0F, 0.0F, MIN_Z);
-                var to = new Vector3f(16.0F, 16.0F, MAX_Z);
+                var from = new Vector3f(0.0F, 0.0F, ItemModelGenerator.MIN_Z);
+                var to = new Vector3f(16.0F, 16.0F, ItemModelGenerator.MAX_Z);
                 builder.addUnculledFace(
                         FaceBakery.bakeQuad(interner, from, to, ItemModelGenerator.SOUTH_FACE_UVS, Quadrant.R0, 0, frontInfo, Direction.SOUTH, modelState, null, true, 0, ExtraFaceData.DEFAULT)
                 );

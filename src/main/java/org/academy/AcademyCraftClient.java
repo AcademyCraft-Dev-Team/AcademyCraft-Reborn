@@ -19,7 +19,6 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
-import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -238,11 +237,6 @@ public final class AcademyCraftClient {
     }
 
     @SubscribeEvent
-    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
-        event.registerAbove(VanillaGuiLayers.CROSSHAIR, academy("hud"), HUDManager::render);
-    }
-
-    @SubscribeEvent
     public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
         event.register(
                 academy("wireless_node"),
@@ -271,14 +265,6 @@ public final class AcademyCraftClient {
         event.register(
                 academy("solar_gen"),
                 SolarGenSpecialRenderer.Unbaked.MAP_CODEC
-        );
-    }
-
-    @SubscribeEvent
-    public static void onRegisterSpecialBlockModelRenderer(RegisterSpecialBlockModelRendererEvent event) {
-        event.register(
-                Blocks.WIND_GEN_PILLAR.get(),
-                WindGenPillarSpecialRenderer.Unbaked.INSTANCE
         );
     }
 }

@@ -1,17 +1,18 @@
 package org.academy.mixin.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.SubmitNodeStorage;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.Render;
 import org.academy.api.client.gui.animation.AnimationManager;
+import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
-import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.spongepowered.asm.mixin.Final;
@@ -32,36 +33,35 @@ public abstract class MixinGameRenderer {
     @Shadow
     public abstract SubmitNodeStorage getSubmitNodeStorage();
 
-    /**
-     * For ResizeDisplayEvent
-     */
-    @Inject(method = "resize",at = @At("TAIL"))
-    private void resize(int width, int height, CallbackInfo ci) {
-        var event = new ResizeDisplayEvent(width, height);
-        NeoForge.EVENT_BUS.post(event);
-    }
-
-    @Inject(method = "render",at = @At("HEAD"))
+    @Inject(method = "render", at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
         AnimationManager.onFrameUpdate();
         NeoForge.EVENT_BUS.post(new RenderLoopEvent());
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(CallbackInfo ci) {
-        if (!minecraft.noRender) {
-            Render.Buffers.getResourcePool().endFrame();
-        }
+    @Inject(
+            method = "render",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V")
+    )
+    private void render(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
+        var resourcesLoaded = minecraft.isGameLoadFinished();
+        var shouldRenderLevel = resourcesLoaded && advanceGameTime && minecraft.level != null;
+        if (shouldRenderLevel) HUDManager.render();
     }
 
-    @Inject(method = "close",at = @At("HEAD"))
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/resource/CrossFrameResourcePool;endFrame()V"))
+    private void onRender(CallbackInfo ci) {
+        Render.Buffers.getResourcePool().endFrame();
+    }
+
+    @Inject(method = "close", at = @At("HEAD"))
     private void onClose(CallbackInfo ci) {
         Render.Buffers.getResourcePool().close();
     }
 
     @Inject(
             method = "renderItemInHand",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;bobHurt(Lnet/minecraft/client/renderer/state/CameraRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;)V"),
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;bobView(Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;)V"),
             locals = LocalCapture.CAPTURE_FAILSOFT
     )
     private void onRenderItemInHand(
@@ -74,11 +74,11 @@ public abstract class MixinGameRenderer {
     ) {
         var player = minecraft.player;
         if (player != null
-                && this.minecraft.options.getCameraType().isFirstPerson()
+                && minecraft.options.getCameraType().isFirstPerson()
                 && !cameraState.entityRenderState.isSleeping
-                && !this.minecraft.options.hideGui
+                && !minecraft.options.hideGui
                 && minecraft.gameMode != null
-                && this.minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR
+                && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR
         ) {
             RendererManager.renderEffectFirstPerson(
                     poseStack,

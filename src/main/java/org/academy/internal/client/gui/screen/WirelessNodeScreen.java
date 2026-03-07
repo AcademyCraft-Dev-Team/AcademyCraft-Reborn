@@ -91,7 +91,7 @@ public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu
                 if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
                     index = (ticks / 20) % 2 == 0 ? 8 : 9;
                 } else {
-                    index = Math.max(0, Math.min((int) (progressCapacity * 8 - 1), 7));
+                    index = Math.clamp((int) (progressCapacity * 8 - 1), 0, 7);
                 }
 
                 setFrameIndex(index);

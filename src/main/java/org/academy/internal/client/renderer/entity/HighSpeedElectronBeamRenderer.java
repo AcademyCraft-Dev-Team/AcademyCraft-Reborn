@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.Render;
@@ -101,7 +101,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         }
         reusedState.yRot = entity.getYRot();
         reusedState.xRot = entity.getXRot();
-        reusedState.progress = Math.max(0.0f, Math.min(1.0f, progress));
+        reusedState.progress = Math.clamp(progress, 0.0f, 1.0f);
     }
 
     @Override

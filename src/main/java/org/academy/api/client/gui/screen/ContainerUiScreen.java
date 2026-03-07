@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -15,6 +14,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.academy.AcademyCraft;
+import org.academy.api.client.Render;
 import org.academy.api.client.Resource;
 import org.academy.api.client.gui.animation.EasingFunctions;
 import org.academy.api.client.gui.animation.ObjectAnimator;
@@ -174,7 +174,7 @@ public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends
         if (colorTextureView == null) return;
 
         guiGraphics.submitBlit(
-                RenderPipelines.GUI_TEXTURED,
+                Render.RenderPipelines.IMAGE_PREMULTIPLIED_ALPHA,
                 colorTextureView,
                 RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
                 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),

@@ -1,10 +1,8 @@
 package org.academy.internal.client.app.music;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.Resource;
 import org.academy.api.client.app.App;
@@ -13,7 +11,6 @@ import org.academy.api.client.gui.animation.ObjectAnimator;
 import org.academy.api.client.gui.animation.ValueAnimator;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.command.ImageCircleDrawCommand;
-import org.academy.api.client.gui.command.ImageDrawCommand;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
@@ -314,7 +311,7 @@ public final class MusicApp implements App {
                         right.setLayoutParams(emptyP);
                         controlArea.addChild("right", right);
                         {
-                            right.addChild("volume_bar", createVolumeBar());
+                            right.addChild("volume_area", createVolumeArea());
                         }
                     }
                 }
@@ -459,72 +456,89 @@ public final class MusicApp implements App {
             return progressBar;
         }
 
-        private SeekBarWidget createVolumeBar() {
-            var volumeBar = new SeekBarWidget() {
-                @Override
-                protected DrawCommand generateBackDrawCommand(
-                        float width, float height,
-                        float red, float green, float blue, float alpha
-                ) {
-                    var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
-                    var textureManager = Minecraft.getInstance().getTextureManager();
-                    var textureView = textureManager.getTexture(Resource.Textures.ICON_VOLUME).getTextureView();
-                    return new ImageDrawCommand(
-                            textureView, sampler,
-                            width, height,
-                            0, 0, 1, 1,
-                            red, green, blue, alpha
-                    );
-                }
-
-                @Override
-                protected DrawCommand generateProgressDrawCommand(
-                        float width, float height,
-                        float red, float green, float blue, float alpha
-                ) {
-                    var progress = (getProgress() - getMin()) / (getMax() - getMin());
-                    var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
-                    var textureManager = Minecraft.getInstance().getTextureManager();
-                    var textureView = textureManager.getTexture(Resource.Textures.ICON_VOLUME).getTextureView();
-                    return new ImageDrawCommand(
-                            textureView, sampler,
-                            width, height,
-                            0, 0,
-                            getOrientation() == Orientation.HORIZONTAL ? progress : 1,
-                            getOrientation() == Orientation.VERTICAL ? progress : 1,
-                            red, green, blue, alpha
-                    );
-                }
-
-                @Override
-                public void tick() {
-                    var musicPlayerBackend = MusicPlayerBackend.getInstance();
-                    if (!isDragging) {
-                        setProgress(getMin() + musicPlayerBackend.getVolume() * (1 / VOLUME_SCALE) * (getMax() - getMin()));
-                    }
-                }
-            };
-            volumeBar.setLayoutParams(
-                    new WidgetContainer.LayoutParams()
-                            .size(32, 16)
-                            .gravity(Gravity.BOTTOM_LEFT)
+        private LinearLayoutWidget createVolumeArea() {
+            var content = new LinearLayoutWidget();
+            content.setLayoutParams(
+                    new LinearLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
             );
-            volumeBar.setOnSeekBarChangeListener(new SeekBarWidget.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBarWidget seekBar, float progress, boolean fromUser) {
-                    var musicPlayerBackend = MusicPlayerBackend.getInstance();
-                    musicPlayerBackend.setVolume(progress / volumeBar.getMax() * VOLUME_SCALE);
-                }
+            content.setOrientation(Orientation.HORIZONTAL);
+            {
+                var p = new LinearLayoutWidget.LayoutParams()
+                        .size(16, 16)
+                        .gravity(Gravity.CENTER);
 
-                @Override
-                public void onStartTrackingTouch(SeekBarWidget seekBar) {
-                }
+                var emptyP = new LinearLayoutWidget.LayoutParams()
+                        .weight(1)
+                        .width(0)
+                        .heightMode(SizeMode.MATCH_PARENT);
 
-                @Override
-                public void onStopTrackingTouch(SeekBarWidget seekBar) {
+                var icon = new ImageWidget(Resource.Textures.ICON_VOLUME);
+                icon.setSampler(FilterMode.LINEAR, false);
+                icon.setLayoutParams(p);
+                content.addChild("icon", icon);
+
+                var info = new FrameLayoutWidget() {
+                    @Override
+                    public void tick() {
+                        super.tick();
+                        if (icon.isHovered() || isHovered()) setVisibility(Visibility.VISIBLE);
+                        else setVisibility(Visibility.INVISIBLE);
+                    }
+
+                    @Override
+                    public void setHovered(boolean hovered) {
+                        if (visibility == Visibility.VISIBLE) super.setHovered(hovered);
+                    }
+                };
+                info.setLayoutParams(emptyP);
+                content.addChild("info", info);
+                {
+                    var text = new LabelWidget("");
+                    text.setScale(0.75f);
+                    text.setLayoutParams(
+                            new WidgetContainer.LayoutParams()
+                                    .marginTop(8)
+                                    .gravity(Gravity.CENTER)
+                    );
+                    info.addChild("text", text);
+
+                    var volumeBar = new SeekBarWidget() {
+                        @Override
+                        public void tick() {
+                            var musicPlayerBackend = MusicPlayerBackend.getInstance();
+                            if (!isDragging) {
+                                var progress = musicPlayerBackend.getVolume() * (1 / VOLUME_SCALE);
+                                setProgress(getMin() + progress * (getMax() - getMin()));
+                                text.setText(Math.round(progress * 100) + "%");
+                            }
+                        }
+                    };
+                    volumeBar.setLayoutParams(
+                            new WidgetContainer.LayoutParams()
+                                    .size(48, 4)
+                                    .marginBottom(2)
+                                    .gravity(Gravity.CENTER)
+                    );
+                    volumeBar.setOnSeekBarChangeListener(new SeekBarWidget.OnSeekBarChangeListener() {
+                        @Override
+                        public void onProgressChanged(SeekBarWidget seekBar, float progress, boolean fromUser) {
+                            var musicPlayerBackend = MusicPlayerBackend.getInstance();
+                            musicPlayerBackend.setVolume(progress / volumeBar.getMax() * VOLUME_SCALE);
+                        }
+
+                        @Override
+                        public void onStartTrackingTouch(SeekBarWidget seekBar) {
+                        }
+
+                        @Override
+                        public void onStopTrackingTouch(SeekBarWidget seekBar) {
+                        }
+                    });
+                    info.addChild("bar", volumeBar);
                 }
-            });
-            return volumeBar;
+            }
+            return content;
         }
 
         private boolean isPlaying() {

@@ -4,9 +4,7 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -63,7 +61,7 @@ public final class HUDManager {
         AbilityInfoHUD.getInstance().perform(mouseX, mouseY, deltaPartialTick);
     }
 
-    public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    public static void render() {
         if (!AcademyCraftClient.isRenderInitialized()) return;
 
         var mc = Minecraft.getInstance();
@@ -96,34 +94,20 @@ public final class HUDManager {
                 BlurEffect.apply(
                         width, height,
                         mainColor,
-                        lastColor,
+                        mainColor,
                         uiDepth,
                         20.0f
                 );
             }
 
-            /*
-             * BlurEffect 仅支持渲染到 TextureView 喵
-             * 为了兼容原版 GUI 层级需要最终使用 GuiGraphics 渲染喵
-             * 如果 blur 渲染到 main, ui 通过 GuiGraphics 渲染, 会导致 blur 与 ui 有一单位左右的像素偏差喵
-             * 解决方案为将 blur 和 ui 绘制到 last, last 最终通过 GuiGraphics 渲染喵
-             */
             var textures = List.of(new TextureBinding("DiffuseSampler", uiColor,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
             );
             Render.runBlitPass(
-                    lastColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
+                    mainColor, Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,
                     Render.Buffers.getInstance().getFSQuadVBNDC(),
                     textures, List.of(),
                     false
-            );
-
-            guiGraphics.submitBlit(
-                    Render.RenderPipelines.IMAGE, lastColor,
-                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
-                    0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
-                    0, 1, 1, 0,
-                    -1
             );
         } finally {
             if (ui != null) pool.release(descTemp, ui);

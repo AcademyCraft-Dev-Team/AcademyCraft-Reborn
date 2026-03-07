@@ -357,7 +357,7 @@ public final class VectorAccel extends Skill {
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
                 distance += event.yOffset;
-                distance = Math.min(20, Math.max(0, distance));
+                distance = Math.clamp(distance, 0, 20);
                 event.setCanceled(true);
             }
 

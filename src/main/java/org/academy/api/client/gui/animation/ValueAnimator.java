@@ -131,7 +131,7 @@ public class ValueAnimator extends Animator {
             }
         }
 
-        fraction = Math.min(Math.max(fraction, 0.0f), 1.0f);
+        fraction = Math.clamp(fraction, 0.0f, 1.0f);
 
         var effectiveFraction = isReversing ? (1.0f - fraction) : fraction;
         var interpolatedFraction = interpolator.getInterpolation(effectiveFraction);
