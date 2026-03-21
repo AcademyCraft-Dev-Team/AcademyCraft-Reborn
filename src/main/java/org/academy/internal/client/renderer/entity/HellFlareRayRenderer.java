@@ -18,7 +18,6 @@ import org.academy.api.client.renderer.BallRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.internal.client.renderer.entity.state.HellFlareRayRenderState;
 import org.academy.internal.common.world.entity.skill.HellFlareRay;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -94,13 +93,21 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         super(context);
     }
 
+    private static int lerpColor(float t, int c1, int c2) {
+        var a = (int) Mth.lerp(t, (c1 >> 24) & 0xFF, (c2 >> 24) & 0xFF);
+        var r = (int) Mth.lerp(t, (c1 >> 16) & 0xFF, (c2 >> 16) & 0xFF);
+        var g = (int) Mth.lerp(t, (c1 >> 8) & 0xFF, (c2 >> 8) & 0xFF);
+        var b = (int) Mth.lerp(t, c1 & 0xFF, c2 & 0xFF);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
     @Override
-    public @NotNull HellFlareRayRenderState createRenderState() {
+    public HellFlareRayRenderState createRenderState() {
         return new HellFlareRayRenderState();
     }
 
     @Override
-    public void extractRenderState(@NotNull HellFlareRay entity, @NotNull HellFlareRayRenderState state, float partialTick) {
+    public void extractRenderState(HellFlareRay entity, HellFlareRayRenderState state, float partialTick) {
         super.extractRenderState(entity, state, partialTick);
         if (entity.getOwner() == null) {
             state.isValid = false;
@@ -134,64 +141,6 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         state.direction = new Vector3f(state.endPos).sub(state.startPos).normalize();
         state.age = entity.tickCount + partialTick;
         state.phase = entity.getPhase();
-    }
-
-    @Override
-    public void submit(@NotNull HellFlareRayRenderState state, @NotNull PoseStack poseStack, @NotNull SubmitNodeCollector collector, @NotNull CameraRenderState camera) {
-        if (!state.isValid || state.length < 0.2f) return;
-
-        var p = calcParams(state);
-        var t12 = phaseBlend12(state);
-        var t23 = phaseBlend23(state);
-        drawOrbLayers(state, poseStack, p);
-
-        collector.submitCustomGeometry(poseStack, Render.RenderTypes.DISTORTION_TUBE_TYPE,
-                (pose, consumer) -> drawDistortion(state, pose, consumer, p.tubeScale, p.tubeStr));
-
-        collector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM,
-                (pose, consumer) -> {
-                    var mat = prepareMatrix(state, pose);
-                    var alpha12 = Mth.lerp(t12, 0x52, 0x64);
-                    var alphaBase = (int) Mth.lerp(t23, alpha12, 0xC8);
-                    var alpha = alphaBase << 24;
-                    var cGS_A = (p.cGlowS & 0x00FFFFFF) | alpha;
-                    var cGE_A = (p.cGlowE & 0x00FFFFFF) | alpha;
-                    var glowScale12 = Mth.lerp(t12, 1.45f, 1.8f);
-                    var glowScale = Mth.lerp(t23, glowScale12, 2.8f);
-                    Geometry.drawBillboardGlow(mat, consumer, state.length, p.glowR * glowScale, cGS_A, cGE_A, state, camera);
-                });
-
-        collector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM,
-                (pose, consumer) -> {
-                    var mat = prepareMatrix(state, pose);
-                    drawCore(state, mat, consumer, p);
-                    drawParticles(state, mat, consumer, p);
-                    if (t23 > 0.01f) {
-                        var alpha = Mth.clamp((int) (255.0f * t23), 0, 255);
-                        var coreHot = (C.P3_COL_CORE & 0x00FFFFFF) | (0xFF << 24);
-                        coreHot = (coreHot & 0x00FFFFFF) | (alpha << 24);
-                        Geometry.drawBillboardGlow(mat, consumer, state.length, p.glowR * (0.8f + 0.45f * t23), coreHot, coreHot, state, camera);
-                    }
-                });
-        collector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST,
-                (pose, consumer) -> {
-                    if (t23 <= 0.01f) return;
-                    var mat = prepareMatrix(state, pose);
-                    var alpha = Mth.clamp((int) (255.0f * t23), 0, 255);
-                    var coreBloom = (C.P3_COL_CORE & 0x00FFFFFF) | (alpha << 24);
-                    Geometry.drawBillboardGlow(mat, consumer, state.length, p.glowR * (1.9f + 1.9f * t23), coreBloom, coreBloom, state, camera);
-                });
-        collector.submitCustomGeometry(poseStack, P3_STEAM_TYPE,
-                (pose, consumer) -> {
-                    var mat = prepareMatrix(state, pose);
-                    Geometry.drawSteamBandLit(mat, consumer, state, p);
-                });
-        collector.submitCustomGeometry(poseStack, P3_STEAM_BLOOM_TYPE,
-                (pose, consumer) -> {
-                    var mat = prepareMatrix(state, pose);
-                    Geometry.drawSteamBandBloom(mat, consumer, state, p);
-                });
-
     }
 
     private RenderParams calcParams(HellFlareRayRenderState state) {
@@ -329,6 +278,64 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         }
     }
 
+    @Override
+    public void submit(HellFlareRayRenderState state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+        if (!state.isValid || state.length < 0.2f) return;
+
+        var p = calcParams(state);
+        var t12 = phaseBlend12(state);
+        var t23 = phaseBlend23(state);
+        drawOrbLayers(state, poseStack, p);
+
+        collector.submitCustomGeometry(poseStack, Render.RenderTypes.DISTORTION_TUBE_TYPE,
+                (pose, consumer) -> drawDistortion(state, pose, consumer, p.tubeScale, p.tubeStr));
+
+        collector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM,
+                (pose, consumer) -> {
+                    var mat = prepareMatrix(state, pose);
+                    var alpha12 = Mth.lerp(t12, 0x52, 0x64);
+                    var alphaBase = (int) Mth.lerp(t23, alpha12, 0xC8);
+                    var alpha = alphaBase << 24;
+                    var cGS_A = (p.cGlowS & 0x00FFFFFF) | alpha;
+                    var cGE_A = (p.cGlowE & 0x00FFFFFF) | alpha;
+                    var glowScale12 = Mth.lerp(t12, 1.45f, 1.8f);
+                    var glowScale = Mth.lerp(t23, glowScale12, 2.8f);
+                    Geometry.drawBillboardGlow(mat, consumer, state.length, p.glowR * glowScale, cGS_A, cGE_A, state, camera);
+                });
+
+        collector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM,
+                (pose, consumer) -> {
+                    var mat = prepareMatrix(state, pose);
+                    drawCore(state, mat, consumer, p);
+                    drawParticles(state, mat, consumer, p);
+                    if (t23 > 0.01f) {
+                        var alpha = Mth.clamp((int) (255.0f * t23), 0, 255);
+                        var coreHot = (C.P3_COL_CORE & 0x00FFFFFF) | (0xFF << 24);
+                        coreHot = (coreHot & 0x00FFFFFF) | (alpha << 24);
+                        Geometry.drawBillboardGlow(mat, consumer, state.length, p.glowR * (0.8f + 0.45f * t23), coreHot, coreHot, state, camera);
+                    }
+                });
+        collector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST,
+                (pose, consumer) -> {
+                    if (t23 <= 0.01f) return;
+                    var mat = prepareMatrix(state, pose);
+                    var alpha = Mth.clamp((int) (255.0f * t23), 0, 255);
+                    var coreBloom = (C.P3_COL_CORE & 0x00FFFFFF) | (alpha << 24);
+                    Geometry.drawBillboardGlow(mat, consumer, state.length, p.glowR * (1.9f + 1.9f * t23), coreBloom, coreBloom, state, camera);
+                });
+        collector.submitCustomGeometry(poseStack, P3_STEAM_TYPE,
+                (pose, consumer) -> {
+                    var mat = prepareMatrix(state, pose);
+                    Geometry.drawSteamBandLit(mat, consumer, state, p);
+                });
+        collector.submitCustomGeometry(poseStack, P3_STEAM_BLOOM_TYPE,
+                (pose, consumer) -> {
+                    var mat = prepareMatrix(state, pose);
+                    Geometry.drawSteamBandBloom(mat, consumer, state, p);
+                });
+
+    }
+
     private void drawParticles(HellFlareRayRenderState state, Matrix4f mat, VertexConsumer consumer, RenderParams p) {
         var rand = RandomSource.create(state.targetId * 31L);
         var t12 = phaseBlend12(state);
@@ -338,49 +345,21 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         var scatterR = Mth.lerp(t23, scatter12, 0.35f);
         var baseSize = Mth.lerp(t23, baseSize12, 0.05f);
         var step = t12 > 0.02f;
-        var destruction = t23;
-        for (int i = 0; i < C.PT_COUNT; i++) {
-            float t = (float) Math.pow(rand.nextFloat(), 3.0) + (state.age * 0.15f * (0.8f + 0.4f * rand.nextFloat()));
+        for (var i = 0; i < C.PT_COUNT; i++) {
+            var t = (float) Math.pow(rand.nextFloat(), 3.0) + (state.age * 0.15f * (0.8f + 0.4f * rand.nextFloat()));
             t = (t * 0.1f) % 1.0f;
-            float ang = rand.nextFloat() * Mth.TWO_PI;
-            float dist = scatterR * (0.6f + rand.nextFloat() * 0.4f);
-            float x = Mth.cos(ang) * dist;
-            float y = Mth.sin(ang) * dist;
-            int baseCol = Geometry.calcColor(p.cCoreS, p.cCoreE, t, 0, step, state.age, state.phase, false);
-            int pCol = (baseCol & 0x00FFFFFF) | ((int)(200 + rand.nextFloat() * 55) << 24);
-            if (destruction > 0.01f) {
-                var darkAlpha = (int) Mth.lerp(destruction, (float) ((pCol >> 24) & 0xFF), 0xAA);
+            var ang = rand.nextFloat() * Mth.TWO_PI;
+            var dist = scatterR * (0.6f + rand.nextFloat() * 0.4f);
+            var x = Mth.cos(ang) * dist;
+            var y = Mth.sin(ang) * dist;
+            var baseCol = Geometry.calcColor(p.cCoreS, p.cCoreE, t, 0, step, state.age, state.phase, false);
+            var pCol = (baseCol & 0x00FFFFFF) | ((int) (200 + rand.nextFloat() * 55) << 24);
+            if (t23 > 0.01f) {
+                var darkAlpha = (int) Mth.lerp(t23, (float) ((pCol >> 24) & 0xFF), 0xAA);
                 pCol = (baseCol & 0x00FFFFFF) | (darkAlpha << 24);
             }
-            float sz = baseSize * (0.6f + rand.nextFloat() * 0.6f) * (1.0f - t * 0.6f);
+            var sz = baseSize * (0.6f + rand.nextFloat() * 0.6f) * (1.0f - t * 0.6f);
             Geometry.addQuad(mat, consumer, x-sz, y-sz, t*state.length, x+sz, y-sz, t*state.length, x+sz, y+sz, t*state.length, x-sz, y+sz, t*state.length, pCol, pCol);
-        }
-    }
-
-    private void drawDistortion(HellFlareRayRenderState state, PoseStack.Pose pose, VertexConsumer consumer, float rScale, float str) {
-        var mat = prepareMatrix(state, pose);
-        float len = state.length;
-        int segs = Math.max(2, (int) (len * 1.5f));
-        float rBase = 0.2f * rScale;
-        float[] cX = new float[C.TUBE_SIDES + 1], cY = new float[C.TUBE_SIDES + 1];
-        for (int i = 0; i <= C.TUBE_SIDES; i++) {
-            float a = (float) (i * 2 * Math.PI / C.TUBE_SIDES);
-            cX[i] = Mth.cos(a); cY[i] = Mth.sin(a);
-        }
-        for (int i = 0; i < segs; i++) {
-            float t1 = (float) i / segs, t2 = (float) (i + 1) / segs;
-            float z1 = t1 * len, z2 = t2 * len;
-            float env1 = getEnv(t1, state.age, state.phase), env2 = getEnv(t2, state.age, state.phase);
-            float r1 = rBase * (1.0f + Mth.sin(t1 * 3.0f - state.age * 0.1f) * 0.1f) * env1;
-            float r2 = rBase * (1.0f + Mth.sin(t2 * 3.0f - state.age * 0.1f) * 0.1f) * env2;
-            float vOff = -state.age * C.TUBE_FLOW;
-            float tv1 = z1 * 0.5f + vOff, tv2 = z2 * 0.5f + vOff;
-            for (int s = 0; s < C.TUBE_SIDES; s++) {
-                consumer.addVertex(mat, cX[s] * r2, cY[s] * r2, z2).setUv((float)s/C.TUBE_SIDES, tv2).setNormal(str, 0, 0);
-                consumer.addVertex(mat, cX[s+1] * r2, cY[s+1] * r2, z2).setUv((float)(s+1)/C.TUBE_SIDES, tv2).setNormal(str, 0, 0);
-                consumer.addVertex(mat, cX[s+1] * r1, cY[s+1] * r1, z1).setUv((float)(s+1)/C.TUBE_SIDES, tv1).setNormal(str, 0, 0);
-                consumer.addVertex(mat, cX[s] * r1, cY[s] * r1, z1).setUv((float)s/C.TUBE_SIDES, tv1).setNormal(str, 0, 0);
-            }
         }
     }
 
@@ -404,12 +383,32 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         return Mth.lerp(blend, base, tapered);
     }
 
-    private static int lerpColor(float t, int c1, int c2) {
-        int a = (int) Mth.lerp(t, (c1 >> 24) & 0xFF, (c2 >> 24) & 0xFF);
-        int r = (int) Mth.lerp(t, (c1 >> 16) & 0xFF, (c2 >> 16) & 0xFF);
-        int g = (int) Mth.lerp(t, (c1 >> 8) & 0xFF, (c2 >> 8) & 0xFF);
-        int b = (int) Mth.lerp(t, c1 & 0xFF, c2 & 0xFF);
-        return (a << 24) | (r << 16) | (g << 8) | b;
+    private void drawDistortion(HellFlareRayRenderState state, PoseStack.Pose pose, VertexConsumer consumer, float rScale, float str) {
+        var mat = prepareMatrix(state, pose);
+        var len = state.length;
+        var segs = Math.max(2, (int) (len * 1.5f));
+        var rBase = 0.2f * rScale;
+        float[] cX = new float[C.TUBE_SIDES + 1], cY = new float[C.TUBE_SIDES + 1];
+        for (var i = 0; i <= C.TUBE_SIDES; i++) {
+            var a = (float) (i * 2 * Math.PI / C.TUBE_SIDES);
+            cX[i] = Mth.cos(a);
+            cY[i] = Mth.sin(a);
+        }
+        for (var i = 0; i < segs; i++) {
+            float t1 = (float) i / segs, t2 = (float) (i + 1) / segs;
+            float z1 = t1 * len, z2 = t2 * len;
+            float env1 = getEnv(t1, state.age, state.phase), env2 = getEnv(t2, state.age, state.phase);
+            var r1 = rBase * (1.0f + Mth.sin(t1 * 3.0f - state.age * 0.1f) * 0.1f) * env1;
+            var r2 = rBase * (1.0f + Mth.sin(t2 * 3.0f - state.age * 0.1f) * 0.1f) * env2;
+            var vOff = -state.age * C.TUBE_FLOW;
+            float tv1 = z1 * 0.5f + vOff, tv2 = z2 * 0.5f + vOff;
+            for (var s = 0; s < C.TUBE_SIDES; s++) {
+                consumer.addVertex(mat, cX[s] * r2, cY[s] * r2, z2).setUv((float) s / C.TUBE_SIDES, tv2).setNormal(str, 0, 0);
+                consumer.addVertex(mat, cX[s + 1] * r2, cY[s + 1] * r2, z2).setUv((float) (s + 1) / C.TUBE_SIDES, tv2).setNormal(str, 0, 0);
+                consumer.addVertex(mat, cX[s + 1] * r1, cY[s + 1] * r1, z1).setUv((float) (s + 1) / C.TUBE_SIDES, tv1).setNormal(str, 0, 0);
+                consumer.addVertex(mat, cX[s] * r1, cY[s] * r1, z1).setUv((float) s / C.TUBE_SIDES, tv1).setNormal(str, 0, 0);
+            }
+        }
     }
 
     private static float noise1(float x) { float fl = Mth.floor(x); return Mth.lerp(x-fl, hash(fl), hash(fl+1.0f)); }
@@ -444,21 +443,21 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             var invRot = new Quaternionf().rotateTo(s.direction, new Vector3f(0, 0, 1));
             var localCam = invRot.transform(relCam);
             float dx = localCam.x, dy = localCam.y;
-            float mag = (float) Math.sqrt(dx * dx + dy * dy);
+            var mag = (float) Math.sqrt(dx * dx + dy * dy);
             if (mag < 1e-5f) { dx = 1.0f; dy = 0.0f; mag = 1.0f; }
             float ux = -dy / mag, uy = dx / mag;
 
-            int segs = Math.max(8, (int) (len * 4.0f));
-            for (int i = 0; i < segs; i++) {
+            var segs = Math.max(8, (int) (len * 4.0f));
+            for (var i = 0; i < segs; i++) {
                 float t1 = (float) i / segs, t2 = (float) (i + 1) / segs;
                 float z1 = t1 * len, z2 = t2 * len;
-                float r1 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t1 * 10)) * getEnv(t1, s.age, s.phase);
-                float r2 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t2 * 10)) * getEnv(t2, s.age, s.phase);
+                var r1 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t1 * 10)) * getEnv(t1, s.age, s.phase);
+                var r2 = radius * (0.95f + 0.05f * Mth.sin(s.age * 0.5f + t2 * 10)) * getEnv(t2, s.age, s.phase);
 
-                int c1 = calcColor(cStart, cEnd, t1, 0, true, s.age, s.phase, false);
-                int c2 = calcColor(cStart, cEnd, t2, 0, true, s.age, s.phase, false);
-                int c1E = c1 & 0x00FFFFFF;
-                int c2E = c2 & 0x00FFFFFF;
+                var c1 = calcColor(cStart, cEnd, t1, 0, true, s.age, s.phase, false);
+                var c2 = calcColor(cStart, cEnd, t2, 0, true, s.age, s.phase, false);
+                var c1E = c1 & 0x00FFFFFF;
+                var c2E = c2 & 0x00FFFFFF;
 
                 addQuad(m, c, 0.0f, 0.0f, z1, ux*r1, uy*r1, z1, ux*r2, uy*r2, z2, 0.0f, 0.0f, z2, c1, c1E, c2E, c2);
                 addQuad(m, c, 0.0f, 0.0f, z1, 0.0f, 0.0f, z2, -ux*r2, -uy*r2, z2, -ux*r1, -uy*r1, z1, c1, c2, c2E, c1E);
@@ -466,18 +465,18 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         }
 
         static void drawVolumetric(Matrix4f m, VertexConsumer c, float len, float rBase, float spd, float frq, float amp, float nAmp, int cS, int cE, boolean step, HellFlareRayRenderState s, int seed, int planes, boolean overload, float rotSpd, float spiral) {
-            int segs = Math.max(4, (int) (len * 8.0f));
-            for (int i = 0; i < segs; i++) {
+            var segs = Math.max(4, (int) (len * 8.0f));
+            for (var i = 0; i < segs; i++) {
                 float t1 = (float) i / segs, t2 = (float) (i + 1) / segs;
-                float rot1 = s.age * rotSpd + t1 * spiral;
-                float rot2 = s.age * rotSpd + t2 * spiral;
+                var rot1 = s.age * rotSpd + t1 * spiral;
+                var rot2 = s.age * rotSpd + t2 * spiral;
                 float wf1 = wave(t1 * frq - s.age * spd), wf2 = wave(t2 * frq - s.age * spd);
                 float r1 = rBase * (1 + wf1 * amp) * getEnv(t1, s.age, s.phase), r2 = rBase * (1 + wf2 * amp) * getEnv(t2, s.age, s.phase);
                 int col1 = calcColor(cS, cE, t1, wf1, step, s.age, s.phase, overload), col2 = calcColor(cS, cE, t2, wf2, step, s.age, s.phase, overload);
                 float ox1 = jitter(t1, s.age, seed, nAmp), oy1 = jitter(t1, s.age, seed+13, nAmp);
                 float ox2 = jitter(t2, s.age, seed, nAmp), oy2 = jitter(t2, s.age, seed+13, nAmp);
-                for (int p = 0; p < planes; p++) {
-                    float a = (float) (Math.PI * p / planes);
+                for (var p = 0; p < planes; p++) {
+                    var a = (float) (Math.PI * p / planes);
                     float cp1 = Mth.cos(a + rot1), sp1 = Mth.sin(a + rot1), cp2 = Mth.cos(a + rot2), sp2 = Mth.sin(a + rot2);
                     addQuad(m, c, ox1 - cp1*r1, oy1 - sp1*r1, t1*len, ox1 + cp1*r1, oy1 + sp1*r1, t1*len, ox2 + cp2*r2, oy2 + sp2*r2, t2*len, ox2 - cp2*r2, oy2 - sp2*r2, t2*len, col1, col2);
                 }

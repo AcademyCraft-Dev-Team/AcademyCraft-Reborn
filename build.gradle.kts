@@ -5,19 +5,21 @@ import org.slf4j.event.Level
 plugins {
     idea
     `java-library`
-    id("net.neoforged.moddev") version "2.0.140"
+    alias(libs.plugins.moddevgradle)
 }
 
-val misakaVersion = project.property("misaka_version")
-val neoVersion: String = "26.1.0.0-alpha.0+snapshot-11.20260307.044334"
+val minecraftVersion = libs.versions.minecraft.get()
+val misakaVersion = libs.versions.misaka.get()
+val neoVersion = libs.versions.neoforge.get()
+val modVersion = libs.versions.academy.get()
 
 val isDev = project.findProperty("isDev")?.toString()?.toBoolean() ?: (System.getenv("IS_DEV") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
 
 base {
-    version = "${project.property("mod_version")}" + (if (isDev) "-dev" else "-release")
+    version = modVersion + (if (isDev) "-dev" else "-release")
     group = "${project.property("mod_group_id")}"
-    archivesName.set("${modId}-${project.property("minecraft_version")}")
+    archivesName.set("${modId}-${minecraftVersion}")
 }
 
 java {
@@ -29,15 +31,15 @@ java {
 
 val generateModMetadata by tasks.registering(ProcessResources::class) {
     val replaceProperties = mapOf(
-        "minecraft_version" to project.property("minecraft_version"),
-        "minecraft_version_range" to project.property("minecraft_version_range"),
+        "minecraft_version" to minecraftVersion,
+        "minecraft_version_range" to minecraftVersion,
         "misaka_version" to misakaVersion,
         "neo_version" to neoVersion,
         "neo_version_range" to neoVersion,
         "mod_id" to modId,
         "mod_name" to project.property("mod_name"),
         "mod_license" to project.property("mod_license"),
-        "mod_version" to project.property("mod_version"),
+        "mod_version" to modVersion,
         "mod_authors" to project.property("mod_authors"),
         "mod_description" to project.property("mod_description")
     )
@@ -64,7 +66,7 @@ repositories {
     maven {
         name = "AC Dev Team's maven"
         //url = uri("D:/Project/maven-repo")
-        url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/main/")
+        url = uri("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/master/")
         content {
             includeGroup("org.academy")
             includeGroup("net.neoforged")
@@ -157,38 +159,28 @@ neoForge {
 }
 
 dependencies {
-    val misaka = "org.academy:misaka-network:$misakaVersion"
+    compileOnly(libs.iris)
+
+    val misaka = libs.misaka
     annotationProcessor(misaka)
     implementation(misaka)
     jarJar(misaka)
 
-    annotationProcessor("com.google.auto.service:auto-service:1.1.1")
+    annotationProcessor(libs.auto)
 
-    val jlayer = "com.github.umjammer:jlayer:1.0.3"
+    val jlayer = libs.jlayer
     implementation(jlayer)
     jarJar(jlayer)
 
-    var jflac = "org.jflac:jflac-codec:1.5.2"
+    var jflac = libs.jflac
     implementation(jflac)
     jarJar(jflac)
 
-    compileOnly("mezz.jei:jei-1.21.10-neoforge-api:${project.property("jei_version")}")
-    //  implementation("mezz.jei:jei-1.21.10-neoforge:${project.property("jei_version")}")
-
-    //  implementation("maven.modrinth:better-modlist:2.0.0-beta.8")
-    //  implementation("maven.modrinth:jade:20.0.5+neoforge")
-    compileOnly("maven.modrinth:sodium:mc1.21.11-0.8.0-neoforge")
-    compileOnly("maven.modrinth:iris:1.10.3+1.21.11-neoforge")
-    //  compileOnly("maven.modrinth:sodium-extra:mc1.21.8-0.7.0+neoforge")
-    //  implementation("maven.modrinth:lithium:mc1.21.10-0.20.0-neoforge")
-    //  implementation("curse.maven:configured-457570:7090441")
-
-    val imguiVersion = project.property("imgui_version")
-    val imguiBinding = "io.github.spair:imgui-java-binding:$imguiVersion"
-    val imguiLwjgl3 = "io.github.spair:imgui-java-lwjgl3:$imguiVersion"
-    val imguiWindows = "io.github.spair:imgui-java-natives-windows:$imguiVersion"
-    val imguiLinux = "io.github.spair:imgui-java-natives-linux:$imguiVersion"
-    val imguiMacos = "io.github.spair:imgui-java-natives-macos:$imguiVersion"
+    val imguiBinding = libs.imgui.binding
+    val imguiLwjgl3 = libs.imgui.lwjgl3
+    val imguiWindows = libs.imgui.windows
+    val imguiLinux = libs.imgui.linux
+    val imguiMacos = libs.imgui.macos
 
     compileOnly(imguiBinding)
     compileOnly(imguiLwjgl3)

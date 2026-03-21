@@ -3,7 +3,7 @@ package org.academy.api.client.gui.screen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -167,17 +167,17 @@ public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         var renderTarget = ScreenDispatcher.getRenderTarget();
         if (renderTarget == null) return;
         var colorTextureView = renderTarget.getColorTextureView();
         if (colorTextureView == null) return;
 
-        guiGraphics.submitBlit(
+        graphics.innerBlit(
                 Render.RenderPipelines.IMAGE_PREMULTIPLIED_ALPHA,
                 colorTextureView,
                 RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
-                0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
+                0, 0, graphics.guiWidth(), graphics.guiHeight(),
                 0, 1, 1, 0, -1
         );
 
@@ -185,19 +185,18 @@ public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends
             var originHeight = 187f;
             var currentHeight = invHeightSupplier.get();
             var scaleY = currentHeight / originHeight;
-            guiGraphics.pose().pushMatrix();
-            guiGraphics.pose().translate(0, topPos);
-            guiGraphics.pose().scale(1, scaleY);
-            guiGraphics.pose().translate(0, -topPos + invTranslationYSupplier.get());
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(0, topPos);
+            graphics.pose().scale(1, scaleY);
+            graphics.pose().translate(0, -topPos + invTranslationYSupplier.get());
 
-            renderContents(guiGraphics, mouseX, mouseY, partialTick);
-            renderCarriedItem(guiGraphics, mouseX, mouseY);
-            renderSnapbackItem(guiGraphics);
+            extractContents(graphics, mouseX, mouseY, a);
+            extractCarriedItem(graphics, mouseX, mouseY);
+            extractSnapbackItem(graphics);
 
-            guiGraphics.pose().popMatrix();
+            graphics.pose().popMatrix();
         }
-
-        renderTooltip(guiGraphics, mouseX, mouseY);
+        extractTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -209,8 +208,8 @@ public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends
     }
 
     @Override
-    protected void renderSlotContents(GuiGraphics guiGraphics, ItemStack itemstack, Slot slot, @Nullable String countString) {
-        var pose = guiGraphics.pose();
+    protected void renderSlotContents(GuiGraphicsExtractor graphics, ItemStack itemstack, Slot slot, @Nullable String itemCount) {
+        var pose = graphics.pose();
         pose.pushMatrix();
 
         pose.translate(slot.x, slot.y);
@@ -221,17 +220,20 @@ public abstract class ContainerUiScreen<T extends AbstractContainerMenu> extends
         pose.translate(-8.0F, -8.0F);
         pose.translate(-slot.x, -slot.y);
 
-        super.renderSlotContents(guiGraphics, itemstack, slot, countString);
+        super.renderSlotContents(graphics, itemstack, slot, itemCount);
 
         pose.popMatrix();
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+        extractBlurredBackground(graphics);
+        extractTransparentBackground(graphics);
+        minecraft.gui.extractDeferredSubtitles();
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int xm, int ym) {
     }
 
     @Override

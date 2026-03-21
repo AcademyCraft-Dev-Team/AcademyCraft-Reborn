@@ -1,0 +1,30 @@
+[versions]
+academy = "0.0.3-alpha"
+
+java = "25"
+minecraft = "26.1"
+
+neoforge = "26.1.0.0-alpha.0+rc-2.20260321.061940"
+iris = "1.10.6+1.21.11-neoforge"
+misaka = "26.1.0.0-alpha.0+rc-2"
+auto = "1.1.1"
+jlayer = "1.0.3"
+jflac = "1.5.2"
+imgui = "1.90.0"
+
+plugin-moddevgradle = "2.0.140"
+
+[libraries]
+iris = { group = "maven.modrinth", name = "iris", version.ref = "iris" }
+misaka = { group = "org.academy", name = "misaka-network", version.ref = "misaka" }
+auto = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto" }
+jlayer = { group = "com.github.umjammer", name = "jlayer", version.ref = "jlayer" }
+jflac = { group = "org.jflac", name = "jflac-codec", version.ref = "jflac" }
+imgui-binding = { group = "io.github.spair", name = "imgui-java-binding", version.ref = "imgui" }
+imgui-lwjgl3 = { group = "io.github.spair", name = "imgui-java-lwjgl3", version.ref = "imgui" }
+imgui-windows = { group = "io.github.spair", name = "imgui-java-natives-windows", version.ref = "imgui" }
+imgui-linux = { group = "io.github.spair", name = "imgui-java-natives-linux", version.ref = "imgui" }
+imgui-macos = { group = "io.github.spair", name = "imgui-java-natives-macos", version.ref = "imgui" }
+
+[plugins]
+moddevgradle = { id = "net.neoforged.moddev", version.ref = "plugin-moddevgradle" }

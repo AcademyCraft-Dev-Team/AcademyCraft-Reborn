@@ -8,7 +8,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 public final class WirelessNodeMenu extends AbstractContainerMenu {
     public final ContainerLevelAccess access;
@@ -37,7 +36,7 @@ public final class WirelessNodeMenu extends AbstractContainerMenu {
         this(id, playerInventory, ContainerLevelAccess.NULL, new SimpleContainer(2));
     }
 
-    public @NotNull ItemStack quickMoveStack(@NotNull Player pPlayer, int index) {
+    public ItemStack quickMoveStack(Player pPlayer, int index) {
         var itemstack = ItemStack.EMPTY;
         var slot = slots.get(index);
         if (slot.hasItem()) {
@@ -62,7 +61,7 @@ public final class WirelessNodeMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public boolean stillValid(@NotNull Player player) {
+    public boolean stillValid(Player player) {
         return container.stillValid(player);
     }
 }

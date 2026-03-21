@@ -510,6 +510,7 @@ public class TextBoxWidget extends LabelWidget {
         NeoForge.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
 
+        Minecraft.getInstance().textInputManager().onTextInputFocusChange(true);
         showCaret = true;
         lastBlinkTime = System.currentTimeMillis();
     }
@@ -520,6 +521,7 @@ public class TextBoxWidget extends LabelWidget {
         NeoForge.EVENT_BUS.post(event);
         if (event.isCanceled()) return;
 
+        Minecraft.getInstance().textInputManager().onTextInputFocusChange(false);
         showCaret = false;
         if (onFocusLostCallback != null) onFocusLostCallback.run();
     }

@@ -18,7 +18,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import org.academy.internal.common.world.item.Items;
-import org.jetbrains.annotations.NotNull;
 
 public final class WindGenTopBlockEntity extends BlockEntity implements Container {
     public int ticks;
@@ -97,7 +96,7 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.@NotNull Provider registries) {
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         return saveWithoutMetadata(registries);
     }
 

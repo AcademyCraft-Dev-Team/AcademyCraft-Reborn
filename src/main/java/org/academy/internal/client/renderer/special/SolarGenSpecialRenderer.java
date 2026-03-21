@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.Resource;
 import org.academy.internal.client.renderer.blockentity.state.SolarGenRenderState;
 import org.joml.Vector3fc;
@@ -30,12 +29,9 @@ public final class SolarGenSpecialRenderer implements NoDataSpecialModelRenderer
     }
 
     @Override
-    public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean p_387131_, int p_451703_) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean p_387131_, int p_451703_) {
         poseStack.pushPose();
         poseStack.translate(0.5f, 1.5f, 0.5f);
-        if (displayContext.firstPerson()) {
-            poseStack.translate(0, 0.5f, 0);
-        }
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         MODEL.resetPose();
         nodeCollector.submitModel(MODEL, new SolarGenRenderState(), poseStack, RenderTypes.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, null);

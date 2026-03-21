@@ -39,18 +39,18 @@ public class CoinModelGenerator implements UnbakedModel {
 
                 var front = modelBaker.materials().get(frontMaterial, name);
                 var back = modelBaker.materials().get(backMaterial, name);
-                var frontInfo = modelBakery.interner().spriteInfo(BakedQuad.SpriteInfo.of(front, front.sprite().transparency()));
-                var backInfo = modelBakery.interner().spriteInfo(BakedQuad.SpriteInfo.of(back, back.sprite().transparency()));
+                var frontInfo = modelBakery.interner().materialInfo(BakedQuad.MaterialInfo.of(front, front.sprite().transparency(), 0, true, 0, true));
+                var backInfo = modelBakery.interner().materialInfo(BakedQuad.MaterialInfo.of(back, back.sprite().transparency(), 0, true, 0, true));
                 var interner = modelBakery.interner();
                 var from = new Vector3f(0.0F, 0.0F, ItemModelGenerator.MIN_Z);
                 var to = new Vector3f(16.0F, 16.0F, ItemModelGenerator.MAX_Z);
                 builder.addUnculledFace(
-                        FaceBakery.bakeQuad(interner, from, to, ItemModelGenerator.SOUTH_FACE_UVS, Quadrant.R0, 0, frontInfo, Direction.SOUTH, modelState, null, true, 0, ExtraFaceData.DEFAULT)
+                        FaceBakery.bakeQuad(interner, from, to, ItemModelGenerator.SOUTH_FACE_UVS, Quadrant.R0, frontInfo, Direction.SOUTH, modelState, null, ExtraFaceData.DEFAULT)
                 );
                 builder.addUnculledFace(
-                        FaceBakery.bakeQuad(interner, from, to, ItemModelGenerator.NORTH_FACE_UVS, Quadrant.R0, 0, backInfo, Direction.NORTH, modelState, null, true, 0, ExtraFaceData.DEFAULT)
+                        FaceBakery.bakeQuad(interner, from, to, ItemModelGenerator.NORTH_FACE_UVS, Quadrant.R0, backInfo, Direction.NORTH, modelState, null, ExtraFaceData.DEFAULT)
                 );
-                ItemModelGenerator.bakeSideFaces(builder, interner, modelState, frontInfo, 0);
+                ItemModelGenerator.bakeSideFaces(builder, interner, modelState, frontInfo);
                 return builder.build();
             });
         }

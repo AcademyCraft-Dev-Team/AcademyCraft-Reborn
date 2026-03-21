@@ -164,22 +164,25 @@ public final class WirelessNodeScreen extends ContainerUiScreen<WirelessNodeMenu
             rangeValueSetter = rangeValueLabel::setText;
             rangeValueLabel.setLayoutParams(
                     new WidgetContainer.LayoutParams()
-                            .size(12, 12)
+                            .height(LabelWidget.DEFAULT_BASE_FONT_SIZE)
                             .gravity(Gravity.CENTER)
             );
-            var rangeLayout = createAttributeRow("Trans. Range", rangeValueLabel, 52);
+            var range = "Trans. Range";
+            var rangeLayout = createAttributeRow(range, rangeValueLabel);
             info.addChild("range_layout", rangeLayout);
 
             var nameTextBox = new TextBoxWidget(12);
             nameTextBox.setBackground(null);
             nameTextBox.setWhenEnter(s -> MisakaNetworkClient.sendPacket(new SetNodeNamePacket(wirelessNodeBlockEntity.getBlockPos(), s)));
-            var nameLayout = createAttributeRow("Node Name", createInputRow(nameTextBox), 48);
+            var name = "Node Name";
+            var nameLayout = createAttributeRow(name, createInputRow(nameTextBox));
             info.addChild("name_layout", nameLayout);
 
             var passTextBox = new TextBoxWidget(12);
             passTextBox.setBackground(null);
             passTextBox.setWhenEnter(s -> MisakaNetworkClient.sendPacket(new SetNodePassPacket(wirelessNodeBlockEntity.getBlockPos(), s)));
-            var passLayout = createAttributeRow("Password", createInputRow(passTextBox), 42);
+            var pass = "Password";
+            var passLayout = createAttributeRow(pass, createInputRow(passTextBox));
             info.addChild("pass_layout", passLayout);
         }
 

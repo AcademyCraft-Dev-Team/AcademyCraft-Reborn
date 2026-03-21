@@ -13,8 +13,8 @@ import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
-import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
+import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -67,7 +67,7 @@ public abstract class MixinGameRenderer {
     private void onRenderItemInHand(
             CameraRenderState cameraState,
             float deltaPartialTick,
-            Matrix4f modelViewMatrix,
+            Matrix4fc modelViewMatrix,
             CallbackInfo ci,
             PoseStack poseStack,
             Matrix4fStack modelViewStack

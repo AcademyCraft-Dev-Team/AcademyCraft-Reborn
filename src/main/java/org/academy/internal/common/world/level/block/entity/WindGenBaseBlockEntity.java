@@ -109,7 +109,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
             var targetStartSeconds = Math.clamp(totalDuration, 0.0f, totalDuration - elapsedSeconds);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
-            targetAnimationState.start((int) Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            targetAnimationState.start(Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
         } else {
             targetAnimationState.start(ticks);
         }

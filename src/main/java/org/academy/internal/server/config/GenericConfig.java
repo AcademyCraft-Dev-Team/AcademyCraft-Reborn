@@ -2,7 +2,6 @@ package org.academy.internal.server.config;
 
 import com.google.gson.annotations.SerializedName;
 import org.academy.api.common.gson.TypeHandler;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +19,7 @@ public class GenericConfig {
         }
 
         @Override
-        public @NotNull GenericConfig getDefault() {
+        public GenericConfig getDefault() {
             var defaultConfig = new GenericConfig();
             defaultConfig.booleanMap.put("attackPlayer", true);
             defaultConfig.booleanMap.put("destroyBlocks", true);
@@ -30,7 +29,7 @@ public class GenericConfig {
         }
 
         @Override
-        public @NotNull Class<GenericConfig> getTypeClass() {
+        public Class<GenericConfig> getTypeClass() {
             return GenericConfig.class;
         }
     }

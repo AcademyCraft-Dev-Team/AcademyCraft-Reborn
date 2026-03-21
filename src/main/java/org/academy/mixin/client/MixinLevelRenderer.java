@@ -17,7 +17,7 @@ import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -30,7 +30,7 @@ public abstract class MixinLevelRenderer {
             method = "renderLevel",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4f;)V",
+                    target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4fc;)V",
                     shift = At.Shift.AFTER
             )
     )
@@ -39,7 +39,7 @@ public abstract class MixinLevelRenderer {
             DeltaTracker deltaTracker,
             boolean renderOutline,
             CameraRenderState cameraState,
-            Matrix4f modelViewMatrix,
+            Matrix4fc modelViewMatrix,
             GpuBufferSlice terrainFog,
             Vector4f fogColor,
             boolean shouldRenderSky,
@@ -56,7 +56,7 @@ public abstract class MixinLevelRenderer {
             DeltaTracker deltaTracker,
             boolean renderOutline,
             CameraRenderState cameraState,
-            Matrix4f modelViewMatrix,
+            Matrix4fc modelViewMatrix,
             GpuBufferSlice terrainFog,
             Vector4f fogColor,
             boolean shouldRenderSky,

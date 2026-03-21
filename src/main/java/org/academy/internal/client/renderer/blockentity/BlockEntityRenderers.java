@@ -11,21 +11,22 @@ public final class BlockEntityRenderers {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_TOP.get(),
-                context -> WindGenTopRenderer.INSTANCE);
-        event.registerBlockEntityRenderer(BlockEntityTypes.ABILITY_DEVELOPER.get(),
-                context -> AbilityDeveloperRenderer.INSTANCE);
+                _ -> WindGenTopRenderer.INSTANCE);
+/*        event.registerBlockEntityRenderer(BlockEntityTypes.ABILITY_DEVELOPER.get(),
+                AbilityDeveloperRenderer::new
+        );*/
         event.registerBlockEntityRenderer(BlockEntityTypes.WIRELESS_NODE.get(),
-                context -> WirelessNodeRenderer.INSTANCE);
+                _ -> WirelessNodeRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.OMNI_CRAFTING_TABLE.get(),
-                context -> OmniCraftingTableRenderer.INSTANCE);
+                _ -> OmniCraftingTableRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.CAT_ENGINE.get(),
-                context -> CatEngineRenderer.INSTANCE);
+                _ -> CatEngineRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_BASE.get(),
-                context -> WindGenBaseRenderer.INSTANCE);
+                _ -> WindGenBaseRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.WIND_GEN_PILLAR.get(),
-                context -> WindGenPillarRenderer.INSTANCE);
+                _ -> WindGenPillarRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.SOLAR_GEN.get(),
-                context -> SolarGenRenderer.INSTANCE);
+                _ -> SolarGenRenderer.INSTANCE);
     }
 
     private BlockEntityRenderers() {

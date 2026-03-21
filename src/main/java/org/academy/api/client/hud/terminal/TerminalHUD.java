@@ -28,6 +28,7 @@ import org.academy.api.client.gui.event.EventType;
 import org.academy.api.client.gui.event.KeyEvent;
 import org.academy.api.client.gui.event.MouseEvent;
 import org.academy.api.client.gui.event.ScrollEvent;
+import org.academy.api.client.gui.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
@@ -130,7 +131,7 @@ public final class TerminalHUD {
                 context.pose().popPose();
             }
 
-            private void submitGlowCommand(RenderContext context, float size, SDFData sdfData) {
+            void submitGlowCommand(RenderContext context, float size, SDFData sdfData) {
                 var glowCommand = new PosTexRectDrawCommand(
                         Render.RenderPipelines.SDF_CIRCLE_GLOW,
                         size,
@@ -228,6 +229,7 @@ public final class TerminalHUD {
 
         try {
             uiContext.upload(terminalTarget, false);
+            ImGuiUIDebugger.render(terminalTarget, context.get());
 
             var terminalView = terminalTarget.getColorTextureView();
             if (terminalView == null) return;
@@ -393,9 +395,9 @@ public final class TerminalHUD {
         if (isActive()) toggleActive();
     }
 
-    public record SDFData(Vector4f color, float radius,
+    private record SDFData(Vector4f color, float radius,
                           float softness) implements DynamicUniformStorage.DynamicUniform {
-        public static final int UBO_SIZE = new Std140SizeCalculator().putVec4().putFloat().putFloat().get();
+        static final int UBO_SIZE = new Std140SizeCalculator().putVec4().putFloat().putFloat().get();
 
         @Override
         public void write(ByteBuffer buffer) {
@@ -417,7 +419,7 @@ public final class TerminalHUD {
             return root;
         }
 
-        private FrameLayoutWidget createRoot() {
+        FrameLayoutWidget createRoot() {
             var root = new FrameLayoutWidget();
             {
                 main.setLayoutParams(
@@ -498,7 +500,7 @@ public final class TerminalHUD {
             return root;
         }
 
-        private void openApp(App app) {
+        void openApp(App app) {
             content.setEnabled(false);
             content.cancelAnimations();
             var animation = ObjectAnimator
@@ -527,7 +529,7 @@ public final class TerminalHUD {
             animateMainWidthTransition(1);
         }
 
-        public void closeApp() {
+        void closeApp() {
             content.setEnabled(true);
             content.setVisibility(Widget.Visibility.VISIBLE);
             content.cancelAnimations();
@@ -555,7 +557,7 @@ public final class TerminalHUD {
             animateMainWidthTransition(0);
         }
 
-        private void animateMainWidthTransition(float target) {
+        void animateMainWidthTransition(float target) {
             var viewStateAnimator = ValueAnimator.ofFloat(viewStateProgress, target);
             viewStateAnimator.setDuration(400);
             viewStateAnimator.setInterpolator(EasingFunctions.EASE_OUT_CUBIC);
@@ -569,7 +571,7 @@ public final class TerminalHUD {
             main.startAnimation(viewStateAnimator);
         }
 
-        private LinearLayoutWidget createApp(App app) {
+        LinearLayoutWidget createApp(App app) {
             var icon = app.icon();
             var name = app.name();
 

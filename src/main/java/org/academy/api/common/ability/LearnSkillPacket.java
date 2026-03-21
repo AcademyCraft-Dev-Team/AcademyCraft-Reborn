@@ -6,7 +6,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.internal.common.network.PacketTypes;
-import org.jetbrains.annotations.NotNull;
 import org.misaka.api.common.network.future.packet.RequestPacket;
 import org.misaka.api.common.network.future.packet.ResponsePacket;
 import org.misaka.api.common.network.packet.PacketType;
@@ -42,7 +41,7 @@ public class LearnSkillPacket extends RequestPacket<ServerGamePacketListenerImpl
     }
 
     @Override
-    public @NotNull PacketType<ServerGamePacketListenerImpl, LearnSkillPacket> getPacketType() {
+    public PacketType<ServerGamePacketListenerImpl, LearnSkillPacket> getPacketType() {
         return PacketTypes.LEARN_SKILL.get();
     }
 
@@ -64,7 +63,7 @@ public class LearnSkillPacket extends RequestPacket<ServerGamePacketListenerImpl
         }
 
         @Override
-        public @NotNull PacketType<ClientPacketListener, Response> getPacketType() {
+        public PacketType<ClientPacketListener, Response> getPacketType() {
             return PacketTypes.LEARN_SKILL_RESPONSE.get();
         }
     }
