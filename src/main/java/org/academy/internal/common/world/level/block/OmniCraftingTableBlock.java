@@ -25,7 +25,6 @@ import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.OmniCraftingMenu;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity;
-import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
@@ -82,7 +81,7 @@ public final class OmniCraftingTableBlock extends MultiBlock {
     }
 
     @Override
-    public <T extends BlockEntity> @NotNull BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof OmniCraftingTableBlockEntity omniCraftingTableBlockEntity) {
                 omniCraftingTableBlockEntity.tick();

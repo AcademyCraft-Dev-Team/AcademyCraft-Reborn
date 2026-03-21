@@ -6,6 +6,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -165,14 +167,14 @@ public class HellFlare extends Skill {
             var targetCenter = target.position().add(0, target.getBbHeight() * 0.5, 0);
             if (eyePos.distanceToSqr(targetCenter) > MAX_RANGE * MAX_RANGE) return false;
 
-            var hitResult = player.level().clip(new net.minecraft.world.level.ClipContext(
+            var hitResult = player.level().clip(new ClipContext(
                     eyePos,
                     targetCenter,
-                    net.minecraft.world.level.ClipContext.Block.COLLIDER,
-                    net.minecraft.world.level.ClipContext.Fluid.NONE,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
                     player
             ));
-            return hitResult.getType() == net.minecraft.world.phys.HitResult.Type.MISS;
+            return hitResult.getType() == HitResult.Type.MISS;
         }
 
         private static void searchNewTarget(ServerPlayer player, HellFlareRay ray) {
@@ -293,7 +295,7 @@ public class HellFlare extends Skill {
                 if (!ray.isRemoved()) {
                     ray.discard();
                 }
-                super.unregister();
+                unregister();
             }
         }
     }

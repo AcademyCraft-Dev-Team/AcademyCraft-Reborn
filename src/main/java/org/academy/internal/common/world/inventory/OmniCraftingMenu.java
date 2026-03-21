@@ -7,7 +7,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import org.academy.internal.common.world.level.block.Blocks;
-import org.jetbrains.annotations.NotNull;
 
 public final class OmniCraftingMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
@@ -44,7 +43,7 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public @NotNull ItemStack quickMoveStack(@NotNull Player player, int index) {
+    public ItemStack quickMoveStack(Player player, int index) {
         var itemStack = ItemStack.EMPTY;
         var slot = slots.get(index);
 
@@ -101,18 +100,18 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public void removed(@NotNull Player player) {
+    public void removed(Player player) {
         super.removed(player);
         access.execute((_, _) -> clearContainer(player, craftSlots));
     }
 
     @Override
-    public boolean canTakeItemForPickAll(@NotNull ItemStack stack, Slot slot) {
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
         return slot.container != resultSlots && super.canTakeItemForPickAll(stack, slot);
     }
 
     @Override
-    public boolean stillValid(@NotNull Player player) {
+    public boolean stillValid(Player player) {
         return stillValid(access, player, Blocks.OMNI_CRAFTING_TABLE.get());
     }
 }

@@ -5,7 +5,6 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.blockentity.WindGenBaseRenderer;
 import org.joml.Vector3fc;
 
@@ -22,13 +21,8 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
     }
 
     @Override
-    public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
-        if (displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND) {
-            poseStack.translate(0.25f, 0.25f, 0.75f);
-        } else {
-            poseStack.translate(0.5f, 0, 0.5f);
-        }
         WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
         poseStack.popPose();
     }

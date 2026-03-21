@@ -6,7 +6,6 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.blockentity.WirelessNodeRenderer;
 import org.joml.Vector3fc;
 
@@ -26,7 +25,7 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
     }
 
     @Override
-    public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, int packedOverlay, boolean p_387131_, int p_451703_) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, int packedOverlay, boolean p_387131_, int p_451703_) {
         poseStack.pushPose();
         poseStack.translate(0.5f, 0, 0.5f);
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);

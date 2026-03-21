@@ -2,7 +2,7 @@ package org.academy.api.client.gui.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -40,19 +40,26 @@ public abstract class UiScreen extends Screen implements RenderRoot {
     protected abstract void onInit();
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         var renderTarget = ScreenDispatcher.getRenderTarget();
         if (renderTarget == null) return;
         var colorTextureView = renderTarget.getColorTextureView();
         if (colorTextureView == null) return;
 
-        guiGraphics.submitBlit(
+        graphics.innerBlit(
                 Render.RenderPipelines.IMAGE_PREMULTIPLIED_ALPHA,
                 colorTextureView,
                 RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST),
-                0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(),
+                0, 0, graphics.guiWidth(), graphics.guiHeight(),
                 0, 1, 1, 0, -1
         );
+    }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+        extractBlurredBackground(graphics);
+        extractTransparentBackground(graphics);
+        minecraft.gui.extractDeferredSubtitles();
     }
 
     @Override

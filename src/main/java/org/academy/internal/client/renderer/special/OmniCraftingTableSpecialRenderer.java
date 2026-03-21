@@ -6,7 +6,6 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.blockentity.OmniCraftingTableRenderer;
 import org.joml.Vector3fc;
 
@@ -19,7 +18,7 @@ public final class OmniCraftingTableSpecialRenderer implements NoDataSpecialMode
     }
 
     @Override
-    public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+    public void submit( PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
         {
             poseStack.scale(0.5f, 0.5f, 0.5f);

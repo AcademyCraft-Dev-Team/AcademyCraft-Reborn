@@ -158,7 +158,7 @@ public final class WindGenScreen extends ContainerUiScreen<WindGenMenu> {
                             .gravity(Gravity.CENTER_RIGHT)
                             .size(12, 12)
             );
-            var altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel, 32);
+            var altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel);
             info.addChild("altitude_layout", altitudeLayout);
         }
 

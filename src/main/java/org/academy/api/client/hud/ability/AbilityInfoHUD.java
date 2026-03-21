@@ -31,6 +31,9 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.academy.api.client.ability.AbilitySystemClient.getAvailableCP;
+import static org.academy.api.client.ability.AbilitySystemClient.getMaxCP;
+
 public final class AbilityInfoHUD {
     @Nullable
     private static AbilityInfoHUD INSTANCE;
@@ -66,14 +69,14 @@ public final class AbilityInfoHUD {
     }
 
     private static class Context implements WidgetContext {
-        private final FrameLayoutWidget root = createRoot();
+        final FrameLayoutWidget root = createRoot();
 
         @Override
         public WidgetContainer get() {
             return root;
         }
 
-        private FrameLayoutWidget createRoot() {
+        FrameLayoutWidget createRoot() {
             var root = new FrameLayoutWidget();
             {
                 var cp = new FrameLayoutWidget();
@@ -93,11 +96,11 @@ public final class AbilityInfoHUD {
                     cp.addChild("back", back);
 
                     var content = new AbstractWidget() {
-                        private @Nullable GpuTextureView textureView;
-                        private final GpuSampler sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
-                        private final List<Particle> particles = new ArrayList<>();
-                        private float lastCp = AbilitySystemClient.getAvailableCP();
-                        private float visualCp = AbilitySystemClient.getAvailableCP();
+                        @Nullable GpuTextureView textureView;
+                        final GpuSampler sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
+                        final List<Particle> particles = new ArrayList<>();
+                        float lastCp = getAvailableCP();
+                        float visualCp = getAvailableCP();
 
                         @Override
                         protected void renderInternal(RenderContext context) {
@@ -119,7 +122,7 @@ public final class AbilityInfoHUD {
                             var rightPadding = 130f / 4f;
 
                             // because tan(45°) = 1
-                            var progress = visualCp / AbilitySystemClient.getMaxCP();
+                            var progress = visualCp / getMaxCP();
                             var offset = height - topPadding - bottomPadding;
                             var i = 10 - Mth.ceil(progress / 0.1f);
                             var barWidth = width - leftPadding - rightPadding - offset - 9 * spacing;
@@ -198,16 +201,26 @@ public final class AbilityInfoHUD {
                         @Override
                         public void tick() {
                             var animationTime = 750L;
-                            var currentCp = AbilitySystemClient.getAvailableCP();
+                            var currentCp = getAvailableCP();
 
                             if (currentCp != lastCp) {
-                                var maxCp = AbilitySystemClient.getMaxCP();
+                                var maxCp = getMaxCP();
                                 var lastProgress = lastCp / maxCp;
                                 var currentProgress = currentCp / maxCp;
                                 var deltaProgress = currentProgress - lastProgress;
                                 var increase = deltaProgress > 0;
 
-                                if (!increase) visualCp = currentCp;
+                                if (!increase) {
+                                    visualCp = currentCp;
+                                    var iterator = particles.iterator();
+                                    while (iterator.hasNext()) {
+                                        var particle = iterator.next();
+                                        if (particle.increase) {
+                                            iterator.remove();
+                                            if (particle.animator != null) particle.animator.cancel();
+                                        }
+                                    }
+                                }
 
                                 var progressTracker = lastProgress;
                                 var i = 0;
@@ -227,12 +240,12 @@ public final class AbilityInfoHUD {
                                     if (!progressChanged) break;
 
                                     var particle = new Particle(start, end, increase);
-                                    var animation = ObjectAnimator
+                                    var animator = ObjectAnimator
                                             .ofFloat(particle::setProgress, 0, 1)
                                             .setDuration(animationTime).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
                                             .setStartDelay(i * animationTime / 10);
 
-                                    animation.addListener(new AnimatorListener() {
+                                    animator.addListener(new AnimatorListener() {
                                         @Override
                                         public void onAnimationEnd(Animator animation) {
                                             particles.remove(particle);
@@ -241,7 +254,8 @@ public final class AbilityInfoHUD {
                                             }
                                         }
                                     });
-                                    animation.start();
+                                    animator.start();
+                                    particle.setAnimator(animator);
                                     particles.add(particle);
 
                                     progressTracker = end;
@@ -253,20 +267,25 @@ public final class AbilityInfoHUD {
                             }
                         }
 
-                        private static class Particle {
-                            public final float last, current;
-                            public final boolean increase;
-                            public float posOffset, alpha = 1;
+                        static class Particle {
+                            @Nullable Animator animator;
+                            final float last, current;
+                            final boolean increase;
+                            float posOffset, alpha = 1;
 
-                            public Particle(float last, float current, boolean increase) {
+                            Particle(float last, float current, boolean increase) {
                                 this.last = last;
                                 this.current = current;
                                 this.increase = increase;
                             }
 
-                            public void setProgress(float progress) {
+                            void setProgress(float progress) {
                                 posOffset = increase ? -10 + progress * 10 : progress * -10;
                                 alpha = increase ? progress : 1 - progress;
+                            }
+
+                            void setAnimator(Animator animator) {
+                                this.animator = animator;
                             }
                         }
                     };

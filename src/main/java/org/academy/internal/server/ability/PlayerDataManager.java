@@ -11,7 +11,6 @@ import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
-import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.slf4j.Logger;
@@ -37,7 +36,7 @@ public final class PlayerDataManager implements AbilitySubsystem {
     }
 
     @Override
-    public void processSync(@NotNull ServerPlayer player) {
+    public void processSync(ServerPlayer player) {
         var uuid = player.getUUID();
         var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
         MisakaNetworkServer.sendPacket(player, packet);

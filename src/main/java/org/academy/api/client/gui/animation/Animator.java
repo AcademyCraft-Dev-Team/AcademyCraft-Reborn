@@ -26,21 +26,16 @@ public abstract class Animator {
         paused = false;
         AnimationManager.remove(this);
         var tempList = new ArrayList<>(listeners);
-        for (var listener : tempList) {
-            listener.onAnimationCancel(this);
-        }
+        for (var listener : tempList) listener.onAnimationCancel(this);
     }
 
     public void end() {
-        if (running) {
-            running = false;
-            paused = false;
-            AnimationManager.remove(this);
-            var tempList = new ArrayList<>(listeners);
-            for (var listener : tempList) {
-                listener.onAnimationEnd(this);
-            }
-        }
+        if (!running) return;
+        running = false;
+        paused = false;
+        AnimationManager.remove(this);
+        var tempList = new ArrayList<>(listeners);
+        for (var listener : tempList) listener.onAnimationEnd(this);
     }
 
     public void pause() {
@@ -51,9 +46,7 @@ public abstract class Animator {
     }
 
     public void resume() {
-        if (running && paused) {
-            paused = false;
-        }
+        if (running && paused) paused = false;
     }
 
     public boolean isPaused() {

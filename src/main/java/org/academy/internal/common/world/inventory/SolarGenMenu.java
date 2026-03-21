@@ -9,7 +9,6 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.academy.internal.common.world.level.block.Blocks;
-import org.jetbrains.annotations.NotNull;
 
 public final class SolarGenMenu extends AbstractContainerMenu {
     public final ContainerLevelAccess access;
@@ -34,7 +33,7 @@ public final class SolarGenMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public @NotNull ItemStack quickMoveStack(@NotNull Player player, int index) {
+    public ItemStack quickMoveStack(Player player, int index) {
         var movedStack = ItemStack.EMPTY;
         var slot = slots.get(index);
         if (slot.hasItem()) {
@@ -58,7 +57,7 @@ public final class SolarGenMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public boolean stillValid(@NotNull Player player) {
+    public boolean stillValid(Player player) {
         return stillValid(access, player, Blocks.SOLAR_GEN.get());
     }
 }

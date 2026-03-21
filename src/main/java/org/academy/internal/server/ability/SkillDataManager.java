@@ -7,7 +7,6 @@ import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.SkillData;
-import org.jetbrains.annotations.NotNull;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.UUID;
@@ -28,12 +27,12 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     @Override
-    public void onPlayerLogin(@NotNull ServerPlayer player) {
+    public void onPlayerLogin(ServerPlayer player) {
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.SKILL_DATA);
     }
 
     @Override
-    public void processSync(@NotNull ServerPlayer player) {
+    public void processSync(ServerPlayer player) {
         var playerData = playerDataManager.getData(player.getUUID());
         if (playerData == null) return;
 

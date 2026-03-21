@@ -1,5 +1,9 @@
 package org.academy.internal.common.world.level.block.entity;
 
+/*import com.geckolib.animatable.GeoBlockEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.util.GeckoLibUtil;*/
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
@@ -16,7 +20,9 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
-public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser {
+public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
+   // private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+
     @Nullable
     public String name;
     public int energyStored;
@@ -49,10 +55,10 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
-            var targetStartSeconds = Math.clamp(totalDuration, 0.0f, totalDuration - elapsedSeconds);
+            var targetStartSeconds = Math.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
-            targetAnimationState.start((int) Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            targetAnimationState.start(Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
         } else {
             targetAnimationState.start(ticks);
         }
@@ -71,10 +77,10 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
-            var targetStartSeconds = Math.clamp(totalDuration, 0.0f, totalDuration - elapsedSeconds);
+            var targetStartSeconds = Math.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
-            targetAnimationState.start((int) Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            targetAnimationState.start(Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
         } else {
             targetAnimationState.start(ticks);
         }
@@ -213,4 +219,13 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         var radius = 5d;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }
+/*
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return cache;
+    }*/
 }

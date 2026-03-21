@@ -31,7 +31,7 @@ public final class HellFlareData extends SkillData {
     }
 
     public void setPhase(int phase) {
-        this.phase = Math.max(1, Math.min(3, phase));
+        this.phase = Math.clamp(phase, 1, 3);
     }
 
     public void reset() {

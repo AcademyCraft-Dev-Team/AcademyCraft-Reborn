@@ -3,10 +3,7 @@ package org.academy.api.client.gui.widget;
 import org.academy.api.client.gui.command.DrawCommand;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.MeasureSpec;
-import org.academy.api.client.gui.msdf.core.MsdfConstants;
-import org.academy.api.client.gui.msdf.font.MsdfFont;
-import org.academy.api.client.gui.msdf.font.MsdfFontService;
-import org.academy.api.client.gui.msdf.font.MsdfKerningManager;
+import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor;
 import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.util.GlyphCommandGenerator;
 import org.jspecify.annotations.Nullable;
@@ -14,10 +11,9 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.academy.api.client.gui.msdf.font.MsdfFontService.getDefaultFont;
-
 public class LabelWidget extends AbstractWidget {
-    protected final float baseFontSize = 12.0f;
+    public static final float DEFAULT_BASE_FONT_SIZE = 8F;
+    protected final float baseFontSize = DEFAULT_BASE_FONT_SIZE;
     protected String text;
     protected float layoutScale = 1.0f;
     protected boolean dropShadow = false;
@@ -49,50 +45,32 @@ public class LabelWidget extends AbstractWidget {
         return Math.clamp(finalScale, 0.0f, 1.0f);
     }
 
-    protected float getTextWidth(String text) {
-        var lines = text.split("\n", -1);
-        float maxWidth = 0;
-
-        for (var line : lines) {
-            var lineWidth = 0f;
-            var prevChar = 0;
-            MsdfFont prevFont = null;
-
-            for (var i = 0; i < line.codePointCount(0, line.length()); i++) {
-                var c = line.codePointAt(i);
-                var font = MsdfFontService.getFont(c);
-                var glyph = font.getGlyph(c);
-                if (glyph == null) continue;
-
-                var metrics = font.getMetrics();
-                var fontUnitScale = baseFontSize / metrics.unitsPerEm();
-
-                if (prevChar != 0 && prevFont == font) {
-                    lineWidth += MsdfKerningManager.getKerning(font.getFace(), prevChar, c) * fontUnitScale;
-                }
-                lineWidth += glyph.advance() * fontUnitScale;
-                prevChar = c;
-                prevFont = font;
-            }
-            maxWidth = Math.max(maxWidth, lineWidth);
+    public static float getTextWidth(String text, float baseFontSize) {
+        var instances = MsdfTextProcessor.layout(text, baseFontSize);
+        var maxX = 0f;
+        for (var inst : instances) {
+            var right = inst.x() + inst.quadWidth();
+            if (right > maxX) maxX = right;
         }
+        return maxX;
+    }
 
-        return maxWidth;
+    public static float getTextHeight(String text, float baseFontSize) {
+        var instances = MsdfTextProcessor.layout(text, baseFontSize);
+        var maxY = 0f;
+        for (var inst : instances) {
+            var bottom = inst.y() + inst.quadHeight();
+            if (bottom > maxY) maxY = bottom;
+        }
+        return maxY;
+    }
+
+    protected float getTextWidth(String text) {
+        return getTextWidth(text, baseFontSize);
     }
 
     protected float getTextHeight(String text) {
-        var lines = text.split("\n", -1);
-        var font = getDefaultFont();
-        var metrics = font.getMetrics();
-        var fontUnitScale = baseFontSize / metrics.unitsPerEm();
-
-        var totalHeight = (metrics.ascender() - metrics.descender()) * fontUnitScale;
-        if (lines.length > 1) {
-            totalHeight += (lines.length - 1) * metrics.lineHeight() * fontUnitScale;
-        }
-        totalHeight += MsdfConstants.DEFAULT_PX_RANGE * 2 * fontUnitScale;
-
-        return totalHeight;
+        return getTextHeight(text, baseFontSize);
     }
 
     @Override

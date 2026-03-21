@@ -83,7 +83,7 @@ public final class InfoAreaUtil {
         return layout;
     }
 
-    public static LinearLayoutWidget createAttributeRow(String labelText, Widget valueWidget, float labelWidth) {
+    public static LinearLayoutWidget createAttributeRow(String labelText, Widget valueWidget) {
         var layout = new LinearLayoutWidget();
         layout.setOrientation(Orientation.HORIZONTAL);
         layout.setLayoutParams(
@@ -96,7 +96,7 @@ public final class InfoAreaUtil {
             var label = new LabelWidget(labelText);
             label.setLayoutParams(
                     new LinearLayoutWidget.LayoutParams()
-                            .width(labelWidth)
+                            .height(LabelWidget.DEFAULT_BASE_FONT_SIZE)
                             .gravity(Gravity.CENTER_VERTICAL)
             );
             layout.addChild(labelText + "_label", label);
@@ -119,7 +119,6 @@ public final class InfoAreaUtil {
         layout.setOrientation(Orientation.HORIZONTAL);
         {
             var leftBracket = new LabelWidget("[");
-            leftBracket.setScale(0.85f);
             leftBracket.setLayoutParams(
                     new LinearLayoutWidget.LayoutParams()
                             .gravity(Gravity.CENTER_VERTICAL)
@@ -132,11 +131,9 @@ public final class InfoAreaUtil {
                             .heightMode(SizeMode.MATCH_PARENT)
                             .gravity(Gravity.CENTER)
             );
-            textBox.setScale(0.75f);
             layout.addChild("textbox", textBox);
 
             var rightBracket = new LabelWidget("]");
-            rightBracket.setScale(0.85f);
             rightBracket.setLayoutParams(
                     new LinearLayoutWidget.LayoutParams()
                             .gravity(Gravity.CENTER_VERTICAL)

@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.Resource;
 import org.academy.internal.client.renderer.blockentity.WindGenTopRenderer;
 import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderState;
@@ -22,17 +21,10 @@ public final class WindGenTopSpecialRenderer implements NoDataSpecialModelRender
     }
 
     @Override
-    public void submit(ItemDisplayContext displayContext, PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
         poseStack.translate(0.5f, 1.5f, 0.5f);
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
-        if (displayContext == ItemDisplayContext.GUI) {
-            poseStack.translate(0.075f, 0.075f, 0);
-            poseStack.scale(0.85f, 0.85f, 0.85f);
-        }
-        if (displayContext.firstPerson()){
-            poseStack.mulPose(Axis.YN.rotationDegrees(90));
-        }
         nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderTypes.entityTranslucent(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, outlineColor, null);
         poseStack.popPose();
     }

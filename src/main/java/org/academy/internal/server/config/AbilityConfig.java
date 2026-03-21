@@ -2,7 +2,6 @@ package org.academy.internal.server.config;
 
 import com.google.gson.annotations.SerializedName;
 import org.academy.api.common.gson.TypeHandler;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +38,7 @@ public class AbilityConfig {
         }
 
         @Override
-        public @NotNull AbilityConfig getDefault() {
+        public AbilityConfig getDefault() {
             var defaultConfig = new AbilityConfig();
 
             List<String> minecraftMetalBlocks = new ArrayList<>();
@@ -72,7 +71,7 @@ public class AbilityConfig {
         }
 
         @Override
-        public @NotNull Class<AbilityConfig> getTypeClass() {
+        public Class<AbilityConfig> getTypeClass() {
             return AbilityConfig.class;
         }
     }
