@@ -1,44 +1,27 @@
 package org.academy.internal.client.renderer.effect;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.rendertype.RenderSetup;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
-import org.academy.api.client.Render;
-import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
-import static net.minecraft.client.renderer.rendertype.RenderType.create;
 import static org.academy.AcademyCraft.academy;
+import static org.academy.api.client.Render.RenderTypes.STORM_WING;
 
 @SuppressWarnings("SuspiciousNameCombination")
 public final class StormWingEffectRenderer implements EffectRenderer {
     public static final ContextKey<Boolean> CONTEXT_KEY = new ContextKey<>(academy("storm_wing"));
     public static final StormWingEffectRenderer INSTANCE = new StormWingEffectRenderer();
-    public static final Identifier TEXTURE = academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
     public static final int RING_SEGMENTS = 4;
     private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, -0.25f);
-    private static final RenderType RENDER_TYPE = create(
-            "storm_wing",
-            RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
-                    .withTexture(
-                            "Sampler0", TEXTURE,
-                            () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                    )
-                    .sortOnUpload()
-                    .createRenderSetup()
-    );
     private static final int NUM_RINGS = 24;
     private static final float HEIGHT = 3.5f;
     private static final float SIZE = 1.0f;
@@ -81,40 +64,41 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     private static final double[] warpedYBuffer = new double[1];
     private static final float[][][] CACHED_VERTICAL_VERTEX_BUFFER = VertexUtil.Ring.getVerticalVertexBuffer(1.0f, 1.0f, RING_SEGMENTS);
 
-    static {
-        PostEffect.addFixedBuffer(RENDER_TYPE);
-    }
-
     @Override
     public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
+        if (IrisCompat.isShadowRendererActive()) return;
         if (!renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
 
-        poseStack.pushPose();
-        poseStack.mulPose(BASE_MATRIX);
-        var vertexConsumer = PostEffect.BUFFER_SOURCE_PRE.getBuffer(RENDER_TYPE);
-        var time = renderState.ageInTicks;
+        submitNodeCollector.submitCustomGeometry(poseStack, STORM_WING, (pose, buffer) -> {
+            var poseStack1 = new PoseStack();
+            poseStack1.last().set(pose);
 
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_1);
-        poseStack.popPose();
+            poseStack1.pushPose();
+            poseStack1.mulPose(BASE_MATRIX);
+            var time = renderState.ageInTicks;
 
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_2);
-        poseStack.popPose();
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_1);
+            poseStack1.popPose();
 
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_3);
-        poseStack.popPose();
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_2);
+            poseStack1.popPose();
 
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-        renderSingleTornado(poseStack, vertexConsumer, time + TORNADO_OFFSET_4);
-        poseStack.popPose();
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_3);
+            poseStack1.popPose();
 
-        poseStack.popPose();
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_4);
+            poseStack1.popPose();
+
+            poseStack1.popPose();
+        });
     }
 
     private static void applyDomainWarp(double normalizedY, double timeWarp) {

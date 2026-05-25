@@ -1,8 +1,6 @@
 package org.academy.mixin.client;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.DeltaTracker;
@@ -30,8 +28,7 @@ public abstract class MixinLevelRenderer {
             method = "renderLevel",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4fc;)V",
-                    shift = At.Shift.AFTER
+                    target = "Lorg/joml/Matrix4fStack;popMatrix()Lorg/joml/Matrix4fStack;"
             )
     )
     private void renderLevel(
@@ -44,25 +41,9 @@ public abstract class MixinLevelRenderer {
             Vector4f fogColor,
             boolean shouldRenderSky,
             ChunkSectionsToRender chunkSectionsToRender,
-            CallbackInfo ci,
-            @Local(ordinal = 0) FrameGraphBuilder frameGraphBuilder
-    ) {
-        BloomEffect.getInstance().process(frameGraphBuilder);
-    }
-
-    @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelTargetBundle;clear()V"))
-    private void post(
-            GraphicsResourceAllocator resourceAllocator,
-            DeltaTracker deltaTracker,
-            boolean renderOutline,
-            CameraRenderState cameraState,
-            Matrix4fc modelViewMatrix,
-            GpuBufferSlice terrainFog,
-            Vector4f fogColor,
-            boolean shouldRenderSky,
-            ChunkSectionsToRender chunkSectionsToRender,
             CallbackInfo ci
     ) {
+        BloomEffect.getInstance().process();
         PostEffect.pre();
         PostEffect.post();
     }
@@ -70,8 +51,8 @@ public abstract class MixinLevelRenderer {
     @Inject(method = "submitEntities", at = @At("HEAD"))
     private void submitEntities(
             PoseStack poseStack,
-            LevelRenderState renderState,
-            SubmitNodeCollector nodeCollector,
+            LevelRenderState levelRenderState,
+            SubmitNodeCollector output,
             CallbackInfo ci
     ) {
         var event = new LevelRenderEvent(

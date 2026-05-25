@@ -13,6 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinGui {
     @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
     private void extractCrosshair(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        if (TerminalHUD.isActive()) ci.cancel();
+        if (TerminalHUD.Companion.isActive()) ci.cancel();
     }
 }

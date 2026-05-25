@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.vanilla.MainLoopEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.jspecify.annotations.Nullable;
@@ -26,6 +27,7 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "runTick", at = @At("HEAD"))
     private void runTick(CallbackInfo info) {
+        AnimationManager.INSTANCE.onFrameUpdate();
         NeoForge.EVENT_BUS.post(new MainLoopEvent());
     }
 

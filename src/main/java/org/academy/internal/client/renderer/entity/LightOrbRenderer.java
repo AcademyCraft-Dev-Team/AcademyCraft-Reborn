@@ -1,8 +1,6 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -34,7 +32,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
         var g = 0.8f;
         var b = 1.0f;
 
-        var bufferSource = BloomEffect.getBlitToMainPost();
+        var bufferSource = BloomEffect.getAfter();
         var additiveBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
 
         random.setSeed(System.currentTimeMillis() / 40);

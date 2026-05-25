@@ -175,7 +175,7 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
     }
 
     private void drawOrbLayers(HellFlareRayRenderState state, PoseStack poseStack, RenderParams p) {
-        var bufferSource = BloomEffect.getBlitToMainPost();
+        var bufferSource = BloomEffect.getAfter();
         var additiveBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
         var mainBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES);
 

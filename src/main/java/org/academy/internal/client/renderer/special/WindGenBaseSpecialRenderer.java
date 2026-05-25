@@ -27,15 +27,8 @@ public final class WindGenBaseSpecialRenderer implements NoDataSpecialModelRende
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
-        var matrix4f = poseStack.last().pose();
-        matrix4f.translate(0.5f, 0.875f, 0.5f);
-        matrix4f.rotate(Axis.YP.rotationDegrees(0));
-        matrix4f.scale(0.625f, 0.625f, 0.625f);
-        WindGenBaseRenderer.MODEL.resetPose();
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         WindGenBaseRenderer.MODEL.render(poseStack, nodeCollector, packedLight, packedOverlay);
-        matrix4f.translate(0, -2, 0);
-        WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
         poseStack.popPose();
     }
 

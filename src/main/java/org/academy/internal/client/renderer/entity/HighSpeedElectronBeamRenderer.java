@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.Render;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.renderer.BallRenderer;
 import org.academy.api.client.renderer.BoxRenderer;
@@ -26,6 +27,8 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
 
     @Override
     public void submit(HighSpeedElectronBeamRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
+        if (IrisCompat.isShadowRendererActive()) return;
+
         var ballRadius = renderState.progress * 0.185f;
 
         var commonInitialOrientation = new Matrix4f()
@@ -39,7 +42,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.mulPose(new Matrix4f().scale(ballRadius));
         BallRenderer.renderBall(
                 poseStack.last(),
-                BloomEffect.getBlitToMainPost().getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_POST),
+                BloomEffect.getAfter().getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_POST),
                 HEAD_BUFFER,
                 0, 1, 0, 1,
                 renderState.lightCoords, OverlayTexture.NO_OVERLAY
@@ -64,7 +67,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.mulPose(new Matrix4f().scale(rayVisualProgress * 0.25f, renderState.length, rayVisualProgress * 0.25f));
         BoxRenderer.renderFilledBox(
                 poseStack,
-                BloomEffect.getBlitToMainPost().getBuffer(Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST),
+                BloomEffect.getAfter().getBuffer(Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST),
                 RAY, 0, 1, 0, 1
         );
         poseStack.scale(0.75f, 1, 0.75f);

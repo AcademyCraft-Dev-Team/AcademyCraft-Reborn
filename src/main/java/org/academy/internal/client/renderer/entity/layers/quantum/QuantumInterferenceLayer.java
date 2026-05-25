@@ -37,7 +37,7 @@ public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M exten
         var b = (color & 0xFF) / 255.0f;
 
         var renderType = Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST;
-        var vertexConsumer = BloomEffect.getBlitToMainPost().getBuffer(renderType);
+        var vertexConsumer = BloomEffect.getAfter().getBuffer(renderType);
 
         var model = getParentModel();
         model.renderToBuffer(

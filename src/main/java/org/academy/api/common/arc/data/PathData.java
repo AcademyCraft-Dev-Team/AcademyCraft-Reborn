@@ -1,6 +1,7 @@
 package org.academy.api.common.arc.data;
 
 import org.academy.api.common.util.UncheckedUtil;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,7 +19,7 @@ public class PathData {
         return frames;
     }
 
-    public <T> List<T> getProperty(PropertyType<T> type) {
+    public <T> @Nullable List<T> getProperty(PropertyType<T> type) {
         return UncheckedUtil.uncheckedCast(properties.get(type));
     }
 

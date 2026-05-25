@@ -2,11 +2,12 @@ package org.academy;
 
 import com.google.common.reflect.TypeToken;
 import com.mojang.math.Axis;
+import net.irisshaders.iris.pipeline.IrisPipelines;
+import net.irisshaders.iris.pipeline.programs.ShaderKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -19,9 +20,11 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
+import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
@@ -35,8 +38,8 @@ import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
-import org.academy.internal.client.app.music.MusicApp;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
+import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
@@ -53,17 +56,17 @@ import java.util.function.BiConsumer;
 
 import static org.academy.AcademyCraft.academy;
 
-@Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 @EventBusSubscriber(Dist.CLIENT)
+@Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 public final class AcademyCraftClient {
     private static boolean renderInitialized = false;
 
     public static void initMain() {
-        TerminalHUD.addApp(MusicApp.INSTANCE);
+        TerminalHUD.Companion.addApp(MusicApp.INSTANCE);
 
-        MusicPlayerBackend.init();
+        MusicPlayerBackend.Companion.init();
         Screens.register();
-        HUDManager.initMain();
+        HUDManager.INSTANCE.initMain();
         AbilitySystemClient.init();
         ClientSyncManager.init();
     }
@@ -71,10 +74,16 @@ public final class AcademyCraftClient {
     public static void initRender() {
         Render.init();
         BloomEffect.init();
-        ScreenDispatcher.init();
-        HUDManager.initRender();
-        MsdfFontService.genDefaultGlyph();
+        ScreenDispatcher.Companion.init();
+        HUDManager.INSTANCE.initRender();
 
+        MsdfFontService.INSTANCE.genDefaultGlyph();
+
+        if (IrisCompat.hasIris()) {
+            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_QUADS, ShaderKey.BASIC_COLOR);
+            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_TRANGLES, ShaderKey.BASIC_COLOR);
+            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR, ShaderKey.TEXTURED_COLOR);
+        }
         renderInitialized = true;
     }
 
@@ -84,7 +93,7 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onClientStarted(ClientStartedEvent event) {
-        ImGuiUtilApi.init();
+        ImGuiUtilApi.INSTANCE.init();
         initMain();
         initRender();
     }
@@ -97,8 +106,7 @@ public final class AcademyCraftClient {
     public static void resize(int width, int height) {
         Render.resize();
         PostEffect.resize(width, height);
-        BloomEffect.resize(width, height);
-        HUDManager.resize(width, height);
+        HUDManager.INSTANCE.resize(width, height);
     }
 
     @SubscribeEvent
@@ -108,9 +116,9 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onClientStopped(ClientStoppedEvent event) {
-        ImGuiUtilApi.close();
-        MsdfFontService.getInstance().close();
-        MsdfAtlasManager.getInstance().closeAll();
+        ImGuiUtilApi.INSTANCE.close();
+        MsdfFontService.INSTANCE.close();
+        MsdfAtlasManager.INSTANCE.closeAll();
     }
 
     @SubscribeEvent
@@ -198,27 +206,24 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
+        event.registerAvatarEntityModifier(new AvatarRenderStateModifier() {
+            @Override
+            public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState) {
+                renderState.setRenderData(
+                        StormWingEffectRenderer.CONTEXT_KEY,
+                        avatar.getData(AttachmentTypes.ACTIVATED_STORM_WING)
+                );
+                renderState.setRenderData(
+                        RailgunEffectRenderer.CONTEXT_KEY,
+                        avatar.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA)
+                );
+            }
+        });
         event.registerEntityModifier(
-                UncheckedUtil.uncheckedCast(AvatarRenderer.class), avatar()
-        );
-        event.registerEntityModifier(
-                new TypeToken<LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>>() {},
+                new TypeToken<LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>>() {
+                },
                 living()
         );
-    }
-
-    private static <AvatarlikeEntity extends Avatar & ClientAvatarEntity>
-    BiConsumer<AvatarlikeEntity, AvatarRenderState> avatar() {
-        return (avatarlikeEntity, avatarRenderState) -> {
-            avatarRenderState.setRenderData(
-                    StormWingEffectRenderer.CONTEXT_KEY,
-                    avatarlikeEntity.getData(AttachmentTypes.ACTIVATED_STORM_WING)
-            );
-            avatarRenderState.setRenderData(
-                    RailgunEffectRenderer.CONTEXT_KEY,
-                    avatarlikeEntity.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA)
-            );
-        };
     }
 
     private static BiConsumer<LivingEntity, LivingEntityRenderState> living() {

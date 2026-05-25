@@ -1,0 +1,5 @@
+{
+  "com/mojang/blaze3d/opengl/GlDevice": [
+    "org/academy/api/client/render/MultisampleGlDevice"
+  ]
+}

@@ -3,13 +3,18 @@ package org.academy.api.client.compatibility;
 import net.irisshaders.iris.api.v0.IrisApi;
 import net.irisshaders.iris.shadows.ShadowRenderer;
 import net.irisshaders.iris.vertices.ImmediateState;
-import net.neoforged.fml.ModList;
+import net.neoforged.fml.loading.FMLLoader;
 
 public final class IrisCompat {
+    private static boolean hasIris = false;
     private static boolean bypass;
 
+    public static void init() {
+        hasIris = FMLLoader.getCurrent().getLoadingModList().getModFileById("iris") != null;
+    }
+
     public static boolean hasIris() {
-        return ModList.get().isLoaded("iris");
+        return hasIris;
     }
 
     public static boolean isShaderPackInUse() {

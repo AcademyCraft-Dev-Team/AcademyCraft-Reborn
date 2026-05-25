@@ -12,14 +12,12 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.blockentity.TheEndPortalRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.level.block.Blocks;
 import org.academy.api.client.Resource;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.internal.client.renderer.blockentity.state.WirelessNodeRenderState;
-
-import static net.minecraft.client.renderer.blockentity.TheEndPortalRenderer.END_PORTAL_LOCATION;
 
 /**
  * @author MapleBadd
@@ -219,24 +217,32 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
         }
     }
 
-    public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, int packedOverlay) {
-        submitNodeCollector.submitModelPart(base2, poseStack, renderType(Resource.Textures.WIRELESS_NODE_MODEL), packedLight, packedOverlay, null);
-        submitNodeCollector.submitModelPart(core_li, poseStack, renderType(Resource.Textures.WIRELESS_NODE_MODEL), packedLight, packedOverlay, null);
+    public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords) {
+        submitNodeCollector.submitModelPart(
+                base2, poseStack, renderType(Resource.Textures.WIRELESS_NODE_MODEL), lightCoords, overlayCoords, null
+        );
+        submitNodeCollector.submitModelPart(
+                core_li, poseStack, renderType(Resource.Textures.WIRELESS_NODE_MODEL), lightCoords, overlayCoords, null
+        );
 
-        RenderType type;
-        if (!IrisCompat.isShaderPackInUse()) {
-            type = RenderTypes.endGateway();
-        } else {
+        if (IrisCompat.isShaderPackInUse()) {
             var blockStateIds = WorldRenderingSettings.INSTANCE.getBlockStateIds();
 
             if (blockStateIds != null) {
-                var intId = blockStateIds.getOrDefault(Blocks.END_PORTAL.defaultBlockState(), -1);
+                var intId = blockStateIds.applyAsInt(Blocks.END_PORTAL.defaultBlockState());
                 CapturedRenderingState.INSTANCE.setCurrentBlockEntity(intId);
             }
 
-            type = RenderTypes.entitySolid(END_PORTAL_LOCATION);
-        }
-
-        submitNodeCollector.submitModelPart(innner_ef, poseStack, type, packedLight, packedOverlay, null);
+            submitNodeCollector.submitCustomGeometry(
+                    poseStack, RenderTypes.entitySolid(TheEndPortalRenderer.END_PORTAL_LOCATION),
+                    (pose, buffer) -> {
+                        var ps = new PoseStack();
+                        ps.last().set(pose);
+                        innner_ef.render(ps, buffer, lightCoords, overlayCoords);
+                    }
+            );
+        } else submitNodeCollector.submitModelPart(
+                innner_ef, poseStack, RenderTypes.endGateway(), lightCoords, overlayCoords, null
+        );
     }
 }

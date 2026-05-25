@@ -14,6 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinSoundEngine {
     @Inject(method = "reload", at = @At("TAIL"))
     public void reload(CallbackInfo ci) {
-        MusicPlayerBackend.getInstance().handleContextReset();
+        MusicPlayerBackend.Companion.getInstance().handleContextReset();
     }
 }
