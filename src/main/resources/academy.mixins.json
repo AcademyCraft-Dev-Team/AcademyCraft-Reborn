@@ -2,7 +2,8 @@
   "required": true,
   "minVersion": "0.8",
   "package": "org.academy.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
+  "plugin": "org.academy.mixin.plugin.MixinPlugin",
   "mixins": [
     "common.MixinCombatTracker",
     "common.MixinEntity",

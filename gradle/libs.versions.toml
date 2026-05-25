@@ -2,29 +2,46 @@
 academy = "0.0.3-alpha"
 
 java = "25"
-minecraft = "26.1"
+minecraft = "26.1.2"
+neoforge = "26.1.2.43-beta"
+loader = "[6.2,)"
 
-neoforge = "26.1.0.0-alpha.0+rc-2.20260321.061940"
-iris = "1.10.6+1.21.11-neoforge"
+renderdoc = "1.44"
+rendernurse = "0.0.26"
+
+kotlinforforge = "6.2.0"
+geckolib = "5.5"
+sodium = "mc26.1.2-0.8.12-beta.1-neoforge"
+iris = "1.10.9+26.1-neoforge"
+jade = "26.0.10+neoforge"
+jei = "29.5.0.28"
 misaka = "26.1.0.0-alpha.0+rc-2"
 auto = "1.1.1"
-jlayer = "1.0.3"
 jflac = "1.5.2"
+jlayer = "1.0.3"
 imgui = "1.90.0"
 
 plugin-moddevgradle = "2.0.140"
-
 [libraries]
+kotlinforforge = { group = "thedarkcolour", name = "kotlinforforge-neoforge", version.ref = "kotlinforforge" }
+geckolib = { group = "com.geckolib", name = "geckolib-neoforge-26.1", version.ref = "geckolib" }
+sodium = { group = "maven.modrinth", name = "sodium", version.ref = "sodium" }
 iris = { group = "maven.modrinth", name = "iris", version.ref = "iris" }
+jade = { group = "maven.modrinth", name = "jade", version.ref = "jade" }
+jei = { group = "mezz.jei", name = "jei-26.1.2-neoforge", version.ref = "jei" }
+jei-api = { group = "mezz.jei", name = "jei-26.1.2-neoforge-api", version.ref = "jei" }
 misaka = { group = "org.academy", name = "misaka-network", version.ref = "misaka" }
+
 auto = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto" }
-jlayer = { group = "com.github.umjammer", name = "jlayer", version.ref = "jlayer" }
+
 jflac = { group = "org.jflac", name = "jflac-codec", version.ref = "jflac" }
+jlayer = { group = "com.github.umjammer", name = "jlayer", version.ref = "jlayer" }
+
 imgui-binding = { group = "io.github.spair", name = "imgui-java-binding", version.ref = "imgui" }
-imgui-lwjgl3 = { group = "io.github.spair", name = "imgui-java-lwjgl3", version.ref = "imgui" }
-imgui-windows = { group = "io.github.spair", name = "imgui-java-natives-windows", version.ref = "imgui" }
 imgui-linux = { group = "io.github.spair", name = "imgui-java-natives-linux", version.ref = "imgui" }
+imgui-lwjgl3 = { group = "io.github.spair", name = "imgui-java-lwjgl3", version.ref = "imgui" }
 imgui-macos = { group = "io.github.spair", name = "imgui-java-natives-macos", version.ref = "imgui" }
+imgui-windows = { group = "io.github.spair", name = "imgui-java-natives-windows", version.ref = "imgui" }
 
 [plugins]
 moddevgradle = { id = "net.neoforged.moddev", version.ref = "plugin-moddevgradle" }

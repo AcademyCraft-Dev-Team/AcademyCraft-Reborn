@@ -5,7 +5,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.renderer.ArcFactory;
 import org.academy.internal.client.renderer.entity.state.ArcRenderState;
 import org.academy.internal.common.world.entity.skill.Arc;
@@ -18,8 +17,6 @@ public class ArcRenderer extends EntityRenderer<Arc, ArcRenderState> {
 
     @Override
     public void submit(ArcRenderState renderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState) {
-        if (IrisCompat.isShadowRendererActive()) return;
-
         poseStack.pushPose();
         var matrix4f = new Matrix4f();
         matrix4f.rotateY((float) Math.toRadians(90 - renderState.yRot));

@@ -2,6 +2,8 @@ package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.arc.data.PathData;
 import org.academy.api.common.arc.data.PropertyType;
@@ -26,7 +28,8 @@ public final class ArcFactory {
     }
 
     public static void render(PoseStack ps, ArcRenderData data, float r, float g, float b, float a) {
-        var vc = PostEffect.BUFFER_SOURCE_PRE.getBuffer(RenderTypes.ARC);
+        if (IrisCompat.isShadowRendererActive()) return;
+        var vc = BloomEffect.getBefore().getBuffer(RenderTypes.ARC);
         renderRecursive(ps.last(), vc, data, r, g, b, a);
     }
 

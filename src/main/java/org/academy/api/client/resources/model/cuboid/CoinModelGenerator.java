@@ -16,7 +16,6 @@ import net.neoforged.neoforge.client.model.ExtraFaceData;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
-
 public class CoinModelGenerator implements UnbakedModel {
     public static final CoinModelGenerator INSTANCE = new CoinModelGenerator();
 

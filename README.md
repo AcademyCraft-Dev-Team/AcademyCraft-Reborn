@@ -13,11 +13,14 @@ The project is currently in the early development stage and is not playable. Dev
 
 ## For Developers
 Only supported in IntelliJ IDEA and requires JetBrains Runtime 25.
+If you want use ClientDevWithRenderDoc Run Configruation to run game,you should
+```bash
+./gradlew setupRenderDoc
+```
 
 ### How to build?
 
 ```bash
-
 ./gradlew build
 ```
 

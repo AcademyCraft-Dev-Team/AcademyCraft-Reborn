@@ -37,8 +37,8 @@ public final class PacketTypes {
     /**
      * Sync
      */
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<?, ?>>
-            SHARED_PUT = PACKET_TYPES.register("shared_put",
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ?>>
+            SYNC_DATA = PACKET_TYPES.register("sync_data",
             () -> new PacketType<>(SyncDataPacket.class, UncheckedUtil.uncheckedCast(SyncDataPacket.CODEC)));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncAbilityCategoryPacket>>

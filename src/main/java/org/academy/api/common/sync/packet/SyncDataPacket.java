@@ -19,7 +19,7 @@ public final class SyncDataPacket<V> extends Packet<ClientPacketListener, SyncDa
 
         private <SV> SyncDataPacket<SV> innerDecode(ByteBuf buffer) {
             var syncKey = SyncKey.CODEC.decode(buffer);
-            DataType<SV> type = UncheckedUtil.uncheckedCast(DataType.CODEC.decode(buffer));
+            var type = UncheckedUtil.<DataType<SV>>uncheckedCast(DataType.CODEC.decode(buffer));
             var value = type.codec().decode(buffer);
             return new SyncDataPacket<>(syncKey, type, value);
         }
@@ -61,6 +61,6 @@ public final class SyncDataPacket<V> extends Packet<ClientPacketListener, SyncDa
 
     @Override
     public PacketType<ClientPacketListener, SyncDataPacket<V>> getPacketType() {
-        return UncheckedUtil.uncheckedCast(PacketTypes.SHARED_PUT.get());
+        return UncheckedUtil.uncheckedCast(PacketTypes.SYNC_DATA.get());
     }
 }

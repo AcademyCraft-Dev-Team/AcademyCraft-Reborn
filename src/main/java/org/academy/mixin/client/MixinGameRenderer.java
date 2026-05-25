@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.Render;
-import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.hud.HUDManager;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
@@ -35,7 +34,6 @@ public abstract class MixinGameRenderer {
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
-        AnimationManager.onFrameUpdate();
         NeoForge.EVENT_BUS.post(new RenderLoopEvent());
     }
 
@@ -46,7 +44,7 @@ public abstract class MixinGameRenderer {
     private void render(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
         var resourcesLoaded = minecraft.isGameLoadFinished();
         var shouldRenderLevel = resourcesLoaded && advanceGameTime && minecraft.level != null;
-        if (shouldRenderLevel) HUDManager.render();
+        if (shouldRenderLevel) HUDManager.INSTANCE.render();
     }
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/resource/CrossFrameResourcePool;endFrame()V"))

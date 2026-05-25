@@ -39,8 +39,8 @@ jobs:
 
       - name: Build Dev and Release
         run: |
-          ./gradlew build -PisDev=true
-          ./gradlew build -PisDev=false
+          ./gradlew build -DisDev=true
+          ./gradlew build -DisDev=false
 
       - name: Upload
         uses: actions/upload-artifact@v6

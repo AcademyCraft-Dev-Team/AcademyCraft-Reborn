@@ -28,7 +28,7 @@ public final class Screens {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menuType = MenuTypes.WIND_GEN.get();
                         var windGenMenu = menuType.create(containerId, inventory);
-                        var windGenScreen = WindGenScreen.create(windGenMenu, inventory, Component.literal(title), pos);
+                        var windGenScreen = WindGenScreen.Companion.create(windGenMenu, inventory, Component.literal(title), pos);
                         if (windGenScreen != null && Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.containerMenu = windGenMenu;
                         }
@@ -49,7 +49,7 @@ public final class Screens {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menu = MenuTypes.NODE.get().create(containerId, inventory);
                         Minecraft.getInstance().player.containerMenu = menu;
-                        var screen = WirelessNodeScreen.create(menu, inventory, Component.literal(title), pos);
+                        var screen = WirelessNodeScreen.Companion.create(menu, inventory, Component.literal(title), pos);
                         if (screen != null && Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.containerMenu = menu;
                         }
@@ -77,7 +77,7 @@ public final class Screens {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menuType = MenuTypes.SOLAR_GEN.get();
                         var windGenMenu = menuType.create(containerId, inventory);
-                        var screen = SolarGenScreen.create(windGenMenu, inventory, Component.literal(title), pos);
+                        var screen = SolarGenScreen.Companion.create(windGenMenu, inventory, Component.literal(title), pos);
                         if (screen != null && Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.containerMenu = windGenMenu;
                         }

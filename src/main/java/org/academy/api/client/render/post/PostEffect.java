@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import org.academy.api.client.Render;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.TextureBinding;
 
 import java.util.List;
@@ -57,11 +58,15 @@ public final class PostEffect {
                 textures, List.of(),
                 false
         );
+        IrisCompat.enableBypass();
         BUFFER_SOURCE_PRE.endBatch();
+        IrisCompat.resetBypass();
     }
 
     public static void post() {
+        IrisCompat.enableBypass();
         BUFFER_SOURCE_POST.endBatch();
+        IrisCompat.resetBypass();
     }
 
     /**

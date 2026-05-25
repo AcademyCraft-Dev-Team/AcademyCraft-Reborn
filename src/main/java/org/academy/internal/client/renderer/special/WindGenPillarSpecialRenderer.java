@@ -23,6 +23,7 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
+        poseStack.translate(0.5f, 0, 0.5f);
         WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
         poseStack.popPose();
     }

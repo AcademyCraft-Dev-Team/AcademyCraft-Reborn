@@ -7,16 +7,16 @@ import static org.academy.AcademyCraft.vanilla;
 
 public final class Resource {
     /**
-     * Normally, vert & frag share the same name.
+     * Normally, vert and frag share the same name.
      */
     public static final class Shaders {
         /**
          * Vanilla
          */
-        public static final Identifier POS_TEX = vanilla("core/position_tex");
-        public static final Identifier POS_COLOR = vanilla("core/position_color");
-        public static final Identifier POS_TEX_COLOR = vanilla("core/position_tex_color");
-        public static final Identifier POS_COLOR_LIGHTMAP = vanilla("core/position_color_lightmap");
+        public static final Identifier POSITION_TEX = vanilla("core/position_tex");
+        public static final Identifier POSITION_COLOR = vanilla("core/position_color");
+        public static final Identifier POSITION_TEX_COLOR = vanilla("core/position_tex_color");
+        public static final Identifier POSITION_COLOR_LIGHTMAP = vanilla("core/position_color_lightmap");
         /**
          * AcademyCraft
          */
@@ -46,6 +46,7 @@ public final class Resource {
             public static final Identifier IMAGE_CIRCLE = academy("core/image_circle");
             public static final Identifier MSDF_TEXT = academy("core/msdf_text");
             public static final Identifier HELLFLARE_STEAM = academy("core/hellflare_steam");
+            public static final Identifier POS_COLOR = academy("core/pos_color");
 
             private Fragment() {
             }
@@ -131,6 +132,7 @@ public final class Resource {
         public static final Identifier STORM_WING_ICON = academy("textures/ability/accelerator/skill/storm_wing/icon.png");
         public static final Identifier PLASMA_GENERATION_ICON = academy("textures/ability/accelerator/skill/plasma_generation/icon.png");
         public static final Identifier DIR_STRIKE_ICON = academy("textures/ability/accelerator/skill/dir_strike/icon.png");
+        public static final Identifier STORM_WING = academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
         /**
          * Imag Phase Dowsing Rod
          */

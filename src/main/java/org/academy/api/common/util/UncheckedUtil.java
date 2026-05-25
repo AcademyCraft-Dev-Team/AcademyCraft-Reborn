@@ -4,13 +4,12 @@ import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings("unchecked")
 public final class UncheckedUtil {
-    @Nullable
-    public static <T> Class<T> uncheckedCast(@Nullable Class<?> clazz) {
-        return (Class<T>) clazz;
+    public static <T> T uncheckedCast(Object o) {
+        return (T) o;
     }
 
     @Nullable
-    public static <T> T uncheckedCast(@Nullable Object o) {
+    public static <T> T uncheckedCastNullable(@Nullable Object o) {
         return (T) o;
     }
 

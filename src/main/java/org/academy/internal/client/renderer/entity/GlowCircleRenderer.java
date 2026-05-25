@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.academy.api.client.Render;
-import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.internal.client.renderer.entity.state.GlowCircleRenderState;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -23,18 +22,12 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
         super(context);
     }
 
-    private float alphaCurve(float p) {
-        return (float) Math.sqrt(Math.sin(p * Math.PI));
-    }
-
     private float sizeCurve(float p) {
         return MAX_RADIUS * (float) Math.sin(p * Math.PI);
     }
 
     @Override
     public void submit(GlowCircleRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        if (IrisCompat.isShadowRendererActive()) return;
-
         var yaw = renderState.yRot;
         var pitch = renderState.xRot;
         var distortionStrength = 0.025f;
