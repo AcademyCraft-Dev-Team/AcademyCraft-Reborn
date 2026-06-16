@@ -3,12 +3,14 @@ package org.academy.api.client.gui.render
 import com.mojang.blaze3d.vertex.PoseStack
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.command.SubmittedCommand
+import org.joml.Quaternionfc
 import java.util.*
 import java.util.function.Supplier
 
 class RenderContext {
     val commands: MutableList<SubmittedCommand> = ArrayList<SubmittedCommand>()
-    private val pose: PoseStack = PoseStack()
+    private val pose = PoseStack()
+    private val pose2D = PoseStack2D()
     private val scissorStack: ScissorStack
     private val drawOrderStack: DrawOrderStack
     private val alphaStack: AlphaStack
@@ -26,8 +28,8 @@ class RenderContext {
         commands.add(SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder))
     }
 
-    fun pose(): PoseStack {
-        return pose
+    fun pose(): PoseStack2D {
+        return pose2D
     }
 
     fun drawOrder(): DrawOrderStack {
@@ -53,6 +55,32 @@ class RenderContext {
         commands.clear()
         drawOrderStack.clear()
         alphaStack.clear()
+    }
+
+    inner class PoseStack2D {
+        fun translate(x: Float, y: Float) {
+            last().translate(x, y, 0f)
+        }
+
+        fun scale(x: Float, y: Float) {
+            last().scale(x, y, 1f)
+        }
+
+        fun mulPose(by: Quaternionfc) {
+            last().rotate(by)
+        }
+
+        fun pushPose() {
+            pose.pushPose()
+        }
+
+        fun popPose() {
+            pose.popPose()
+        }
+
+        fun last(): PoseStack.Pose {
+            return pose.last()
+        }
     }
 
     class AlphaStack {
@@ -96,8 +124,8 @@ class RenderContext {
             if (stack.size > 1) stack.pop()
         }
 
-        fun advance() {
-            stack.push(stack.pop() + 1)
+        fun advance(x: Int = 1) {
+            stack.push(stack.pop() + x)
         }
 
         fun peek(): Int {
@@ -133,11 +161,6 @@ class RenderContext {
 
         fun peek(): ScissorRect? {
             return stack.peekLast()
-        }
-
-        fun containsPoint(x: Int, y: Int): Boolean {
-            if (stack.isEmpty()) return true
-            return stack.peekLast().containsPoint(x, y)
         }
     }
 }

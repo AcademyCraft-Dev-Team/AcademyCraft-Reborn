@@ -26,7 +26,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
         );
         var progress = MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5) * 0.1f;
         poseStack.scale(progress, 50, progress);
-        CylinderRenderer.renderCylinder(poseStack, PostEffect.BUFFER_SOURCE_PRE, BUFFERED_VERTEX, 0.75f, 0.5f, 0, 1f);
+        CylinderRenderer.renderCylinder(poseStack, PostEffect.getPre(), BUFFERED_VERTEX, 0.75f, 0.5f, 0, 1f);
         poseStack.popPose();
     }
 

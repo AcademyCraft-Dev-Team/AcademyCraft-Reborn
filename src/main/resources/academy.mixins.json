@@ -15,7 +15,7 @@
   ],
   "client": [
     "client.MixinGameRenderer",
-    "client.MixinGui",
+    "client.MixinHud",
     "client.MixinKeyboardHandler",
     "client.MixinLevelRenderer",
     "client.MixinLivingEntityRenderer",

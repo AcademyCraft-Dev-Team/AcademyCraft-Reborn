@@ -2,12 +2,9 @@ package org.academy.api.client.renderer;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.render.MatrixStack;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
 import java.util.Map;
@@ -40,53 +37,36 @@ public final class LineBoxRenderer {
         };
     }
 
-    public static void renderWireframeBox(MatrixStack poseStack, MultiBufferSource bufferSource, AABB box,
+    public static void renderWireframeBox(MatrixStack poseStack, VertexConsumer vertexConsumer, AABB box,
                                           float r, float g, float b, float a) {
         var vertices = getVertices(box);
-        var vertexConsumer = bufferSource.getBuffer(RenderTypes.LINES);
         var matrix4f = poseStack.lastMatrix();
-        var matrix3f = poseStack.lastNormal();
 
         for (var edge : EDGES) {
             var v1 = vertices[edge[0]];
             var v2 = vertices[edge[1]];
-            drawLine(vertexConsumer, matrix4f, matrix3f, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], r, g, b, a);
+            drawLine(vertexConsumer, matrix4f, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], r, g, b, a);
         }
     }
 
-    public static void renderFace(MatrixStack poseStack, MultiBufferSource bufferSource, AABB box, Direction face,
+    public static void renderFace(MatrixStack poseStack, VertexConsumer vertexConsumer, AABB box, Direction face,
                                   float r, float g, float b, float a) {
         var vertices = getVertices(box);
         var faceIndices = FACE_EDGES.get(face);
         if (faceIndices == null) return;
 
-        var vertexConsumer = bufferSource.getBuffer(RenderTypes.LINES);
         var matrix4f = poseStack.lastMatrix();
-        var matrix3f = poseStack.lastNormal();
 
         for (var i = 0; i < faceIndices.length; i++) {
             var v1 = vertices[faceIndices[i]];
             var v2 = vertices[faceIndices[(i + 1) % faceIndices.length]];
-            drawLine(vertexConsumer, matrix4f, matrix3f, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], r, g, b, a);
+            drawLine(vertexConsumer, matrix4f, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], r, g, b, a);
         }
     }
 
-    private static void drawLine(VertexConsumer vc, Matrix4f mat, Matrix3f normMat,
+    private static void drawLine(VertexConsumer vc, Matrix4f mat,
                                  float x1, float y1, float z1, float x2, float y2, float z2,
                                  float r, float g, float b, float a) {
-        var nx = x2 - x1;
-        var ny = y2 - y1;
-        var nz = z2 - z1;
-        var len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
-        if (len > 1e-6f) {
-            nx /= len;
-            ny /= len;
-            nz /= len;
-        } else {
-            nx = 0;
-            ny = 1;
-            nz = 0;
-        }
         var lineWidth = Minecraft.getInstance().getWindow().getAppropriateLineWidth();
         vc.addVertex(mat, x1, y1, z1)
                 .setColor(r, g, b, a)

@@ -219,7 +219,7 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         run {
             context.pose().pushPose()
             run {
-                context.pose().translate(-scrollX, -scrollY, 0f)
+                context.pose().translate(-scrollX, -scrollY)
                 if (content != null && content!!.isVisible()) {
                     renderChildren(context)
                 }

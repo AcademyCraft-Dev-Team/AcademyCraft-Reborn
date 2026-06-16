@@ -62,7 +62,10 @@ public class BallLightning extends Skill {
 
     public BallLightning() {
         super(Builder.of(AbilityCategories.ELECTROMASTER.get())
-                .level(AbilityLevel.LEVEL4)
+                .level(AbilityLevel.LEVEL5)
+                .cpCost(80)
+                .iterationTicks(60)
+                .maxStacks(1)
         );
     }
 
@@ -83,7 +86,7 @@ public class BallLightning extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {

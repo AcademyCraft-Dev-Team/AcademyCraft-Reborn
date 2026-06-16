@@ -25,6 +25,7 @@ public class GenericConfig {
             defaultConfig.booleanMap.put("destroyBlocks", true);
             defaultConfig.booleanMap.put("genOres", true);
             defaultConfig.booleanMap.put("genPhaseLiquid", true);
+            defaultConfig.booleanMap.put("devMode", false);
             return defaultConfig;
         }
 

@@ -12,6 +12,8 @@ import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.msdf.atlas.MsdfAtlasDebugger
+import org.academy.api.client.gui.msdf.font.MsdfFontService
 import org.academy.api.client.gui.screen.ContainerUiScreen
 import org.academy.api.client.gui.util.InfoAreaUtil.create
 import org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow
@@ -41,13 +43,17 @@ class WirelessNodeScreen(
 ) : ContainerUiScreen<WirelessNodeMenu>(menu, playerInventory, title) {
     private val mainPos: BlockPos = wirelessNodeBlockEntity.blockPos
     private var ticks = 0
-    private var energyValueSetter = Consumer { `_`: String -> }
-    private var capacityValueSetter = Consumer { `_`: String -> }
-    private var rangeValueSetter = Consumer { `_`: String -> }
+    private var energyValueSetter =  { _: String -> }
+    private var capacityValueSetter =  { _: String -> }
+    private var rangeValueSetter =  { _: String -> }
 
     init {
-
         NeoForge.EVENT_BUS.register(this)
+/*        for (msdfFont in MsdfFontService.loadedFonts.values) {
+            MsdfAtlasDebugger.dumpAtlas(msdfFont.atlas,
+                msdfFont.descriptor.identifier.path.length.toString()
+            )
+        }*/
     }
 
     override fun onClose() {
@@ -202,9 +208,9 @@ class WirelessNodeScreen(
     private fun updateInfo() {
         ticks++
 
-        capacityValueSetter.accept(wirelessNodeBlockEntity.connectedUsersCount.toString() + " / " + wirelessNodeBlockEntity.maxConnectedUsers)
-        energyValueSetter.accept(WindGenScreen.AF.format(wirelessNodeBlockEntity.energyStored))
-        rangeValueSetter.accept(wirelessNodeBlockEntity.radius.toString() + "")
+        capacityValueSetter(wirelessNodeBlockEntity.connectedUsersCount.toString() + " / " + wirelessNodeBlockEntity.maxConnectedUsers)
+        energyValueSetter(WindGenScreen.AF.format(wirelessNodeBlockEntity.energyStored))
+        rangeValueSetter(wirelessNodeBlockEntity.radius.toString() + "")
     }
 
     override fun containerTick() {

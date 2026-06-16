@@ -1,6 +1,7 @@
 package org.academy;
 
 import com.google.common.reflect.TypeToken;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.irisshaders.iris.pipeline.IrisPipelines;
 import net.irisshaders.iris.pipeline.programs.ShaderKey;
@@ -77,7 +78,7 @@ public final class AcademyCraftClient {
         ScreenDispatcher.Companion.init();
         HUDManager.INSTANCE.initRender();
 
-        MsdfFontService.INSTANCE.genDefaultGlyph();
+        MsdfFontService.genDefaultGlyph();
 
         if (IrisCompat.hasIris()) {
             IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_QUADS, ShaderKey.BASIC_COLOR);
@@ -118,7 +119,9 @@ public final class AcademyCraftClient {
     public static void onClientStopped(ClientStoppedEvent event) {
         ImGuiUtilApi.INSTANCE.close();
         MsdfFontService.INSTANCE.close();
-        MsdfAtlasManager.INSTANCE.closeAll();
+        MsdfAtlasManager.closeAll();
+        PostEffect.close();
+        BloomEffect.getInstance().close();
     }
 
     @SubscribeEvent
@@ -132,7 +135,6 @@ public final class AcademyCraftClient {
                     blockOutlineRenderState,
                     bufferSource,
                     poseStack,
-                    _,
                     levelRenderState
             ) -> {
                 poseStack.pushPose();
@@ -148,12 +150,17 @@ public final class AcademyCraftClient {
                     poseStack.translate(0, 1 / 16f, 0);
                 }
                 poseStack.mulPose(Axis.YN.rotationDegrees(22.5f));
-                CylinderRenderer.renderCylinderWireframe(
-                        poseStack,
-                        bufferSource.getBuffer(RenderTypes.lines()),
-                        WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER,
-                        0, 0, 0, 0.4f
-                );
+                bufferSource.submitCustomGeometry(poseStack, RenderTypes.lines(), (pose, buffer) -> {
+                    var ps = new PoseStack();
+                    ps.last().set(pose);
+                    CylinderRenderer.renderCylinderWireframe(
+                            ps,
+                            buffer,
+                            WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER,
+                            0, 0, 0, 0.4f
+                    );
+                });
+
                 poseStack.popPose();
                 return pillar || (
                         base && (state.getValue(MultiBlock.TYPE) == MultiBlock.MultiBlockType.SUBJECT)

@@ -15,11 +15,13 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -43,7 +45,10 @@ public class DirStrike extends Skill {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL3)
-                .dependsOn(Skills.VECTOR_REFLECTION)
+                .cpCost(75)
+                .iterationTicks(5)
+                .maxStacks(1)
+                .dependsOn(Skills.DIRECTED_SHOCK)
         );
     }
 
@@ -52,6 +57,7 @@ public class DirStrike extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, new InputSystem.InputPair(
                 InputSystem.InputType.KEYBOARD,
@@ -69,7 +75,7 @@ public class DirStrike extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
@@ -79,6 +85,14 @@ public class DirStrike extends Skill {
         public static void onAction() {
             if (Minecraft.getInstance().player == null) return;
             MisakaNetworkClient.sendPacket(ActionPacket.INSTANCE);
+            var p = Minecraft.getInstance().player;
+            var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
+                    (float) p.getX(), (float) p.getY() + 0.5f, (float) p.getZ());
+            emitter.setColor(0.9f, 0.7f, 0.2f);
+            emitter.setEmissionRate(0);
+            emitter.burst(30);
+            emitter.setLifetime(1.5f, 0.5f);
+            emitter.setVelocity(1.5f, 0.5f);
         }
 
         public static class Config extends KeyBindingConfig {

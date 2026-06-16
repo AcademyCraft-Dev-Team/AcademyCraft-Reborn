@@ -1,5 +1,7 @@
 package org.academy.api.client.hud.terminal
 
+import com.mojang.blaze3d.GpuFormat
+import com.mojang.blaze3d.PrimitiveTopology
 import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
@@ -9,7 +11,6 @@ import com.mojang.blaze3d.resource.RenderTargetDescriptor
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuTextureView
-import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import net.minecraft.util.Mth
@@ -75,23 +76,22 @@ class TerminalHUD private constructor() {
     private var viewMarginRight = 32f
 
     @Volatile
-    private var xpos = 0.0
+    private var xPos = 0.0
 
     @Volatile
-    private var ypos = 0.0
-    private var startXpos = 0.0
-    private var startYpos = 0.0
+    private var yPos = 0.0
+    private var startXPos = 0.0
+    private var startYPos = 0.0
 
     init {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE)
         val config: TerminalConfig = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY)
 
-        val toggleKeys = LinkedHashSet<Int>()
-        toggleKeys.add(GLFW.GLFW_KEY_RIGHT_ALT)
         val defaultKey = InputPair(
             InputSystem.InputType.KEYBOARD,
             InputSystem.KeyInfo(
-                toggleKeys, 0, LinkedHashSet()
+                LinkedHashSet(setOf(GLFW.GLFW_KEY_RIGHT_ALT)),
+                GLFW.GLFW_RELEASE
             )
         )
         InputSystem.addKeyBinding(
@@ -112,23 +112,31 @@ class TerminalHUD private constructor() {
                 super.generateCommands(context, rootWidget, mouseX, mouseY, partialTick)
 
                 context.pose().pushPose()
-                context.pose().translate(xpos, ypos, 1000.0)
-
-                var sdfData = SDFData(Vector4f(0f, 0f, 0f, 0.75f), 0.5f, 0.5f)
-
-                context.pose().pushPose()
+                context.drawOrder().push()
                 run {
-                    context.pose().translate(-2f, -2f, 0f)
-                    submitGlowCommand(context, 4f, sdfData)
-                }
-                context.pose().popPose()
+                    val max = context.commands.maxByOrNull { it.drawOrder }?.drawOrder ?: 0
+                    context.drawOrder().advance(max + 1)
+                    context.pose().translate(xPos.toFloat(), yPos.toFloat())
 
-                context.pose().pushPose()
-                run {
-                    context.pose().translate(-1.5f, -1.5f, 0.1f)
-                    sdfData = SDFData(Vector4f(1f, 1f, 1f, 1f), 0.5f, 0.25f)
-                    submitGlowCommand(context, 3f, sdfData)
+                    var sdfData = SDFData(Vector4f(0f, 0f, 0f, 0.75f), 0.5f, 0.5f)
+
+                    context.pose().pushPose()
+                    run {
+                        context.pose().translate(-2f, -2f)
+                        submitGlowCommand(context, 4f, sdfData)
+                    }
+                    context.pose().popPose()
+
+                    context.pose().pushPose()
+                    run {
+                        context.drawOrder().advance()
+                        context.pose().translate(-1.5f, -1.5f)
+                        sdfData = SDFData(Vector4f(1f, 1f, 1f, 1f), 0.5f, 0.25f)
+                        submitGlowCommand(context, 3f, sdfData)
+                    }
+                    context.pose().popPose()
                 }
+                context.drawOrder().pop()
                 context.pose().popPose()
             }
 
@@ -168,13 +176,13 @@ class TerminalHUD private constructor() {
             val m = mc.mouseHandler
             val width = w.guiScaledWidth
             val height = w.guiScaledHeight
-            xpos = width / 2.0
-            ypos = height / 2.0
+            xPos = width / 2.0
+            yPos = height / 2.0
             GLFW.glfwSetCursorPos(w.handle(), w.width / 2.0, w.height / 2.0)
-            startXpos = m.xpos
-            startYpos = m.ypos
+            startXPos = m.xpos
+            startYPos = m.ypos
             context.get().requestLayout()
-        } else GLFW.glfwSetCursorPos(w.handle(), startXpos, startYpos)
+        } else GLFW.glfwSetCursorPos(w.handle(), startXPos, startYPos)
     }
 
     @MainThread
@@ -193,7 +201,7 @@ class TerminalHUD private constructor() {
 
         val desc = RenderTargetDescriptor(
             width, height,
-            true, 0
+            true, Vector4f(0f), GpuFormat.RGBA8_UNORM
         )
         val terminalTarget = Render.Buffers.getResourcePool().acquire(desc)
 
@@ -217,7 +225,7 @@ class TerminalHUD private constructor() {
 
             commandEncoder.createRenderPass(
                 { "Blit Pass to $color $depth" },
-                color, OptionalInt.empty(), depth, OptionalDouble.empty()
+                color, Optional.empty(), depth, OptionalDouble.empty()
             ).use { renderPass ->
                 renderPass.setPipeline(Render.RenderPipelines.IMAGE_STENCIL_PREMULTIPLIED_ALPHA)
                 renderPass.bindTexture(
@@ -228,10 +236,10 @@ class TerminalHUD private constructor() {
                 renderPass.setUniform("Projection", projectionUBSlice)
                 renderPass.setUniform("DynamicTransforms", dynamicTransformsSlice)
 
-                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().fsQuadUvColorVBSDC)
-                val sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS)
+                renderPass.setVertexBuffer(0, Render.Buffers.getInstance().fsQuadUvColorVBSDC.slice())
+                val sequentialBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS)
                 renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type())
-                renderPass.drawIndexed(0, 0, 6, 1)
+                renderPass.drawIndexed(6, 1, 0, 0, 0)
             }
             drewStencil.set(true)
         } finally {
@@ -252,8 +260,8 @@ class TerminalHUD private constructor() {
 
         viewMatrix.translate(0f, 0f, 0f)
 
-        val dx = (xpos - guiWidth - viewMarginRight - MAIN_WIDTH / 2f).toFloat()
-        val dy = (ypos - guiHeight / 2.0f).toFloat()
+        val dx = (xPos - guiWidth - viewMarginRight - MAIN_WIDTH / 2f).toFloat()
+        val dy = (yPos - guiHeight / 2.0f).toFloat()
 
         val rotateY = Mth.lerp(viewStateProgress, dx * 0.05f - 5, 0f)
         val rotateX = Mth.lerp(viewStateProgress, -dy * 0.05f - 1, 0f)
@@ -278,7 +286,7 @@ class TerminalHUD private constructor() {
     }
 
     @SubscribeEvent
-    fun onTick(event: ClientTickEvent.Post) {
+    fun onTick(@Suppress("unused") event: ClientTickEvent.Post) {
         context.get().tick()
     }
 
@@ -289,13 +297,13 @@ class TerminalHUD private constructor() {
             val deltaGuiX = event.xpos / guiScale
             val deltaGuiY = event.ypos / guiScale
             val window = Minecraft.getInstance().window
-            xpos = Mth.clamp(deltaGuiX, 0.0, window.guiScaledWidth.toDouble())
-            ypos = Mth.clamp(deltaGuiY, 0.0, window.guiScaledHeight.toDouble())
-            context.get().dispatchEvent(createMoveEvent(xpos, ypos))
+            xPos = Mth.clamp(deltaGuiX, 0.0, window.guiScaledWidth.toDouble())
+            yPos = Mth.clamp(deltaGuiY, 0.0, window.guiScaledHeight.toDouble())
+            context.get().dispatchEvent(createMoveEvent(xPos, yPos))
             if (InputSystem.currentMouseAction == 1 || InputSystem.currentMouseAction == 2) {
                 context.get().dispatchEvent(
                     createDragEvent(
-                        xpos, ypos, InputSystem.currentMouseButton, deltaGuiX, deltaGuiY
+                        xPos, yPos, InputSystem.currentMouseButton, deltaGuiX, deltaGuiY
                     )
                 )
             }
@@ -312,15 +320,15 @@ class TerminalHUD private constructor() {
 
     @SubscribeEvent
     fun onMouseButton(event: MouseButtonEvent) {
-        if (isActive && Minecraft.getInstance().screen == null) {
+        if (isActive && Minecraft.getInstance().gui.screen() == null) {
             InputSystem.currentMouseButton = event.button
             InputSystem.currentMouseAction = event.action
             InputSystem.currentMouseModifier = event.modifiers
             val inputEvent =
                 if (event.action == 1)
-                    createPressEvent(xpos, ypos, event.button)
+                    createPressEvent(xPos, yPos, event.button)
                 else
-                    createReleaseEvent(xpos, ypos, event.button)
+                    createReleaseEvent(xPos, yPos, event.button)
             context.get().dispatchEvent(inputEvent)
             event.setCanceled(true)
         }
@@ -333,7 +341,7 @@ class TerminalHUD private constructor() {
             val d0 = ((if (options.discreteMouseScroll().get()) sign(event.yOffset) else
                 event.yOffset
                     ) * options.mouseWheelSensitivity().get())
-            context.get().dispatchEvent(ScrollEvent(xpos, ypos, d0))
+            context.get().dispatchEvent(ScrollEvent(xPos, yPos, d0))
             event.setCanceled(true)
         }
     }
@@ -355,7 +363,7 @@ class TerminalHUD private constructor() {
     }
 
     @SubscribeEvent
-    fun onScreenChange(event: ScreenEvent.Opening) {
+    fun onScreenChange(@Suppress("unused") event: ScreenEvent.Opening) {
         if (isActive) toggleActive()
     }
 

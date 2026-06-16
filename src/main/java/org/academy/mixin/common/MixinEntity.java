@@ -11,19 +11,19 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin(Entity.class)
 public abstract class MixinEntity {
 
-    @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true)
-    private float academy$amplifyQuantumDamage(float amount, DamageSource source) {
-        if (amount <= 0) return amount;
+    @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, name = "damage")
+    private float academy$amplifyQuantumDamage(float damage, DamageSource source) {
+        if (damage <= 0) return damage;
         if ((Object) this instanceof LivingEntity self) {
-            if (self.level().isClientSide()) return amount;
+            if (self.level().isClientSide()) return damage;
             var data = self.getData(AttachmentTypes.QUANTUM_DATA.get());
 
             //量子易伤：+15%
             if (data.active()) {
-                return amount * 1.15f;
+                return damage * 1.15f;
             }
         }
 
-        return amount;
+        return damage;
     }
 }

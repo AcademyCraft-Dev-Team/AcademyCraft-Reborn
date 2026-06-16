@@ -47,6 +47,11 @@ public final class Resource {
             public static final Identifier MSDF_TEXT = academy("core/msdf_text");
             public static final Identifier HELLFLARE_STEAM = academy("core/hellflare_steam");
             public static final Identifier POS_COLOR = academy("core/pos_color");
+            public static final Identifier PARTICLE_ADDITIVE = academy("core/particle_additive");
+            public static final Identifier SHOCKWAVE = academy("core/shockwave");
+            public static final Identifier TRAIL = academy("core/trail");
+            public static final Identifier AURA_FIELD = academy("core/aura_field");
+            public static final Identifier SPATIAL_DISTORTION = academy("core/spatial_distortion");
 
             private Fragment() {
             }
@@ -57,7 +62,6 @@ public final class Resource {
     }
 
     public static final class Textures {
-        public static final Identifier ARC = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
         /**
          * Ability Developer
          */
@@ -114,6 +118,7 @@ public final class Resource {
         public static final Identifier ICON_INV = academy("textures/gui/icon/icon_inv.png");
         public static final Identifier ICON_WIRELESS = academy("textures/gui/icon/icon_wireless.png");
         public static final Identifier ICON_BOX = academy("textures/gui/icon/icon_box.png");
+        public static final Identifier ICON_CLOSE = academy("textures/gui/icon/icon_close.png");
         /**
          * Terminal
          */
@@ -122,6 +127,7 @@ public final class Resource {
         /**
          * Electromaster
          */
+        public static final Identifier ARC = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
         public static final Identifier RAILGUN_ICON = academy("textures/ability/electromaster/skill/railgun/icon.png");
         public static final Identifier ARC_GENERATE_ICON = academy("textures/ability/electromaster/skill/railgun/icon.png");
         /**

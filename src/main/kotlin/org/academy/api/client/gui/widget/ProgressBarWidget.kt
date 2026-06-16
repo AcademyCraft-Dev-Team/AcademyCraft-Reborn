@@ -73,7 +73,7 @@ open class ProgressBarWidget : AbstractWidget() {
             val progressHeight = height * ratio
             if (progressHeight > 0) {
                 context.pose().pushPose()
-                context.pose().translate(0f, height - progressHeight, 0.1f)
+                context.pose().translate(0f, height - progressHeight)
                 context.submit(
                     generateProgressDrawCommand(
                         width,

@@ -3,18 +3,17 @@ package org.academy.api.client.gui.render
 import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.vertex.BufferBuilder
+import com.mojang.blaze3d.vertex.MeshData
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import org.academy.api.client.Render.Buffers.getByteBufferBuilder
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformBinding
 import org.academy.api.client.render.UniformPayload
-import org.joml.Matrix4f
 
 object BatchProcessor {
     fun process(
         commands: MutableList<SubmittedCommand>,
-        depthEpsilon: Float,
         uploader: UboUploader
     ): List<PendingBatch> {
         if (commands.isEmpty()) return mutableListOf()
@@ -31,7 +30,7 @@ object BatchProcessor {
         val firstCommand = iterator.next()
         val state = BatchState(firstCommand)
 
-        applyVertices(state.builder, firstCommand, depthEpsilon)
+        applyVertices(state, firstCommand)
 
         while (iterator.hasNext()) {
             val command = iterator.next()
@@ -41,7 +40,7 @@ object BatchProcessor {
                 state.reset(command)
             }
 
-            applyVertices(state.builder, command, depthEpsilon)
+            applyVertices(state, command)
         }
 
         finishBatch(batches, state, uploader)
@@ -50,11 +49,6 @@ object BatchProcessor {
     }
 
     private fun compareCommands(c1: SubmittedCommand, c2: SubmittedCommand): Int {
-        val pose1 = c1.pose.pose().m32()
-        val pose2 = c2.pose.pose().m32()
-        val zCompare = pose1.toDouble().compareTo(pose2.toDouble())
-        if (zCompare != 0) return zCompare
-
         val orderCompare = c1.drawOrder.toLong().compareTo(c2.drawOrder.toLong())
         if (orderCompare != 0) return orderCompare
 
@@ -73,16 +67,23 @@ object BatchProcessor {
         return s1.compareTo(s2)
     }
 
-    private fun applyVertices(builder: BufferBuilder, submittedCommand: SubmittedCommand, depthEpsilon: Float) {
+    private fun applyVertices(state: BatchState, submittedCommand: SubmittedCommand) {
         val command = submittedCommand.command
-        val pose = submittedCommand.pose.pose()
-        val sequenceId = submittedCommand.drawOrder
+        val pose = submittedCommand.pose
 
-        if (sequenceId > 0 && depthEpsilon > 0) {
-            val tempPose = Matrix4f(pose)
-            tempPose.translate(0f, 0f, sequenceId * depthEpsilon)
-            command.generateVertices(builder, tempPose)
-        } else command.generateVertices(builder, pose)
+        if (state.builders.size == 1) {
+            command.generateVertices(state.builders[0], pose)
+        } else {
+            val instancing = command.isGeometryFixed()
+            if (!instancing || state.instanceCount == 0) {
+                command.generateVertices(state.builders[0], pose)
+            }
+            for (i in 1 until state.builders.size) {
+                val slot = state.slotIndices[i]
+                command.generateInstanceData(slot, state.builders[i], if (instancing) state.instanceCount else 0, pose)
+            }
+            if (instancing) state.instanceCount++ else state.instanceCount = 1
+        }
     }
 
     private fun finishBatch(
@@ -90,15 +91,36 @@ object BatchProcessor {
         state: BatchState,
         uploader: UboUploader
     ) {
-        val meshData = state.builder.build()
-        if (meshData != null) {
-            val bindings = ArrayList<UniformBinding>(state.uniforms.size)
-            for (payload in state.uniforms) {
-                val slice = uploader.upload(payload)
-                bindings.add(UniformBinding(payload.name, slice))
+        val meshDataList = ArrayList<MeshData>()
+        for (builder in state.builders) {
+            val mesh = builder.build()
+            if (mesh == null && state.builders.size > 1) {
+                meshDataList.forEach { it.close() }
+                return
             }
-            batches.add(PendingBatch(meshData, state.pipeline, state.scissor, state.textures, bindings))
+            if (mesh != null) {
+                meshDataList.add(mesh)
+            }
         }
+
+        if (meshDataList.isEmpty()) return
+
+        val bindings = ArrayList<UniformBinding>(state.uniforms.size)
+        for (payload in state.uniforms) {
+            val slice = uploader.upload(payload)
+            bindings.add(UniformBinding(payload.name, slice))
+        }
+
+        val indexCount = meshDataList[0].drawState().indexCount()
+        val vertexStride = meshDataList[0].drawState().format().vertexSize
+        val instanceCount = if (state.builders.size > 1) state.instanceCount else 1
+
+        batches.add(
+            PendingBatch(
+                meshDataList, state.slotIndices, state.pipeline, state.scissor,
+                state.textures, bindings, indexCount, vertexStride, instanceCount
+            )
+        )
     }
 
     interface UboUploader {
@@ -110,7 +132,9 @@ object BatchProcessor {
         var scissor: ScissorRect? = null
         var textures: List<TextureBinding>
         var uniforms: List<UniformPayload<*>>
-        var builder: BufferBuilder
+        var builders: List<BufferBuilder>
+        var slotIndices: List<Int>
+        var instanceCount: Int
 
         private var resourceKey: Long = 0
 
@@ -121,11 +145,17 @@ object BatchProcessor {
             resourceKey = initialCommand.resourceKey
             textures = innerCommand.textures
             uniforms = innerCommand.uniforms
-            builder = BufferBuilder(
-                getByteBufferBuilder(),
-                pipeline.vertexFormatMode,
-                pipeline.vertexFormat
-            )
+
+            val activeSlots = pipeline.vertexFormatBindings
+                .mapIndexedNotNull { index, format -> if (format != null) index else null }
+            slotIndices = activeSlots
+
+            builders = activeSlots.map { slot ->
+                val format = pipeline.getVertexFormatBinding(slot)!!
+                BufferBuilder(getByteBufferBuilder(), pipeline.primitiveTopology, format)
+            }
+
+            instanceCount = if (activeSlots.size > 1 && innerCommand.isGeometryFixed()) 0 else 1
         }
 
         fun reset(command: SubmittedCommand) {
@@ -135,16 +165,26 @@ object BatchProcessor {
             resourceKey = command.resourceKey
             textures = innerCommand.textures
             uniforms = innerCommand.uniforms
-            builder = BufferBuilder(
-                getByteBufferBuilder(),
-                pipeline.vertexFormatMode,
-                pipeline.vertexFormat
-            )
+
+            val activeSlots = pipeline.vertexFormatBindings
+                .mapIndexedNotNull { index, format -> if (format != null) index else null }
+            slotIndices = activeSlots
+
+            builders = activeSlots.map { slot ->
+                val format = pipeline.getVertexFormatBinding(slot)!!
+                BufferBuilder(getByteBufferBuilder(), pipeline.primitiveTopology, format)
+            }
+
+            instanceCount = if (activeSlots.size > 1 && innerCommand.isGeometryFixed()) 0 else 1
         }
 
         fun shouldBreakBatch(nextCommand: SubmittedCommand): Boolean {
             val nextInner = nextCommand.command
-            return nextInner.pipeline !== pipeline || nextCommand.resourceKey != resourceKey || (nextCommand.scissorRect != scissor)
+            if (nextInner.pipeline !== pipeline || nextCommand.resourceKey != resourceKey || nextCommand.scissorRect != scissor) return true
+            if (builders.size > 1) {
+                return !nextInner.isGeometryFixed()
+            }
+            return false
         }
     }
 }

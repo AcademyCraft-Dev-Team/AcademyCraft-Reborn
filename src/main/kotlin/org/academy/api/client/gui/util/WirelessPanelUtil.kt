@@ -106,7 +106,7 @@ object WirelessPanelUtil {
         nodeList: LinearLayoutWidget
     ) {
         val requestPayload = GetCurrentNodePacket(position)
-        MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(
+        MisakaNetworkClient.FUTURE_MANAGER.send(
             requestPayload,
             Consumer { response: GetCurrentNodePacket.Response? ->
                 if (response == null) return@Consumer
@@ -128,7 +128,7 @@ object WirelessPanelUtil {
         nodeList: LinearLayoutWidget
     ) {
         val requestPayload = GetAvailableNodesPacket(position)
-        MisakaNetworkClient.FUTURE_MANAGER.sendRequestToServer(
+        MisakaNetworkClient.FUTURE_MANAGER.send(
             requestPayload,
             Consumer { response ->
                 if (response == null) return@Consumer
@@ -191,7 +191,7 @@ object WirelessPanelUtil {
                     .gravity(Gravity.CENTER_VERTICAL)
                 itemContent.addChild("node_name", nodeNameLabel)
                 if (!isConnected) {
-                    val connectAction =  { password: String ->
+                    val connectAction = { password: String ->
                         MisakaNetworkClient.sendPacket(
                             ConnectNodePacket(
                                 position,

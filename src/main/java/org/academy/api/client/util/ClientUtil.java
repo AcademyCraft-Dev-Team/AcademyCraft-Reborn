@@ -15,11 +15,11 @@ public final class ClientUtil {
     }
 
     public static boolean hasScreen() {
-        return Minecraft.getInstance().screen != null;
+        return Minecraft.getInstance().gui.screen() != null;
     }
 
     public static boolean hasNoScreen() {
-        return Minecraft.getInstance().screen == null;
+        return Minecraft.getInstance().gui.screen() == null;
     }
 
     public static boolean lacksSkill(Skill skill) {

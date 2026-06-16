@@ -17,12 +17,11 @@ public abstract class MixinLivingEntityRenderer<S extends LivingEntityRenderStat
     @ModifyVariable(
             method = "getRenderType",
             at = @At("HEAD"),
-            ordinal = 1,
-            argsOnly = true
-    )
-    private boolean getRenderType(boolean value, @Local(argsOnly = true, ordinal = 0) S state) {
+            argsOnly = true,
+            name = "forceTransparent")
+    private boolean getRenderType(boolean forceTransparent, @Local(argsOnly = true, name = "state") S state) {
         var quantum = state.getRenderData(QuantumInterferenceLayer.CONTEXT_KEY);
-        return value || (quantum != null && quantum.active());
+        return forceTransparent || (quantum != null && quantum.active());
     }
 
     @Inject(method = "getModelTint", at = @At("HEAD"), cancellable = true)

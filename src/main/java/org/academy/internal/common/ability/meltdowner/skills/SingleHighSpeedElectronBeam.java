@@ -7,12 +7,15 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
@@ -33,11 +36,15 @@ public class SingleHighSpeedElectronBeam extends Skill {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL1)
+                .cpCost(30)
+                .iterationTicks(4)
+                .maxStacks(1)
         );
     }
 
     @Override
     public void initClient() {
+        RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
         var skillKeyConfig = AcademyCraftClient.Config.INSTANCE.<Client.Config>getConfig(key);
@@ -57,14 +64,20 @@ public class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
         public static final String KEY_NAME_SHOOT = SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM + "_shoot";
 
         public static void handleKey() {
+            if (!org.academy.api.client.ability.AbilitySystemClient.canUseSkill(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()))
+                return;
             MisakaNetworkClient.sendPacket(ShootPacket.INSTANCE);
+            var p = net.minecraft.client.Minecraft.getInstance().player;
+            if (p == null) return;
+            TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.06f, 0.9f, 0.5f, 0.1f)
+                    .addPoint((float) p.getX(), (float) p.getEyeY(), (float) p.getZ());
         }
 
         public static class Config extends KeyBindingConfig {

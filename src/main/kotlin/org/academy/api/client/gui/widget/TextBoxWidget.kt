@@ -102,7 +102,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         val finalY = lp.paddingTop + alignmentOffsetY
 
         context.pose().pushPose()
-        context.pose().translate(finalX, finalY, 0f)
+        context.pose().translate(finalX, finalY)
         context.submit(
             FillRectDrawCommand(
                 0.5f,
@@ -155,7 +155,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         val finalY = lp.paddingTop + alignmentOffsetY
 
         context.pose().pushPose()
-        context.pose().translate(finalX, finalY, 0f)
+        context.pose().translate(finalX, finalY)
         context.submit(
             FillRectDrawCommand(
                 selectionWidth,

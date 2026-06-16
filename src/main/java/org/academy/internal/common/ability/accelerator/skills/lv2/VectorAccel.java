@@ -1,10 +1,12 @@
 package org.academy.internal.common.ability.accelerator.skills.lv2;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.StagedVertexBuffer;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -28,13 +30,17 @@ import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
+import org.academy.api.client.render.effect.AfterimageRenderer;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.AfterimageEffectWrapper;
+import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
@@ -61,10 +67,10 @@ public final class VectorAccel extends Skill {
     public VectorAccel() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL1)
+                .level(AbilityLevel.LEVEL2)
                 .cpCost(45)
                 .maxStacks(4)
-                .iterationTicks(80)
+                .iterationTicks(6)
         );
     }
 
@@ -73,6 +79,8 @@ public final class VectorAccel extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
+        RendererManager.registerEffectRenderer(AfterimageEffectWrapper.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
                 new InputSystem.InputPair(
@@ -98,7 +106,7 @@ public final class VectorAccel extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
@@ -110,7 +118,7 @@ public final class VectorAccel extends Skill {
 
         public static void onChargeStart() {
             var player = Minecraft.getInstance().player;
-            if (player == null || currentContext != null || Minecraft.getInstance().screen != null) {
+            if (player == null || currentContext != null || Minecraft.getInstance().gui.screen() != null) {
                 return;
             }
             currentContext = new Context(player);
@@ -152,16 +160,24 @@ public final class VectorAccel extends Skill {
             private float ringAlpha;
             private Vec3 lastCalculatedDirection = Vec3.ZERO;
             private double distance = 10;
+            private final AfterimageRenderer afterimage = new AfterimageRenderer(0.05f, 8, 2.0f);
+            private final java.util.Map<net.minecraft.client.renderer.rendertype.RenderType, StagedVertexBuffer.Draw> activeDraws = new java.util.HashMap<>();
 
             public Context(LocalPlayer player) {
                 this.player = player;
                 chargeStartTime = System.nanoTime();
+                afterimage.setActive(true);
             }
 
             public void release() {
                 if (released) return;
                 released = true;
                 MisakaNetworkClient.sendPacket(new DashPacket(chargeRatio, lastCalculatedDirection));
+                var p = player;
+                var trail = TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.12f, 0.2f, 0.6f, 1.0f);
+                trail.addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());
+                AfterimageEffectWrapper.INSTANCE.setActive(true);
+                AfterimageEffectWrapper.INSTANCE.captureAt((float) p.getX(), (float) p.getY(), (float) p.getZ());
                 cleanup();
             }
 
@@ -174,7 +190,7 @@ public final class VectorAccel extends Skill {
 
             private Vec3 calculateDashDirection(float partialTick) {
                 var mc = Minecraft.getInstance();
-                var camera = mc.gameRenderer.getMainCamera();
+                var camera = mc.gameRenderer.mainCamera();
                 var cameraPos = camera.position();
                 var lookVec = new Vec3(camera.forwardVector());
                 var farPoint = cameraPos.add(lookVec.scale(100.0));
@@ -283,10 +299,19 @@ public final class VectorAccel extends Skill {
                 }
             }
 
-            private void renderTrajectoryPath(MatrixStack matrixStack, MultiBufferSource.BufferSource bufferSource, Camera camera) {
+            private VertexConsumer getStagingVertexConsumer(StagedVertexBuffer staging, RenderType type) {
+                var draw = activeDraws.get(type);
+                if (draw == null) {
+                    draw = staging.appendDraw(type.format(), type.primitiveTopology());
+                    activeDraws.put(type, draw);
+                }
+                return staging.getVertexBuilder(draw);
+            }
+
+            private void renderTrajectoryPath(MatrixStack matrixStack, StagedVertexBuffer staging, Camera camera) {
                 if (trajectoryPath.size() < 2) return;
 
-                var buffer = bufferSource.getBuffer(RenderTypes.lightning());
+                var buffer = getStagingVertexConsumer(staging, RenderTypes.lightning());
 
                 for (var i = 0; i < trajectoryPath.size() - 1; i++) {
                     var p1 = trajectoryPath.get(i);
@@ -310,7 +335,7 @@ public final class VectorAccel extends Skill {
                 }
             }
 
-            private void renderLandingPoint(MatrixStack matrixStack, MultiBufferSource.BufferSource bufferSource) {
+            private void renderLandingPoint(MatrixStack matrixStack, StagedVertexBuffer staging) {
                 if (lastHitResult == null) return;
 
                 if (lastHitResult instanceof BlockHitResult blockHitResult) {
@@ -330,7 +355,7 @@ public final class VectorAccel extends Skill {
 
                     matrixStack.translate(0, 0.005f, 0);
 
-                    var consumer = bufferSource.getBuffer(RenderTypes.lightning());
+                    var consumer = getStagingVertexConsumer(staging, RenderTypes.lightning());
                     var matrix = matrixStack.lastMatrix();
                     var ringHeight = 0.25f;
                     var y_bottom = -ringHeight / 2.0f;
@@ -363,7 +388,7 @@ public final class VectorAccel extends Skill {
 
             @SubscribeEvent
             public void onLevelRender(LevelRenderEvent event) {
-                if (player.isRemoved() || Minecraft.getInstance().screen != null) {
+                if (player.isRemoved() || Minecraft.getInstance().gui.screen() != null) {
                     cleanup();
                     return;
                 }
@@ -372,19 +397,23 @@ public final class VectorAccel extends Skill {
                 var elapsedMillis = (currentTime - chargeStartTime) / 1_000_000;
                 chargeRatio = Mth.clamp((float) elapsedMillis / MAX_CHARGE_TIME_MS, 0f, 1f);
 
+                afterimage.update(event.getPartialTick());
+
                 lastCalculatedDirection = calculateDashDirection(event.getPartialTick());
                 simulatePath(event.getPartialTick());
 
-                var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+                var staging = Minecraft.getInstance().gameRenderer.renderBuffers().stagedVertexBuffer();
+                activeDraws.clear();
+
                 var matrixStack = event.getMatrixStack();
-                var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+                var camera = Minecraft.getInstance().gameRenderer.mainCamera();
                 var camPos = camera.position();
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
 
-                renderTrajectoryPath(matrixStack, bufferSource, camera);
-                renderLandingPoint(matrixStack, bufferSource);
+                renderTrajectoryPath(matrixStack, staging, camera);
+                renderLandingPoint(matrixStack, staging);
 
                 matrixStack.popPose();
 

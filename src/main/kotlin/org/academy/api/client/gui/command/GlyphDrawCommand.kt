@@ -3,12 +3,12 @@ package org.academy.api.client.gui.command
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuTextureView
+import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import org.academy.api.client.Render
 import org.academy.api.client.render.MsdfUniformData
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformPayload
-import org.joml.Matrix4f
 import org.joml.Vector4f
 
 class GlyphDrawCommand(
@@ -43,7 +43,7 @@ class GlyphDrawCommand(
         )
     )
 ) {
-    override fun generateVertices(consumer: VertexConsumer, pose: Matrix4f) {
+    override fun generateVertices(consumer: VertexConsumer, pose: PoseStack.Pose) {
         val x0 = x
         val y0 = y
         val y1 = y + quadHeight

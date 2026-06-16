@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessUser;
 import org.jspecify.annotations.Nullable;
 
@@ -144,7 +145,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
     }
 
     public AABB getRenderBoundingBox() {
-        var pos = getBlockPos().getCenter();
+        var pos = Vec3.atCenterOf(getBlockPos());
         var radius = 0.8;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

@@ -13,6 +13,9 @@ public final class HellFlareData extends SkillData {
     @SerializedName("phase")
     private int phase = 1;
 
+    @SerializedName("meltStacks")
+    private int meltStacks = 0;
+
     @Override
     public Identifier getType() {
         return ID;
@@ -34,8 +37,17 @@ public final class HellFlareData extends SkillData {
         this.phase = Math.clamp(phase, 1, 3);
     }
 
+    public int getMeltStacks() {
+        return meltStacks;
+    }
+
+    public void setMeltStacks(int meltStacks) {
+        this.meltStacks = meltStacks;
+    }
+
     public void reset() {
         lockTicks = 0;
         phase = 1;
+        meltStacks = 0;
     }
 }

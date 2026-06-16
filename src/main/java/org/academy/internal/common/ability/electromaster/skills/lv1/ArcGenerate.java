@@ -43,7 +43,7 @@ import java.util.Set;
 
 public final class ArcGenerate extends Skill {
     public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
-    public static final float BASE_DAMAGE = 2.0F;
+    public static final float DAMAGE_MULTIPLIER = 1.0F;
 
     public ArcGenerate() {
         super(
@@ -51,6 +51,8 @@ public final class ArcGenerate extends Skill {
                         .of(AbilityCategories.ELECTROMASTER.get())
                         .level(AbilityLevel.LEVEL1)
                         .cpCost(10)
+                        .iterationTicks(4)
+                        .maxStacks(1)
         );
     }
 
@@ -71,7 +73,7 @@ public final class ArcGenerate extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
@@ -107,75 +109,72 @@ public final class ArcGenerate extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var level = player.level();
             if (!(level.getServer() instanceof MinecraftServerContext)) return;
-            Skills.ARC_GENERATE.get().executeActive(player, new SkillAction() {
-                @Override
-                public void execute(SkillContext ctx, float actualCost) {
-                    var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
-                    var eyePos = player.getEyePosition();
+            Skills.ARC_GENERATE.get().executeActive(player, (_, actualCost) -> {
+                var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
+                var eyePos = player.getEyePosition();
 
-                    var playerOrientation = new Quaternionf().rotateY(yawRad);
+                var playerOrientation = new Quaternionf().rotateY(yawRad);
 
-                    var look = new Vector3f(0, 0, 1).rotate(playerOrientation);
-                    var up = new Vector3f(0, 1, 0).rotate(playerOrientation);
-                    var right = new Vector3f(-1, 0, 0).rotate(playerOrientation);
+                var look = new Vector3f(0, 0, 1).rotate(playerOrientation);
+                var up = new Vector3f(0, 1, 0).rotate(playerOrientation);
+                var right = new Vector3f(-1, 0, 0).rotate(playerOrientation);
 
-                    var handPos = eyePos
-                            .add(new Vec3(right).scale(0.35))
-                            .add(new Vec3(up).scale(-0.8))
-                            .add(new Vec3(look).scale(0.35));
+                var handPos = eyePos
+                        .add(new Vec3(right).scale(0.35))
+                        .add(new Vec3(up).scale(-0.8))
+                        .add(new Vec3(look).scale(0.35));
 
-                    var length = LevelUtil.getValidViewDistance(player, 10);
-                    var targetPos = eyePos.add(player.getLookAngle().scale(length));
-                    var trunkLength = (float) handPos.distanceTo(targetPos);
+                var length = LevelUtil.getValidViewDistance(player, 10);
+                var targetPos = eyePos.add(player.getLookAngle().scale(length));
+                var trunkLength = (float) handPos.distanceTo(targetPos);
 
-                    var arc = new ArcEffect(level, 20);
-                    arc.setPos(handPos);
+                var arc = new ArcEffect(level, 20);
+                arc.setPos(handPos);
 
-                    var branches = new ArrayList<Branch>();
-                    var branchCount = 4 + MathUtil.RANDOM.nextInt(3);
-                    var maxAngleRad = Math.toRadians(10.0);
+                var branches = new ArrayList<Branch>();
+                var branchCount = 4 + MathUtil.RANDOM.nextInt(3);
+                var maxAngleRad = Math.toRadians(10.0);
 
-                    for (var i = 0; i < branchCount; i++) {
-                        var progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;
-                        var branchLength = trunkLength * (0.3f + MathUtil.RANDOM.nextFloat() * 0.2f);
+                for (var i = 0; i < branchCount; i++) {
+                    var progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;
+                    var branchLength = trunkLength * (0.3f + MathUtil.RANDOM.nextFloat() * 0.2f);
 
-                        var phi = MathUtil.RANDOM.nextDouble() * maxAngleRad;
+                    var phi = MathUtil.RANDOM.nextDouble() * maxAngleRad;
 
-                        var x = Mth.sin(phi);
-                        var y = Mth.sin(phi);
-                        var z = Mth.cos(phi);
+                    var x = Mth.sin(phi);
+                    var y = Mth.sin(phi);
+                    var z = Mth.cos(phi);
 
-                        var localDir = new Vector3f(x, y, z).normalize().mul(branchLength);
+                    var localDir = new Vector3f(x, y, z).normalize().mul(branchLength);
 
-                        var childPath = new ArcPath(
-                                new LinePath(new Vector3f(0, 0, 0), localDir),
-                                List.of(
-                                        new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())
-                                ),
-                                2.0f,
-                                List.of()
-                        );
-
-                        branches.add(new Branch(progress, childPath));
-                    }
-
-                    var rootPath = new ArcPath(
-                            new LinePath(handPos.toVector3f(), targetPos.toVector3f()),
+                    var childPath = new ArcPath(
+                            new LinePath(new Vector3f(0, 0, 0), localDir),
                             List.of(
-                                    new JaggedModifier(1, 4, MathUtil.RANDOM.nextLong())
+                                    new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())
                             ),
-                            2,
-                            branches
+                            2.0f,
+                            List.of()
                     );
 
-                    arc.setArcPath(rootPath);
-                    level.addFreshEntity(arc);
-                    arc.playSound(SoundEvents.ARC_WEAK.get());
-
-                    var radius = 0.25f;
-                    var src = player.damageSources().playerAttack(player);
-                    LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, BASE_DAMAGE);
+                    branches.add(new Branch(progress, childPath));
                 }
+
+                var rootPath = new ArcPath(
+                        new LinePath(handPos.toVector3f(), targetPos.toVector3f()),
+                        List.of(
+                                new JaggedModifier(1, 4, MathUtil.RANDOM.nextLong())
+                        ),
+                        2,
+                        branches
+                );
+
+                arc.setArcPath(rootPath);
+                level.addFreshEntity(arc);
+                arc.playSound(SoundEvents.ARC_WEAK.get());
+
+                var radius = 0.25f;
+                var src = player.damageSources().playerAttack(player);
+                LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, actualCost * DAMAGE_MULTIPLIER);
             });
         }
     }

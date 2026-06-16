@@ -6,7 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.Render;
 import org.academy.api.client.hud.HUDManager;
@@ -30,7 +29,8 @@ public abstract class MixinGameRenderer {
     private Minecraft minecraft;
 
     @Shadow
-    public abstract SubmitNodeStorage getSubmitNodeStorage();
+    @Final
+    private SubmitNodeStorage handAndScreenSubmitNodeStorage;
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
@@ -39,7 +39,7 @@ public abstract class MixinGameRenderer {
 
     @Inject(
             method = "render",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V")
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V")
     )
     private void render(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
         var resourcesLoaded = minecraft.isGameLoadFinished();
@@ -71,22 +71,14 @@ public abstract class MixinGameRenderer {
             Matrix4fStack modelViewStack
     ) {
         var player = minecraft.player;
-        if (player != null
-                && minecraft.options.getCameraType().isFirstPerson()
-                && !cameraState.entityRenderState.isSleeping
-                && !minecraft.options.hideGui
-                && minecraft.gameMode != null
-                && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR
-        ) {
-            RendererManager.renderEffectFirstPerson(
-                    poseStack,
-                    getSubmitNodeStorage(),
-                    player,
-                    minecraft.getEntityRenderDispatcher().getPackedLightCoords(
-                            player, deltaPartialTick
-                    ),
-                    deltaPartialTick
-            );
-        }
+        RendererManager.renderEffectFirstPerson(
+                poseStack,
+                handAndScreenSubmitNodeStorage,
+                player,
+                minecraft.getEntityRenderDispatcher().getPackedLightCoords(
+                        player, deltaPartialTick
+                ),
+                deltaPartialTick
+        );
     }
 }

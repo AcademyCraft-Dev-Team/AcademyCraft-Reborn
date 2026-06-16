@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
+import org.academy.api.client.Resource;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -45,11 +46,22 @@ public abstract class Skill {
     private Set<Skill> dependencies = new HashSet<>();
     private final DataFactory dataFactory;
     private final int maxSkillLevel;
-    private final int iterationTicks;// 技能迭代时间间隔，单位为tick
-    private final int maxStacks;// 技能堆栈数量
-    private final float maintenanceCost;// 持续性技能所占用的cp
+    /**
+     * 技能迭代时间间隔，单位为tick
+     */
+    private final int iterationTicks;
+    /**
+     * 技能堆栈数量
+     */
+    private final int maxStacks;
+    /**
+     * 持续性技能所占用的cp
+     */
+    private final float maintenanceCost;
     private final boolean isPassive;
     private final float cpCost;
+
+    private final Identifier icon;
 
     protected Skill(Builder builder) {
         recommendedLevel = builder.recommendedLevel;
@@ -66,6 +78,7 @@ public abstract class Skill {
         dataFactory = builder.dataFactory;
         var dataClass = builder.dataClass;
         SkillDataSerializer.registerType(builder.dataTypeId, dataClass);
+        icon = builder.icon;
 
         if (builder.dependencyHolders.isEmpty()) {
             dependencies = ImmutableSet.of();
@@ -267,9 +280,10 @@ public abstract class Skill {
         private boolean isPassive = false;
         private float cpCost = 0;
 
-        private DataFactory dataFactory = player -> new CommonSkillData();
+        private DataFactory dataFactory = _ -> new CommonSkillData();
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
+        private Identifier icon = Resource.Textures.ICON_CLOSE;
 
         private Builder(AbilityCategory category) {
             this.category = category;
@@ -333,6 +347,10 @@ public abstract class Skill {
             dataClass = clazz;
             dataFactory = factory;
             return this;
+        }
+
+        public void setIcon(Identifier icon) {
+            this.icon = icon;
         }
 
         @SafeVarargs

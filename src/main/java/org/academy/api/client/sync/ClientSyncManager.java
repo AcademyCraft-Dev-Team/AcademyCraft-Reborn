@@ -14,7 +14,7 @@ public final class ClientSyncManager {
     public static final Map<SyncKey, Consumer<?>> SYNC_MAP = new ConcurrentHashMap<>();
 
     public static void init() {
-        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(ClientSyncManager.class);
+        MisakaNetworkClient.NETWORK_MANAGER.register(ClientSyncManager.class);
     }
 
     @SubscribePacket

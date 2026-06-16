@@ -2,7 +2,7 @@ package org.academy.api.client.gui.util
 
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.command.GlyphDrawCommand
-import org.academy.api.client.gui.msdf.core.Constants
+import org.academy.api.client.gui.msdf.Constants
 import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor
 import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor.layout
 
@@ -25,7 +25,7 @@ object GlyphCommandGenerator {
                     instance.quadHeight,
                     instance.u0, instance.v0, instance.u1, instance.v1,
                     red, green, blue, alpha,
-                    Constants.DEFAULT_PX_RANGE.toFloat(),
+                    Constants.DEFAULT_PX_RANGE,
                     thickness
                 )
             )

@@ -129,3 +129,4 @@ runs/
 *.exe
 
 .vscode
+/.claude/

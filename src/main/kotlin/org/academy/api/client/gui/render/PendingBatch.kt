@@ -7,27 +7,28 @@ import org.academy.api.client.render.UniformBinding
 import java.lang.AutoCloseable
 
 data class PendingBatch(
-    val meshData: MeshData,
+    val meshDataList: List<MeshData>,
+    val slotIndices: List<Int>,
     val pipeline: RenderPipeline,
     val scissorArea: ScissorRect?,
     val textures: List<TextureBinding>,
     val uniforms: List<UniformBinding>,
-    val vertexBufferSize: Int,
+    val indexCount: Int,
     val vertexStride: Int,
-    val indexCount: Int
+    val instanceCount: Int
 ) : AutoCloseable {
     constructor(
         meshData: MeshData, pipeline: RenderPipeline, scissorArea: ScissorRect?,
         textures: List<TextureBinding>, uniforms: List<UniformBinding>
     ) : this(
-        meshData, pipeline, scissorArea,
+        listOf(meshData), listOf(0), pipeline, scissorArea,
         textures, uniforms,
-        meshData.vertexBuffer().remaining(),
+        meshData.drawState().indexCount(),
         meshData.drawState().format().vertexSize,
-        meshData.drawState().indexCount()
+        1
     )
 
     override fun close() {
-        meshData.close()
+        meshDataList.forEach { it.close() }
     }
 }

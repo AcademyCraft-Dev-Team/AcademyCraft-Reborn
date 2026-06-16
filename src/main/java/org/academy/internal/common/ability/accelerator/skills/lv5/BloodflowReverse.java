@@ -1,13 +1,14 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -18,6 +19,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
@@ -33,7 +35,13 @@ import java.util.Set;
 
 public class BloodflowReverse extends Skill {
     public BloodflowReverse() {
-        super(Builder.of(AbilityCategories.ACCELERATOR.get()).level(AbilityLevel.LEVEL2));
+        super(Builder
+                .of(AbilityCategories.ACCELERATOR.get())
+                .level(AbilityLevel.LEVEL5)
+                .cpCost(100)
+                .iterationTicks(10)
+                .maxStacks(16)
+        );
     }
 
     @Override
@@ -49,7 +57,7 @@ public class BloodflowReverse extends Skill {
                                         new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
                                         GLFW.GLFW_RELEASE,
                                         new LinkedHashSet<>(
-                                                Set.of(GLFW.GLFW_MOD_ALT)
+                                                Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)
                                         )
                                 )
                         )
@@ -59,7 +67,7 @@ public class BloodflowReverse extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
@@ -91,20 +99,53 @@ public class BloodflowReverse extends Skill {
     }
 
     public static final class Server {
+        private static final String EFFECT_KEY = "bloodflow_reverse_level";
+
         @SubscribePacket
         public static void onAction(ReverseBloodflowPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var level = player.level();
-            var hitResult = player.pick(1, 1, false);
-            var entityList = level.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(new BlockPos((int) hitResult.getLocation().x, (int) hitResult.getLocation().y, (int) hitResult.getLocation().z))
-            );
-            if (!entityList.isEmpty()) {
-                var livingEntity = entityList.getFirst();
-                if (livingEntity != player) {
-                    livingEntity.hurtServer(level, new DamageSource(player.damageSources().damageTypes.getOrThrow(DamageTypes.MAGIC)), livingEntity.getHealth());
-                }
+            Skills.BLOODFLOW_REVERSE.get().executeActive(player, (ctx, actualCost) -> {
+                var serverLevel = player.level();
+                if (!(serverLevel instanceof ServerLevel)) return;
+                var lookVec = player.getViewVector(1.0f);
+                var eyePos = player.getEyePosition();
+                var targetPos = eyePos.add(lookVec.scale(4.5));
+                var box = new AABB(targetPos.add(-1.5, -1.5, -1.5), targetPos.add(1.5, 1.5, 1.5));
+
+                var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box,
+                        e -> e != player && e.isAlive() && !e.isSpectator());
+                if (targets.isEmpty()) return;
+                var target = targets.getFirst();
+
+                var currentStacks = getBloodflowStacks(target);
+                var newStacks = currentStacks + 1;
+                var amplifier = Math.min(newStacks - 1, 4);
+                var duration = 200;
+
+                target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, amplifier));
+                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, amplifier));
+                target.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, duration, amplifier));
+
+                var hpPercent = 0.20f + newStacks * 0.02f;
+                var damage = target.getMaxHealth() * hpPercent;
+                target.hurtServer(serverLevel, player.damageSources().magic(), Math.max(1.0f, damage));
+
+                setBloodflowStacks(target, newStacks);
+            });
+        }
+
+        private static int getBloodflowStacks(LivingEntity entity) {
+            var data = entity.getPersistentData();
+            if (data.contains(EFFECT_KEY)) {
+                var val = data.getInt(EFFECT_KEY);
+                if (val.isPresent()) return val.get();
             }
+            return 0;
+        }
+
+        private static void setBloodflowStacks(LivingEntity entity, int stacks) {
+            var data = entity.getPersistentData();
+            data.putInt(EFFECT_KEY, stacks);
         }
     }
 

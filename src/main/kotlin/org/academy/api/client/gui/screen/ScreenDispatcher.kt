@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.screen
 
+import com.mojang.blaze3d.GpuFormat
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.pipeline.TextureTarget
 import net.minecraft.client.Minecraft
@@ -20,7 +21,7 @@ class ScreenDispatcher private constructor() {
 
     init {
         val window = Minecraft.getInstance().window
-        renderTarget = TextureTarget("Screen", window.width, window.height, true)
+        renderTarget = TextureTarget("Screen", window.width, window.height, true, GpuFormat.RGBA8_UNORM)
         uiContext = UiContext()
     }
 
@@ -35,7 +36,7 @@ class ScreenDispatcher private constructor() {
     @SubscribeEvent
     fun onMainLoop(@Suppress("unused") event: MainLoopEvent) {
         val mc = Minecraft.getInstance()
-        val screen = mc.screen
+        val screen = mc.gui.screen()
         if (screen is RenderRoot) {
             val w = mc.window
             val m = mc.mouseHandler
@@ -52,7 +53,7 @@ class ScreenDispatcher private constructor() {
     @SubscribeEvent
     fun onRenderLoop(@Suppress("unused") event: RenderLoopEvent) {
         val mc = Minecraft.getInstance()
-        val screen = mc.screen
+        val screen = mc.gui.screen()
         if (screen is RenderRoot) {
             uiContext.upload(renderTarget, true)
             ImGuiUIDebugger.render(renderTarget, screen.root)

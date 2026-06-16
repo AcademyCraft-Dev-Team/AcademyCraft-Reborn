@@ -7,8 +7,10 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 public final class OmniCraftingTableBlockEntity extends MultiBlockEntity implements Container {
     public int ticks;
@@ -58,7 +60,7 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity impleme
         if (stack.getCount() > getMaxStackSize()) stack.setCount(getMaxStackSize());
         setChanged();
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_NEIGHBORS | Block.UPDATE_CLIENTS);
         }
     }
 
@@ -73,7 +75,7 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity impleme
     }
 
     public AABB getRenderBoundingBox() {
-        var pos = getBlockPos().getCenter();
+        var pos = Vec3.atCenterOf(getBlockPos());
         var radius = 2d;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

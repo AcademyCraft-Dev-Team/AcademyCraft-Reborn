@@ -18,7 +18,7 @@ public abstract class MixinMinecraftServer implements MinecraftServerContext {
     private AcademyCraftServer academyCraftServer;
 
     @Inject(method = "halt", at = @At("HEAD"))
-    private void halt(boolean waitForServer, CallbackInfo ci) {
+    private void halt(boolean wait, CallbackInfo ci) {
         getAcademyCraftServer().getAbilitySystemServer().halt();
     }
 

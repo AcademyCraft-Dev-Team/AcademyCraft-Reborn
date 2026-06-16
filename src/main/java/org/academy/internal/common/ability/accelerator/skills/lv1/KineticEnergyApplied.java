@@ -42,7 +42,7 @@ public class KineticEnergyApplied extends Skill {
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL1)
                 .cpCost(10)
-                .iterationTicks(100)
+                .iterationTicks(5)
                 .passive()
                 .maxStacks(10)
         );
@@ -60,7 +60,7 @@ public class KineticEnergyApplied extends Skill {
 
     @Override
     public int getIterationTicks(int skillLevel) {
-        if (skillLevel >= 3) return 20;
+        if (skillLevel >= 3) return 1;
         return super.getIterationTicks(skillLevel);
     }
 
@@ -90,7 +90,7 @@ public class KineticEnergyApplied extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {

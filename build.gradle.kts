@@ -4,11 +4,11 @@ import de.undercouch.gradle.tasks.download.Download
 import org.slf4j.event.Level
 
 plugins {
-    idea
-    `java-library`
-    kotlin("jvm") version "2.3.21"
+    alias(libs.plugins.idea)
+    alias(libs.plugins.java.library)
+    alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.moddevgradle)
-    id("de.undercouch.download") version "5.7.0"
+    alias(libs.plugins.download)
 }
 
 val minecraftVersion = libs.versions.minecraft.get()
@@ -48,6 +48,7 @@ java {
 }
 
 val generateModMetadata by tasks.registering(ProcessResources::class) {
+    description = "generateModMetadata"
     val replaceProperties = mapOf(
         "minecraft_version" to minecraftVersion,
         "minecraft_version_range" to minecraftVersion,
@@ -83,9 +84,17 @@ sourceSets.named("main") {
 repositories {
     mavenLocal()
     maven {
+        name = "Maven for PR #3198" // https://github.com/neoforged/NeoForge/pull/3198
+        url = uri("https://prmaven.neoforged.net/NeoForge/pr3198")
+        content {
+            includeModule("net.neoforged", "neoforge")
+            includeModule("net.neoforged", "testframework")
+        }
+    }
+    maven {
         name = "AC Dev Team's maven"
-        //setUrl("D:/Project/maven-repo")
-        setUrl("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/master/")
+        setUrl("/home/cane/Projects/maven-repo")
+        //setUrl("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/master/")
         content {
             includeGroup("org.academy")
             includeGroup("net.neoforged")
@@ -195,61 +204,71 @@ neoForge {
     }
 }
 
+fun DependencyHandler.apiAndJarJar(dep: Any) {
+    api(dep)
+    jarJar(dep)
+}
+
+fun DependencyHandler.implAndJarJar(dep: Any) {
+    implementation(dep)
+    jarJar(dep)
+}
+
+fun DependencyHandler.implAndJarJar(
+    dependencyNotation: Provider<*>,
+    dependencyConfiguration: Action<ExternalModuleDependency>
+) {
+    implementation(dependencyNotation, dependencyConfiguration)
+    jarJar(dependencyNotation, dependencyConfiguration)
+}
+
 dependencies {
-    val kotlinforforge = libs.kotlinforforge
-    implementation(kotlinforforge)
+    implAndJarJar(libs.kotlinforforge)
 
-    val geckolib = libs.geckolib
-    interfaceInjectionData(geckolib)
-    implementation(geckolib)
-    jarJar(geckolib)
+    /*
+        val geckolib = libs.geckolib
+        interfaceInjectionData(geckolib)
+        implAndJarJar(geckolib)
+    */
 
-    implementation(libs.sodium)
-    implementation(libs.iris)
+    compileOnly(libs.sodium)
+    compileOnly(libs.iris)
 
-    implementation(libs.jade)
+    compileOnly(libs.jade)
 
     compileOnly(libs.jei.api)
-    implementation(libs.jei)
+    compileOnly(libs.jei)
 
-    val misaka = libs.misaka
-    annotationProcessor(misaka)
-    implementation(misaka)
-    jarJar(misaka)
+    apiAndJarJar(libs.misaka)
 
     annotationProcessor(libs.auto)
 
-    val jflac = libs.jflac
-    implementation(jflac)
-    jarJar(jflac)
+    implAndJarJar(libs.jflac)
+    implAndJarJar(libs.jlayer)
 
-    val jlayer = libs.jlayer
-    implementation(jlayer)
-    jarJar(jlayer)
+    val lwjglMsdfgen = libs.lwjgl.msdfgen
+    implAndJarJar(lwjglMsdfgen)
+    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-linux") })
+    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-macos") })
+    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-macos-arm64") })
+    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-windows") })
+    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-windows-arm64") })
+    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-windows-x86") })
 
     val imguiBinding = libs.imgui.binding
-    val imguiLinux = libs.imgui.linux
     val imguiLwjgl3 = libs.imgui.lwjgl3
-    val imguiMacos = libs.imgui.macos
-    val imguiWindows = libs.imgui.windows
-
-    compileOnly(imguiBinding)
-    compileOnly(imguiLwjgl3)
 
     if (isDev) {
-        implementation(imguiBinding)
-        implementation(imguiLwjgl3) {
+        implAndJarJar(imguiBinding)
+        implAndJarJar(imguiLwjgl3) {
             exclude(group = "org.lwjgl")
         }
-        implementation(imguiLinux)
-        implementation(imguiMacos)
-        implementation(imguiWindows)
-
-        jarJar(imguiBinding)
-        jarJar(imguiLwjgl3)
-        jarJar(imguiLinux)
-        jarJar(imguiMacos)
-        jarJar(imguiWindows)
+        implAndJarJar(libs.imgui.linux)
+        implAndJarJar(libs.imgui.macos)
+        implAndJarJar(libs.imgui.windows)
+    } else {
+        compileOnly(imguiBinding)
+        compileOnly(imguiLwjgl3)
     }
 }
 
@@ -281,7 +300,6 @@ val downloadRenderNurse by tasks.register<Download>("downloadRenderNurse") {
 
 val downloadRenderDoc = tasks.register<Download>("downloadRenderDoc") {
     description = "Downloads RenderDoc archive"
-    group = "academy"
     val (url, fileName) = when {
         System.getProperty("os.name").lowercase()
             .contains("win") -> "https://renderdoc.org/stable/${renderDocVersion}/RenderDoc_${renderDocVersion}_64.zip" to "renderdoc.zip"
@@ -295,7 +313,6 @@ val downloadRenderDoc = tasks.register<Download>("downloadRenderDoc") {
 
 val extractRenderDoc = tasks.register<Sync>("extractRenderDoc") {
     description = "Extracts RenderDoc to installation directory"
-    group = "academy"
     dependsOn(downloadRenderDoc)
 
     from({

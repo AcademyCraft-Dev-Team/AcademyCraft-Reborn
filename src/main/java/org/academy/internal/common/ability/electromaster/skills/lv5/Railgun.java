@@ -38,6 +38,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -66,12 +67,20 @@ public final class Railgun extends Skill {
     public static final int CHARGE_TIME = 20;
 
     public Railgun() {
-        super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL5));
+        super(Builder
+                .of(AbilityCategories.ELECTROMASTER.get())
+                .level(AbilityLevel.LEVEL5)
+                .cpCost(200)
+                .iterationTicks(40)
+                .maxStacks(1)
+                .dependsOn(Skills.THUNDER_LANCE)
+                .dependsOn(Skills.MAGNET_MANIPULATION)
+        );
     }
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
         var key = SyncKeys.RAILGUN_CHARGING.get();
         Server.chargingSyncManager = new DataSyncManager<>(
                 key, DataTypes.BOOL.get(), context.getMinecraftServer().getPlayerList()
@@ -112,7 +121,7 @@ public final class Railgun extends Skill {
         }
 
         public static void start() {
-            if (Minecraft.getInstance().screen == null) {
+            if (Minecraft.getInstance().gui.screen() == null) {
                 var player = Minecraft.getInstance().player;
                 if (player == null) return;
                 if (player.isHolding(Items.COIN.get())) {

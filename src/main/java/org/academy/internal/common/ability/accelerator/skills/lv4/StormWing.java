@@ -48,7 +48,10 @@ public final class StormWing extends Skill {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL4)
-                .dependsOn(Skills.VECTOR_REFLECTION)
+                .cpCost(200)
+                .iterationTicks(30)
+                .maxStacks(1)
+                .dependsOn(Skills.FLOW_CONTROL)
         );
     }
 
@@ -74,7 +77,7 @@ public final class StormWing extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
@@ -104,7 +107,7 @@ public final class StormWing extends Skill {
 
                 var states = new HashSet<State>();
 
-                var canMove = mc.screen == null;
+                var canMove = mc.gui.screen() == null;
 
                 if (canMove) {
                     if (front && !back) states.add(State.FRONT);

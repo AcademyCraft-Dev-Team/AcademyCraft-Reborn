@@ -40,14 +40,14 @@ open class ScrollBarWidget(protected val panel: ScrollPanelWidget, orientation: 
         val b = ARGB.blue(thumbColor) / 255.0f
 
         context.pose().pushPose()
-        context.pose().translate(0.0f, 0.0f, 0.1f)
+        context.pose().translate(0.0f, 0.0f)
 
         if (orientation == Orientation.HORIZONTAL) {
-            context.pose().translate(thumbStart, 0.0f, 0.0f)
+            context.pose().translate(thumbStart, 0.0f)
             val thumbCommand = FillRectDrawCommand(thumbSize, height, r, g, b, thumbAlpha)
             context.submit(thumbCommand)
         } else {
-            context.pose().translate(0.0f, thumbStart, 0.0f)
+            context.pose().translate(0.0f, thumbStart)
             val thumbCommand = FillRectDrawCommand(width, thumbSize, r, g, b, thumbAlpha)
             context.submit(thumbCommand)
         }

@@ -23,8 +23,8 @@ public class WirelessManager {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     
     public static void initServer() {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(WirelessManager.class);
-        MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(WirelessManager.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(WirelessManager.class);
+        MisakaNetworkServer.FUTURE_MANAGER.register(WirelessManager.class);
     }
 
     @HandleFuture

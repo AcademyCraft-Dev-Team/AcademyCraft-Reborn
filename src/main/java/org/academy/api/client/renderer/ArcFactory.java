@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.post.BloomEffect;
-import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.common.arc.data.PathData;
 import org.academy.api.common.arc.data.PropertyType;
 import org.joml.Quaternionf;
@@ -18,10 +17,6 @@ import static org.academy.api.client.Render.RenderTypes;
 
 public final class ArcFactory {
     private static final Vector3f DEFAULT_COLOR = new Vector3f(1.0f, 1.0f, 1.0f);
-
-    static {
-        PostEffect.addFixedBuffer(RenderTypes.ARC);
-    }
 
     public static void render(PoseStack ps, ArcRenderData data) {
         render(ps, data, 1, 1, 1, 1);

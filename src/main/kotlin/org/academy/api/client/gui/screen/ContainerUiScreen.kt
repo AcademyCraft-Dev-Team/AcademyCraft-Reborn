@@ -190,7 +190,6 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
 
             extractContents(graphics, mouseX, mouseY, a)
             extractCarriedItem(graphics, mouseX, mouseY)
-            extractSnapbackItem(graphics)
 
             graphics.pose().popMatrix()
         }
@@ -229,7 +228,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
     override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
         extractBlurredBackground(graphics)
         extractTransparentBackground(graphics)
-        minecraft.gui.extractDeferredSubtitles()
+        minecraft.gui.hud.extractDeferredSubtitles()
     }
 
     override fun extractLabels(graphics: GuiGraphicsExtractor, xm: Int, ym: Int) {

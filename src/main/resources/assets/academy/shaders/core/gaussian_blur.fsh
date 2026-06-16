@@ -5,7 +5,7 @@
 
 #version 330
 
-uniform sampler2D DiffuseSampler;
+uniform sampler2D Sampler0;
 
 #define MAX_SAMPLES 12
 
@@ -22,15 +22,15 @@ out vec4 fragColor;
 void main() {
     vec2 pixelSize = 1.0 / OutSize;
 
-    vec3 accumulatedColor = texture(DiffuseSampler, texCoord).rgb * Samples[0].z;
+    vec3 accumulatedColor = texture(Sampler0, texCoord).rgb * Samples[0].z;
 
     for (int i = 1; i < SampleCount; i++) {
         float offset = Samples[i].x;
         float weight = Samples[i].z;
 
         vec2 offsetCoord = BlurDir * pixelSize * offset;
-        vec3 samplePos = texture(DiffuseSampler, texCoord + offsetCoord).rgb;
-        vec3 sampleNeg = texture(DiffuseSampler, texCoord - offsetCoord).rgb;
+        vec3 samplePos = texture(Sampler0, texCoord + offsetCoord).rgb;
+        vec3 sampleNeg = texture(Sampler0, texCoord - offsetCoord).rgb;
 
         accumulatedColor += (samplePos + sampleNeg) * weight;
     }

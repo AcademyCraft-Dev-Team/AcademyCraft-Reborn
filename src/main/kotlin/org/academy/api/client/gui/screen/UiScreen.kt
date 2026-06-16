@@ -48,7 +48,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
     override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
         extractBlurredBackground(graphics)
         extractTransparentBackground(graphics)
-        minecraft.gui.extractDeferredSubtitles()
+        minecraft.gui.hud.extractDeferredSubtitles()
     }
 
     override fun removed() {

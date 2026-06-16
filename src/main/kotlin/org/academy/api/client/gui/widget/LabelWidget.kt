@@ -120,8 +120,8 @@ open class LabelWidget(text: String) : AbstractWidget() {
         run {
             context.drawOrder().advance()
             val textTopY = lp.paddingTop + alignmentOffsetY
-            context.pose().translate(lp.paddingLeft + alignmentOffsetX, textTopY, 0f)
-            context.pose().scale(finalScale, finalScale, 1.0f)
+            context.pose().translate(lp.paddingLeft + alignmentOffsetX, textTopY)
+            context.pose().scale(finalScale, finalScale)
 
             val finalAlpha = alpha * context.accumulatedAlpha
             if (colorChanged || lastFinalAlpha != finalAlpha || (text != lastText)) {

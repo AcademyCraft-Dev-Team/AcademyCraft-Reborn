@@ -5,7 +5,7 @@
 
 #version 330
 
-uniform sampler2D DiffuseSampler;
+uniform sampler2D Sampler0;
 uniform sampler2D BlurTexture1;
 uniform sampler2D BlurTexture2;
 uniform sampler2D BlurTexture3;
@@ -37,6 +37,6 @@ void main() {
     lerpBloomFactor(0.8) * texture(BlurTexture2, texCoord) +
     lerpBloomFactor(0.6) * texture(BlurTexture3, texCoord));
 
-    vec4 background = texture(DiffuseSampler, texCoord);
+    vec4 background = texture(Sampler0, texCoord);
     fragColor = vec4(background.rgb + jodieReinhardTonemap(bloom.rgb), 1.);
 }

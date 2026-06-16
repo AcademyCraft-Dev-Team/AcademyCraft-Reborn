@@ -147,6 +147,11 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private boolean processOccupations(ServerPlayer player, CPData cpData, List<CPData.CpOccupationData> occupations) {
+        if (AbilitySystemServer.isDevMode()) {
+            occupations.removeIf(occ -> !occ.isPermanent());
+            return true;
+        }
+
         var dirty = false;
         var it = occupations.iterator();
         while (it.hasNext()) {
@@ -184,8 +189,8 @@ public class PlayerCPManager implements AbilitySubsystem {
         var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
         var level = (skillData != null) ? skillData.getLevel() : 0;
 
-        if (cpData.getStatus() == CPData.Status.OVERLOAD) return false;
-        if (!skill.isPassive(level) && cpData.getAvailableCP() < amount) return false;
+        if (cpData.getStatus() == CPData.Status.OVERLOAD && !AbilitySystemServer.isDevMode()) return false;
+        if (!skill.isPassive(level) && cpData.getAvailableCP() < amount && !AbilitySystemServer.isDevMode()) return false;
 
         if (!isPermanent && skill.getMaxStacks(level) != Skill.NO_STACK_LIMIT) {
             var currentStacks = occupations.stream()
@@ -194,8 +199,10 @@ public class PlayerCPManager implements AbilitySubsystem {
             if (currentStacks >= skill.getMaxStacks(level)) return false;
         }
 
-        occupations.add(new CPData.CpOccupationData(amount, iterationTicks, skill.getKeyString(), isPermanent));
-        cpData.setAvailableCP(cpData.getAvailableCP() - amount);
+        if (!AbilitySystemServer.isDevMode()) {
+            occupations.add(new CPData.CpOccupationData(amount, iterationTicks, skill.getKeyString(), isPermanent));
+            cpData.setAvailableCP(cpData.getAvailableCP() - amount);
+        }
         return true;
     }
 
@@ -370,5 +377,56 @@ public class PlayerCPManager implements AbilitySubsystem {
 
     public void setMaxSP(UUID uuid, int maxSP) {
         modify(uuid, cpData -> cpData.setMaxSP(maxSP));
+    }
+
+    public float getFreeCPRatio(UUID uuid) {
+        var maxCP = getMaxCP(uuid);
+        if (maxCP <= 0) return 0f;
+        return getAvailableCP(uuid) / maxCP;
+    }
+
+    public float getDamageMultiplier(UUID uuid) {
+        var ratio = getFreeCPRatio(uuid);
+        if (ratio >= 0.5f) return 1.0f;
+        return 0.25f + (ratio / 0.5f) * 0.75f;
+    }
+
+    public float getRangeMultiplier(UUID uuid) {
+        var ratio = getFreeCPRatio(uuid);
+        if (ratio >= 0.5f) return 1.0f;
+        return 0.50f + (ratio / 0.5f) * 0.50f;
+    }
+
+    public float getEffectiveDistanceMultiplier(UUID uuid) {
+        var ratio = getFreeCPRatio(uuid);
+        if (ratio >= 0.5f) return 1.0f;
+        return 0.40f + (ratio / 0.5f) * 0.60f;
+    }
+
+    public float getCurrMP(UUID uuid) {
+        return query(uuid, CPData::getCurrMP, 0f);
+    }
+
+    public void setCurrMP(UUID uuid, float currMP) {
+        modify(uuid, cpData -> cpData.setCurrMP(currMP));
+    }
+
+    public void addCurrMP(UUID uuid, float addMP) {
+        modify(uuid, cpData -> cpData.addMP(addMP));
+    }
+
+    public float getMaxMP(UUID uuid) {
+        return query(uuid, CPData::getMaxMP, 0f);
+    }
+
+    public void setMaxMP(UUID uuid, float maxMP) {
+        modify(uuid, cpData -> cpData.setMaxMP(maxMP));
+    }
+
+    public boolean tryConsumeMP(UUID uuid, float amount) {
+        var currMP = getCurrMP(uuid);
+        if (currMP < amount) return false;
+        setCurrMP(uuid, currMP - amount);
+        return true;
     }
 }
