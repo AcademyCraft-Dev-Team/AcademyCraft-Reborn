@@ -94,7 +94,7 @@ public class HyperAccelerate extends Skill {
             var lookVec = mc.player.getViewVector(1.0f);
             var elapsedMs = (System.nanoTime() - chargeStartTime) / 1_000_000f;
             var chargeRatio = Math.clamp(elapsedMs / 2000f, 0.1f, 1.0f);
-            MisakaNetworkClient.sendPacket(new LaunchPacket(chargeRatio, lookVec));
+            MisakaNetworkClient.send(new LaunchPacket(chargeRatio, lookVec));
             var p = mc.player;
             var trail = TrailEffectWrapper.INSTANCE.createTrail(0.8f, 0.15f, 0.3f, 0.7f, 1.0f);
             trail.addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());

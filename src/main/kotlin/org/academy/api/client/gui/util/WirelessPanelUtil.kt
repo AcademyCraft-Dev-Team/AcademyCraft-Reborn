@@ -192,7 +192,7 @@ object WirelessPanelUtil {
                 itemContent.addChild("node_name", nodeNameLabel)
                 if (!isConnected) {
                     val connectAction = { password: String ->
-                        MisakaNetworkClient.sendPacket(
+                        MisakaNetworkClient.send(
                             ConnectNodePacket(
                                 position,
                                 nodeName,
@@ -234,7 +234,7 @@ object WirelessPanelUtil {
                 } else if (!isNull) {
                     val disconnectButton = ButtonWidget()
                     disconnectButton.onClickListener = { _ ->
-                        MisakaNetworkClient.sendPacket(DisconnectNodePacket(position))
+                        MisakaNetworkClient.send(DisconnectNodePacket(position))
                         WirelessPanelUtil.updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
                     }
                     disconnectButton.layoutParams = LinearLayoutWidget.LayoutParams()

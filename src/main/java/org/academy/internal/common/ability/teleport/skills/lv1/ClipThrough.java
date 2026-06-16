@@ -74,7 +74,7 @@ public class ClipThrough extends Skill {
             var mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.player == null) return;
             var lookVec = mc.player.getViewVector(1.0f);
-            MisakaNetworkClient.sendPacket(new TeleportPacket(lookVec));
+            MisakaNetworkClient.send(new TeleportPacket(lookVec));
         }
 
         public static class Config extends KeyBindingConfig {

@@ -98,7 +98,7 @@ public class KineticEnergyApplied extends Skill {
         public static KineticEnergyAppliedConfig CONFIG = new KineticEnergyAppliedConfig();
 
         public static void toggle() {
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
         public static class KineticEnergyAppliedConfig extends KeyBindingConfig {

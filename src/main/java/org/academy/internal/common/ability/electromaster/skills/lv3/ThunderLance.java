@@ -79,7 +79,7 @@ public class ThunderLance extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            MisakaNetworkClient.sendPacket(StartPacket.INSTANCE);
+            MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {

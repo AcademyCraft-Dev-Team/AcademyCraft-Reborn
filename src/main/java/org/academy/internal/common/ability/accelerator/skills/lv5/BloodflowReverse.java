@@ -75,7 +75,7 @@ public class BloodflowReverse extends Skill {
         public static Config CONFIG = new Config();
 
         public static void reverseBloodflow() {
-            MisakaNetworkClient.sendPacket(ReverseBloodflowPacket.INSTANCE);
+            MisakaNetworkClient.send(ReverseBloodflowPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {

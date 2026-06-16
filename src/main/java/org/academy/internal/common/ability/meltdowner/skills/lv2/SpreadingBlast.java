@@ -115,7 +115,7 @@ public class SpreadingBlast extends Skill {
                 emitter.burst(15);
                 emitter.setLifetime(0.8f, 0.3f);
             }
-            MisakaNetworkClient.sendPacket(ShootPacket.INSTANCE);
+            MisakaNetworkClient.send(ShootPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {

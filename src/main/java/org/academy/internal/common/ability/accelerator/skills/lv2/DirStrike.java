@@ -84,7 +84,7 @@ public class DirStrike extends Skill {
 
         public static void onAction() {
             if (Minecraft.getInstance().player == null) return;
-            MisakaNetworkClient.sendPacket(ActionPacket.INSTANCE);
+            MisakaNetworkClient.send(ActionPacket.INSTANCE);
             var p = Minecraft.getInstance().player;
             var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
                     (float) p.getX(), (float) p.getY() + 0.5f, (float) p.getZ());

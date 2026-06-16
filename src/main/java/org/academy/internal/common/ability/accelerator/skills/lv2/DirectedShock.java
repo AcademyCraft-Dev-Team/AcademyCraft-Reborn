@@ -98,7 +98,7 @@ public class DirectedShock extends Skill {
             if (mc.player == null) return;
             var elapsedMs = (System.nanoTime() - chargeStartTime) / 1_000_000f;
             var chargeRatio = Math.clamp(elapsedMs / 2000f, 0.1f, 1.0f);
-            MisakaNetworkClient.sendPacket(new ActionPacket(chargeRatio));
+            MisakaNetworkClient.send(new ActionPacket(chargeRatio));
         }
 
         public static class Config extends KeyBindingConfig {

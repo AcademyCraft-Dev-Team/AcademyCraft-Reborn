@@ -91,7 +91,7 @@ public class HellFlare extends Skill {
         public static void handleKey() {
             if (!org.academy.api.client.ability.AbilitySystemClient.isSkillLearned(Skills.HELL_FLARE.get()))
                 return;
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             AuraEffectWrapper.INSTANCE.triggerSphere(

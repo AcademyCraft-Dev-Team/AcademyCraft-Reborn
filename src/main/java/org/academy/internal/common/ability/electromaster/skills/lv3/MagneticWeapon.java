@@ -59,7 +59,7 @@ public class MagneticWeapon extends Skill {
         public static final String KEY = SkillNames.MAGNETIC_WEAPON + "_toggle";
         public static Config CONFIG = new Config();
         public static void onToggle() {
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             EMFieldEffectWrapper.INSTANCE.ensureActive();

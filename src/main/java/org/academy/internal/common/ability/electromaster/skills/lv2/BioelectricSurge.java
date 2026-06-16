@@ -84,7 +84,7 @@ public class BioelectricSurge extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {

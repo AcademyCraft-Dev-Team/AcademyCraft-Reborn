@@ -92,7 +92,7 @@ public class VectorReduction extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             VectorFieldEffectWrapper.INSTANCE.trigger(

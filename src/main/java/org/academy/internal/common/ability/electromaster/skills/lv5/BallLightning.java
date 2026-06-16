@@ -93,7 +93,7 @@ public class BallLightning extends Skill {
         public static BallLightningConfig CONFIG = new BallLightningConfig();
 
         public static void handler() {
-            MisakaNetworkClient.sendPacket(ActivatePacket.INSTANCE);
+            MisakaNetworkClient.send(ActivatePacket.INSTANCE);
         }
 
         public static class BallLightningConfig extends KeyBindingConfig {

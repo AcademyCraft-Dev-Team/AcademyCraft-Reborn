@@ -33,7 +33,7 @@ public class CoinItem extends Item {
                     :
                     player.getDeltaMovement().multiply(1.5, 0, 1.5);
 
-            MisakaNetworkClient.sendPacket(new ThrowCoinPacket(
+            MisakaNetworkClient.send(new ThrowCoinPacket(
                         initialVelocity.add(0, 0.5, 0),
                         player.getYRot(), player.getXRot()));
 

@@ -124,7 +124,7 @@ public class VectorReflection extends Skill {
         }
 
         public static void onToggle() {
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {

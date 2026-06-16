@@ -120,7 +120,7 @@ public final class SelfTeleport extends Skill {
                 var finalTargetPos = currentContext.currentRenderPos;
                 currentContext.cleanup();
                 if (ClientUtil.hasScreen()) return;
-                MisakaNetworkClient.sendPacket(new SelfTeleportPacket(finalTargetPos));
+                MisakaNetworkClient.send(new SelfTeleportPacket(finalTargetPos));
             }
         }
 

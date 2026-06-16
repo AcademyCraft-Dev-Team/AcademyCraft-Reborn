@@ -101,7 +101,7 @@ public class IronSandArsenal extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             AuraEffectWrapper.INSTANCE.triggerSphere(
@@ -110,7 +110,7 @@ public class IronSandArsenal extends Skill {
         }
 
         public static void onSwitchForm() {
-            MisakaNetworkClient.sendPacket(FormSelectPacket.INSTANCE);
+            MisakaNetworkClient.send(FormSelectPacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             AuraEffectWrapper.INSTANCE.triggerSphere(

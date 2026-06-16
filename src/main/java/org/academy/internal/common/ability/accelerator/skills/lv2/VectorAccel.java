@@ -172,7 +172,7 @@ public final class VectorAccel extends Skill {
             public void release() {
                 if (released) return;
                 released = true;
-                MisakaNetworkClient.sendPacket(new DashPacket(chargeRatio, lastCalculatedDirection));
+                MisakaNetworkClient.send(new DashPacket(chargeRatio, lastCalculatedDirection));
                 var p = player;
                 var trail = TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.12f, 0.2f, 0.6f, 1.0f);
                 trail.addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());

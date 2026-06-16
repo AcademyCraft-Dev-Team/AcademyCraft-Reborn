@@ -92,17 +92,17 @@ public class SpacialReplace extends Skill {
 
         public static void onSelectCorner1() {
             var pos = getLookBlock();
-            if (pos != null) MisakaNetworkClient.sendPacket(new SetCornerPacket(1, pos));
+            if (pos != null) MisakaNetworkClient.send(new SetCornerPacket(1, pos));
         }
 
         public static void onSelectCorner2() {
             var pos = getLookBlock();
-            if (pos != null) MisakaNetworkClient.sendPacket(new SetCornerPacket(2, pos));
+            if (pos != null) MisakaNetworkClient.send(new SetCornerPacket(2, pos));
         }
 
         public static void onPaste() {
             var pos = getLookBlock();
-            if (pos != null) MisakaNetworkClient.sendPacket(new PastePacket(pos));
+            if (pos != null) MisakaNetworkClient.send(new PastePacket(pos));
         }
 
         public static class Config extends KeyBindingConfig {

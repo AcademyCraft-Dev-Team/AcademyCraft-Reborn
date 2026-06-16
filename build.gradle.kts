@@ -93,8 +93,8 @@ repositories {
     }
     maven {
         name = "AC Dev Team's maven"
-        setUrl("/home/cane/Projects/maven-repo")
-        //setUrl("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/master/")
+        //setUrl("/home/cane/Projects/maven-repo")
+        setUrl("https://raw.githubusercontent.com/AcademyCraft-Dev-Team/maven-repo/master/")
         content {
             includeGroup("org.academy")
             includeGroup("net.neoforged")

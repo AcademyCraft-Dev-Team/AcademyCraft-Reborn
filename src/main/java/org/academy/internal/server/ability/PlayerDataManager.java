@@ -39,7 +39,7 @@ public final class PlayerDataManager implements AbilitySubsystem {
     public void processSync(ServerPlayer player) {
         var uuid = player.getUUID();
         var packet = new SyncAbilityCategoryPacket(getPlayerAbilityCategory(uuid));
-        MisakaNetworkServer.sendPacket(player, packet);
+        MisakaNetworkServer.send(player, packet);
     }
 
     public AbilityCategory getPlayerAbilityCategory(UUID uuid) {

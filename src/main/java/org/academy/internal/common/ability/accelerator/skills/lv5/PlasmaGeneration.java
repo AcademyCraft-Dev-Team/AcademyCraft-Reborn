@@ -96,13 +96,13 @@ public class PlasmaGeneration extends Skill {
         public static void onFire() {
             var elapsedMs = (System.nanoTime() - chargeStartTime) / 1_000_000f;
             if (elapsedMs < MIN_CHARGE_MS) {
-                MisakaNetworkClient.sendPacket(new FirePacket(0));
+                MisakaNetworkClient.send(new FirePacket(0));
                 return;
             }
             var mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.player != null) {
                 var lookVec = mc.player.getViewVector(1.0f);
-                MisakaNetworkClient.sendPacket(new FirePacket((long) elapsedMs, lookVec));
+                MisakaNetworkClient.send(new FirePacket((long) elapsedMs, lookVec));
             }
         }
 

@@ -91,7 +91,7 @@ public class FlowControl extends Skill {
             var mc = Minecraft.getInstance();
             if (mc.player == null) return;
             var pull = mc.player.isShiftKeyDown();
-            MisakaNetworkClient.sendPacket(new ActionPacket(pull));
+            MisakaNetworkClient.send(new ActionPacket(pull));
             var p = mc.player;
             VectorFieldEffectWrapper.INSTANCE.trigger(
                     (float) p.getX(), (float) p.getY(), (float) p.getZ(),

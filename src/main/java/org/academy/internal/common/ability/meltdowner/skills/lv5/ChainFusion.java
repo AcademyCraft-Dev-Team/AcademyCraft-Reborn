@@ -74,7 +74,7 @@ public class ChainFusion extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            MisakaNetworkClient.sendPacket(ActivatePacket.INSTANCE);
+            MisakaNetworkClient.send(ActivatePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             EMFieldEffectWrapper.INSTANCE.ensureActive();

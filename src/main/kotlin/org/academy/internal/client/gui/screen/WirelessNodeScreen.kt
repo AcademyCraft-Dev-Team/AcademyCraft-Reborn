@@ -171,7 +171,7 @@ class WirelessNodeScreen(
             val nameTextBox = TextBoxWidget(12)
             nameTextBox.background = null
             nameTextBox.setWhenEnter { s ->
-                MisakaNetworkClient.sendPacket(
+                MisakaNetworkClient.send(
                     SetNodeNamePacket(wirelessNodeBlockEntity.blockPos, s)
                 )
             }
@@ -182,7 +182,7 @@ class WirelessNodeScreen(
             val passTextBox = TextBoxWidget(12)
             passTextBox.background = null
             passTextBox.setWhenEnter { s ->
-                MisakaNetworkClient.sendPacket(
+                MisakaNetworkClient.send(
                     SetNodePassPacket(wirelessNodeBlockEntity.blockPos, s)
                 )
             }
