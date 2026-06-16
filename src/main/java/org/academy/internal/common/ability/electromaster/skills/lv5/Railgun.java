@@ -61,7 +61,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.*;
 
-import static org.misaka.MisakaNetworkClient.sendPacket;
+import static org.misaka.MisakaNetworkClient.send;
 
 public final class Railgun extends Skill {
     public static final int CHARGE_TIME = 20;
@@ -125,7 +125,7 @@ public final class Railgun extends Skill {
                 var player = Minecraft.getInstance().player;
                 if (player == null) return;
                 if (player.isHolding(Items.COIN.get())) {
-                    sendPacket(StartPacket.INSTANCE);
+                    send(StartPacket.INSTANCE);
                 }
             }
         }

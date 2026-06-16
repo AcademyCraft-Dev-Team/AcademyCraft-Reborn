@@ -87,7 +87,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         var player = playerDataManager.getData(serverPlayer.getUUID());
         if (player == null) return;
         var cpData = player.getCpData();
-        MisakaNetworkServer.sendPacket(serverPlayer, new SyncCPDataPacket(cpData));
+        MisakaNetworkServer.send(serverPlayer, new SyncCPDataPacket(cpData));
         cpData.clearDirty();
     }
 

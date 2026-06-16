@@ -80,7 +80,7 @@ public final class ArcGenerate extends Skill {
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
-            MisakaNetworkClient.sendPacket(GeneratePacket.INSTANCE);
+            MisakaNetworkClient.send(GeneratePacket.INSTANCE);
         }
 
         public static class ArcGenerateConfig extends KeyBindingConfig {

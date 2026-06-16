@@ -38,7 +38,7 @@ public class SkillDataManager implements AbilitySubsystem {
 
         var skills = playerData.getSkillDataMap();
         var packet = new SyncSkillDataPacket(skills);
-        MisakaNetworkServer.sendPacket(player, packet);
+        MisakaNetworkServer.send(player, packet);
     }
 
     private void modify(UUID uuid, String skillId, Consumer<SkillData> action) {

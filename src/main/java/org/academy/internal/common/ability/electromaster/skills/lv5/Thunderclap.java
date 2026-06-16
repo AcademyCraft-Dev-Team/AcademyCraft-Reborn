@@ -59,7 +59,7 @@ public class Thunderclap extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            MisakaNetworkClient.sendPacket(UsePacket.INSTANCE);
+            MisakaNetworkClient.send(UsePacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {

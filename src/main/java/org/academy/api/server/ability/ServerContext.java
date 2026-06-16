@@ -14,8 +14,8 @@ public abstract class ServerContext implements Context {
         this.player = player;
     }
 
-    public final <P extends Packet<ClientPacketListener, P>> void sendPacket(P packet) {
-        MisakaNetworkServer.sendPacket(player, packet);
+    public final <P extends Packet<ClientPacketListener, P>> void send(P packet) {
+        MisakaNetworkServer.send(player, packet);
     }
 
     public final ServerLevel level() {

@@ -87,11 +87,11 @@ public class CoordinateTeleport extends Skill {
             var pos = mc.player.position();
             var dim = mc.player.level().dimension().toString();
             var name = String.format("(%.0f, %.0f, %.0f)", pos.x, pos.y, pos.z);
-            MisakaNetworkClient.sendPacket(new SavePositionPacket(pos, dim, name));
+            MisakaNetworkClient.send(new SavePositionPacket(pos, dim, name));
         }
 
         public static void onTeleport() {
-            MisakaNetworkClient.sendPacket(new RequestTeleportPacket());
+            MisakaNetworkClient.send(new RequestTeleportPacket());
         }
 
         public static class Config extends KeyBindingConfig {

@@ -81,7 +81,7 @@ public class LightningStorm extends Skill {
             if (mc.player == null) return;
             var hitResult = mc.player.pick(50, 1.0f, false);
             var targetPos = hitResult.getLocation();
-            MisakaNetworkClient.sendPacket(new ActivatePacket(targetPos));
+            MisakaNetworkClient.send(new ActivatePacket(targetPos));
         }
 
         public static class Config extends KeyBindingConfig {

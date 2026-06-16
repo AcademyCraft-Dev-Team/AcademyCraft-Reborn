@@ -67,7 +67,7 @@ public class Disintegrate extends Skill {
                 emitter.burst(20);
                 emitter.setLifetime(0.8f, 0.3f);
             }
-            MisakaNetworkClient.sendPacket(UsePacket.INSTANCE);
+            MisakaNetworkClient.send(UsePacket.INSTANCE);
         }
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {

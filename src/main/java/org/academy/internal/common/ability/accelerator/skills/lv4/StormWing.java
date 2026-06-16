@@ -118,12 +118,12 @@ public final class StormWing extends Skill {
 
                 if (states.isEmpty()) states.add(State.KEEP);
 
-                for (var state : states) MisakaNetworkClient.sendPacket(new ControlPacket(state));
+                for (var state : states) MisakaNetworkClient.send(new ControlPacket(state));
             }
         }
 
         public static void toggle() {
-            MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {

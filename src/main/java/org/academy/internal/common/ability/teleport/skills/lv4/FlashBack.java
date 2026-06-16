@@ -59,7 +59,7 @@ public class FlashBack extends Skill {
     public static final class Client {
         public static final String KEY = SkillNames.FLASH_BACK + "_toggle";
         public static Config CONFIG = new Config();
-        public static void onToggle() { MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE); }
+        public static void onToggle() { MisakaNetworkClient.send(TogglePacket.INSTANCE); }
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();

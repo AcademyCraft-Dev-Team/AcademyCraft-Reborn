@@ -69,7 +69,7 @@ public class Cloudroom extends Skill {
     public static final class Client {
         public static final String KEY_NAME_TOGGLE = SkillNames.CLOUDROOM + "_toggle";
         public static Config CONFIG = new Config();
-        public static void onToggle() { MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE); }
+        public static void onToggle() { MisakaNetworkClient.send(TogglePacket.INSTANCE); }
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();

@@ -84,7 +84,7 @@ public class CutThrough extends Skill {
             var mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.player == null) return;
             var lookVec = mc.player.getViewVector(1.0f);
-            MisakaNetworkClient.sendPacket(new TeleportPacket(lookVec));
+            MisakaNetworkClient.send(new TeleportPacket(lookVec));
             var p = mc.player;
             DistortionEffectWrapper.INSTANCE.trigger(
                     (float) p.getX(), (float) p.getY() + 1.0f, (float) p.getZ(),

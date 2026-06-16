@@ -74,7 +74,7 @@ public class VisualTeleport extends Skill {
             var lookVec = mc.player.getViewVector(1.0f);
             var distance = 16;
             var targetPos = mc.player.getEyePosition().add(lookVec.scale(distance));
-            MisakaNetworkClient.sendPacket(new TeleportPacket(targetPos));
+            MisakaNetworkClient.send(new TeleportPacket(targetPos));
         }
 
         public static class Config extends KeyBindingConfig {

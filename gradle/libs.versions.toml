@@ -16,7 +16,7 @@ sodium = "mc26.1.2-0.8.12-beta.1-neoforge"
 iris = "1.10.9+26.1-neoforge"
 jade = "26.0.10+neoforge"
 jei = "29.5.0.28"
-misaka = "26.1.2.0-alpha3"
+misaka = "26.2.0.0-alpha"
 
 auto = "1.1.1"
 jflac = "1.5.2"

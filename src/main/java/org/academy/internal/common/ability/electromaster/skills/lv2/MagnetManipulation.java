@@ -78,7 +78,7 @@ public class MagnetManipulation extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onPullSelf() {
-            MisakaNetworkClient.sendPacket(new PullPacket(false));
+            MisakaNetworkClient.send(new PullPacket(false));
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             EMFieldEffectWrapper.INSTANCE.ensureActive();
@@ -93,7 +93,7 @@ public class MagnetManipulation extends Skill {
         }
 
         public static void onPullTarget() {
-            MisakaNetworkClient.sendPacket(new PullPacket(true));
+            MisakaNetworkClient.send(new PullPacket(true));
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             var look = p.getLookAngle().scale(16);

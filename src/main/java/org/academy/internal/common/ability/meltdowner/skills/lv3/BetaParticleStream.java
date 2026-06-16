@@ -79,7 +79,7 @@ public class BetaParticleStream extends Skill {
         public static void onFire() {
             var elapsedMs = (System.nanoTime() - chargeStartTime) / 1_000_000f;
             var charges = Math.clamp((int)(elapsedMs / 750f), 1, 5);
-            MisakaNetworkClient.sendPacket(new MulticastPacket(charges));
+            MisakaNetworkClient.send(new MulticastPacket(charges));
         }
 
         public static class Config extends KeyBindingConfig {

@@ -78,7 +78,7 @@ public class JetStrike extends Skill {
         public static void onUse() {
             var mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.player == null) return;
-            MisakaNetworkClient.sendPacket(new DashPacket(mc.player.getViewVector(1.0f)));
+            MisakaNetworkClient.send(new DashPacket(mc.player.getViewVector(1.0f)));
             var p = mc.player;
             TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.1f, 1.0f, 0.4f, 0.1f)
                     .addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());

@@ -27,7 +27,7 @@ public final class DataSyncManager<V> {
         var player = playerList.getPlayer(key);
         if (player != null) {
             values.put(key, value);
-            MisakaNetworkServer.sendPacket(player, new SyncDataPacket<>(syncKey, type, value));
+            MisakaNetworkServer.send(player, new SyncDataPacket<>(syncKey, type, value));
         }
     }
 

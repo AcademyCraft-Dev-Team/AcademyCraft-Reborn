@@ -74,7 +74,7 @@ public class PhantomFalling extends Skill {
         public static final String KEY_NAME_USE = SkillNames.PHANTOM_FALLING + "_use";
         public static Config CONFIG = new Config();
         public static void onUse() {
-            MisakaNetworkClient.sendPacket(UsePacket.INSTANCE);
+            MisakaNetworkClient.send(UsePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             DistortionEffectWrapper.INSTANCE.trigger(

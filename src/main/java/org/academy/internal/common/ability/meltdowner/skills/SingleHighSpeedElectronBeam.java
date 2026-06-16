@@ -73,7 +73,7 @@ public class SingleHighSpeedElectronBeam extends Skill {
         public static void handleKey() {
             if (!org.academy.api.client.ability.AbilitySystemClient.canUseSkill(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()))
                 return;
-            MisakaNetworkClient.sendPacket(ShootPacket.INSTANCE);
+            MisakaNetworkClient.send(ShootPacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
             TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.06f, 0.9f, 0.5f, 0.1f)

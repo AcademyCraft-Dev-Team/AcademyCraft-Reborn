@@ -74,7 +74,7 @@ public class HomingBlast extends Skill {
     public static final class Client {
         public static final String KEY_NAME_USE = SkillNames.HOMING_BLAST + "_use";
         public static Config CONFIG = new Config();
-        public static void onUse() { MisakaNetworkClient.sendPacket(ActivatePacket.INSTANCE); }
+        public static void onUse() { MisakaNetworkClient.send(ActivatePacket.INSTANCE); }
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
