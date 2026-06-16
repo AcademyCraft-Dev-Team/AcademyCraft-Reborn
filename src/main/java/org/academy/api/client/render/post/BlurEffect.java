@@ -1,5 +1,6 @@
 package org.academy.api.client.render.post;
 
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -9,6 +10,7 @@ import org.academy.api.client.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
+import org.joml.Vector4f;
 
 import java.util.List;
 
@@ -36,7 +38,7 @@ public final class BlurEffect {
         if (radius < 1) return;
 
         var resourcePool = Render.Buffers.getResourcePool();
-        var desc = new RenderTargetDescriptor(width, height, false, 0);
+        var desc = new RenderTargetDescriptor(width, height, false, new Vector4f(0), GpuFormat.RGBA8_UNORM);
 
         RenderTarget swapTarget = null;
 
@@ -49,7 +51,7 @@ public final class BlurEffect {
 
             var blurUboSlice = getBlurUniformsBuffer().slice();
             var gpuSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-            var textures = List.of(new TextureBinding("DiffuseSampler", sampler, gpuSampler));
+            var textures = List.of(new TextureBinding("Sampler0", sampler, gpuSampler));
             var uniforms = List.of(new UniformBinding("BlurInfo", blurUboSlice));
 
             var vec2 = new Vector2f(width, height);
@@ -74,7 +76,7 @@ public final class BlurEffect {
                     false, false,
                     Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR,
                     Render.Buffers.getInstance().getFSQuadVBNDC(),
-                    List.of(new TextureBinding("DiffuseSampler", swap, gpuSampler)), uniforms
+                    List.of(new TextureBinding("Sampler0", swap, gpuSampler)), uniforms
             );
         } finally {
             if (swapTarget != null) resourcePool.release(desc, swapTarget);

@@ -2,12 +2,10 @@ package org.academy.mixin.client;
 
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.vanilla.MainLoopEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
-import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,10 +15,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraft {
-    @Shadow
-    @Nullable
-    public Screen screen;
-
     @Shadow
     @Final
     private Window window;

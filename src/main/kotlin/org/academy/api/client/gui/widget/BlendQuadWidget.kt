@@ -41,7 +41,7 @@ class BlendQuadWidget : AbstractWidget() {
         val finalAlpha = alpha * context.accumulatedAlpha
 
         context.pose().pushPose()
-        context.pose().translate(lp.paddingLeft, lp.paddingTop, 0f)
+        context.pose().translate(lp.paddingLeft, lp.paddingTop)
         context.drawOrder().push()
         run {
             // 极小值也需要渲染喵
@@ -55,8 +55,7 @@ class BlendQuadWidget : AbstractWidget() {
                     1.0f,
                     1.0f,
                     listOf(),
-                    listOf(
-                        UniformPayload(
+                    listOf(UniformPayload(
                             "SdfUniforms",
                             SDFData::class.java, SDFData(
                                 Vector2f(paddedWidth, paddedHeight),
@@ -104,7 +103,7 @@ class BlendQuadWidget : AbstractWidget() {
         }
         run {
             context.pose().pushPose()
-            context.pose().translate(0f, max(paddedHeight - lineH, 0f), 0f)
+            context.pose().translate(0f, max(paddedHeight - lineH, 0f))
             val bottomLineCommand = ImageDrawCommand(
                 lineTextureView,
                 sampler,

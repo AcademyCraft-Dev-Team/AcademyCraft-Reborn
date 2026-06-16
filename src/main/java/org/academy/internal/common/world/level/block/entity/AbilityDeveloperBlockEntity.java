@@ -213,12 +213,6 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
             }
         }
     }
-
-    public AABB getRenderBoundingBox() {
-        var pos = getBlockPos().getCenter();
-        var radius = 5d;
-        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
-    }
 /*
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {

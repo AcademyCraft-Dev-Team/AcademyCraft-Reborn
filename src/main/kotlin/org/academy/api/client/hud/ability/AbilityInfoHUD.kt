@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
+import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.client.Minecraft
 import net.minecraft.util.Mth
@@ -26,7 +27,6 @@ import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.render.TextureBinding
-import org.joml.Matrix4f
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -129,7 +129,7 @@ class AbilityInfoHUD private constructor() {
                                 listOf(TextureBinding("Sampler0", view, sampler)),
                                 mutableListOf()
                             ) {
-                                override fun generateVertices(consumer: VertexConsumer, pose: Matrix4f) {
+                                override fun generateVertices(consumer: VertexConsumer, pose: PoseStack.Pose) {
                                     consumer.addVertex(pose, topLeft, topPadding, 0f).setUv(topLeftU, topPaddingU)
                                         .setColor(1f, 1f, 1f, alpha)
                                     consumer.addVertex(pose, bottomLeft, height - bottomPadding, 0f)
@@ -162,13 +162,13 @@ class AbilityInfoHUD private constructor() {
 
                                 context.pose().pushPose()
                                 run {
-                                    context.pose().translate(particle.posOffset, particle.posOffset, 0f)
+                                    context.pose().translate(particle.posOffset, particle.posOffset)
                                     context.submit(object : DrawCommand(
                                         Render.RenderPipelines.IMAGE,
                                         listOf(TextureBinding("Sampler0", view, sampler)),
                                         mutableListOf()
                                     ) {
-                                        override fun generateVertices(consumer: VertexConsumer, pose: Matrix4f) {
+                                        override fun generateVertices(consumer: VertexConsumer, pose: PoseStack.Pose) {
                                             consumer.addVertex(pose, particleTopLeft, topPadding, 0f)
                                                 .setUv(particleTopLeftU, topPaddingU)
                                                 .setColor(1f, 1f, 1f, particle.alpha)

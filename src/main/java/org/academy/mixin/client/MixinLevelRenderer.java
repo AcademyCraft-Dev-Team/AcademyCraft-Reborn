@@ -7,7 +7,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.neoforged.neoforge.common.NeoForge;
@@ -25,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LevelRenderer.class)
 public abstract class MixinLevelRenderer {
     @Inject(
-            method = "renderLevel",
+            method = "render",
             at = @At(
                     value = "INVOKE",
                     target = "Lorg/joml/Matrix4fStack;popMatrix()Lorg/joml/Matrix4fStack;"
@@ -40,7 +39,6 @@ public abstract class MixinLevelRenderer {
             GpuBufferSlice terrainFog,
             Vector4f fogColor,
             boolean shouldRenderSky,
-            ChunkSectionsToRender chunkSectionsToRender,
             CallbackInfo ci
     ) {
         BloomEffect.getInstance().process();

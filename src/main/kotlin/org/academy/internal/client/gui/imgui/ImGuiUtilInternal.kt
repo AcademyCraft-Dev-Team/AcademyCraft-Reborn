@@ -37,7 +37,7 @@ object ImGuiUtilInternal {
         RenderSystem.getDevice().createCommandEncoder().createRenderPass(
             { "ImGui" },
             colorTextureView,
-            OptionalInt.empty()
+            Optional.empty()
         ).use { _ ->
             imGuiImplGl3.newFrame()
             imGuiImplGlfw.newFrame()

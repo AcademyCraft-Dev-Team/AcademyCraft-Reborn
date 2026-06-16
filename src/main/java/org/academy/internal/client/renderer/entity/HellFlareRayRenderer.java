@@ -175,12 +175,12 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
     }
 
     private void drawOrbLayers(HellFlareRayRenderState state, PoseStack poseStack, RenderParams p) {
-        var bufferSource = BloomEffect.getAfter();
-        var additiveBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
-        var mainBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES);
+        var phase = BloomEffect.getAfter();
+        var additiveBuilder = phase.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
+        var mainBuilder = phase.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES);
 
         var random = RandomSource.create((long) (state.age * 50));
-        var cameraRotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+        var cameraRotation = Minecraft.getInstance().gameRenderer.mainCamera().rotation();
         var t12 = phaseBlend12(state);
         var t23 = phaseBlend23(state);
         var flare = Geometry.prominence(0.52f, state.age * 0.9f, 1.6f);

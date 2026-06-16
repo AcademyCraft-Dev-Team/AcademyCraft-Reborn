@@ -145,14 +145,14 @@ abstract class AbstractWidget : Widget {
 
         context.pose().pushPose()
         if (hasTransform) {
-            context.pose().translate(pivotX, pivotY, 0f)
+            context.pose().translate(pivotX, pivotY)
             if (rotation != 0.0f) {
                 context.pose().mulPose(Axis.ZP.rotationDegrees(rotation))
             }
             if (scaleX != 1.0f || scaleY != 1.0f) {
-                context.pose().scale(scaleX, scaleY, 1.0f)
+                context.pose().scale(scaleX, scaleY)
             }
-            context.pose().translate(-pivotX, -pivotY, 0f)
+            context.pose().translate(-pivotX, -pivotY)
         }
 
         renderInternal(context)

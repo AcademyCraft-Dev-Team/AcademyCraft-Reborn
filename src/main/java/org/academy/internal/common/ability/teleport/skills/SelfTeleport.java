@@ -49,7 +49,10 @@ public final class SelfTeleport extends Skill {
     public SelfTeleport() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
-                .level(AbilityLevel.LEVEL3)
+                .level(AbilityLevel.LEVEL2)
+                .cpCost(30)
+                .iterationTicks(8)
+                .maxStacks(1)
         );
     }
 
@@ -78,7 +81,7 @@ public final class SelfTeleport extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Server {
@@ -86,13 +89,13 @@ public final class SelfTeleport extends Skill {
         public static void handleTeleport(SelfTeleportPacket packet) {
             var serverPlayer = packet.getPacketListener().getPlayer();
             var pos = packet.getPosition();
-                var dimensions = serverPlayer.getDimensions(Pose.STANDING);
-                var playerHeight = dimensions.height();
-                var teleportY = pos.y() - (playerHeight / 2.0);
-                serverPlayer.teleportTo(pos.x(), teleportY, pos.z());
-                serverPlayer.resetFallDistance();
-                serverPlayer.setDeltaMovement(0, 0.25, 0);
-                serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(serverPlayer));
+            var dimensions = serverPlayer.getDimensions(Pose.STANDING);
+            var playerHeight = dimensions.height();
+            var teleportY = pos.y() - (playerHeight / 2.0);
+            serverPlayer.teleportTo(pos.x(), teleportY, pos.z());
+            serverPlayer.resetFallDistance();
+            serverPlayer.setDeltaMovement(0, 0.25, 0);
+            serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(serverPlayer));
         }
     }
 
@@ -216,15 +219,16 @@ public final class SelfTeleport extends Skill {
                 visualRenderPos = visualRenderPos.lerp(currentRenderPos, factor);
                 previewBoxWorld = calculateAABBFromCenter(visualRenderPos);
 
-                var matrixStack = event.getMatrixStack();
-                var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-                var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+/*                var matrixStack = event.getMatrixStack();
+                var camera = Minecraft.getInstance().gameRenderer.mainCamera();
+                var buffer = Minecraft.getInstance().gameRenderer.renderBuffers().stagedVertexBuffer();
+                var bufferSource = buffer.getVertexBuilder(buffer.appendDraw());
                 var camPos = camera.position();
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
                 LineBoxRenderer.renderWireframeBox(matrixStack, bufferSource, previewBoxWorld, 1f, 1f, 1f, 1f);
-                matrixStack.popPose();
+                matrixStack.popPose();*/
             }
 
             public void cleanup() {

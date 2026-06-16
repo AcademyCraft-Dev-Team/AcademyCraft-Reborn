@@ -38,6 +38,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
+    private static volatile boolean DEV_MODE = false;
+
+    public static boolean isDevMode() {
+        return DEV_MODE;
+    }
+
+    public static void setDevMode(boolean devMode) {
+        if (DEV_MODE != devMode) {
+            DEV_MODE = devMode;
+            LOGGER.warn("DEV_MODE changed to {}", devMode);
+        }
+    }
     private final Map<UUID, Set<ServerContext>> activeContexts;
 
     private final SkillDataManager skillDataManager;
@@ -73,7 +85,7 @@ public final class AbilitySystemServer {
         activeContexts = new ConcurrentHashMap<>();
         NeoForge.EVENT_BUS.register(this);
 
-        MisakaNetworkServer.FUTURE_MANAGER.registerFutureHandler(AbilitySystemServer.class);
+        MisakaNetworkServer.FUTURE_MANAGER.register(AbilitySystemServer.class);
     }
 
     public static final class SubsystemRegistry {
@@ -197,7 +209,7 @@ public final class AbilitySystemServer {
 
         contexts.forEach(ctx -> {
             NeoForge.EVENT_BUS.unregister(ctx);
-            MisakaNetworkServer.NETWORK_MANAGER.unregisterPacketListener(ctx);
+            MisakaNetworkServer.NETWORK_MANAGER.unregister(ctx);
         });
     }
 
@@ -233,11 +245,11 @@ public final class AbilitySystemServer {
         if (player == null) return;
 
         var instance = getSystem(player);
-        instance.activeContexts.computeIfAbsent(player.getUUID(), k -> ConcurrentHashMap.newKeySet())
+        instance.activeContexts.computeIfAbsent(player.getUUID(), _ -> ConcurrentHashMap.newKeySet())
                 .add(serverContext);
 
         NeoForge.EVENT_BUS.register(serverContext);
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(serverContext);
+        MisakaNetworkServer.NETWORK_MANAGER.register(serverContext);
     }
 
     public static void unregisterContext(ServerContext serverContext) {
@@ -252,7 +264,7 @@ public final class AbilitySystemServer {
         if (contexts.isEmpty()) instance.activeContexts.remove(player.getUUID());
 
         NeoForge.EVENT_BUS.unregister(serverContext);
-        MisakaNetworkServer.NETWORK_MANAGER.unregisterPacketListener(serverContext);
+        MisakaNetworkServer.NETWORK_MANAGER.unregister(serverContext);
     }
 
     @SubscribeEvent
@@ -374,8 +386,13 @@ public final class AbilitySystemServer {
         var uuid = player.getUUID();
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
-        var actualCost = calculator.calculate(ctx);
 
+        if (DEV_MODE) {
+            action.execute(ctx, 0f);
+            return true;
+        }
+
+        var actualCost = calculator.calculate(ctx);
         if (playerCPManager.tryOccupation(uuid, actualCost, skill, skill.getIterationTicks(level), false)) {
             action.execute(ctx, actualCost);
             addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
@@ -393,6 +410,12 @@ public final class AbilitySystemServer {
         var uuid = player.getUUID();
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
+
+        if (DEV_MODE) {
+            action.execute(ctx, 0f);
+            return true;
+        }
+
         if (playerCPManager.tryOccupation(uuid, cost, skill, skill.getIterationTicks(level), false)) {
             action.execute(ctx, cost);
             addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
@@ -463,6 +486,46 @@ public final class AbilitySystemServer {
 
     public static float getSPReductionRate(LivingEntity entity) {
         return entity.getData(AttachmentTypes.SP_REDUCTION_RATE);
+    }
+
+    public float getPlayerFreeCPRatio(UUID uuid) {
+        return playerCPManager.getFreeCPRatio(uuid);
+    }
+
+    public float getPlayerDamageMultiplier(UUID uuid) {
+        return playerCPManager.getDamageMultiplier(uuid);
+    }
+
+    public float getPlayerRangeMultiplier(UUID uuid) {
+        return playerCPManager.getRangeMultiplier(uuid);
+    }
+
+    public float getPlayerEffectiveDistanceMultiplier(UUID uuid) {
+        return playerCPManager.getEffectiveDistanceMultiplier(uuid);
+    }
+
+    public float getPlayerCurrMP(UUID uuid) {
+        return playerCPManager.getCurrMP(uuid);
+    }
+
+    public void setPlayerCurrMP(UUID uuid, float currMP) {
+        playerCPManager.setCurrMP(uuid, currMP);
+    }
+
+    public void addPlayerCurrMP(UUID uuid, float addMP) {
+        playerCPManager.addCurrMP(uuid, addMP);
+    }
+
+    public boolean tryConsumePlayerMP(UUID uuid, float amount) {
+        return playerCPManager.tryConsumeMP(uuid, amount);
+    }
+
+    public float getPlayerMaxMP(UUID uuid) {
+        return playerCPManager.getMaxMP(uuid);
+    }
+
+    public void setPlayerMaxMP(UUID uuid, float maxMP) {
+        playerCPManager.setMaxMP(uuid, maxMP);
     }
 
     public static void setSPReductionRate(LivingEntity entity, float rate) {

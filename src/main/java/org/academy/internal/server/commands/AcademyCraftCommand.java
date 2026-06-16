@@ -27,7 +27,6 @@ import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.Skills;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -89,6 +88,11 @@ public final class AcademyCraftCommand {
                 .then(Commands.literal("debug")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(CPDebugCommands.register())
+                )
+                .then(Commands.literal("dev")
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.argument("state", BoolArgumentType.bool())
+                                .executes(AcademyCraftCommand::toggleDevMode))
                 )
         );
     }
@@ -239,6 +243,15 @@ public final class AcademyCraftCommand {
         }
     }
 
+    private static int toggleDevMode(CommandContext<CommandSourceStack> context) {
+        var enabled = BoolArgumentType.getBool(context, "state");
+        AbilitySystemServer.setDevMode(enabled);
+        context.getSource().sendSuccess(
+                () -> Component.literal("§e[AC Dev]§r Dev mode: " + (enabled ? "§aON" : "§cOFF")),
+                true);
+        return 1;
+    }
+
     private static int learnAllSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var value = 1;
 
@@ -332,12 +345,10 @@ public final class AcademyCraftCommand {
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
         abilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet.get().value());
         var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
-        if (learnedSkills != null) {
-            learnedSkills.clear();
-            var playerData = abilitySystemServer.getPlayerData(playerUuid);
-            if (playerData != null) playerData.markDirty();
-            abilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_DATA);
-        }
+        learnedSkills.clear();
+        var playerData = abilitySystemServer.getPlayerData(playerUuid);
+        if (playerData != null) playerData.markDirty();
+        abilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_DATA);
 
         context.getSource().sendSuccess(
                 () -> Component.literal(

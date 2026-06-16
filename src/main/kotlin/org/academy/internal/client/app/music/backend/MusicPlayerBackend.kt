@@ -77,13 +77,10 @@ class MusicPlayerBackend private constructor() {
 
         // 初始化以缓解 MusicApp 第一次打开时卡顿喵
         for (info in newPlaylist) {
-            val codePoints =  info.name.codePoints().toArray()
+            val codePoints = info.name.codePoints().toArray()
             for (cp in codePoints) {
                 val font: MsdfFont = MsdfFontService.getFont(cp)
-                val atlas = font.atlas
-                val face = font.face
-
-                atlas.getOrGenerate(face, cp)
+                font.getGlyph(cp)
             }
             Minecraft.getInstance().textureManager.getTexture(info.icon)
         }

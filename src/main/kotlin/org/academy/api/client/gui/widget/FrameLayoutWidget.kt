@@ -29,8 +29,8 @@ open class FrameLayoutWidget : AbstractWidgetContainer() {
                 if (child.isVisible()) {
                     context.pose().pushPose()
                     run {
-                        context.pose().translate(child.x, child.y, child.z)
-                        context.pose().translate(child.translationX, child.translationY, 0f)
+                        context.pose().translate(child.x, child.y)
+                        context.pose().translate(child.translationX, child.translationY)
                         child.render(context)
                     }
                     context.pose().popPose()

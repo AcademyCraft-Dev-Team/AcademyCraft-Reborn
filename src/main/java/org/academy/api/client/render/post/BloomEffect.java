@@ -1,5 +1,6 @@
 package org.academy.api.client.render.post;
 
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
@@ -8,42 +9,27 @@ import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.OutputTarget;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import org.academy.api.client.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
+import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.List;
-import java.util.SequencedMap;
 
 import static org.academy.api.client.Render.BlurUniforms.getBlurUniformsBuffer;
 import static org.academy.api.client.Render.BlurUniforms.writeBlurUniforms;
-import static org.academy.api.client.render.post.PostEffect.MAIN_SCENE;
 
 public final class BloomEffect {
     @Nullable
     private static BloomEffect instance;
-    private static final SequencedMap<RenderType, ByteBufferBuilder> FIXED_BUFFERS =
-            new Object2ObjectLinkedOpenHashMap<>();
-    private static final MultiBufferSource.BufferSource BEFORE =
-            PostEffect.createPostEffectPassBuffer(FIXED_BUFFERS);
-    private static final MultiBufferSource.BufferSource AFTER =
-            PostEffect.createPostEffectPassBuffer(FIXED_BUFFERS);
-    /**
-     * 需要搭配 getBlitToMainPost 使用喵, 不然 input 为 null 喵
-     * <br>
-     * 如:
-     * <br>
-     * java.lang.NullPointerException: Cannot invoke "com.mojang.blaze3d.textures.GpuTextureView.isClosed()" because "colorTexture" is null
-     */
+    private static final Phase BEFORE = new Phase("before");
+    private static final Phase AFTER = new Phase("after");
+
     public static final OutputTarget BLOOM_TARGET = new OutputTarget(
             "bloom_target",
             () -> getInstance().getInput()
@@ -60,25 +46,24 @@ public final class BloomEffect {
         bloomUniformsBuffer = device.createBuffer(() -> "Bloom Blend UBO", uboUsage, BloomUniforms.UBO_SIZE);
     }
 
+    private BloomEffect() {
+    }
+
     public static void init() {
         instance = new BloomEffect();
     }
 
-    public static void addFixedBuffer(RenderType type) {
-        FIXED_BUFFERS.put(type, new ByteBufferBuilder(type.bufferSize()));
-    }
-
     public static BloomEffect getInstance() {
         if (instance == null) {
-            throw new IllegalStateException(
-                    "BloomEffect has not been initialized."
-            );
+            throw new IllegalStateException("BloomEffect has not been initialized.");
         }
         return instance;
     }
 
     public void close() {
         bloomUniformsBuffer.close();
+        BEFORE.close();
+        AFTER.close();
     }
 
     public @Nullable RenderTarget getInput() {
@@ -86,39 +71,26 @@ public final class BloomEffect {
         return input;
     }
 
-    public static MultiBufferSource.BufferSource getAfter() {
-        hasBeenUsed = true;
-        return AFTER;
-    }
-
-    public static MultiBufferSource.BufferSource getBefore() {
+    public static Phase getBefore() {
         hasBeenUsed = true;
         return BEFORE;
     }
 
-    private void runBlurPass(
-            GpuTextureView output, GpuTextureView input,
-            Vector2f outSize, float dirX, float dirY, int radius
-    ) {
+    public static Phase getAfter() {
+        hasBeenUsed = true;
+        return AFTER;
+    }
+
+    private void runBlurPass(GpuTextureView output, GpuTextureView input, Vector2f outSize, float dirX, float dirY, int radius) {
         writeBlurUniforms(outSize, dirX, dirY, radius);
         var blurUboSlice = getBlurUniformsBuffer().slice();
-
         var textures = List.of(
-                new TextureBinding(
-                        "DiffuseSampler",
-                        input,
-                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                )
+                new TextureBinding("Sampler0", input, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
         );
         var uniforms = List.of(
                 new UniformBinding("BlurInfo", blurUboSlice)
         );
-        Render.runBlitPass(
-                output, Render.RenderPipelines.GAUSSIAN_BLUR,
-                Render.Buffers.getInstance().getFSQuadVBNDC(),
-                textures, uniforms,
-                true
-        );
+        Render.runBlitPass(output, Render.RenderPipelines.GAUSSIAN_BLUR, Render.Buffers.getInstance().getFSQuadVBNDC(), textures, uniforms, true);
     }
 
     private void writeBloomUniforms(float radius, float intensity) {
@@ -134,29 +106,29 @@ public final class BloomEffect {
         if (!hasBeenUsed) return;
 
         var mc = Minecraft.getInstance();
-        var mainRenderTarget = mc.getMainRenderTarget();
+        var mainRenderTarget = mc.gameRenderer.mainRenderTarget();
         var width = mainRenderTarget.width;
         var height = mainRenderTarget.height;
         var resourcePool = Render.Buffers.getResourcePool();
 
         var descInput = new RenderTargetDescriptor(
-                width, height, mainRenderTarget.useDepth, 0, mainRenderTarget.useStencil
+                width, height, mainRenderTarget.useDepth, mainRenderTarget.useStencil, new Vector4f(0), GpuFormat.RGBA8_UNORM
         );
         var descHalf = new RenderTargetDescriptor(
-                width / 2, height / 2, false, 0
+                width / 2, height / 2, false, new Vector4f(0), GpuFormat.RGBA8_UNORM
         );
         var descQuarter = new RenderTargetDescriptor(
-                width / 4, height / 4, false, 0
+                width / 4, height / 4, false, new Vector4f(0), GpuFormat.RGBA8_UNORM
         );
         var descEighth = new RenderTargetDescriptor(
-                width / 8, height / 8, false, 0
+                width / 8, height / 8, false, new Vector4f(0), GpuFormat.RGBA8_UNORM
         );
 
         RenderTarget pongHalf = null, pongQuarter = null, pongEighth = null;
         RenderTarget ping = null;
 
         try {
-            var scene = MAIN_SCENE.getColorTextureView();
+            var scene = PostEffect.MAIN_SCENE.getColorTextureView();
             var main = mainRenderTarget.getColorTextureView();
 
             input = resourcePool.acquire(descInput);
@@ -165,16 +137,16 @@ public final class BloomEffect {
             if (scene == null || main == null || inputView == null) return;
 
             input.copyDepthFrom(mainRenderTarget);
-            BEFORE.endBatch();
+            BEFORE.draw();
             var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-            var textures = List.of(new TextureBinding("DiffuseSampler", inputView, sampler));
+            var textures = List.of(new TextureBinding("Sampler0", inputView, sampler));
             Render.runBlitPass(
                     main, Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,
                     Render.Buffers.getInstance().getFSQuadVBNDC(),
                     textures, List.of(),
                     false
             );
-            AFTER.endBatch();
+            AFTER.draw();
 
             {
                 ping = resourcePool.acquire(descHalf);
@@ -240,7 +212,7 @@ public final class BloomEffect {
 
             writeBloomUniforms(1.0f, 1.0f);
             var blendSamplers = List.of(
-                    new TextureBinding("DiffuseSampler", main, sampler),
+                    new TextureBinding("Sampler0", main, sampler),
                     new TextureBinding("BlurTexture1", pongHalfView, sampler),
                     new TextureBinding("BlurTexture2", pongQuarterView, sampler),
                     new TextureBinding("BlurTexture3", pongEighthView, sampler)
@@ -255,11 +227,11 @@ public final class BloomEffect {
             Render.runBlitPass(
                     scene, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
                     Render.Buffers.getInstance().getFSQuadVBNDC(),
-                    List.of(new TextureBinding("DiffuseSampler", main, sampler)),
+                    List.of(new TextureBinding("Sampler0", main, sampler)),
                     List.of(),
                     false
             );
-            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(inputView.texture(), 0);
+            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(inputView.texture(), new Vector4f(0));
         } finally {
             if (input != null) resourcePool.release(descInput, input);
             if (ping != null) {

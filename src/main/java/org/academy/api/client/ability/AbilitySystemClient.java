@@ -47,7 +47,7 @@ public final class AbilitySystemClient {
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
                                 new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)),
-                                GLFW.GLFW_PRESS,
+                                GLFW.GLFW_RELEASE,
                                 new LinkedHashSet<>()
                         )
                 )
@@ -67,7 +67,7 @@ public final class AbilitySystemClient {
     }
 
     public static void init() {
-        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(AbilitySystemClient.class);
+        MisakaNetworkClient.NETWORK_MANAGER.register(AbilitySystemClient.class);
         InputSystem.addKeyBinding(KEY_NAME_ACTIVATE_HUD, ACTIVATE_HUD_KEY, () -> {
             if (ClientUtil.hasScreen()) return;
             setActiveHUD(!activeHUD);
@@ -100,10 +100,17 @@ public final class AbilitySystemClient {
         SKILL_DATA.putAll(newData);
 
         LEARNED_SKILLS.clear();
-        newData.keySet().forEach(skillId -> {
-            Registries.SKILLS.get(Identifier.parse(skillId))
-                    .ifPresent(holder -> LEARNED_SKILLS.add(holder.value()));
-        });
+        newData.keySet().forEach(skillId -> Registries.SKILLS.get(Identifier.parse(skillId))
+                .ifPresent(holder -> LEARNED_SKILLS.add(holder.value())));
+    }
+
+    public static boolean canUseSkill(Skill skill) {
+        return LEARNED_SKILLS.contains(skill)
+                && getSkillData(skill).map(SkillData::isEnabled).orElse(false);
+    }
+
+    public static boolean isSkillLearned(Skill skill) {
+        return LEARNED_SKILLS.contains(skill);
     }
 
     public static float getAvailableCP() {
@@ -124,6 +131,28 @@ public final class AbilitySystemClient {
 
     public static void setActiveHUD(boolean activeHUD) {
         AbilitySystemClient.activeHUD = activeHUD;
+    }
+
+    public static int getCurrSP() {
+        return cpData.getCurrSP();
+    }
+
+    public static int getMaxSP() {
+        return cpData.getMaxSP();
+    }
+
+    public static float getFreeCPRatio() {
+        var max = cpData.getMaxCP();
+        if (max <= 0) return 0f;
+        return cpData.getAvailableCP() / max;
+    }
+
+    public static float getCurrMP() {
+        return cpData.getCurrMP();
+    }
+
+    public static float getMaxMP() {
+        return cpData.getMaxMP();
     }
 
     public static AbilityCategory getCategory() {
@@ -154,12 +183,12 @@ public final class AbilitySystemClient {
 
     public static void registerContext(ClientContext clientContext) {
         NeoForge.EVENT_BUS.register(clientContext);
-        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(clientContext);
+        MisakaNetworkClient.NETWORK_MANAGER.register(clientContext);
     }
 
     public static void unregisterContext(ClientContext clientContext) {
         NeoForge.EVENT_BUS.unregister(clientContext);
-        MisakaNetworkClient.NETWORK_MANAGER.unregisterPacketListener(clientContext);
+        MisakaNetworkClient.NETWORK_MANAGER.unregister(clientContext);
     }
 
     public static class Config extends KeyBindingConfig {

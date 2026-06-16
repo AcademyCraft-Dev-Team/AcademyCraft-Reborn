@@ -1,5 +1,6 @@
 package org.academy.api.client.hud
 
+import com.mojang.blaze3d.GpuFormat
 import com.mojang.blaze3d.resource.RenderTargetDescriptor
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
@@ -17,6 +18,7 @@ import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
 import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.MainLoopEvent
+import org.joml.Vector4f
 import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -60,14 +62,13 @@ object HUDManager {
         if (!AcademyCraftClient.isRenderInitialized()) return
 
         val mc = Minecraft.getInstance()
-        val main = mc.mainRenderTarget
+        val main = mc.gameRenderer.mainRenderTarget()
         val width = main.width
         val height = main.height
 
-
         val pool = Render.Buffers.getResourcePool()
-        val descTemp = RenderTargetDescriptor(width, height, true, 0, true)
-        val descBlur = RenderTargetDescriptor(width, height, false, 0, false)
+        val descTemp = RenderTargetDescriptor(width, height, true, true, Vector4f(0f), GpuFormat.RGBA8_UNORM)
+        val descBlur = RenderTargetDescriptor(width, height, false, false, Vector4f(0f), GpuFormat.RGBA8_UNORM)
 
         val ui = pool.acquire(descTemp)
         val blur = pool.acquire(descBlur)
@@ -97,7 +98,7 @@ object HUDManager {
                     Render.Buffers.getInstance().fsQuadVBNDC,
                     listOf(
                         TextureBinding(
-                            "DiffuseSampler", blurColor,
+                            "Sampler0", blurColor,
                             RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
                         )
                     ), mutableListOf(),
@@ -110,7 +111,7 @@ object HUDManager {
                 Render.Buffers.getInstance().fsQuadVBNDC,
                 listOf(
                     TextureBinding(
-                        "DiffuseSampler", uiColor,
+                        "Sampler0", uiColor,
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
                     )
                 ), mutableListOf(),

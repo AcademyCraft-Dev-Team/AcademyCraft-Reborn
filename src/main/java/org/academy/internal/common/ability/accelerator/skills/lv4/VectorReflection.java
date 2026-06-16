@@ -97,7 +97,7 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {

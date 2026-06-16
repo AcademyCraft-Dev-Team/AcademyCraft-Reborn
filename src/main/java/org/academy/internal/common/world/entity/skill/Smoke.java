@@ -16,15 +16,15 @@ public class Smoke extends RenderOnlyEntity {
 
     public Smoke(EntityType<?> entityType, Level level) {
         super(entityType, level);
-        this.lifeModifier = 0.5f + MathUtil.RANDOM.nextFloat() * 0.2f;
-        this.rotSpeed = 0.3f * (MathUtil.RANDOM.nextFloat() + 3);
-        this.frame = MathUtil.RANDOM.nextInt(4);
-        this.initTick = tickCount;
+        lifeModifier = 0.5f + MathUtil.RANDOM.nextFloat() * 0.2f;
+        rotSpeed = 0.3f * (MathUtil.RANDOM.nextFloat() + 3);
+        frame = MathUtil.RANDOM.nextInt(4);
+        initTick = tickCount;
     }
 
     public float getAlpha() {
-        float deltaTime = (tickCount - initTick) / 20.0f;
-        float t = deltaTime / lifeModifier;
+        var deltaTime = (tickCount - initTick) / 20.0f;
+        var t = deltaTime / lifeModifier;
         if (t <= 0.3f) {
             return t / 0.3f;
         } else if (t <= 1.5f) {

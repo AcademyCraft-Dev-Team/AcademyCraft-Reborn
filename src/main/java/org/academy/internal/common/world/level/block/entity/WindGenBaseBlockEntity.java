@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.internal.client.gui.world.WindGenWorldGui;
@@ -332,7 +333,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     }
 
     public AABB getRenderBoundingBox() {
-        var pos = getBlockPos().getCenter();
+        var pos = Vec3.atCenterOf(getBlockPos());
         var radius = 1.5f;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

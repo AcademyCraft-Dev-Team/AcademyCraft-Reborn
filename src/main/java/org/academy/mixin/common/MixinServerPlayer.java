@@ -25,8 +25,8 @@ public abstract class MixinServerPlayer extends Player {
                     target = "Lnet/minecraft/world/entity/player/Player;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z"
             )
     )
-    public boolean redirectHurtServer(Player instance, ServerLevel level, DamageSource source, float amount) {
-        var pair = VectorReflection.Server.hurtServer(instance, level, source, amount);
+    public boolean redirectHurtServer(Player instance, ServerLevel level, DamageSource source, float damage) {
+        var pair = VectorReflection.Server.hurtServer(instance, level, source, damage);
         if (pair.getLeft()) return false;
         return super.hurtServer(level, source, pair.getRight());
     }

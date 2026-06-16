@@ -14,10 +14,6 @@ import org.academy.internal.common.world.entity.skill.GlowCircle;
 public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRenderState> {
     private static final float MAX_RADIUS = 1.5f;
 
-    static {
-        PostEffect.addFixedBuffer(Render.RenderTypes.DISTORTION_RING);
-    }
-
     public GlowCircleRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
@@ -43,7 +39,7 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
         poseStack.mulPose(Axis.ZP.rotationDegrees(90 + pitch));
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
 
-        var vertexConsumer = PostEffect.BUFFER_SOURCE_PRE.getBuffer(Render.RenderTypes.DISTORTION_RING);
+        var vertexConsumer = PostEffect.getPre().getBuffer(Render.RenderTypes.DISTORTION_RING);
         vertexConsumer.addVertex(matrix, -radius, 0, -radius).setUv(0, 0).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
         vertexConsumer.addVertex(matrix, radius, 0, -radius).setUv(1, 0).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
         vertexConsumer.addVertex(matrix, radius, 0, radius).setUv(1, 1).setNormal(distortionStrength, ringWidth, ringEdgeBlur);

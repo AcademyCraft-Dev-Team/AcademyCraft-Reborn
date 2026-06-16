@@ -17,26 +17,26 @@ public abstract class MixinProjectile {
             cancellable = true
     )
     private void shootFromRotation(
-            Entity shooter,
-            float x,
-            float y,
-            float z,
-            float velocity,
-            float inaccuracy,
+            Entity source,
+            float xRot,
+            float yRot,
+            float yOffset,
+            float pow,
+            float uncertainty,
             CallbackInfo ci
     ) {
         var projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide()) return;
-        velocity = KineticEnergyApplied.Server.onProjectileShoot(projectile, shooter, velocity);
+        pow = KineticEnergyApplied.Server.onProjectileShoot(projectile, source, pow);
 
-        var f = -Mth.sin(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
-        var f1 = -Mth.sin((x + z) * ((float) Math.PI / 180F));
-        var f2 = Mth.cos(y * ((float) Math.PI / 180F)) * Mth.cos(x * ((float) Math.PI / 180F));
+        var f = -Mth.sin(yRot * ((float) Math.PI / 180F)) * Mth.cos(xRot * ((float) Math.PI / 180F));
+        var f1 = -Mth.sin((xRot + yOffset) * ((float) Math.PI / 180F));
+        var f2 = Mth.cos(yRot * ((float) Math.PI / 180F)) * Mth.cos(xRot * ((float) Math.PI / 180F));
 
-        projectile.shoot(f, f1, f2, velocity, inaccuracy);
+        projectile.shoot(f, f1, f2, pow, uncertainty);
 
-        var vec3 = shooter.getDeltaMovement();
-        projectile.setDeltaMovement(projectile.getDeltaMovement().add(vec3.x, shooter.onGround() ? 0.0D : vec3.y, vec3.z));
+        var vec3 = source.getDeltaMovement();
+        projectile.setDeltaMovement(projectile.getDeltaMovement().add(vec3.x, source.onGround() ? 0.0D : vec3.y, vec3.z));
         ci.cancel();
     }
 }

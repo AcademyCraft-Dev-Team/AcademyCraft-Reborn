@@ -12,12 +12,11 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.util.GlyphCommandGenerator
-import java.util.*
 import kotlin.math.max
 
 abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     protected val protectedChildren: MutableMap<String, Widget> = LinkedHashMap()
-    override val children: Map<String, Widget> get() = Collections.unmodifiableMap(protectedChildren)
+    override val children: Map<String, Widget> get() = protectedChildren
 
     override var isLayoutDirty: Boolean = true
         protected set
@@ -35,14 +34,23 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
     override var focusedChild: Widget? = null
         set(child) {
-            if (child == null) return
+            if (child == null) {
+                field?.isFocused = false
+                field = null
+                return
+            }
             val cP = child.parent
             if (cP !== this) {
                 if (cP is WidgetContainer) cP.focusedChild = child
                 return
             }
 
-            if (field === child) return
+            if (field === child) {
+                if (!child.isFocused) {
+                    child.isFocused = true
+                }
+                return
+            }
 
             field?.isFocused = false
 
@@ -77,12 +85,12 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
         context.submit(FillRectDrawCommand(width, thickness, red, green, blue, alpha))
         context.pose().pushPose()
-        context.pose().translate(0f, height - thickness, 0f)
+        context.pose().translate(0f, height - thickness)
         context.submit(FillRectDrawCommand(width, thickness, red, green, blue, alpha))
         context.pose().popPose()
         context.submit(FillRectDrawCommand(thickness, height, red, green, blue, alpha))
         context.pose().pushPose()
-        context.pose().translate(width - thickness, 0f, 0f)
+        context.pose().translate(width - thickness, 0f)
         context.submit(FillRectDrawCommand(thickness, height, red, green, blue, alpha))
         context.pose().popPose()
 
@@ -112,7 +120,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         val backAlpha = 0.56f
 
         context.pose().pushPose()
-        context.pose().translate(padding, padding, 500f)
+        context.pose().translate(padding, padding)
 
         context.submit(
             FillRectDrawCommand(
@@ -123,7 +131,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         )
 
         context.pose().pushPose()
-        context.pose().translate(padding, padding, 0.1f)
+        context.pose().translate(padding, padding)
         val commands = GlyphCommandGenerator.generate(
             infoText, fontSize, 0f, textRed, textGreen, textBlue, textAlpha
         )
@@ -176,16 +184,18 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         val hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f
 
         context.pose().pushPose()
+        context.drawOrder().push()
         run {
+            context.drawOrder().advance()
             if (hasTransform) {
-                context.pose().translate(pivotX, pivotY, 0f)
+                context.pose().translate(pivotX, pivotY)
                 if (rotation != 0.0f) {
                     context.pose().mulPose(Axis.ZP.rotationDegrees(rotation))
                 }
                 if (scaleX != 1.0f || scaleY != 1.0f) {
-                    context.pose().scale(scaleX, scaleY, 1.0f)
+                    context.pose().scale(scaleX, scaleY)
                 }
-                context.pose().translate(-pivotX, -pivotY, 0f)
+                context.pose().translate(-pivotX, -pivotY)
             }
             context.alpha().push(alpha)
             run {
@@ -197,6 +207,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             }
             context.alpha().pop()
         }
+        context.drawOrder().pop()
         context.pose().popPose()
     }
 
@@ -205,8 +216,8 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             if (child.isVisible()) {
                 context.pose().pushPose()
                 run {
-                    context.pose().translate(child.x, child.y, child.z)
-                    context.pose().translate(child.translationX, child.translationY, 0f)
+                    context.pose().translate(child.x, child.y)
+                    context.pose().translate(child.translationX, child.translationY)
                     child.render(context)
                 }
                 context.pose().popPose()
@@ -218,7 +229,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                 if (child.isVisible() && child !is WidgetContainer) {
                     context.pose().pushPose()
                     run {
-                        context.pose().translate(child.x, child.y, child.z + 0.1f)
+                        context.pose().translate(child.x, child.y)
                         renderDebugLayoutBounds(child, context)
                     }
                     context.pose().popPose()
@@ -441,12 +452,12 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     }
 
     override fun clearChildren() {
-        for (child in children.values) removeChild(child.name)
+        children.keys.toList().forEach { removeChild(it) }
         requestLayout()
     }
 
     override fun tick() {
-        for (tickable in children.values) tickable.tick()
+        children.values.forEach { it.tick() }
     }
 
     override fun canFocus(): Boolean {

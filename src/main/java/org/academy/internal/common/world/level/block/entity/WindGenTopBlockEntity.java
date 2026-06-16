@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.item.Items;
 
 public final class WindGenTopBlockEntity extends BlockEntity implements Container {
@@ -106,7 +107,7 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
     }
 
     public AABB getRenderBoundingBox() {
-        var pos = getBlockPos().getCenter();
+        var pos = Vec3.atCenterOf(getBlockPos());
         var radius = 9;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
     }

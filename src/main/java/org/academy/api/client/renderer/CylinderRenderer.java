@@ -3,27 +3,22 @@ package org.academy.api.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.LightCoordsUtil;
-import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.post.Phase;
 import org.joml.Matrix4f;
 
 import static org.academy.api.client.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
 
 public final class CylinderRenderer {
-    static {
-        PostEffect.addFixedBuffer(POS_COLOR_QUADS_BLOOM);
-    }
-
     private CylinderRenderer() {
     }
 
-    public static void renderCylinder(PoseStack poseStack, MultiBufferSource buffer, float[][] vertexBuffer,
+    public static void renderCylinder(PoseStack poseStack, Phase phase, float[][] vertexBuffer,
                                       float red, float green, float blue, float alpha) {
         var pose = poseStack.last();
         var matrix = pose.pose();
-        var vertexConsumer = buffer.getBuffer(POS_COLOR_QUADS_BLOOM);
+        var vertexConsumer = phase.getBuffer(POS_COLOR_QUADS_BLOOM);
         renderCylinder(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
     }
 

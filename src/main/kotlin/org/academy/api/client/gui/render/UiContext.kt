@@ -6,8 +6,6 @@ import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.blaze3d.textures.GpuTexture
-import com.mojang.blaze3d.textures.TextureFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
@@ -23,11 +21,12 @@ import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.util.ClientUtil
 import org.academy.api.common.util.UncheckedUtil
 import org.joml.Matrix4f
+import org.joml.Vector4f
 import org.lwjgl.system.MemoryStack
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
-open class UiContext(private val layered: Float = 3000f) {
+open class UiContext {
     private val commandList = AtomicReference<MutableList<SubmittedCommand>?>()
 
     private val closed = AtomicBoolean(false)
@@ -73,26 +72,22 @@ open class UiContext(private val layered: Float = 3000f) {
 
         val commandEncoder = RenderSystem.getDevice().createCommandEncoder()
         val colorTexture = target.getColorTexture()
-        val depthTextureView = target.getDepthTextureView() ?: return
-        val depthTexture = depthTextureView.texture()
         val colorTextureView = target.getColorTextureView()
 
         if (colorTexture == null || colorTextureView == null) return
 
-        if (clear) commandEncoder.clearColorAndDepthTextures(colorTexture, 0, depthTexture, 1.0)
+        if (clear) commandEncoder.clearColorTexture(colorTexture, Vector4f(0f))
 
         val projectionMatrixBuffer = projectionMatrixBuffer
+        val dynamicTransformsUbo = dynamicTransformsUbo
         if (projectionMatrixBuffer == null || dynamicTransformsUbo == null) return
 
         val commands = commandList.getAndSet(null)
 
         if (commands.isNullOrEmpty()) return
 
-        val depthEpsilon: Float = calculateDepthEpsilon(depthTexture) * layered
-
         val meshesToDraw = BatchProcessor.process(
             commands,
-            depthEpsilon,
             object : UboUploader {
                 override fun <T : DynamicUniform> upload(payload: UniformPayload<T>): GpuBufferSlice {
                     return uploadPayload(payload)
@@ -103,17 +98,11 @@ open class UiContext(private val layered: Float = 3000f) {
         val window = Minecraft.getInstance().window
         val guiScaledWidth = window.width / effectiveScale
         val guiScaledHeight = window.height / effectiveScale
-        /*
-         * Map: z [0, layered] -> NDC [1, -1] :: Depth [1, 0]
-         * Eq : ndc = z * 2 / (zNear - zFar) + (zNear + zFar) / (zNear - zFar)
-         * z=0 => ndc= 1 => (zNear + zFar) / (zNear - zFar) = 1 => zFar = 0
-         * z=layered => ndc=-1 => layered * 2 / zNear + 1 = -1 => zNear = -layered
-         */
-        projection.setupOrtho(-layered, 0.0f, guiScaledWidth, guiScaledHeight, true)
+        projection.setupOrtho(0f, 1f, guiScaledWidth, guiScaledHeight, true)
         val projectionBufferSlice = projectionMatrixBuffer.getBuffer(projection)
         commandExecutor.execute(
-            meshesToDraw, colorTextureView, depthTextureView,
-            projectionBufferSlice, dynamicTransformsUbo!!, effectiveScale
+            meshesToDraw, colorTextureView,
+            projectionBufferSlice, dynamicTransformsUbo, effectiveScale
         )
     }
 
@@ -122,8 +111,8 @@ open class UiContext(private val layered: Float = 3000f) {
     ) {
         context.pose().pushPose()
         run {
-            context.pose().translate(rootWidget.x, rootWidget.y, rootWidget.z)
-            context.pose().translate(rootWidget.translationX, rootWidget.translationY, 0f)
+            context.pose().translate(rootWidget.x, rootWidget.y)
+            context.pose().translate(rootWidget.translationX, rootWidget.translationY)
             rootWidget.render(context)
         }
         context.pose().popPose()
@@ -186,23 +175,5 @@ open class UiContext(private val layered: Float = 3000f) {
         dynamicUniformStorages.clear()
         closed.set(true)
         closing.set(false)
-    }
-
-    companion object {
-        private fun calculateDepthEpsilon(depthTexture: GpuTexture): Float {
-            val format = depthTexture.format
-
-            if (!format.hasDepthAspect()) return 0f
-
-            val depthBits = when (format) {
-                TextureFormat.DEPTH32, TextureFormat.DEPTH32_STENCIL8 -> 32
-                TextureFormat.DEPTH24_STENCIL8 -> 24
-                else -> 0
-            }
-
-            if (depthBits == 0) return 0f
-
-            return 1f / ((1L shl depthBits) - 1)
-        }
     }
 }

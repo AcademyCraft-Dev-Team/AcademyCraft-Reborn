@@ -51,7 +51,7 @@ open class TextureDrawable : Drawable {
         val b = ARGB.blue(tintColor) / 255.0f
 
         context.pose().pushPose()
-        context.pose().translate(lp.paddingLeft, lp.paddingTop, 0f)
+        context.pose().translate(lp.paddingLeft, lp.paddingTop)
 
         val command =
             ImageDrawCommand(texture!!, sampler, paddedWidth, paddedHeight, 0f, 0f, 1f, 1f, r, g, b, finalAlpha)

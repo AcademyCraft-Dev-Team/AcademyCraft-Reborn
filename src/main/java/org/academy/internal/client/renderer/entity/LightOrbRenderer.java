@@ -36,7 +36,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
         var additiveBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
 
         random.setSeed(System.currentTimeMillis() / 40);
-        var cameraRotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+        var cameraRotation = Minecraft.getInstance().gameRenderer.mainCamera().rotation();
 
         poseStack.pushPose();
         poseStack.scale(scale, scale, scale);

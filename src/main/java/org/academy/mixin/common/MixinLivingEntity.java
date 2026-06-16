@@ -23,10 +23,10 @@ public abstract class MixinLivingEntity {
             method = "hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;actuallyHurt(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)V")
     )
-    private void academy$onSkillHurt(ServerLevel level, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+    private void academy$onSkillHurt(ServerLevel level, DamageSource source, float damage, CallbackInfoReturnable<Boolean> cir) {
         if (source instanceof SkillDamageSource skillSource) {
             if (skillSource.getEntity() instanceof ServerPlayer player) {
-                skillSource.getSkill().onHurt(player, (LivingEntity) (Object) this, amount);
+                skillSource.getSkill().onHurt(player, (LivingEntity) (Object) this, damage);
             }
         }
     }

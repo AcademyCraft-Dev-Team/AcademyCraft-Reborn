@@ -1,10 +1,10 @@
 package org.academy.api.client.gui.command
 
 import com.mojang.blaze3d.pipeline.RenderPipeline
+import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformPayload
-import org.joml.Matrix4f
 
 open class PosTexRectDrawCommand(
     pipeline: RenderPipeline,
@@ -17,7 +17,7 @@ open class PosTexRectDrawCommand(
     textures: List<TextureBinding>,
     uniforms: List<UniformPayload<*>>
 ) : DrawCommand(pipeline, textures, uniforms) {
-    override fun generateVertices(consumer: VertexConsumer, pose: Matrix4f) {
+    override fun generateVertices(consumer: VertexConsumer, pose: PoseStack.Pose) {
         consumer.addVertex(pose, 0.0f, 0.0f, 0.0f).setUv(u0, v0)
         consumer.addVertex(pose, 0.0f, height, 0.0f).setUv(u0, v1)
         consumer.addVertex(pose, width, height, 0.0f).setUv(u1, v1)

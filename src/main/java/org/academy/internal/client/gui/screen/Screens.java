@@ -32,13 +32,13 @@ public final class Screens {
                         if (windGenScreen != null && Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.containerMenu = windGenMenu;
                         }
-                        Minecraft.getInstance().setScreen(windGenScreen);
+                        Minecraft.getInstance().gui.setScreen(windGenScreen);
                     }
                 });
         SCREEN_HANDLERS.put(AbilityDeveloperBlock.ABILITY_DEVELOPER_SCREEN,
                 (_, buf) -> {
                     var pos = buf.readBlockPos();
-                    Minecraft.getInstance().setScreen(new AbilityDeveloperScreen(pos));
+                    Minecraft.getInstance().gui.setScreen(new AbilityDeveloperScreen(pos));
                 });
         SCREEN_HANDLERS.put(WirelessNodeBlock.WIRELESS_NODE_SCREEN,
                 (_, buf) -> {
@@ -53,7 +53,7 @@ public final class Screens {
                         if (screen != null && Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.containerMenu = menu;
                         }
-                        Minecraft.getInstance().setScreen(screen);
+                        Minecraft.getInstance().gui.setScreen(screen);
                     }
                 });
         SCREEN_HANDLERS.put(OmniCraftingTableBlock.OMNI_CRAFTING_TABLE_SCREEN,
@@ -65,7 +65,7 @@ public final class Screens {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menu = MenuTypes.OMNI_CRAFTING_TABLE.get().create(containerId, inventory);
                         Minecraft.getInstance().player.containerMenu = menu;
-                        Minecraft.getInstance().setScreen(new OmniCraftingTableScreen(menu, inventory, Component.literal(title), pos));
+                        Minecraft.getInstance().gui.setScreen(new OmniCraftingTableScreen(menu, inventory, Component.literal(title), pos));
                     }
                 });
         SCREEN_HANDLERS.put(SolarGenBlock.SOLAR_GEN_SCREEN,
@@ -81,7 +81,7 @@ public final class Screens {
                         if (screen != null && Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.containerMenu = windGenMenu;
                         }
-                        Minecraft.getInstance().setScreen(screen);
+                        Minecraft.getInstance().gui.setScreen(screen);
                     }
                 });
     }
@@ -90,7 +90,7 @@ public final class Screens {
     }
 
     public static void register() {
-        MisakaNetworkClient.NETWORK_MANAGER.registerPacketListener(Screens.class);
+        MisakaNetworkClient.NETWORK_MANAGER.register(Screens.class);
     }
 
     @SubscribePacket

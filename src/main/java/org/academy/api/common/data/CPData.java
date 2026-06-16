@@ -15,6 +15,10 @@ public class CPData {
     private int maxSP = 2000;
     private int spRegenTimer = 0;// 每tick自增，到20时，SP增加1
 
+    // MP (Matter Point) - 物质点，每系能力独立消耗
+    private float currMP = 100;
+    private float maxMP = 100;
+
     private transient boolean isDirty = false;
 
     public enum Status {
@@ -132,6 +136,29 @@ public class CPData {
         spRegenTimer = setSpRegenTimer;
     }
 
+    public float getCurrMP() {
+        return currMP;
+    }
+
+    public void setCurrMP(float currMP) {
+        this.currMP = Math.clamp(maxMP, 0, currMP);
+        markDirty();
+    }
+
+    public void addMP(float amount) {
+        currMP = Math.clamp(maxMP, 0, currMP + amount);
+        markDirty();
+    }
+
+    public float getMaxMP() {
+        return maxMP;
+    }
+
+    public void setMaxMP(float maxMP) {
+        this.maxMP = maxMP;
+        markDirty();
+    }
+
     public static class Builder {
         private final CPData cpData;
 
@@ -171,6 +198,16 @@ public class CPData {
 
         public Builder maxSP(int maxSP) {
             cpData.maxSP = maxSP;
+            return this;
+        }
+
+        public Builder currMP(float currMP) {
+            cpData.currMP = currMP;
+            return this;
+        }
+
+        public Builder maxMP(float maxMP) {
+            cpData.maxMP = maxMP;
             return this;
         }
 

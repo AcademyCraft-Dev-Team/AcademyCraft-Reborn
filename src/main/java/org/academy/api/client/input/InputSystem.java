@@ -4,12 +4,14 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.input.KeyEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.util.ClientUtil;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -79,19 +81,22 @@ public final class InputSystem {
 
     private static void processBindings(InputType eventType, Map<Integer, Integer> state, int input, int modifiers) {
         KEY_BINDINGS.values().forEach(binding -> {
-            if (binding.inputPair.inputType != eventType) {
+            var inputPair = binding.inputPair;
+            if (inputPair.inputType != eventType) {
                 return;
             }
 
-            var keyInfo = binding.inputPair.keyInfo;
+            var keyInfo = inputPair.keyInfo;
             var requiredKeys = keyInfo.inputs;
             var requiredModifiers = keyInfo.modifiers;
             var requiredAction = keyInfo.action;
 
+            if (!inputPair.availableWhenScreen && ClientUtil.hasScreen()) return;
             if (requiredKeys.isEmpty()) return;
 
-            var requiredMask = requiredModifiers.stream().reduce(0, (a, b) -> a | b);
-            var modSuccess = keyInfo.modifiers.isEmpty() || modifiers == requiredMask;
+            var requiredMask = requiredModifiers.isEmpty() ? 0
+                    : requiredModifiers.stream().reduce(0, (a, b) -> a | b);
+            var modSuccess = requiredMask == -1 || modifiers == requiredMask;
 
             boolean keySuccess;
             if (requiredAction == GLFW.GLFW_RELEASE) {
@@ -147,6 +152,12 @@ public final class InputSystem {
             this.action = action;
             this.modifiers = modifiers;
         }
+
+        public KeyInfo(LinkedHashSet<Integer> inputs, int action) {
+            this.inputs = inputs;
+            this.action = action;
+            modifiers = new LinkedHashSet<>(Set.of(-1));
+        }
     }
 
     public static class KeyBinding {
@@ -162,6 +173,13 @@ public final class InputSystem {
     public static class InputPair {
         public InputType inputType;
         public KeyInfo keyInfo;
+        public boolean availableWhenScreen = false;
+
+        public InputPair(InputType inputType, KeyInfo keyInfo, boolean availableWhenScreen) {
+            this.inputType = inputType;
+            this.keyInfo = keyInfo;
+            this.availableWhenScreen = availableWhenScreen;
+        }
 
         public InputPair(InputType inputType, KeyInfo keyInfo) {
             this.inputType = inputType;

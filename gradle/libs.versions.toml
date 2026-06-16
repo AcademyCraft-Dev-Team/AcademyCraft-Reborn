@@ -2,8 +2,9 @@
 academy = "0.0.3-alpha"
 
 java = "25"
-minecraft = "26.1.2"
-neoforge = "26.1.2.43-beta"
+lwjgl = "3.4.1"
+minecraft = "26.2.0"
+neoforge = "26.2.0-alpha.0+rc-2.20260615.113433"
 loader = "[6.2,)"
 
 renderdoc = "1.44"
@@ -15,13 +16,16 @@ sodium = "mc26.1.2-0.8.12-beta.1-neoforge"
 iris = "1.10.9+26.1-neoforge"
 jade = "26.0.10+neoforge"
 jei = "29.5.0.28"
-misaka = "26.1.0.0-alpha.0+rc-2"
+misaka = "26.1.2.0-alpha3"
+
 auto = "1.1.1"
 jflac = "1.5.2"
 jlayer = "1.0.3"
 imgui = "1.90.0"
 
-plugin-moddevgradle = "2.0.140"
+kotlin = "2.3.10"
+plugin-moddevgradle = "2.0.141"
+download = "5.7.0"
 [libraries]
 kotlinforforge = { group = "thedarkcolour", name = "kotlinforforge-neoforge", version.ref = "kotlinforforge" }
 geckolib = { group = "com.geckolib", name = "geckolib-neoforge-26.1", version.ref = "geckolib" }
@@ -37,6 +41,8 @@ auto = { group = "com.google.auto.service", name = "auto-service", version.ref =
 jflac = { group = "org.jflac", name = "jflac-codec", version.ref = "jflac" }
 jlayer = { group = "com.github.umjammer", name = "jlayer", version.ref = "jlayer" }
 
+lwjgl-msdfgen = { group = "org.lwjgl", name = "lwjgl-msdfgen", version.ref = "lwjgl" }
+
 imgui-binding = { group = "io.github.spair", name = "imgui-java-binding", version.ref = "imgui" }
 imgui-linux = { group = "io.github.spair", name = "imgui-java-natives-linux", version.ref = "imgui" }
 imgui-lwjgl3 = { group = "io.github.spair", name = "imgui-java-lwjgl3", version.ref = "imgui" }
@@ -44,4 +50,8 @@ imgui-macos = { group = "io.github.spair", name = "imgui-java-natives-macos", ve
 imgui-windows = { group = "io.github.spair", name = "imgui-java-natives-windows", version.ref = "imgui" }
 
 [plugins]
+idea = { id = "idea" }
+java-library = { id = "java-library" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 moddevgradle = { id = "net.neoforged.moddev", version.ref = "plugin-moddevgradle" }
+download = { id = "de.undercouch.download", version.ref = "download" }

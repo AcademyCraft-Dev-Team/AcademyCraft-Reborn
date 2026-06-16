@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.meltdowner.skills;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,6 +15,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
@@ -24,7 +26,10 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.HellFlareData;
+import org.academy.internal.client.renderer.effect.AuraEffectWrapper;
+import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
 import org.academy.internal.common.world.entity.skill.HellFlareRay;
+import org.academy.internal.common.world.entity.skill.LightOrb;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
@@ -46,14 +51,17 @@ public class HellFlare extends Skill {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL4)
-                .iterationTicks(1)
-                .maintenanceCost(0)
+                .cpCost(600)
+                .iterationTicks(30)
+                .maintenanceCost(10)
                 .withCustomData(HellFlareData.ID, HellFlareData.class, player -> new HellFlareData())
         );
     }
 
     @Override
     public void initClient() {
+        RendererManager.registerEffectRenderer(AuraEffectWrapper.INSTANCE);
+        RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.HellFlareConfig.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -63,9 +71,9 @@ public class HellFlare extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)),
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_N)),
                                 GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>()
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT))
                         )
                 )
         ), Client::handleKey);
@@ -73,7 +81,7 @@ public class HellFlare extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.registerPacketListener(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
@@ -81,7 +89,20 @@ public class HellFlare extends Skill {
         public static HellFlareConfig CONFIG = new HellFlareConfig();
 
         public static void handleKey() {
+            if (!org.academy.api.client.ability.AbilitySystemClient.isSkillLearned(Skills.HELL_FLARE.get()))
+                return;
             MisakaNetworkClient.sendPacket(TogglePacket.INSTANCE);
+            var p = net.minecraft.client.Minecraft.getInstance().player;
+            if (p == null) return;
+            AuraEffectWrapper.INSTANCE.triggerSphere(
+                    (float) p.getX(), (float) p.getY() + 2.5f, (float) p.getZ(),
+                    1.0f, 1.0f, 0.4f, 0.1f, 0.6f, 0.5f, 0.1f, 0.0f, 0.0f, 8.0f);
+            var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
+                    (float) p.getX(), (float) p.getY() + 2.0f, (float) p.getZ());
+            emitter.setColor(1.0f, 0.5f, 0.1f);
+            emitter.setEmissionRate(0);
+            emitter.burst(20);
+            emitter.setLifetime(1.0f, 0.5f);
         }
 
         public static class HellFlareConfig extends KeyBindingConfig {
@@ -109,6 +130,9 @@ public class HellFlare extends Skill {
         private static final double MAX_RANGE = 32.0;
         private static final int PHASE_P1_END = 120;
         private static final int PHASE_P2_END = 240;
+        private static final int DAMAGE_INTERVAL = 30;
+        private static final float[] PHASE_DAMAGE = {2.0f, 6.0f, 12.0f};
+        private static final int[] PHASE_COLORS = {0xff6600, 0xffaa00, 0xffffff};
 
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
@@ -207,7 +231,9 @@ public class HellFlare extends Skill {
 
         public static final class Context extends ServerContext {
             private final HellFlareRay ray;
+            private final LightOrb chargeOrb;
             private int lastTargetId = -1;
+            private int lastDamageTick = 0;
             private boolean ended = false;
 
             private Context(ServerPlayer player) {
@@ -215,10 +241,16 @@ public class HellFlare extends Skill {
                 ray = new HellFlareRay(level(), player);
                 level().addFreshEntity(ray);
 
+                chargeOrb = new LightOrb(level(), -1, 1.5f, null);
+                chargeOrb.setPos(player.getX(), player.getY() + 2.5, player.getZ());
+                chargeOrb.setColor(1.0f, 0.4f, 0.0f);
+                level().addFreshEntity(chargeOrb);
+
                 var data = getData(player);
                 if (data == null) return;
                 data.setLockTicks(0);
                 data.setPhase(1);
+                data.setMeltStacks(0);
                 ray.setPhase(1);
             }
 
@@ -246,6 +278,38 @@ public class HellFlare extends Skill {
                 updateTargeting(player, ray);
                 updatePhaseByTarget(data);
                 ray.setPhase(data.getPhase());
+
+                chargeOrb.setPos(player.getX(), player.getY() + 2.5, player.getZ());
+                var phase = data.getPhase();
+                var colorHex = PHASE_COLORS[phase - 1];
+                chargeOrb.setColor(
+                        ((colorHex >> 16) & 0xff) / 255f,
+                        ((colorHex >> 8) & 0xff) / 255f,
+                        (colorHex & 0xff) / 255f
+                );
+                chargeOrb.setScale(1.5f + phase * 0.3f);
+
+                lastDamageTick++;
+                if (lastDamageTick < DAMAGE_INTERVAL) return;
+                lastDamageTick = 0;
+
+                var targetId = ray.getTargetId();
+                if (targetId == -1) return;
+
+                var entity = player.level().getEntity(targetId);
+                if (!(entity instanceof LivingEntity target) || !target.isAlive()) return;
+
+                var baseDamage = PHASE_DAMAGE[phase - 1];
+                var meltStacks = data.getMeltStacks();
+                var damageMultiplier = 1.0f + meltStacks * 0.1f;
+                var finalDamage = baseDamage * damageMultiplier;
+
+                target.hurtServer((ServerLevel) player.level(),
+                        player.damageSources().indirectMagic(player, player), finalDamage);
+
+                if (phase == 3) {
+                    data.setMeltStacks(meltStacks + 1);
+                }
             }
 
             private void updatePhaseByTarget(HellFlareData data) {
@@ -288,12 +352,14 @@ public class HellFlare extends Skill {
 
                 var data = getData(player);
                 if (data != null) {
-                    data.setLockTicks(0);
-                    data.setPhase(1);
+                    data.reset();
                 }
 
                 if (!ray.isRemoved()) {
                     ray.discard();
+                }
+                if (!chargeOrb.isRemoved()) {
+                    chargeOrb.discard();
                 }
                 unregister();
             }

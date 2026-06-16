@@ -23,7 +23,7 @@ class ColorDrawable(var color: Int) : Drawable {
         val b = ARGB.blue(color) / 255.0f
 
         context.pose().pushPose()
-        context.pose().translate(lp.paddingLeft, lp.paddingTop, 0f)
+        context.pose().translate(lp.paddingLeft, lp.paddingTop)
 
         val command = FillRectDrawCommand(paddedWidth, paddedHeight, r, g, b, finalAlpha)
         context.submit(command)
