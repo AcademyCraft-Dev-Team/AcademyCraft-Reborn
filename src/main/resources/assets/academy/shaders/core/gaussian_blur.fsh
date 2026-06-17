@@ -1,9 +1,9 @@
+#version 330
+
 // Adapted from the Photon project (commit 08db839ccb01a741b21c70741c1015719992602a)
 // https://github.com/Low-Drag-MC/Photon/commit/08db839ccb01a741b21c70741c1015719992602a
 // Licensed under GNU GPLv3, copyright Low-Drag-MC and contributors.
 // Modified for this project.
-
-#version 330
 
 uniform sampler2D Sampler0;
 

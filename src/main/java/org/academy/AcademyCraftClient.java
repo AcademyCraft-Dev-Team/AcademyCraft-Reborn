@@ -242,13 +242,6 @@ public final class AcademyCraftClient {
     }
 
     @SubscribeEvent
-    public static void onRegisterRenderPipelines(RegisterRenderPipelinesEvent event) {
-        event.registerPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR);
-        event.registerPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_HELLFLARE);
-        event.registerPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE);
-    }
-
-    @SubscribeEvent
     public static void onRegisterSpecialModelRenderer(RegisterSpecialModelRendererEvent event) {
         event.register(
                 academy("wireless_node"),

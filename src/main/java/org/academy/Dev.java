@@ -1,5 +1,6 @@
 package org.academy;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import imgui.ImGui;
 
 @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -13,6 +14,7 @@ public final class Dev {
             hasImGui = true;
         } catch (Throwable _) {
         }
+        if (RenderSystem.getDevice().getDeviceInfo().backendName().equals("Vulkan")) hasImGui = false;
         HAS_IM_GUI = hasImGui;
     }
 

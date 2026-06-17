@@ -23,7 +23,6 @@ public final class Resource {
         public static final Identifier IMAGE = academy("core/image");
         public static final Identifier SCREEN_BLIT = academy("core/screen_blit");
         public static final Identifier DISTORTION_RING = academy("core/distortion_ring");
-        public static final Identifier DISTORTION_TUBE = academy("core/distortion_tube");
 
         /**
          * Vert only.

@@ -12,7 +12,6 @@ import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.Render
 import org.academy.api.client.hud.ability.AbilityInfoHUD
-import org.academy.api.client.hud.ability.AbilityInfoHUD.Companion.instance
 import org.academy.api.client.hud.terminal.TerminalHUD
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
@@ -55,7 +54,7 @@ object HUDManager {
         val mouseY = m.getScaledYPos(w)
         val deltaPartialTick = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
         TerminalHUD.instance.perform(mouseX, mouseY, deltaPartialTick)
-        instance.perform(mouseX, mouseY, deltaPartialTick)
+        AbilityInfoHUD.instance.perform(mouseX, mouseY, deltaPartialTick)
     }
 
     fun render() {
@@ -83,7 +82,7 @@ object HUDManager {
             val drewStencil = AtomicBoolean()
 
             TerminalHUD.instance.render(width, height, uiColor, uiDepth, drewStencil)
-            instance.render(ui)
+            AbilityInfoHUD.instance.render(ui)
 
             if (drewStencil.get()) {
                 BlurEffect.apply(
