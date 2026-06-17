@@ -26,9 +26,13 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.Identifier;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
+import org.academy.AcademyCraft;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
@@ -39,7 +43,9 @@ import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
+import org.slf4j.Logger;
 
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -52,6 +58,8 @@ import static org.academy.api.client.Render.GaussianSamples.getGaussianSamples;
 import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 
 public final class Render {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
+
     public static void init() {
         Buffers.init();
         TextureViews.init();
@@ -476,6 +484,7 @@ public final class Render {
         }
     }
 
+    @EventBusSubscriber
     public static final class RenderPipelines extends net.minecraft.client.renderer.RenderPipelines {
         public static final RenderPipeline.Snippet PROJECTION_SNIPPET = builder()
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -493,16 +502,13 @@ public final class Render {
                                 .withUniform("MsdfUniforms", UniformType.UNIFORM_BUFFER)
                                 .build()
                 )
-                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(true)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
-                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline.Snippet BLIT_SCREEN_SNIPPET = builder()
-                .withLocation(academy("pipeline/blit_screen"))
                 .withVertexShader(Resource.Shaders.SCREEN_BLIT)
                 .withFragmentShader(Resource.Shaders.SCREEN_BLIT)
                 .withCull(false)
@@ -511,24 +517,24 @@ public final class Render {
                 .buildSnippet();
 
         public static final RenderPipeline BLIT_SCREEN_WITH_BLEND = builder(BLIT_SCREEN_SNIPPET)
-                .withLocation(academy("pipeline/blit_screen"))
+                .withLocation(academy("pipeline/blit_screen_with_blend"))
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_PREMULTIPLIED_ALPHA = builder(BLIT_SCREEN_SNIPPET)
-                .withLocation(academy("pipeline/blit_screen"))
+                .withLocation(academy("pipeline/blit_screen_premultiplied_alpha"))
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND = builder(BLIT_SCREEN_SNIPPET)
-                .withLocation(academy("pipeline/blit_screen"))
+                .withLocation(academy("pipeline/blit_screen_without_blend"))
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .build();
 
         public static final RenderPipeline BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT = builder(BLIT_SCREEN_SNIPPET)
-                .withLocation(academy("pipeline/blit_screen"))
+                .withLocation(academy("pipeline/blit_screen_without_blend_inverse_cutout"))
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withStencilTest(
                         new StencilTest(
@@ -618,17 +624,15 @@ public final class Render {
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
-                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline IMAGE_PREMULTIPLIED_ALPHA = builder()
-                .withLocation(academy("pipeline/image"))
+                .withLocation(academy("pipeline/image_premultiplied_alpha"))
                 .withVertexShader(Resource.Shaders.POSITION_TEX_COLOR)
                 .withFragmentShader(Resource.Shaders.POSITION_TEX_COLOR)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
-                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(true)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
@@ -649,7 +653,7 @@ public final class Render {
                 .build();
 
         public static final RenderPipeline IMAGE_STENCIL_PREMULTIPLIED_ALPHA = builder()
-                .withLocation(academy("pipeline/image"))
+                .withLocation(academy("pipeline/image_stencil_premultiplied_alpha"))
                 .withVertexShader(Resource.Shaders.POSITION_TEX_COLOR)
                 .withFragmentShader(Resource.Shaders.POSITION_TEX_COLOR)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
@@ -684,7 +688,6 @@ public final class Render {
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
-                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline SDF_SHARP_MARGIN = builder()
@@ -702,7 +705,6 @@ public final class Render {
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
-                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline GLOW_CIRCLE = builder()
@@ -720,7 +722,6 @@ public final class Render {
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
-                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline SDF_CIRCLE_GLOW = builder()
@@ -777,7 +778,7 @@ public final class Render {
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                .withLocation(academy("pipeline/level_pos_color"))
+                .withLocation(academy("pipeline/level_pos_color_quads"))
                 .withVertexShader(Resource.Shaders.POSITION_COLOR)
                 .withFragmentShader(Resource.Shaders.POSITION_COLOR)
                 .withCull(false)
@@ -788,7 +789,7 @@ public final class Render {
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                .withLocation(academy("pipeline/level_pos_color"))
+                .withLocation(academy("pipeline/level_pos_color_trangles"))
                 .withVertexShader(Resource.Shaders.POSITION_COLOR)
                 .withFragmentShader(Resource.Shaders.POSITION_COLOR)
                 .withCull(false)
@@ -805,6 +806,7 @@ public final class Render {
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.GLOBALS)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
@@ -813,7 +815,6 @@ public final class Render {
                         .addAttribute("UV0", DefaultVertexFormat.UV0_FORMAT)
                         .addAttribute("Normal", DefaultVertexFormat.NORMAL_FORMAT)
                         .build())
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .build();
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR_ADDITIVE_BLOOM = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
@@ -826,35 +827,6 @@ public final class Render {
                 .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
-                .build();
-
-        public static final RenderPipeline SHOCKWAVE = builder()
-                .withLocation(academy("pipeline/shockwave"))
-                .withVertexShader(Resource.Shaders.POSITION_TEX)
-                .withFragmentShader(Resource.Shaders.Fragment.SHOCKWAVE)
-                .withBindGroupLayout(
-                        BindGroupLayout.builder()
-                                .withUniform("ShockwaveUniforms", UniformType.UNIFORM_BUFFER)
-                                .build()
-                )
-                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
-                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
-                .withCull(false)
-                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-                .withPrimitiveTopology(PrimitiveTopology.QUADS)
-                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
-                .build();
-
-        public static final RenderPipeline TRAIL_BLOOM = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                .withLocation(academy("pipeline/trail_bloom"))
-                .withVertexShader(Resource.Shaders.POSITION_COLOR)
-                .withFragmentShader(Resource.Shaders.Fragment.TRAIL)
-                .withCull(false)
-                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
-                .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
-                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
                 .build();
 
         public static final RenderPipeline SPATIAL_DISTORTION = builder()
@@ -872,27 +844,24 @@ public final class Render {
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .build();
 
-        public static final RenderPipeline DISTORTION_TUBE = builder()
-                .withLocation(academy("pipeline/distortion_tube"))
-                .withVertexShader(Resource.Shaders.DISTORTION_TUBE)
-                .withFragmentShader(Resource.Shaders.DISTORTION_TUBE)
-                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
-                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
-                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
-                .withCull(true)
-                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-                .withPrimitiveTopology(PrimitiveTopology.QUADS)
-                .withVertexBinding(0, VertexFormat.builder(0)
-                        .addAttribute("Position", DefaultVertexFormat.POSITION_FORMAT)
-                        .addAttribute("UV0", DefaultVertexFormat.UV0_FORMAT)
-                        .addAttribute("Normal", DefaultVertexFormat.NORMAL_FORMAT)
-                        .build()
-                )
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
-                .build();
+        @SubscribeEvent
+        public static void onRegisterRenderPipelinesEvent(RegisterRenderPipelinesEvent event) {
+            for (var field : RenderPipelines.class.getDeclaredFields()) {
+                var modifiers = field.getModifiers();
+                if (!Modifier.isPublic(modifiers) || !Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers)) {
+                    continue;
+                }
+                if (field.getType() != RenderPipeline.class) continue;
+                try {
+                    var pipeline = (RenderPipeline) field.get(null);
+                    event.registerPipeline(pipeline);
+                } catch (IllegalAccessException e) {
+                    LOGGER.warn(e.getMessage());
+                }
+            }
+        }
 
         private RenderPipelines() {
         }
@@ -993,22 +962,6 @@ public final class Render {
                         .createRenderSetup()
         );
 
-        public static final RenderType SHOCKWAVE_RING = create(
-                "shockwave_ring",
-                RenderSetup.builder(RenderPipelines.SHOCKWAVE)
-                        .setOutputTarget(BLOOM_TARGET)
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
-        public static final RenderType TRAIL_BLOOM = create(
-                "trail_bloom",
-                RenderSetup.builder(RenderPipelines.TRAIL_BLOOM)
-                        .setOutputTarget(BLOOM_TARGET)
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
         public static final RenderType SPATIAL_DISTORTION = create(
                 "spatial_distortion",
                 RenderSetup.builder(RenderPipelines.SPATIAL_DISTORTION)
@@ -1017,7 +970,6 @@ public final class Render {
         );
 
         public static final RenderType DISTORTION_RING;
-        public static final RenderType DISTORTION_TUBE_TYPE;
         public static final RenderType ABILITY_DEVELOPER = entityTranslucent(Resource.Textures.MODEL_ABILITY_DEVELOPER);
         public static final RenderType CAT_ENGINE = entityTranslucent(Resource.Textures.CAT_ENGINE);
         public static final RenderType CLEANING_ROBOT = entitySolid(Resource.Textures.CLEANING_ROBOT);
@@ -1062,39 +1014,6 @@ public final class Render {
                     "distortion_ring",
                     RenderSetup.builder(RenderPipelines.DISTORTION_RING)
                             .withTexture("Sampler0", id)
-                            .createRenderSetup()
-            );
-
-
-            var tubeId = academy("render/distortion_tube");
-            Minecraft.getInstance().getTextureManager().register(
-                    tubeId,
-                    new AbstractTexture() {
-                        {
-                            sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-                        }
-
-                        @Override
-                        public GpuTexture getTexture() {
-                            var tex = PostEffect.MAIN_SCENE.getColorTexture();
-                            return tex == null
-                                    ? Minecraft.getInstance().getTextureManager().getTexture(MissingTextureAtlasSprite.getLocation()).getTexture()
-                                    : tex;
-                        }
-
-                        @Override
-                        public GpuTextureView getTextureView() {
-                            var tex = PostEffect.MAIN_SCENE.getColorTextureView();
-                            return tex == null
-                                    ? Minecraft.getInstance().getTextureManager().getTexture(MissingTextureAtlasSprite.getLocation()).getTextureView()
-                                    : tex;
-                        }
-                    }
-            );
-            DISTORTION_TUBE_TYPE = create(
-                    "distortion_tube",
-                    RenderSetup.builder(RenderPipelines.DISTORTION_TUBE)
-                            .withTexture("Sampler0", tubeId)
                             .createRenderSetup()
             );
         }

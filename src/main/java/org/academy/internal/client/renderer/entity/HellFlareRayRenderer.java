@@ -287,9 +287,6 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         var t23 = phaseBlend23(state);
         drawOrbLayers(state, poseStack, p);
 
-        collector.submitCustomGeometry(poseStack, Render.RenderTypes.DISTORTION_TUBE_TYPE,
-                (pose, consumer) -> drawDistortion(state, pose, consumer, p.tubeScale, p.tubeStr));
-
         collector.submitCustomGeometry(poseStack, Render.RenderTypes.POS_COLOR_QUADS_BLOOM,
                 (pose, consumer) -> {
                     var mat = prepareMatrix(state, pose);
