@@ -3,11 +3,14 @@ package org.academy.internal.client.data;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.ModelProvider;
+import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
 import net.minecraft.client.data.models.model.*;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
 import org.academy.internal.client.renderer.special.*;
@@ -123,7 +126,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.itemModelOutput.accept(
                 Items.WIND_GEN_BASE.get(),
                 ItemModelUtils.specialModel(
-                        AcademyCraft.vanilla("block").withPrefix("block/"),
+                        AcademyCraft.academy("wind_gen_base_transforms").withPrefix("block/"),
                         WindGenBaseSpecialRenderer.Unbaked.INSTANCE
                 )
         );

@@ -16,6 +16,7 @@ abstract class AbstractWidget : Widget {
         set(value) {
             field = value
             requestLayout()
+            invalidate()
         }
 
     final override var measuredWidth: Float = 0f
@@ -55,10 +56,30 @@ abstract class AbstractWidget : Widget {
         }
 
     override var translationX: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
     override var translationY: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
     override var scaleX: Float = 1.0f
+        set(value) {
+            field = value
+            invalidate()
+        }
     override var scaleY: Float = 1.0f
+        set(value) {
+            field = value
+            invalidate()
+        }
     override var rotation: Float = 0.0f
+        set(value) {
+            field = value
+            invalidate()
+        }
     override var originX: Float = 0.5f
     override var originY: Float = 0.5f
     override var origin: Float
@@ -73,6 +94,7 @@ abstract class AbstractWidget : Widget {
             if (field != value) {
                 field = value
                 parent?.requestLayout()
+                invalidate()
             }
         }
 
@@ -80,6 +102,7 @@ abstract class AbstractWidget : Widget {
         set(enabled) {
             field = enabled
             updateStateAnimator()
+            invalidate()
         }
 
     override var isFocused: Boolean = false
@@ -87,6 +110,7 @@ abstract class AbstractWidget : Widget {
             if (field != focused && canFocus()) {
                 field = focused
                 updateStateAnimator()
+                invalidate()
                 if (focused) onFocusGained() else onFocusLost()
             }
         }
@@ -94,14 +118,20 @@ abstract class AbstractWidget : Widget {
         set(selected) {
             field = selected
             updateStateAnimator()
+            invalidate()
         }
     override var isHovered: Boolean = false
         set(hovered) {
             field = hovered
             updateStateAnimator()
+            invalidate()
         }
     override var isClickable: Boolean = false
     override var alpha: Float = 1.0f
+        set(value) {
+            field = value
+            invalidate()
+        }
     override var name: String = ""
 
     override var stateListAnimator: StateListAnimator? = null
@@ -118,10 +148,19 @@ abstract class AbstractWidget : Widget {
         set(value) {
             scaleX = value
             scaleY = value
+            invalidate()
         }
 
     override var background: Drawable? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
     override var foreground: Drawable? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
 
     final override var scrollX: Float = 0f
         private set
@@ -134,6 +173,13 @@ abstract class AbstractWidget : Widget {
 
     private var isAttached = false
     private val attachedAnimators: MutableList<Animator> = ArrayList()
+
+    override var isRenderDirty: Boolean = true
+
+    override fun invalidate() {
+        isRenderDirty = true
+        parent?.invalidate()
+    }
 
     override fun render(context: RenderContext) {
         if (!isVisible()) return
@@ -247,6 +293,7 @@ abstract class AbstractWidget : Widget {
     }
 
     override fun requestLayout() {
+        invalidate()
         parent?.requestLayout()
     }
 
@@ -269,8 +316,11 @@ abstract class AbstractWidget : Widget {
     }
 
     override fun scrollTo(x: Float, y: Float) {
-        scrollX = x
-        scrollY = y
+        if (scrollX != x || scrollY != y) {
+            scrollX = x
+            scrollY = y
+            invalidate()
+        }
     }
 
     override fun scrollBy(dx: Float, dy: Float) {

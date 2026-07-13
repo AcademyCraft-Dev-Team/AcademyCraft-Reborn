@@ -62,10 +62,6 @@ public final class WindGenTopBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-
         if (level.getBlockEntity(pos) instanceof WindGenTopBlockEntity windGenTopBlockEntity) {
             var hand = player.getUsedItemHand();
             var stackInSlot = windGenTopBlockEntity.getItem(0);
@@ -87,7 +83,7 @@ public final class WindGenTopBlock extends BaseEntityBlock {
 
             if (stackInSlot.isEmpty() && stackInHand.getItem() == Items.WIND_GEN_FAN_ITEM.get()) {
                 windGenTopBlockEntity.setItem(0, stackInHand.copyWithCount(1));
-                stackInHand.shrink(1);
+                if (!player.isCreative()) stackInHand.shrink(1);
                 return InteractionResult.CONSUME;
             }
         }

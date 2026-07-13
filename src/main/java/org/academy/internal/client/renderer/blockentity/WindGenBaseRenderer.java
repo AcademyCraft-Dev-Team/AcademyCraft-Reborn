@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.client.Resource;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.renderer.blockentity.state.WindGenBaseRenderState;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
@@ -18,7 +19,6 @@ import org.jspecify.annotations.Nullable;
 
 public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBaseBlockEntity, WindGenBaseRenderState> {
     public static final WindGenBaseRenderer INSTANCE = new WindGenBaseRenderer();
-    public static final WindGenBaseModel MODEL = new WindGenBaseModel(WindGenBaseModel.createBodyLayer().bakeRoot());
 
     private WindGenBaseRenderer() {
     }
@@ -39,25 +39,25 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
     }
 
     @Override
-    public void submit(WindGenBaseRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        poseStack.pushPose();
-        if (renderState.isMain) {
-            var facing = renderState.facing;
-            var yRot = facing.getOpposite().toYRot();
-
+    public void submit(WindGenBaseRenderState state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
+        if (state.isMain) {
             poseStack.pushPose();
-            poseStack.translate(0.5f, 0, 0.5f);
-            poseStack.mulPose(Axis.XP.rotationDegrees(180));
-            poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
-
-            MODEL.render(poseStack, renderState, nodeCollector, renderState.lightCoords, OverlayTexture.NO_OVERLAY);
-
+            poseStack.pushPose();
+            poseStack.scale(1, 15 / 16f, 1);
+            poseStack.translate(0, 1 / 16f, 0);
+            WindGenPillarRenderer.renderPillar(poseStack, submitNodeCollector, state.lightCoords);
             poseStack.popPose();
-        } else {
-            poseStack.translate(0.5f, 0, 0.5f);
-            MODEL.renderPole(poseStack, nodeCollector, renderState.lightCoords, OverlayTexture.NO_OVERLAY);
-        }
-        poseStack.popPose();
+            poseStack.translate(0.5f, 0f, 0.5f);
+            poseStack.translate(0, 1.5f, 0);
+            poseStack.mulPose(Axis.XP.rotationDegrees(180));
+            submitNodeCollector.submitModel(
+                    WindGenBaseModel.MODEL,
+                    state,
+                    poseStack, Resource.Textures.MODEL_WIND_GEN, state.lightCoords, OverlayTexture.NO_OVERLAY,
+                    0, null
+            );
+            poseStack.popPose();
+        } else WindGenPillarRenderer.renderPillar(poseStack, submitNodeCollector, state.lightCoords);
     }
 
     @Override

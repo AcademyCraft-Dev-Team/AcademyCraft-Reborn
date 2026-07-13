@@ -26,7 +26,6 @@ import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.data.CPData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.vanilla.MinecraftServerContext;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -44,7 +43,7 @@ public final class AcademyCraftCommand {
 
         public static AcademyCraftServer getServer(CommandContext<CommandSourceStack> context) {
             var server = context.getSource().getServer();
-            return ((MinecraftServerContext) server).getAcademyCraftServer();
+            return (server).getAcademyCraftServer();
         }
 
         public static AbilitySystemServer getSystem(CommandContext<CommandSourceStack> context) {
@@ -189,7 +188,7 @@ public final class AcademyCraftCommand {
 
         private static int set(CommandContext<CommandSourceStack> context, ServerPlayer player, float value, boolean broadcast) {
             var uuid = player.getUUID();
-            var serverContext = (MinecraftServerContext) player.level().getServer();
+            var serverContext = player.level().getServer();
             var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
             abilitySystemServer.setPlayerAvailableCP(uuid, value);
 
@@ -200,7 +199,7 @@ public final class AcademyCraftCommand {
 
         private static int setMax(CommandContext<CommandSourceStack> context, ServerPlayer player, float value, boolean broadcast) {
             var uuid = player.getUUID();
-            var serverContext = (MinecraftServerContext) player.level().getServer();
+            var serverContext = player.level().getServer();
             var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
             abilitySystemServer.setPlayerMaxCP(uuid, value);
 
@@ -213,7 +212,7 @@ public final class AcademyCraftCommand {
             var uuid = player.getUUID();
             try {
                 var status = CPData.Status.valueOf(statusName.toUpperCase());
-                var serverContext = (MinecraftServerContext) player.level().getServer();
+                var serverContext = player.level().getServer();
                 var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
                 abilitySystemServer.setPlayerStatus(uuid, status);
                 abilitySystemServer.setPlayerStateTimer(uuid, timer);
@@ -257,7 +256,7 @@ public final class AcademyCraftCommand {
 
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
-        var serverContext = (MinecraftServerContext) player.level().getServer();
+        var serverContext = player.level().getServer();
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
         var currentCategory = abilitySystemServer.getPlayerAbilityCategory(playerUuid);
         var categoryKey = Registries.ABILITY_CATEGORIES.getKey(currentCategory);
@@ -279,7 +278,7 @@ public final class AcademyCraftCommand {
     private static int listLearnedSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var player = context.getSource().getPlayerOrException();
         var playerUuid = player.getUUID();
-        var serverContext = (MinecraftServerContext) player.level().getServer();
+        var serverContext = player.level().getServer();
 
         var learnedSkills = serverContext.getAcademyCraftServer()
                 .getAbilitySystemServer().getPlayerData(playerUuid).getSkillDataMap();
@@ -305,7 +304,7 @@ public final class AcademyCraftCommand {
             return 0;
         }
 
-        var serverContext = (MinecraftServerContext) player.level().getServer();
+        var serverContext = player.level().getServer();
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
 
         var playerCategory = abilitySystemServer.getPlayerAbilityCategory(playerUuid);
@@ -341,7 +340,7 @@ public final class AcademyCraftCommand {
             return 0;
         }
 
-        var serverContext = (MinecraftServerContext) player.level().getServer();
+        var serverContext = player.level().getServer();
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
         abilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet.get().value());
         var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
@@ -363,7 +362,7 @@ public final class AcademyCraftCommand {
         try {
             var player = context.getSource().getPlayerOrException();
             var playerUuid = player.getUUID();
-            var serverContext = (MinecraftServerContext) player.level().getServer();
+            var serverContext = player.level().getServer();
             var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
             var currentCategory = abilitySystemServer.getPlayerAbilityCategory(playerUuid);
             var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
@@ -385,7 +384,7 @@ public final class AcademyCraftCommand {
         var skillIdentifier = IdentifierArgument.getId(context, "skill_name");
         var amount = FloatArgumentType.getFloat(context, "amount");
 
-        var serverContext = (MinecraftServerContext) player.level().getServer();
+        var serverContext = player.level().getServer();
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
 
         var playerData = abilitySystemServer.getPlayerData(playerUuid);
@@ -417,7 +416,7 @@ public final class AcademyCraftCommand {
         try {
             var player = context.getSource().getPlayerOrException();
             var playerUuid = player.getUUID();
-            var serverContext = (MinecraftServerContext) player.level().getServer();
+            var serverContext = player.level().getServer();
             var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
             var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
 

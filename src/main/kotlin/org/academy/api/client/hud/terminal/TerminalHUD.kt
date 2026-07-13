@@ -83,6 +83,9 @@ class TerminalHUD private constructor() {
     private var startXPos = 0.0
     private var startYPos = 0.0
 
+    @Volatile
+    private var posChanged = false
+
     init {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE)
         val config: TerminalConfig = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY)
@@ -106,6 +109,10 @@ class TerminalHUD private constructor() {
 
     private fun createUiContext(): UiContext {
         return object : UiContext() {
+            override fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean {
+                return super.shouldUseCacheCommands(rootWidget) && !posChanged
+            }
+
             override fun generateCommands(
                 context: RenderContext, rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float
             ) {
@@ -300,6 +307,7 @@ class TerminalHUD private constructor() {
             xPos = Mth.clamp(deltaGuiX, 0.0, window.guiScaledWidth.toDouble())
             yPos = Mth.clamp(deltaGuiY, 0.0, window.guiScaledHeight.toDouble())
             context.get().dispatchEvent(createMoveEvent(xPos, yPos))
+            posChanged = true
             if (InputSystem.currentMouseAction == 1 || InputSystem.currentMouseAction == 2) {
                 context.get().dispatchEvent(
                     createDragEvent(

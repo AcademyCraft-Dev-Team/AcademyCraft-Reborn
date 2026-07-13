@@ -87,10 +87,10 @@ public final class VertexUtil {
                 var nx = (float) faceNormalXd;
                 var nz = (float) faceNormalZd;
 
-                vertexBuffer[vertexIndex++] = new float[]{(float) x1d, yBottom, (float) z1d, u1f, vBottomf, nx, 0f, nz};
-                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yBottom, (float) z2d, u2f, vBottomf, nx, 0f, nz};
-                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yTop, (float) z2d, u2f, vTopf, nx, 0f, nz};
                 vertexBuffer[vertexIndex++] = new float[]{(float) x1d, yTop, (float) z1d, u1f, vTopf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yTop, (float) z2d, u2f, vTopf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yBottom, (float) z2d, u2f, vBottomf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{(float) x1d, yBottom, (float) z1d, u1f, vBottomf, nx, 0f, nz};
             }
 
             if (capped) {
@@ -118,10 +118,10 @@ public final class VertexUtil {
                     var v2 = new float[]{(float) x1d, yTop, (float) z1d, u1f, v1f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
                     var v3 = new float[]{(float) x2d, yTop, (float) z2d, u2f, v2f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
 
-                    vertexBuffer[vertexIndex++] = v1;
+                    vertexBuffer[vertexIndex++] = v3;
+                    vertexBuffer[vertexIndex++] = v3;
                     vertexBuffer[vertexIndex++] = v2;
-                    vertexBuffer[vertexIndex++] = v3;
-                    vertexBuffer[vertexIndex++] = v3;
+                    vertexBuffer[vertexIndex++] = v1;
                 }
 
                 for (var i = 0; i < faces; i++) {
@@ -143,10 +143,10 @@ public final class VertexUtil {
                     var v2 = new float[]{(float) x2d, yBottom, (float) z2d, u2f, v2f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
                     var v3 = new float[]{(float) x1d, yBottom, (float) z1d, u1f, v1f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
 
-                    vertexBuffer[vertexIndex++] = v1;
+                    vertexBuffer[vertexIndex++] = v3;
+                    vertexBuffer[vertexIndex++] = v3;
                     vertexBuffer[vertexIndex++] = v2;
-                    vertexBuffer[vertexIndex++] = v3;
-                    vertexBuffer[vertexIndex++] = v3;
+                    vertexBuffer[vertexIndex++] = v1;
                 }
             }
 

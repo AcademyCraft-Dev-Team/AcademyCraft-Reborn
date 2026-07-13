@@ -1,2 +1,5 @@
 {
+  "net/minecraft/server/MinecraftServer": [
+    "org/academy/api/server/vanilla/MinecraftServerContext"
+  ]
 }

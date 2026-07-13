@@ -24,7 +24,9 @@ public abstract class MixinMinecraftServer implements MinecraftServerContext {
 
     @Override
     public AcademyCraftServer getAcademyCraftServer() {
-        if (academyCraftServer == null) throw new IllegalStateException("AcademyCraftServer has not been initialized.");
+        if (academyCraftServer == null) throw new IllegalStateException(
+                "AcademyCraftServer has not been initialized."
+        );
         return academyCraftServer;
     }
 

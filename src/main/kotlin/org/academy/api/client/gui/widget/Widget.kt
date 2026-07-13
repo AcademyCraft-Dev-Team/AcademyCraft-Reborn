@@ -47,6 +47,8 @@ interface Widget : Tickable {
     fun measure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec)
     fun layout(left: Float, top: Float, right: Float, bottom: Float)
     fun requestLayout()
+    var isRenderDirty: Boolean
+    fun invalidate()
     fun isVisible(): Boolean
     fun getWidgetState(): Int
     fun isAbsoluteEnabled(): Boolean

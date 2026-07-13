@@ -49,11 +49,11 @@ class WirelessNodeScreen(
 
     init {
         NeoForge.EVENT_BUS.register(this)
-/*        for (msdfFont in MsdfFontService.loadedFonts.values) {
+        for (msdfFont in MsdfFontService.INSTANCE.loadedFonts.values) {
             MsdfAtlasDebugger.dumpAtlas(msdfFont.atlas,
                 msdfFont.descriptor.identifier.path.length.toString()
             )
-        }*/
+        }
     }
 
     override fun onClose() {

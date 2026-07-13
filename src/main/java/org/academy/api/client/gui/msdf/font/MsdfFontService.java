@@ -7,17 +7,30 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.util.freetype.FT_Face;
 import org.lwjgl.util.freetype.FreeType;
-import org.lwjgl.util.msdfgen.MSDFGenExt;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MsdfFontService {
     public static final MsdfFontService INSTANCE = new MsdfFontService();
 
-    public static final Identifier defaultFontId = AcademyCraft.academy("fonts/source-sans-3-regular.ttf");
+    public static final Identifier DEFAULT_FONT_ID = AcademyCraft.academy(
+            "fonts/source-sans-3-regular.otf"
+    );
+
+    private static final ExecutorService GLYPH_EXECUTOR = Executors.newFixedThreadPool(
+            Math.max(1, Runtime.getRuntime().availableProcessors() - 1),
+            r -> {
+                var t = new Thread(r, "AcademyCraft-MSDF-Generator");
+                t.setDaemon(true);
+                return t;
+            }
+    );
 
     private final long library;
     public final ConcurrentHashMap<Identifier, MsdfFont> loadedFonts = new ConcurrentHashMap<>();
@@ -33,16 +46,13 @@ public class MsdfFontService {
             lib = pp.get(0);
         }
         library = lib;
-        MSDFGenExt.msdf_ft_set_load_callback(nameAddress ->
-                FreeType.getLibrary().getFunctionAddress(MemoryUtil.memASCII(nameAddress))
-        );
     }
 
-    public static void setFontSearchOrder(java.util.List<Identifier> availableFonts) {
+    public static void setFontSearchOrder(List<Identifier> availableFonts) {
         INSTANCE.fontSearchOrder.clear();
-        INSTANCE.fontSearchOrder.add(defaultFontId);
+        INSTANCE.fontSearchOrder.add(DEFAULT_FONT_ID);
         for (var id : availableFonts) {
-            if (!id.equals(defaultFontId)) INSTANCE.fontSearchOrder.add(id);
+            if (!id.equals(DEFAULT_FONT_ID)) INSTANCE.fontSearchOrder.add(id);
         }
         INSTANCE.charToFontCache.clear();
     }
@@ -59,7 +69,7 @@ public class MsdfFontService {
                 if (FreeType.FT_Get_Char_Index(font.face, c) != 0) return id;
             }
         }
-        return defaultFontId;
+        return DEFAULT_FONT_ID;
     }
 
     public static MsdfFont getFont(Identifier identifier) {
@@ -71,10 +81,10 @@ public class MsdfFontService {
         var buffer = INSTANCE.fontBuffers.computeIfAbsent(identifier, MsdfFontService::loadResourceToBuffer);
         try (var stack = MemoryStack.stackPush()) {
             var pp = stack.mallocPointer(1);
-            if (FreeType.FT_New_Memory_Face(INSTANCE.library, buffer, 0, pp) != 0) {
+            if (FreeType.FT_New_Memory_Face(INSTANCE.library, buffer, 0, pp) != FreeType.FT_Err_Ok) {
                 throw new RuntimeException("Failed to load font face: " + identifier);
             }
-            var font = new MsdfFont(identifier, FT_Face.create(pp.get(0)));
+            var font = new MsdfFont(identifier, FT_Face.create(pp.get(0)), GLYPH_EXECUTOR);
             INSTANCE.loadedFonts.put(identifier, font);
             return font;
         }
@@ -110,11 +120,11 @@ public class MsdfFontService {
 
     public static boolean isFont(Identifier location) {
         var path = location.getPath();
-        return path.endsWith(".ttf") || path.endsWith(".otf");
+        return path.endsWith(".ttf") || path.endsWith(".otf") || path.endsWith(".ttc");
     }
 
     public static void genDefaultGlyph() {
-        for (var c = '!'; c <= '~'; c++) {
+        for (var c = ' '; c <= '~'; c++) {
             getFont(c).getGlyph(c);
         }
     }

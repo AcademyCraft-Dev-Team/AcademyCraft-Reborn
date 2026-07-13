@@ -28,6 +28,7 @@ public final class Resource {
          * Vert only.
          */
         public static final class Vertex {
+            public static final Identifier MSDF_TEXT_INSTANCED = academy("core/msdf_text_instanced");
 
             private Vertex() {
             }

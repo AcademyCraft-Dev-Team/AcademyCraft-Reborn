@@ -2,28 +2,28 @@
 academy = "0.0.3-alpha"
 
 java = "25"
-lwjgl = "3.4.1"
 minecraft = "26.2.0"
-neoforge = "26.2.0-alpha.0+rc-2.20260615.113433"
-loader = "[6.2,)"
+neoforge = "26.2.0.12-beta"
+loader = "[6.3.0,)"
 
 renderdoc = "1.44"
 rendernurse = "0.0.26"
 
-kotlinforforge = "6.2.0"
+kotlinforforge = "6.3.0"
 geckolib = "5.5"
-sodium = "mc26.1.2-0.8.12-beta.1-neoforge"
+sodium = "mc26.2-0.9.1-beta.3-neoforge"
 iris = "1.10.9+26.1-neoforge"
 jade = "26.0.10+neoforge"
 jei = "29.5.0.28"
 misaka = "26.2.0.0-alpha"
+jmsdfgen = "0.0.1"
 
 auto = "1.1.1"
 jflac = "1.5.2"
 jlayer = "1.0.3"
 imgui = "1.90.0"
 
-kotlin = "2.3.10"
+kotlin = "2.4.0"
 plugin-moddevgradle = "2.0.141"
 download = "5.7.0"
 [libraries]
@@ -35,13 +35,13 @@ jade = { group = "maven.modrinth", name = "jade", version.ref = "jade" }
 jei = { group = "mezz.jei", name = "jei-26.1.2-neoforge", version.ref = "jei" }
 jei-api = { group = "mezz.jei", name = "jei-26.1.2-neoforge-api", version.ref = "jei" }
 misaka = { group = "org.academy", name = "misaka-network", version.ref = "misaka" }
+jmsdfgen-core = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-core", version.ref = "jmsdfgen" }
+jmsdfgen-ext = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-ext", version.ref = "jmsdfgen" }
 
 auto = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto" }
 
 jflac = { group = "org.jflac", name = "jflac-codec", version.ref = "jflac" }
 jlayer = { group = "com.github.umjammer", name = "jlayer", version.ref = "jlayer" }
-
-lwjgl-msdfgen = { group = "org.lwjgl", name = "lwjgl-msdfgen", version.ref = "lwjgl" }
 
 imgui-binding = { group = "io.github.spair", name = "imgui-java-binding", version.ref = "imgui" }
 imgui-linux = { group = "io.github.spair", name = "imgui-java-natives-linux", version.ref = "imgui" }

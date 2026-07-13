@@ -18,7 +18,10 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.*;
+import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
+import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
@@ -42,7 +45,7 @@ import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.gui.screen.Screens;
-import org.academy.internal.client.model.WindGenBaseModel;
+import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
@@ -122,6 +125,7 @@ public final class AcademyCraftClient {
         MsdfAtlasManager.closeAll();
         PostEffect.close();
         BloomEffect.getInstance().close();
+        Render.close();
     }
 
     @SubscribeEvent
@@ -156,7 +160,7 @@ public final class AcademyCraftClient {
                     CylinderRenderer.renderCylinderWireframe(
                             ps,
                             buffer,
-                            WindGenBaseModel.PILLAR_OUTLINE_VERTEX_BUFFER,
+                            WindGenPillarRenderer.PILLAR_OUTLINE_VERTEX_BUFFER,
                             0, 0, 0, 0.4f
                     );
                 });

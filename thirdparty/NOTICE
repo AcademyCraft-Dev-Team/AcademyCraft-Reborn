@@ -6,9 +6,27 @@ projects.
 
 The complete text for each software license can be found in the directory "thirdparty/licenses".
 
-* msdfgen
-  * Copyright (c) 2014 - 2025 Viktor Chlumsky
-  * Code Location: src/main/java/org/academy/api/client/gui/msdf/core
-  * License Location: thirdparty/licenses/LICENSE-msdfgen
+* source-sans
+  * Copyright 2010-2024 Adobe
+  * License:
+    * OFL-1.1
+      * thirdparty/licenses/LICENSE-source-sans
+  * Location: src/main/resources/assets/academy/fonts/source-sans-3-regular.otf
   * Original Source:
-    * https://github.com/Chlumsky/msdfgen
+    * https://github.com/adobe-fonts/source-sans
+
+* wqy-microhei (modified)
+  * Modified: Extracted as TrueType (.ttf) from original TrueType Collection (.ttc) on 2026-07-12.
+  * Copyright: Digitized data copyright © 2007, Google Corporation.
+               Copyright © 2008-2009, WenQuanYi Project Board of
+               Trustees, All rights reserved.
+
+               Droid Sans Fallback extension interface
+               ( http://wenq.org/index.cgi?Fontopia(cn) ),
+               copyright © 2008-2009 mozbug and Qianqian Fang
+  * License:
+    * Apache2.0
+      * thirdparty/licenses/LICENSE-wqy-microhei
+  * Location: src/main/resources/assets/academy/fonts/wqy-microhei-modified.ttf
+  * Original Source:
+    * http://wenq.org/en/ or http://wqy.sourceforge.net/en/

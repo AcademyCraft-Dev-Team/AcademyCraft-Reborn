@@ -6,7 +6,6 @@ import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.PoseStack
-import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.client.Minecraft
 import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
@@ -25,6 +24,7 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.UiContext
+import org.academy.api.client.gui.render.VertexWriter
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.render.TextureBinding
 import kotlin.math.abs
@@ -42,7 +42,7 @@ class AbilityInfoHUD private constructor() {
     fun render(target: RenderTarget) {
         if (!AbilitySystemClient.isActiveHUD()) return
         uiContext.upload(target, false)
-        context.get().requestLayout()
+        context.get().invalidate()
         ImGuiUIDebugger.render(target, context.get())
     }
 
@@ -129,15 +129,34 @@ class AbilityInfoHUD private constructor() {
                                 listOf(TextureBinding("Sampler0", view, sampler)),
                                 mutableListOf()
                             ) {
-                                override fun generateVertices(consumer: VertexConsumer, pose: PoseStack.Pose) {
-                                    consumer.addVertex(pose, topLeft, topPadding, 0f).setUv(topLeftU, topPaddingU)
-                                        .setColor(1f, 1f, 1f, alpha)
-                                    consumer.addVertex(pose, bottomLeft, height - bottomPadding, 0f)
-                                        .setUv(bottomLeftU, 1 - bottomPaddingU).setColor(1f, 1f, 1f, alpha)
-                                    consumer.addVertex(pose, bottomRight, height - bottomPadding, 0f)
-                                        .setUv(bottomRightU, 1 - bottomPaddingU).setColor(1f, 1f, 1f, alpha)
-                                    consumer.addVertex(pose, topRight, topPadding, 0f).setUv(topRightU, topPaddingU)
-                                        .setColor(1f, 1f, 1f, alpha)
+                                override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+                                    val matrix = pose.pose()
+                                    val a = (alpha * 255.0f).toInt()
+                                    val dest = org.joml.Vector3f()
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(topLeft, topPadding, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(topLeftU, topPaddingU)
+                                    writer.putColor(255, 255, 255, a)
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(bottomLeft, height - bottomPadding, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(bottomLeftU, 1.0f - bottomPaddingU)
+                                    writer.putColor(255, 255, 255, a)
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(bottomRight, height - bottomPadding, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(bottomRightU, 1.0f - bottomPaddingU)
+                                    writer.putColor(255, 255, 255, a)
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(topRight, topPadding, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(topRightU, topPaddingU)
+                                    writer.putColor(255, 255, 255, a)
                                 }
                             })
 
@@ -168,19 +187,34 @@ class AbilityInfoHUD private constructor() {
                                         listOf(TextureBinding("Sampler0", view, sampler)),
                                         mutableListOf()
                                     ) {
-                                        override fun generateVertices(consumer: VertexConsumer, pose: PoseStack.Pose) {
-                                            consumer.addVertex(pose, particleTopLeft, topPadding, 0f)
-                                                .setUv(particleTopLeftU, topPaddingU)
-                                                .setColor(1f, 1f, 1f, particle.alpha)
-                                            consumer.addVertex(pose, particleBottomLeft, height - bottomPadding, 0f)
-                                                .setUv(particleBottomLeftU, 1 - bottomPaddingU)
-                                                .setColor(1f, 1f, 1f, particle.alpha)
-                                            consumer.addVertex(pose, particleBottomRight, height - bottomPadding, 0f)
-                                                .setUv(particleBottomRightU, 1 - bottomPaddingU)
-                                                .setColor(1f, 1f, 1f, particle.alpha)
-                                            consumer.addVertex(pose, particleTopRight, topPadding, 0f)
-                                                .setUv(particleTopRightU, topPaddingU)
-                                                .setColor(1f, 1f, 1f, particle.alpha)
+                                        override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+                                            val matrix = pose.pose()
+                                            val a = (particle.alpha * 255.0f).toInt()
+                                            val dest = org.joml.Vector3f()
+
+                                            writer.beginVertex()
+                                            matrix.transformPosition(particleTopLeft, topPadding, 0f, dest)
+                                            writer.putVec3f(dest.x, dest.y, dest.z)
+                                            writer.putVec2f(particleTopLeftU, topPaddingU)
+                                            writer.putColor(255, 255, 255, a)
+
+                                            writer.beginVertex()
+                                            matrix.transformPosition(particleBottomLeft, height - bottomPadding, 0f, dest)
+                                            writer.putVec3f(dest.x, dest.y, dest.z)
+                                            writer.putVec2f(particleBottomLeftU, 1.0f - bottomPaddingU)
+                                            writer.putColor(255, 255, 255, a)
+
+                                            writer.beginVertex()
+                                            matrix.transformPosition(particleBottomRight, height - bottomPadding, 0f, dest)
+                                            writer.putVec3f(dest.x, dest.y, dest.z)
+                                            writer.putVec2f(particleBottomRightU, 1.0f - bottomPaddingU)
+                                            writer.putColor(255, 255, 255, a)
+
+                                            writer.beginVertex()
+                                            matrix.transformPosition(particleTopRight, topPadding, 0f, dest)
+                                            writer.putVec3f(dest.x, dest.y, dest.z)
+                                            writer.putVec2f(particleTopRightU, topPaddingU)
+                                            writer.putColor(255, 255, 255, a)
                                         }
                                     })
                                 }

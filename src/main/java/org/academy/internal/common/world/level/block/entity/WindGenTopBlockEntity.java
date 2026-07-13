@@ -75,9 +75,6 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
     @Override
     public void setItem(int slot, ItemStack stack) {
         items.set(slot, stack);
-        if (stack.getCount() > getMaxStackSize()) {
-            stack.setCount(getMaxStackSize());
-        }
         setChanged();
     }
 
