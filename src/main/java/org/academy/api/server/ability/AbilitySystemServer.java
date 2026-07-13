@@ -50,6 +50,7 @@ public final class AbilitySystemServer {
             LOGGER.warn("DEV_MODE changed to {}", devMode);
         }
     }
+
     private final Map<UUID, Set<ServerContext>> activeContexts;
 
     private final SkillDataManager skillDataManager;
@@ -126,7 +127,7 @@ public final class AbilitySystemServer {
                     }
                 }
 
-                var serverContext = (MinecraftServerContext) level.getServer();
+                var serverContext = level.getServer();
                 var instance = serverContext.getAcademyCraftServer().getAbilitySystemServer();
 
                 var abilityCategory = weightedRandom.getRandomItem();
@@ -162,7 +163,7 @@ public final class AbilitySystemServer {
                 var skill = skillReference.get().value();
                 var energy = skill.getEnergyCostToLearn();
                 var depLearned = true;
-                var serverContext = (MinecraftServerContext) level.getServer();
+                var serverContext = level.getServer();
                 var instance = serverContext.getAcademyCraftServer().getAbilitySystemServer();
 
                 for (var dep : skill.getDependencies()) {
@@ -218,8 +219,7 @@ public final class AbilitySystemServer {
         @SubscribeEvent
         public static void tickMinecraftServerThread(ServerTickEvent.Pre event) {
             var server = event.getServer();
-            var context = (MinecraftServerContext) server;
-            var instance = context.getAcademyCraftServer().getAbilitySystemServer();
+            var instance = server.getAcademyCraftServer().getAbilitySystemServer();
 
             var syncManager = instance.getSyncManager();
             syncManager.processPendingTasks();
@@ -310,7 +310,7 @@ public final class AbilitySystemServer {
 
     public static AbilitySystemServer getSystem(Entity entity) {
         if (entity.level() instanceof ServerLevel serverLevel) {
-            return ((MinecraftServerContext) serverLevel.getServer())
+            return serverLevel.getServer()
                     .getAcademyCraftServer()
                     .getAbilitySystemServer();
         }

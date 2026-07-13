@@ -108,7 +108,6 @@ public final class ArcGenerate extends Skill {
         public static void handle(GeneratePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var level = player.level();
-            if (!(level.getServer() instanceof MinecraftServerContext)) return;
             Skills.ARC_GENERATE.get().executeActive(player, (_, actualCost) -> {
                 var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
                 var eyePos = player.getEyePosition();

@@ -54,11 +54,11 @@ public final class WindGenTopRenderer implements BlockEntityRenderer<WindGenTopB
 
         nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, 0, renderState.breakProgress);
         poseStack.pushPose();
-        poseStack.translate(0, 1.5f, 0);
+        poseStack.translate(-0.5f, 1.5f, 0.5f);
         poseStack.scale(1, 1f / 16f, 1);
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
 
-        WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
+        WindGenPillarRenderer.renderPillar(poseStack, nodeCollector, packedLight);
         poseStack.popPose();
 
         if (renderState.hasFan) {

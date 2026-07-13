@@ -171,7 +171,7 @@ object MusicApp : App {
                         val p = LinearLayoutWidget.LayoutParams()
                             .weight(1f)
                             .width(0f)
-                            .gravity(Gravity.CENTER_TOP)
+                            .gravity(Gravity.CENTER)
                         val currentTime: LabelWidget = object : LabelWidget("00:00") {
                             override fun tick() {
                                 text = formatTime(MusicPlayerBackend.getInstance().currentTime)

@@ -17,6 +17,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
             if (field != text) {
                 field = text
                 requestLayout()
+                invalidate()
             }
         }
     protected var lastText: String? = null

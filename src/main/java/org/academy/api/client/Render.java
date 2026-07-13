@@ -1,5 +1,6 @@
 package org.academy.api.client;
 
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
@@ -131,6 +132,11 @@ public final class Render {
             renderPass.drawIndexed(6, 1, 0, 0, 0);
             IrisCompat.resetBypass();
         }
+    }
+
+    public static void close() {
+        Buffers.close();
+        TextureViews.close();
     }
 
     public record GaussianSamples(int sampleCount, Vector4f[] samples) {
@@ -266,10 +272,13 @@ public final class Render {
         }
 
         private void closeInternal() {
+            fullScreenQuadVBNDC.close();
             fullScreenQuadUvVBNDC.close();
+            fullScreenQuadUvColorVBNDC.close();
             fullScreenQuadUvVBSDC.close();
             fullScreenQuadUvColorVBSDC.close();
             projectionUB.close();
+            blurUniformsBuffer.close();
         }
 
         public void recreateSDC() {
@@ -492,7 +501,7 @@ public final class Render {
 
         public static final RenderPipeline MSDF_TEXT = builder()
                 .withLocation(academy("pipeline/msdf_text"))
-                .withVertexShader(Resource.Shaders.IMAGE)
+                .withVertexShader(Resource.Shaders.Vertex.MSDF_TEXT_INSTANCED)
                 .withFragmentShader(Resource.Shaders.Fragment.MSDF_TEXT)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -504,7 +513,18 @@ public final class Render {
                 )
                 .withCull(true)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withVertexBinding(0, VertexFormat.builder(0)
+                        .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+                        .build()
+                )
+                .withVertexBinding(1, VertexFormat.builder(1)
+                        .addAttribute("InstPos", GpuFormat.RGB32_FLOAT)
+                        .addAttribute("InstSize", GpuFormat.RG32_FLOAT)
+                        .addAttribute("InstUVStart", GpuFormat.RG32_FLOAT)
+                        .addAttribute("InstUVEnd", GpuFormat.RG32_FLOAT)
+                        .addAttribute("InstColor", GpuFormat.RGBA32_FLOAT)
+                        .build()
+                )
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .build();
 

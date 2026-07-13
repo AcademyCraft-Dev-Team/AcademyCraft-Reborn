@@ -2,7 +2,6 @@ package org.academy.api.client.gui.render
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.pipeline.RenderPipeline
-import com.mojang.blaze3d.vertex.BufferBuilder
 import com.mojang.blaze3d.vertex.MeshData
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import org.academy.api.client.Render.Buffers.getByteBufferBuilder
@@ -18,9 +17,7 @@ object BatchProcessor {
     ): List<PendingBatch> {
         if (commands.isEmpty()) return mutableListOf()
 
-        commands.sortWith { c1, c2 ->
-            compareCommands(c1, c2)
-        }
+        commands.sortWith { c1, c2 -> compareCommands(c1, c2) }
 
         val batches = ArrayList<PendingBatch>()
         val iterator = commands.iterator()
@@ -52,8 +49,7 @@ object BatchProcessor {
         val orderCompare = c1.drawOrder.toLong().compareTo(c2.drawOrder.toLong())
         if (orderCompare != 0) return orderCompare
 
-        val pipelineCompare =
-            c1.command.pipeline.sortKey.compareTo(c2.command.pipeline.sortKey)
+        val pipelineCompare = c1.command.pipeline.sortKey.compareTo(c2.command.pipeline.sortKey)
         if (pipelineCompare != 0) return pipelineCompare
 
         val resCompare = c1.resourceKey.compareTo(c2.resourceKey)
@@ -77,6 +73,9 @@ object BatchProcessor {
             val instancing = command.isGeometryFixed()
             if (!instancing || state.instanceCount == 0) {
                 command.generateVertices(state.builders[0], pose)
+                if (instancing) {
+                    state.geometryMeshData = state.builders[0].build()
+                }
             }
             for (i in 1 until state.builders.size) {
                 val slot = state.slotIndices[i]
@@ -92,13 +91,24 @@ object BatchProcessor {
         uploader: UboUploader
     ) {
         val meshDataList = ArrayList<MeshData>()
-        for (builder in state.builders) {
-            val mesh = builder.build()
-            if (mesh == null && state.builders.size > 1) {
-                meshDataList.forEach { it.close() }
-                return
+
+        if (state.geometryMeshData != null) {
+            meshDataList.add(state.geometryMeshData!!)
+            for (i in 1 until state.builders.size) {
+                val mesh = state.builders[i].build()
+                if (mesh == null) {
+                    meshDataList.forEach { it.close() }
+                    return
+                }
+                meshDataList.add(mesh)
             }
-            if (mesh != null) {
+        } else {
+            for (builder in state.builders) {
+                val mesh = builder.build()
+                if (mesh == null) {
+                    meshDataList.forEach { it.close() }
+                    return
+                }
                 meshDataList.add(mesh)
             }
         }
@@ -132,9 +142,10 @@ object BatchProcessor {
         var scissor: ScissorRect? = null
         var textures: List<TextureBinding>
         var uniforms: List<UniformPayload<*>>
-        var builders: List<BufferBuilder>
+        var builders: List<MeshBuilder>
         var slotIndices: List<Int>
         var instanceCount: Int
+        var geometryMeshData: MeshData? = null
 
         private var resourceKey: Long = 0
 
@@ -150,9 +161,10 @@ object BatchProcessor {
                 .mapIndexedNotNull { index, format -> if (format != null) index else null }
             slotIndices = activeSlots
 
+            val sharedBuffer = getByteBufferBuilder()
             builders = activeSlots.map { slot ->
                 val format = pipeline.getVertexFormatBinding(slot)!!
-                BufferBuilder(getByteBufferBuilder(), pipeline.primitiveTopology, format)
+                MeshBuilder(sharedBuffer, pipeline.primitiveTopology, format)
             }
 
             instanceCount = if (activeSlots.size > 1 && innerCommand.isGeometryFixed()) 0 else 1
@@ -170,12 +182,14 @@ object BatchProcessor {
                 .mapIndexedNotNull { index, format -> if (format != null) index else null }
             slotIndices = activeSlots
 
+            val sharedBuffer = getByteBufferBuilder()
             builders = activeSlots.map { slot ->
                 val format = pipeline.getVertexFormatBinding(slot)!!
-                BufferBuilder(getByteBufferBuilder(), pipeline.primitiveTopology, format)
+                MeshBuilder(sharedBuffer, pipeline.primitiveTopology, format)
             }
 
             instanceCount = if (activeSlots.size > 1 && innerCommand.isGeometryFixed()) 0 else 1
+            geometryMeshData = null
         }
 
         fun shouldBreakBatch(nextCommand: SubmittedCommand): Boolean {

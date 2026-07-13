@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import org.academy.internal.client.renderer.blockentity.WindGenBaseRenderer;
+import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.joml.Vector3fc;
 
 import java.util.function.Consumer;
@@ -21,10 +22,9 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
     }
 
     @Override
-    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, final int outlineColor) {
         poseStack.pushPose();
-        poseStack.translate(0.5f, 0, 0.5f);
-        WindGenBaseRenderer.MODEL.renderPole(poseStack, nodeCollector, packedLight, packedOverlay);
+        WindGenPillarRenderer.renderPillar(poseStack, submitNodeCollector, lightCoords);
         poseStack.popPose();
     }
 

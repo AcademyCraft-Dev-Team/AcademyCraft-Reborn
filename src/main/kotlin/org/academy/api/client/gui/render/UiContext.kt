@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.layout.MeasureSpec
+import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager
 import org.academy.api.client.gui.render.BatchProcessor.UboUploader
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.UniformPayload
@@ -28,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 open class UiContext {
     private val commandList = AtomicReference<MutableList<SubmittedCommand>?>()
+    private var cachedCommands: MutableList<SubmittedCommand>? = null
 
     private val closed = AtomicBoolean(false)
     private val closing = AtomicBoolean(false)
@@ -61,9 +63,20 @@ open class UiContext {
             rootWidget.layout(0f, 0f, width.toFloat(), height.toFloat())
         }
 
+        if (shouldUseCacheCommands(rootWidget)) {
+            commandList.set(cachedCommands)
+            return
+        }
+
         val context = RenderContext()
+        rootWidget.isRenderDirty = false
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick)
+        cachedCommands = context.commands.toMutableList()
         commandList.set(context.commands)
+    }
+
+    open fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean {
+        return !rootWidget.isRenderDirty && cachedCommands != null
     }
 
     @RenderThread

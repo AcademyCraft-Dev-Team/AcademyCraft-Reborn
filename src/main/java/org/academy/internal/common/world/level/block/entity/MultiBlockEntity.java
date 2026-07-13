@@ -16,13 +16,16 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
+import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
+import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
+
 public abstract class MultiBlockEntity extends BlockEntity {
     @Nullable
     public BlockPos mainPos;
 
     public MultiBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
         super(type, pos, blockState);
-        if (isMain()){
+        if (isMain()) {
             setMainPos(pos);
         }
     }
@@ -31,7 +34,9 @@ public abstract class MultiBlockEntity extends BlockEntity {
         mainPos = pos;
         setChanged();
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            level.sendBlockUpdated(
+                    getBlockPos(), getBlockState(), getBlockState(), UPDATE_NEIGHBORS | UPDATE_CLIENTS
+            );
         }
     }
 

@@ -236,12 +236,17 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
             scrollTarget -= (event.delta * scrollSpeed).toFloat()
             val max = this.maxScroll
             scrollTarget = Mth.clamp(scrollTarget, 0f, max)
+            invalidate()
         }
     }
 
     fun setScrollTarget(scrollTarget: Float): ScrollPanelWidget {
         val max = this.maxScroll
-        this.scrollTarget = Mth.clamp(scrollTarget, 0f, max)
+        val clamped = Mth.clamp(scrollTarget, 0f, max)
+        if (this.scrollTarget != clamped) {
+            this.scrollTarget = clamped
+            invalidate()
+        }
         return this
     }
 

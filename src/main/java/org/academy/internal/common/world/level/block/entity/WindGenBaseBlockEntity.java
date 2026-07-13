@@ -39,7 +39,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     @Nullable
     private BlockPos connectedNodePos = null;
     public int altitude;
-    private boolean playerNearby = false;
+    private boolean playerNearby = true;
     public boolean isDisplayActive = false;
 
     public WindGenBaseBlockEntity(BlockPos pos, BlockState blockState) {
@@ -81,8 +81,10 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     private void clientTick() {
         if (isMain() && level != null) {
             var wasNearby = playerNearby;
-            var nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
-            playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;
+            var nearbyPlayers = level.getNearestPlayer(
+                    worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), 10, false
+            );
+            playerNearby = nearbyPlayers != null && energyStored > 0;
 
             if (wasNearby != playerNearby) {
                 handleStateChangeOnClient(wasNearby, playerNearby);
@@ -107,7 +109,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
-            var targetStartSeconds = Math.clamp(totalDuration, 0.0f, totalDuration - elapsedSeconds);
+            var targetStartSeconds = Math.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
             targetAnimationState.start(Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));

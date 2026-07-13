@@ -131,17 +131,24 @@ open class ProgressBarWidget : AbstractWidget() {
         val clampedProgress = Mth.clamp(progress, min, max)
         if (this.progress != clampedProgress) {
             this.progress = clampedProgress
+            invalidate()
         }
         return this
     }
 
     fun setBackgroundColor(backgroundColor: Int): ProgressBarWidget {
-        this.backgroundColor = backgroundColor
+        if (this.backgroundColor != backgroundColor) {
+            this.backgroundColor = backgroundColor
+            invalidate()
+        }
         return this
     }
 
     fun setProgressColor(progressColor: Int): ProgressBarWidget {
-        this.progressColor = progressColor
+        if (this.progressColor != progressColor) {
+            this.progressColor = progressColor
+            invalidate()
+        }
         return this
     }
 

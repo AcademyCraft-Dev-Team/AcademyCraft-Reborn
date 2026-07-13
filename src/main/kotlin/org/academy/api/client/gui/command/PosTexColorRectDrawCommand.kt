@@ -2,9 +2,10 @@ package org.academy.api.client.gui.command
 
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.vertex.PoseStack
-import com.mojang.blaze3d.vertex.VertexConsumer
+import org.academy.api.client.gui.render.VertexWriter
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformPayload
+import org.joml.Vector3f
 
 abstract class PosTexColorRectDrawCommand protected constructor(
     pipeline: RenderPipeline,
@@ -21,10 +22,36 @@ abstract class PosTexColorRectDrawCommand protected constructor(
     textures: List<TextureBinding>,
     uniforms: List<UniformPayload<*>>
 ) : DrawCommand(pipeline, textures, uniforms) {
-    override fun generateVertices(consumer: VertexConsumer, pose: PoseStack.Pose) {
-        consumer.addVertex(pose, 0.0f, 0.0f, 0.0f).setUv(u0, v0).setColor(red, green, blue, alpha)
-        consumer.addVertex(pose, 0.0f, height, 0.0f).setUv(u0, v1).setColor(red, green, blue, alpha)
-        consumer.addVertex(pose, width, height, 0.0f).setUv(u1, v1).setColor(red, green, blue, alpha)
-        consumer.addVertex(pose, width, 0.0f, 0.0f).setUv(u1, v0).setColor(red, green, blue, alpha)
+    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+        val matrix = pose.pose()
+        val r = (red * 255.0f).toInt()
+        val g = (green * 255.0f).toInt()
+        val b = (blue * 255.0f).toInt()
+        val a = (alpha * 255.0f).toInt()
+        val dest = Vector3f()
+
+        writer.beginVertex()
+        matrix.transformPosition(0.0f, 0.0f, 0.0f, dest)
+        writer.putVec3f(dest.x, dest.y, dest.z)
+        writer.putVec2f(u0, v0)
+        writer.putColor(r, g, b, a)
+
+        writer.beginVertex()
+        matrix.transformPosition(0.0f, height, 0.0f, dest)
+        writer.putVec3f(dest.x, dest.y, dest.z)
+        writer.putVec2f(u0, v1)
+        writer.putColor(r, g, b, a)
+
+        writer.beginVertex()
+        matrix.transformPosition(width, height, 0.0f, dest)
+        writer.putVec3f(dest.x, dest.y, dest.z)
+        writer.putVec2f(u1, v1)
+        writer.putColor(r, g, b, a)
+
+        writer.beginVertex()
+        matrix.transformPosition(width, 0.0f, 0.0f, dest)
+        writer.putVec3f(dest.x, dest.y, dest.z)
+        writer.putVec2f(u1, v0)
+        writer.putColor(r, g, b, a)
     }
 }

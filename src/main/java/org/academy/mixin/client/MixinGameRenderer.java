@@ -71,6 +71,7 @@ public abstract class MixinGameRenderer {
             Matrix4fStack modelViewStack
     ) {
         var player = minecraft.player;
+        if (player == null) return;
         RendererManager.renderEffectFirstPerson(
                 poseStack,
                 handAndScreenSubmitNodeStorage,

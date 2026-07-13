@@ -6,7 +6,9 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import org.academy.internal.client.renderer.blockentity.WindGenBaseRenderer;
+import org.academy.api.client.Resource;
+import org.academy.internal.client.model.WindGenBaseModel;
+import org.academy.internal.client.renderer.blockentity.state.WindGenBaseRenderState;
 import org.joml.Vector3fc;
 
 import java.util.function.Consumer;
@@ -21,14 +23,20 @@ public final class WindGenBaseSpecialRenderer implements NoDataSpecialModelRende
     public void getExtents(Consumer<Vector3fc> output) {
         var posestack = new PoseStack();
         posestack.scale(1.0F, -1.0F, -1.0F);
-        WindGenBaseRenderer.MODEL.root().getExtentsForGui(posestack, output);
+        WindGenBaseModel.MODEL.root().getExtentsForGui(posestack, output);
     }
 
     @Override
-    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, final int outlineColor) {
         poseStack.pushPose();
+        poseStack.translate(0.5f, -0.5f, 0.5f);
+        poseStack.scale(0.75F, 0.75F, 0.75F);
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
-        WindGenBaseRenderer.MODEL.render(poseStack, nodeCollector, packedLight, packedOverlay);
+        submitNodeCollector.submitModel(
+                WindGenBaseModel.MODEL,
+                WindGenBaseRenderState.NONE,
+                poseStack, Resource.Textures.MODEL_WIND_GEN, lightCoords, overlayCoords, 0, null
+        );
         poseStack.popPose();
     }
 

@@ -349,7 +349,10 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
 
             else -> false
         }
-        if (handled) event.consume()
+        if (handled) {
+            event.consume()
+            invalidate()
+        }
     }
 
     private fun updateTextComponent() {
@@ -377,12 +380,14 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
             showCaret = true
             lastBlinkTime = System.currentTimeMillis()
             event.consume()
+            invalidate()
         }
     }
 
     override fun onMouseReleased(event: MouseEvent) {
         if (event.button == 0) {
             mouseDragging = false
+            invalidate()
         }
     }
 
@@ -401,6 +406,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
 
             caretPos = newCaretPos
             event.consume()
+            invalidate()
         }
     }
 

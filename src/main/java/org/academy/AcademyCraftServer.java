@@ -4,8 +4,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -20,8 +22,6 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 /**
  * MinecraftServer, 不区分 IntegratedServer 或 DedicatedServer
@@ -36,7 +36,8 @@ public final class AcademyCraftServer {
     private final WorldData worldData;
     private final AbilitySystemServer abilitySystemServer;
     private final MinecraftServer server;
-    private final ScheduledFuture<?> worldDataSaveTask;
+    private long lastSaveTick = 0;
+    private static final long SAVE_INTERVAL_TICKS = 20 * 60 * 5;
 
     /**
      * 一个 MinecraftServer 实例对应一个 MinecraftServerContext
@@ -66,24 +67,21 @@ public final class AcademyCraftServer {
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
         WirelessManager.initServer();
 
-        worldDataSaveTask = AcademyCraft.EXECUTOR_SERVICE.scheduleAtFixedRate(
-                this::scheduleSaveTask
-                , 5, 5, TimeUnit.MINUTES
-        );
+        NeoForge.EVENT_BUS.addListener(this::onServerTick);
     }
 
     public AbilitySystemServer getAbilitySystemServer() {
         return abilitySystemServer;
     }
 
-    private void scheduleSaveTask() {
-        server.execute(this::asyncSave);
-    }
-
-    private void asyncSave() {
-        var snapshot = createSnapshotAndClean();
-        if (snapshot == null) return;
-        AcademyCraft.EXECUTOR_SERVICE.submit(() -> writeToFile(snapshot));
+    public void onServerTick(ServerTickEvent.Post event) {
+        long currentTick = server.getTickCount();
+        if (currentTick - lastSaveTick >= SAVE_INTERVAL_TICKS) {
+            lastSaveTick = currentTick;
+            var snapshot = createSnapshotAndClean();
+            if (snapshot == null) return;
+            writeToFile(snapshot);
+        }
     }
 
     private void saveData() {
@@ -125,15 +123,14 @@ public final class AcademyCraftServer {
 
     @SubscribeEvent
     public static void init(ServerStartedEvent event) {
-        new AcademyCraftServer((MinecraftServerContext) event.getServer());
+        new AcademyCraftServer(event.getServer());
     }
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
-        var context = (MinecraftServerContext) event.getServer();
+        var context = event.getServer();
         var instance = context.getAcademyCraftServer();
         instance.abilitySystemServer.onServerStopping();
-        instance.worldDataSaveTask.cancel(false);
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();
         instance.serverConfig.save();

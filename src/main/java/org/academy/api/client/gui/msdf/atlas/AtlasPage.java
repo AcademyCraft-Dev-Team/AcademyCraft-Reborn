@@ -33,6 +33,7 @@ public class AtlasPage {
     }
 
     public void upload(Rect rect, ByteBuffer buffer) {
+        RenderSystem.assertOnRenderThread();
         var encoder = RenderSystem.getDevice().createCommandEncoder();
         encoder.writeToTexture(
                 texture, buffer,

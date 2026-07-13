@@ -1,30 +1,31 @@
 package org.academy.api.client.gui.msdf.font;
 
+import lovely.cane.jmsdfgen.ImportFont;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.msdf.atlas.MsdfAtlas;
 import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
 import org.academy.api.client.gui.msdf.atlas.MsdfGlyph;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.freetype.FT_Face;
-import org.lwjgl.util.freetype.FreeType;
-import org.lwjgl.util.msdfgen.MSDFGen;
-import org.lwjgl.util.msdfgen.MSDFGenExt;
+
+import java.util.concurrent.Executor;
+
+import static org.lwjgl.util.freetype.FreeType.FT_Done_Face;
 
 public class MsdfFont {
     public final FontDescriptor descriptor;
     public final FT_Face face;
     public final MsdfAtlas atlas;
-    public final long msdfFontHandle;
+    public final ImportFont.FontHandle fontHandle;
     public final MsdfFontMetrics metrics;
 
-    public MsdfFont(Identifier identifier, FT_Face face) {
+    public MsdfFont(Identifier identifier, FT_Face face, Executor executor) {
         this.face = face;
         descriptor = new FontDescriptor(
                 identifier,
                 FontStyle.of((int) face.style_flags())
         );
-        atlas = MsdfAtlasManager.getAtlas(identifier);
+        atlas = MsdfAtlasManager.getAtlas(identifier, executor);
         metrics = new MsdfFontMetrics(
                 face.units_per_EM(),
                 face.ascender(),
@@ -32,23 +33,14 @@ public class MsdfFont {
                 face.height()
         );
 
-        long handle;
-        try (var stack = MemoryStack.stackPush()) {
-            var pHandle = stack.callocPointer(1);
-            if (MSDFGenExt.msdf_ft_adopt_font(face.address(), pHandle) != MSDFGen.MSDF_SUCCESS) {
-                throw new RuntimeException("Failed to adopt FT_Face for msdfgen");
-            }
-            handle = pHandle.get();
-        }
-        msdfFontHandle = handle;
+        fontHandle = ImportFont.adoptFreetypeFont(face);
     }
 
     public @Nullable MsdfGlyph getGlyph(int character) {
-        return atlas.getOrGenerate(face, msdfFontHandle, character);
+        return atlas.getOrGenerate(face, fontHandle, character);
     }
 
     public void close() {
-        MSDFGenExt.msdf_ft_font_destroy(msdfFontHandle);
-        FreeType.FT_Done_Face(face);
+        FT_Done_Face(face);
     }
 }

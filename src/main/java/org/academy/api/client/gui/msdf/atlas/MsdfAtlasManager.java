@@ -4,6 +4,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.msdf.Constants;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 
 public final class MsdfAtlasManager {
     private MsdfAtlasManager() {
@@ -11,11 +12,12 @@ public final class MsdfAtlasManager {
 
     private static final ConcurrentHashMap<Identifier, MsdfAtlas> atlases = new ConcurrentHashMap<>();
 
-    public static MsdfAtlas getAtlas(Identifier descriptor) {
+    public static MsdfAtlas getAtlas(Identifier descriptor, Executor executor) {
         return atlases.computeIfAbsent(descriptor, _ -> new MsdfAtlas(
                 Constants.DEFAULT_ATLAS_SIZE,
                 Constants.DEFAULT_GLYPH_SIZE,
-                Constants.DEFAULT_PX_RANGE
+                Constants.DEFAULT_PX_RANGE,
+                executor
         ));
     }
 

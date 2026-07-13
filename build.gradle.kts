@@ -1,5 +1,6 @@
-@file:Suppress("UnstableApiUsage")
-
+import com.electronwill.nightconfig.core.Config
+import com.electronwill.nightconfig.core.io.IndentStyle
+import com.electronwill.nightconfig.toml.TomlFormat
 import de.undercouch.gradle.tasks.download.Download
 import org.slf4j.event.Level
 
@@ -40,6 +41,7 @@ base {
 
 java {
     toolchain {
+        @Suppress("UnstableApiUsage")
         vendor.set(JvmVendorSpec.JETBRAINS)
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
     }
@@ -47,29 +49,88 @@ java {
     withJavadocJar()
 }
 
-val generateModMetadata by tasks.registering(ProcessResources::class) {
+val generateModMetadata = tasks.register<Copy>("generateModMetadata") {
     description = "generateModMetadata"
-    val replaceProperties = mapOf(
-        "minecraft_version" to minecraftVersion,
-        "minecraft_version_range" to minecraftVersion,
-        "misaka_version" to misakaVersion,
-        "neo_version" to neoVersion,
-        "neo_version_range" to neoVersion,
-        "mod_id" to modId,
-        "loader_version_range" to libs.versions.loader,
-        "mod_name" to project.property("mod_name"),
-        "mod_license" to project.property("mod_license"),
-        "mod_version" to modVersion,
-        "mod_authors" to project.property("mod_authors"),
-        "mod_description" to project.property("mod_description")
-    )
-    inputs.properties(replaceProperties)
-    expand(replaceProperties)
-    from("src/main/templates")
-    into("build/generated/sources/modMetadata")
+    dependsOn(generateModsToml)
+    from(generateModsToml.map { it.outputs.files.singleFile }) { into("META-INF") }
+    from("thirdparty") { into("thirdparty") }
+    into(layout.buildDirectory.dir("generated/sources/modMetadata"))
+}
 
-    from("thirdparty") {
-        into("thirdparty")
+val generateModsToml = tasks.register("generateModsToml") {
+    description = "Generates META-INF/neoforge.mods.toml using night-config"
+    group = "academy"
+
+    val tomlFile = layout.buildDirectory.file("generated/toml/META-INF/neoforge.mods.toml")
+
+    inputs.property("loaderVersionRange", libs.versions.loader.get())
+    inputs.property("license", project.property("mod_license"))
+    inputs.property("modId", modId)
+    inputs.property("version", modVersion)
+    inputs.property("displayName", project.property("mod_name"))
+    inputs.property("authors", project.property("mod_authors"))
+    inputs.property("description", project.property("mod_description"))
+    inputs.property("neoVersion", neoVersion)
+    inputs.property("minecraftVersionRange", minecraftVersion)
+    inputs.property("misakaVersion", misakaVersion)
+
+    outputs.file(tomlFile)
+
+    doLast {
+        val loaderVersionRange = inputs.properties["loaderVersionRange"] as String
+        val license = inputs.properties["license"] as String
+        val modId = inputs.properties["modId"] as String
+        val version = inputs.properties["version"] as String
+        val displayName = inputs.properties["displayName"] as String
+        val authors = inputs.properties["authors"] as String
+        val description = inputs.properties["description"] as String
+        val neoVersion = inputs.properties["neoVersion"] as String
+        val minecraftVersionRange = inputs.properties["minecraftVersionRange"] as String
+        val misakaVersion = inputs.properties["misakaVersion"] as String
+
+        val config = TomlFormat.newConfig()
+        config.set<String>("modLoader", "kotlinforforge")
+        config.set<String>("loaderVersion", loaderVersionRange)
+        config.set<String>("license", license)
+
+        val modConfig = Config.inMemory().apply {
+            set<String>("modId", modId)
+            set<String>("version", version)
+            set<String>("displayName", displayName)
+            set<String>("authors", authors)
+            set<String>("description", description)
+        }
+        val modsList = mutableListOf<Config>(modConfig)
+        config.set<MutableList<Config>>("mods", modsList)
+
+        val mixinConfig = Config.inMemory().apply {
+            set<String>("config", "${modId}.mixins.json")
+        }
+        config.set<MutableList<Config>>("mixins", mutableListOf(mixinConfig))
+
+        val dependencies = mutableListOf<Config>()
+        fun addDep(modId: String, versionRange: String) {
+            val dep = Config.inMemory().apply {
+                set<String>("modId", modId)
+                set<String>("type", "required")
+                set<String>("versionRange", versionRange)
+                set<String>("ordering", "NONE")
+                set<String>("side", "BOTH")
+            }
+            dependencies.add(dep)
+        }
+        addDep("neoforge", "[$neoVersion,)")
+        addDep("minecraft", minecraftVersionRange)
+        addDep("kotlinforforge", loaderVersionRange)
+        addDep("misaka_network", misakaVersion)
+
+        config.set<MutableList<Config>>(listOf("dependencies", modId), dependencies)
+
+        val file = tomlFile.get().asFile
+        file.parentFile.mkdirs()
+        val writer = TomlFormat.instance().createWriter()
+        writer.setIndent(IndentStyle.NONE)
+        file.outputStream().use { writer.write(config, it) }
     }
 }
 
@@ -82,15 +143,6 @@ sourceSets.named("main") {
 }
 
 repositories {
-    mavenLocal()
-    maven {
-        name = "Maven for PR #3198" // https://github.com/neoforged/NeoForge/pull/3198
-        url = uri("https://prmaven.neoforged.net/NeoForge/pr3198")
-        content {
-            includeModule("net.neoforged", "neoforge")
-            includeModule("net.neoforged", "testframework")
-        }
-    }
     maven {
         name = "AC Dev Team's maven"
         //setUrl("/home/cane/Projects/maven-repo")
@@ -98,6 +150,7 @@ repositories {
         content {
             includeGroup("org.academy")
             includeGroup("net.neoforged")
+            includeGroup("lovely.cane.jmsdfgen")
         }
     }
     maven {
@@ -112,13 +165,6 @@ repositories {
         setUrl("https://maven.blamejared.com/")
         content {
             includeGroup("mezz.jei")
-        }
-    }
-    maven {
-        name = "IzzelAliz"
-        setUrl("https://maven.izzel.io/releases/")
-        content {
-            includeGroup("icyllis.modernui")
         }
     }
     maven {
@@ -187,6 +233,18 @@ neoForge {
                 "-Dneoforge.rendernurse.renderdoc.library=${renderDocLibraryFile.absolutePath}"
             )
         }
+        register("clientData") {
+            clientData()
+            programArguments.addAll(
+                "--mod",
+                modId,
+                "--all",
+                "--output",
+                file("src/generated/resources/").absolutePath,
+                "--existing",
+                file("src/main/resources/").absolutePath
+            )
+        }
         configureEach {
             logLevel.set(Level.DEBUG)
             systemProperty("terminal.ansi", "true")
@@ -209,22 +267,21 @@ fun DependencyHandler.apiAndJarJar(dep: Any) {
     jarJar(dep)
 }
 
-fun DependencyHandler.implAndJarJar(dep: Any) {
-    implementation(dep)
-    jarJar(dep)
-}
-
 fun DependencyHandler.implAndJarJar(
-    dependencyNotation: Provider<*>,
-    dependencyConfiguration: Action<ExternalModuleDependency>
+    dep: Provider<*>,
+    config: Action<ExternalModuleDependency>? = null
 ) {
-    implementation(dependencyNotation, dependencyConfiguration)
-    jarJar(dependencyNotation, dependencyConfiguration)
+    if (config != null) {
+        implementation(dep, config)
+        jarJar(dep, config)
+    } else {
+        implementation(dep)
+        jarJar(dep)
+    }
 }
 
 dependencies {
-    implAndJarJar(libs.kotlinforforge)
-
+    implementation(libs.kotlinforforge)
     /*
         val geckolib = libs.geckolib
         interfaceInjectionData(geckolib)
@@ -241,19 +298,13 @@ dependencies {
 
     apiAndJarJar(libs.misaka)
 
+    apiAndJarJar(libs.jmsdfgen.core)
+    apiAndJarJar(libs.jmsdfgen.ext)
+
     annotationProcessor(libs.auto)
 
     implAndJarJar(libs.jflac)
     implAndJarJar(libs.jlayer)
-
-    val lwjglMsdfgen = libs.lwjgl.msdfgen
-    implAndJarJar(lwjglMsdfgen)
-    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-linux") })
-    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-macos") })
-    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-macos-arm64") })
-    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-windows") })
-    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-windows-arm64") })
-    implAndJarJar(variantOf(lwjglMsdfgen) { classifier("natives-windows-x86") })
 
     val imguiBinding = libs.imgui.binding
     val imguiLwjgl3 = libs.imgui.lwjgl3
@@ -291,7 +342,7 @@ tasks.withType<Javadoc> {
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
 }
 
-val downloadRenderNurse by tasks.register<Download>("downloadRenderNurse") {
+val downloadRenderNurse = tasks.register<Download>("downloadRenderNurse") {
     description = "Downloads render-nurse"
     src("https://maven.neoforged.net/releases/net/neoforged/render-nurse/${renderNurseVersion}/render-nurse-${renderNurseVersion}.jar")
     dest(renderNurseJar)
@@ -327,4 +378,8 @@ tasks.register("setupRenderDoc") {
     description = "Downloads and extracts RenderDoc and render-nurse (overwrites existing files)"
     group = "academy"
     dependsOn(downloadRenderNurse, extractRenderDoc)
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.isFork = true
 }

@@ -85,7 +85,7 @@ public final class AuraEffectWrapper implements EffectRenderer {
         var camera = Minecraft.getInstance().gameRenderer.mainCamera();
         var camPos = camera.position();
 
-        for (AuraRenderer aura : activeAuras) {
+        for (var aura : activeAuras) {
             if (!lifetimes.containsKey(aura)) continue;
 
             var pos = positions.get(aura);

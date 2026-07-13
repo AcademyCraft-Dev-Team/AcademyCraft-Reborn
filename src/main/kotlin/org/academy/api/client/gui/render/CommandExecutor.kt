@@ -218,6 +218,14 @@ class CommandExecutor : AutoCloseable {
         physicalHeight: Int
     ): Boolean {
         renderPass.setPipeline(drawCall.pipeline)
+
+        val bindings = drawCall.pipeline.vertexFormatBindings
+        for (i in bindings.indices) {
+            if (bindings[i] == null) {
+                renderPass.setVertexBuffer(i, null)
+            }
+        }
+
         for (i in drawCall.vertexSlices.indices) {
             val slot = drawCall.slotIndices[i]
             renderPass.setVertexBuffer(slot, drawCall.vertexSlices[i])

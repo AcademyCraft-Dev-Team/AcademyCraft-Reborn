@@ -28,6 +28,9 @@ import org.slf4j.Logger;
 
 import java.util.*;
 
+import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
+import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
+
 public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     
@@ -232,7 +235,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         if (stack.getCount() > getMaxStackSize()) stack.setCount(getMaxStackSize());
         setChanged();
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), UPDATE_NEIGHBORS | UPDATE_CLIENTS);
         }
     }
 
