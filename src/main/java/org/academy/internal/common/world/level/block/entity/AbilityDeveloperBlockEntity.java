@@ -1,9 +1,5 @@
 package org.academy.internal.common.world.level.block.entity;
 
-/*import com.geckolib.animatable.GeoBlockEntity;
-import com.geckolib.animatable.instance.AnimatableInstanceCache;
-import com.geckolib.animatable.manager.AnimatableManager;
-import com.geckolib.util.GeckoLibUtil;*/
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AnimationState;
@@ -13,6 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
@@ -21,7 +18,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
-   // private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     @Nullable
     public String name;
@@ -213,13 +209,10 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
             }
         }
     }
-/*
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-    }
 
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return cache;
-    }*/
+    public AABB getRenderBoundingBox() {
+        var pos = Vec3.atCenterOf(getBlockPos());
+        var radius = 5d;
+        return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
+    }
 }

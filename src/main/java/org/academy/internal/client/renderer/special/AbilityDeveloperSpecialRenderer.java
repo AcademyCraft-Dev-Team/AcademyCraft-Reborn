@@ -7,18 +7,19 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import org.academy.api.client.Render;
-import org.academy.internal.client.model.AbilityDeveloperModel;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 import org.joml.Vector3fc;
 
 import java.util.function.Consumer;
 
+import static org.academy.internal.client.model.AbilityDeveloperModel.MODEL;
+
 public final class AbilityDeveloperSpecialRenderer implements NoDataSpecialModelRenderer {
-    public static final AbilityDeveloperModel MODEL = new AbilityDeveloperModel(AbilityDeveloperModel.createBodyLayer().bakeRoot());
     public static final AbilityDeveloperSpecialRenderer INSTANCE = new AbilityDeveloperSpecialRenderer();
 
     private AbilityDeveloperSpecialRenderer() {
     }
+
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
@@ -29,6 +30,7 @@ public final class AbilityDeveloperSpecialRenderer implements NoDataSpecialModel
 
         poseStack.popPose();
     }
+
     @Override
     public void getExtents(Consumer<Vector3fc> output) {
         var posestack = new PoseStack();

@@ -12,37 +12,10 @@ import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRe
  */
 @SuppressWarnings({"FieldCanBeLocal", "unused"})
 public class AbilityDeveloperModel extends Model<AbilityDeveloperRenderState> {
-    private final ModelPart all;
-    private final ModelPart up;
-    private final ModelPart pod;
-    private final ModelPart logo;
-    private final ModelPart glass;
-    private final ModelPart L1;
-    private final ModelPart L2;
-    private final ModelPart L3;
-    private final ModelPart R1;
-    private final ModelPart R2;
-    private final ModelPart R3;
-    private final ModelPart poles;
-    private final ModelPart base;
+    public static final AbilityDeveloperModel MODEL = new AbilityDeveloperModel(createBodyLayer().bakeRoot());
 
     public AbilityDeveloperModel(ModelPart root) {
-        var all = root.getChild("all");
-        super(all, RenderTypes::entityTranslucent);
-
-        this.all = all;
-        up = all.getChild("up");
-        pod = up.getChild("pod");
-        logo = up.getChild("logo");
-        glass = up.getChild("glass");
-        L1 = glass.getChild("L1");
-        L2 = L1.getChild("L2");
-        L3 = L2.getChild("L3");
-        R1 = glass.getChild("R1");
-        R2 = R1.getChild("R2");
-        R3 = R2.getChild("R3");
-        poles = all.getChild("poles");
-        base = all.getChild("base");
+        super(root, RenderTypes::entityTranslucent);
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -132,5 +105,6 @@ public class AbilityDeveloperModel extends Model<AbilityDeveloperRenderState> {
     @Override
     public void setupAnim(AbilityDeveloperRenderState renderState) {
         super.setupAnim(renderState);
+
     }
 }
