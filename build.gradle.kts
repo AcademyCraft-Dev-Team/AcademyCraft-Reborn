@@ -251,9 +251,6 @@ neoForge {
             // due to shit iris
             systemProperty("neoforge.disableGlValidation", "true")
 
-/*            jvmArgument("-XX:+ClassUnloading")
-            jvmArgument("-XX:-SegmentedCodeCache")
-            jvmArgument("-XX:ReservedCodeCacheSize=512m")*/
             jvmArgument("-XX:+AllowEnhancedClassRedefinition")
             jvmArgument("-Xverify:none")
         }
@@ -292,13 +289,13 @@ dependencies {
         implAndJarJar(geckolib)
     */
 
-    compileOnly(libs.sodium)
-    compileOnly(libs.iris)
+    implementation(libs.sodium)
+    implementation(libs.iris)
 
-    compileOnly(libs.jade)
+    implementation(libs.jade)
 
     compileOnly(libs.jei.api)
-    compileOnly(libs.jei)
+    implementation(libs.jei)
 
     apiAndJarJar(libs.misaka)
 

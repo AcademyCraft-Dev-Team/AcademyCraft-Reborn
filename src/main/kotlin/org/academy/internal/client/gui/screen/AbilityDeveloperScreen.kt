@@ -98,11 +98,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     private fun createLeftContent(): LinearLayoutWidget {
         val leftContent = LinearLayoutWidget()
-        leftContent.layoutParams = FrameLayoutWidget.LayoutParams()
+        leftContent.layoutParams = WidgetContainer.LayoutParams()
             .gravity(Gravity.START)
             .width(PANEL_MAIN_WIDTH / 4)
             .heightMode(SizeMode.MATCH_PARENT)
-            .padding(6f, 8f, 6f, 0f)
+            .padding(6.125f, 8f, 0.125f, 0f)
 
         val playerInfoContent = createPlayerInfoContent()
         leftContent.addChild("player_info_content", playerInfoContent)
@@ -115,82 +115,88 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         return leftContent
     }
 
-    private fun createPlayerInfoContent(): LinearLayoutWidget {
-        val playerInfoContent = LinearLayoutWidget()
+    private fun createPlayerInfoContent(): FrameLayoutWidget {
+        val playerInfoContent = FrameLayoutWidget()
         playerInfoContent.layoutParams = LinearLayoutWidget.LayoutParams()
-            .heightMode(SizeMode.WRAP_CONTENT)
+            .height(36f)
             .widthMode(SizeMode.MATCH_PARENT)
 
+        val leftLine = ImageWidget(Resource.Textures.ELEMENT_LINE)
+        leftLine.layoutParams = WidgetContainer.LayoutParams()
+            .heightMode(SizeMode.MATCH_PARENT)
+            .gravity(Gravity.LEFT)
+            .width(4f)
+            .margin(-1.5f, 0f, 0f, 0f)
+            .padding(0f, 1.5f, 0f, 1.8f)
+        leftLine.rotateUv()
+        playerInfoContent.addChild("left_line", leftLine)
+
+        val rightLine = ImageWidget(Resource.Textures.ELEMENT_LINE)
+        rightLine.layoutParams = WidgetContainer.LayoutParams()
+            .heightMode(SizeMode.MATCH_PARENT)
+            .gravity(Gravity.RIGHT)
+            .width(4f)
+            .margin(0f, 0f, -2f, 0f)
+            .padding(0f, 1.5f, 0f, 1.8f)
+        rightLine.rotateUv()
+        playerInfoContent.addChild("right_line", rightLine)
+
         val topLine = ImageWidget(Resource.Textures.ELEMENT_LINE)
-        topLine.layoutParams = LinearLayoutWidget.LayoutParams()
+        topLine.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.TOP)
             .widthMode(SizeMode.MATCH_PARENT)
             .height(4f)
         playerInfoContent.addChild("top_line", topLine)
 
-        val infoArea = createInfoArea()
-        playerInfoContent.addChild("info_area", infoArea)
-
         val bottomLine = ImageWidget(Resource.Textures.ELEMENT_LINE)
         bottomLine.layoutParams = WidgetContainer.LayoutParams()
             .widthMode(SizeMode.MATCH_PARENT)
+            .gravity(Gravity.BOTTOM)
             .height(4f)
         playerInfoContent.addChild("bottom_line", bottomLine)
 
-        return playerInfoContent
-    }
-
-    private fun createInfoArea(): RelativeLayoutWidget {
-        val infoArea = RelativeLayoutWidget()
-        infoArea.layoutParams = LinearLayoutWidget.LayoutParams()
-            .heightMode(SizeMode.WRAP_CONTENT)
-            .widthMode(SizeMode.MATCH_PARENT)
-
         val icon = FrameLayoutWidget()
-        icon.layoutParams = RelativeLayoutWidget.LayoutParams()
+        icon.layoutParams = WidgetContainer.LayoutParams()
             .size(32f, 32f)
+            .gravity(Gravity.CENTER_LEFT)
             .margin(0f, 2f)
-        infoArea.addChild("icon", icon)
+        playerInfoContent.addChild("icon", icon)
 
         val frame = ImageWidget(Resource.Textures.ICON_BOX)
-        frame.layoutParams = FrameLayoutWidget.LayoutParams()
+        frame.layoutParams = WidgetContainer.LayoutParams()
             .sizeMode(SizeMode.MATCH_PARENT)
         icon.addChild("frame", frame)
 
         val ability = ImageWidget(AcademyCraft.academy("textures/ability/accelerator/icon.png"))
-        ability.layoutParams = FrameLayoutWidget.LayoutParams()
+        ability.layoutParams = WidgetContainer.LayoutParams()
             .size(16f, 16f)
             .gravity(Gravity.CENTER)
         icon.addChild("ability", ability)
 
-        val info = LinearLayoutWidget()
-        info.orientation = Orientation.VERTICAL
-        info.layoutParams = RelativeLayoutWidget.LayoutParams()
-            .addRule(RelativeLayoutWidget.RIGHT_OF, icon)
-            .addRule(RelativeLayoutWidget.ALIGN_TOP, icon)
-            .addRule(RelativeLayoutWidget.ALIGN_BOTTOM, icon)
-            .margin(8f, 0f, 0f, 0f)
-            .sizeMode(SizeMode.WRAP_CONTENT, SizeMode.MATCH_PARENT)
-        infoArea.addChild("info", info)
-
         val abilityName = LabelWidget("Accelerator")
-        abilityName.layoutParams = LinearLayoutWidget.LayoutParams()
-            .weight(0.5f)
-            .gravity(Gravity.CENTER_LEFT)
-        info.addChild("ability_name", abilityName)
+        abilityName.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.TOP_LEFT)
+            .margin(32f, 7f, 0f, 0f)
+        playerInfoContent.addChild("ability_name", abilityName)
 
-        val levelInfo = LinearLayoutWidget()
-        levelInfo.orientation = Orientation.HORIZONTAL
-        levelInfo.layoutParams = LinearLayoutWidget.LayoutParams()
-            .weight(0.5f)
+        val progress = ProgressBarWidget()
+        progress.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.CENTER_LEFT)
             .widthMode(SizeMode.MATCH_PARENT)
-        info.addChild("level_info", levelInfo)
+            .height(0.75f)
+            .margin(32f, 0f, 8f, 0f)
 
-        val lv = LabelWidget("LV 5")
-        lv.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.CENTER_LEFT)
-        levelInfo.addChild("lv", lv)
+        progress.backgroundColor = 0x40FFFFFF
+        progress.setProgress(70f)
+        playerInfoContent.addChild("progress", progress)
 
-        return infoArea
+        val level = LabelWidget("LV 1314")
+        level.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.BOTTOM_LEFT)
+            .margin(32f, 0f, 0f, 7f)
+        playerInfoContent.addChild("level", level)
+
+        return playerInfoContent
     }
 
     private fun createRightContent(anim: ObjectAnimator, finalAnim: ObjectAnimator): FrameLayoutWidget {
@@ -256,7 +262,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             .sizeMode(SizeMode.MATCH_PARENT)
         terminalArea.addChild("scroll_panel", scrollPanel)
 
-        val outputs = object :LinearLayoutWidget(){
+        val outputs = object : LinearLayoutWidget() {
             override fun onLayout() {
                 super.onLayout()
                 scrollPanel.scrollToEnd()
