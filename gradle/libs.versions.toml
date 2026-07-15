@@ -3,7 +3,7 @@ academy = "0.0.3-alpha"
 
 java = "25"
 minecraft = "26.2.0"
-neoforge = "26.2.0.12-beta"
+neoforge = "26.2.0.15-beta"
 loader = "[6.3.0,)"
 
 renderdoc = "1.44"
@@ -11,10 +11,10 @@ rendernurse = "0.0.26"
 
 kotlinforforge = "6.3.0"
 geckolib = "5.5"
-sodium = "mc26.2-0.9.1-beta.3-neoforge"
-iris = "1.10.9+26.1-neoforge"
-jade = "26.0.10+neoforge"
-jei = "29.5.0.28"
+sodium = "mc26.2-0.9.1-neoforge"
+iris = "1.11.2+26.2-neoforge"
+jade = "26.2.8+neoforge"
+jei = "30.11.0.66"
 misaka = "26.2.0.1"
 jmsdfgen = "0.0.1"
 
@@ -32,8 +32,8 @@ geckolib = { group = "com.geckolib", name = "geckolib-neoforge-26.1", version.re
 sodium = { group = "maven.modrinth", name = "sodium", version.ref = "sodium" }
 iris = { group = "maven.modrinth", name = "iris", version.ref = "iris" }
 jade = { group = "maven.modrinth", name = "jade", version.ref = "jade" }
-jei = { group = "mezz.jei", name = "jei-26.1.2-neoforge", version.ref = "jei" }
-jei-api = { group = "mezz.jei", name = "jei-26.1.2-neoforge-api", version.ref = "jei" }
+jei = { group = "mezz.jei", name = "jei-26.2-neoforge", version.ref = "jei" }
+jei-api = { group = "mezz.jei", name = "jei-26.2-neoforge-api", version.ref = "jei" }
 misaka = { group = "org.academy", name = "misaka-network", version.ref = "misaka" }
 jmsdfgen-core = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-core", version.ref = "jmsdfgen" }
 jmsdfgen-ext = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-ext", version.ref = "jmsdfgen" }

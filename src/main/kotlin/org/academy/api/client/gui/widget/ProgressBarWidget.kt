@@ -16,7 +16,6 @@ open class ProgressBarWidget : AbstractWidget() {
         protected set
 
     var backgroundColor: Int = 0x40000000
-        protected set
     var progressColor: Int = -0x1
         protected set
 

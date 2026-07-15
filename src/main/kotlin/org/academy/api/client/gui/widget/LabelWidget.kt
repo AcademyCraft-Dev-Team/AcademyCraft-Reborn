@@ -9,7 +9,14 @@ import org.academy.api.client.gui.util.GlyphCommandGenerator
 import kotlin.math.min
 
 open class LabelWidget(text: String) : AbstractWidget() {
-    protected val baseFontSize: Float = DEFAULT_BASE_FONT_SIZE
+    var baseFontSize: Float = DEFAULT_BASE_FONT_SIZE
+        set(value) {
+            if (field != value) {
+                field = value
+                requestLayout()
+                invalidate()
+            }
+        }
     protected var layoutScale: Float = 1.0f
     protected var dropShadow: Boolean = false
     open var text: String = text
