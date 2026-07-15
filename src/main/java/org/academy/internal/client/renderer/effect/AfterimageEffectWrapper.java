@@ -9,8 +9,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.joml.Matrix4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -35,7 +33,16 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
     private boolean active;
     private float deactivateTimer;
 
-    private AfterimageEffectWrapper() {}
+    private AfterimageEffectWrapper() {
+    }
+
+    private static float easeOutCubic(float t) {
+        return 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
 
     public void setActive(boolean active) {
         this.active = active;
@@ -119,8 +126,8 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
     }
 
     private void drawSilhouette(Matrix4f mat, VertexConsumer vc, Snapshot s,
-                                 net.minecraft.world.phys.Vec3 camPos,
-                                 float r, float g, float b, float a, int index) {
+                                net.minecraft.world.phys.Vec3 camPos,
+                                float r, float g, float b, float a, int index) {
         var dx = (float) (s.x - camPos.x);
         var dy = (float) (s.y - camPos.y);
         var dz = (float) (s.z - camPos.z);
@@ -198,9 +205,9 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
     }
 
     private void drawBillboardBox(Matrix4f mat, VertexConsumer vc,
-                                   float x0, float y0, float z0,
-                                   float x1, float y1, float z1,
-                                   float hw, float r, float g, float b, float a) {
+                                  float x0, float y0, float z0,
+                                  float x1, float y1, float z1,
+                                  float hw, float r, float g, float b, float a) {
         var cx = (x0 + x1) * 0.5f;
         var cz = (z0 + z1) * 0.5f;
         // Billboard: render 4 quads forming a box always facing camera-relative axes
@@ -211,10 +218,10 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
     }
 
     private void drawLimb(Matrix4f mat, VertexConsumer vc,
-                           float sx, float sy, float sz,
-                           float mx, float my, float mz,
-                           float ex, float ey, float ez,
-                           float width, float r, float g, float b, float a) {
+                          float sx, float sy, float sz,
+                          float mx, float my, float mz,
+                          float ex, float ey, float ez,
+                          float width, float r, float g, float b, float a) {
         // Shoulder to elbow segment
         drawBillboardSegment(mat, vc, sx, sy, sz, mx, my, mz, width, r, g, b, a);
         // Elbow to hand segment
@@ -222,9 +229,9 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
     }
 
     private void drawBillboardSegment(Matrix4f mat, VertexConsumer vc,
-                                       float x0, float y0, float z0,
-                                       float x1, float y1, float z1,
-                                       float width, float r, float g, float b, float a) {
+                                      float x0, float y0, float z0,
+                                      float x1, float y1, float z1,
+                                      float width, float r, float g, float b, float a) {
         var lenX = x1 - x0;
         var lenY = y1 - y0;
         var lenZ = z1 - z0;
@@ -250,9 +257,9 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
     }
 
     private void renderQuadX(Matrix4f mat, VertexConsumer vc,
-                              float x0, float y0, float z0,
-                              float x1, float y1, float z1,
-                              float r, float g, float b, float a) {
+                             float x0, float y0, float z0,
+                             float x1, float y1, float z1,
+                             float r, float g, float b, float a) {
         vc.addVertex(mat, x0, y0, z0).setColor(r, g, b, a);
         vc.addVertex(mat, x0, y1, z0).setColor(r, g, b, a);
         vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a);
@@ -260,9 +267,9 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
     }
 
     private void renderQuadZ(Matrix4f mat, VertexConsumer vc,
-                              float x0, float y0, float z0,
-                              float x1, float y1, float z1,
-                              float r, float g, float b, float a) {
+                             float x0, float y0, float z0,
+                             float x1, float y1, float z1,
+                             float r, float g, float b, float a) {
         vc.addVertex(mat, x0, y0, z0).setColor(r, g, b, a);
         vc.addVertex(mat, x1, y0, z1).setColor(r, g, b, a);
         vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a);
@@ -278,17 +285,9 @@ public final class AfterimageEffectWrapper implements EffectRenderer {
         return false;
     }
 
-    private static float easeOutCubic(float t) {
-        return 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
-    }
-
-    private static float lerp(float a, float b, float t) {
-        return a + (b - a) * t;
-    }
-
     @Override
     public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector nodeCollector,
-                                   LocalPlayer player, int packedLight, float partialTick) {
+                                  LocalPlayer player, int packedLight, float partialTick) {
         // Afterimages are not visible in first person
     }
 

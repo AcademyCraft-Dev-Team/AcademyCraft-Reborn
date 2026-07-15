@@ -16,6 +16,10 @@ import org.joml.Matrix4f;
 public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRenderState> {
     public static final float[][] BUFFERED_VERTEX = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 16, true);
 
+    public RailgunRayRenderer(EntityRendererProvider.Context context) {
+        super(context);
+    }
+
     @Override
     public void submit(RailgunRayRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
@@ -40,10 +44,6 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
         super.extractRenderState(entity, reusedState, partialTick);
         reusedState.xRot = entity.getXRot();
         reusedState.yRot = entity.getYRot();
-    }
-
-    public RailgunRayRenderer(EntityRendererProvider.Context context) {
-        super(context);
     }
 
     @Override

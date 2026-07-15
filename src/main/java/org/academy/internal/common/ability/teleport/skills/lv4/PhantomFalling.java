@@ -35,7 +35,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class PhantomFalling extends Skill {
     private static final float RADIUS = 10.0f;
@@ -59,10 +60,10 @@ public class PhantomFalling extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         RendererManager.registerEffectRenderer(DistortionEffectWrapper.INSTANCE);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_F)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onUse);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_F)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onUse);
     }
 
     @Override
@@ -73,6 +74,7 @@ public class PhantomFalling extends Skill {
     public static final class Client {
         public static final String KEY_NAME_USE = SkillNames.PHANTOM_FALLING + "_use";
         public static Config CONFIG = new Config();
+
         public static void onUse() {
             MisakaNetworkClient.send(UsePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
@@ -83,12 +85,23 @@ public class PhantomFalling extends Skill {
                     0.3f, 0.1f, 0.7f, 0.6f,
                     0.1f, 0.0f, 0.5f, 0.0f);
         }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public PhantomFalling.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public PhantomFalling.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -107,12 +120,17 @@ public class PhantomFalling extends Skill {
         private int ticks;
         private boolean ended;
 
-        private PhantomContext(ServerPlayer player) { super(player); }
+        private PhantomContext(ServerPlayer player) {
+            super(player);
+        }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             ticks++;
-            if (player.hasDisconnected() || !player.isAlive() || ticks >= DURATION) { end(); return; }
+            if (player.hasDisconnected() || !player.isAlive() || ticks >= DURATION) {
+                end();
+                return;
+            }
             if (ticks % 10 != 0) return;
 
             if (level() instanceof ServerLevel serverLevel) {
@@ -133,15 +151,23 @@ public class PhantomFalling extends Skill {
             }
         }
 
-        private void end() { if (ended) return; ended = true; unregister(); }
+        private void end() {
+            if (ended) return;
+            ended = true;
+            unregister();
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
         public static final UsePacket INSTANCE = new UsePacket();
         public static final StreamCodec<ByteBuf, UsePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private UsePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
+
+        private UsePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
             return PacketTypes.PHANTOM_FALLING_USE.get();
         }
     }

@@ -7,8 +7,20 @@ import org.academy.api.client.gui.layout.SizeMode
 import kotlin.math.max
 
 open class LinearLayoutWidget : AbstractWidgetContainer() {
-    protected var orientation: Orientation = Orientation.VERTICAL
-    protected var spacing: Float = 0f
+    var orientation: Orientation = Orientation.VERTICAL
+        set(value) {
+            if (field != value) {
+                field = value
+                requestLayout()
+            }
+        }
+    var spacing: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                requestLayout()
+            }
+        }
     protected var weightSum: Float = -1.0f
     protected var gravity: Int = Gravity.START or Gravity.TOP
     private var totalLength = 0f
@@ -333,22 +345,6 @@ open class LinearLayoutWidget : AbstractWidgetContainer() {
             currentX += childWidth + childLp.marginLeft + childLp.marginRight
             first = false
         }
-    }
-
-    fun setOrientation(orientation: Orientation): LinearLayoutWidget {
-        if (this.orientation != orientation) {
-            this.orientation = orientation
-            requestLayout()
-        }
-        return this
-    }
-
-    fun setSpacing(spacing: Float): LinearLayoutWidget {
-        if (this.spacing != spacing) {
-            this.spacing = spacing
-            requestLayout()
-        }
-        return this
     }
 
     fun setGravity(gravity: Int): LinearLayoutWidget {

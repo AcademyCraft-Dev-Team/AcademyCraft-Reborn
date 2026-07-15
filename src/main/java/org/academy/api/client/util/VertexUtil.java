@@ -248,9 +248,6 @@ public final class VertexUtil {
     }
 
     public static final class Ball {
-        private record TriangleIndices(int v1, int v2, int v3) {
-        }
-
         private static float[] normalize(float[] v) {
             var length = (float) Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
             if (length > 1e-6) {
@@ -370,6 +367,9 @@ public final class VertexUtil {
                 buffer[bufferIndex++] = new float[]{v3[0] * radius, v3[1] * radius, v3[2] * radius, n3[0], n3[1], n3[2]};
             }
             return buffer;
+        }
+
+        private record TriangleIndices(int v1, int v2, int v3) {
         }
     }
 }

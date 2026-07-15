@@ -39,11 +39,11 @@ object WirelessPanelUtil {
                 root.addChild("back", back)
             }
             val content = LinearLayoutWidget()
-            content.setOrientation(Orientation.VERTICAL)
+            content.orientation = Orientation.VERTICAL
             content.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .padding(WirelessPanelUtil.MARGIN_HORIZONTAL, WirelessPanelUtil.MARGIN_VERTICAL)
-            content.setSpacing(WirelessPanelUtil.SPACING_MINOR)
+            content.spacing = WirelessPanelUtil.SPACING_MINOR
             root.addChild("content", content)
             run {
                 val icon = ImageWidget(Resource.Textures.ICON_OPEN_WIRELESS_PANEL)
@@ -66,8 +66,8 @@ object WirelessPanelUtil {
                 content.addChild("available_node_label", availableLabel)
 
                 val listContainer = LinearLayoutWidget()
-                listContainer.setOrientation(Orientation.HORIZONTAL)
-                listContainer.setSpacing(WirelessPanelUtil.SPACING_MINOR)
+                listContainer.orientation = Orientation.HORIZONTAL
+                listContainer.spacing = WirelessPanelUtil.SPACING_MINOR
                 listContainer.layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .widthMode(SizeMode.MATCH_PARENT)
@@ -89,7 +89,7 @@ object WirelessPanelUtil {
                     listContainer.addChild("scroll_bar", scrollBar)
 
                     val nodeList = LinearLayoutWidget()
-                    nodeList.setOrientation(Orientation.VERTICAL)
+                    nodeList.orientation = Orientation.VERTICAL
                     nodeList.layoutParams = FrameLayoutWidget.LayoutParams()
                         .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
                     scrollPanel.setContent(nodeList)
@@ -170,12 +170,12 @@ object WirelessPanelUtil {
             nodeViewPanel.addChild("back", nodeBack)
 
             val itemContent = LinearLayoutWidget()
-            itemContent.setOrientation(Orientation.HORIZONTAL)
+            itemContent.orientation = Orientation.HORIZONTAL
             itemContent.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .gravity(Gravity.CENTER_VERTICAL)
                 .paddingHorizontal(4f)
-            itemContent.setSpacing(4f)
+            itemContent.spacing = 4f
             nodeViewPanel.addChild("content", itemContent)
             run {
                 val nodeIcon = ImageWidget(Resource.Textures.ICON_NODE)

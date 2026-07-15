@@ -32,63 +32,6 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
     private static final RenderType P3_STEAM_TYPE = Render.RenderTypes.getHellFlareSteam(P3_STEAM_TEX);
     private static final RenderType P3_STEAM_BLOOM_TYPE = Render.RenderTypes.getHellFlareSteamBloom(P3_STEAM_TEX);
 
-    private static final class C {
-
-        static final int TUBE_SIDES = 8;
-        static final int PT_COUNT = 64;
-        static final float TUBE_FLOW = 0.15f;
-        static final float T_P1_END = 120.0f;
-        static final float T_P2_END = 240.0f;
-        static final float TRANSITION = 24.0f;
-
-        static final float P1_SCALE = 0.6f;
-        static final float P1_CORE_R = 0.1f * P1_SCALE;
-        static final float P1_GLOW_R = 0.2f * P1_SCALE;
-        static final int P1_COL_CORE = 0xFFFF6F45;
-        static final int P1_COL_GLOW = 0xCC661018;
-        static final float P1_TUBE_SCALE = 2.2f * P1_SCALE;
-        static final float P1_TUBE_STR = 0.025f;
-        static final float P1_ORB_SCALE = 0.35f;
-
-        static final float P2_CORE_R = 0.15f;
-        static final float P2_GLOW_R = 0.3f;
-        static final int P2_COL_CORE_S = 0xFFFFE9A6, P2_COL_CORE_E = 0xFFFFC55E;
-        static final int P2_COL_GLOW_S = 0xD0FF9D32, P2_COL_GLOW_E = 0xB8FF6E14;
-        static final float P2_TUBE_SCALE = 2.2f;
-        static final float P2_TUBE_STR = 0.04f;
-        static final float P2_ROT_SPD = 6.0f;
-        static final float P2_SPIRAL = 4.0f;
-        static final float P2_TAPER_S = 0.8f, P2_TAPER_E = 0.2f;
-        static final float P2_PT_SIZE = 0.05f;
-        static final float P2_PT_SCATTER = 0.35f;
-        static final float P2_ORB_SCALE = 0.7f;
-
-        static final float P3_CORE_R = 0.12f;
-        static final float P3_GLOW_R = 0.42f;
-        static final int P3_COL_CORE = 0xFFF3FBFF;
-        static final int P3_COL_GLOW = 0xFF76BBFF;
-        static final float P3_TUBE_SCALE = 1.0f;
-        static final float P3_ORB_SCALE = 0.38f;
-        static final float P3_ROT_SPD = 2.2f;
-        static final float P3_SPIRAL = 1.5f;
-
-        static final float P1_STEAM_SCALE = 0.34f;
-        static final float P2_STEAM_SCALE = 1.36f;
-        static final float P3_STEAM_SCALE = 1.85f;
-        static final float P1_STEAM_ALPHA = 0.42f;
-        static final float P2_STEAM_ALPHA = 1.56f;
-        static final float P3_STEAM_ALPHA = 1.60f;
-    }
-
-    private record RenderParams(
-            float coreR, float glowR,
-            int cCoreS, int cCoreE,
-            int cGlowS, int cGlowE,
-            float tubeScale, float tubeStr,
-            float rotSpd, float spiralFactor,
-            float orbScale
-    ) {}
-
     public HellFlareRayRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
@@ -99,6 +42,47 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         var g = (int) Mth.lerp(t, (c1 >> 8) & 0xFF, (c2 >> 8) & 0xFF);
         var b = (int) Mth.lerp(t, c1 & 0xFF, c2 & 0xFF);
         return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    static float getEnv(float t, float age, int phase) {
+        var base = (float) Math.pow(Mth.sin(t * Mth.PI), 0.3);
+        var tapered = Mth.lerp(t, C.P2_TAPER_S, C.P2_TAPER_E);
+        var t12 = phaseBlend12(age, phase);
+        var t23 = phaseBlend23(age, phase);
+        var p2Weight = t12 * (1.0f - t23);
+        var blend = Mth.clamp(p2Weight * 1.35f, 0.0f, 1.0f);
+        return Mth.lerp(blend, base, tapered);
+    }
+
+    private static float noise1(float x) {
+        float fl = Mth.floor(x);
+        return Mth.lerp(x - fl, hash(fl), hash(fl + 1.0f));
+    }
+
+    private static float hash(float n) {
+        return Mth.frac(Mth.sin(n) * 43758.5453f);
+    }
+
+    private static float phaseBlend(float age, float center, float width) {
+        var half = width * 0.5f;
+        var t = Mth.clamp((age - (center - half)) / width, 0.0f, 1.0f);
+        return (float) Mth.smoothstep(t);
+    }
+
+    private static float phaseBlend12(HellFlareRayRenderState state) {
+        return phaseBlend12(state.age, state.phase);
+    }
+
+    private static float phaseBlend23(HellFlareRayRenderState state) {
+        return phaseBlend23(state.age, state.phase);
+    }
+
+    private static float phaseBlend12(float age, int phase) {
+        return phase >= 2 ? 1.0f : 0.0f;
+    }
+
+    private static float phaseBlend23(float age, int phase) {
+        return phase >= 3 ? 1.0f : 0.0f;
     }
 
     @Override
@@ -118,13 +102,13 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
 
         var owner = entity.getOwner();
         var lookVec = owner.getViewVector(partialTick).normalize();
-        var look = new Vector3f((float)lookVec.x, (float)lookVec.y, (float)lookVec.z);
+        var look = new Vector3f((float) lookVec.x, (float) lookVec.y, (float) lookVec.z);
         var up = new Vector3f(0, 1, 0);
         var right = new Vector3f(look).cross(up).normalize();
 
         var offset = new Vector3f(right).mul(0.6f).add(new Vector3f(up).mul(-0.4f)).add(new Vector3f(look).mul(0.9f));
         var eyePosVec = owner.getEyePosition(partialTick);
-        var startVec = new Vector3f((float)eyePosVec.x, (float)eyePosVec.y, (float)eyePosVec.z).add(offset);
+        var startVec = new Vector3f((float) eyePosVec.x, (float) eyePosVec.y, (float) eyePosVec.z).add(offset);
         state.startPos.set(startVec.x, startVec.y, startVec.z);
 
         var beamLen = Math.max(0.1f, entity.getBeamLength());
@@ -200,7 +184,7 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         var haloG = ((haloColor >> 8) & 0xFF) / 255.0f;
         var haloB = (haloColor & 0xFF) / 255.0f;
 
-        var rel = new Vector3f(state.startPos).sub((float)state.x, (float)state.y, (float)state.z);
+        var rel = new Vector3f(state.startPos).sub((float) state.x, (float) state.y, (float) state.z);
 
         poseStack.pushPose();
         poseStack.translate(rel.x, rel.y, rel.z);
@@ -254,6 +238,7 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         }
         poseStack.popPose();
     }
+
     private void drawCore(HellFlareRayRenderState state, Matrix4f mat, VertexConsumer consumer, RenderParams p) {
         var t12 = phaseBlend12(state);
         var t23 = phaseBlend23(state);
@@ -356,28 +341,18 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
                 pCol = (baseCol & 0x00FFFFFF) | (darkAlpha << 24);
             }
             var sz = baseSize * (0.6f + rand.nextFloat() * 0.6f) * (1.0f - t * 0.6f);
-            Geometry.addQuad(mat, consumer, x-sz, y-sz, t*state.length, x+sz, y-sz, t*state.length, x+sz, y+sz, t*state.length, x-sz, y+sz, t*state.length, pCol, pCol);
+            Geometry.addQuad(mat, consumer, x - sz, y - sz, t * state.length, x + sz, y - sz, t * state.length, x + sz, y + sz, t * state.length, x - sz, y + sz, t * state.length, pCol, pCol);
         }
     }
 
     private Matrix4f prepareMatrix(HellFlareRayRenderState state, PoseStack.Pose pose) {
         var m = new Matrix4f(pose.pose());
-        var rel = new Vector3f(state.startPos).sub((float)state.x, (float)state.y, (float)state.z);
+        var rel = new Vector3f(state.startPos).sub((float) state.x, (float) state.y, (float) state.z);
         m.translate(rel.x, rel.y, rel.z);
         var d = new Vector3f(state.direction);
         if (d.lengthSquared() < 1e-6f) d.set(0, 0, 1);
         m.rotate(new Quaternionf().rotateTo(new Vector3f(0, 0, 1), d.normalize()));
         return m;
-    }
-
-    static float getEnv(float t, float age, int phase) {
-        var base = (float) Math.pow(Mth.sin(t * Mth.PI), 0.3);
-        var tapered = Mth.lerp(t, C.P2_TAPER_S, C.P2_TAPER_E);
-        var t12 = phaseBlend12(age, phase);
-        var t23 = phaseBlend23(age, phase);
-        var p2Weight = t12 * (1.0f - t23);
-        var blend = Mth.clamp(p2Weight * 1.35f, 0.0f, 1.0f);
-        return Mth.lerp(blend, base, tapered);
     }
 
     private void drawDistortion(HellFlareRayRenderState state, PoseStack.Pose pose, VertexConsumer consumer, float rScale, float str) {
@@ -408,40 +383,78 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         }
     }
 
-    private static float noise1(float x) { float fl = Mth.floor(x); return Mth.lerp(x-fl, hash(fl), hash(fl+1.0f)); }
-    private static float hash(float n) { return Mth.frac(Mth.sin(n) * 43758.5453f); }
-    private static float phaseBlend(float age, float center, float width) {
-        var half = width * 0.5f;
-        var t = Mth.clamp((age - (center - half)) / width, 0.0f, 1.0f);
-        return (float) Mth.smoothstep(t);
+    private static final class C {
+
+        static final int TUBE_SIDES = 8;
+        static final int PT_COUNT = 64;
+        static final float TUBE_FLOW = 0.15f;
+        static final float T_P1_END = 120.0f;
+        static final float T_P2_END = 240.0f;
+        static final float TRANSITION = 24.0f;
+
+        static final float P1_SCALE = 0.6f;
+        static final float P1_CORE_R = 0.1f * P1_SCALE;
+        static final float P1_GLOW_R = 0.2f * P1_SCALE;
+        static final int P1_COL_CORE = 0xFFFF6F45;
+        static final int P1_COL_GLOW = 0xCC661018;
+        static final float P1_TUBE_SCALE = 2.2f * P1_SCALE;
+        static final float P1_TUBE_STR = 0.025f;
+        static final float P1_ORB_SCALE = 0.35f;
+
+        static final float P2_CORE_R = 0.15f;
+        static final float P2_GLOW_R = 0.3f;
+        static final int P2_COL_CORE_S = 0xFFFFE9A6, P2_COL_CORE_E = 0xFFFFC55E;
+        static final int P2_COL_GLOW_S = 0xD0FF9D32, P2_COL_GLOW_E = 0xB8FF6E14;
+        static final float P2_TUBE_SCALE = 2.2f;
+        static final float P2_TUBE_STR = 0.04f;
+        static final float P2_ROT_SPD = 6.0f;
+        static final float P2_SPIRAL = 4.0f;
+        static final float P2_TAPER_S = 0.8f, P2_TAPER_E = 0.2f;
+        static final float P2_PT_SIZE = 0.05f;
+        static final float P2_PT_SCATTER = 0.35f;
+        static final float P2_ORB_SCALE = 0.7f;
+
+        static final float P3_CORE_R = 0.12f;
+        static final float P3_GLOW_R = 0.42f;
+        static final int P3_COL_CORE = 0xFFF3FBFF;
+        static final int P3_COL_GLOW = 0xFF76BBFF;
+        static final float P3_TUBE_SCALE = 1.0f;
+        static final float P3_ORB_SCALE = 0.38f;
+        static final float P3_ROT_SPD = 2.2f;
+        static final float P3_SPIRAL = 1.5f;
+
+        static final float P1_STEAM_SCALE = 0.34f;
+        static final float P2_STEAM_SCALE = 1.36f;
+        static final float P3_STEAM_SCALE = 1.85f;
+        static final float P1_STEAM_ALPHA = 0.42f;
+        static final float P2_STEAM_ALPHA = 1.56f;
+        static final float P3_STEAM_ALPHA = 1.60f;
     }
 
-    private static float phaseBlend12(HellFlareRayRenderState state) {
-        return phaseBlend12(state.age, state.phase);
-    }
-
-    private static float phaseBlend23(HellFlareRayRenderState state) {
-        return phaseBlend23(state.age, state.phase);
-    }
-
-    private static float phaseBlend12(float age, int phase) {
-        return phase >= 2 ? 1.0f : 0.0f;
-    }
-
-    private static float phaseBlend23(float age, int phase) {
-        return phase >= 3 ? 1.0f : 0.0f;
+    private record RenderParams(
+            float coreR, float glowR,
+            int cCoreS, int cCoreE,
+            int cGlowS, int cGlowE,
+            float tubeScale, float tubeStr,
+            float rotSpd, float spiralFactor,
+            float orbScale
+    ) {
     }
 
     private static class Geometry {
         static void drawBillboardGlow(Matrix4f m, VertexConsumer c, float len, float radius, int cStart, int cEnd, HellFlareRayRenderState s, CameraRenderState camera) {
             var camPos = camera.pos;
             var worldStart = new Vector3f(s.startPos);
-            var relCam = new Vector3f((float)camPos.x - worldStart.x, (float)camPos.y - worldStart.y, (float)camPos.z - worldStart.z);
+            var relCam = new Vector3f((float) camPos.x - worldStart.x, (float) camPos.y - worldStart.y, (float) camPos.z - worldStart.z);
             var invRot = new Quaternionf().rotateTo(s.direction, new Vector3f(0, 0, 1));
             var localCam = invRot.transform(relCam);
             float dx = localCam.x, dy = localCam.y;
             var mag = (float) Math.sqrt(dx * dx + dy * dy);
-            if (mag < 1e-5f) { dx = 1.0f; dy = 0.0f; mag = 1.0f; }
+            if (mag < 1e-5f) {
+                dx = 1.0f;
+                dy = 0.0f;
+                mag = 1.0f;
+            }
             float ux = -dy / mag, uy = dx / mag;
 
             var segs = Math.max(8, (int) (len * 4.0f));
@@ -456,8 +469,8 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
                 var c1E = c1 & 0x00FFFFFF;
                 var c2E = c2 & 0x00FFFFFF;
 
-                addQuad(m, c, 0.0f, 0.0f, z1, ux*r1, uy*r1, z1, ux*r2, uy*r2, z2, 0.0f, 0.0f, z2, c1, c1E, c2E, c2);
-                addQuad(m, c, 0.0f, 0.0f, z1, 0.0f, 0.0f, z2, -ux*r2, -uy*r2, z2, -ux*r1, -uy*r1, z1, c1, c2, c2E, c1E);
+                addQuad(m, c, 0.0f, 0.0f, z1, ux * r1, uy * r1, z1, ux * r2, uy * r2, z2, 0.0f, 0.0f, z2, c1, c1E, c2E, c2);
+                addQuad(m, c, 0.0f, 0.0f, z1, 0.0f, 0.0f, z2, -ux * r2, -uy * r2, z2, -ux * r1, -uy * r1, z1, c1, c2, c2E, c1E);
             }
         }
 
@@ -470,12 +483,12 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
                 float wf1 = wave(t1 * frq - s.age * spd), wf2 = wave(t2 * frq - s.age * spd);
                 float r1 = rBase * (1 + wf1 * amp) * getEnv(t1, s.age, s.phase), r2 = rBase * (1 + wf2 * amp) * getEnv(t2, s.age, s.phase);
                 int col1 = calcColor(cS, cE, t1, wf1, step, s.age, s.phase, overload), col2 = calcColor(cS, cE, t2, wf2, step, s.age, s.phase, overload);
-                float ox1 = jitter(t1, s.age, seed, nAmp), oy1 = jitter(t1, s.age, seed+13, nAmp);
-                float ox2 = jitter(t2, s.age, seed, nAmp), oy2 = jitter(t2, s.age, seed+13, nAmp);
+                float ox1 = jitter(t1, s.age, seed, nAmp), oy1 = jitter(t1, s.age, seed + 13, nAmp);
+                float ox2 = jitter(t2, s.age, seed, nAmp), oy2 = jitter(t2, s.age, seed + 13, nAmp);
                 for (var p = 0; p < planes; p++) {
                     var a = (float) (Math.PI * p / planes);
                     float cp1 = Mth.cos(a + rot1), sp1 = Mth.sin(a + rot1), cp2 = Mth.cos(a + rot2), sp2 = Mth.sin(a + rot2);
-                    addQuad(m, c, ox1 - cp1*r1, oy1 - sp1*r1, t1*len, ox1 + cp1*r1, oy1 + sp1*r1, t1*len, ox2 + cp2*r2, oy2 + sp2*r2, t2*len, ox2 - cp2*r2, oy2 - sp2*r2, t2*len, col1, col2);
+                    addQuad(m, c, ox1 - cp1 * r1, oy1 - sp1 * r1, t1 * len, ox1 + cp1 * r1, oy1 + sp1 * r1, t1 * len, ox2 + cp2 * r2, oy2 + sp2 * r2, t2 * len, ox2 - cp2 * r2, oy2 - sp2 * r2, t2 * len, col1, col2);
                 }
             }
         }
@@ -648,8 +661,14 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             }
         }
 
-        static float wave(float x) { return Mth.sin(x)*0.5f + Mth.sin(x*2.3f)*0.3f + Mth.sin(x*4.7f)*0.2f; }
-        static float jitter(float t, float a, int s, float amp) { return (1-t) * amp * (Mth.sin(t*80+a*60+s)*0.5f + Mth.cos(t*150-a*40)*0.5f); }
+        static float wave(float x) {
+            return Mth.sin(x) * 0.5f + Mth.sin(x * 2.3f) * 0.3f + Mth.sin(x * 4.7f) * 0.2f;
+        }
+
+        static float jitter(float t, float a, int s, float amp) {
+            return (1 - t) * amp * (Mth.sin(t * 80 + a * 60 + s) * 0.5f + Mth.cos(t * 150 - a * 40) * 0.5f);
+        }
+
         static int calcColor(int s, int e, float t, float w, boolean step, float age, int phase, boolean ov) {
             var bc = lerp(s, e, step ? Mth.clamp(t * 3.33f, 0, 1) : t);
             var spot = sunspot(t, age * 0.55f, 3.1f);
@@ -664,16 +683,19 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             var ovMix = Mth.lerp(t23, t12, 1.0f);
             return lerp(bc, 0xFFFFFFFF, Mth.clamp(w, 0, 1) * 0.85f * ovMix);
         }
+
         static float prominence(float t, float age, float phase) {
             var wave = Mth.sin(t * 16.0f - age * 0.12f + phase * 2.1f) * 0.5f + 0.5f;
             var noise = noise1(t * 29.0f + age * 0.09f + phase * 11.0f);
             var gate = Mth.clamp((wave * 0.7f + noise * 0.3f - 0.62f) * 2.8f, 0.0f, 1.0f);
             return gate * gate;
         }
+
         static float sunspot(float t, float age, float phase) {
             var spot = noise1(t * 35.0f + age * 0.11f + phase * 4.7f);
             return Mth.clamp((0.58f - spot) * 1.9f, 0.0f, 1.0f);
         }
+
         static float cmePulse(float t, float age, float phase, float blueBlend) {
             var wave = Mth.sin(t * 41.0f - age * 0.24f + phase * 3.7f) * 0.5f + 0.5f;
             var noise = noise1(t * 57.0f - age * 0.18f + phase * 9.3f);
@@ -681,11 +703,13 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             var gate = Mth.clamp((wave * 0.62f + noise * 0.38f - threshold) * 7.4f, 0.0f, 1.0f);
             return gate * gate;
         }
+
         static int lerp(int c1, int c2, float t) {
-            int a = (int)Mth.lerp(t, (c1>>24)&0xFF, (c2>>24)&0xFF), r = (int)Mth.lerp(t, (c1>>16)&0xFF, (c2>>16)&0xFF);
-            int g = (int)Mth.lerp(t, (c1>>8)&0xFF, (c2>>8)&0xFF), b = (int)Mth.lerp(t, c1&0xFF, c2&0xFF);
-            return (a<<24)|(r<<16)|(g<<8)|b;
+            int a = (int) Mth.lerp(t, (c1 >> 24) & 0xFF, (c2 >> 24) & 0xFF), r = (int) Mth.lerp(t, (c1 >> 16) & 0xFF, (c2 >> 16) & 0xFF);
+            int g = (int) Mth.lerp(t, (c1 >> 8) & 0xFF, (c2 >> 8) & 0xFF), b = (int) Mth.lerp(t, c1 & 0xFF, c2 & 0xFF);
+            return (a << 24) | (r << 16) | (g << 8) | b;
         }
+
         static int scaleRgb(int c, float factor) {
             var a = (c >>> 24) & 0xFF;
             var r = (int) Mth.clamp(((c >>> 16) & 0xFF) * factor, 0.0f, 255.0f);
@@ -693,15 +717,25 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             var b = (int) Mth.clamp((c & 0xFF) * factor, 0.0f, 255.0f);
             return (a << 24) | (r << 16) | (g << 8) | b;
         }
+
         static int color(int a, int r, int g, int b) {
             return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
         }
+
         static void addQuad(Matrix4f m, VertexConsumer c, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, int c1, int c2, int c3, int c4) {
-            c.addVertex(m, x1, y1, z1).setColor(c1); c.addVertex(m, x2, y2, z2).setColor(c2); c.addVertex(m, x3, y3, z3).setColor(c3); c.addVertex(m, x4, y4, z4).setColor(c4);
+            c.addVertex(m, x1, y1, z1).setColor(c1);
+            c.addVertex(m, x2, y2, z2).setColor(c2);
+            c.addVertex(m, x3, y3, z3).setColor(c3);
+            c.addVertex(m, x4, y4, z4).setColor(c4);
         }
+
         static void addQuad(Matrix4f m, VertexConsumer c, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, int c1, int c2) {
-            c.addVertex(m, x1, y1, z1).setColor(c1); c.addVertex(m, x2, y2, z2).setColor(c1); c.addVertex(m, x3, y3, z3).setColor(c2); c.addVertex(m, x4, y4, z4).setColor(c2);
+            c.addVertex(m, x1, y1, z1).setColor(c1);
+            c.addVertex(m, x2, y2, z2).setColor(c1);
+            c.addVertex(m, x3, y3, z3).setColor(c2);
+            c.addVertex(m, x4, y4, z4).setColor(c2);
         }
+
         static void addTexturedQuad(Matrix4f m, VertexConsumer c, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4, int col) {
             c.addVertex(m, x1, y1, z1).setUv(u1, v1).setColor(col);
             c.addVertex(m, x2, y2, z2).setUv(u2, v2).setColor(col);
@@ -712,6 +746,7 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
             c.addVertex(m, x2, y2, z2).setUv(u2, v2).setColor(col);
             c.addVertex(m, x1, y1, z1).setUv(u1, v1).setColor(col);
         }
+
         static void addTexturedQuadLit(Matrix4f m, VertexConsumer c, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4, int col) {
             c.addVertex(m, x1, y1, z1).setUv(u1, v1).setColor(col).setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(0, 1, 0);
             c.addVertex(m, x2, y2, z2).setUv(u2, v2).setColor(col).setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(0, 1, 0);

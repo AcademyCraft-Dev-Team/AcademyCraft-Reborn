@@ -4,6 +4,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 public final class BallRenderer {
+    private BallRenderer() {
+    }
+
     public static void renderBall(PoseStack.Pose pose, VertexConsumer vertexConsumer, float[][] vertexBuffer,
                                   float red, float green, float blue, float alpha, int packedLight, int packedOverlay) {
         for (var vertexData : vertexBuffer) {
@@ -20,8 +23,5 @@ public final class BallRenderer {
                     .setLight(packedLight)
                     .setNormal(pose, nx, ny, nz);
         }
-    }
-
-    private BallRenderer() {
     }
 }

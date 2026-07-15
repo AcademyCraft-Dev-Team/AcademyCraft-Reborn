@@ -152,15 +152,6 @@ public class BallLightning extends Skill {
             private BehaviorState currentState;
             private int stateTimer = 0;
 
-            private enum BehaviorState {
-                START,
-                ROAMING,
-                TRACK,
-                STAY,
-                SLIDE,
-                DASH
-            }
-
             public Context(ServerPlayer player) {
                 super(player);
                 position = player.getEyePosition().add(0, 1, 0);
@@ -526,6 +517,15 @@ public class BallLightning extends Skill {
                     ortho = new Vector3f(input).cross(new Vector3f(0, 1, 0)).normalize();
                 }
                 return ortho;
+            }
+
+            private enum BehaviorState {
+                START,
+                ROAMING,
+                TRACK,
+                STAY,
+                SLIDE,
+                DASH
             }
         }
     }

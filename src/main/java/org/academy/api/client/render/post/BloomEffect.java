@@ -25,20 +25,17 @@ import static org.academy.api.client.Render.BlurUniforms.getBlurUniformsBuffer;
 import static org.academy.api.client.Render.BlurUniforms.writeBlurUniforms;
 
 public final class BloomEffect {
-    @Nullable
-    private static BloomEffect instance;
     private static final Phase BEFORE = new Phase("before");
     private static final Phase AFTER = new Phase("after");
-
+    @Nullable
+    private static BloomEffect instance;
+    private static boolean hasBeenUsed;
     public static final OutputTarget BLOOM_TARGET = new OutputTarget(
             "bloom_target",
             () -> getInstance().getInput()
     );
-
-    private static boolean hasBeenUsed;
-
-    private @Nullable RenderTarget input;
     private final GpuBuffer bloomUniformsBuffer;
+    private @Nullable RenderTarget input;
 
     {
         var device = RenderSystem.getDevice();
@@ -60,6 +57,16 @@ public final class BloomEffect {
         return instance;
     }
 
+    public static Phase getBefore() {
+        hasBeenUsed = true;
+        return BEFORE;
+    }
+
+    public static Phase getAfter() {
+        hasBeenUsed = true;
+        return AFTER;
+    }
+
     public void close() {
         bloomUniformsBuffer.close();
         BEFORE.close();
@@ -69,16 +76,6 @@ public final class BloomEffect {
     public @Nullable RenderTarget getInput() {
         hasBeenUsed = true;
         return input;
-    }
-
-    public static Phase getBefore() {
-        hasBeenUsed = true;
-        return BEFORE;
-    }
-
-    public static Phase getAfter() {
-        hasBeenUsed = true;
-        return AFTER;
     }
 
     private void runBlurPass(GpuTextureView output, GpuTextureView input, Vector2f outSize, float dirX, float dirY, int radius) {

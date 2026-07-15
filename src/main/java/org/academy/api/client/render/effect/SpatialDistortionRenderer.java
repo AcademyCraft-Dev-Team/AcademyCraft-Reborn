@@ -3,12 +3,11 @@ package org.academy.api.client.render.effect;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
-import org.joml.Vector3f;
 
 public final class SpatialDistortionRenderer {
     private float time;
     private float lifetime;
-    private float intensity;
+    private final float intensity;
     private float coreR, coreG, coreB, coreA;
     private float edgeR, edgeG, edgeB, edgeA;
     private float centerX, centerY, centerZ;
@@ -18,8 +17,14 @@ public final class SpatialDistortionRenderer {
     public SpatialDistortionRenderer() {
         lifetime = 1.0f;
         intensity = 0.8f;
-        coreR = 0.6f; coreG = 0.0f; coreB = 1.0f; coreA = 0.6f;
-        edgeR = 1.0f; edgeG = 0.3f; edgeB = 0.8f; edgeA = 0.2f;
+        coreR = 0.6f;
+        coreG = 0.0f;
+        coreB = 1.0f;
+        coreA = 0.6f;
+        edgeR = 1.0f;
+        edgeG = 0.3f;
+        edgeB = 0.8f;
+        edgeA = 0.2f;
     }
 
     public void trigger(float centerX, float centerY, float centerZ, float lifetime) {
@@ -34,8 +39,14 @@ public final class SpatialDistortionRenderer {
 
     public void setColors(float coreR, float coreG, float coreB, float coreA,
                           float edgeR, float edgeG, float edgeB, float edgeA) {
-        this.coreR = coreR; this.coreG = coreG; this.coreB = coreB; this.coreA = coreA;
-        this.edgeR = edgeR; this.edgeG = edgeG; this.edgeB = edgeB; this.edgeA = edgeA;
+        this.coreR = coreR;
+        this.coreG = coreG;
+        this.coreB = coreB;
+        this.coreA = coreA;
+        this.edgeR = edgeR;
+        this.edgeG = edgeG;
+        this.edgeB = edgeB;
+        this.edgeA = edgeA;
     }
 
     public boolean isActive() {

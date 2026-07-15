@@ -17,8 +17,8 @@ import org.academy.internal.common.world.entity.skill.LightOrb;
 
 public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderState> {
     public static final float[][] HEAD_BUFFER = VertexUtil.Ball.getIcosphereVertexBuffer(1, 2, true);
-    private final RandomSource random = RandomSource.create();
     private static final int FULL_BRIGHT = 15728880;
+    private final RandomSource random = RandomSource.create();
 
     public LightOrbRenderer(EntityRendererProvider.Context context) {
         super(context);

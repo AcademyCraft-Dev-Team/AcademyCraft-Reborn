@@ -78,7 +78,7 @@ public class Arc extends Entity {
 
         currentLifetime--;
         if (currentLifetime <= 0) {
-            if (level() instanceof  ServerLevel serverLevel) {
+            if (level() instanceof ServerLevel serverLevel) {
                 kill(serverLevel);
             }
         }

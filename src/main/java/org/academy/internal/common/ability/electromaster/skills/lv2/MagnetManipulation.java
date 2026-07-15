@@ -182,9 +182,9 @@ public class MagnetManipulation extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class PullPacket extends Packet<ServerGamePacketListenerImpl, PullPacket> {
-        private final boolean pullTarget;
         public static final StreamCodec<ByteBuf, PullPacket> CODEC =
                 net.minecraft.network.codec.ByteBufCodecs.BOOL.map(PullPacket::new, PullPacket::pullTarget);
+        private final boolean pullTarget;
 
         public PullPacket(boolean pullTarget) {
             this.pullTarget = pullTarget;

@@ -9,12 +9,11 @@ import org.slf4j.LoggerFactory;
 
 @Mod(AcademyCraft.MODID)
 public final class AcademyCraft {
-    private static final StackWalker STACK_WALKER =
-            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
-
     public static final String MODID = "academy";
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
+    private static final StackWalker STACK_WALKER =
+            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     public static boolean DEBUG_UI = false;
 
     public AcademyCraft(IEventBus modEventBus) {

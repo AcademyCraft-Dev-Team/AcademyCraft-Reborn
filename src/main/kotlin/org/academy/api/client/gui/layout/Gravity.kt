@@ -43,5 +43,5 @@ object Gravity {
     const val CENTER_LEFT: Int = CENTER_VERTICAL or LEFT
     const val CENTER_RIGHT: Int = CENTER_VERTICAL or RIGHT
 
-    fun  apply(){}
+    fun apply() {}
 }

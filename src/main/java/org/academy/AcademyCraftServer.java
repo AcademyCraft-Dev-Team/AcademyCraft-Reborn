@@ -29,15 +29,13 @@ import java.io.IOException;
 @EventBusSubscriber
 public final class AcademyCraftServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
-
+    private static final long SAVE_INTERVAL_TICKS = 20 * 60 * 5;
     private final File worldDataFile;
-
     private final AcademyCraftConfig serverConfig;
     private final WorldData worldData;
     private final AbilitySystemServer abilitySystemServer;
     private final MinecraftServer server;
     private long lastSaveTick = 0;
-    private static final long SAVE_INTERVAL_TICKS = 20 * 60 * 5;
 
     /**
      * 一个 MinecraftServer 实例对应一个 MinecraftServerContext
@@ -68,6 +66,21 @@ public final class AcademyCraftServer {
         WirelessManager.initServer();
 
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
+    }
+
+    @SubscribeEvent
+    public static void init(ServerStartedEvent event) {
+        new AcademyCraftServer(event.getServer());
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        var context = event.getServer();
+        var instance = context.getAcademyCraftServer();
+        instance.abilitySystemServer.onServerStopping();
+        LOGGER.info("Server stopping. Performing final data saves...");
+        instance.saveData();
+        instance.serverConfig.save();
     }
 
     public AbilitySystemServer getAbilitySystemServer() {
@@ -119,20 +132,5 @@ public final class AcademyCraftServer {
         } catch (IOException e) {
             LOGGER.error("Failed to write WorldData to disk", e);
         }
-    }
-
-    @SubscribeEvent
-    public static void init(ServerStartedEvent event) {
-        new AcademyCraftServer(event.getServer());
-    }
-
-    @SubscribeEvent
-    public static void onServerStopping(ServerStoppingEvent event) {
-        var context = event.getServer();
-        var instance = context.getAcademyCraftServer();
-        instance.abilitySystemServer.onServerStopping();
-        LOGGER.info("Server stopping. Performing final data saves...");
-        instance.saveData();
-        instance.serverConfig.save();
     }
 }

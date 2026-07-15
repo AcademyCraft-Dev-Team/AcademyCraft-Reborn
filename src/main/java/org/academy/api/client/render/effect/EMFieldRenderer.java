@@ -23,9 +23,14 @@ public final class EMFieldRenderer {
     private final List<FieldLine> fieldLines = new ArrayList<>();
     private float time;
     private boolean active = true;
-    private long seed = 42;
+    private final long seed = 42;
 
     public EMFieldRenderer() {
+    }
+
+    private static float hash(long seed) {
+        var x = (seed ^ 0x9E3779B9L) * 0x9E3779B9L;
+        return (float) ((x ^ (x >>> 16)) & 0x7FFFFFFF) / (float) 0x7FFFFFFF;
     }
 
     public void setActive(boolean active) {
@@ -67,12 +72,12 @@ public final class EMFieldRenderer {
         var branches = new ArrayList<Branch>();
         if (line.branchCount > 0) {
             for (var b = 0; b < line.branchCount; b++) {
-                var branchProgress = 0.3f + hash(lineSeed + b * 100 + 1) * 0.5f;
+                var branchProgress = 0.3f + hash(lineSeed + b * 100L + 1) * 0.5f;
                 var branchDir = new Vector3f(line.to).sub(line.from).normalize();
                 var perp = new Vector3f(-branchDir.z, 0, branchDir.x).normalize();
                 if (perp.length() < 0.01f) perp = new Vector3f(1, 0, 0);
-                var spreadAngle = (hash(lineSeed + b * 200 + 2) - 0.5f) * 1.2f;
-                var spreadLen = line.to.distance(line.from) * (0.15f + hash(lineSeed + b * 300 + 3) * 0.15f);
+                var spreadAngle = (hash(lineSeed + b * 200L + 2) - 0.5f) * 1.2f;
+                var spreadLen = line.to.distance(line.from) * (0.15f + hash(lineSeed + b * 300L + 3) * 0.15f);
                 var branchEnd = new Vector3f(perp).mul(spreadAngle * spreadLen);
 
                 var branchPath = new ArcPath(
@@ -111,11 +116,6 @@ public final class EMFieldRenderer {
         var renderData = PathProcessor.process(arcPath, currentTime, worldOffset);
         ArcFactory.render(poseStack, renderData,
                 line.color.x, line.color.y, line.color.z, line.alpha);
-    }
-
-    private static float hash(long seed) {
-        var x = (seed ^ 0x9E3779B9L) * 0x9E3779B9L;
-        return (float) ((x ^ (x >>> 16)) & 0x7FFFFFFF) / (float) 0x7FFFFFFF;
     }
 
     public static final class FieldLine {

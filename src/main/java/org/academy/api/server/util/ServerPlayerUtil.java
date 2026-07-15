@@ -12,6 +12,9 @@ import org.misaka.api.common.network.packet.S2CPacket;
 import java.util.function.Consumer;
 
 public final class ServerPlayerUtil {
+    private ServerPlayerUtil() {
+    }
+
     public static void openMenuScreen(ServerPlayer serverPlayer, MenuProvider menuProvider, String screenName, Consumer<FriendlyByteBuf> payloadWriter) {
         if (serverPlayer.containerMenu != serverPlayer.inventoryMenu) {
             serverPlayer.closeContainer();
@@ -36,8 +39,5 @@ public final class ServerPlayerUtil {
             serverPlayer.initMenu(abstractContainerMenu);
             serverPlayer.containerMenu = abstractContainerMenu;
         }
-    }
-
-    private ServerPlayerUtil() {
     }
 }

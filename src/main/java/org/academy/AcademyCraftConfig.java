@@ -20,9 +20,9 @@ public final class AcademyCraftConfig {
     private static final Gson GSON = new GsonBuilder().create();
 
     private final File configFile;
+    private final Map<String, Object> runtimeConfigCache = new ConcurrentHashMap<>();
     private JsonObject rootJsonConfig;
     private volatile boolean dirty = false;
-    private final Map<String, Object> runtimeConfigCache = new ConcurrentHashMap<>();
 
     public AcademyCraftConfig(File configFile) {
         this.configFile = configFile;
@@ -90,7 +90,7 @@ public final class AcademyCraftConfig {
             return UncheckedUtil.uncheckedCast(cachedInstance);
         }
 
-        TypeHandler<T> handler =  UncheckedUtil.uncheckedCast(HANDLER_MAP.get(configKey));
+        TypeHandler<T> handler = UncheckedUtil.uncheckedCast(HANDLER_MAP.get(configKey));
 
         if (handler == null) {
             throw new IllegalStateException("No TypeHandler registered for key: " + configKey);

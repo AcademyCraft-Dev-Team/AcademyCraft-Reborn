@@ -10,10 +10,10 @@ import java.nio.file.Files;
 import java.util.function.IntUnaryOperator;
 
 public final class MsdfAtlasDebugger {
+    private static final Logger logger = AcademyCraft.getLogger();
+
     private MsdfAtlasDebugger() {
     }
-
-    private static final Logger logger = AcademyCraft.getLogger();
 
     public static void dumpAtlas(MsdfAtlas atlas, String fileNamePrefix) {
         var pages = atlas.getPages();

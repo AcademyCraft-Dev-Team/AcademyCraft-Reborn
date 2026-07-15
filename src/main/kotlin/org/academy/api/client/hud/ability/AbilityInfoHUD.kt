@@ -199,13 +199,23 @@ class AbilityInfoHUD private constructor() {
                                             writer.putColor(255, 255, 255, a)
 
                                             writer.beginVertex()
-                                            matrix.transformPosition(particleBottomLeft, height - bottomPadding, 0f, dest)
+                                            matrix.transformPosition(
+                                                particleBottomLeft,
+                                                height - bottomPadding,
+                                                0f,
+                                                dest
+                                            )
                                             writer.putVec3f(dest.x, dest.y, dest.z)
                                             writer.putVec2f(particleBottomLeftU, 1.0f - bottomPaddingU)
                                             writer.putColor(255, 255, 255, a)
 
                                             writer.beginVertex()
-                                            matrix.transformPosition(particleBottomRight, height - bottomPadding, 0f, dest)
+                                            matrix.transformPosition(
+                                                particleBottomRight,
+                                                height - bottomPadding,
+                                                0f,
+                                                dest
+                                            )
                                             writer.putVec3f(dest.x, dest.y, dest.z)
                                             writer.putVec2f(particleBottomRightU, 1.0f - bottomPaddingU)
                                             writer.putColor(255, 255, 255, a)

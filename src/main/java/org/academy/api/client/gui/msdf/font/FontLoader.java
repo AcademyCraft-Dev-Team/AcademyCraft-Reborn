@@ -16,6 +16,15 @@ import java.util.concurrent.Executor;
 public enum FontLoader implements PreparableReloadListener {
     INSTANCE;
 
+    private static CompletableFuture<Void> loadFont(Identifier resource, Executor taskExecutor) {
+        return CompletableFuture.runAsync(() -> MsdfFontService.loadFont(resource), taskExecutor);
+    }
+
+    @SubscribeEvent
+    public static void onAddReloadListener(AddClientReloadListenersEvent event) {
+        event.addListener(AcademyCraft.academy("font_loader"), INSTANCE);
+    }
+
     @Override
     public CompletableFuture<Void> reload(
             SharedState currentReload,
@@ -33,14 +42,5 @@ public enum FontLoader implements PreparableReloadListener {
                 .toArray(CompletableFuture<?>[]::new);
         return CompletableFuture.allOf(futures)
                 .thenCompose(preparationBarrier::wait);
-    }
-
-    private static CompletableFuture<Void> loadFont(Identifier resource, Executor taskExecutor) {
-        return CompletableFuture.runAsync(() -> MsdfFontService.loadFont(resource), taskExecutor);
-    }
-
-    @SubscribeEvent
-    public static void onAddReloadListener(AddClientReloadListenersEvent event) {
-        event.addListener(AcademyCraft.academy("font_loader"), INSTANCE);
     }
 }

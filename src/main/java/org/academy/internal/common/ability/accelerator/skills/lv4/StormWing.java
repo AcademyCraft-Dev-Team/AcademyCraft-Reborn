@@ -80,6 +80,10 @@ public final class StormWing extends Skill {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
+    public enum State {
+        FRONT, BACK, RIGHT, LEFT, KEEP
+    }
+
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
@@ -231,9 +235,5 @@ public final class StormWing extends Skill {
         public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.STORM_WING_TOGGLE.get();
         }
-    }
-
-    public enum State {
-        FRONT, BACK, RIGHT, LEFT, KEEP
     }
 }

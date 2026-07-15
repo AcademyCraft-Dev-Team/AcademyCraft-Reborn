@@ -7,6 +7,9 @@ import org.academy.api.client.gui.widget.*;
 import org.academy.api.client.hud.terminal.TerminalHUD;
 
 public final class SettingsApp {
+    private SettingsApp() {
+    }
+
     public static FrameLayoutWidget create() {
         var root = new FrameLayoutWidget();
         {
@@ -87,8 +90,5 @@ public final class SettingsApp {
             }
         }
         return root;
-    }
-
-    private SettingsApp() {
     }
 }

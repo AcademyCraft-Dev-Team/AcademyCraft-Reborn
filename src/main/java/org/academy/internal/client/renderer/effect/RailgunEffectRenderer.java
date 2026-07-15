@@ -11,15 +11,11 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemDisplayContext;
-import org.academy.api.client.Render;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.item.Items;
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 import static org.academy.AcademyCraft.academy;
 import static org.academy.api.client.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
@@ -28,6 +24,11 @@ import static org.academy.internal.common.ability.electromaster.skills.lv5.Railg
 public final class RailgunEffectRenderer implements EffectRenderer {
     public static final RailgunEffectRenderer INSTANCE = new RailgunEffectRenderer();
     public static final ContextKey<Railgun.Data> CONTEXT_KEY = new ContextKey<>(academy("railgun_data"));
+
+    private static float hash(long seed) {
+        var x = (seed ^ 0x9E3779B9L) * 0x9E3779B9L;
+        return (float) ((x ^ (x >>> 16)) & 0x7FFFFFFF) / (float) 0x7FFFFFFF;
+    }
 
     @Override
     public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
@@ -65,7 +66,7 @@ public final class RailgunEffectRenderer implements EffectRenderer {
     }
 
     private void renderChargeEffects(PoseStack poseStack, VertexConsumer vc,
-                                      float cx, float cy, float cz, float chargeRatio, float age) {
+                                     float cx, float cy, float cz, float chargeRatio, float age) {
         if (chargeRatio <= 0.01f) return;
 
         var mat = poseStack.last().pose();
@@ -123,9 +124,9 @@ public final class RailgunEffectRenderer implements EffectRenderer {
                 var z = cz + (float) Math.sin(theta) * (float) Math.cos(phi) * arcRadius;
 
                 // Add jitter
-                x += hash(seed + s * 7) * 0.04f - 0.02f;
-                y += hash(seed + s * 13 + 1) * 0.04f - 0.02f;
-                z += hash(seed + s * 17 + 2) * 0.04f - 0.02f;
+                x += hash(seed + s * 7L) * 0.04f - 0.02f;
+                y += hash(seed + s * 13L + 1) * 0.04f - 0.02f;
+                z += hash(seed + s * 17L + 2) * 0.04f - 0.02f;
 
                 if (prevValid) {
                     var arcAlpha = chargeRatio * 0.8f;
@@ -201,10 +202,5 @@ public final class RailgunEffectRenderer implements EffectRenderer {
         var capturedPose = poseStack;
         nodeCollector.submitCustomGeometry(poseStack, POS_COLOR_QUADS_BLOOM,
                 (pose, vc) -> renderChargeEffects(capturedPose, vc, coinX, coinY, coinZ, chargeRatio, player.tickCount + partialTick));
-    }
-
-    private static float hash(long seed) {
-        var x = (seed ^ 0x9E3779B9L) * 0x9E3779B9L;
-        return (float) ((x ^ (x >>> 16)) & 0x7FFFFFFF) / (float) 0x7FFFFFFF;
     }
 }

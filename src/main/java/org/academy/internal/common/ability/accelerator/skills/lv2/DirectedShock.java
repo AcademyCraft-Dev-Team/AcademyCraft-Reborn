@@ -104,9 +104,19 @@ public class DirectedShock extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public DirectedShock.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public DirectedShock.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -155,9 +165,16 @@ public class DirectedShock extends Skill {
         private final float chargeRatio;
 
         @SuppressWarnings("unused")
-        public ActionPacket(float chargeRatio) { this.chargeRatio = chargeRatio; }
-        public float getChargeRatio() { return chargeRatio; }
-        @Override public PacketType<ServerGamePacketListenerImpl, ActionPacket> getPacketType() {
+        public ActionPacket(float chargeRatio) {
+            this.chargeRatio = chargeRatio;
+        }
+
+        public float getChargeRatio() {
+            return chargeRatio;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, ActionPacket> getPacketType() {
             return PacketTypes.DIRECTED_SHOCK_ACTION.get();
         }
     }

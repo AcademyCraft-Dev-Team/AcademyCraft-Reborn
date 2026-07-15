@@ -43,17 +43,17 @@ class WirelessNodeScreen(
 ) : ContainerUiScreen<WirelessNodeMenu>(menu, playerInventory, title) {
     private val mainPos: BlockPos = wirelessNodeBlockEntity.blockPos
     private var ticks = 0
-    private var energyValueSetter =  { _: String -> }
-    private var capacityValueSetter =  { _: String -> }
-    private var rangeValueSetter =  { _: String -> }
+    private var energyValueSetter = { _: String -> }
+    private var capacityValueSetter = { _: String -> }
+    private var rangeValueSetter = { _: String -> }
 
     init {
         NeoForge.EVENT_BUS.register(this)
-/*        for (msdfFont in MsdfFontService.INSTANCE.loadedFonts.values) {
-            MsdfAtlasDebugger.dumpAtlas(msdfFont.atlas,
-                msdfFont.descriptor.identifier.path.length.toString()
-            )
-        }*/
+        /*        for (msdfFont in MsdfFontService.INSTANCE.loadedFonts.values) {
+                    MsdfAtlasDebugger.dumpAtlas(msdfFont.atlas,
+                        msdfFont.descriptor.identifier.path.length.toString()
+                    )
+                }*/
     }
 
     override fun onClose() {

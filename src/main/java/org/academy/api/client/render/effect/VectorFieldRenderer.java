@@ -3,7 +3,6 @@ package org.academy.api.client.render.effect;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 public final class VectorFieldRenderer {
@@ -24,6 +23,11 @@ public final class VectorFieldRenderer {
                 phaseOffsets[x][z] = hash(x * 7919L + z * 6271L) * 2.0f;
             }
         }
+    }
+
+    private static float hash(long seed) {
+        var x = (seed ^ 0x9E3779B9L) * 0x9E3779B9L;
+        return (float) ((x ^ (x >>> 16)) & 0x7FFFFFFF) / (float) 0x7FFFFFFF;
     }
 
     public void setDirection(int x, int z, float dx, float dy, float dz) {
@@ -167,10 +171,5 @@ public final class VectorFieldRenderer {
         vc.addVertex(pose, tip.x, tip.y, tip.z).setColor(r, g, b, headA);
         vc.addVertex(pose, headBottomV.x, headBottomV.y, headBottomV.z).setColor(r, g, b, headA);
         vc.addVertex(pose, headLeft.x, headLeft.y, headLeft.z).setColor(r, g, b, headA);
-    }
-
-    private static float hash(long seed) {
-        var x = (seed ^ 0x9E3779B9L) * 0x9E3779B9L;
-        return (float) ((x ^ (x >>> 16)) & 0x7FFFFFFF) / (float) 0x7FFFFFFF;
     }
 }

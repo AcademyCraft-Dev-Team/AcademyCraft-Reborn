@@ -6,8 +6,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.academy.AcademyCraftClient;
@@ -52,22 +50,22 @@ public class SpacialReplace extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_CORNER1, Client.CONFIG.getKeyBinding(Client.KEY_CORNER1,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_KP_1)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
-        , Client::onSelectCorner1);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_KP_1)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
+                , Client::onSelectCorner1);
 
         InputSystem.addKeyBinding(Client.KEY_CORNER2, Client.CONFIG.getKeyBinding(Client.KEY_CORNER2,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_KP_2)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
-        , Client::onSelectCorner2);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_KP_2)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
+                , Client::onSelectCorner2);
 
         InputSystem.addKeyBinding(Client.KEY_PASTE, Client.CONFIG.getKeyBinding(Client.KEY_PASTE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_P)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
-        , Client::onPaste);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_P)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
+                , Client::onPaste);
     }
 
     @Override
@@ -196,8 +194,13 @@ public class SpacialReplace extends Skill {
             this.position = position;
         }
 
-        public int getCorner() { return corner; }
-        public BlockPos getPosition() { return position; }
+        public int getCorner() {
+            return corner;
+        }
+
+        public BlockPos getPosition() {
+            return position;
+        }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, SetCornerPacket> getPacketType() {
@@ -212,8 +215,13 @@ public class SpacialReplace extends Skill {
 
         private final BlockPos target;
 
-        public PastePacket(BlockPos target) { this.target = target; }
-        public BlockPos getTarget() { return target; }
+        public PastePacket(BlockPos target) {
+            this.target = target;
+        }
+
+        public BlockPos getTarget() {
+            return target;
+        }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, PastePacket> getPacketType() {

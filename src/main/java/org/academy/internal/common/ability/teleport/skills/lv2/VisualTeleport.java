@@ -28,7 +28,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class VisualTeleport extends Skill {
     public VisualTeleport() {
@@ -52,11 +53,11 @@ public class VisualTeleport extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
-                        GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onUse);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
+                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onUse);
     }
 
     @Override
@@ -80,9 +81,19 @@ public class VisualTeleport extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public VisualTeleport.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public VisualTeleport.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -109,9 +120,17 @@ public class VisualTeleport extends Skill {
                 ByteBufCodecs.DOUBLE, Vec3::x, ByteBufCodecs.DOUBLE, Vec3::y, ByteBufCodecs.DOUBLE, Vec3::z, Vec3::new);
         public static final StreamCodec<ByteBuf, TeleportPacket> CODEC = V3.map(TeleportPacket::new, TeleportPacket::getPosition);
         private final Vec3 position;
-        public TeleportPacket(Vec3 p) { position = p; }
-        public Vec3 getPosition() { return position; }
-        @Override public PacketType<ServerGamePacketListenerImpl, TeleportPacket> getPacketType() {
+
+        public TeleportPacket(Vec3 p) {
+            position = p;
+        }
+
+        public Vec3 getPosition() {
+            return position;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TeleportPacket> getPacketType() {
             return PacketTypes.VISUAL_TELEPORT.get();
         }
     }

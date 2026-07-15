@@ -7,12 +7,12 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 public class Smoke extends RenderOnlyEntity {
-    public float size = 1.0f;
-    public float rotation = 0.0f;
+    public final int frame;
     private final float lifeModifier;
     private final float rotSpeed;
-    public final int frame;
     private final int initTick;
+    public float size = 1.0f;
+    public float rotation = 0.0f;
 
     public Smoke(EntityType<?> entityType, Level level) {
         super(entityType, level);

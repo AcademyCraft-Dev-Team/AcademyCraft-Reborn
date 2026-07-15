@@ -29,7 +29,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class Shackle extends Skill {
     public Shackle() {
@@ -49,10 +50,10 @@ public class Shackle extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_S)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onUse);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_S)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onUse);
     }
 
     @Override
@@ -63,13 +64,27 @@ public class Shackle extends Skill {
     public static final class Client {
         public static final String KEY_NAME_USE = SkillNames.SHACKLE + "_use";
         public static Config CONFIG = new Config();
-        public static void onUse() { MisakaNetworkClient.send(UsePacket.INSTANCE); }
+
+        public static void onUse() {
+            MisakaNetworkClient.send(UsePacket.INSTANCE);
+        }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public Shackle.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public Shackle.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -105,8 +120,12 @@ public class Shackle extends Skill {
     public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
         public static final UsePacket INSTANCE = new UsePacket();
         public static final StreamCodec<ByteBuf, UsePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private UsePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
+
+        private UsePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
             return PacketTypes.SHACKLE_USE.get();
         }
     }

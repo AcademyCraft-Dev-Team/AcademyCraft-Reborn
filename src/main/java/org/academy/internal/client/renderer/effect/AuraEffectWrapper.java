@@ -22,7 +22,8 @@ public final class AuraEffectWrapper implements EffectRenderer {
     private final Map<AuraRenderer, float[]> positions = new IdentityHashMap<>();
     private final Map<AuraRenderer, Float> radii = new IdentityHashMap<>();
 
-    private AuraEffectWrapper() {}
+    private AuraEffectWrapper() {
+    }
 
     public void triggerSphere(float cx, float cy, float cz, float radius,
                               float ir, float ig, float ib, float ia,
@@ -78,7 +79,7 @@ public final class AuraEffectWrapper implements EffectRenderer {
 
     @Override
     public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector nodeCollector,
-                                   LocalPlayer player, int packedLight, float partialTick) {
+                                  LocalPlayer player, int packedLight, float partialTick) {
         if (activeAuras.isEmpty()) return;
 
         // Use partialTick for smooth first-person animation

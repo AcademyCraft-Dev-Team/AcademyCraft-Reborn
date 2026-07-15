@@ -103,9 +103,19 @@ public class HyperAccelerate extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public HyperAccelerate.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public HyperAccelerate.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -148,10 +158,21 @@ public class HyperAccelerate extends Skill {
         private final float chargeRatio;
         private final Vec3 direction;
 
-        public LaunchPacket(float chargeRatio, Vec3 direction) { this.chargeRatio = chargeRatio; this.direction = direction; }
-        public float getChargeRatio() { return chargeRatio; }
-        public Vec3 getDirection() { return direction; }
-        @Override public PacketType<ServerGamePacketListenerImpl, LaunchPacket> getPacketType() {
+        public LaunchPacket(float chargeRatio, Vec3 direction) {
+            this.chargeRatio = chargeRatio;
+            this.direction = direction;
+        }
+
+        public float getChargeRatio() {
+            return chargeRatio;
+        }
+
+        public Vec3 getDirection() {
+            return direction;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, LaunchPacket> getPacketType() {
             return PacketTypes.HYPER_ACCELERATE_LAUNCH.get();
         }
     }

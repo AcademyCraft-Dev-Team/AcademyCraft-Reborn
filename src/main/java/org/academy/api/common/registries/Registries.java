@@ -25,6 +25,9 @@ public final class Registries {
     public static final Registry<PathModifierType<?>> PATH_MODIFIER_TYPES =
             new RegistryBuilder<>(Keys.PATH_MODIFIER_TYPES).sync(true).create();
 
+    private Registries() {
+    }
+
     public static final class Keys {
         public static final ResourceKey<Registry<AbilityCategory>> ABILITY_CATEGORIES = key("ability_category");
         public static final ResourceKey<Registry<Skill>> SKILLS = key("skill");
@@ -33,14 +36,11 @@ public final class Registries {
         public static final ResourceKey<Registry<PathType<?>>> PATH_TYPES = key("path_type");
         public static final ResourceKey<Registry<PathModifierType<?>>> PATH_MODIFIER_TYPES = key("path_modifier_type");
 
+        private Keys() {
+        }
+
         private static <T> ResourceKey<Registry<T>> key(String name) {
             return ResourceKey.createRegistryKey(AcademyCraft.academy(name));
         }
-
-        private Keys() {
-        }
-    }
-
-    private Registries() {
     }
 }

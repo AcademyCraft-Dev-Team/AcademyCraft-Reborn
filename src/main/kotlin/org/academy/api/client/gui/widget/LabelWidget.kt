@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.widget
 
-import org.academy.api.client.gui.command.DrawCommand
+import org.academy.api.client.gui.command.GlyphDrawCommand
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor.layout
@@ -25,7 +25,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
     private var green = 1f
     private var blue = 1f
     private var lastFinalAlpha = 1f
-    protected var drawCommands: MutableList<DrawCommand> = ArrayList()
+    protected var drawCommands: MutableList<GlyphDrawCommand> = mutableListOf()
     private var colorChanged = false
 
     protected fun calculateLayoutScale(
@@ -125,8 +125,8 @@ open class LabelWidget(text: String) : AbstractWidget() {
             context.pose().scale(finalScale, finalScale)
 
             val finalAlpha = alpha * context.accumulatedAlpha
-            if (colorChanged || lastFinalAlpha != finalAlpha || (text != lastText)) {
-                drawCommands = GlyphCommandGenerator.generate(
+            if (colorChanged || lastFinalAlpha != finalAlpha || (text != lastText) || isRenderDirty) {
+                drawCommands = generateDrawCommands(
                     text, baseFontSize, 0f, red, green, blue, finalAlpha
                 )
                 lastText = text
@@ -137,6 +137,14 @@ open class LabelWidget(text: String) : AbstractWidget() {
         }
         context.drawOrder().pop()
         context.pose().popPose()
+    }
+
+    protected open fun generateDrawCommands(
+        text: String,
+        fontSize: Float, thickness: Float,
+        red: Float, green: Float, blue: Float, alpha: Float
+    ): MutableList<GlyphDrawCommand> {
+        return GlyphCommandGenerator.generate(text, fontSize, thickness, red, green, blue, alpha)
     }
 
     fun getRed(): Float {

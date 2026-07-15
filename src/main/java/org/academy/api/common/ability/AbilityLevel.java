@@ -17,14 +17,6 @@ public enum AbilityLevel {
         this.levelCode = levelCode;
     }
 
-    public float getBasicCP() {
-        return basicCP;
-    }
-
-    public int getLevelCode() {
-        return levelCode;
-    }
-
     public static AbilityLevel fromLevelCode(int levelCode) {
         for (var level : values()) {
             if (level.getLevelCode() == levelCode) {
@@ -32,5 +24,13 @@ public enum AbilityLevel {
             }
         }
         throw new IllegalArgumentException("No ability level found with level code " + levelCode);
+    }
+
+    public float getBasicCP() {
+        return basicCP;
+    }
+
+    public int getLevelCode() {
+        return levelCode;
     }
 }

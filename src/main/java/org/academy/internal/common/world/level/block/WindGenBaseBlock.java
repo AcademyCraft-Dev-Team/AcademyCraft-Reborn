@@ -43,13 +43,12 @@ import org.slf4j.Logger;
 import java.util.List;
 
 public final class WindGenBaseBlock extends MultiBlock {
-    private static final Logger LOGGER = AcademyCraft.getLogger();
-
     public static final MapCodec<WindGenBaseBlock> CODEC = simpleCodec(WindGenBaseBlock::new);
     public static final String WIND_GEN_SCREEN = "wind_gen_screen";
     public static final List<Vec3i> SUB_BLOCKS = List.of(
             new Vec3i(0, 1, 0)
     );
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     public WindGenBaseBlock(Properties properties) {
         super(properties.noOcclusion());

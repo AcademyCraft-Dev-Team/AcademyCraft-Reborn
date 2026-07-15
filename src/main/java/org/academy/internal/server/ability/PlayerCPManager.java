@@ -190,7 +190,8 @@ public class PlayerCPManager implements AbilitySubsystem {
         var level = (skillData != null) ? skillData.getLevel() : 0;
 
         if (cpData.getStatus() == CPData.Status.OVERLOAD && !AbilitySystemServer.isDevMode()) return false;
-        if (!skill.isPassive(level) && cpData.getAvailableCP() < amount && !AbilitySystemServer.isDevMode()) return false;
+        if (!skill.isPassive(level) && cpData.getAvailableCP() < amount && !AbilitySystemServer.isDevMode())
+            return false;
 
         if (!isPermanent && skill.getMaxStacks(level) != Skill.NO_STACK_LIMIT) {
             var currentStacks = occupations.stream()

@@ -26,6 +26,14 @@ public final class AuraRenderer {
     public AuraRenderer() {
     }
 
+    private static Vector3f spherePoint(float phi, float theta, float radius) {
+        return new Vector3f(
+                (float) (radius * Math.sin(phi) * Math.cos(theta)),
+                (float) (radius * Math.cos(phi)),
+                (float) (radius * Math.sin(phi) * Math.sin(theta))
+        );
+    }
+
     public AuraLayer addLayer() {
         var layer = new AuraLayer();
         layers.add(layer);
@@ -77,9 +85,9 @@ public final class AuraRenderer {
     }
 
     private void renderSpherePatch(PoseStack poseStack, VertexConsumer vc,
-                                    float centerX, float centerY, float centerZ,
-                                    float radius, int rings, int segments,
-                                    float phiStart, float phiRange) {
+                                   float centerX, float centerY, float centerZ,
+                                   float radius, int rings, int segments,
+                                   float phiStart, float phiRange) {
         for (var lat = 0; lat < rings; lat++) {
             var phi1 = (float) (Math.PI * (phiStart + phiRange * lat / rings));
             var phi2 = (float) (Math.PI * (phiStart + phiRange * (lat + 1) / rings));
@@ -134,8 +142,8 @@ public final class AuraRenderer {
     }
 
     private void renderHaloShell(PoseStack poseStack, VertexConsumer vc,
-                                  float centerX, float centerY, float centerZ,
-                                  float radius, int rings, int segments) {
+                                 float centerX, float centerY, float centerZ,
+                                 float radius, int rings, int segments) {
         for (var lat = 0; lat < rings; lat++) {
             var phi1 = (float) (Math.PI * lat / rings);
             var phi2 = (float) (Math.PI * (lat + 1) / rings);
@@ -168,8 +176,8 @@ public final class AuraRenderer {
     }
 
     public void renderOrbitingParticles(PoseStack poseStack, VertexConsumer vc,
-                                         float centerX, float centerY, float centerZ,
-                                         float radius, int count) {
+                                        float centerX, float centerY, float centerZ,
+                                        float radius, int count) {
         if (!active) return;
         var pose = poseStack.last();
 
@@ -194,14 +202,6 @@ public final class AuraRenderer {
         }
     }
 
-    private static Vector3f spherePoint(float phi, float theta, float radius) {
-        return new Vector3f(
-                (float) (radius * Math.sin(phi) * Math.cos(theta)),
-                (float) (radius * Math.cos(phi)),
-                (float) (radius * Math.sin(phi) * Math.sin(theta))
-        );
-    }
-
     public static final class AuraLayer {
         float innerR = 1, innerG = 1, innerB = 1, innerA = 0.3f;
         float outerR = 1, outerG = 1, outerB = 1, outerA = 0.1f;
@@ -210,13 +210,62 @@ public final class AuraRenderer {
         float noiseScale = 0.5f;
         float noiseSpeed = 0.3f;
 
+        private static float simplexNoise(float x, float y, float z) {
+            var n = 0f;
+            var amp = 1f;
+            var freq = 1f;
+            for (var i = 0; i < 3; i++) {
+                n += amp * hashNoise(x * freq, y * freq, z * freq);
+                amp *= 0.5f;
+                freq *= 2.0f;
+            }
+            return n;
+        }
+
+        private static float hashNoise(float x, float y, float z) {
+            var ix = (int) Math.floor(x);
+            var iy = (int) Math.floor(y);
+            var iz = (int) Math.floor(z);
+            var fx = x - ix;
+            var fy = y - iy;
+            var fz = z - iz;
+            fx = fx * fx * (3f - 2f * fx);
+            fy = fy * fy * (3f - 2f * fy);
+            fz = fz * fz * (3f - 2f * fz);
+            return lerp(fz,
+                    lerp(fy, lerp(fx, grad(ix, iy, iz, fx, fy, fz), grad(ix + 1, iy, iz, fx - 1, fy, fz)),
+                            lerp(fx, grad(ix, iy + 1, iz, fx, fy - 1, fz), grad(ix + 1, iy + 1, iz, fx - 1, fy - 1, fz))),
+                    lerp(fy, lerp(fx, grad(ix, iy, iz + 1, fx, fy, fz - 1), grad(ix + 1, iy, iz + 1, fx - 1, fy, fz - 1)),
+                            lerp(fx, grad(ix, iy + 1, iz + 1, fx, fy - 1, fz - 1), grad(ix + 1, iy + 1, iz + 1, fx - 1, fy - 1, fz - 1))));
+        }
+
+        private static float grad(int ix, int iy, int iz, float dx, float dy, float dz) {
+            var h = ix * 374761393 + iy * 668265263 + iz * 1274126177;
+            h = (h ^ (h >> 13)) * 1274126177;
+            h = h ^ (h >> 16);
+            var gx = ((h & 1) == 0 ? 1f : -1f) * dx;
+            var gy = ((h & 2) == 0 ? 1f : -1f) * dy;
+            var gz = ((h & 4) == 0 ? 1f : -1f) * dz;
+            return gx + gy + gz;
+        }
+
+        private static float lerp(float t, float a, float b) {
+            return a + t * (b - a);
+        }
+
         public AuraLayer setInnerColor(float r, float g, float b, float a) {
-            innerR = r; innerG = g; innerB = b; innerA = a;
+            innerR = r;
+            innerG = g;
+            innerB = b;
+            innerA = a;
             return this;
         }
 
         public AuraLayer setOuterColor(float r, float g, float b, float a) {
-            outerR = r; outerG = g; outerB = b; outerA = a;
+            outerR = r;
+            outerG = g;
+            outerB = b;
+            outerA = a;
             return this;
         }
 
@@ -243,51 +292,8 @@ public final class AuraRenderer {
             var a = (innerA + (outerA - innerA) * n) * pulse;
             var r = innerR + (outerR - innerR) * n;
             var g = innerG + (outerG - innerG) * n;
-            var b = innerB + (outerB - outerB) * n;
+            var b = innerB + (0.0f) * n;
             return new Vector4f(r, g, b, Math.clamp(a, 0, 1));
-        }
-
-        private static float simplexNoise(float x, float y, float z) {
-            var n = 0f;
-            var amp = 1f;
-            var freq = 1f;
-            for (var i = 0; i < 3; i++) {
-                n += amp * hashNoise(x * freq, y * freq, z * freq);
-                amp *= 0.5f;
-                freq *= 2.0f;
-            }
-            return n;
-        }
-
-        private static float hashNoise(float x, float y, float z) {
-            var ix = (int) Math.floor(x);
-            var iy = (int) Math.floor(y);
-            var iz = (int) Math.floor(z);
-            var fx = x - ix;
-            var fy = y - iy;
-            var fz = z - iz;
-            fx = fx * fx * (3f - 2f * fx);
-            fy = fy * fy * (3f - 2f * fy);
-            fz = fz * fz * (3f - 2f * fz);
-            return lerp(fz,
-                    lerp(fy, lerp(fx, grad(ix, iy, iz, fx, fy, fz), grad(ix + 1, iy, iz, fx - 1, fy, fz)),
-                         lerp(fx, grad(ix, iy + 1, iz, fx, fy - 1, fz), grad(ix + 1, iy + 1, iz, fx - 1, fy - 1, fz))),
-                    lerp(fy, lerp(fx, grad(ix, iy, iz + 1, fx, fy, fz - 1), grad(ix + 1, iy, iz + 1, fx - 1, fy, fz - 1)),
-                         lerp(fx, grad(ix, iy + 1, iz + 1, fx, fy - 1, fz - 1), grad(ix + 1, iy + 1, iz + 1, fx - 1, fy - 1, fz - 1))));
-        }
-
-        private static float grad(int ix, int iy, int iz, float dx, float dy, float dz) {
-            var h = ix * 374761393 + iy * 668265263 + iz * 1274126177;
-            h = (h ^ (h >> 13)) * 1274126177;
-            h = h ^ (h >> 16);
-            var gx = ((h & 1) == 0 ? 1f : -1f) * dx;
-            var gy = ((h & 2) == 0 ? 1f : -1f) * dy;
-            var gz = ((h & 4) == 0 ? 1f : -1f) * dz;
-            return gx + gy + gz;
-        }
-
-        private static float lerp(float t, float a, float b) {
-            return a + t * (b - a);
         }
     }
 }

@@ -14,7 +14,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -29,7 +28,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class PlasmaGeneration extends Skill {
     private static final int MAX_CHARGE_MS = 20_000;
@@ -67,15 +67,15 @@ public class PlasmaGeneration extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)), GLFW.GLFW_PRESS,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_CONTROL)))))
-        , Client::onChargeStart);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)), GLFW.GLFW_PRESS,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_CONTROL)))))
+                , Client::onChargeStart);
         InputSystem.addKeyBinding(Client.KEY_NAME_FIRE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_FIRE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_CONTROL)))))
-        , Client::onFire);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_CONTROL)))))
+                , Client::onFire);
     }
 
     @Override
@@ -109,9 +109,19 @@ public class PlasmaGeneration extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public PlasmaGeneration.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public PlasmaGeneration.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -153,17 +163,29 @@ public class PlasmaGeneration extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class FirePacket extends Packet<ServerGamePacketListenerImpl, FirePacket> {
-        private final long chargeMs;
-        private final Vec3 direction;
         public static final StreamCodec<ByteBuf, FirePacket> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_LONG, FirePacket::chargeMs,
                 ByteBufCodecs.fromCodec(Vec3.CODEC), FirePacket::direction,
                 FirePacket::new);
+        private final long chargeMs;
+        private final Vec3 direction;
 
-        public FirePacket(long chargeMs) { this(chargeMs, Vec3.ZERO); }
-        public FirePacket(long chargeMs, Vec3 direction) { this.chargeMs = chargeMs; this.direction = direction; }
-        public long chargeMs() { return chargeMs; }
-        public Vec3 direction() { return direction; }
+        public FirePacket(long chargeMs) {
+            this(chargeMs, Vec3.ZERO);
+        }
+
+        public FirePacket(long chargeMs, Vec3 direction) {
+            this.chargeMs = chargeMs;
+            this.direction = direction;
+        }
+
+        public long chargeMs() {
+            return chargeMs;
+        }
+
+        public Vec3 direction() {
+            return direction;
+        }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, FirePacket> getPacketType() {

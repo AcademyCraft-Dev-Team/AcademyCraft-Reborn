@@ -10,7 +10,8 @@ import static org.academy.AcademyCraft.MODID;
 
 public class MenuTypes {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(BuiltInRegistries.MENU, MODID);
-    public static final DeferredHolder<MenuType<?>, MenuType<WindGenMenu>> WIND_GEN = MENU_TYPES.register("wind_gen",
+    private MenuTypes() {
+    }    public static final DeferredHolder<MenuType<?>, MenuType<WindGenMenu>> WIND_GEN = MENU_TYPES.register("wind_gen",
             () -> new MenuType<>(WindGenMenu::new, FeatureFlags.VANILLA_SET));
     public static final DeferredHolder<MenuType<?>, MenuType<WirelessNodeMenu>> NODE = MENU_TYPES.register("node",
             () -> new MenuType<>(WirelessNodeMenu::new, FeatureFlags.VANILLA_SET));
@@ -19,6 +20,5 @@ public class MenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<SolarGenMenu>> SOLAR_GEN = MENU_TYPES.register("solar_gen",
             () -> new MenuType<>(SolarGenMenu::new, FeatureFlags.VANILLA_SET));
 
-    private MenuTypes() {
-    }
+
 }

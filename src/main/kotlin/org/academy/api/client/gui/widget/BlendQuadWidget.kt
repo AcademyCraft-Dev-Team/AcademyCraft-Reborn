@@ -55,7 +55,8 @@ class BlendQuadWidget : AbstractWidget() {
                     1.0f,
                     1.0f,
                     listOf(),
-                    listOf(UniformPayload(
+                    listOf(
+                        UniformPayload(
                             "SdfUniforms",
                             SDFData::class.java, SDFData(
                                 Vector2f(paddedWidth, paddedHeight),

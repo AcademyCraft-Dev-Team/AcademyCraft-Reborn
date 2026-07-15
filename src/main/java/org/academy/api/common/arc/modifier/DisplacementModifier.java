@@ -16,7 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequency, long seed) implements PathModifier {
+public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequency,
+                                   long seed) implements PathModifier {
     public static final StreamCodec<ByteBuf, DisplacementModifier> CODEC = StreamCodec.composite(
             AttributeCurve.CODEC, DisplacementModifier::strength,
             AttributeCurve.CODEC, DisplacementModifier::frequency,

@@ -22,9 +22,7 @@ public class CoinModelGenerator implements UnbakedModel {
     public static final String TEXTURE_KEY_FRONT = "front";
     public static final String TEXTURE_KEY_BACK = "back";
 
-    @Override
-    public @Nullable UnbakedGeometry geometry() {
-        return CoinModelGenerator::bake;
+    private CoinModelGenerator() {
     }
 
     private static QuadCollection bake(TextureSlots textureSlots, ModelBaker modelBaker, ModelState modelState, ModelDebugName name) {
@@ -49,13 +47,15 @@ public class CoinModelGenerator implements UnbakedModel {
                 builder.addUnculledFace(
                         FaceBakery.bakeQuad(interner, from, to, ItemModelGenerator.NORTH_FACE_UVS, Quadrant.R0, backInfo, Direction.NORTH, modelState, null, ExtraFaceData.DEFAULT)
                 );
-                ItemModelGenerator.bakeSideFaces(builder, interner, modelState, frontInfo);
+                ItemModelGenerator.bakeSideFaces(builder, interner, modelState, frontInfo, ExtraFaceData.DEFAULT);
                 return builder.build();
             });
         }
         return singleResult;
     }
 
-    private CoinModelGenerator() {
+    @Override
+    public @Nullable UnbakedGeometry geometry() {
+        return CoinModelGenerator::bake;
     }
 }

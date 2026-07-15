@@ -19,7 +19,6 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
@@ -125,15 +124,15 @@ public final class SelfTeleport extends Skill {
         }
 
         public static class TeleportRenderContext extends ClientContext {
-            private double distance = 10;
-            private final LocalPlayer player;
-            public Vec3 currentRenderPos;
-            private Vec3 visualRenderPos;
-            private AABB previewBoxWorld;
             private static final float STEP_HEIGHT = 0.125f;
             private static final int MAX_UPWARD_CHECKS = 16;
             private static final float RAY_TRACE_STEP = 1;
+            private final LocalPlayer player;
             private final EntityDimensions playerDimensions;
+            public Vec3 currentRenderPos;
+            private double distance = 10;
+            private Vec3 visualRenderPos;
+            private AABB previewBoxWorld;
 
             public TeleportRenderContext(LocalPlayer player) {
                 this.player = player;

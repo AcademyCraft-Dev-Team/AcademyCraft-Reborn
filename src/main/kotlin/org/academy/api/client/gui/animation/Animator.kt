@@ -53,12 +53,14 @@ abstract class Animator {
         for (listener in tempList) listener!!.onAnimationStart(this)
     }
 
-    fun addListener(listener: AnimatorListener) {
+    open fun addListener(listener: AnimatorListener): Animator {
         listeners.add(listener)
+        return this
     }
 
-    fun removeListener(listener: AnimatorListener) {
+    open fun removeListener(listener: AnimatorListener): Animator {
         listeners.remove(listener)
+        return this
     }
 
     open fun setDuration(duration: Long): Animator {

@@ -6,8 +6,8 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -33,7 +33,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Random;
+import java.util.Set;
 
 public class Disarm extends Skill {
     public Disarm() {
@@ -45,49 +47,6 @@ public class Disarm extends Skill {
                 .maxStacks(1)
                 .dependsOn(Skills.MATTER_WARP)
         );
-    }
-
-    @Override
-    public float getCpCost(int skillLevel) {
-        if (skillLevel >= 2) return 50;
-        return super.getCpCost(skillLevel);
-    }
-
-    @Override
-    public int getIterationTicks(int skillLevel) {
-        if (skillLevel >= 3) return 8;
-        return super.getIterationTicks(skillLevel);
-    }
-
-    @Override
-    public void initClient() {
-        var key = getKey();
-        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_D)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))))
-        , Client::onUse);
-    }
-
-    @Override
-    public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    public static final class Client {
-        public static final String KEY_NAME_USE = SkillNames.DISARM + "_use";
-        public static Config CONFIG = new Config();
-        public static void onUse() { MisakaNetworkClient.send(UsePacket.INSTANCE); }
-        public static class Config extends KeyBindingConfig {
-            public static final class Action implements TypeHandler<Config> {
-                public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public Disarm.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
-            }
-        }
     }
 
     private static void disarmTarget(LivingEntity target) {
@@ -152,6 +111,63 @@ public class Disarm extends Skill {
                 rng.nextDouble() * 4 - 2, rng.nextDouble() * 2, rng.nextDouble() * 4 - 2));
     }
 
+    @Override
+    public float getCpCost(int skillLevel) {
+        if (skillLevel >= 2) return 50;
+        return super.getCpCost(skillLevel);
+    }
+
+    @Override
+    public int getIterationTicks(int skillLevel) {
+        if (skillLevel >= 3) return 8;
+        return super.getIterationTicks(skillLevel);
+    }
+
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_D)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))))
+                , Client::onUse);
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    public static final class Client {
+        public static final String KEY_NAME_USE = SkillNames.DISARM + "_use";
+        public static Config CONFIG = new Config();
+
+        public static void onUse() {
+            MisakaNetworkClient.send(UsePacket.INSTANCE);
+        }
+
+        public static class Config extends KeyBindingConfig {
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Disarm.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
+        }
+    }
+
     public static final class Server {
         @SubscribePacket
         public static void handle(UsePacket packet) {
@@ -176,8 +192,12 @@ public class Disarm extends Skill {
     public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
         public static final UsePacket INSTANCE = new UsePacket();
         public static final StreamCodec<ByteBuf, UsePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private UsePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
+
+        private UsePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
             return PacketTypes.DISARM_USE.get();
         }
     }

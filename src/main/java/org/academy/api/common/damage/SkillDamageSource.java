@@ -19,10 +19,6 @@ public class SkillDamageSource extends DamageSource {
         this.skill = skill;
     }
 
-    public Skill getSkill() {
-        return skill;
-    }
-
     /**
      * 创建一个玩家攻击的技能伤害源(默认)
      *
@@ -59,5 +55,9 @@ public class SkillDamageSource extends DamageSource {
      */
     public static SkillDamageSource from(DamageSource original, Skill skill) {
         return new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
+    }
+
+    public Skill getSkill() {
+        return skill;
     }
 }

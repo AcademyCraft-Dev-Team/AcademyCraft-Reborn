@@ -13,7 +13,6 @@ import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager
 import org.academy.api.client.gui.render.BatchProcessor.UboUploader
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.UniformPayload

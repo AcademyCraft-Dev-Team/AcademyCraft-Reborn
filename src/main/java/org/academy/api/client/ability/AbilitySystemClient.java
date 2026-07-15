@@ -29,10 +29,10 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
-    private static final Map<String, SkillData> SKILL_DATA = new ConcurrentHashMap<>();
     public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system";
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
     public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
+    private static final Map<String, SkillData> SKILL_DATA = new ConcurrentHashMap<>();
     private static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
     @Nullable
     public static AbilityCategory category;

@@ -13,10 +13,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public final class OmniCraftingTableBlockEntity extends MultiBlockEntity implements Container {
+    public final AnimationState unfoldingState = new AnimationState();
     public int ticks;
     public NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
-
-    public final AnimationState unfoldingState = new AnimationState();
 
     public OmniCraftingTableBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.OMNI_CRAFTING_TABLE.get(), pos, blockState);

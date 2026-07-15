@@ -26,6 +26,9 @@ public final class PostEffect {
         );
     }
 
+    private PostEffect() {
+    }
+
     public static void resize(int width, int height) {
         MAIN_SCENE.resize(width, height);
     }
@@ -57,19 +60,16 @@ public final class PostEffect {
         IrisCompat.resetBypass();
     }
 
-    public static Phase getPre(){
+    public static Phase getPre() {
         return PRE_PHASE;
     }
 
-    public static Phase getPost(){
+    public static Phase getPost() {
         return POST_PHASE;
     }
 
     public static void close() {
         PRE_PHASE.close();
         POST_PHASE.close();
-    }
-
-    private PostEffect() {
     }
 }

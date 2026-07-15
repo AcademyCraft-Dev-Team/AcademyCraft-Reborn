@@ -2,6 +2,7 @@ package org.academy.api.common.ability;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -15,18 +16,18 @@ import java.util.List;
 
 public class AcquireCategoryPacket extends RequestPacket<ServerGamePacketListenerImpl, AcquireCategoryPacket, ClientPacketListener, AcquireCategoryPacket.Response> {
     public static final StreamCodec<ByteBuf, AcquireCategoryPacket> CODEC = StreamCodec.composite(
-            ByteBufCodecs.LONG,
+            BlockPos.STREAM_CODEC,
             AcquireCategoryPacket::getUserPos,
             AcquireCategoryPacket::new
     );
 
-    private final long userPos;
+    private final BlockPos userPos;
 
-    public AcquireCategoryPacket(long userPos) {
+    public AcquireCategoryPacket(BlockPos userPos) {
         this.userPos = userPos;
     }
 
-    public long getUserPos() {
+    public BlockPos getUserPos() {
         return userPos;
     }
 

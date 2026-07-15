@@ -85,4 +85,5 @@ interface Widget : Tickable {
         const val CHECKED = 1 shl 4
         const val SELECTED = 1 shl 5
     }
+
 }

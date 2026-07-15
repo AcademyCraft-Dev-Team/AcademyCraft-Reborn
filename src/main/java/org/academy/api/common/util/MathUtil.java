@@ -21,60 +21,60 @@ public class MathUtil {
     public static final Random RANDOM = new Random();
 
     /**
-     *    peakHeight
-     *        *
-     *       * *
-     *      *   *
-     *     *     *
-     *    *       *
-     *   *         *
-     *   -----------
-     *  totalDistance
+     * peakHeight
+     * *
+     * * *
+     * *   *
+     * *     *
+     * *       *
+     * *         *
+     * -----------
+     * totalDistance
      *
      * @param totalDistance total distance
      * @param peakHeight    peak
      * @param x             current x
-     * @return              height
+     * @return height
      */
     public static double getParabolaHeight(double totalDistance, double peakHeight, double x) {
         return (4 * peakHeight * x * (totalDistance - x)) / (totalDistance * totalDistance);
     }
 
     /**
-     *    peakHeight
-     *        *
-     *       * *
-     *      *   *
-     *     *     *
-     *    *       *
-     *   *         *
-     *   -----------
-     *  totalDistance
+     * peakHeight
+     * *
+     * * *
+     * *   *
+     * *     *
+     * *       *
+     * *         *
+     * -----------
+     * totalDistance
      *
      * @param totalDistance total distance
      * @param peakHeight    peak
      * @param x             current x
-     * @return              height
+     * @return height
      */
     public static float getParabolaHeight(float totalDistance, float peakHeight, float x) {
         return (4 * peakHeight * x * (totalDistance - x)) / (totalDistance * totalDistance);
     }
 
     /**
-     *    a + length + a
-     *   ________________
-     *        length
-     *      __________
-     *     *          *
-     *    *            *
-     *   *              *
-     *   ---          ---
-     *    a            a
+     * a + length + a
+     * ________________
+     * length
+     * __________
+     * *          *
+     * *            *
+     * *              *
+     * ---          ---
+     * a            a
      *
      * @param x      current x
      * @param length flat length
      * @param a      time
-     * @return       height
+     * @return height
      */
     public static double getFlatTopParabolaHeight(double x, double length, double a) {
         var halfLength = length * 0.5;
@@ -87,20 +87,20 @@ public class MathUtil {
     }
 
     /**
-     *    a + length + a
-     *   ________________
-     *        length
-     *      __________
-     *     *          *
-     *    *            *
-     *   *              *
-     *   ---          ---
-     *    a            a
+     * a + length + a
+     * ________________
+     * length
+     * __________
+     * *          *
+     * *            *
+     * *              *
+     * ---          ---
+     * a            a
      *
      * @param x      current x
      * @param length flat length
      * @param a      time
-     * @return       height
+     * @return height
      */
     public static float getFlatTopParabolaHeight(float x, float length, float a) {
         var halfLength = length * 0.5f;
@@ -201,7 +201,8 @@ public class MathUtil {
 
     /**
      * 获取指定位置球形范围内的LivingEntity列表，并按血量降序排序。
-     * @param filter  可选的实体过滤器
+     *
+     * @param filter 可选的实体过滤器
      */
     public static List<LivingEntity> getEntitiesInSphereByHP(Level level, Vec3 center, double radius, @Nullable Predicate<LivingEntity> filter) {
         var searchBox = AABB.ofSize(center, radius * 2, radius * 2, radius * 2);
@@ -213,6 +214,82 @@ public class MathUtil {
         });
         entities.sort((e1, e2) -> Float.compare(e2.getHealth(), e1.getHealth()));
         return entities;
+    }
+
+    public enum Axis2D {
+        HORIZONTAL,
+        VERTICAL;
+
+        public Axis2D orthogonal() {
+            return switch (this) {
+                case HORIZONTAL -> VERTICAL;
+                case VERTICAL -> HORIZONTAL;
+            };
+        }
+
+        public Direction2D getPositive() {
+            return switch (this) {
+                case HORIZONTAL -> Direction2D.RIGHT;
+                case VERTICAL -> Direction2D.DOWN;
+            };
+        }
+
+        public Direction2D getNegative() {
+            return switch (this) {
+                case HORIZONTAL -> Direction2D.LEFT;
+                case VERTICAL -> Direction2D.UP;
+            };
+        }
+
+        public Direction2D getDirection(boolean isPositive) {
+            return isPositive ? getPositive() : getNegative();
+        }
+    }
+
+    public enum Direction2D {
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT;
+
+        private final IntComparator coordinateValueComparator = (first, second) -> first == second
+                ? 0
+                : (isBefore(first, second) ? -1 : 1);
+
+        public Axis2D getAxis() {
+            return switch (this) {
+                case UP, DOWN -> Axis2D.VERTICAL;
+                case LEFT, RIGHT -> Axis2D.HORIZONTAL;
+            };
+        }
+
+        public Direction2D getOpposite() {
+            return switch (this) {
+                case UP -> DOWN;
+                case DOWN -> UP;
+                case LEFT -> RIGHT;
+                case RIGHT -> LEFT;
+            };
+        }
+
+        public boolean isPositive() {
+            return switch (this) {
+                case UP, LEFT -> false;
+                case DOWN, RIGHT -> true;
+            };
+        }
+
+        public boolean isAfter(int first, int second) {
+            return isPositive() ? first > second : second > first;
+        }
+
+        public boolean isBefore(int first, int second) {
+            return isPositive() ? first < second : second < first;
+        }
+
+        public IntComparator coordinateValueComparator() {
+            return coordinateValueComparator;
+        }
     }
 
     public static class RayUtil {
@@ -302,82 +379,6 @@ public class MathUtil {
             var r = RANDOM.nextDouble() * totalWeight;
             var entry = map.ceilingEntry(r);
             return entry != null ? entry.getValue() : map.firstEntry().getValue();
-        }
-    }
-
-    public enum Axis2D {
-        HORIZONTAL,
-        VERTICAL;
-
-        public Axis2D orthogonal() {
-            return switch (this) {
-                case HORIZONTAL -> VERTICAL;
-                case VERTICAL -> HORIZONTAL;
-            };
-        }
-
-        public Direction2D getPositive() {
-            return switch (this) {
-                case HORIZONTAL -> Direction2D.RIGHT;
-                case VERTICAL -> Direction2D.DOWN;
-            };
-        }
-
-        public Direction2D getNegative() {
-            return switch (this) {
-                case HORIZONTAL -> Direction2D.LEFT;
-                case VERTICAL -> Direction2D.UP;
-            };
-        }
-
-        public Direction2D getDirection(boolean isPositive) {
-            return isPositive ? getPositive() : getNegative();
-        }
-    }
-
-    public enum Direction2D {
-        UP,
-        DOWN,
-        LEFT,
-        RIGHT;
-
-        private final IntComparator coordinateValueComparator = (first, second) -> first == second
-                ? 0
-                : (isBefore(first, second) ? -1 : 1);
-
-        public Axis2D getAxis() {
-            return switch (this) {
-                case UP, DOWN -> Axis2D.VERTICAL;
-                case LEFT, RIGHT -> Axis2D.HORIZONTAL;
-            };
-        }
-
-        public Direction2D getOpposite() {
-            return switch (this) {
-                case UP -> DOWN;
-                case DOWN -> UP;
-                case LEFT -> RIGHT;
-                case RIGHT -> LEFT;
-            };
-        }
-
-        public boolean isPositive() {
-            return switch (this) {
-                case UP, LEFT -> false;
-                case DOWN, RIGHT -> true;
-            };
-        }
-
-        public boolean isAfter(int first, int second) {
-            return isPositive() ? first > second : second > first;
-        }
-
-        public boolean isBefore(int first, int second) {
-            return isPositive() ? first < second : second < first;
-        }
-
-        public IntComparator coordinateValueComparator() {
-            return coordinateValueComparator;
         }
     }
 }

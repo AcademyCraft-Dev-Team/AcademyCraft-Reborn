@@ -25,22 +25,22 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
-    public int ticks;
-    public int energyStored;
+    private static final String NBT_COMPLETENESS = "Completeness";
     public final AnimationState setupState = new AnimationState();
     public final AnimationState shutdownState = new AnimationState();
+    public int ticks;
+    public int energyStored;
     @Nullable
     public WindGenWorldGui windGenWorldGUI;
     public Completeness completeness = Completeness.BASE_ONLY;
-    private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     @Nullable
     public WindGenTopBlockEntity topBlockEntity;
-    private static final String NBT_COMPLETENESS = "Completeness";
+    public int altitude;
+    public boolean isDisplayActive = false;
+    private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     @Nullable
     private BlockPos connectedNodePos = null;
-    public int altitude;
     private boolean playerNearby = true;
-    public boolean isDisplayActive = false;
 
     public WindGenBaseBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.WIND_GEN_BASE.get(), pos, blockState);
@@ -330,13 +330,13 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         }
     }
 
-    public enum Completeness {
-        BASE_ONLY, NO_TOP, COMPLETE, COMPLETE_NOT_WORKING
-    }
-
     public AABB getRenderBoundingBox() {
         var pos = Vec3.atCenterOf(getBlockPos());
         var radius = 1.5f;
         return new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius, pos.z + radius);
+    }
+
+    public enum Completeness {
+        BASE_ONLY, NO_TOP, COMPLETE, COMPLETE_NOT_WORKING
     }
 }

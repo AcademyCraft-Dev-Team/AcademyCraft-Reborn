@@ -77,14 +77,14 @@ object MusicApp : App {
                 .sizeMode(SizeMode.MATCH_PARENT)
             run {
                 val root = LinearLayoutWidget()
-                root.setOrientation(Orientation.VERTICAL)
+                root.orientation = Orientation.VERTICAL
                 root.layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT)
-                root.setSpacing(1f)
+                root.spacing = 1f
                 content.addChild("root", root)
                 run {
                     val topBar = LinearLayoutWidget()
-                    topBar.setOrientation(Orientation.HORIZONTAL)
+                    topBar.orientation = Orientation.HORIZONTAL
                     topBar.layoutParams = LinearLayoutWidget.LayoutParams()
                         .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
                     root.addChild("top_bar", topBar)
@@ -124,7 +124,7 @@ object MusicApp : App {
                 .weight(1f)
                 .padding(2f, 0f, 2f, 2f)
                 .widthMode(SizeMode.MATCH_PARENT)
-            main.setOrientation(Orientation.HORIZONTAL)
+            main.orientation = Orientation.HORIZONTAL
             run {
                 val musicListArea = ScrollPanelWidget()
                 musicListArea.layoutParams = LinearLayoutWidget.LayoutParams()
@@ -147,7 +147,7 @@ object MusicApp : App {
                 updateRot()
 
                 val musicList = LinearLayoutWidget()
-                musicList.setOrientation(Orientation.VERTICAL)
+                musicList.orientation = Orientation.VERTICAL
                 musicList.layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.WRAP_CONTENT)
                 musicListArea.setContent(createMusicList())
@@ -157,15 +157,15 @@ object MusicApp : App {
                     .gravity(Gravity.CENTER_BOTTOM)
                     .size(224f, 32f)
                     .margin(0f, 0f, 0f, 12f)
-                infoArea.setOrientation(Orientation.VERTICAL)
+                infoArea.orientation = Orientation.VERTICAL
                 playerArea.addChild("info_area", infoArea)
                 run {
                     val progressInfoArea = LinearLayoutWidget()
                     progressInfoArea.layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
                         .widthMode(SizeMode.MATCH_PARENT)
-                    progressInfoArea.setOrientation(Orientation.HORIZONTAL)
-                    progressInfoArea.setSpacing(4f)
+                    progressInfoArea.orientation = Orientation.HORIZONTAL
+                    progressInfoArea.spacing = 4f
                     infoArea.addChild("progress_info_area", progressInfoArea)
                     run {
                         val p = LinearLayoutWidget.LayoutParams()
@@ -195,8 +195,8 @@ object MusicApp : App {
                     controlArea.layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(16f)
-                    controlArea.setOrientation(Orientation.HORIZONTAL)
-                    controlArea.setSpacing(8f)
+                    controlArea.orientation = Orientation.HORIZONTAL
+                    controlArea.spacing = 8f
                     infoArea.addChild("control_area", controlArea)
                     run {
                         val emptyP = LinearLayoutWidget.LayoutParams()
@@ -272,7 +272,7 @@ object MusicApp : App {
 
         fun createMusicList(): LinearLayoutWidget {
             val musicList = LinearLayoutWidget()
-            musicList.setOrientation(Orientation.VERTICAL)
+            musicList.orientation = Orientation.VERTICAL
             musicList.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.WRAP_CONTENT)
             run {
@@ -292,8 +292,8 @@ object MusicApp : App {
                         val info = LinearLayoutWidget()
                         info.layoutParams = FrameLayoutWidget.LayoutParams()
                             .sizeMode(SizeMode.WRAP_CONTENT)
-                        info.setOrientation(Orientation.HORIZONTAL)
-                        info.setSpacing(2f)
+                        info.orientation = Orientation.HORIZONTAL
+                        info.spacing = 2f
                         musicButton.addChild("info", info)
                         run {
                             val icon = ImageWidget(mediaInfo.icon)
@@ -308,7 +308,7 @@ object MusicApp : App {
                             text.layoutParams = LinearLayoutWidget.LayoutParams()
                                 .height(16f)
                                 .gravity(Gravity.CENTER)
-                            text.setOrientation(Orientation.VERTICAL)
+                            text.orientation = Orientation.VERTICAL
                             info.addChild("stringBuilder", text)
                             run {
                                 val name = LabelWidget(mediaInfo.name)
@@ -335,15 +335,27 @@ object MusicApp : App {
         fun createVinyl(): ImageWidget {
             return object : ImageWidget(Resource.Textures.ICON_NOW_PLAYING) {
                 override fun generateDrawCommand(
-                    texture: GpuTextureView, sampler: GpuSampler,
-                    width: Float, height: Float,
-                    u0: Float, v0: Float, u1: Float, v1: Float,
-                    red: Float, green: Float, blue: Float, alpha: Float
+                    texture: GpuTextureView,
+                    sampler: GpuSampler,
+                    width: Float,
+                    height: Float,
+                    u0: Float,
+                    v0: Float,
+                    u1: Float,
+                    v1: Float,
+                    u2: Float,
+                    v2: Float,
+                    u3: Float,
+                    v3: Float,
+                    red: Float,
+                    green: Float,
+                    blue: Float,
+                    alpha: Float
                 ): DrawCommand {
                     return ImageCircleDrawCommand(
                         texture, sampler,
                         width, height,
-                        u0, v0, u1, v1,
+                        u0, v0, u1, v1, u2, v2, u3, v3,
                         red, green, blue, alpha
                     )
                 }
@@ -385,7 +397,7 @@ object MusicApp : App {
             val content = LinearLayoutWidget()
             content.layoutParams = LinearLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
-            content.setOrientation(Orientation.HORIZONTAL)
+            content.orientation = Orientation.HORIZONTAL
             run {
                 val p = LinearLayoutWidget.LayoutParams()
                     .size(16f, 16f)
@@ -400,7 +412,7 @@ object MusicApp : App {
                 icon.layoutParams = p
                 content.addChild("icon", icon)
 
-                val info: FrameLayoutWidget = object : FrameLayoutWidget() {
+                val info = object : FrameLayoutWidget() {
                     override fun tick() {
                         super.tick()
                         visibility = if (icon.isHovered || isHovered) Widget.Visibility.VISIBLE

@@ -33,20 +33,19 @@ import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
 
 public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
     private static final Logger LOGGER = AcademyCraft.getLogger();
-    
+
     private static final int MAX_ENERGY = 2_400_000;
     private static final int TRANSFER_RATE = 20000;
-
-    private int energyStored = 5000;
+    public final AnimationState coreState = new AnimationState();
     public WirelessNetworkData.@Nullable NodeConfig cachedConfig = null;
     public NonNullList<ItemStack> items = NonNullList.withSize(2, ItemStack.EMPTY);
-    @Nullable
-    private BlockPos connectedNodePos = null;
     public int connectedUsersCount;
     public int maxConnectedUsers;
     public int radius;
     public int ticks;
-    public final AnimationState coreState = new AnimationState();
+    private int energyStored = 5000;
+    @Nullable
+    private BlockPos connectedNodePos = null;
 
     public WirelessNodeBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.WIRELESS_NODE.get(), pos, blockState);
