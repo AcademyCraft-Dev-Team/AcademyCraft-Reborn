@@ -33,7 +33,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 public class CoordinateTeleport extends Skill {
     private static final int COMPUTE_TICKS = 200;
@@ -59,16 +62,16 @@ public class CoordinateTeleport extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_SAVE, Client.CONFIG.getKeyBinding(Client.KEY_SAVE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_T)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onSave);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_T)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onSave);
 
         InputSystem.addKeyBinding(Client.KEY_TP, Client.CONFIG.getKeyBinding(Client.KEY_TP,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Y)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onTeleport);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Y)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onTeleport);
     }
 
     @Override
@@ -218,9 +221,17 @@ public class CoordinateTeleport extends Skill {
             this.name = name;
         }
 
-        public Vec3 getPosition() { return pos; }
-        public String getDimension() { return dimension; }
-        public String getName() { return name; }
+        public Vec3 getPosition() {
+            return pos;
+        }
+
+        public String getDimension() {
+            return dimension;
+        }
+
+        public String getName() {
+            return name;
+        }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, SavePositionPacket> getPacketType() {
@@ -233,7 +244,8 @@ public class CoordinateTeleport extends Skill {
         public static final RequestTeleportPacket INSTANCE = new RequestTeleportPacket();
         public static final StreamCodec<ByteBuf, RequestTeleportPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        private RequestTeleportPacket() {}
+        private RequestTeleportPacket() {
+        }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, RequestTeleportPacket> getPacketType() {

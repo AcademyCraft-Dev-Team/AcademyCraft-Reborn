@@ -59,7 +59,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
         val duration = 600L
 
         val main = LinearLayoutWidget()
-        main.setOrientation(Orientation.HORIZONTAL)
+        main.orientation = Orientation.HORIZONTAL
         main.layoutParams = FrameLayoutWidget.LayoutParams()
             .widthMode(SizeMode.WRAP_CONTENT)
             .heightMode(SizeMode.WRAP_CONTENT)
@@ -78,7 +78,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
         )
         run {
             val pageButtons = RadioGroupWidget()
-            pageButtons.setOrientation(Orientation.VERTICAL)
+            pageButtons.orientation = Orientation.VERTICAL
             pageButtons.layoutParams = LinearLayoutWidget.LayoutParams()
                 .width(16f)
                 .heightMode(SizeMode.WRAP_CONTENT)

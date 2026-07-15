@@ -38,5 +38,6 @@ public final class CoordinateTeleportData extends SkillData {
             @SerializedName("y") double y,
             @SerializedName("z") double z,
             @SerializedName("dimension") String dimension
-    ) {}
+    ) {
+    }
 }

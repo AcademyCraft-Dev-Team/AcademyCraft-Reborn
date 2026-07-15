@@ -22,12 +22,12 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.AuraEffectWrapper;
+import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.HellFlareData;
-import org.academy.internal.client.renderer.effect.AuraEffectWrapper;
-import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
 import org.academy.internal.common.world.entity.skill.HellFlareRay;
 import org.academy.internal.common.world.entity.skill.LightOrb;
 import org.jspecify.annotations.Nullable;
@@ -304,7 +304,7 @@ public class HellFlare extends Skill {
                 var damageMultiplier = 1.0f + meltStacks * 0.1f;
                 var finalDamage = baseDamage * damageMultiplier;
 
-                target.hurtServer((ServerLevel) player.level(),
+                target.hurtServer(player.level(),
                         player.damageSources().indirectMagic(player, player), finalDamage);
 
                 if (phase == 3) {

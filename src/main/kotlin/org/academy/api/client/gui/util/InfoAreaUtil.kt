@@ -35,12 +35,12 @@ object InfoAreaUtil {
             infoArea.addChild("back", back)
 
             val info = LinearLayoutWidget()
-            info.setOrientation(Orientation.VERTICAL)
+            info.orientation = Orientation.VERTICAL
             info.layoutParams = FrameLayoutWidget.LayoutParams()
                 .marginTop(6.5f)
                 .marginBottom(6.5f)
                 .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-            info.setSpacing(2f)
+            info.spacing = 2f
             infoArea.addChild("info", info)
             return info
         }
@@ -53,8 +53,8 @@ object InfoAreaUtil {
         valueLabel: LabelWidget
     ): LinearLayoutWidget {
         val layout = LinearLayoutWidget()
-        layout.setOrientation(Orientation.HORIZONTAL)
-        layout.setSpacing(4f)
+        layout.orientation = Orientation.HORIZONTAL
+        layout.spacing = 4f
         layout.layoutParams = WidgetContainer.LayoutParams()
             .width(128f)
             .heightMode(SizeMode.WRAP_CONTENT)
@@ -86,7 +86,7 @@ object InfoAreaUtil {
 
     fun createAttributeRow(labelText: String, valueWidget: Widget): LinearLayoutWidget {
         val layout = LinearLayoutWidget()
-        layout.setOrientation(Orientation.HORIZONTAL)
+        layout.orientation = Orientation.HORIZONTAL
         layout.layoutParams = WidgetContainer.LayoutParams()
             .width(128f)
             .heightMode(SizeMode.WRAP_CONTENT)
@@ -110,7 +110,7 @@ object InfoAreaUtil {
 
     fun createInputRow(textBox: TextBoxWidget): LinearLayoutWidget {
         val layout = LinearLayoutWidget()
-        layout.setOrientation(Orientation.HORIZONTAL)
+        layout.orientation = Orientation.HORIZONTAL
         run {
             val leftBracket = LabelWidget("[")
             leftBracket.layoutParams = LinearLayoutWidget.LayoutParams()

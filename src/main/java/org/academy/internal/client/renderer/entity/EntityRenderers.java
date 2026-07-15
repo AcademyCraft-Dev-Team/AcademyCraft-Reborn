@@ -8,6 +8,9 @@ import org.academy.internal.common.world.entity.EntityTypes;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class EntityRenderers {
+    private EntityRenderers() {
+    }
+
     @SubscribeEvent
     public static void onRegister(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(EntityTypes.THROWN_COIN.get(), ThrownCoinRenderer::new);
@@ -20,8 +23,5 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.SMOKE.get(), SmokeRenderer::new);
         event.registerEntityRenderer(EntityTypes.CLEANING_ROBOT.get(), CleaningRobotRenderer::new);
         event.registerEntityRenderer(EntityTypes.ARC_EFFECT.get(), ArcEffectRenderer::new);
-    }
-
-    private EntityRenderers() {
     }
 }

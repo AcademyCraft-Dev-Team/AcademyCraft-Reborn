@@ -22,6 +22,16 @@ class ObjectAnimator private constructor() : ValueAnimator() {
         super.onStartInternal()
     }
 
+    override fun addListener(listener: AnimatorListener): Animator {
+        super.addListener(listener)
+        return this
+    }
+
+    override fun removeListener(listener: AnimatorListener): Animator {
+        super.removeListener(listener)
+        return this
+    }
+
     override fun setDuration(duration: Long): ObjectAnimator {
         super.setDuration(duration)
         return this

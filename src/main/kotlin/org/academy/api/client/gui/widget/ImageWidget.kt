@@ -18,10 +18,19 @@ open class ImageWidget : AbstractWidget {
     protected var textureView: GpuTextureView? = null
 
     private var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
-    protected var u0: Float = 0.0f
-    protected var v0: Float = 0.0f
-    protected var u1: Float = 1.0f
-    protected var v1: Float = 1.0f
+
+    protected var u0: Float = 0f
+    protected var v0: Float = 0f
+
+    protected var u1: Float = 0f
+    protected var v1: Float = 1f
+
+    protected var u2: Float = 1f
+    protected var v2: Float = 1f
+
+    protected var u3: Float = 1f
+    protected var v3: Float = 0f
+
     var brightness: Float = 1.0f
         protected set
     var green: Float = 1.0f
@@ -59,7 +68,7 @@ open class ImageWidget : AbstractWidget {
     }
 
     override fun renderInternal(context: RenderContext) {
-        super.renderInternal(context)
+        background?.draw(context, this)
         resolveAndPrepareTexture()
         if (textureView == null) return
 
@@ -75,22 +84,23 @@ open class ImageWidget : AbstractWidget {
         run {
             context.pose().translate(lp.paddingLeft, lp.paddingTop)
             val command = generateDrawCommand(
-                textureView!!, sampler, paddedWidth, paddedHeight, u0, v0, u1, v1,
+                textureView!!, sampler, paddedWidth, paddedHeight, u0, v0, u1, v1, u2, v2, u3, v3,
                 this.brightness, green, blue, finalAlpha
             )
             context.submit(command)
         }
         context.pose().popPose()
+        foreground?.draw(context, this)
     }
 
     protected open fun generateDrawCommand(
         texture: GpuTextureView, sampler: GpuSampler,
         width: Float, height: Float,
-        u0: Float, v0: Float, u1: Float, v1: Float,
+        u0: Float, v0: Float, u1: Float, v1: Float, u2: Float, v2: Float, u3: Float, v3: Float,
         red: Float, green: Float, blue: Float, alpha: Float
     ): DrawCommand {
         return ImageDrawCommand(
-            texture, sampler, width, height, u0, v0, u1, v1, red, green, blue, alpha
+            texture, sampler, width, height, u0, v0, u1, v1, u2, v2, u3, v3, red, green, blue, alpha
         )
     }
 
@@ -133,10 +143,21 @@ open class ImageWidget : AbstractWidget {
     }
 
     fun setUv(u0: Float, v0: Float, u1: Float, v1: Float): ImageWidget {
+        return setUv(u0, v0, u0, v1, u1, v1, u1, v0)
+    }
+
+    fun setUv(u0: Float, v0: Float, u1: Float, v1: Float, u2: Float, v2: Float, u3: Float, v3: Float): ImageWidget {
         this.u0 = u0
         this.v0 = v0
+
         this.u1 = u1
         this.v1 = v1
+
+        this.u2 = u2
+        this.v2 = v2
+
+        this.u3 = u3
+        this.v3 = v3
         return this
     }
 
@@ -154,11 +175,20 @@ open class ImageWidget : AbstractWidget {
         return this
     }
 
-    fun setBrightness(`val`: Float): ImageWidget {
-        this.brightness = `val`
-        green = `val`
-        blue = `val`
+    fun setBrightness(value: Float): ImageWidget {
+        this.brightness = value
+        green = value
+        blue = value
         return this
+    }
+
+    fun rotateUv(): ImageWidget {
+        return setUv(
+            u0 = 1f - v0, v0 = u0,
+            u1 = 1f - v1, v1 = u1,
+            u2 = 1f - v2, v2 = u2,
+            u3 = 1f - v3, v3 = u3
+        )
     }
 
     companion object {

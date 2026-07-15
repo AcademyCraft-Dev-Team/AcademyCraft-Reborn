@@ -26,7 +26,8 @@ public class SyncSkillDataPacket extends Packet<ClientPacketListener, SyncSkillD
             .enableComplexMapKeySerialization()
             .create();
 
-    private static final Type MAP_TYPE = new TypeToken<Map<String, SkillData>>(){}.getType();
+    private static final Type MAP_TYPE = new TypeToken<Map<String, SkillData>>() {
+    }.getType();
 
     public static final StreamCodec<ByteBuf, SyncSkillDataPacket> CODEC = StreamCodec.of(
             (buf, packet) -> {

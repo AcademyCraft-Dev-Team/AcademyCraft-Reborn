@@ -15,7 +15,7 @@ public class GenericConfig {
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();
 
-        private Action(){
+        private Action() {
         }
 
         @Override

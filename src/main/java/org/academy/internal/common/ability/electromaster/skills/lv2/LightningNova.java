@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -32,7 +31,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class LightningNova extends Skill {
     private static final int MAX_RADIUS = 16;
@@ -56,10 +56,10 @@ public class LightningNova extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_N)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_CONTROL)))))
-        , Client::onUse);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_N)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_CONTROL)))))
+                , Client::onUse);
     }
 
     @Override
@@ -70,13 +70,27 @@ public class LightningNova extends Skill {
     public static final class Client {
         public static final String KEY_NAME_USE = SkillNames.LIGHTNING_NOVA + "_use";
         public static Config CONFIG = new Config();
-        public static void onUse() { MisakaNetworkClient.send(ActivatePacket.INSTANCE); }
+
+        public static void onUse() {
+            MisakaNetworkClient.send(ActivatePacket.INSTANCE);
+        }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public LightningNova.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public LightningNova.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -93,12 +107,17 @@ public class LightningNova extends Skill {
         private int ticks;
         private boolean ended;
 
-        private Context(ServerPlayer player) { super(player); }
+        private Context(ServerPlayer player) {
+            super(player);
+        }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             ticks++;
-            if (player.hasDisconnected() || !player.isAlive() || ticks >= PULSE_DURATION) { end(); return; }
+            if (player.hasDisconnected() || !player.isAlive() || ticks >= PULSE_DURATION) {
+                end();
+                return;
+            }
 
             var currentRadius = 1.0f + (float) ticks / PULSE_DURATION * MAX_RADIUS;
             var innerRadius = Math.max(0, currentRadius - 1.5f);
@@ -116,15 +135,23 @@ public class LightningNova extends Skill {
             }
         }
 
-        private void end() { if (ended) return; ended = true; unregister(); }
+        private void end() {
+            if (ended) return;
+            ended = true;
+            unregister();
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class ActivatePacket extends Packet<ServerGamePacketListenerImpl, ActivatePacket> {
         public static final ActivatePacket INSTANCE = new ActivatePacket();
         public static final StreamCodec<ByteBuf, ActivatePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private ActivatePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, ActivatePacket> getPacketType() {
+
+        private ActivatePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, ActivatePacket> getPacketType() {
             return PacketTypes.LIGHTNING_NOVA_ACTIVATE_P4.get();
         }
     }

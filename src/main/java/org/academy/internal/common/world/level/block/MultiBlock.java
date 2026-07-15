@@ -31,16 +31,6 @@ public abstract class MultiBlock extends BaseEntityBlock {
         super(properties);
     }
 
-    @Nullable
-    public MultiBlockEntity getMainBlockEntity(Level level, BlockPos anyPos) {
-        var blockEntity = level.getBlockEntity(anyPos);
-        if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
-            return multiBlockEntity.getMain();
-        } else return null;
-    }
-
-    public abstract List<Vec3i> getSubBlocks();
-
     public static List<BlockPos> getRotatedSubjectBlocks(BlockPos pos, Direction direction, List<Vec3i> subBlocks) {
         var subjectBlocks = new ArrayList<BlockPos>();
 
@@ -57,6 +47,26 @@ public abstract class MultiBlock extends BaseEntityBlock {
 
         return subjectBlocks;
     }
+
+    public static void setSubBlocks(Level level, BlockPos pos, BlockState state, List<BlockPos> subBlocks) {
+        for (var subjectBlock : subBlocks) {
+            level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
+            var blockEntity = level.getBlockEntity(subjectBlock);
+            if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
+                multiBlockEntity.setMainPos(pos);
+            }
+        }
+    }
+
+    @Nullable
+    public MultiBlockEntity getMainBlockEntity(Level level, BlockPos anyPos) {
+        var blockEntity = level.getBlockEntity(anyPos);
+        if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
+            return multiBlockEntity.getMain();
+        } else return null;
+    }
+
+    public abstract List<Vec3i> getSubBlocks();
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -97,16 +107,6 @@ public abstract class MultiBlock extends BaseEntityBlock {
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         var subjectBlocks = getRotatedSubjectBlocks(pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING), getSubBlocks());
         setSubBlocks(level, pos, state, subjectBlocks);
-    }
-
-    public static void setSubBlocks(Level level, BlockPos pos, BlockState state, List<BlockPos> subBlocks) {
-        for (var subjectBlock : subBlocks) {
-            level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
-            var blockEntity = level.getBlockEntity(subjectBlock);
-            if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
-                multiBlockEntity.setMainPos(pos);
-            }
-        }
     }
 
     @Override

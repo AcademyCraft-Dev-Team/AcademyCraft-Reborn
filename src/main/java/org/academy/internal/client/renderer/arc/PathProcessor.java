@@ -56,8 +56,8 @@ public final class PathProcessor {
         var transform = new Matrix4f();
         transform.set(
                 binormal.x(), binormal.y(), binormal.z(), 0.0f,
-                normal.x(),   normal.y(),   normal.z(),   0.0f,
-                tangent.x(),  tangent.y(),  tangent.z(),  0.0f,
+                normal.x(), normal.y(), normal.z(), 0.0f,
+                tangent.x(), tangent.y(), tangent.z(), 0.0f,
                 position.x(), position.y(), position.z(), 1.0f
         );
         return transform;

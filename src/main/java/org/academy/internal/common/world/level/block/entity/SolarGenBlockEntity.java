@@ -24,19 +24,15 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 public final class SolarGenBlockEntity extends BlockEntity implements WirelessUser, Container {
+    private static final int MAX_ENERGY_STORAGE = 100_000;
+    private static final int GENERATION_RATE = 50;
+    public final AnimationState foldingState = new AnimationState();
+    public final AnimationState unfoldingState = new AnimationState();
     public int ticks;
     public int energyStored;
-
     @Nullable
     private BlockPos connectedNodePos = null;
     private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
-
-    public final AnimationState foldingState = new AnimationState();
-    public final AnimationState unfoldingState = new AnimationState();
-
-    private static final int MAX_ENERGY_STORAGE = 100_000;
-    private static final int GENERATION_RATE = 50;
-
     private State state = State.SUNNY;
 
     public SolarGenBlockEntity(BlockPos pos, BlockState blockState) {
@@ -109,11 +105,6 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         return energyStored;
     }
 
-    @Override
-    public int getMaxEnergyStorage() {
-        return MAX_ENERGY_STORAGE;
-    }
-
     public void setEnergyStored(int newEnergy) {
         var clamped = Math.clamp(newEnergy, 0, getMaxEnergyStorage());
         if (clamped != energyStored) {
@@ -123,6 +114,11 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
+    }
+
+    @Override
+    public int getMaxEnergyStorage() {
+        return MAX_ENERGY_STORAGE;
     }
 
     @Override

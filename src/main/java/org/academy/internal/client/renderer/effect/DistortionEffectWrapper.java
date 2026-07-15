@@ -1,7 +1,6 @@
 package org.academy.internal.client.renderer.effect;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -18,11 +17,12 @@ public final class DistortionEffectWrapper implements EffectRenderer {
     public static final DistortionEffectWrapper INSTANCE = new DistortionEffectWrapper();
     private final List<SpatialDistortionRenderer> activeEffects = new ArrayList<>();
 
-    private DistortionEffectWrapper() {}
+    private DistortionEffectWrapper() {
+    }
 
     public void trigger(float cx, float cy, float cz, float lifetime, float intensity,
-                         float cr, float cg, float cb, float ca,
-                         float er, float eg, float eb, float ea) {
+                        float cr, float cg, float cb, float ca,
+                        float er, float eg, float eb, float ea) {
         var fx = new SpatialDistortionRenderer();
         fx.setColors(cr, cg, cb, ca, er, eg, eb, ea);
         fx.trigger(cx, cy, cz, lifetime);
@@ -51,7 +51,7 @@ public final class DistortionEffectWrapper implements EffectRenderer {
 
     @Override
     public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector nodeCollector,
-                                   LocalPlayer player, int packedLight, float partialTick) {
+                                  LocalPlayer player, int packedLight, float partialTick) {
         if (activeEffects.isEmpty()) return;
 
         var camera = Minecraft.getInstance().gameRenderer.mainCamera();

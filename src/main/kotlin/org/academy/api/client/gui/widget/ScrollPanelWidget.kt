@@ -181,24 +181,26 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
 
     val maxScroll: Float
         get() {
-            if (content == null) return 0f
+            val content = content ?: return 0f
 
             val lp = layoutParams
-            val contentLp = content!!.layoutParams
+            val contentLp = content.layoutParams
 
             if (orientation == Orientation.VERTICAL) {
-                val contentHeight = content!!.measuredHeight + contentLp.marginTop + contentLp.marginBottom
+                val contentHeight = content.measuredHeight + contentLp.marginTop + contentLp.marginBottom
                 val viewHeight = height - lp.paddingTop - lp.paddingBottom
                 return max(0f, contentHeight - viewHeight)
             } else {
-                val contentWidth = content!!.measuredWidth + contentLp.marginLeft + contentLp.marginRight
+                val contentWidth = content.measuredWidth + contentLp.marginLeft + contentLp.marginRight
                 val viewWidth = width - lp.paddingLeft - lp.paddingRight
                 return max(0f, contentWidth - viewWidth)
             }
         }
 
+    /**
+     * must when layout is measured
+     */
     fun scrollToEnd() {
-        requestLayout()
         setScrollTarget(this.maxScroll)
     }
 

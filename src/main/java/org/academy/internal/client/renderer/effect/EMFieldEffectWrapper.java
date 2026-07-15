@@ -23,7 +23,8 @@ public final class EMFieldEffectWrapper implements EffectRenderer {
     private final List<EMFieldRenderer> activeFields = new ArrayList<>();
     private final Map<EMFieldRenderer, Float> fieldLifetimes = new IdentityHashMap<>();
 
-    private EMFieldEffectWrapper() {}
+    private EMFieldEffectWrapper() {
+    }
 
     public EMFieldRenderer createField() {
         return createField(DEFAULT_LIFETIME);
@@ -66,8 +67,8 @@ public final class EMFieldEffectWrapper implements EffectRenderer {
     }
 
     public void addFieldLineWithBranches(Vec3 from, Vec3 to, float r, float g, float b,
-                                          float thickness, float alpha, float waviness,
-                                          int segments, int branchCount) {
+                                         float thickness, float alpha, float waviness,
+                                         int segments, int branchCount) {
         if (activeFields.isEmpty()) {
             createField();
         }
@@ -123,7 +124,7 @@ public final class EMFieldEffectWrapper implements EffectRenderer {
 
     @Override
     public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector nodeCollector,
-                                   LocalPlayer player, int packedLight, float partialTick) {
+                                  LocalPlayer player, int packedLight, float partialTick) {
         if (activeFields.isEmpty()) return;
 
         var camera = Minecraft.getInstance().gameRenderer.mainCamera();

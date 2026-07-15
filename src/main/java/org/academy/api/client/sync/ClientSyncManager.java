@@ -13,6 +13,9 @@ import java.util.function.Consumer;
 public final class ClientSyncManager {
     public static final Map<SyncKey, Consumer<?>> SYNC_MAP = new ConcurrentHashMap<>();
 
+    private ClientSyncManager() {
+    }
+
     public static void init() {
         MisakaNetworkClient.NETWORK_MANAGER.register(ClientSyncManager.class);
     }
@@ -27,8 +30,5 @@ public final class ClientSyncManager {
 
     public static <V> void register(SyncKey syncKey, Consumer<V> setter) {
         SYNC_MAP.put(syncKey, setter);
-    }
-
-    private ClientSyncManager() {
     }
 }

@@ -3,9 +3,10 @@ package org.academy.api.client.gui.widget
 import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 import net.minecraft.util.Mth
+import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.render.RenderContext
 
-class ParallaxImageWidget(x: Float, y: Float, width: Float, height: Float, texture: Identifier) : ImageWidget(texture) {
+class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
     private var parallaxFactorX: Float = 0.5f
     private var parallaxFactorY: Float = 0.5f
 
@@ -37,6 +38,11 @@ class ParallaxImageWidget(x: Float, y: Float, width: Float, height: Float, textu
         setUv(uOffset, vOffset, uOffset + imageToViewRatioWidth, vOffset + imageToViewRatioHeight)
 
         super.render(context)
+    }
+
+    override fun onMouseMoved(event: MouseEvent) {
+        super.onMouseMoved(event)
+        invalidate()
     }
 
     fun setParallaxFactor(parallaxFactorX: Float, parallaxFactorY: Float): ParallaxImageWidget {

@@ -5,8 +5,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -30,7 +28,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class BetaParticleStream extends Skill {
     public BetaParticleStream() {
@@ -50,15 +49,15 @@ public class BetaParticleStream extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_F)), GLFW.GLFW_PRESS,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onChargeStart);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_F)), GLFW.GLFW_PRESS,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onChargeStart);
         InputSystem.addKeyBinding(Client.KEY_NAME_FIRE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_FIRE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_F)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onFire);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_F)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onFire);
     }
 
     @Override
@@ -78,16 +77,26 @@ public class BetaParticleStream extends Skill {
 
         public static void onFire() {
             var elapsedMs = (System.nanoTime() - chargeStartTime) / 1_000_000f;
-            var charges = Math.clamp((int)(elapsedMs / 750f), 1, 5);
+            var charges = Math.clamp((int) (elapsedMs / 750f), 1, 5);
             MisakaNetworkClient.send(new MulticastPacket(charges));
         }
 
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public BetaParticleStream.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public BetaParticleStream.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -128,12 +137,17 @@ public class BetaParticleStream extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class MulticastPacket extends Packet<ServerGamePacketListenerImpl, MulticastPacket> {
-        private final int charges;
         public static final StreamCodec<ByteBuf, MulticastPacket> CODEC =
                 ByteBufCodecs.INT.map(MulticastPacket::new, MulticastPacket::charges);
+        private final int charges;
 
-        public MulticastPacket(int charges) { this.charges = charges; }
-        public int charges() { return charges; }
+        public MulticastPacket(int charges) {
+            this.charges = charges;
+        }
+
+        public int charges() {
+            return charges;
+        }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, MulticastPacket> getPacketType() {

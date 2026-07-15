@@ -39,25 +39,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     private static volatile boolean DEV_MODE = false;
-
-    public static boolean isDevMode() {
-        return DEV_MODE;
-    }
-
-    public static void setDevMode(boolean devMode) {
-        if (DEV_MODE != devMode) {
-            DEV_MODE = devMode;
-            LOGGER.warn("DEV_MODE changed to {}", devMode);
-        }
-    }
-
     private final Map<UUID, Set<ServerContext>> activeContexts;
-
     private final SkillDataManager skillDataManager;
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
     private final SyncManager syncManager;
-
     public AbilitySystemServer(MinecraftServerContext context, WorldData worldData, AbilityConfig abilityConfig) {
         syncManager = new SyncManager(context);
 
@@ -89,28 +75,23 @@ public final class AbilitySystemServer {
         MisakaNetworkServer.FUTURE_MANAGER.register(AbilitySystemServer.class);
     }
 
-    public static final class SubsystemRegistry {
-        private static final Map<Identifier, AbilitySubsystem> SYNC_ROUTERS = new ConcurrentHashMap<>();
+    public static boolean isDevMode() {
+        return DEV_MODE;
+    }
 
-        public static void registerSubsystem(@NotNull AbilitySubsystem subsystem, Identifier syncType) {
-            SYNC_ROUTERS.put(syncType, subsystem);
-        }
-
-        public static Optional<AbilitySubsystem> getHandler(Identifier type) {
-            return Optional.ofNullable(SYNC_ROUTERS.get(type));
-        }
-
-        public static List<AbilitySubsystem> getSubsystems() {
-            return List.copyOf(SYNC_ROUTERS.values());
+    public static void setDevMode(boolean devMode) {
+        if (DEV_MODE != devMode) {
+            DEV_MODE = devMode;
+            LOGGER.warn("DEV_MODE changed to {}", devMode);
         }
     }
 
     @HandleFuture
     public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var userPos = BlockPos.of(payload.getUserPos());
+        var userPos = payload.getUserPos();
         if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
-            return new AcquireCategoryPacket.Response(Collections.singletonList("Error: You are too far away."));
+            return new AcquireCategoryPacket.Response(List.of("Error: You are too far away."));
         }
 
         var level = player.level();
@@ -143,7 +124,7 @@ public final class AbilitySystemServer {
             }
             return new AcquireCategoryPacket.Response(outputList);
         }
-        return new AcquireCategoryPacket.Response(Collections.singletonList("Error: Block is not an Ability Developer."));
+        return new AcquireCategoryPacket.Response(List.of("Error: Block is not an Ability Developer."));
     }
 
     @HandleFuture
@@ -184,6 +165,53 @@ public final class AbilitySystemServer {
         return new LearnSkillPacket.Response(false);
     }
 
+    public static void registerContext(ServerContext serverContext) {
+        var player = serverContext.player;
+        if (player == null) return;
+
+        var instance = getSystem(player);
+        instance.activeContexts.computeIfAbsent(player.getUUID(), _ -> ConcurrentHashMap.newKeySet())
+                .add(serverContext);
+
+        NeoForge.EVENT_BUS.register(serverContext);
+        MisakaNetworkServer.NETWORK_MANAGER.register(serverContext);
+    }
+
+    public static void unregisterContext(ServerContext serverContext) {
+        var player = serverContext.player;
+        if (player == null) return;
+
+        var instance = getSystem(player);
+        var contexts = instance.activeContexts.get(player.getUUID());
+        if (contexts == null) return;
+
+        contexts.remove(serverContext);
+        if (contexts.isEmpty()) instance.activeContexts.remove(player.getUUID());
+
+        NeoForge.EVENT_BUS.unregister(serverContext);
+        MisakaNetworkServer.NETWORK_MANAGER.unregister(serverContext);
+    }
+
+    public static AbilitySystemServer getSystem(Entity entity) {
+        if (entity.level() instanceof ServerLevel serverLevel) {
+            return serverLevel.getServer()
+                    .getAcademyCraftServer()
+                    .getAbilitySystemServer();
+        }
+        throw new IllegalStateException("Entity is not in a ServerLevel");
+    }
+
+    public static float getSPReductionRate(LivingEntity entity) {
+        return entity.getData(AttachmentTypes.SP_REDUCTION_RATE);
+    }
+
+    public static void setSPReductionRate(LivingEntity entity, float rate) {
+        var clamped = Mth.clamp(rate, 0.0f, 1.0f);
+        if (Float.compare(entity.getData(AttachmentTypes.SP_REDUCTION_RATE), clamped) != 0) {
+            entity.setData(AttachmentTypes.SP_REDUCTION_RATE, clamped);
+        }
+    }
+
     public void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
         syncManager.schedulePlayerSync(uuid, syncType);
     }
@@ -214,57 +242,12 @@ public final class AbilitySystemServer {
         });
     }
 
-    @EventBusSubscriber
-    public static final class ServerLifecycleHooks {
-        @SubscribeEvent
-        public static void tickMinecraftServerThread(ServerTickEvent.Pre event) {
-            var server = event.getServer();
-            var instance = server.getAcademyCraftServer().getAbilitySystemServer();
-
-            var syncManager = instance.getSyncManager();
-            syncManager.processPendingTasks();
-
-            var playerList = server.getPlayerList().getPlayers();
-            playerList.forEach(serverPlayer -> {
-                SubsystemRegistry.getSubsystems().forEach(abilitySubsystem -> abilitySubsystem.tick(serverPlayer));
-                instance.getSyncManager().tick(serverPlayer);
-            });
-        }
-    }
-
     public SyncManager getSyncManager() {
         return syncManager;
     }
 
     public Player getPlayerData(UUID uuid) {
         return playerDataManager.getData(uuid);
-    }
-
-    public static void registerContext(ServerContext serverContext) {
-        var player = serverContext.player;
-        if (player == null) return;
-
-        var instance = getSystem(player);
-        instance.activeContexts.computeIfAbsent(player.getUUID(), _ -> ConcurrentHashMap.newKeySet())
-                .add(serverContext);
-
-        NeoForge.EVENT_BUS.register(serverContext);
-        MisakaNetworkServer.NETWORK_MANAGER.register(serverContext);
-    }
-
-    public static void unregisterContext(ServerContext serverContext) {
-        var player = serverContext.player;
-        if (player == null) return;
-
-        var instance = getSystem(player);
-        var contexts = instance.activeContexts.get(player.getUUID());
-        if (contexts == null) return;
-
-        contexts.remove(serverContext);
-        if (contexts.isEmpty()) instance.activeContexts.remove(player.getUUID());
-
-        NeoForge.EVENT_BUS.unregister(serverContext);
-        MisakaNetworkServer.NETWORK_MANAGER.unregister(serverContext);
     }
 
     @SubscribeEvent
@@ -306,15 +289,6 @@ public final class AbilitySystemServer {
         activeContexts.values().forEach(set ->
                 set.forEach(NeoForge.EVENT_BUS::unregister));
         activeContexts.clear();
-    }
-
-    public static AbilitySystemServer getSystem(Entity entity) {
-        if (entity.level() instanceof ServerLevel serverLevel) {
-            return serverLevel.getServer()
-                    .getAcademyCraftServer()
-                    .getAbilitySystemServer();
-        }
-        throw new IllegalStateException("Entity is not in a ServerLevel");
     }
 
     public void addTask(Runnable runnable) {
@@ -484,10 +458,6 @@ public final class AbilitySystemServer {
         playerCPManager.setMaxSP(uuid, maxSP);
     }
 
-    public static float getSPReductionRate(LivingEntity entity) {
-        return entity.getData(AttachmentTypes.SP_REDUCTION_RATE);
-    }
-
     public float getPlayerFreeCPRatio(UUID uuid) {
         return playerCPManager.getFreeCPRatio(uuid);
     }
@@ -528,10 +498,37 @@ public final class AbilitySystemServer {
         playerCPManager.setMaxMP(uuid, maxMP);
     }
 
-    public static void setSPReductionRate(LivingEntity entity, float rate) {
-        var clamped = Mth.clamp(rate, 0.0f, 1.0f);
-        if (Float.compare(entity.getData(AttachmentTypes.SP_REDUCTION_RATE), clamped) != 0) {
-            entity.setData(AttachmentTypes.SP_REDUCTION_RATE, clamped);
+    public static final class SubsystemRegistry {
+        private static final Map<Identifier, AbilitySubsystem> SYNC_ROUTERS = new ConcurrentHashMap<>();
+
+        public static void registerSubsystem(@NotNull AbilitySubsystem subsystem, Identifier syncType) {
+            SYNC_ROUTERS.put(syncType, subsystem);
+        }
+
+        public static Optional<AbilitySubsystem> getHandler(Identifier type) {
+            return Optional.ofNullable(SYNC_ROUTERS.get(type));
+        }
+
+        public static List<AbilitySubsystem> getSubsystems() {
+            return List.copyOf(SYNC_ROUTERS.values());
+        }
+    }
+
+    @EventBusSubscriber
+    public static final class ServerLifecycleHooks {
+        @SubscribeEvent
+        public static void tickMinecraftServerThread(ServerTickEvent.Pre event) {
+            var server = event.getServer();
+            var instance = server.getAcademyCraftServer().getAbilitySystemServer();
+
+            var syncManager = instance.getSyncManager();
+            syncManager.processPendingTasks();
+
+            var playerList = server.getPlayerList().getPlayers();
+            playerList.forEach(serverPlayer -> {
+                SubsystemRegistry.getSubsystems().forEach(abilitySubsystem -> abilitySubsystem.tick(serverPlayer));
+                instance.getSyncManager().tick(serverPlayer);
+            });
         }
     }
 }

@@ -10,10 +10,10 @@ import java.util.Deque;
 
 public final class AfterimageRenderer {
     private final Deque<AfterimageSnapshot> snapshots = new ArrayDeque<>();
-    private float captureInterval;
+    private final float captureInterval;
     private float captureAccumulator;
-    private int maxSnapshots;
-    private float lifetime;
+    private final int maxSnapshots;
+    private final float lifetime;
     private boolean active;
 
     public AfterimageRenderer(float captureInterval, int maxSnapshots, float lifetime) {

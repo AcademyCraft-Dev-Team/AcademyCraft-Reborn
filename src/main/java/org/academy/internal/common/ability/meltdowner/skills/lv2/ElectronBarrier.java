@@ -32,7 +32,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ElectronBarrier extends Skill {
     public ElectronBarrier() {
@@ -76,9 +78,19 @@ public class ElectronBarrier extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public ElectronBarrier.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public ElectronBarrier.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -153,8 +165,12 @@ public class ElectronBarrier extends Skill {
     public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
         public static final TogglePacket INSTANCE = new TogglePacket();
         public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private TogglePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+
+        private TogglePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.ELECTRON_BARRIER_TOGGLE.get();
         }
     }

@@ -100,8 +100,8 @@ public final class AbilityDeveloperBlock extends MultiBlock {
 
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level,
-                                                                           BlockState state,
-                                                                           BlockEntityType<T> blockEntityType) {
+                                                                  BlockState state,
+                                                                  BlockEntityType<T> blockEntityType) {
         return (level1, pos, state1, blockEntity) -> {
             if (blockEntity instanceof AbilityDeveloperBlockEntity abe) {
                 if (abe.isMain()) {

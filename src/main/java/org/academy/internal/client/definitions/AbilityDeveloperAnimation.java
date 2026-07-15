@@ -87,7 +87,7 @@ public final class AbilityDeveloperAnimation {
             ))
             .build();
 
-        public static final AnimationDefinition STANDING = AnimationDefinition.Builder.withLength(1.5F)
+    public static final AnimationDefinition STANDING = AnimationDefinition.Builder.withLength(1.5F)
             .addAnimation("middle", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                     new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
                     new Keyframe(0.6667F, KeyframeAnimations.degreeVec(-43.67F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),

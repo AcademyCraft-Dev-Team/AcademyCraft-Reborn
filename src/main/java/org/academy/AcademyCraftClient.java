@@ -198,23 +198,6 @@ public final class AcademyCraftClient {
         renderer.addLayer(new QuantumInterferenceLayer<>(renderer));
     }
 
-    public static final class Config {
-        public static final File CLIENT_CONFIG_FILE;
-        public static final AcademyCraftConfig INSTANCE;
-
-        static {
-            CLIENT_CONFIG_FILE = new File(
-                    Minecraft.getInstance().gameDirectory,
-                    "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json"
-            );
-            FileUtil.checkFile(CLIENT_CONFIG_FILE);
-            INSTANCE = new AcademyCraftConfig(CLIENT_CONFIG_FILE);
-        }
-
-        private Config() {
-        }
-    }
-
     @SubscribeEvent
     public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
         event.registerAvatarEntityModifier(new AvatarRenderStateModifier() {
@@ -275,5 +258,22 @@ public final class AcademyCraftClient {
                 academy("solar_gen"),
                 SolarGenSpecialRenderer.Unbaked.MAP_CODEC
         );
+    }
+
+    public static final class Config {
+        public static final File CLIENT_CONFIG_FILE;
+        public static final AcademyCraftConfig INSTANCE;
+
+        static {
+            CLIENT_CONFIG_FILE = new File(
+                    Minecraft.getInstance().gameDirectory,
+                    "config" + File.separator + AcademyCraft.MOD_ID + "-client" + ".json"
+            );
+            FileUtil.checkFile(CLIENT_CONFIG_FILE);
+            INSTANCE = new AcademyCraftConfig(CLIENT_CONFIG_FILE);
+        }
+
+        private Config() {
+        }
     }
 }

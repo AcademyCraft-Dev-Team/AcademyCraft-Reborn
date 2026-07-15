@@ -21,13 +21,11 @@ public class CPData {
 
     private transient boolean isDirty = false;
 
-    public enum Status {
-        NORMAL,
-        PERSONAL_REALITY_OVERLOAD,
-        OVERLOAD
+    public CPData() {
     }
 
-    public CPData() {
+    public static Builder builder() {
+        return new Builder();
     }
 
     public void markDirty() {
@@ -159,6 +157,12 @@ public class CPData {
         markDirty();
     }
 
+    public enum Status {
+        NORMAL,
+        PERSONAL_REALITY_OVERLOAD,
+        OVERLOAD
+    }
+
     public static class Builder {
         private final CPData cpData;
 
@@ -216,15 +220,11 @@ public class CPData {
         }
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static class CpOccupationData {
         private final float amount;
-        private int iterationTicks;
         private final String skillId;
         private final boolean isPermanent;
+        private int iterationTicks;
 
         public CpOccupationData(float amount, int iterationTicks, String skillId, boolean isPermanent) {
             this.amount = amount;

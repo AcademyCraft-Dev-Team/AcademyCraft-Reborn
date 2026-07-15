@@ -1,14 +1,12 @@
 package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -23,9 +21,9 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.AuraEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.client.renderer.effect.AuraEffectWrapper;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.lwjgl.glfw.GLFW;
@@ -37,7 +35,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class IronSandArsenal extends Skill {
     public static final int SWORD_COOLDOWN = 10;
@@ -70,16 +71,16 @@ public class IronSandArsenal extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_TOGGLE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_I)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onToggle);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_I)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onToggle);
 
         InputSystem.addKeyBinding(Client.KEY_FORM, Client.CONFIG.getKeyBinding(Client.KEY_FORM,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_G)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onSwitchForm);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_G)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onSwitchForm);
     }
 
     @Override
@@ -168,8 +169,8 @@ public class IronSandArsenal extends Skill {
     }
 
     public static final class Context extends ServerContext {
-        private IronSandForm currentForm = IronSandForm.SWORD;
         private final Map<IronSandForm, Integer> cooldowns = new HashMap<>();
+        private IronSandForm currentForm = IronSandForm.SWORD;
         private boolean ended;
 
         private Context(ServerPlayer p) {

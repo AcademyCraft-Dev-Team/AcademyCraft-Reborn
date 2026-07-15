@@ -36,14 +36,9 @@ public abstract class Skill {
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
     );
-
-    @Nullable
-    private String cachedKeyString;
-
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
     private final AbilityCategory category;
-    private Set<Skill> dependencies = new HashSet<>();
     private final DataFactory dataFactory;
     private final int maxSkillLevel;
     /**
@@ -60,8 +55,10 @@ public abstract class Skill {
     private final float maintenanceCost;
     private final boolean isPassive;
     private final float cpCost;
-
     private final Identifier icon;
+    @Nullable
+    private String cachedKeyString;
+    private Set<Skill> dependencies = new HashSet<>();
 
     protected Skill(Builder builder) {
         recommendedLevel = builder.recommendedLevel;
@@ -88,7 +85,8 @@ public abstract class Skill {
         }
     }
 
-    public record SkillContext(int level, float availableCP, AbilitySystemServer system) {
+    public static <T extends Context> Map<Player, T> createContextMap() {
+        return new WeakHashMap<>();
     }
 
     /**
@@ -163,10 +161,6 @@ public abstract class Skill {
         return dataFactory.create(player);
     }
 
-    public static <T extends Context> Map<Player, T> createContextMap() {
-        return new WeakHashMap<>();
-    }
-
     public final Set<Skill> getDependencies() {
         return dependencies;
     }
@@ -231,7 +225,6 @@ public abstract class Skill {
         return maxStacks;
     }
 
-
     public final String getKeyString() {
         if (cachedKeyString == null) {
             cachedKeyString = getKey().toString();
@@ -253,6 +246,24 @@ public abstract class Skill {
         return skillName + "." + name;
     }
 
+    @FunctionalInterface
+    public interface DataFactory {
+        SkillData create(ServerPlayer player);
+    }
+
+    @FunctionalInterface
+    public interface CostCalculator {
+        float calculate(SkillContext ctx);
+    }
+
+    @FunctionalInterface
+    public interface SkillAction {
+        void execute(SkillContext ctx, float actualCost);
+    }
+
+    public record SkillContext(int level, float availableCP, AbilitySystemServer system) {
+    }
+
     private record DependencyResolver(Skill target, Set<DeferredHolder<Skill, ? extends Skill>> holders) {
         private DependencyResolver(Skill target, Set<DeferredHolder<Skill, ? extends Skill>> holders) {
             this.target = target;
@@ -270,9 +281,9 @@ public abstract class Skill {
 
     public static final class Builder {
         private final AbilityCategory category;
+        private final Set<DeferredHolder<Skill, ? extends Skill>> dependencyHolders = new HashSet<>();
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
-        private final Set<DeferredHolder<Skill, ? extends Skill>> dependencyHolders = new HashSet<>();
         private int maxSkillLevel = 3;
         private int iterationTicks = 20;
         private int maxStacks = 2;
@@ -287,6 +298,10 @@ public abstract class Skill {
 
         private Builder(AbilityCategory category) {
             this.category = category;
+        }
+
+        public static Builder of(AbilityCategory category) {
+            return new Builder(category);
         }
 
         public Builder level(AbilityLevel level) {
@@ -358,24 +373,5 @@ public abstract class Skill {
             Collections.addAll(dependencyHolders, dependencies);
             return this;
         }
-
-        public static Builder of(AbilityCategory category) {
-            return new Builder(category);
-        }
-    }
-
-    @FunctionalInterface
-    public interface DataFactory {
-        SkillData create(ServerPlayer player);
-    }
-
-    @FunctionalInterface
-    public interface CostCalculator {
-        float calculate(SkillContext ctx);
-    }
-
-    @FunctionalInterface
-    public interface SkillAction {
-        void execute(SkillContext ctx, float actualCost);
     }
 }

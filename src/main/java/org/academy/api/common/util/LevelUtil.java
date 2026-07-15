@@ -65,13 +65,6 @@ public class LevelUtil {
         return Pair.of(minBlockedDist < pathLength, minBlockedDist);
     }
 
-    // Context object to avoid passing 10+ arguments meow
-    private record BlockCollectionContext(
-            Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock,
-            List<BlockPos> breakable, List<BlockPos> unbreakable,
-            LongOpenHashSet visited, BlockPos.MutableBlockPos mutablePos
-    ) {}
-
     private static Pair<List<BlockPos>, List<BlockPos>> collectBlocksOptimized(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock) {
         var context = new BlockCollectionContext(
                 level, start, end, radius, miningLevel, canBlock,
@@ -274,5 +267,13 @@ public class LevelUtil {
             return (start < min || start > max) ? -Double.MAX_VALUE : Double.MAX_VALUE;
         var invDir = 1.0 / dir;
         return Math.max((min - start) * invDir, (max - start) * invDir);
+    }
+
+    // Context object to avoid passing 10+ arguments meow
+    private record BlockCollectionContext(
+            Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock,
+            List<BlockPos> breakable, List<BlockPos> unbreakable,
+            LongOpenHashSet visited, BlockPos.MutableBlockPos mutablePos
+    ) {
     }
 }

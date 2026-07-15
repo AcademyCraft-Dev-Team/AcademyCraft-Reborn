@@ -17,7 +17,8 @@ public final class TrailEffectWrapper implements EffectRenderer {
     public static final TrailEffectWrapper INSTANCE = new TrailEffectWrapper();
     private final List<TrailRenderer> activeTrails = new ArrayList<>();
 
-    private TrailEffectWrapper() {}
+    private TrailEffectWrapper() {
+    }
 
     public TrailRenderer createTrail(float maxAge, float width, float r, float g, float b) {
         var trail = new TrailRenderer(maxAge, width);
@@ -48,7 +49,7 @@ public final class TrailEffectWrapper implements EffectRenderer {
 
     @Override
     public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector nodeCollector,
-                                   LocalPlayer player, int packedLight, float partialTick) {
+                                  LocalPlayer player, int packedLight, float partialTick) {
         if (activeTrails.isEmpty()) return;
 
         var deltaTime = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks();

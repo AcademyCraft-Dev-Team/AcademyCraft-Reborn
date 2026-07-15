@@ -25,16 +25,6 @@ public final class WindGenPillarRenderer implements BlockEntityRenderer<WindGenP
     private WindGenPillarRenderer() {
     }
 
-    @Override
-    public BlockEntityRenderState createRenderState() {
-        return new BlockEntityRenderState();
-    }
-
-    @Override
-    public void submit(BlockEntityRenderState state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState) {
-        renderPillar(poseStack, submitNodeCollector, state.lightCoords);
-    }
-
     public static void renderPillar(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords) {
         poseStack.pushPose();
         poseStack.translate(0.5f, 0, 0.5f);
@@ -48,6 +38,16 @@ public final class WindGenPillarRenderer implements BlockEntityRenderer<WindGenP
                         )
         );
         poseStack.popPose();
+    }
+
+    @Override
+    public BlockEntityRenderState createRenderState() {
+        return new BlockEntityRenderState();
+    }
+
+    @Override
+    public void submit(BlockEntityRenderState state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState) {
+        renderPillar(poseStack, submitNodeCollector, state.lightCoords);
     }
 
     @Override

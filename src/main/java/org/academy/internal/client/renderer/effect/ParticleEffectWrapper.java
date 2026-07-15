@@ -1,7 +1,6 @@
 package org.academy.internal.client.renderer.effect;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -18,7 +17,8 @@ public final class ParticleEffectWrapper implements EffectRenderer {
     public static final ParticleEffectWrapper INSTANCE = new ParticleEffectWrapper();
     private final List<ParticleEmitter> emitters = new ArrayList<>();
 
-    private ParticleEffectWrapper() {}
+    private ParticleEffectWrapper() {
+    }
 
     public ParticleEmitter createEmitter(float x, float y, float z) {
         var emitter = new ParticleEmitter();
@@ -50,7 +50,7 @@ public final class ParticleEffectWrapper implements EffectRenderer {
 
     @Override
     public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector nodeCollector,
-                                   LocalPlayer player, int packedLight, float partialTick) {
+                                  LocalPlayer player, int packedLight, float partialTick) {
         if (emitters.isEmpty()) return;
 
         var camera = Minecraft.getInstance().gameRenderer.mainCamera();

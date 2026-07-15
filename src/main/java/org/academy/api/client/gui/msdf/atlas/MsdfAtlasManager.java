@@ -7,10 +7,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
 public final class MsdfAtlasManager {
+    private static final ConcurrentHashMap<Identifier, MsdfAtlas> atlases = new ConcurrentHashMap<>();
+
     private MsdfAtlasManager() {
     }
-
-    private static final ConcurrentHashMap<Identifier, MsdfAtlas> atlases = new ConcurrentHashMap<>();
 
     public static MsdfAtlas getAtlas(Identifier descriptor, Executor executor) {
         return atlases.computeIfAbsent(descriptor, _ -> new MsdfAtlas(

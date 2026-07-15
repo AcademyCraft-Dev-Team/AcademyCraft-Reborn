@@ -12,6 +12,9 @@ import java.util.Map;
 public final class ServerSyncManager {
     private static final Map<SyncKey, DataSyncManager<?>> SHARED = new HashMap<>();
 
+    private ServerSyncManager() {
+    }
+
     public static <V> void register(SyncKey key, DataSyncManager<V> manager) {
         SHARED.put(key, manager);
     }
@@ -25,8 +28,5 @@ public final class ServerSyncManager {
         for (var manager : SHARED.values()) {
             manager.remove(event.getEntity().getUUID());
         }
-    }
-
-    private ServerSyncManager() {
     }
 }

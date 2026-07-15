@@ -64,41 +64,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     private static final double[] warpedYBuffer = new double[1];
     private static final float[][][] CACHED_VERTICAL_VERTEX_BUFFER = VertexUtil.Ring.getVerticalVertexBuffer(1.0f, 1.0f, RING_SEGMENTS);
 
-    @Override
-    public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
-        if (IrisCompat.isShadowRendererActive()) return;
-        if (!renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
-
-        submitNodeCollector.submitCustomGeometry(poseStack, STORM_WING, (pose, buffer) -> {
-            var poseStack1 = new PoseStack();
-            poseStack1.last().set(pose);
-
-            poseStack1.pushPose();
-            poseStack1.mulPose(BASE_MATRIX);
-            var time = renderState.ageInTicks;
-
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
-            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_1);
-            poseStack1.popPose();
-
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
-            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_2);
-            poseStack1.popPose();
-
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_3);
-            poseStack1.popPose();
-
-            poseStack1.pushPose();
-            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
-            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_4);
-            poseStack1.popPose();
-
-            poseStack1.popPose();
-        });
+    private StormWingEffectRenderer() {
     }
 
     private static void applyDomainWarp(double normalizedY, double timeWarp) {
@@ -250,6 +216,40 @@ public final class StormWingEffectRenderer implements EffectRenderer {
         }
     }
 
-    private StormWingEffectRenderer() {
+    @Override
+    public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
+        if (IrisCompat.isShadowRendererActive()) return;
+        if (!renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
+
+        submitNodeCollector.submitCustomGeometry(poseStack, STORM_WING, (pose, buffer) -> {
+            var poseStack1 = new PoseStack();
+            poseStack1.last().set(pose);
+
+            poseStack1.pushPose();
+            poseStack1.mulPose(BASE_MATRIX);
+            var time = renderState.ageInTicks;
+
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_1);
+            poseStack1.popPose();
+
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_2);
+            poseStack1.popPose();
+
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_3);
+            poseStack1.popPose();
+
+            poseStack1.pushPose();
+            poseStack1.mulPose(new Quaternionf().rotateZ((float) Math.toRadians(-30.0f)).rotateX((float) Math.toRadians(-30.0f)));
+            renderSingleTornado(poseStack1, buffer, time + TORNADO_OFFSET_4);
+            poseStack1.popPose();
+
+            poseStack1.popPose();
+        });
     }
 }

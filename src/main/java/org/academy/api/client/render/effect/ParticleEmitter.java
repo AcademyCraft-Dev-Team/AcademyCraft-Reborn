@@ -12,6 +12,17 @@ import java.util.List;
 public final class ParticleEmitter {
     private final List<Particle> particles = new ArrayList<>();
     private final RandomSource random = RandomSource.create();
+    // Reusable temp vectors to reduce GC pressure in hot render loop
+    private final Vector3f tmpCamPos = new Vector3f();
+    private final Vector3f tmpCamRight = new Vector3f();
+    private final Vector3f tmpCamUp = new Vector3f();
+    private final Vector3f tmpPos = new Vector3f();
+    private final Vector3f tmpHalfRight = new Vector3f();
+    private final Vector3f tmpHalfUp = new Vector3f();
+    private final Vector3f tmpV1 = new Vector3f();
+    private final Vector3f tmpV2 = new Vector3f();
+    private final Vector3f tmpV3 = new Vector3f();
+    private final Vector3f tmpV4 = new Vector3f();
     private boolean active = true;
     private float emissionRate;
     private float emissionAccumulator;
@@ -26,36 +37,16 @@ public final class ParticleEmitter {
     private float gravity;
     private float damping;
     private float red, green, blue;
-    private float colorVariation;
+    private final float colorVariation;
     private float startAlpha;
     private float endAlpha;
     private SpreadMode spreadMode = SpreadMode.SPHERE;
     private float spreadAngle;
-    private Vector3f emissionDirection = new Vector3f(0, 1, 0);
-    private Vector3f emitterPosition = new Vector3f();
+    private final Vector3f emissionDirection = new Vector3f(0, 1, 0);
+    private final Vector3f emitterPosition = new Vector3f();
     private boolean useRotation;
     private float rotationSpeedBase;
     private float rotationSpeedVariation;
-
-    // Reusable temp vectors to reduce GC pressure in hot render loop
-    private final Vector3f tmpCamPos = new Vector3f();
-    private final Vector3f tmpCamRight = new Vector3f();
-    private final Vector3f tmpCamUp = new Vector3f();
-    private final Vector3f tmpPos = new Vector3f();
-    private final Vector3f tmpHalfRight = new Vector3f();
-    private final Vector3f tmpHalfUp = new Vector3f();
-    private final Vector3f tmpV1 = new Vector3f();
-    private final Vector3f tmpV2 = new Vector3f();
-    private final Vector3f tmpV3 = new Vector3f();
-    private final Vector3f tmpV4 = new Vector3f();
-
-    public enum SpreadMode {
-        SPHERE,
-        HEMISPHERE_UP,
-        CONE,
-        HORIZONTAL_RING,
-        VERTICAL_DISC
-    }
 
     public ParticleEmitter() {
         maxParticles = 100;
@@ -154,12 +145,12 @@ public final class ParticleEmitter {
         emissionDirection.set(x, y, z).normalize();
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
     public boolean isActive() {
         return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public void burst(int count) {
@@ -363,6 +354,14 @@ public final class ParticleEmitter {
         };
     }
 
+    public enum SpreadMode {
+        SPHERE,
+        HEMISPHERE_UP,
+        CONE,
+        HORIZONTAL_RING,
+        VERTICAL_DISC
+    }
+
     public static final class Particle {
         final Vector3f position;
         final Vector3f velocity;
@@ -375,8 +374,8 @@ public final class ParticleEmitter {
         float rotation;
 
         Particle(Vector3f position, Vector3f velocity, float r, float g, float b,
-                float startSize, float endSize, float lifetime, float age,
-                float rotation, float angularVelocity) {
+                 float startSize, float endSize, float lifetime, float age,
+                 float rotation, float angularVelocity) {
             this.position = position;
             this.velocity = velocity;
             this.r = r;

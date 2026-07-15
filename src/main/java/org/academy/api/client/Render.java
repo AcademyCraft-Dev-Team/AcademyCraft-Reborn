@@ -61,6 +61,9 @@ import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
 public final class Render {
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
+    private Render() {
+    }
+
     public static void init() {
         Buffers.init();
         TextureViews.init();
@@ -190,13 +193,6 @@ public final class Render {
             UBO_SIZE = calculator.get();
         }
 
-        public void write(Std140Builder builder) {
-            builder.putVec2(outSize).putVec2(blurDir).putInt(sampleCount);
-            for (var sample : samples) {
-                builder.putVec4(sample);
-            }
-        }
-
         public static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, int radius) {
             try (var memoryStack = MemoryStack.stackPush()) {
                 var samples = getGaussianSamples(radius);
@@ -210,13 +206,19 @@ public final class Render {
         public static GpuBuffer getBlurUniformsBuffer() {
             return Buffers.getInstance().getBlurUniformsBuffer();
         }
+
+        public void write(Std140Builder builder) {
+            builder.putVec2(outSize).putVec2(blurDir).putInt(sampleCount);
+            for (var sample : samples) {
+                builder.putVec4(sample);
+            }
+        }
     }
 
     public static final class Buffers {
+        public static final int PROJECTION_UBO_SIZE = new Std140SizeCalculator().putMat4f().get();
         private static final CrossFrameResourcePool RESOURCE_POOL = new CrossFrameResourcePool(3);
         private static final ByteBufferBuilder BYTE_BUFFER_BUILDER = new ByteBufferBuilder(786432);
-        public static final int PROJECTION_UBO_SIZE = new Std140SizeCalculator().putMat4f().get();
-
         @Nullable
         private static Buffers instance;
 
@@ -227,15 +229,12 @@ public final class Render {
         private final GpuBuffer fullScreenQuadVBNDC;
         private final GpuBuffer fullScreenQuadUvVBNDC;
         private final GpuBuffer fullScreenQuadUvColorVBNDC;
-
+        private final GpuBuffer blurUniformsBuffer;
         /**
          * 0~scaled
          */
         private GpuBuffer fullScreenQuadUvVBSDC;
         private GpuBuffer fullScreenQuadUvColorVBSDC;
-
-        private final GpuBuffer blurUniformsBuffer;
-
         @Nullable
         private Matrix4fc lastProjection;
 
@@ -269,6 +268,14 @@ public final class Render {
                 );
             }
             return instance;
+        }
+
+        public static ByteBufferBuilder getByteBufferBuilder() {
+            return BYTE_BUFFER_BUILDER;
+        }
+
+        public static CrossFrameResourcePool getResourcePool() {
+            return RESOURCE_POOL;
         }
 
         private void closeInternal() {
@@ -446,20 +453,15 @@ public final class Render {
         public GpuBuffer getBlurUniformsBuffer() {
             return blurUniformsBuffer;
         }
-
-        public static ByteBufferBuilder getByteBufferBuilder() {
-            return BYTE_BUFFER_BUILDER;
-        }
-
-        public static CrossFrameResourcePool getResourcePool() {
-            return RESOURCE_POOL;
-        }
     }
 
     public static final class TextureViews {
         @Nullable
         private static TextureViews instance;
         private final UiLightmap uiLightmap = new UiLightmap();
+
+        private TextureViews() {
+        }
 
         public static void init() {
             if (instance == null) instance = new TextureViews();
@@ -487,9 +489,6 @@ public final class Render {
 
         private void closeInternal() {
             uiLightmap.close();
-        }
-
-        private TextureViews() {
         }
     }
 
@@ -866,6 +865,9 @@ public final class Render {
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
                 .build();
 
+        private RenderPipelines() {
+        }
+
         @SubscribeEvent
         public static void onRegisterRenderPipelinesEvent(RegisterRenderPipelinesEvent event) {
             for (var field : RenderPipelines.class.getDeclaredFields()) {
@@ -881,9 +883,6 @@ public final class Render {
                     LOGGER.warn(e.getMessage());
                 }
             }
-        }
-
-        private RenderPipelines() {
         }
     }
 
@@ -1078,8 +1077,5 @@ public final class Render {
                             .createRenderSetup()
             );
         }
-    }
-
-    private Render() {
     }
 }

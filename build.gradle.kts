@@ -250,6 +250,10 @@ neoForge {
             systemProperty("terminal.ansi", "true")
             // due to shit iris
             systemProperty("neoforge.disableGlValidation", "true")
+
+/*            jvmArgument("-XX:+ClassUnloading")
+            jvmArgument("-XX:-SegmentedCodeCache")
+            jvmArgument("-XX:ReservedCodeCacheSize=512m")*/
             jvmArgument("-XX:+AllowEnhancedClassRedefinition")
             jvmArgument("-Xverify:none")
         }

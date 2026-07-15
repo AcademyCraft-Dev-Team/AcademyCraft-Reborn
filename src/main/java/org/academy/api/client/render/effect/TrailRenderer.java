@@ -54,9 +54,17 @@ public final class TrailRenderer {
         taperRatio = Math.clamp(ratio, 0, 1);
     }
 
-    public float getR() { return r; }
-    public float getG() { return g; }
-    public float getB() { return b; }
+    public float getR() {
+        return r;
+    }
+
+    public float getG() {
+        return g;
+    }
+
+    public float getB() {
+        return b;
+    }
 
     public void addPoint(Vector3f pos) {
         addPoint(pos.x, pos.y, pos.z);
@@ -93,8 +101,8 @@ public final class TrailRenderer {
     }
 
     private void renderQuadStrip(PoseStack.Pose pose, VertexConsumer vc,
-                                  net.minecraft.world.phys.Vec3 camPos,
-                                  float r, float g, float b, float baseWidth, float alphaMult) {
+                                 net.minecraft.world.phys.Vec3 camPos,
+                                 float r, float g, float b, float baseWidth, float alphaMult) {
         var it = points.iterator();
         var prev = it.next();
         var pointCount = points.size();
@@ -137,8 +145,12 @@ public final class TrailRenderer {
                 cg = this.g + (endG - this.g) * currProgress;
                 cb = this.b + (endB - this.b) * currProgress;
             } else {
-                pr = r; pg = g; pb = b;
-                cr = r; cg = g; cb = b;
+                pr = r;
+                pg = g;
+                pb = b;
+                cr = r;
+                cg = g;
+                cb = b;
             }
 
             var prevAlpha = prevLife * alphaMult;

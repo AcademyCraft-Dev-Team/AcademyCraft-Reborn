@@ -12,10 +12,10 @@ import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import java.util.List;
 
 public class ArcEffect extends RenderOnlyEntity {
-    private final int lifeTime;
     public static final EntityDataAccessor<List<ArcPath>> ARC_PATHS = SynchedEntityData.defineId(
             ArcEffect.class, EntityDataSerializers.ARC_PATH.get()
     );
+    private final int lifeTime;
 
     public ArcEffect(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -42,11 +42,11 @@ public class ArcEffect extends RenderOnlyEntity {
         entityData.set(ARC_PATHS, List.of(arcPath));
     }
 
-    public void setArcPaths(List<ArcPath> arcPaths) {
-        entityData.set(ARC_PATHS, arcPaths);
-    }
-
     public List<ArcPath> getArcPaths() {
         return entityData.get(ARC_PATHS);
+    }
+
+    public void setArcPaths(List<ArcPath> arcPaths) {
+        entityData.set(ARC_PATHS, arcPaths);
     }
 }

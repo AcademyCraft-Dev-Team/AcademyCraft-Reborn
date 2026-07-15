@@ -18,7 +18,7 @@ public final class OmniCraftingTableSpecialRenderer implements NoDataSpecialMode
     }
 
     @Override
-    public void submit( PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
         {
             poseStack.scale(0.5f, 0.5f, 0.5f);

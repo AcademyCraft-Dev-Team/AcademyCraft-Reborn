@@ -122,7 +122,7 @@ public class ElectricalContact extends Skill {
             var box = player.getBoundingBox().inflate(RADIUS);
             var targets = level.getEntitiesOfClass(LivingEntity.class, box,
                     e -> e != player && e.isAlive() && !e.isSpectator()
-                        && !player.isAlliedTo(e));
+                            && !player.isAlliedTo(e));
 
             if (!(level instanceof ServerLevel serverLevel)) return;
             var damageSource = player.damageSources().lightningBolt();

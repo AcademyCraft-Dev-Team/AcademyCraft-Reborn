@@ -17,6 +17,9 @@ public final class WirelessNodeRenderer implements BlockEntityRenderer<WirelessN
     public static final WirelessNodeRenderer INSTANCE = new WirelessNodeRenderer();
     public static final WirelessNodeModel MODEL = new WirelessNodeModel(WirelessNodeModel.createBodyLayer().bakeRoot());
 
+    private WirelessNodeRenderer() {
+    }
+
     @Override
     public void submit(WirelessNodeRenderState wirelessNodeRenderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
@@ -39,8 +42,5 @@ public final class WirelessNodeRenderer implements BlockEntityRenderer<WirelessN
         renderState.coreState = blockEntity.coreState;
         renderState.connectedUsersCount = blockEntity.connectedUsersCount;
         renderState.maxConnectedUsers = blockEntity.maxConnectedUsers;
-    }
-
-    private WirelessNodeRenderer() {
     }
 }

@@ -16,16 +16,16 @@ import static net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
 public class CleaningRobotRenderer extends EntityRenderer<CleaningRobot, EntityRenderState> {
     public static final CleaningRobotModel CLEANING_ROBOT_MODEL = new CleaningRobotModel(CleaningRobotModel.createBodyLayer().bakeRoot());
 
+    protected CleaningRobotRenderer(EntityRendererProvider.Context context) {
+        super(context);
+    }
+
     @Override
     public void submit(EntityRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
         poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0.75f, 0);
         nodeCollector.submitModel(CLEANING_ROBOT_MODEL, renderState, poseStack, Render.RenderTypes.CLEANING_ROBOT, renderState.lightCoords, NO_OVERLAY, 0, null);
         poseStack.popPose();
-    }
-
-    protected CleaningRobotRenderer(EntityRendererProvider.Context context) {
-        super(context);
     }
 
     @Override

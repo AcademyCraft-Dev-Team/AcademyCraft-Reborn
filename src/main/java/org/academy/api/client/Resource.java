@@ -6,6 +6,9 @@ import static org.academy.AcademyCraft.academy;
 import static org.academy.AcademyCraft.vanilla;
 
 public final class Resource {
+    private Resource() {
+    }
+
     /**
      * Normally, vert and frag share the same name.
      */
@@ -23,6 +26,9 @@ public final class Resource {
         public static final Identifier IMAGE = academy("core/image");
         public static final Identifier SCREEN_BLIT = academy("core/screen_blit");
         public static final Identifier DISTORTION_RING = academy("core/distortion_ring");
+
+        private Shaders() {
+        }
 
         /**
          * Vert only.
@@ -55,9 +61,6 @@ public final class Resource {
 
             private Fragment() {
             }
-        }
-
-        private Shaders() {
         }
     }
 
@@ -156,6 +159,10 @@ public final class Resource {
          */
         public static final Identifier CLEANING_ROBOT = academy("textures/model/cleaning_robot.png");
         /**
+         * Settings
+         */
+        public static final Identifier ICON_SETTINGS = academy("textures/gui/icon/icon_settings.png");
+        /**
          * Music Player
          */
         private static final String MUSIC = "textures/gui/app/music/";
@@ -169,10 +176,6 @@ public final class Resource {
         public static final Identifier ICON_PAUSE = academy(MUSIC + "pause.png");
         public static final Identifier ICON_PLAY = academy(MUSIC + "play.png");
         public static final Identifier ICON_VOLUME = academy(MUSIC + "volume.png");
-        /**
-         * Settings
-         */
-        public static final Identifier ICON_SETTINGS = academy("textures/gui/icon/icon_settings.png");
 
         private Textures() {
         }
@@ -180,8 +183,5 @@ public final class Resource {
 
     public static final class Models {
         public static final Identifier COIN_ITEM_MODEL_ID = academy("builtin/coin");
-    }
-
-    private Resource() {
     }
 }

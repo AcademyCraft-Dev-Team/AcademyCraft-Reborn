@@ -5,7 +5,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.Entity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;

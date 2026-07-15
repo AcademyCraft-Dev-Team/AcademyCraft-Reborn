@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -18,7 +17,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -36,7 +34,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class HomingBlast extends Skill {
     private static final int BEAM_COUNT = 24;
@@ -60,10 +61,10 @@ public class HomingBlast extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_H)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onUse);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_H)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onUse);
     }
 
     @Override
@@ -74,13 +75,27 @@ public class HomingBlast extends Skill {
     public static final class Client {
         public static final String KEY_NAME_USE = SkillNames.HOMING_BLAST + "_use";
         public static Config CONFIG = new Config();
-        public static void onUse() { MisakaNetworkClient.send(ActivatePacket.INSTANCE); }
+
+        public static void onUse() {
+            MisakaNetworkClient.send(ActivatePacket.INSTANCE);
+        }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public HomingBlast.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public HomingBlast.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -94,10 +109,10 @@ public class HomingBlast extends Skill {
     }
 
     public static final class Context extends ServerContext {
+        private static final int MAX_TICKS = 100;
         private final List<HomingOrb> orbs = new ArrayList<>();
         private int ticks;
         private boolean ended;
-        private static final int MAX_TICKS = 100;
 
         private Context(ServerPlayer player) {
             super(player);
@@ -115,7 +130,10 @@ public class HomingBlast extends Skill {
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             ticks++;
-            if (player.hasDisconnected() || !player.isAlive() || ticks >= MAX_TICKS) { end(); return; }
+            if (player.hasDisconnected() || !player.isAlive() || ticks >= MAX_TICKS) {
+                end();
+                return;
+            }
 
             if (ticks > 10 && ticks % 2 == 0) {
                 for (var h : orbs) {
@@ -158,7 +176,9 @@ public class HomingBlast extends Skill {
         private void end() {
             if (ended) return;
             ended = true;
-            for (var h : orbs) { if (!h.orb.isRemoved()) h.orb.discard(); }
+            for (var h : orbs) {
+                if (!h.orb.isRemoved()) h.orb.discard();
+            }
             unregister();
         }
 
@@ -166,7 +186,11 @@ public class HomingBlast extends Skill {
             final LightOrb orb;
             final Level level;
             boolean hasHomed;
-            HomingOrb(LightOrb orb, Level level) { this.orb = orb; this.level = level; }
+
+            HomingOrb(LightOrb orb, Level level) {
+                this.orb = orb;
+                this.level = level;
+            }
         }
     }
 
@@ -174,8 +198,12 @@ public class HomingBlast extends Skill {
     public static final class ActivatePacket extends Packet<ServerGamePacketListenerImpl, ActivatePacket> {
         public static final ActivatePacket INSTANCE = new ActivatePacket();
         public static final StreamCodec<ByteBuf, ActivatePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private ActivatePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, ActivatePacket> getPacketType() {
+
+        private ActivatePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, ActivatePacket> getPacketType() {
             return PacketTypes.HOMING_BLAST_ACTIVATE.get();
         }
     }

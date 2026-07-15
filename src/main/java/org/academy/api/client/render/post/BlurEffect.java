@@ -18,6 +18,9 @@ import static org.academy.api.client.Render.BlurUniforms.getBlurUniformsBuffer;
 import static org.academy.api.client.Render.BlurUniforms.writeBlurUniforms;
 
 public final class BlurEffect {
+    private BlurEffect() {
+    }
+
     /**
      * 应用高斯模糊喵
      *
@@ -81,8 +84,5 @@ public final class BlurEffect {
         } finally {
             if (swapTarget != null) resourcePool.release(desc, swapTarget);
         }
-    }
-
-    private BlurEffect() {
     }
 }

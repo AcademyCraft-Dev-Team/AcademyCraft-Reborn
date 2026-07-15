@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -16,7 +15,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -34,7 +32,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class MagnetMomentCharge extends Skill {
     public MagnetMomentCharge() {
@@ -78,9 +77,19 @@ public class MagnetMomentCharge extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public MagnetMomentCharge.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public MagnetMomentCharge.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -150,8 +159,12 @@ public class MagnetMomentCharge extends Skill {
     public static final class ActivatePacket extends Packet<ServerGamePacketListenerImpl, ActivatePacket> {
         public static final ActivatePacket INSTANCE = new ActivatePacket();
         public static final StreamCodec<ByteBuf, ActivatePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private ActivatePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, ActivatePacket> getPacketType() {
+
+        private ActivatePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, ActivatePacket> getPacketType() {
             return PacketTypes.MAGNET_MOMENT_CHARGE_ACTIVATE.get();
         }
     }

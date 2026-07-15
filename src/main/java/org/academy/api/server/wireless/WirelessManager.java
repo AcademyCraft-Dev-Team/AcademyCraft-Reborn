@@ -21,7 +21,10 @@ import java.util.Map;
 
 public class WirelessManager {
     private static final Logger LOGGER = AcademyCraft.getLogger();
-    
+
+    private WirelessManager() {
+    }
+
     public static void initServer() {
         MisakaNetworkServer.NETWORK_MANAGER.register(WirelessManager.class);
         MisakaNetworkServer.FUTURE_MANAGER.register(WirelessManager.class);
@@ -214,7 +217,7 @@ public class WirelessManager {
         return nodeNamesInRange;
     }
 
-    public static Pair<Boolean,String> getCurrentNode(ServerLevel level, BlockPos userPos) {
+    public static Pair<Boolean, String> getCurrentNode(ServerLevel level, BlockPos userPos) {
         String currentNodeName = null;
         var be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
@@ -315,8 +318,5 @@ public class WirelessManager {
         }
 
         node.setEnergyStored(energyStored);
-    }
-
-    private WirelessManager() {
     }
 }

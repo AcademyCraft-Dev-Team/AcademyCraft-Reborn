@@ -31,9 +31,8 @@ public class MsdfFontService {
                 return t;
             }
     );
-
-    private final long library;
     public final ConcurrentHashMap<Identifier, MsdfFont> loadedFonts = new ConcurrentHashMap<>();
+    private final long library;
     private final ConcurrentHashMap<Identifier, ByteBuffer> fontBuffers = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<Identifier> fontSearchOrder = new CopyOnWriteArrayList<>();
     private final ConcurrentHashMap<Integer, Identifier> charToFontCache = new ConcurrentHashMap<>();
@@ -55,21 +54,6 @@ public class MsdfFontService {
             if (!id.equals(DEFAULT_FONT_ID)) INSTANCE.fontSearchOrder.add(id);
         }
         INSTANCE.charToFontCache.clear();
-    }
-
-    private MsdfFont resolveFontForChar(int c) {
-        var fontId = charToFontCache.computeIfAbsent(c, this::findFontIdForChar);
-        return getFont(fontId);
-    }
-
-    private Identifier findFontIdForChar(int c) {
-        for (var id : fontSearchOrder) {
-            var font = loadedFonts.get(id);
-            if (font != null) {
-                if (FreeType.FT_Get_Char_Index(font.face, c) != 0) return id;
-            }
-        }
-        return DEFAULT_FONT_ID;
     }
 
     public static MsdfFont getFont(Identifier identifier) {
@@ -106,14 +90,6 @@ public class MsdfFontService {
         }
     }
 
-    public void close() {
-        loadedFonts.values().forEach(MsdfFont::close);
-        loadedFonts.clear();
-        fontBuffers.values().forEach(MemoryUtil::memFree);
-        fontBuffers.clear();
-        FreeType.FT_Done_FreeType(library);
-    }
-
     public static MsdfFont getFont(int c) {
         return INSTANCE.resolveFontForChar(c);
     }
@@ -127,5 +103,28 @@ public class MsdfFontService {
         for (var c = ' '; c <= '~'; c++) {
             getFont(c).getGlyph(c);
         }
+    }
+
+    private MsdfFont resolveFontForChar(int c) {
+        var fontId = charToFontCache.computeIfAbsent(c, this::findFontIdForChar);
+        return getFont(fontId);
+    }
+
+    private Identifier findFontIdForChar(int c) {
+        for (var id : fontSearchOrder) {
+            var font = loadedFonts.get(id);
+            if (font != null) {
+                if (FreeType.FT_Get_Char_Index(font.face, c) != 0) return id;
+            }
+        }
+        return DEFAULT_FONT_ID;
+    }
+
+    public void close() {
+        loadedFonts.values().forEach(MsdfFont::close);
+        loadedFonts.clear();
+        fontBuffers.values().forEach(MemoryUtil::memFree);
+        fontBuffers.clear();
+        FreeType.FT_Done_FreeType(library);
     }
 }

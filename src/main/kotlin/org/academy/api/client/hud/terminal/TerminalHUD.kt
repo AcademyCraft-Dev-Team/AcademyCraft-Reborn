@@ -426,8 +426,8 @@ class TerminalHUD private constructor() {
                 run {
                     val background = FillWidget(COLOR)
                     main.addChild("back", background)
-                    content.setOrientation(Orientation.VERTICAL)
-                    content.setSpacing(2f)
+                    content.orientation = Orientation.VERTICAL
+                    content.spacing = 2f
                     main.addChild("content", content)
                     run {
                         val logo = ImageWidget(Resource.Textures.ICON_TERMINAL)
@@ -456,15 +456,15 @@ class TerminalHUD private constructor() {
                         content.addChild("apps", apps)
                         run {
                             val appRows = LinearLayoutWidget()
-                            appRows.setOrientation(Orientation.VERTICAL)
-                            appRows.setSpacing(4f)
+                            appRows.orientation = Orientation.VERTICAL
+                            appRows.spacing = 4f
                             appRows.layoutParams = WidgetContainer.LayoutParams()
                                 .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
                             apps.addChild("app_rows", appRows)
                             run {
                                 val rowOne = LinearLayoutWidget()
-                                rowOne.setOrientation(Orientation.HORIZONTAL)
+                                rowOne.orientation = Orientation.HORIZONTAL
                                 rowOne.layoutParams = LinearLayoutWidget.LayoutParams()
                                     .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
@@ -599,8 +599,8 @@ class TerminalHUD private constructor() {
             val size = 48
             val height = 62
             val layout = LinearLayoutWidget()
-            layout.setSpacing(1f)
-            layout.setOrientation(Orientation.VERTICAL)
+            layout.spacing = 1f
+            layout.orientation = Orientation.VERTICAL
             layout.layoutParams = LinearLayoutWidget.LayoutParams()
                 .size(size.toFloat(), height.toFloat())
 

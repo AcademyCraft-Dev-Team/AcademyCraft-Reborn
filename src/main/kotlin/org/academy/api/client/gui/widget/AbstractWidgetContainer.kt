@@ -427,6 +427,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         }
 
         requestLayout()
+        invalidate()
     }
 
     override fun removeChild(name: String) {
@@ -448,6 +449,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             }
             protectedChildren.remove(name)
             requestLayout()
+            invalidate()
         }
     }
 

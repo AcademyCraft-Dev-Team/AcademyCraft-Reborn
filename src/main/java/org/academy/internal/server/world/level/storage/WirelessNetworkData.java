@@ -24,7 +24,7 @@ import static org.academy.AcademyCraft.academy;
 
 public final class WirelessNetworkData extends SavedData {
     private static final Logger LOGGER = AcademyCraft.getLogger();
-    
+
     private static final Codec<BlockPos> BLOCKPOS_AS_STRING_CODEC = Codec.STRING.flatXmap(
             s -> {
                 try {
@@ -60,7 +60,8 @@ public final class WirelessNetworkData extends SavedData {
     private final DualKeyMap<BlockPos, String, NodeConfig> nodes =
             new DualKeyMap<>(nodeConfig -> nodeConfig.name);
 
-    public WirelessNetworkData() {}
+    public WirelessNetworkData() {
+    }
 
     private WirelessNetworkData(Map<BlockPos, NodeConfig> initialNodes) {
         initialNodes.forEach(nodes::put);
@@ -174,12 +175,6 @@ public final class WirelessNetworkData extends SavedData {
     }
 
     public static class NodeConfig {
-        public String name;
-        public String password;
-        public final int radius;
-        public final int maxConnections;
-        public final Map<BlockPos, UserConfig> connectedUsers;
-
         public static final Codec<NodeConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.STRING.fieldOf("name").forGetter(config -> config.name),
                 Codec.STRING.fieldOf("password").forGetter(config -> config.password),
@@ -189,6 +184,11 @@ public final class WirelessNetworkData extends SavedData {
                         .fieldOf("users")
                         .forGetter(config -> config.connectedUsers)
         ).apply(instance, NodeConfig::new));
+        public final int radius;
+        public final int maxConnections;
+        public final Map<BlockPos, UserConfig> connectedUsers;
+        public String name;
+        public String password;
 
         public NodeConfig(String name, String password, int radius, int maxConnections, Map<BlockPos, UserConfig> connectedUsers) {
             this.name = name;

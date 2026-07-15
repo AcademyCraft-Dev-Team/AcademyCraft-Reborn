@@ -96,9 +96,19 @@ public class CutThrough extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public CutThrough.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public CutThrough.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -132,9 +142,16 @@ public class CutThrough extends Skill {
         public static final StreamCodec<ByteBuf, TeleportPacket> CODEC = VEC3_CODEC.map(TeleportPacket::new, TeleportPacket::getDirection);
         private final Vec3 direction;
 
-        public TeleportPacket(Vec3 direction) { this.direction = direction; }
-        public Vec3 getDirection() { return direction; }
-        @Override public PacketType<ServerGamePacketListenerImpl, TeleportPacket> getPacketType() {
+        public TeleportPacket(Vec3 direction) {
+            this.direction = direction;
+        }
+
+        public Vec3 getDirection() {
+            return direction;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TeleportPacket> getPacketType() {
             return PacketTypes.CUT_THROUGH_TELEPORT.get();
         }
     }

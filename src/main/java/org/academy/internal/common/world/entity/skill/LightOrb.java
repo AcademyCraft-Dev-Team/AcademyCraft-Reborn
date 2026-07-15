@@ -12,16 +12,15 @@ import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
 public class LightOrb extends RenderOnlyEntity {
-    private int lifeTime = -1;
-    @Nullable
-    private Runnable run;
-
     public static final EntityDataAccessor<Float> SCALE = SynchedEntityData.defineId(
             LightOrb.class, EntityDataSerializers.FLOAT
     );
     public static final EntityDataAccessor<Vector3fc> COLOR = SynchedEntityData.defineId(
             LightOrb.class, EntityDataSerializers.VECTOR3
     );
+    private int lifeTime = -1;
+    @Nullable
+    private Runnable run;
 
     public LightOrb(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -53,12 +52,12 @@ public class LightOrb extends RenderOnlyEntity {
         builder.define(COLOR, new Vector3f(1.0f, 1.0f, 1.0f));
     }
 
-    public void setScale(float scale) {
-        entityData.set(SCALE, scale);
-    }
-
     public float getScale() {
         return entityData.get(SCALE);
+    }
+
+    public void setScale(float scale) {
+        entityData.set(SCALE, scale);
     }
 
     public void setColor(float r, float g, float b) {

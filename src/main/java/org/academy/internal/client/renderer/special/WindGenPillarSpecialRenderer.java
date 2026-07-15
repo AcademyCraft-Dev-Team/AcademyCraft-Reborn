@@ -5,7 +5,6 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import org.academy.internal.client.renderer.blockentity.WindGenBaseRenderer;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.joml.Vector3fc;
 

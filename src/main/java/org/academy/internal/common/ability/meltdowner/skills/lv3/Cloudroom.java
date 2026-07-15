@@ -34,7 +34,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class Cloudroom extends Skill {
     private static final float RADIUS = 16.0f;
@@ -55,10 +58,10 @@ public class Cloudroom extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_U)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))))
-        , Client::onToggle);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_U)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))))
+                , Client::onToggle);
     }
 
     @Override
@@ -69,13 +72,27 @@ public class Cloudroom extends Skill {
     public static final class Client {
         public static final String KEY_NAME_TOGGLE = SkillNames.CLOUDROOM + "_toggle";
         public static Config CONFIG = new Config();
-        public static void onToggle() { MisakaNetworkClient.send(TogglePacket.INSTANCE); }
+
+        public static void onToggle() {
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
+        }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public Cloudroom.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public Cloudroom.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -88,7 +105,11 @@ public class Cloudroom extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.CLOUDROOM.get();
             skill.toggle(player);
-            if (!skill.isEnabled(player)) { var ctx = CONTEXT_MAP.remove(player); if (ctx != null) ctx.end(); return; }
+            if (!skill.isEnabled(player)) {
+                var ctx = CONTEXT_MAP.remove(player);
+                if (ctx != null) ctx.end();
+                return;
+            }
             if (CONTEXT_MAP.containsKey(player)) return;
             var context = new Context(player);
             CONTEXT_MAP.put(player, context);
@@ -100,12 +121,17 @@ public class Cloudroom extends Skill {
         private final Map<LivingEntity, Vec3> lastPositions = new HashMap<>();
         private boolean ended;
 
-        private Context(ServerPlayer player) { super(player); }
+        private Context(ServerPlayer player) {
+            super(player);
+        }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             var skill = Skills.CLOUDROOM.get();
-            if (!skill.isEnabled(player) || !player.isAlive() || player.hasDisconnected()) { end(); return; }
+            if (!skill.isEnabled(player) || !player.isAlive() || player.hasDisconnected()) {
+                end();
+                return;
+            }
 
             var entities = level().getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(RADIUS),
@@ -125,15 +151,24 @@ public class Cloudroom extends Skill {
             lastPositions.keySet().retainAll(entities);
         }
 
-        private void end() { if (ended) return; ended = true; Server.CONTEXT_MAP.remove(player); unregister(); }
+        private void end() {
+            if (ended) return;
+            ended = true;
+            Server.CONTEXT_MAP.remove(player);
+            unregister();
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
         public static final TogglePacket INSTANCE = new TogglePacket();
         public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private TogglePacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+
+        private TogglePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.CLOUDROOM_TOGGLE.get();
         }
     }

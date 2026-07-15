@@ -13,7 +13,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(CombatTracker.class)
 public abstract class MixinCombatTracker {
-    @Shadow @Final private LivingEntity mob;
+    @Shadow
+    @Final
+    private LivingEntity mob;
 
     @Inject(method = "getDeathMessage", at = @At("HEAD"), cancellable = true)
     private void academy$overrideQuantumDeathMessage(CallbackInfoReturnable<Component> cir) {

@@ -364,6 +364,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         val now = System.currentTimeMillis()
         if (now - lastBlinkTime >= 500) {
             showCaret = !showCaret
+            invalidate()
             lastBlinkTime = now
         }
     }

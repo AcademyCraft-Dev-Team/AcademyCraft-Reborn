@@ -151,9 +151,9 @@ public final class Railgun extends Skill {
     }
 
     public static final class Server {
+        public static final Map<Player, Context> CONTEXT_MAP = createContextMap();
         @Nullable
         private static DataSyncManager<Boolean> chargingSyncManager;
-        public static final Map<Player, Context> CONTEXT_MAP = createContextMap();
 
         @SubscribePacket
         public static void onStartCharge(StartPacket packet) {
@@ -179,8 +179,8 @@ public final class Railgun extends Skill {
 
         public static class Context extends ServerContext {
             private final InteractionHand hand;
-            private int ticks = 0;
             private final ArcEffect arcEffect;
+            private int ticks = 0;
 
             public Context(ServerPlayer player, InteractionHand hand) {
                 super(player);
@@ -339,12 +339,12 @@ public final class Railgun extends Skill {
     }
 
     public record Data(boolean rightHand, int ticks) {
-        private static final Data DEFAULT = new Data(true, 0);
         public static final StreamCodec<ByteBuf, Data> CODEC = StreamCodec.composite(
                 ByteBufCodecs.BOOL, Data::rightHand,
                 ByteBufCodecs.INT, Data::ticks,
                 Data::new
         );
+        private static final Data DEFAULT = new Data(true, 0);
 
         public static Data getDefault() {
             return DEFAULT;

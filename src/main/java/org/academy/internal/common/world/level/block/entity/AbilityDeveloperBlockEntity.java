@@ -19,14 +19,14 @@ import java.util.Objects;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
 
-    @Nullable
-    public String name;
-    public int energyStored;
-    public int ticks;
     public final AnimationState openingState = new AnimationState();
     public final AnimationState closingState = new AnimationState();
     public final AnimationState standingState = new AnimationState();
     public final AnimationState lyingDownState = new AnimationState();
+    @Nullable
+    public String name;
+    public int energyStored;
+    public int ticks;
     public boolean isOpen = false;
     @Nullable
     private BlockPos connectedNodePos = null;
@@ -129,6 +129,11 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         return energyToReceive;
     }
 
+    @Override
+    public int getEnergyStored() {
+        return energyStored;
+    }
+
     public void setEnergyStored(int newEnergy) {
         var clamped = Math.clamp(newEnergy, 0, getMaxEnergyStorage());
         if (clamped != energyStored) {
@@ -138,11 +143,6 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
             }
         }
-    }
-
-    @Override
-    public int getEnergyStored() {
-        return energyStored;
     }
 
     @Override

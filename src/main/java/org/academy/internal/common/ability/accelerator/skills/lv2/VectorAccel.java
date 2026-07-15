@@ -30,10 +30,10 @@ import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.effect.AfterimageRenderer;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
@@ -110,11 +110,10 @@ public final class VectorAccel extends Skill {
     }
 
     public static final class Client {
-        public static Config CONFIG = new Config();
-        public static @Nullable Context currentContext = null;
-
         public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
         public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";
+        public static Config CONFIG = new Config();
+        public static @Nullable Context currentContext = null;
 
         public static void onChargeStart() {
             var player = Minecraft.getInstance().player;
@@ -152,16 +151,16 @@ public final class VectorAccel extends Skill {
 
         public static final class Context extends ClientContext {
             private final LocalPlayer player;
-            private boolean released = false;
             private final long chargeStartTime;
+            private final List<Vec3> trajectoryPath = new ArrayList<>();
+            private final AfterimageRenderer afterimage = new AfterimageRenderer(0.05f, 8, 2.0f);
+            private final java.util.Map<net.minecraft.client.renderer.rendertype.RenderType, StagedVertexBuffer.Draw> activeDraws = new java.util.HashMap<>();
+            private boolean released = false;
             private float chargeRatio;
             private @Nullable HitResult lastHitResult;
-            private final List<Vec3> trajectoryPath = new ArrayList<>();
             private float ringAlpha;
             private Vec3 lastCalculatedDirection = Vec3.ZERO;
             private double distance = 10;
-            private final AfterimageRenderer afterimage = new AfterimageRenderer(0.05f, 8, 2.0f);
-            private final java.util.Map<net.minecraft.client.renderer.rendertype.RenderType, StagedVertexBuffer.Draw> activeDraws = new java.util.HashMap<>();
 
             public Context(LocalPlayer player) {
                 this.player = player;

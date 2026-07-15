@@ -9,6 +9,9 @@ public final class IrisCompat {
     private static boolean hasIris = false;
     private static boolean bypass;
 
+    private IrisCompat() {
+    }
+
     public static void init() {
         hasIris = FMLLoader.getCurrent().getLoadingModList().getModFileById("iris") != null;
     }
@@ -34,8 +37,5 @@ public final class IrisCompat {
 
     public static void resetBypass() {
         if (hasIris()) ImmediateState.bypass = bypass;
-    }
-
-    private IrisCompat() {
     }
 }

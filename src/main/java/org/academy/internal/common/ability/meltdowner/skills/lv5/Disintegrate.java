@@ -30,30 +30,38 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import java.util.*;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class Disintegrate extends Skill {
     public Disintegrate() {
         super(Builder.of(AbilityCategories.MELTDOWNER.get()).level(AbilityLevel.LEVEL5).cpCost(200).iterationTicks(60).maxStacks(1));
     }
 
-    @Override public void initClient() {
+    @Override
+    public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
         RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_K)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
-        , Client::onUse);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_K)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                , Client::onUse);
     }
-    @Override public void initServer(MinecraftServerContext c) { MisakaNetworkServer.NETWORK_MANAGER.register(Server.class); }
+
+    @Override
+    public void initServer(MinecraftServerContext c) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
 
     public static final class Client {
         public static final String KEY = SkillNames.DISINTEGRATE + "_use";
         public static Config CONFIG = new Config();
+
         public static void onUse() {
             if (!org.academy.api.client.ability.AbilitySystemClient.canUseSkill(Skills.DISINTEGRATE.get())) return;
             var p = Minecraft.getInstance().player;
@@ -69,11 +77,23 @@ public class Disintegrate extends Skill {
             }
             MisakaNetworkClient.send(UsePacket.INSTANCE);
         }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {} @Override public Disintegrate.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public Disintegrate.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -95,7 +115,7 @@ public class Disintegrate extends Skill {
                 for (var e : l.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(eye, target).inflate(1), e -> e != player && e.isAlive()))
                     dmg = e.getHealth() * 0.99;
                 for (var e : l.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(eye, target).inflate(1), e -> e != player && e.isAlive()))
-                    e.hurtServer(l, l.damageSources().magic(), (float)dmg);
+                    e.hurtServer(l, l.damageSources().magic(), (float) dmg);
             });
         }
     }
@@ -104,6 +124,13 @@ public class Disintegrate extends Skill {
     public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
         public static final UsePacket INSTANCE = new UsePacket();
         public static final StreamCodec<ByteBuf, UsePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private UsePacket() {} @Override public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() { return PacketTypes.DISINTEGRATE_USE.get(); }
+
+        private UsePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
+            return PacketTypes.DISINTEGRATE_USE.get();
+        }
     }
 }

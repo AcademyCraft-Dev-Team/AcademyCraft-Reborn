@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -85,9 +84,19 @@ public class ThunderLance extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() {}
-                @Override public ThunderLance.Client.Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public ThunderLance.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -108,8 +117,8 @@ public class ThunderLance extends Skill {
     }
 
     public static final class Context extends ServerContext {
-        private int ticks;
         private final ArcEffect chargeArc;
+        private int ticks;
         private boolean ended;
 
         private Context(ServerPlayer player) {
@@ -175,8 +184,12 @@ public class ThunderLance extends Skill {
     public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
         public static final StartPacket INSTANCE = new StartPacket();
         public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private StartPacket() {}
-        @Override public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+
+        private StartPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
             return PacketTypes.THUNDER_LANCE_START.get();
         }
     }

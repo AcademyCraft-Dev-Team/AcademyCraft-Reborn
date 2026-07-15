@@ -56,30 +56,30 @@ public class HellFlareRay extends RenderOnlyEntity {
         return true;
     }
 
-    public void setOwner(LivingEntity owner) {
-        entityData.set(OWNER_ID, owner.getId());
-    }
-
     public @Nullable LivingEntity getOwner() {
         var id = entityData.get(OWNER_ID);
         var entity = level().getEntity(id);
         return entity instanceof LivingEntity living ? living : null;
     }
 
-    public void setBeamLength(float length) {
-        entityData.set(BEAM_LENGTH, length);
+    public void setOwner(LivingEntity owner) {
+        entityData.set(OWNER_ID, owner.getId());
     }
 
     public float getBeamLength() {
         return entityData.get(BEAM_LENGTH);
     }
 
-    public void setTargetId(int id) {
-        entityData.set(TARGET_ID, id);
+    public void setBeamLength(float length) {
+        entityData.set(BEAM_LENGTH, length);
     }
 
     public int getTargetId() {
         return entityData.get(TARGET_ID);
+    }
+
+    public void setTargetId(int id) {
+        entityData.set(TARGET_ID, id);
     }
 
     public boolean hasTarget() {
@@ -91,12 +91,12 @@ public class HellFlareRay extends RenderOnlyEntity {
         return id == -1 ? null : level().getEntity(id);
     }
 
+    public int getPhase() {
+        return entityData.get(PHASE);
+    }
+
     public void setPhase(int phase) {
         var clamped = Math.clamp(phase, 1, 3);
         entityData.set(PHASE, clamped);
-    }
-
-    public int getPhase() {
-        return entityData.get(PHASE);
     }
 }

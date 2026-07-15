@@ -1,7 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills.lv5;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,10 +20,10 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.client.renderer.effect.DistortionEffectWrapper;
 import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.lwjgl.glfw.GLFW;
@@ -36,7 +35,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class SpacialExcision extends Skill {
     public SpacialExcision() {
@@ -58,10 +58,10 @@ public class SpacialExcision extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_O)), GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
-        , Client::onUse);
+                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_O)), GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
+                , Client::onUse);
     }
 
     @Override

@@ -34,8 +34,8 @@ public class CoinItem extends Item {
                     player.getDeltaMovement().multiply(1.5, 0, 1.5);
 
             MisakaNetworkClient.send(new ThrowCoinPacket(
-                        initialVelocity.add(0, 0.5, 0),
-                        player.getYRot(), player.getXRot()));
+                    initialVelocity.add(0, 0.5, 0),
+                    player.getYRot(), player.getXRot()));
 
             if (!player.getAbilities().instabuild) {
                 itemStack.shrink(1);

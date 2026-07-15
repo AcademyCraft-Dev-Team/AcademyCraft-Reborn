@@ -244,7 +244,7 @@ abstract class AbstractWidget : Widget {
         }
     }
 
-    protected fun onMouseMoved(event: MouseEvent) {
+    protected open fun onMouseMoved(event: MouseEvent) {
     }
 
     protected open fun onMouseScrolled(event: ScrollEvent) {

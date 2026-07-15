@@ -29,6 +29,11 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
         super(BlockEntityTypes.WIND_GEN_TOP.get(), pos, blockState);
     }
 
+    public static void tick(Level level, BlockPos pos, BlockState state, WindGenTopBlockEntity blockEntity) {
+        blockEntity.ticks++;
+        blockEntity.hasFan = blockEntity.getItem(0).getItem() == Items.WIND_GEN_FAN_ITEM.get();
+    }
+
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
@@ -86,11 +91,6 @@ public final class WindGenTopBlockEntity extends BlockEntity implements Containe
     @Override
     public void clearContent() {
         items.clear();
-    }
-
-    public static void tick(Level level, BlockPos pos, BlockState state, WindGenTopBlockEntity blockEntity) {
-        blockEntity.ticks++;
-        blockEntity.hasFan = blockEntity.getItem(0).getItem() == Items.WIND_GEN_FAN_ITEM.get();
     }
 
     @Override

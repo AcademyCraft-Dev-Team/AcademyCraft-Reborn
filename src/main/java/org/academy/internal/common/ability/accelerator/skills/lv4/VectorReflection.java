@@ -40,7 +40,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class VectorReflection extends Skill {
     public VectorReflection() {
@@ -101,7 +103,6 @@ public class VectorReflection extends Skill {
     }
 
     public static final class Client {
-        private static boolean active = false;
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
                 new AbilitySystemClient.SkillInfo(
@@ -111,16 +112,16 @@ public class VectorReflection extends Skill {
                         20, 75
                 )
         );
-
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
         public static Config CONFIG = new Config();
-
-        public static void setActive(boolean active) {
-            Client.active = active;
-        }
+        private static boolean active = false;
 
         public static boolean isActive() {
             return active;
+        }
+
+        public static void setActive(boolean active) {
+            Client.active = active;
         }
 
         public static void onToggle() {

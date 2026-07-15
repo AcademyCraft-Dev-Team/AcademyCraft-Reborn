@@ -31,7 +31,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public final class PulseCharge extends Skill {
     public static final String KEY_NAME_USE = SkillNames.PULSE_CHARGE + ".use";

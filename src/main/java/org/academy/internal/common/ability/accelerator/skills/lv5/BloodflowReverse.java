@@ -8,7 +8,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
