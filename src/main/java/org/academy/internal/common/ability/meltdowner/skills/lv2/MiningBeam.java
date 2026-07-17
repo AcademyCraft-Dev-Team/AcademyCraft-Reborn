@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.meltdowner.skills.lv2;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -55,9 +56,9 @@ public class MiningBeam extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_M)),
-                        GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_M)),
+                        InputConstants.RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT)))
                 )
         ), Client::onToggle);
     }

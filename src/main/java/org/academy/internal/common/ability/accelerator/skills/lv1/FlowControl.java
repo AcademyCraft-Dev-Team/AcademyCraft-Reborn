@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv1;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -69,8 +70,8 @@ public class FlowControl extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)),
-                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_V)),
+                                InputConstants.RELEASE,
                                 new LinkedHashSet<>()
                         )
                 )

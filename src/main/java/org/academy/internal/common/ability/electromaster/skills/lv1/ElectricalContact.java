@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.electromaster.skills.lv1;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -56,8 +57,8 @@ public class ElectricalContact extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_H)),
-                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_H)),
+                                InputConstants.RELEASE,
                                 new LinkedHashSet<>()
                         )
                 )

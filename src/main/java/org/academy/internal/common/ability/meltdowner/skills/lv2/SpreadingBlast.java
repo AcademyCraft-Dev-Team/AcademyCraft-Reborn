@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.meltdowner.skills.lv2;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
@@ -68,9 +69,9 @@ public class SpreadingBlast extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.MOUSE,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOUSE_BUTTON_LEFT)),
-                                GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT))
+                                new LinkedHashSet<>(Set.of(InputConstants.MOUSE_BUTTON_LEFT)),
+                                InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT))
                         )
                 )
         ), Client::handleKey);

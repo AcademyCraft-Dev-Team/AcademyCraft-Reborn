@@ -1,5 +1,6 @@
 package org.academy.api.client.ability;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
@@ -46,8 +47,8 @@ public final class AbilitySystemClient {
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_V)),
-                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_V)),
+                                InputConstants.RELEASE,
                                 new LinkedHashSet<>()
                         )
                 )

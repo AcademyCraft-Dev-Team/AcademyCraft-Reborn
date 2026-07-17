@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv3;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -59,16 +60,16 @@ public class HyperAccelerate extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME_PRESS, Client.CONFIG.getKeyBinding(Client.KEY_NAME_PRESS,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)),
-                        GLFW.GLFW_PRESS,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_SHIFT)))
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_C)),
+                        InputConstants.PRESS,
+                        new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))
                 )
         ), Client::onChargeStart);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)),
-                        GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_SHIFT)))
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_C)),
+                        InputConstants.RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))
                 )
         ), Client::onUse);
     }

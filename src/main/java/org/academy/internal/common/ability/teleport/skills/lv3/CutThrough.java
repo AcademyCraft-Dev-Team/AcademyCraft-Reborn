@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills.lv3;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -64,9 +65,9 @@ public class CutThrough extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_F)),
-                        GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_CONTROL)))
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_F)),
+                        InputConstants.RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_CONTROL)))
                 )
         ), Client::onUse);
     }

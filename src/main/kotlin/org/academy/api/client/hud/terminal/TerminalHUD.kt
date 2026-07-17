@@ -93,8 +93,8 @@ class TerminalHUD private constructor() {
         val defaultKey = InputPair(
             InputSystem.InputType.KEYBOARD,
             InputSystem.KeyInfo(
-                LinkedHashSet(setOf(GLFW.GLFW_KEY_RIGHT_ALT)),
-                GLFW.GLFW_RELEASE
+                LinkedHashSet(setOf(InputConstants.KEY_RALT)),
+                InputConstants.RELEASE
             )
         )
         InputSystem.addKeyBinding(

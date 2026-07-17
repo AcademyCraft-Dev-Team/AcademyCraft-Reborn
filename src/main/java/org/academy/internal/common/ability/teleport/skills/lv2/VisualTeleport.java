@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills.lv2;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -19,7 +20,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -54,9 +54,9 @@ public class VisualTeleport extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_X)),
-                                GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_SHIFT)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_X)),
+                                InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))))
                 , Client::onUse);
     }
 

@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -53,10 +54,10 @@ public class BloodflowReverse extends Skill {
                         new InputSystem.InputPair(
                                 InputSystem.InputType.KEYBOARD,
                                 new InputSystem.KeyInfo(
-                                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
-                                        GLFW.GLFW_RELEASE,
+                                        new LinkedHashSet<>(Set.of(InputConstants.KEY_R)),
+                                        InputConstants.RELEASE,
                                         new LinkedHashSet<>(
-                                                Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)
+                                                Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)
                                         )
                                 )
                         )

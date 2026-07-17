@@ -69,7 +69,7 @@ public final class InputSystem {
         NeoForge.EVENT_BUS.post(event);
 
         if (event.isCanceled()) {
-            if (action == GLFW.GLFW_RELEASE) {
+            if (action == InputConstants.RELEASE) {
                 KeyMapping.set(InputConstants.Type.MOUSE.getOrCreate(button), false);
             }
             ci.cancel();
@@ -99,7 +99,7 @@ public final class InputSystem {
             var modSuccess = requiredMask == -1 || modifiers == requiredMask;
 
             boolean keySuccess;
-            if (requiredAction == GLFW.GLFW_RELEASE) {
+            if (requiredAction == InputConstants.RELEASE) {
                 var lastKey = -1;
                 for (var key : requiredKeys) lastKey = key;
                 keySuccess = input == lastKey && requiredKeys.stream().allMatch(state::containsKey)

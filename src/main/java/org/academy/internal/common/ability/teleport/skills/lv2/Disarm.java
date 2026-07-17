@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills.lv2;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -130,8 +131,8 @@ public class Disarm extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_D)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_D)), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT)))))
                 , Client::onUse);
     }
 
