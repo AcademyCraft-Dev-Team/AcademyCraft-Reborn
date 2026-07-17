@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills.lv3;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -63,14 +64,14 @@ public class CoordinateTeleport extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_SAVE, Client.CONFIG.getKeyBinding(Client.KEY_SAVE,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_T)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_T)), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
                 , Client::onSave);
 
         InputSystem.addKeyBinding(Client.KEY_TP, Client.CONFIG.getKeyBinding(Client.KEY_TP,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Y)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_Y)), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
                 , Client::onTeleport);
     }
 

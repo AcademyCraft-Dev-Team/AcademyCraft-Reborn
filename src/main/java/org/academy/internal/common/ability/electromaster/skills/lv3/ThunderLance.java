@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.electromaster.skills.lv3;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
@@ -61,9 +62,9 @@ public class ThunderLance extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_T)),
-                        GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_CONTROL)))
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_T)),
+                        InputConstants.RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.MOD_CONTROL)))
                 )
         ), Client::onUse);
     }

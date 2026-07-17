@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv2;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -62,11 +63,11 @@ public class DirStrike extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, new InputSystem.InputPair(
                 InputSystem.InputType.KEYBOARD,
                 new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_R)),
-                        GLFW.GLFW_RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_R)),
+                        InputConstants.RELEASE,
                         new LinkedHashSet<>(
                                 Set.of(
-                                        GLFW.GLFW_MOD_ALT
+                                        InputConstants.MOD_ALT
                                 )
                         )
                 )

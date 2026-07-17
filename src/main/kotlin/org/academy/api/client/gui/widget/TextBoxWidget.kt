@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget
 
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.Minecraft
 import net.neoforged.bus.api.Event
 import net.neoforged.bus.api.ICancellableEvent
@@ -203,7 +204,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         if (!isFocused) return
 
         val handled = when (event.keyCode) {
-            GLFW.GLFW_KEY_BACKSPACE -> {
+            InputConstants.KEY_BACKSPACE -> {
                 if (hasSelection) {
                     deleteSelectedText()
                 } else if (caretPos > 0) {
@@ -217,7 +218,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
                 true
             }
 
-            GLFW.GLFW_KEY_DELETE -> {
+            InputConstants.KEY_DELETE -> {
                 if (hasSelection) {
                     deleteSelectedText()
                 } else if (caretPos < stringBuilder.codePointCount(0, stringBuilder.length)) {
@@ -230,7 +231,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
                 true
             }
 
-            GLFW.GLFW_KEY_RIGHT -> {
+            InputConstants.KEY_RIGHT -> {
                 val extend = event.hasShiftDown()
                 if (!extend) {
                     clearSelection()
@@ -248,7 +249,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
                 true
             }
 
-            GLFW.GLFW_KEY_LEFT -> {
+            InputConstants.KEY_LEFT -> {
                 val extend = event.hasShiftDown()
                 if (!extend) {
                     clearSelection()
@@ -266,7 +267,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
                 true
             }
 
-            GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
+            InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER -> {
                 if (allowLineBreak) {
                     if (hasSelection) {
                         deleteSelectedText()
@@ -287,7 +288,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
                 true
             }
 
-            GLFW.GLFW_KEY_END -> {
+            InputConstants.KEY_END -> {
                 val extend = event.hasShiftDown()
                 if (!extend) {
                     clearSelection()
@@ -303,7 +304,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
                 true
             }
 
-            GLFW.GLFW_KEY_HOME -> {
+            InputConstants.KEY_HOME -> {
                 val extend = event.hasShiftDown()
                 if (!extend) {
                     clearSelection()
@@ -319,28 +320,28 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
                 true
             }
 
-            GLFW.GLFW_KEY_A -> {
+            InputConstants.KEY_A -> {
                 if (event.hasControlDownWithQuirk()) {
                     selectAll()
                     true
                 } else false
             }
 
-            GLFW.GLFW_KEY_C -> {
+            InputConstants.KEY_C -> {
                 if (event.hasControlDownWithQuirk() && hasSelection) {
                     copyToClipboard()
                     true
                 } else false
             }
 
-            GLFW.GLFW_KEY_V -> {
+            InputConstants.KEY_V -> {
                 if (event.hasControlDownWithQuirk()) {
                     pasteFromClipboard()
                     true
                 } else false
             }
 
-            GLFW.GLFW_KEY_X -> {
+            InputConstants.KEY_X -> {
                 if (event.hasControlDownWithQuirk() && hasSelection) {
                     cutToClipboard()
                     true

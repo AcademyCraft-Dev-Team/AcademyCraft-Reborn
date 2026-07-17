@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.meltdowner.skills.lv1;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -72,8 +73,8 @@ public class TraceRing extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)),
-                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_C)),
+                                InputConstants.RELEASE,
                                 new LinkedHashSet<>()
                         )
                 )

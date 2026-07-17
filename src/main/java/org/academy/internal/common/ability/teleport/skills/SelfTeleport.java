@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -63,14 +64,14 @@ public final class SelfTeleport extends Skill {
 
         KEY_START = CONFIG.getKeyBinding(Client.KEY_NAME_START,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Z)),
-                        GLFW.GLFW_PRESS,
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_Z)),
+                        InputConstants.PRESS,
                         new LinkedHashSet<>()
                 )));
         KEY_END = CONFIG.getKeyBinding(Client.KEY_NAME_END,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Z)),
-                        GLFW.GLFW_RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_Z)),
+                        InputConstants.RELEASE,
                         new LinkedHashSet<>()
                 )));
 

@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.electromaster.skills.lv1;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
@@ -60,9 +61,9 @@ public final class PulseCharge extends Skill {
 
         InputSystem.addKeyBinding(KEY_NAME_USE, Client.CONFIG.getKeyBinding(KEY_NAME_USE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_G)),
-                        GLFW.GLFW_RELEASE,
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_CONTROL)))
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_G)),
+                        InputConstants.RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.MOD_CONTROL)))
                 )
         ), Client::onUse);
     }

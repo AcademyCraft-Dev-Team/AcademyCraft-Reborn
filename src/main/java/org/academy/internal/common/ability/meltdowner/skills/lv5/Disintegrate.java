@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.meltdowner.skills.lv5;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
@@ -48,8 +49,8 @@ public class Disintegrate extends Skill {
         RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_K)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_K)), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
                 , Client::onUse);
     }
 

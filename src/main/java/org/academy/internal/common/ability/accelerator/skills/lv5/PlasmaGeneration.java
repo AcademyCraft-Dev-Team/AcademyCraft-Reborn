@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -68,13 +69,13 @@ public class PlasmaGeneration extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)), GLFW.GLFW_PRESS,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_CONTROL)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_C)), InputConstants.PRESS,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_CONTROL)))))
                 , Client::onChargeStart);
         InputSystem.addKeyBinding(Client.KEY_NAME_FIRE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_FIRE,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_C)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_CONTROL)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_C)), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_CONTROL)))))
                 , Client::onFire);
     }
 

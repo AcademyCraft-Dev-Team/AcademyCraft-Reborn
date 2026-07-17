@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget
 
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.util.Mth
 import org.academy.api.client.gui.event.KeyEvent
 import org.academy.api.client.gui.event.MouseEvent
@@ -60,18 +61,18 @@ open class SeekBarWidget : ProgressBarWidget() {
         val keyCode = event.keyCode
 
         if (orientation == Orientation.HORIZONTAL) {
-            if (keyCode == GLFW.GLFW_KEY_LEFT) {
+            if (keyCode == InputConstants.KEY_LEFT) {
                 setProgress(progress - keyProgressIncrement)
                 handled = true
-            } else if (keyCode == GLFW.GLFW_KEY_RIGHT) {
+            } else if (keyCode == InputConstants.KEY_RIGHT) {
                 setProgress(progress + keyProgressIncrement)
                 handled = true
             }
         } else {
-            if (keyCode == GLFW.GLFW_KEY_DOWN) {
+            if (keyCode == InputConstants.KEY_DOWN) {
                 setProgress(progress - keyProgressIncrement)
                 handled = true
-            } else if (keyCode == GLFW.GLFW_KEY_UP) {
+            } else if (keyCode == InputConstants.KEY_UP) {
                 setProgress(progress + keyProgressIncrement)
                 handled = true
             }

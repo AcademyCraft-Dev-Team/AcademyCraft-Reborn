@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.electromaster.skills.lv5;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
@@ -77,8 +78,8 @@ public class BallLightning extends Skill {
 
         InputSystem.addKeyBinding(KEY_NAME_ACTIVATE, Client.CONFIG.getKeyBinding(KEY_NAME_ACTIVATE,
                 new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_Y)),
-                        GLFW.GLFW_RELEASE,
+                        new LinkedHashSet<>(Set.of(InputConstants.KEY_Y)),
+                        InputConstants.RELEASE,
                         new LinkedHashSet<>())
                 )
         ), Client::handler);

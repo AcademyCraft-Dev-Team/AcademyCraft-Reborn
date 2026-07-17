@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv3;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
@@ -74,8 +75,8 @@ public class VectorReduction extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.KEYBOARD,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_N)),
-                                GLFW.GLFW_RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_N)),
+                                InputConstants.RELEASE,
                                 new LinkedHashSet<>()
                         )
                 )

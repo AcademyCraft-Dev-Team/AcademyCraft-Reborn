@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills.lv5;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -51,20 +52,20 @@ public class SpacialReplace extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_CORNER1, Client.CONFIG.getKeyBinding(Client.KEY_CORNER1,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_KP_1)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
+                                new LinkedHashSet<>(Set.of()), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT, InputConstants.MOD_CONTROL)))))
                 , Client::onSelectCorner1);
 
         InputSystem.addKeyBinding(Client.KEY_CORNER2, Client.CONFIG.getKeyBinding(Client.KEY_CORNER2,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_KP_2)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
+                                new LinkedHashSet<>(Set.of()), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT, InputConstants.MOD_CONTROL)))))
                 , Client::onSelectCorner2);
 
         InputSystem.addKeyBinding(Client.KEY_PASTE, Client.CONFIG.getKeyBinding(Client.KEY_PASTE,
                         new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_KEY_P)), GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT, GLFW.GLFW_MOD_SHIFT, GLFW.GLFW_MOD_CONTROL)))))
+                                new LinkedHashSet<>(Set.of(InputConstants.KEY_P)), InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT, InputConstants.MOD_CONTROL)))))
                 , Client::onPaste);
     }
 

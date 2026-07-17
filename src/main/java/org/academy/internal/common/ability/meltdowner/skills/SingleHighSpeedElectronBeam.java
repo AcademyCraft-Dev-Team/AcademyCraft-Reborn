@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.meltdowner.skills;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -54,9 +55,9 @@ public class SingleHighSpeedElectronBeam extends Skill {
                 new InputSystem.InputPair(
                         InputSystem.InputType.MOUSE,
                         new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOUSE_BUTTON_LEFT)),
-                                GLFW.GLFW_RELEASE,
-                                new LinkedHashSet<>(Set.of(GLFW.GLFW_MOD_ALT))
+                                new LinkedHashSet<>(Set.of(InputConstants.MOUSE_BUTTON_LEFT)),
+                                InputConstants.RELEASE,
+                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT))
                         )
                 )
         ), Client::handleKey);
