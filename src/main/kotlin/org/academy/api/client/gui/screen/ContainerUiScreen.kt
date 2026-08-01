@@ -16,8 +16,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
 import org.academy.AcademyCraft
-import org.academy.api.client.Render
-import org.academy.api.client.Resource
+import org.academy.api.client.render.Render
+import org.academy.api.client.resources.R
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.drawable.StateListDrawable
@@ -86,7 +86,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
             main.addChild("radio_group_page_button", pageButtons)
             val invButton: RadioButtonWidget
             run {
-                invButton = createButton(Resource.Textures.ICON_INV)
+                invButton = createButton(R.textures.ICON_INV)
                 invButton.layoutParams = WidgetContainer.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(16f)
@@ -126,7 +126,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
                     back.alpha = 0.5f
                     invPage.addChild("back", back)
 
-                    val inv = ImageWidget(Resource.Textures.UI_INVENTORY)
+                    val inv = ImageWidget(R.textures.UI_INVENTORY)
                     inv.layoutParams = FrameLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .heightMode(SizeMode.MATCH_PARENT)

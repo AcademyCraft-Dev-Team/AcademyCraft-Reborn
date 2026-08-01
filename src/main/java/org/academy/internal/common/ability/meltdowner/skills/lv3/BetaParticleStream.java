@@ -20,7 +20,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -28,9 +27,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 public class BetaParticleStream extends Skill {
     public BetaParticleStream() {
@@ -50,15 +46,11 @@ public class BetaParticleStream extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_F)), InputConstants.PRESS,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onChargeStart);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_F, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onChargeStart());
         InputSystem.addKeyBinding(Client.KEY_NAME_FIRE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_FIRE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_F)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onFire);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_F, InputConstants.RELEASE, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onFire());
     }
 
     @Override

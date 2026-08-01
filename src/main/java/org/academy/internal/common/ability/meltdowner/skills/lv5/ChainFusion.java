@@ -29,7 +29,6 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.skill.LightOrb;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -59,10 +58,8 @@ public class ChainFusion extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_U)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onUse);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_U, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onUse());
     }
 
     @Override

@@ -5,27 +5,85 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.input.KeyEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.util.ClientUtil;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public final class InputSystem {
-    public static final Map<String, KeyBinding> KEY_BINDINGS = new HashMap<>();
-    public static final Map<String, Consumer<Integer>> scrollListeners = new HashMap<>();
-    public static final Map<Integer, Integer> KEYBOARD_STATE = new HashMap<>();
-    public static final Map<Integer, Integer> MOUSE_STATE = new HashMap<>();
-    public static final Map<String, BiConsumer<Double, Double>> MOUSE_MOVE_HANDLERS = new HashMap<>();
+    public static final int ANY_ACTION = -1;
+    public static final int ANY_MODIFIER = -1;
+
+    private static final Map<String, KeyBinding> KEY_BINDINGS = new HashMap<>();
+    private static final Map<String, Consumer<Integer>> SCROLL_LISTENERS = new HashMap<>();
+    private static final Map<String, BiConsumer<Double, Double>> MOUSE_MOVE_HANDLERS = new HashMap<>();
+    private static final Map<Integer, Integer> KEYBOARD_STATE = new HashMap<>();
+    private static final Map<Integer, Integer> MOUSE_STATE = new HashMap<>();
     public static int currentMouseButton = -1;
     public static int currentMouseAction = -1;
     public static int currentMouseModifier = -1;
-    public static int currentKeyCode = -1;
-    public static int currentKeyAction = -1;
+
+    private InputSystem() {
+    }
+
+    public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
+        KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler));
+    }
+
+    public static void removeKeyBinding(String keyName) {
+        KEY_BINDINGS.remove(keyName);
+    }
+
+    public static boolean isDown(InputType type, int key) {
+        return stateOf(type).getOrDefault(key, InputConstants.RELEASE) != InputConstants.RELEASE;
+    }
+
+    public static int actionOf(InputType type, int key) {
+        return stateOf(type).getOrDefault(key, InputConstants.RELEASE);
+    }
+
+    public static void addScrollListener(String name, Consumer<Integer> listener) {
+        SCROLL_LISTENERS.put(name, listener);
+    }
+
+    public static void removeScrollListener(String name) {
+        SCROLL_LISTENERS.remove(name);
+    }
+
+    public static void addMouseMoveHandler(String name, BiConsumer<Double, Double> handler) {
+        MOUSE_MOVE_HANDLERS.put(name, handler);
+    }
+
+    public static void removeMouseMoveHandler(String name) {
+        MOUSE_MOVE_HANDLERS.remove(name);
+    }
+
+    public static KeyCombination combo(InputType type, int key, int action) {
+        return combo(type, Set.of(key), action, ANY_MODIFIER, false);
+    }
+
+    public static KeyCombination combo(InputType type, int key, int action, int modifiers) {
+        return combo(type, Set.of(key), action, modifiers, false);
+    }
+
+    public static KeyCombination combo(InputType type, int key, int action, int modifiers, boolean availableWhenScreen) {
+        return combo(type, Set.of(key), action, modifiers, availableWhenScreen);
+    }
+
+    public static KeyCombination anyKey(InputType type, int action, int modifiers) {
+        return combo(type, Set.of(), action, modifiers, false);
+    }
+
+    public static KeyCombination anyKey(InputType type, int action, int modifiers, boolean availableWhenScreen) {
+        return combo(type, Set.of(), action, modifiers, availableWhenScreen);
+    }
+
+    public static KeyCombination combo(InputType type, Set<Integer> keys, int action, int modifiers, boolean availableWhenScreen) {
+        return new KeyCombination(type, keys, action, modifiers, availableWhenScreen);
+    }
 
     public static void handleMouseMove(double xpos, double ypos, CallbackInfo ci) {
         var event = new MouseMoveEvent(xpos, ypos);
@@ -43,8 +101,6 @@ public final class InputSystem {
 
     public static void handleKey(@KeyEvent.Action int action, KeyEvent event, CallbackInfo ci) {
         var key = event.key();
-        currentKeyCode = key;
-        currentKeyAction = action;
         KEYBOARD_STATE.put(key, action);
 
         var inputEvent = new KeyInputEvent(key, event.scancode(), action, event.modifiers());
@@ -56,7 +112,7 @@ public final class InputSystem {
             return;
         }
 
-        processBindings(InputType.KEYBOARD, KEYBOARD_STATE, inputEvent.key, inputEvent.modifiers);
+        dispatch(InputType.KEYBOARD, key, action, event.modifiers());
     }
 
     public static void handleMouseButton(int button, int action, int modifiers, CallbackInfo ci) {
@@ -76,42 +132,7 @@ public final class InputSystem {
             return;
         }
 
-        processBindings(InputType.MOUSE, MOUSE_STATE, event.button, event.modifiers);
-    }
-
-    private static void processBindings(InputType eventType, Map<Integer, Integer> state, int input, int modifiers) {
-        KEY_BINDINGS.values().forEach(binding -> {
-            var inputPair = binding.inputPair;
-            if (inputPair.inputType != eventType) {
-                return;
-            }
-
-            var keyInfo = inputPair.keyInfo;
-            var requiredKeys = keyInfo.inputs;
-            var requiredModifiers = keyInfo.modifiers;
-            var requiredAction = keyInfo.action;
-
-            if (!inputPair.availableWhenScreen && ClientUtil.hasScreen()) return;
-            if (requiredKeys.isEmpty()) return;
-
-            var requiredMask = requiredModifiers.isEmpty() ? 0
-                    : requiredModifiers.stream().reduce(0, (a, b) -> a | b);
-            var modSuccess = requiredMask == -1 || modifiers == requiredMask;
-
-            boolean keySuccess;
-            if (requiredAction == InputConstants.RELEASE) {
-                var lastKey = -1;
-                for (var key : requiredKeys) lastKey = key;
-                keySuccess = input == lastKey && requiredKeys.stream().allMatch(state::containsKey)
-                        && requiredKeys.stream().allMatch(requiredKey -> state.get(requiredKey) == requiredAction);
-            } else {
-                keySuccess = requiredKeys.stream().allMatch(state::containsKey)
-                        && requiredKeys.stream().allMatch(requiredKey -> state.get(requiredKey) == requiredAction);
-            }
-
-            if (modSuccess && keySuccess)
-                binding.runnable.run();
-        });
+        dispatch(InputType.MOUSE, button, action, modifiers);
     }
 
     public static void handleMouseScroll(double xOffset, double yOffset, CallbackInfo ci) {
@@ -122,19 +143,32 @@ public final class InputSystem {
             return;
         }
         yOffset = event.yOffset;
-        if (yOffset != 0 && !scrollListeners.isEmpty()) {
+        if (yOffset != 0 && !SCROLL_LISTENERS.isEmpty()) {
             var finalYOffset = yOffset;
-            scrollListeners.values().forEach(listener -> listener.accept((int) finalYOffset));
+            SCROLL_LISTENERS.values().forEach(listener -> listener.accept((int) finalYOffset));
         }
     }
 
-    public static void addKeyBinding(String keyName, InputSystem.InputPair pair, Runnable runnable) {
-        var binding = new KeyBinding(pair, runnable);
-        KEY_BINDINGS.put(keyName, binding);
+    private static void dispatch(InputType eventType, int input, int action, int modifiers) {
+        for (var binding : KEY_BINDINGS.values()) {
+            var combo = binding.combo;
+            if (!matches(combo, eventType, input, action, modifiers)) continue;
+            binding.handler.accept(new BindingContext(eventType, input, action, modifiers));
+        }
     }
 
-    public static void removeKeyBinding(String keyName) {
-        KEY_BINDINGS.remove(keyName);
+    private static boolean matches(KeyCombination combo, InputType eventType, int input, int action, int modifiers) {
+        if (combo.type != eventType) return false;
+        if (!combo.availableWhenScreen && ClientUtil.hasScreen()) return false;
+        if (combo.action != ANY_ACTION && combo.action != action) return false;
+        if (combo.modifiers != ANY_MODIFIER && combo.modifiers != modifiers) return false;
+        if (combo.keys.isEmpty()) return true;
+        if (!combo.keys.contains(input)) return false;
+        return combo.keys.stream().allMatch(key -> stateOf(eventType).getOrDefault(key, InputConstants.RELEASE) == combo.action);
+    }
+
+    private static Map<Integer, Integer> stateOf(InputType type) {
+        return type == InputType.KEYBOARD ? KEYBOARD_STATE : MOUSE_STATE;
     }
 
     public enum InputType {
@@ -142,48 +176,21 @@ public final class InputSystem {
         KEYBOARD
     }
 
-    public static final class KeyInfo {
-        public LinkedHashSet<Integer> inputs;
-        public int action;
-        public LinkedHashSet<Integer> modifiers;
-
-        public KeyInfo(LinkedHashSet<Integer> inputs, int action, LinkedHashSet<Integer> modifiers) {
-            this.inputs = inputs;
-            this.action = action;
-            this.modifiers = modifiers;
-        }
-
-        public KeyInfo(LinkedHashSet<Integer> inputs, int action) {
-            this.inputs = inputs;
-            this.action = action;
-            modifiers = new LinkedHashSet<>(Set.of(-1));
+    public record KeyCombination(
+            InputType type,
+            Set<Integer> keys,
+            int action,
+            int modifiers,
+            boolean availableWhenScreen
+    ) {
+        public KeyCombination {
+            keys = keys == null ? Set.of() : keys;
         }
     }
 
-    public static class KeyBinding {
-        public InputPair inputPair;
-        public Runnable runnable;
-
-        public KeyBinding(InputPair inputPair, Runnable runnable) {
-            this.inputPair = inputPair;
-            this.runnable = runnable;
-        }
+    public record BindingContext(InputType type, int input, int action, int modifiers) {
     }
 
-    public static class InputPair {
-        public InputType inputType;
-        public KeyInfo keyInfo;
-        public boolean availableWhenScreen = false;
-
-        public InputPair(InputType inputType, KeyInfo keyInfo, boolean availableWhenScreen) {
-            this.inputType = inputType;
-            this.keyInfo = keyInfo;
-            this.availableWhenScreen = availableWhenScreen;
-        }
-
-        public InputPair(InputType inputType, KeyInfo keyInfo) {
-            this.inputType = inputType;
-            this.keyInfo = keyInfo;
-        }
+    private record KeyBinding(KeyCombination combo, Consumer<BindingContext> handler) {
     }
 }

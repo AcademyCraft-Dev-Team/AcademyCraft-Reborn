@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.command
 
-import org.academy.api.client.Render
+import org.academy.api.client.render.Render
 
 class FillRectDrawCommand(
     width: Float, height: Float,

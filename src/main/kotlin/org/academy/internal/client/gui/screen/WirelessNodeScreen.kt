@@ -6,7 +6,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.common.NeoForge
-import org.academy.api.client.Resource
+import org.academy.api.client.resources.R
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
@@ -70,14 +70,14 @@ class WirelessNodeScreen(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(Resource.Textures.WIRELESS_NODE_UI)
+        val ui = ImageWidget(R.textures.WIRELESS_NODE_UI)
         ui.layoutParams = FrameLayoutWidget.LayoutParams()
             .sizeMode(SizeMode.MATCH_PARENT)
 
         invPage.addChild("ui", ui)
 
         val effect: SpriteSheetWidget = object : SpriteSheetWidget(
-            Resource.Textures.WIRELESS_NODE_STATE,
+            R.textures.WIRELESS_NODE_STATE,
             Orientation.VERTICAL,
             186, 750,
             186, 75,
@@ -110,7 +110,7 @@ class WirelessNodeScreen(
         wirelessPage.isEnabled = false
         content.addChild("page_wireless", wirelessPage)
 
-        val wirelessButton = createButton(Resource.Textures.ICON_WIRELESS)
+        val wirelessButton = createButton(R.textures.ICON_WIRELESS)
         wirelessButton.layoutParams = WidgetContainer.LayoutParams()
             .widthMode(SizeMode.MATCH_PARENT)
             .height(16f)

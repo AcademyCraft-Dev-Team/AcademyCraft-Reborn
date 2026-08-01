@@ -9,6 +9,11 @@ interface WidgetContainer : Widget {
 
     fun addChild(name: String, child: Widget)
 
+    fun addChild(name: String, child: Widget, runnable: () -> Unit) {
+        addChild(name, child)
+        runnable()
+    }
+
     fun removeChild(name: String)
 
     fun clearChildren()

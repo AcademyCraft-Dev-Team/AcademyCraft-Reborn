@@ -21,7 +21,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -29,9 +28,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 public class HyperAccelerate extends Skill {
     public HyperAccelerate() {
@@ -59,19 +55,11 @@ public class HyperAccelerate extends Skill {
         RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_PRESS, Client.CONFIG.getKeyBinding(Client.KEY_NAME_PRESS,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_C)),
-                        InputConstants.PRESS,
-                        new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))
-                )
-        ), Client::onChargeStart);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.PRESS, InputConstants.MOD_SHIFT)
+        ), ctx -> Client.onChargeStart());
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_C)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))
-                )
-        ), Client::onUse);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.RELEASE, InputConstants.MOD_SHIFT)
+        ), ctx -> Client.onUse());
     }
 
     @Override

@@ -12,7 +12,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.renderer.BallRenderer;
 import org.academy.api.client.util.VertexUtil;
@@ -159,9 +159,9 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
     }
 
     private void drawOrbLayers(HellFlareRayRenderState state, PoseStack poseStack, RenderParams p) {
-        var phase = BloomEffect.getAfter();
-        var additiveBuilder = phase.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
-        var mainBuilder = phase.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES);
+        var after = BloomEffect.getAfter();
+        var additiveBuilder = after.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
+        var mainBuilder = after.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES);
 
         var random = RandomSource.create((long) (state.age * 50));
         var cameraRotation = Minecraft.getInstance().gameRenderer.mainCamera().rotation();
@@ -759,4 +759,3 @@ public class HellFlareRayRenderer extends EntityRenderer<HellFlareRay, HellFlare
         }
     }
 }
-

@@ -11,7 +11,7 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.BloomEffect;
 
 import static org.academy.AcademyCraft.academy;

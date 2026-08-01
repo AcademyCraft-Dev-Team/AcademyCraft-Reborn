@@ -14,7 +14,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.academy.api.client.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
 
 public final class EMFieldEffectWrapper implements EffectRenderer {
     public static final EMFieldEffectWrapper INSTANCE = new EMFieldEffectWrapper();

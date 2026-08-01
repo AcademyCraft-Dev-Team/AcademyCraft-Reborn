@@ -21,9 +21,9 @@ public final class EMFieldRenderer {
     private static final float GLOW_WIDTH_MULT = 2.5f;
 
     private final List<FieldLine> fieldLines = new ArrayList<>();
+    private final long seed = 42;
     private float time;
     private boolean active = true;
-    private final long seed = 42;
 
     public EMFieldRenderer() {
     }

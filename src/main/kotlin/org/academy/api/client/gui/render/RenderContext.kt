@@ -8,12 +8,15 @@ import java.util.*
 import java.util.function.Supplier
 
 class RenderContext {
-    val commands: MutableList<SubmittedCommand> = ArrayList<SubmittedCommand>()
+    val commands = mutableListOf<SubmittedCommand>()
     private val pose = PoseStack()
     private val pose2D = PoseStack2D()
     private val scissorStack: ScissorStack
     private val drawOrderStack: DrawOrderStack
     private val alphaStack: AlphaStack
+
+    var recordedMax = 0
+        private set
 
     init {
         scissorStack = ScissorStack()
@@ -21,10 +24,15 @@ class RenderContext {
         alphaStack = AlphaStack()
     }
 
+    fun resetRecordedMax() {
+        recordedMax = 0
+    }
+
     fun submit(command: DrawCommand) {
         val currentPose = pose.last().copy()
         val currentScissor = scissorStack.peek()
         val currentDrawOrder = drawOrderStack.peek()
+        if (currentDrawOrder > recordedMax) recordedMax = currentDrawOrder
         commands.add(SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder))
     }
 
@@ -84,7 +92,7 @@ class RenderContext {
     }
 
     class AlphaStack {
-        private val stack: Deque<Float> = ArrayDeque<Float>()
+        private val stack = ArrayDeque<Float>()
 
         init {
             stack.push(1.0f)
@@ -110,14 +118,14 @@ class RenderContext {
     }
 
     class DrawOrderStack {
-        private val stack: Deque<Int> = ArrayDeque<Int>()
+        private val stack = ArrayDeque<Int>()
 
         init {
             stack.push(0)
         }
 
-        fun push() {
-            stack.push(peek())
+        fun push(x: Int = peek()) {
+            stack.push(x)
         }
 
         fun pop() {
@@ -140,7 +148,7 @@ class RenderContext {
     }
 
     class ScissorStack {
-        private val stack: Deque<ScissorRect> = ArrayDeque<ScissorRect>()
+        private val stack = ArrayDeque<ScissorRect>()
 
         fun push(scissor: ScissorRect) {
             val currentScissor = stack.peekLast()

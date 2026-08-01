@@ -27,7 +27,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -38,9 +37,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 public class DirStrike extends Skill {
     public DirStrike() {
         super(Builder
@@ -60,18 +56,7 @@ public class DirStrike extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
 
-        InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, new InputSystem.InputPair(
-                InputSystem.InputType.KEYBOARD,
-                new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_R)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>(
-                                Set.of(
-                                        InputConstants.MOD_ALT
-                                )
-                        )
-                )
-        )), Client::onAction);
+        InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT)), ctx -> Client.onAction());
     }
 
     @Override

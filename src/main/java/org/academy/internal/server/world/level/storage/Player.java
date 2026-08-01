@@ -1,7 +1,7 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.google.gson.annotations.SerializedName;
-import org.academy.api.common.data.CPData;
+import org.academy.api.common.data.AbilityData;
 import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.*;
@@ -14,9 +14,9 @@ public final class Player {
 
     // CP
     @SerializedName("cpOccupations")
-    private List<CPData.CpOccupationData> cpOccupations = new ArrayList<>();
+    private List<AbilityData.CpOccupationData> cpOccupations = new ArrayList<>();
     @SerializedName("cpData")
-    private CPData cpData = new CPData();
+    private AbilityData cpData = new AbilityData();
 
     private transient volatile boolean isDirty = false;
 
@@ -51,22 +51,22 @@ public final class Player {
         return skillDataMap.containsKey(skillId);
     }
 
-    public CPData getCpData() {
+    public AbilityData getCpData() {
         return cpData;
     }
 
-    public void setCpData(CPData cpData) {
+    public void setCpData(AbilityData cpData) {
         if (!Objects.equals(this.cpData, cpData)) {
             this.cpData = cpData;
             markDirty();
         }
     }
 
-    public List<CPData.CpOccupationData> getCpOccupations() {
+    public List<AbilityData.CpOccupationData> getCpOccupations() {
         return cpOccupations;
     }
 
-    public void setCpOccupations(List<CPData.CpOccupationData> cpOccupations) {
+    public void setCpOccupations(List<AbilityData.CpOccupationData> cpOccupations) {
         this.cpOccupations = cpOccupations;
         markDirty();
     }

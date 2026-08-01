@@ -14,7 +14,7 @@ import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.internal.common.world.level.block.entity.WindGenPillarBlockEntity;
 
-import static org.academy.api.client.Resource.Textures.BLOCK_WIND_GEN_PILLAR;
+import static org.academy.api.client.resources.R.textures.BLOCK_WIND_GEN_PILLAR;
 
 public final class WindGenPillarRenderer implements BlockEntityRenderer<WindGenPillarBlockEntity, BlockEntityRenderState> {
     public static final WindGenPillarRenderer INSTANCE = new WindGenPillarRenderer();

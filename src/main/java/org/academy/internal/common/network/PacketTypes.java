@@ -5,10 +5,9 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.AcquireCategoryPacket;
-import org.academy.api.common.ability.LearnSkillPacket;
+import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
-import org.academy.api.common.ability.pakcet.SyncCPDataPacket;
+import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.sync.packet.SyncDataPacket;
 import org.academy.api.common.util.UncheckedUtil;
@@ -83,9 +82,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncAbilityCategoryPacket>>
             SYNC_ABILITY_CATEGORY = PACKET_TYPES.register("sync_ability_category",
             () -> new PacketType<>(SyncAbilityCategoryPacket.class, SyncAbilityCategoryPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncCPDataPacket>>
-            SYNC_CP_DATA = PACKET_TYPES.register("sync_cp_data",
-            () -> new PacketType<>(SyncCPDataPacket.class, SyncCPDataPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncAbilityDataPacket>>
+            SYNC_ABILITY_DATA = PACKET_TYPES.register("sync_ability_data",
+            () -> new PacketType<>(SyncAbilityDataPacket.class, SyncAbilityDataPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillDataPacket>>
             SYNC_SKILL_DATA = PACKET_TYPES.register("sync_skill_data",
             () -> new PacketType<>(SyncSkillDataPacket.class, SyncSkillDataPacket.CODEC));
@@ -165,14 +164,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BloodflowReverse.ReverseBloodflowPacket>>
             REVERSE_BLOODFLOW = PACKET_TYPES.register("reverse_bloodflow",
             () -> new PacketType<>(BloodflowReverse.ReverseBloodflowPacket.class, BloodflowReverse.ReverseBloodflowPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AcquireCategoryPacket>>
-            ACQUIRE_CATEGORY = PACKET_TYPES.register("acquire_category",
-            () -> new PacketType<>(AcquireCategoryPacket.class, AcquireCategoryPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AcquireCategoryPacket.Response>>
-            ACQUIRE_CATEGORY_RESPONSE = PACKET_TYPES.register("acquire_category_response",
-            () -> new PacketType<>(AcquireCategoryPacket.Response.class, AcquireCategoryPacket.Response.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LearnSkillPacket>>
             LEARN_SKILL = PACKET_TYPES.register("learn_skill",
@@ -338,6 +329,33 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpacialExcision.ActivatePacket>>
             SPACIAL_EXCISION_ACTIVATE = PACKET_TYPES.register("spacial_excision_activate",
             () -> new PacketType<>(SpacialExcision.ActivatePacket.class, SpacialExcision.ActivatePacket.CODEC));
+
+    /**
+     * Development packets
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, StartSkillDevPacket>>
+            START_SKILL_DEV = PACKET_TYPES.register("start_skill_dev",
+            () -> new PacketType<>(StartSkillDevPacket.class, StartSkillDevPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, StartSkillDevPacket.Response>>
+            START_SKILL_DEV_RESPONSE = PACKET_TYPES.register("start_skill_dev_response",
+            () -> new PacketType<>(StartSkillDevPacket.Response.class, StartSkillDevPacket.Response.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, StartLevelDevPacket>>
+            START_LEVEL_DEV = PACKET_TYPES.register("start_level_dev",
+            () -> new PacketType<>(StartLevelDevPacket.class, StartLevelDevPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, StartLevelDevPacket.Response>>
+            START_LEVEL_DEV_RESPONSE = PACKET_TYPES.register("start_level_dev_response",
+            () -> new PacketType<>(StartLevelDevPacket.Response.class, StartLevelDevPacket.Response.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DevSyncPacket>>
+            DEV_SYNC = PACKET_TYPES.register("dev_sync",
+            () -> new PacketType<>(DevSyncPacket.class, DevSyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, StopDevPacket>>
+            STOP_DEV = PACKET_TYPES.register("stop_dev",
+            () -> new PacketType<>(StopDevPacket.class, StopDevPacket.CODEC));
 
     private PacketTypes() {
     }

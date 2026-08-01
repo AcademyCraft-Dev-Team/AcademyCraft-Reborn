@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.RandomSource;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.renderer.BallRenderer;
 import org.academy.api.client.util.VertexUtil;
@@ -32,8 +32,7 @@ public class LightOrbRenderer extends EntityRenderer<LightOrb, LightOrbRenderSta
         var g = 0.8f;
         var b = 1.0f;
 
-        var bufferSource = BloomEffect.getAfter();
-        var additiveBuilder = bufferSource.getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
+        var additiveBuilder = BloomEffect.getAfter().getBuffer(Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM_ADDITIVE);
 
         random.setSeed(System.currentTimeMillis() / 40);
         var cameraRotation = Minecraft.getInstance().gameRenderer.mainCamera().rotation();

@@ -6,7 +6,7 @@ import com.mojang.blaze3d.resource.RenderTargetDescriptor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
@@ -14,8 +14,8 @@ import org.joml.Vector4f;
 
 import java.util.List;
 
-import static org.academy.api.client.Render.BlurUniforms.getBlurUniformsBuffer;
-import static org.academy.api.client.Render.BlurUniforms.writeBlurUniforms;
+import static org.academy.api.client.render.Render.BlurUniforms.getBlurUniformsBuffer;
+import static org.academy.api.client.render.Render.BlurUniforms.writeBlurUniforms;
 
 public final class BlurEffect {
     private BlurEffect() {

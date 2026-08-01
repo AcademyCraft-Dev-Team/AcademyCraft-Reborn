@@ -10,7 +10,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jspecify.annotations.Nullable;

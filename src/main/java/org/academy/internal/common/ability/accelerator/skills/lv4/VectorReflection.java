@@ -13,12 +13,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
-import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
@@ -26,13 +27,13 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -41,10 +42,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
-
 public class VectorReflection extends Skill {
     public VectorReflection() {
         super(Builder
@@ -54,6 +52,8 @@ public class VectorReflection extends Skill {
                 .maintenanceCost(50)
                 .passive()
                 .maxStacks(NO_STACK_LIMIT)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
+                .devCondition(new DevCondition.DependencyCondition("Vector Reduction", "academy:vector_reduction"))
         );
     }
 
@@ -85,16 +85,8 @@ public class VectorReflection extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                        new InputSystem.InputPair(
-                                InputSystem.InputType.KEYBOARD,
-                                new InputSystem.KeyInfo(
-                                        new LinkedHashSet<>(Set.of(InputConstants.KEY_R)),
-                                        InputConstants.PRESS,
-                                        new LinkedHashSet<>()
-                                )
-                        )
-                ), Client::onToggle
-        );
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0)
+                ), ctx -> Client.onToggle());
         ClientSyncManager.register(SyncKeys.VECTOR_REFLECTION_ACTIVE.get(), Client::setActive);
     }
 
@@ -108,9 +100,9 @@ public class VectorReflection extends Skill {
                 AbilityCategories.ACCELERATOR.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.VECTOR_REFLECTION.get(),
-                        List.of(),
-                        Resource.Textures.VECTOR_REFLECTION_ICON,
-                        20, 75
+                        List.of(VectorReduction.Client.SKILL_INFO),
+                        R.textures.vector_reflection_icon,
+                        210, 50
                 )
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";

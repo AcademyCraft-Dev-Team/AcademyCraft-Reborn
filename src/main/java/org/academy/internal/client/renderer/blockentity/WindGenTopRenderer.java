@@ -12,7 +12,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.internal.client.model.WindGenTopModel;
 import org.academy.internal.client.model.WindGenTurbineModel;
 import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderState;
@@ -52,7 +52,7 @@ public final class WindGenTopRenderer implements BlockEntityRenderer<WindGenTopB
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
-        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, 0, renderState.breakProgress);
+        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(R.textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, 0, renderState.breakProgress);
         poseStack.pushPose();
         poseStack.translate(-0.5f, 1.5f, 0.5f);
         poseStack.scale(1, 1f / 16f, 1);

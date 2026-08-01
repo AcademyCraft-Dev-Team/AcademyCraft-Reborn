@@ -13,7 +13,7 @@ import org.joml.Matrix4f;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import static org.academy.api.client.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
 
 public final class AfterimageEffectWrapper implements EffectRenderer {
     public static final AfterimageEffectWrapper INSTANCE = new AfterimageEffectWrapper();

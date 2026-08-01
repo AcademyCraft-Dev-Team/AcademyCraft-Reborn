@@ -27,7 +27,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -37,10 +36,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
-
 public class IronSandArsenal extends Skill {
     public static final int SWORD_COOLDOWN = 10;
     public static final int WHIP_COOLDOWN = 5;
@@ -72,16 +68,12 @@ public class IronSandArsenal extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_TOGGLE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_I)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onToggle);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_I, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onToggle());
 
         InputSystem.addKeyBinding(Client.KEY_FORM, Client.CONFIG.getKeyBinding(Client.KEY_FORM,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_G)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onSwitchForm);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onSwitchForm());
     }
 
     @Override

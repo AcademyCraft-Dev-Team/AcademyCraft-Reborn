@@ -2,26 +2,29 @@ package org.academy.api.common.data;
 
 import org.academy.api.common.ability.AbilityLevel;
 
-public class CPData {
+public class AbilityData {
     // CP
     private float maxCP = 100;
     private float availableCP = 100;
     private AbilityLevel level = AbilityLevel.LEVEL0;
     private Status status = Status.NORMAL;
-    private int stateTimer = 0;// 状态定时器，大于零时每tick自减
+    private int stateTimer = 0;
 
     // SP
     private int currSP = 2000;
     private int maxSP = 2000;
-    private int spRegenTimer = 0;// 每tick自增，到20时，SP增加1
+    private int spRegenTimer = 0;
 
-    // MP (Matter Point) - 物质点，每系能力独立消耗
+    // MP (Matter Point)
     private float currMP = 100;
     private float maxMP = 100;
 
+    // Ability Exp
+    private float abilityExp = 0;
+
     private transient boolean isDirty = false;
 
-    public CPData() {
+    public AbilityData() {
     }
 
     public static Builder builder() {
@@ -157,6 +160,20 @@ public class CPData {
         markDirty();
     }
 
+    public float getAbilityExp() {
+        return abilityExp;
+    }
+
+    public void setAbilityExp(float abilityExp) {
+        this.abilityExp = abilityExp;
+        markDirty();
+    }
+
+    public void addAbilityExp(float amount) {
+        this.abilityExp += amount;
+        markDirty();
+    }
+
     public enum Status {
         NORMAL,
         PERSONAL_REALITY_OVERLOAD,
@@ -164,59 +181,64 @@ public class CPData {
     }
 
     public static class Builder {
-        private final CPData cpData;
+        private final AbilityData data;
 
         public Builder() {
-            cpData = new CPData();
+            data = new AbilityData();
         }
 
         public Builder maxCP(float maxCP) {
-            cpData.maxCP = maxCP;
+            data.maxCP = maxCP;
             return this;
         }
 
         public Builder availableCP(float availableCP) {
-            cpData.availableCP = availableCP;
+            data.availableCP = availableCP;
             return this;
         }
 
         public Builder level(AbilityLevel level) {
-            cpData.level = level;
+            data.level = level;
             return this;
         }
 
         public Builder status(Status status) {
-            cpData.status = status;
+            data.status = status;
             return this;
         }
 
         public Builder stateTimer(int stateTimer) {
-            cpData.stateTimer = stateTimer;
+            data.stateTimer = stateTimer;
             return this;
         }
 
         public Builder currSP(int currSP) {
-            cpData.currSP = currSP;
+            data.currSP = currSP;
             return this;
         }
 
         public Builder maxSP(int maxSP) {
-            cpData.maxSP = maxSP;
+            data.maxSP = maxSP;
             return this;
         }
 
         public Builder currMP(float currMP) {
-            cpData.currMP = currMP;
+            data.currMP = currMP;
             return this;
         }
 
         public Builder maxMP(float maxMP) {
-            cpData.maxMP = maxMP;
+            data.maxMP = maxMP;
             return this;
         }
 
-        public CPData build() {
-            return cpData;
+        public Builder abilityExp(float abilityExp) {
+            data.abilityExp = abilityExp;
+            return this;
+        }
+
+        public AbilityData build() {
+            return data;
         }
     }
 

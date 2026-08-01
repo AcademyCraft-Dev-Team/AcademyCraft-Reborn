@@ -4,7 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.PoseStack
-import org.academy.api.client.Render
+import org.academy.api.client.render.Render
 import org.academy.api.client.gui.render.VertexWriter
 import org.academy.api.client.render.MsdfUniformData
 import org.academy.api.client.render.TextureBinding

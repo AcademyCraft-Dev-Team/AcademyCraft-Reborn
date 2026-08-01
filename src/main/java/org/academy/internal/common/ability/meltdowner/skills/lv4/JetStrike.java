@@ -31,7 +31,6 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.Smoke;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -39,9 +38,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 public class JetStrike extends Skill {
     public JetStrike() {
@@ -62,10 +58,8 @@ public class JetStrike extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_J)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onUse);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_J, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onUse());
     }
 
     @Override

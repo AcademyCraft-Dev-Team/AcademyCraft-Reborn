@@ -8,16 +8,16 @@ import java.util.Map;
 
 public abstract class KeyBindingConfig {
     @SerializedName("keyBindings")
-    private final Map<String, InputSystem.InputPair> keyBindings = new HashMap<>();
+    private final Map<String, InputSystem.KeyCombination> keyBindings = new HashMap<>();
 
-    public InputSystem.InputPair getKeyBinding(String name, InputSystem.InputPair defaultConfig) {
+    public InputSystem.KeyCombination getKeyBinding(String name, InputSystem.KeyCombination defaultConfig) {
         if (!keyBindings.containsKey(name)) {
             setKeyBinding(name, defaultConfig);
         }
         return keyBindings.get(name);
     }
 
-    public void setKeyBinding(String name, InputSystem.InputPair keyBinding) {
+    public void setKeyBinding(String name, InputSystem.KeyCombination keyBinding) {
         keyBindings.put(name, keyBinding);
     }
 }

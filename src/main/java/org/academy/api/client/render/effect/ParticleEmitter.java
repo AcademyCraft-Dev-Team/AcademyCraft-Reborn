@@ -23,6 +23,9 @@ public final class ParticleEmitter {
     private final Vector3f tmpV2 = new Vector3f();
     private final Vector3f tmpV3 = new Vector3f();
     private final Vector3f tmpV4 = new Vector3f();
+    private final float colorVariation;
+    private final Vector3f emissionDirection = new Vector3f(0, 1, 0);
+    private final Vector3f emitterPosition = new Vector3f();
     private boolean active = true;
     private float emissionRate;
     private float emissionAccumulator;
@@ -37,13 +40,10 @@ public final class ParticleEmitter {
     private float gravity;
     private float damping;
     private float red, green, blue;
-    private final float colorVariation;
     private float startAlpha;
     private float endAlpha;
     private SpreadMode spreadMode = SpreadMode.SPHERE;
     private float spreadAngle;
-    private final Vector3f emissionDirection = new Vector3f(0, 1, 0);
-    private final Vector3f emitterPosition = new Vector3f();
     private boolean useRotation;
     private float rotationSpeedBase;
     private float rotationSpeedVariation;

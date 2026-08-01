@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.internal.client.renderer.blockentity.state.CatEngineRenderState;
 import org.academy.internal.common.world.level.block.entity.CatEngineBlockEntity;
 import org.joml.Vector3f;

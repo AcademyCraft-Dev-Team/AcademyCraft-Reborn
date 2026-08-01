@@ -14,7 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -56,6 +56,7 @@ public abstract class Skill {
     private final boolean isPassive;
     private final float cpCost;
     private final Identifier icon;
+    private final List<DevCondition> devConditions;
     @Nullable
     private String cachedKeyString;
     private Set<Skill> dependencies = new HashSet<>();
@@ -76,6 +77,7 @@ public abstract class Skill {
         var dataClass = builder.dataClass;
         SkillDataSerializer.registerType(builder.dataTypeId, dataClass);
         icon = builder.icon;
+        devConditions = List.copyOf(builder.devConditions);
 
         if (builder.dependencyHolders.isEmpty()) {
             dependencies = ImmutableSet.of();
@@ -165,6 +167,10 @@ public abstract class Skill {
         return dependencies;
     }
 
+    public List<DevCondition> getDevConditions() {
+        return devConditions;
+    }
+
     public void init() {
     }
 
@@ -240,6 +246,10 @@ public abstract class Skill {
         return Language.getInstance().getOrDefault(getDescriptionId());
     }
 
+    public String getTranslatedDescription() {
+        return Language.getInstance().getOrDefault(getDescriptionId() + ".desc");
+    }
+
     public String getKeyBindingKeyName(String name) {
         var key = getKey();
         var skillName = Util.makeDescriptionId("key", key);
@@ -282,6 +292,7 @@ public abstract class Skill {
     public static final class Builder {
         private final AbilityCategory category;
         private final Set<DeferredHolder<Skill, ? extends Skill>> dependencyHolders = new HashSet<>();
+        private final List<DevCondition> devConditions = new ArrayList<>();
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
         private int maxSkillLevel = 3;
@@ -294,7 +305,7 @@ public abstract class Skill {
         private DataFactory dataFactory = _ -> new CommonSkillData();
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
-        private Identifier icon = Resource.Textures.ICON_CLOSE;
+        private Identifier icon = R.textures.ICON_CLOSE;
 
         private Builder(AbilityCategory category) {
             this.category = category;
@@ -371,6 +382,11 @@ public abstract class Skill {
         @SafeVarargs
         public final Builder dependsOn(DeferredHolder<Skill, ? extends Skill>... dependencies) {
             Collections.addAll(dependencyHolders, dependencies);
+            return this;
+        }
+
+        public Builder devCondition(DevCondition condition) {
+            devConditions.add(condition);
             return this;
         }
     }

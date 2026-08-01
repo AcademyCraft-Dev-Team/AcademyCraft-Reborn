@@ -23,7 +23,6 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -32,10 +31,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
-
 public final class PulseCharge extends Skill {
     public static final String KEY_NAME_USE = SkillNames.PULSE_CHARGE + ".use";
 
@@ -60,12 +56,8 @@ public final class PulseCharge extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(KEY_NAME_USE, Client.CONFIG.getKeyBinding(KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_G)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>(Set.of(InputConstants.MOD_CONTROL)))
-                )
-        ), Client::onUse);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.PRESS, InputConstants.MOD_CONTROL)
+        ), ctx -> Client.onUse());
     }
 
     @Override

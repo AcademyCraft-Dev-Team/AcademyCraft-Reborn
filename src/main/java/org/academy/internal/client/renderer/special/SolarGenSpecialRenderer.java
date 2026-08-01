@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.internal.client.renderer.blockentity.state.SolarGenRenderState;
 import org.joml.Vector3fc;
 
@@ -34,7 +34,7 @@ public final class SolarGenSpecialRenderer implements NoDataSpecialModelRenderer
         poseStack.translate(0.5f, 1.5f, 0.5f);
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         MODEL.resetPose();
-        nodeCollector.submitModel(MODEL, new SolarGenRenderState(), poseStack, RenderTypes.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, null);
+        nodeCollector.submitModel(MODEL, new SolarGenRenderState(), poseStack, RenderTypes.entityCutout(R.textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, null);
         poseStack.popPose();
     }
 

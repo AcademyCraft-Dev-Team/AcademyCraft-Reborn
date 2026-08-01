@@ -4,7 +4,7 @@ import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.resources.Identifier
-import org.academy.api.client.Resource
+import org.academy.api.client.resources.R
 import org.academy.api.client.app.App
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
@@ -37,7 +37,7 @@ object MusicApp : App {
     }
 
     override fun icon(): Identifier {
-        return Resource.Textures.ICON_MUSIC_PLAYER
+        return R.textures.ICON_MUSIC_PLAYER
     }
 
     private class Context : WidgetContext {
@@ -98,7 +98,7 @@ object MusicApp : App {
                         }
                         topBar.addChild("back_button", backButton)
                         run {
-                            val arrow = ImageWidget(Resource.Textures.ARROW_BACK)
+                            val arrow = ImageWidget(R.textures.ARROW_BACK)
                             arrow.setSampler(FilterMode.LINEAR, false)
                             arrow.layoutParams = FrameLayoutWidget.LayoutParams()
                                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -232,7 +232,7 @@ object MusicApp : App {
                         }
                         controlArea.addChild("previous", previousButton)
                         run {
-                            val icon = ImageWidget(Resource.Textures.ICON_PREV)
+                            val icon = ImageWidget(R.textures.ICON_PREV)
                             icon.setSampler(FilterMode.LINEAR, false)
                             previousButton.addChild("icon", icon)
                         }
@@ -253,7 +253,7 @@ object MusicApp : App {
                         nextButton.onClickListener = { MusicPlayerBackend.getInstance().playNext() }
                         controlArea.addChild("next", nextButton)
                         run {
-                            val icon = ImageWidget(Resource.Textures.ICON_NEXT)
+                            val icon = ImageWidget(R.textures.ICON_NEXT)
                             icon.setSampler(FilterMode.LINEAR, false)
                             nextButton.addChild("icon", icon)
                         }
@@ -333,7 +333,7 @@ object MusicApp : App {
         }
 
         fun createVinyl(): ImageWidget {
-            return object : ImageWidget(Resource.Textures.ICON_NOW_PLAYING) {
+            return object : ImageWidget(R.textures.ICON_NOW_PLAYING) {
                 override fun generateDrawCommand(
                     texture: GpuTextureView,
                     sampler: GpuSampler,
@@ -407,7 +407,7 @@ object MusicApp : App {
                     .width(0f)
                     .heightMode(SizeMode.MATCH_PARENT)
 
-                val icon = ImageWidget(Resource.Textures.ICON_VOLUME)
+                val icon = ImageWidget(R.textures.ICON_VOLUME)
                 icon.setSampler(FilterMode.LINEAR, false)
                 icon.layoutParams = p
                 content.addChild("icon", icon)
@@ -473,16 +473,16 @@ object MusicApp : App {
             get() = MusicPlayerBackend.getInstance().isPlaying
 
         fun getPlayPauseIcon(): Identifier {
-            return if (isPlaying) Resource.Textures.ICON_PAUSE
-            else Resource.Textures.ICON_PLAY
+            return if (isPlaying) R.textures.ICON_PAUSE
+            else R.textures.ICON_PLAY
         }
 
         fun getPlaybackModeIcon(): Identifier {
             val musicPlayerBackend = MusicPlayerBackend.getInstance()
             return when (musicPlayerBackend.playbackMode) {
-                PlaybackMode.REPEAT_LIST -> Resource.Textures.ICON_CYCLE
-                PlaybackMode.REPEAT_ONE -> Resource.Textures.ICON_SINGLE_CYCLE
-                PlaybackMode.SHUFFLE -> Resource.Textures.ICON_RANDOM_PLAY
+                PlaybackMode.REPEAT_LIST -> R.textures.ICON_CYCLE
+                PlaybackMode.REPEAT_ONE -> R.textures.ICON_SINGLE_CYCLE
+                PlaybackMode.SHUFFLE -> R.textures.ICON_RANDOM_PLAY
             }
         }
 

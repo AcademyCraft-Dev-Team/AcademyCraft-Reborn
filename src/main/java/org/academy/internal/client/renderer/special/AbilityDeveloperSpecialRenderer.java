@@ -6,7 +6,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.internal.client.renderer.blockentity.state.AbilityDeveloperRenderState;
 import org.joml.Vector3fc;
 

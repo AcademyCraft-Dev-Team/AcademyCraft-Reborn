@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
-import org.academy.api.client.Resource
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
@@ -13,6 +12,7 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
 import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
+import org.academy.api.client.resources.R
 import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.SolarGenMenu
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity
@@ -36,14 +36,14 @@ class SolarGenScreen private constructor(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(Resource.Textures.UI_GEN)
+        val ui = ImageWidget(R.textures.UI_GEN)
         ui.layoutParams = FrameLayoutWidget.LayoutParams()
             .sizeMode(SizeMode.MATCH_PARENT)
 
         invPage.addChild("ui", ui)
 
         val effect: SpriteSheetWidget = object : SpriteSheetWidget(
-            Resource.Textures.ICON_SOLAR_GEN_SUNNY,
+            R.textures.ICON_SOLAR_GEN_SUNNY,
             Orientation.VERTICAL,
             48, 96,
             48, 48,
@@ -59,16 +59,14 @@ class SolarGenScreen private constructor(
                 }
             }
         }
-        stateConsumer = Consumer { state: SolarGenBlockEntity.State? ->
-            when (state) {
-                SolarGenBlockEntity.State.SUNNY -> effect.setTexture(
-                    Resource.Textures.ICON_SOLAR_GEN_SUNNY
-                )
-
-                SolarGenBlockEntity.State.RAINY -> effect.setTexture(Resource.Textures.ICON_SOLAR_GEN_RAINY)
-                SolarGenBlockEntity.State.NIGHT -> effect.setTexture(Resource.Textures.ICON_SOLAR_GEN_NIGHT)
-                else -> {}
-            }
+        stateConsumer = {
+            effect.setTexture(
+                when (it) {
+                    SolarGenBlockEntity.State.SUNNY -> R.textures.ICON_SOLAR_GEN_SUNNY
+                    SolarGenBlockEntity.State.RAINY -> R.textures.ICON_SOLAR_GEN_RAINY
+                    SolarGenBlockEntity.State.NIGHT -> R.textures.ICON_SOLAR_GEN_NIGHT
+                }
+            )
         }
         effect.layoutParams = FrameLayoutWidget.LayoutParams()
             .heightMode(SizeMode.MATCH_PARENT)
@@ -83,14 +81,14 @@ class SolarGenScreen private constructor(
         wirelessPage.isEnabled = false
         content.addChild("page_wireless", wirelessPage)
 
-        val wirelessButton = createButton(Resource.Textures.ICON_WIRELESS)
+        val wirelessButton = createButton(R.textures.ICON_WIRELESS)
         wirelessButton.layoutParams = WidgetContainer.LayoutParams()
             .widthMode(SizeMode.MATCH_PARENT)
             .height(16f)
 
         pageButtons.addChild("wireless", wirelessButton)
-        pageButtons.onSelectionChanged = Consumer { button: RadioButtonWidget? ->
-            when (button!!.name) {
+        pageButtons.onSelectionChanged = {
+            when (it.name) {
                 "inv" -> {
                     AnimationUtil.hide(wirelessPage)
                     AnimationUtil.show(invPage)

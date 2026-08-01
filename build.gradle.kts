@@ -208,6 +208,7 @@ repositories {
             includeGroup("thedarkcolour")
         }
     }
+    mavenCentral()
 }
 
 neoForge {

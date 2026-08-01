@@ -42,7 +42,7 @@ open class ButtonWidget() : FrameLayoutWidget() {
     }
 
     override fun onMousePressed(event: MouseEvent) {
-        if (event.button == 0 && isMouseOver(event.x, event.y)) {
+        if (event.button == 0 && isHovered) {
             isPointerDown = true
             handlePress(event)
         }

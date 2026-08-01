@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.meltdowner.skills;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
@@ -32,7 +31,6 @@ import org.academy.internal.common.skilldata.HellFlareData;
 import org.academy.internal.common.world.entity.skill.HellFlareRay;
 import org.academy.internal.common.world.entity.skill.LightOrb;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -42,10 +40,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
-
 public class HellFlare extends Skill {
 
     public HellFlare() {
@@ -69,15 +64,8 @@ public class HellFlare extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TEST, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_TEST,
-                new InputSystem.InputPair(
-                        InputSystem.InputType.KEYBOARD,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_N)),
-                                InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT))
-                        )
-                )
-        ), Client::handleKey);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)
+        ), ctx -> Client.handleKey());
     }
 
     @Override

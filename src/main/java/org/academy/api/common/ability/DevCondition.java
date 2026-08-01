@@ -1,0 +1,143 @@
+package org.academy.api.common.ability;
+
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.resources.R;
+import org.academy.api.common.wireless.WirelessUser;
+import org.academy.internal.common.ability.Skills;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
+
+public interface DevCondition {
+    boolean accepts();
+
+    default boolean accepts(ServerPlayer player, WirelessUser developer) {
+        return accepts();
+    }
+
+    @Nullable
+    Identifier getIcon();
+
+    String getHintText();
+
+    default boolean shouldDisplay() {
+        return true;
+    }
+
+    record LevelCondition(AbilityLevel requiredLevel) implements DevCondition {
+        @Override
+        public boolean accepts() {
+            return AbilitySystemClient.getLevel().levelCode >= requiredLevel.levelCode;
+        }
+
+        @Override
+        public boolean accepts(ServerPlayer player, WirelessUser developer) {
+            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            return system.getPlayerLevel(player.getUUID()) >= requiredLevel.levelCode;
+        }
+
+        @Override
+        public Identifier getIcon() {
+            return switch (requiredLevel.levelCode) {
+                case 1 -> R.textures.condition_any1;
+                case 2 -> R.textures.condition_any2;
+                case 3 -> R.textures.condition_any3;
+                case 4 -> R.textures.condition_any4;
+                case 5 -> R.textures.condition_any5;
+                default -> null;
+            };
+        }
+
+        @Override
+        public String getHintText() {
+            return "Requires Level " + requiredLevel.levelCode;
+        }
+    }
+
+    record EnergyCondition(int requiredEnergy) implements DevCondition {
+        @Override
+        public boolean accepts() {
+            return false;
+        }
+
+        @Override
+        public boolean accepts(ServerPlayer player, WirelessUser developer) {
+            return developer.getEnergyStored() >= requiredEnergy;
+        }
+
+        @Override
+        public Identifier getIcon() {
+            return null;
+        }
+
+        @Override
+        public String getHintText() {
+            return "Requires " + requiredEnergy + " IM";
+        }
+    }
+
+    record DependencyCondition(String depName, String depId) implements DevCondition {
+        public DependencyCondition(String depName) {
+            this(depName, "");
+        }
+
+        @Override
+        public boolean accepts() {
+            return false;
+        }
+
+        @Override
+        public boolean accepts(ServerPlayer player, WirelessUser developer) {
+            if (depId.isEmpty()) return true;
+            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            return system.getPlayerData(player.getUUID()).isSkillLearned(depId);
+        }
+
+        @Override
+        public Identifier getIcon() {
+            return null;
+        }
+
+        @Override
+        public String getHintText() {
+            return "Requires " + depName;
+        }
+    }
+
+    record AnySkillOfLevelCondition(int requiredLevel) implements DevCondition {
+        @Override
+        public boolean accepts() {
+            return AbilitySystemClient.LEARNED_SKILLS.stream()
+                    .anyMatch(s -> s.getRecommendedLevel().levelCode >= requiredLevel);
+        }
+
+        @Override
+        public boolean accepts(ServerPlayer player, WirelessUser developer) {
+            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            var data = system.getPlayerData(player.getUUID());
+            return org.academy.api.common.registries.Registries.SKILLS.stream()
+                    .anyMatch(skill -> skill.getRecommendedLevel().levelCode >= requiredLevel
+                            && data.isSkillLearned(Objects.requireNonNull(
+                                    org.academy.api.common.registries.Registries.SKILLS.getKey(skill)).toString()));
+        }
+
+        @Override
+        public Identifier getIcon() {
+            return switch (requiredLevel) {
+                case 1 -> R.textures.condition_any1;
+                case 2 -> R.textures.condition_any2;
+                case 3 -> R.textures.condition_any3;
+                case 4 -> R.textures.condition_any4;
+                case 5 -> R.textures.condition_any5;
+                default -> null;
+            };
+        }
+
+        @Override
+        public String getHintText() {
+            return "Requires any skill of level " + requiredLevel;
+        }
+    }
+}

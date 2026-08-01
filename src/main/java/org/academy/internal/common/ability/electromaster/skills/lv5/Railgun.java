@@ -19,10 +19,13 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
+import org.academy.api.client.resources.R;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.modifier.HelixModifier;
@@ -52,7 +55,6 @@ import org.academy.internal.common.world.item.Items;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -70,12 +72,15 @@ public final class Railgun extends Skill {
     public Railgun() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
-                .level(AbilityLevel.LEVEL5)
+                .level(AbilityLevel.LEVEL4)
                 .cpCost(200)
                 .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.THUNDER_LANCE)
                 .dependsOn(Skills.MAGNET_MANIPULATION)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
+                .devCondition(new DevCondition.DependencyCondition("Thunder Lance", "academy:thunder_lance"))
+                .devCondition(new DevCondition.DependencyCondition("Magnet Manipulation", "academy:magnet_manipulation"))
         );
     }
 
@@ -97,18 +102,17 @@ public final class Railgun extends Skill {
         Client.CLIENT_CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CLIENT_CONFIG.getKeyBinding(Client.KEY_NAME_START,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_X)),
-                                InputConstants.PRESS,
-                                new LinkedHashSet<>())
-                )
-        ), Client::start);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0)
+        ), ctx -> Client.start());
 
         ClientSyncManager.register(SyncKeys.RAILGUN_CHARGING.get(), Client::setCharging);
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(Skills.RAILGUN.get(), List.of(), R.textures.railgun_icon, 164, 59)
+        );
         public static final String KEY_NAME_START = SkillNames.RAILGUN + "_start";
         public static Config CLIENT_CONFIG = new Config();
         private static boolean charging = false;

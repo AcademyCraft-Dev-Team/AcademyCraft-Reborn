@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.util
 
 import net.minecraft.core.BlockPos
-import org.academy.api.client.Resource
+import org.academy.api.client.resources.R
 import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.drawable.TextureDrawable
 import org.academy.api.client.gui.layout.Gravity
@@ -44,9 +44,8 @@ object WirelessPanelUtil {
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .padding(WirelessPanelUtil.MARGIN_HORIZONTAL, WirelessPanelUtil.MARGIN_VERTICAL)
             content.spacing = WirelessPanelUtil.SPACING_MINOR
-            root.addChild("content", content)
-            run {
-                val icon = ImageWidget(Resource.Textures.ICON_OPEN_WIRELESS_PANEL)
+            root.addChild("content", content) {
+                val icon = ImageWidget(R.textures.ICON_OPEN_WIRELESS_PANEL)
                 icon.layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(16f, 16f)
                 content.addChild("icon", icon)
@@ -73,8 +72,7 @@ object WirelessPanelUtil {
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(0f)
                     .marginTop(WirelessPanelUtil.SPACING_MINOR - WirelessPanelUtil.SPACING_MAJOR)
-                content.addChild("list_container", listContainer)
-                run {
+                content.addChild("list_container", listContainer) {
                     val scrollPanel = ScrollPanelWidget()
                     scrollPanel.layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
@@ -107,18 +105,18 @@ object WirelessPanelUtil {
     ) {
         val requestPayload = GetCurrentNodePacket(position)
         MisakaNetworkClient.FUTURE_MANAGER.send(
-            requestPayload,
-            Consumer { response: GetCurrentNodePacket.Response? ->
-                if (response == null) return@Consumer
-                connectedNodeContainer.clearChildren()
-                val nodeName = response.nodeName
-                val connectedNodeWidget =
-                    getNodeWidget(position, connectedNodeContainer, nodeList, nodeName, true, response.isNull)
-                connectedNodeWidget.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                connectedNodeContainer.addChild("connected_node", connectedNodeWidget)
-                updateAvailableNodesList(position, nodeName, connectedNodeContainer, nodeList)
-            })
+            requestPayload
+        ) {
+            if (it == null) return@send
+            connectedNodeContainer.clearChildren()
+            val nodeName = it.nodeName
+            val connectedNodeWidget =
+                getNodeWidget(position, connectedNodeContainer, nodeList, nodeName, true, it.isNone)
+            connectedNodeWidget.layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+            connectedNodeContainer.addChild("connected_node", connectedNodeWidget)
+            updateAvailableNodesList(position, nodeName, connectedNodeContainer, nodeList)
+        }
     }
 
     private fun updateAvailableNodesList(
@@ -142,7 +140,7 @@ object WirelessPanelUtil {
                         nodeList,
                         name,
                         isConnected = false,
-                        isNull = false
+                        isNone = false
                     )
                     nodeViewPanel.layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
@@ -158,7 +156,7 @@ object WirelessPanelUtil {
         nodeList: LinearLayoutWidget,
         nodeName: String,
         isConnected: Boolean,
-        isNull: Boolean
+        isNone: Boolean
     ): FrameLayoutWidget {
         val nodeViewPanel = FrameLayoutWidget()
         run {
@@ -176,9 +174,8 @@ object WirelessPanelUtil {
                 .gravity(Gravity.CENTER_VERTICAL)
                 .paddingHorizontal(4f)
             itemContent.spacing = 4f
-            nodeViewPanel.addChild("content", itemContent)
-            run {
-                val nodeIcon = ImageWidget(Resource.Textures.ICON_NODE)
+            nodeViewPanel.addChild("content", itemContent) {
+                val nodeIcon = ImageWidget(R.textures.ICON_NODE)
                 nodeIcon.layoutParams = LinearLayoutWidget.LayoutParams()
                     .gravity(Gravity.CENTER)
                     .size(14f, 14f)
@@ -213,13 +210,12 @@ object WirelessPanelUtil {
                         .gravity(Gravity.CENTER)
                         .size(14f, 14f)
                     connectButton.onClickListener = { _ -> connectAction(inputBox.text) }
-                    itemContent.addChild("button", connectButton)
-                    run {
+                    itemContent.addChild("button", connectButton) {
                         val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(Resource.Textures.ICON_UNCONNECTED)
+                        val defaultDrawable = TextureDrawable(R.textures.ICON_UNCONNECTED)
                         defaultDrawable.tintColor = -0x444445
 
-                        val hoveredDrawable = TextureDrawable(Resource.Textures.ICON_UNCONNECTED)
+                        val hoveredDrawable = TextureDrawable(R.textures.ICON_UNCONNECTED)
                         hoveredDrawable.tintColor = -0x1
 
                         val sld = StateListDrawable()
@@ -231,22 +227,21 @@ object WirelessPanelUtil {
                             .sizeMode(SizeMode.MATCH_PARENT)
                         connectButton.addChild("content", content)
                     }
-                } else if (!isNull) {
+                } else if (!isNone) {
                     val disconnectButton = ButtonWidget()
-                    disconnectButton.onClickListener = { _ ->
+                    disconnectButton.onClickListener = {
                         MisakaNetworkClient.send(DisconnectNodePacket(position))
                         WirelessPanelUtil.updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
                     }
                     disconnectButton.layoutParams = LinearLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER)
                         .size(14f, 14f)
-                    itemContent.addChild("button", disconnectButton)
-                    run {
+                    itemContent.addChild("button", disconnectButton) {
                         val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(Resource.Textures.ICON_CONNECTED)
+                        val defaultDrawable = TextureDrawable(R.textures.ICON_CONNECTED)
                         defaultDrawable.tintColor = -0x444445
 
-                        val hoveredDrawable = TextureDrawable(Resource.Textures.ICON_CONNECTED)
+                        val hoveredDrawable = TextureDrawable(R.textures.ICON_CONNECTED)
                         hoveredDrawable.tintColor = -0x1
 
                         val sld = StateListDrawable()

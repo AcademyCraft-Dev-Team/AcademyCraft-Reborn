@@ -11,7 +11,7 @@ import org.academy.api.client.renderer.EffectRenderer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.academy.api.client.Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM;
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_TRANGLES_BLOOM;
 
 public final class TrailEffectWrapper implements EffectRenderer {
     public static final TrailEffectWrapper INSTANCE = new TrailEffectWrapper();

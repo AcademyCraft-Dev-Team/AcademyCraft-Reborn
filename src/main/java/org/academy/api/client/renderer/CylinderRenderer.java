@@ -8,7 +8,7 @@ import net.minecraft.util.LightCoordsUtil;
 import org.academy.api.client.render.post.Phase;
 import org.joml.Matrix4f;
 
-import static org.academy.api.client.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
 
 public final class CylinderRenderer {
     private CylinderRenderer() {

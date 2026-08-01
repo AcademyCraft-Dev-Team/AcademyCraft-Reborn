@@ -42,7 +42,6 @@ import org.joml.AxisAngle4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -52,10 +51,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
-
 public class BallLightning extends Skill {
     public static final String KEY_NAME_ACTIVATE = SkillNames.BALL_LIGHTNING + ".activate";
     public static final float MAX_RADIUS = 64.0F;
@@ -77,12 +73,8 @@ public class BallLightning extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(KEY_NAME_ACTIVATE, Client.CONFIG.getKeyBinding(KEY_NAME_ACTIVATE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_Y)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>())
-                )
-        ), Client::handler);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.PRESS, 0)
+        ), ctx -> Client.handler());
     }
 
     @Override

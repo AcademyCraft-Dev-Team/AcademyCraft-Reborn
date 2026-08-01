@@ -29,7 +29,11 @@ abstract class AbstractWidget : Widget {
     final override var y: Float = 0f
         private set
 
-    override var z: Float = 0f
+    override var coverAllPrev: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
 
     protected var protectedWidth: Float = 0f
 
@@ -157,6 +161,11 @@ abstract class AbstractWidget : Widget {
             invalidate()
         }
     override var foreground: Drawable? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+    override var tooltipText: CharSequence? = null
         set(value) {
             field = value
             invalidate()

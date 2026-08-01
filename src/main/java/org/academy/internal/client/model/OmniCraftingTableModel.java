@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.LightCoordsUtil;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.internal.client.definitions.OmniCraftingTableAnimation;
 import org.academy.internal.client.renderer.blockentity.state.OmniCraftingTableRenderState;
 
@@ -152,10 +152,10 @@ public class OmniCraftingTableModel extends Model<OmniCraftingTableRenderState> 
     }
 
     public void render(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay) {
-        nodeCollector.submitModelPart(main, poseStack, renderType(Resource.Textures.OMNI_CRAFTING_TABLE), packedLight, packedOverlay, null);
+        nodeCollector.submitModelPart(main, poseStack, renderType(R.textures.OMNI_CRAFTING_TABLE), packedLight, packedOverlay, null);
         var rt = RenderTypes.endGateway();
         nodeCollector.submitModelPart(craftinggrid_end, poseStack, rt, LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
 
-        nodeCollector.submitModelPart(_fluid, poseStack, renderType(Resource.Textures.OMNI_CRAFTING_TABLE), LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
+        nodeCollector.submitModelPart(_fluid, poseStack, renderType(R.textures.OMNI_CRAFTING_TABLE), LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
     }
 }

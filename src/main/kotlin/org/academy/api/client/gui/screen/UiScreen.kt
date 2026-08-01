@@ -8,7 +8,7 @@ import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
-import org.academy.api.client.Render
+import org.academy.api.client.render.Render
 import org.academy.api.client.gui.event.CharTypedEvent
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.MouseEvent

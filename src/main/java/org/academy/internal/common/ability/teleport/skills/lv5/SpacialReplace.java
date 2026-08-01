@@ -21,7 +21,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -51,22 +50,16 @@ public class SpacialReplace extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_CORNER1, Client.CONFIG.getKeyBinding(Client.KEY_CORNER1,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of()), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT, InputConstants.MOD_CONTROL)))))
-                , Client::onSelectCorner1);
+                        InputSystem.anyKey(InputSystem.InputType.KEYBOARD, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT | InputConstants.MOD_CONTROL))
+                , ctx -> Client.onSelectCorner1());
 
         InputSystem.addKeyBinding(Client.KEY_CORNER2, Client.CONFIG.getKeyBinding(Client.KEY_CORNER2,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of()), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT, InputConstants.MOD_CONTROL)))))
-                , Client::onSelectCorner2);
+                        InputSystem.anyKey(InputSystem.InputType.KEYBOARD, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT | InputConstants.MOD_CONTROL))
+                , ctx -> Client.onSelectCorner2());
 
         InputSystem.addKeyBinding(Client.KEY_PASTE, Client.CONFIG.getKeyBinding(Client.KEY_PASTE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_P)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT, InputConstants.MOD_CONTROL)))))
-                , Client::onPaste);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_P, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT | InputConstants.MOD_CONTROL))
+                , ctx -> Client.onPaste());
     }
 
     @Override

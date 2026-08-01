@@ -8,9 +8,12 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -18,7 +21,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -27,18 +29,16 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
+import java.util.List;
 public class DirectedShock extends Skill {
     public DirectedShock() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL2)
+                .level(AbilityLevel.LEVEL1)
                 .cpCost(50)
                 .iterationTicks(4)
                 .maxStacks(4)
-                .dependsOn(Skills.KINETIC_ENERGY_APPLIED)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }
 
@@ -64,19 +64,11 @@ public class DirectedShock extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_PRESS, Client.CONFIG.getKeyBinding(Client.KEY_NAME_PRESS,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_R)),
-                        InputConstants.PRESS,
-                        new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))
-                )
-        ), Client::onChargeStart);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_SHIFT)
+        ), ctx -> Client.onChargeStart());
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_R)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))
-                )
-        ), Client::onUse);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.RELEASE, InputConstants.MOD_SHIFT)
+        ), ctx -> Client.onUse());
     }
 
     @Override
@@ -85,6 +77,10 @@ public class DirectedShock extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(Skills.DIRECTED_SHOCK.get(), List.of(), R.textures.directed_shock_icon, 16, 45)
+        );
         public static final String KEY_NAME_PRESS = SkillNames.DIRECTED_SHOCK + "_press";
         public static final String KEY_NAME_USE = SkillNames.DIRECTED_SHOCK + "_use";
         public static Config CONFIG = new Config();

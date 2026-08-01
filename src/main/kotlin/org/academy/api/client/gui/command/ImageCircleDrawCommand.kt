@@ -2,7 +2,7 @@ package org.academy.api.client.gui.command
 
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
-import org.academy.api.client.Render
+import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 
 class ImageCircleDrawCommand : PosTexColorRectDrawCommand {
@@ -36,25 +36,5 @@ class ImageCircleDrawCommand : PosTexColorRectDrawCommand {
             )
         ),
         mutableListOf()
-    )
-
-    constructor(
-        texture: GpuTextureView,
-        sampler: GpuSampler,
-        width: Float,
-        height: Float,
-        u0: Float,
-        v0: Float,
-        u1: Float,
-        v1: Float,
-        red: Float,
-        green: Float,
-        blue: Float,
-        alpha: Float
-    ) : this(
-        texture, sampler,
-        width, height,
-        u0, v0, u0, v1, u1, v1, u1, v0,
-        red, green, blue, alpha,
     )
 }

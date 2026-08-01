@@ -6,21 +6,19 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.hud.ability.AbilityInfoHud;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.AbilityLevel;
-import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
-import org.academy.api.common.ability.pakcet.SyncCPDataPacket;
+import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
-import org.academy.api.common.data.CPData;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.skilldata.SkillData;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 
@@ -32,25 +30,27 @@ public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
     public static final String CONFIG_KEY_ABILITY_SYSTEM = "ability_system";
     public static final String KEY_NAME_ACTIVATE_HUD = "activate_ability_hud";
-    public static final InputSystem.InputPair ACTIVATE_HUD_KEY;
+    public static final InputSystem.KeyCombination ACTIVATE_HUD_KEY;
     private static final Map<String, SkillData> SKILL_DATA = new ConcurrentHashMap<>();
     private static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
     @Nullable
     public static AbilityCategory category;
     private static boolean activeHUD = false;
-    private static CPData cpData = new CPData();
+    private static AbilityData cpData = new AbilityData();
+
+    private static volatile DevState devState = DevState.IDLE;
+    private static volatile float devProgress = 0f;
+    private static volatile String devMessage = "";
 
     static {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY_ABILITY_SYSTEM, Config.Action.INSTANCE);
         var configData = AcademyCraftClient.Config.INSTANCE.<Config>getConfig(CONFIG_KEY_ABILITY_SYSTEM);
         ACTIVATE_HUD_KEY = configData.getKeyBinding(KEY_NAME_ACTIVATE_HUD,
-                new InputSystem.InputPair(
+                InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_V)),
-                                InputConstants.RELEASE,
-                                new LinkedHashSet<>()
-                        )
+                        InputConstants.KEY_V,
+                        InputConstants.PRESS,
+                        0
                 )
         );
     }
@@ -69,7 +69,7 @@ public final class AbilitySystemClient {
 
     public static void init() {
         MisakaNetworkClient.NETWORK_MANAGER.register(AbilitySystemClient.class);
-        InputSystem.addKeyBinding(KEY_NAME_ACTIVATE_HUD, ACTIVATE_HUD_KEY, () -> {
+        InputSystem.addKeyBinding(KEY_NAME_ACTIVATE_HUD, ACTIVATE_HUD_KEY, ctx -> {
             if (ClientUtil.hasScreen()) return;
             setActiveHUD(!activeHUD);
         });
@@ -89,8 +89,33 @@ public final class AbilitySystemClient {
     }
 
     @SubscribePacket
-    public static void handleSync(SyncCPDataPacket packet) {
-        cpData = packet.getCPData();
+    public static void handleSync(SyncAbilityDataPacket packet) {
+        cpData = packet.getAbilityData();
+    }
+
+    @SubscribePacket
+    public static void handleDevSync(DevSyncPacket packet) {
+        devState = packet.getState();
+        devProgress = packet.getProgress();
+        devMessage = packet.getMessage();
+    }
+
+    public static DevState getDevState() {
+        return devState;
+    }
+
+    public static float getDevProgress() {
+        return devProgress;
+    }
+
+    public static String getDevMessage() {
+        return devMessage;
+    }
+
+    public static void resetDevState() {
+        devState = DevState.IDLE;
+        devProgress = 0;
+        devMessage = "";
     }
 
     @SubscribePacket
@@ -126,12 +151,21 @@ public final class AbilitySystemClient {
         return cpData.getLevel();
     }
 
+    public static float getAbilityExp() {
+        return cpData.getAbilityExp();
+    }
+
+    public static boolean canLevelUp() {
+        return getLevel().getLevelCode() < 5 && getAbilityExp() >= 1f;
+    }
+
     public static boolean isActiveHUD() {
         return activeHUD;
     }
 
     public static void setActiveHUD(boolean activeHUD) {
         AbilitySystemClient.activeHUD = activeHUD;
+        AbilityInfoHud.Companion.getInstance().toggleActive();
     }
 
     public static int getCurrSP() {

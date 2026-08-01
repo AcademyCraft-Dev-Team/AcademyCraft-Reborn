@@ -22,7 +22,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -30,9 +29,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 public class SpreadingBlast extends Skill {
     public SpreadingBlast() {
@@ -66,15 +62,8 @@ public class SpreadingBlast extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME_SHOOT, skillKeyConfig.getKeyBinding(
                 Client.KEY_NAME_SHOOT,
-                new InputSystem.InputPair(
-                        InputSystem.InputType.MOUSE,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.MOUSE_BUTTON_LEFT)),
-                                InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT))
-                        )
-                )
-        ), Client::handleKey);
+                InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)
+        ), ctx -> Client.handleKey());
     }
 
     @Override
