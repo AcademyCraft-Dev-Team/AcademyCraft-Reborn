@@ -79,7 +79,7 @@ public class DirectedShock extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
-                new AbilitySystemClient.SkillInfo(Skills.DIRECTED_SHOCK.get(), List.of(), R.textures.directed_shock_icon, 16, 45)
+                new AbilitySystemClient.SkillInfo(Skills.DIRECTED_SHOCK.get(), List.of(), R.textures.ability.accelerator.skill.directed_shock.icon, 16, 45)
         );
         public static final String KEY_NAME_PRESS = SkillNames.DIRECTED_SHOCK + "_press";
         public static final String KEY_NAME_USE = SkillNames.DIRECTED_SHOCK + "_use";

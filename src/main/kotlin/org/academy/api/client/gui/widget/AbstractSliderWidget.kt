@@ -51,6 +51,7 @@ abstract class AbstractSliderWidget(
             val newValue = Mth.clamp(value, minValue, maxValue)
             if (currentValue != newValue) {
                 currentValue = newValue
+                invalidate()
                 if (onValueChanged != null) {
                     onValueChanged!!.accept(currentValue)
                 }
@@ -75,7 +76,10 @@ abstract class AbstractSliderWidget(
     }
 
     fun setDirection(direction: Direction): AbstractSliderWidget {
-        this.direction = direction
+        if (this.direction != direction) {
+            this.direction = direction
+            invalidate()
+        }
         return this
     }
 

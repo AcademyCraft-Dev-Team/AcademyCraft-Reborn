@@ -12,7 +12,7 @@ import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.render.Render
 import org.academy.api.client.hud.ability.AbilityInfoHud
-import org.academy.api.client.hud.terminal.TerminalHUD
+import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
 import org.academy.api.client.thread.RenderThread
@@ -32,7 +32,7 @@ object HudManager {
     }
 
     fun initMain() {
-        TerminalHUD.initMain()
+        TerminalHud.initMain()
         AbilityInfoHud.initMain()
     }
 
@@ -53,7 +53,7 @@ object HudManager {
         val mouseX = m.getScaledXPos(w)
         val mouseY = m.getScaledYPos(w)
         val deltaPartialTick = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
-        TerminalHUD.instance.perform(mouseX, mouseY, deltaPartialTick)
+        TerminalHud.INSTANCE.perform(mouseX, mouseY, deltaPartialTick)
         AbilityInfoHud.instance.perform(mouseX, mouseY, deltaPartialTick)
     }
 
@@ -81,7 +81,7 @@ object HudManager {
 
             val drewStencil = AtomicBoolean()
 
-            TerminalHUD.instance.render(width, height, uiColor, uiDepth, drewStencil)
+            TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
             AbilityInfoHud.instance.render(ui)
 
             if (drewStencil.get()) {

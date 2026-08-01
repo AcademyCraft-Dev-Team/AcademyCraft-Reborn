@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
+import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.render.BatchProcessor.UboUploader
@@ -68,14 +69,15 @@ open class UiContext {
         }
 
         val context = RenderContext()
-        rootWidget.isRenderDirty = false
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick)
+        rootWidget.isRenderDirty = false
         cachedCommands = context.commands.toMutableList()
         commandList.set(context.commands)
     }
 
     open fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean {
-        return !rootWidget.isRenderDirty && cachedCommands != null
+        if (AcademyCraft.DEBUG_UI) return false
+        return !rootWidget.hasPendingRender() && cachedCommands != null
     }
 
     @RenderThread

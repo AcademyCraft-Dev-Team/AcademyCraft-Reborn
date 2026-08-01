@@ -101,7 +101,7 @@ public class VectorReflection extends Skill {
                 new AbilitySystemClient.SkillInfo(
                         Skills.VECTOR_REFLECTION.get(),
                         List.of(VectorReduction.Client.SKILL_INFO),
-                        R.textures.vector_reflection_icon,
+                        R.textures.ability.accelerator.skill.vector_reflection.icon,
                         210, 50
                 )
         );

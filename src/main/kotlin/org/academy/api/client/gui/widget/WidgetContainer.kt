@@ -7,6 +7,10 @@ import org.academy.api.client.gui.layout.SizeMode
 interface WidgetContainer : Widget {
     val isLayoutDirty: Boolean
 
+    val dirtyChildren: Set<Widget>
+
+    fun onChildInvalidated(child: Widget)
+
     fun addChild(name: String, child: Widget)
 
     fun addChild(name: String, child: Widget, runnable: () -> Unit) {
@@ -32,6 +36,10 @@ interface WidgetContainer : Widget {
 
     fun onInterceptEvent(event: InputEvent): Boolean {
         return false
+    }
+
+    override fun hasPendingRender(): Boolean {
+        return isRenderDirty || dirtyChildren.isNotEmpty()
     }
 
     open class LayoutParams {

@@ -8,8 +8,6 @@ import org.academy.api.client.gui.event.MouseEvent
  * It is designed to be used within a [RadioGroupWidget].
  */
 open class RadioButtonWidget : ButtonWidget {
-    override var isSelected: Boolean = false
-
     var radioGroup: RadioGroupWidget? = null
     var id: Int = -1
         protected set

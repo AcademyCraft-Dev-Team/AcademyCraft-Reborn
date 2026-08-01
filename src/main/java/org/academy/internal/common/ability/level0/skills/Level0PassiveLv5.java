@@ -33,7 +33,7 @@ public class Level0PassiveLv5 extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.LEVEL0.get(),
-                new AbilitySystemClient.SkillInfo(Skills.LEVEL0_PASSIVE_LV5.get(), List.of(Level0PassiveLv4.Client.SKILL_INFO), R.textures.level0_passive_lv5_icon, 205, 110)
+                new AbilitySystemClient.SkillInfo(Skills.LEVEL0_PASSIVE_LV5.get(), List.of(Level0PassiveLv4.Client.SKILL_INFO), R.textures.ability.level0.skill.level0_passive_lv5.icon, 205, 110)
         );
     }
 

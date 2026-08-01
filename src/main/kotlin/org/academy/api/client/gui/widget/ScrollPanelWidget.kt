@@ -10,6 +10,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.ScissorRect
 import org.academy.api.client.util.ClientUtil
+import kotlin.math.abs
 import kotlin.math.max
 
 open class ScrollPanelWidget(protected val orientation: Orientation? = Orientation.VERTICAL) :
@@ -17,7 +18,23 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     protected var scrollTarget: Float = 0f
     protected var scrollSpeed: Float = 24f
 
+    /** Below this distance (px) the scroll snaps onto its target and stops. */
+    private companion object {
+        const val SNAP_EPSILON: Float = 0.5f
+    }
+
     private var content: Widget? = null
+
+    private val scrollListeners: MutableList<() -> Unit> = ArrayList()
+
+    fun addScrollChangeListener(listener: () -> Unit) {
+        scrollListeners.add(listener)
+    }
+
+    private fun notifyScrollChanged() {
+        if (scrollListeners.isEmpty()) return
+        for (listener in scrollListeners) listener()
+    }
 
     override fun generateDefaultLayoutParams(): WidgetContainer.LayoutParams {
         return FrameLayoutWidget.LayoutParams()
@@ -113,6 +130,7 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
 
             if (needsClamping) scrollTo(currentScrollX, currentScrollY)
         }
+        notifyScrollChanged()
     }
 
     override fun dispatchEvent(event: InputEvent) {
@@ -140,6 +158,8 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
                 if (transformedEvent.type == EventType.MOUSE_PRESSED) {
                     gestureTarget = content
                     focusedChild = if (content!!.canFocus()) content else this
+                } else if (transformedEvent.type == EventType.MOUSE_RELEASED) {
+                    gestureTarget = null
                 }
                 return
             }
@@ -209,7 +229,11 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
 
         val currentScrollY = scrollY
         val newScrollY = Mth.lerp(ClientUtil.animationFactor(Mth.PI / 1.5f), currentScrollY, scrollTarget)
-        scrollTo(scrollX, newScrollY)
+        if (abs(newScrollY - scrollTarget) < SNAP_EPSILON) {
+            scrollTo(scrollX, scrollTarget)
+        } else {
+            scrollTo(scrollX, newScrollY)
+        }
 
         val alpha1 = alpha
         context.alpha().push(alpha1)
@@ -259,7 +283,9 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
 
     override fun scrollTo(x: Float, y: Float) {
         if (content == null) {
+            val changed = scrollX != x || scrollY != y
             super.scrollTo(x, y)
+            if (changed) notifyScrollChanged()
             return
         }
 
@@ -269,7 +295,9 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         val finalX = Math.clamp(x, 0f, maxScrollX)
         val finalY = Math.clamp(y, 0f, maxScrollY)
 
+        val changed = scrollX != finalX || scrollY != finalY
         super.scrollTo(finalX, finalY)
+        if (changed) notifyScrollChanged()
     }
 
     override fun scrollBy(dx: Float, dy: Float) {

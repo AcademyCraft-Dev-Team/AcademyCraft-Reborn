@@ -96,7 +96,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 leftBg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
                 parentLeft.addChild("left_bg", leftBg)
 
-                val uiLeft = ImageWidget(R.textures.UI_DEVELOPER_PANEL_LEFT)
+                val uiLeft = ImageWidget(R.textures.gui.developer.ui_developerleft)
                 uiLeft.layoutParams = WidgetContainer.LayoutParams()
                     .gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
                     .size(108.5f, 187f)
@@ -131,7 +131,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 rightBg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
                 parentRight.addChild("right_bg", rightBg)
 
-                val uiRight = ImageWidget(R.textures.UI_DEVELOPER_PANEL_RIGHT)
+                val uiRight = ImageWidget(R.textures.gui.developer.ui_developerright)
                 uiRight.layoutParams = WidgetContainer.LayoutParams()
                     .gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
                     .size(278f, 187f)
@@ -282,7 +282,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 .size(70f, 12f)
             nodeBtn.addChild("text_nodename", nodeName)
 
-            val nodeIcon = ImageWidget(R.textures.ICON_NODE)
+            val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
             nodeIcon.layoutParams = WidgetContainer.LayoutParams()
                 .gravity(Gravity.TOP_LEFT)
                 .margin(7f, 2f, 0f, 0f)
@@ -523,7 +523,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val category = AbilitySystemClient.getCategory()
         val skillInfos = AbilitySystemClient.getSkillInfos()[category] ?: emptyList()
 
-        val bg = ParallaxImageWidget(R.textures.UI_DEVELOPER_SKILL_AREA_BG)
+        val bg = ParallaxImageWidget(R.textures.gui.developer.skill_panel_back)
         bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         bg.setSampler(FilterMode.LINEAR, true)
         bg.setImageToViewRatio(0.9f, 0.9f)
@@ -705,7 +705,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             .size(16f, 16f)
         node.alpha = mAlpha
         run {
-            val iconBg = ImageWidget(R.textures.UI_DEVELOPER_SKILL_ICON_BG)
+            val iconBg = ImageWidget(R.textures.gui.developer.skill_back)
             iconBg.layoutParams = WidgetContainer.LayoutParams()
                 .gravity(Gravity.CENTER)
                 .size(23f, 23f)
@@ -925,7 +925,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     val texManager = Minecraft.getInstance().textureManager
                     val outlineTex = if (progress >= 1.0f) viewOutlineGlowTex else viewOutlineTex
                     val backView =
-                        texManager.getTexture(R.textures.UI_DEVELOPER_SKILL_ICON_BG).getTextureView()
+                        texManager.getTexture(R.textures.gui.developer.skill_back).getTextureView()
                     val outlineView = texManager.getTexture(outlineTex).getTextureView()
                     val maskView = texManager.getTexture(radialMaskTex).getTextureView()
                     val iconView = texManager.getTexture(info.texture).getTextureView()
@@ -1087,8 +1087,8 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                                 .gravity(Gravity.CENTER)
                                 .size(14f, 14f)
                             val condIcon = if (!accepted) MonochromeImageWidget(
-                                cond.getIcon() ?: R.textures.ICON_CLOSE
-                            ) else ImageWidget(cond.getIcon() ?: R.textures.ICON_CLOSE)
+                                cond.getIcon() ?: R.textures.gui.icon.close
+                            ) else ImageWidget(cond.getIcon() ?: R.textures.gui.icon.close)
                             condIcon.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
                             condWid.addChild("icon", condIcon)
                             req.addChild("cond_$idx", condWid)
@@ -1220,7 +1220,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     try {
                         val texManager = Minecraft.getInstance().textureManager
                         val outlineTex = if (progress >= 1.0f) viewOutlineGlowTex else viewOutlineTex
-                        val backView = texManager.getTexture(R.textures.UI_DEVELOPER_SKILL_ICON_BG).getTextureView()
+                        val backView = texManager.getTexture(R.textures.gui.developer.skill_back).getTextureView()
                         val outlineView = texManager.getTexture(outlineTex).getTextureView()
                         val maskView = texManager.getTexture(radialMaskTex).getTextureView()
                         val levelView = texManager.getTexture(levelIconPath).getTextureView()

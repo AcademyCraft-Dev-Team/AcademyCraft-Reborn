@@ -25,7 +25,7 @@ public final class WindGenTopSpecialRenderer implements NoDataSpecialModelRender
         poseStack.pushPose();
         poseStack.translate(0.5f, 1.5f, 0.5f);
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
-        nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderTypes.entityTranslucent(R.textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, outlineColor, null);
+        nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderTypes.entityTranslucent(R.textures.model.wind_gen_top), packedLight, packedOverlay, outlineColor, null);
         poseStack.popPose();
     }
 

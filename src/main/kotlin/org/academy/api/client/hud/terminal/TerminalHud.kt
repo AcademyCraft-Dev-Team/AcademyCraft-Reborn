@@ -62,7 +62,7 @@ import kotlin.math.abs
 import kotlin.math.sign
 import kotlin.math.tan
 
-class TerminalHUD private constructor() {
+class TerminalHud private constructor() {
     private var context: Context = Context()
     private val uiContext: UiContext
 
@@ -98,7 +98,7 @@ class TerminalHUD private constructor() {
             KEY_NAME_TOGGLE,
             config.getKeyBinding(KEY_NAME_TOGGLE, defaultKey)
         ) {
-            if (INSTANCE != null) INSTANCE!!.toggleActive()
+            INSTANCE.toggleActive()
         }
 
         uiContext = createUiContext()
@@ -192,7 +192,11 @@ class TerminalHUD private constructor() {
     @MainThread
     fun perform(mouseX: Double, mouseY: Double, deltaPartialTick: Float) {
         if (!isActive) return
+        if (posChanged) {
+            context.get().dispatchEvent(createMoveEvent(xPos, yPos))
+        }
         uiContext.perform(context.get(), mouseX, mouseY, deltaPartialTick)
+        posChanged = false
     }
 
     fun render(
@@ -301,10 +305,13 @@ class TerminalHUD private constructor() {
             val deltaGuiX = event.xpos / guiScale
             val deltaGuiY = event.ypos / guiScale
             val window = Minecraft.getInstance().window
-            xPos = Mth.clamp(deltaGuiX, 0.0, window.guiScaledWidth.toDouble())
-            yPos = Mth.clamp(deltaGuiY, 0.0, window.guiScaledHeight.toDouble())
-            context.get().dispatchEvent(createMoveEvent(xPos, yPos))
-            posChanged = true
+            val newX = Mth.clamp(deltaGuiX, 0.0, window.guiScaledWidth.toDouble())
+            val newY = Mth.clamp(deltaGuiY, 0.0, window.guiScaledHeight.toDouble())
+            if (newX != xPos || newY != yPos) {
+                xPos = newX
+                yPos = newY
+                posChanged = true
+            }
             if (InputSystem.currentMouseAction == 1 || InputSystem.currentMouseAction == 2) {
                 context.get().dispatchEvent(
                     createDragEvent(
@@ -427,7 +434,7 @@ class TerminalHUD private constructor() {
                     content.spacing = 2f
                     main.addChild("content", content)
                     run {
-                        val logo = ImageWidget(R.textures.ICON_TERMINAL)
+                        val logo = ImageWidget(R.textures.gui.terminal.icon)
                         logo.layoutParams = LinearLayoutWidget.LayoutParams()
                             .size(16f, 16f)
                             .gravity(Gravity.START)
@@ -609,7 +616,7 @@ class TerminalHUD private constructor() {
                 iconArea.onClickListener = OnClickListener { openApp(app) }
                 layout.addChild("icon_area", iconArea)
                 run {
-                    val back = ImageWidget(R.textures.APP_BACK)
+                    val back = ImageWidget(R.textures.gui.element.app_back)
                     back.setColor(0.8f, 0.8f, 0.8f)
                     iconArea.addChild("back", back)
 
@@ -667,22 +674,16 @@ class TerminalHUD private constructor() {
         var isActive: Boolean = false
             private set
 
-        private var INSTANCE: TerminalHUD? = null
+        lateinit var INSTANCE: TerminalHud
 
         private val APPS: MutableList<App> = ArrayList<App>()
-
-        val instance: TerminalHUD
-            get() {
-                checkNotNull(INSTANCE) { "TerminalHUD has not been initialized." }
-                return INSTANCE!!
-            }
 
         fun addApp(app: App) {
             APPS.add(app)
         }
 
         fun initMain() {
-            INSTANCE = TerminalHUD()
+            INSTANCE = TerminalHud()
             NeoForge.EVENT_BUS.register(INSTANCE)
         }
 

@@ -17,13 +17,17 @@ abstract class AbstractButtonWidget(protected var onClickListener: OnClickListen
     override fun onMousePressed(event: MouseEvent) {
         if (state == MouseButtonState.PRESSED && event.button == 0 && isMouseOver(event.x, event.y)) {
             isPointerDown = true
+            updateStateAnimator()
+            invalidate()
             handlePress(event)
         }
     }
 
     override fun onMouseReleased(event: MouseEvent) {
-        if (event.button == 0) {
+        if (event.button == 0 && isPointerDown) {
             isPointerDown = false
+            updateStateAnimator()
+            invalidate()
         }
 
         if (state == MouseButtonState.RELEASED && event.button == 0 && isMouseOver(event.x, event.y)) {

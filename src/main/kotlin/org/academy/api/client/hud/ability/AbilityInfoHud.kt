@@ -34,6 +34,7 @@ import org.academy.api.client.resources.R
 import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.joml.Vector3f
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -46,9 +47,6 @@ private val cpColors = listOf(
     ProgColor(0.35f, Color(255, 174, 68)),
     ProgColor(1.0f, Color(255, 255, 255)),
 )
-
-/** How long a CP bar shrink transition takes. */
-private const val CP_SHRINK_DURATION = 260L
 
 private const val WHEEL_ITEM_ENTRANCE_DURATION = 200L
 private const val WHEEL_ITEM_ENTRANCE_STAGGER = 30L
@@ -139,7 +137,7 @@ class AbilityInfoHud private constructor() {
                 root.addChild("cp", cp)
                 run {
                     val sampler: GpuSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                    val back = ImageWidget(R.textures.CP_BAR_BACKGROUND)
+                    val back = ImageWidget(R.textures.hud.cp_bar_background)
                     back.layoutParams = FrameLayoutWidget.LayoutParams()
                         .sizeMode(SizeMode.MATCH_PARENT)
                     back.setSampler(sampler)
@@ -150,7 +148,6 @@ class AbilityInfoHud private constructor() {
                         val particles = mutableListOf<Particle>()
                         var lastCp: Float = AbilitySystemClient.getAvailableCP()
                         var visualCp: Float = AbilitySystemClient.getAvailableCP()
-                        var visualCpAnimator: ObjectAnimator? = null
 
                         override fun renderInternal(context: RenderContext) {
                             super.renderInternal(context)
@@ -160,7 +157,7 @@ class AbilityInfoHud private constructor() {
                             if (view == null || view.isClosed) {
                                 try {
                                     val tex = Minecraft.getInstance().textureManager
-                                        .getTexture(R.textures.CP_BAR_VALUE)
+                                        .getTexture(R.textures.hud.cp_bar_value)
                                     view = tex.getTextureView()
                                     textureView = view
                                 } catch (_: Exception) {
@@ -312,13 +309,13 @@ class AbilityInfoHud private constructor() {
                             val increase = currentCp > lastCp
 
                             if (increase) {
-                                visualCpAnimator?.cancel()
-                                visualCpAnimator = null
+                                cancelShrinkParticles()
                                 visualCp = lastCp
                                 spawnFillParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
                             } else {
                                 cancelIncreaseParticles()
-                                animateShrink(currentCp)
+                                visualCp = currentCp
+                                spawnShrinkParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
                             }
                             lastCp = currentCp
                         }
@@ -371,27 +368,51 @@ class AbilityInfoHud private constructor() {
                             }
                         }
 
-                        private fun animateShrink(targetCp: Float) {
-                            visualCpAnimator?.cancel()
-                            visualCpAnimator = null
-                            val from = visualCp
-                            val animator = ObjectAnimator.ofFloat(
-                                { value: Float -> visualCp = value },
-                                from,
-                                targetCp
-                            ).setDuration(CP_SHRINK_DURATION).setInterpolator(EasingFunctions.EASE_OUT_QUAD)
-                            animator.addListener(object : AnimatorListener {
-                                override fun onAnimationEnd(animation: Animator) {
-                                    visualCp = targetCp
-                                    visualCpAnimator = null
-                                }
+                        private fun spawnShrinkParticles(lastProgress: Float, currentProgress: Float, maxCp: Float) {
+                            val animationTime = 750L
+                            var progressTracker = lastProgress
+                            var i = 0
+                            while (true) {
+                                val start = progressTracker
+                                val nextBoundary = (Mth.ceil(start / 0.1f) - 1).toFloat() * 0.1f
+                                val end = max(nextBoundary, currentProgress)
+                                val progressChanged = abs(start - end) > 0
+                                if (!progressChanged) break
 
-                                override fun onAnimationCancel(animation: Animator) {
-                                    visualCpAnimator = null
+                                val particle = Particle(start, end, false)
+                                val animator = ObjectAnimator.ofFloat(
+                                    { progress: Float? -> particle.setProgress(progress!!) },
+                                    0f,
+                                    1f
+                                )
+                                    .setDuration(animationTime).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
+                                    .setStartDelay(i * animationTime / 10)
+
+                                animator.addListener(object : AnimatorListener {
+                                    override fun onAnimationEnd(animation: Animator) {
+                                        particles.remove(particle)
+                                    }
+                                })
+                                animator.start()
+                                particle.animator = animator
+                                particles.add(particle)
+
+                                progressTracker = end
+                                i++
+
+                                if (progressTracker == currentProgress) break
+                            }
+                        }
+
+                        private fun cancelShrinkParticles() {
+                            val iterator = particles.iterator()
+                            while (iterator.hasNext()) {
+                                val particle = iterator.next()
+                                if (!particle.increase) {
+                                    iterator.remove()
+                                    particle.animator?.cancel()
                                 }
-                            })
-                            visualCpAnimator = animator
-                            animator.start()
+                            }
                         }
 
                         inner class Particle(val last: Float, val current: Float, val increase: Boolean) {

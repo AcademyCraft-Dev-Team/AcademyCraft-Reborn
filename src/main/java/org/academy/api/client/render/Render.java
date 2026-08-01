@@ -535,7 +535,7 @@ public final class Render {
         public static final RenderPipeline MSDF_TEXT = builder()
                 .withLocation(academy("pipeline/msdf_text"))
                 .withVertexShader(R.shaders.core.msdf_text_instanced)
-                .withFragmentShader(R.shaders.core.MSDF_TEXT)
+                .withFragmentShader(R.shaders.core.msdf_text)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
@@ -562,8 +562,8 @@ public final class Render {
                 .build();
 
         public static final RenderPipeline.Snippet BLIT_SCREEN_SNIPPET = builder()
-                .withVertexShader(R.shaders.SCREEN_BLIT)
-                .withFragmentShader(R.shaders.SCREEN_BLIT)
+                .withVertexShader(R.shaders.core.screen_blit)
+                .withFragmentShader(R.shaders.core.screen_blit)
                 .withCull(false)
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION)
@@ -606,7 +606,7 @@ public final class Render {
 
         public static final RenderPipeline GAUSSIAN_BLUR = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/gaussian_blur"))
-                .withFragmentShader(R.shaders.core.GAUSSIAN_BLUR)
+                .withFragmentShader(R.shaders.core.gaussian_blur)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
@@ -618,7 +618,7 @@ public final class Render {
 
         public static final RenderPipeline CUTOUT_GAUSSIAN_BLUR = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/cutout_gaussian_blur"))
-                .withFragmentShader(R.shaders.core.GAUSSIAN_BLUR)
+                .withFragmentShader(R.shaders.core.gaussian_blur)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
@@ -642,7 +642,7 @@ public final class Render {
 
         public static final RenderPipeline BLOOM_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/bloom_blend"))
-                .withFragmentShader(R.shaders.core.BLOOM_BLEND)
+                .withFragmentShader(R.shaders.core.bloom_blend)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
@@ -657,8 +657,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_additive"))
-                .withVertexShader(R.shaders.POSITION_COLOR)
-                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withVertexShader(R.shaders.position_color)
+                .withFragmentShader(R.shaders.position_color)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
                 .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
@@ -681,8 +681,8 @@ public final class Render {
 
         public static final RenderPipeline IMAGE_PREMULTIPLIED_ALPHA = builder()
                 .withLocation(academy("pipeline/image_premultiplied_alpha"))
-                .withVertexShader(R.shaders.POSITION_TEX_COLOR)
-                .withFragmentShader(R.shaders.POSITION_TEX_COLOR)
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.position_tex_color)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
@@ -695,7 +695,7 @@ public final class Render {
         public static final RenderPipeline IMAGE_CIRCLE = builder()
                 .withLocation(academy("pipeline/image_circle"))
                 .withVertexShader(R.shaders.core.image)
-                .withFragmentShader(R.shaders.core.IMAGE_CIRCLE)
+                .withFragmentShader(R.shaders.core.image_circle)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -708,7 +708,7 @@ public final class Render {
         public static final RenderPipeline IMAGE_MONOCHROME = builder()
                 .withLocation(academy("pipeline/image_monochrome"))
                 .withVertexShader(R.shaders.core.image)
-                .withFragmentShader(R.shaders.core.IMAGE_MONOCHROME)
+                .withFragmentShader(R.shaders.core.image_monochrome)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -721,7 +721,7 @@ public final class Render {
         public static final RenderPipeline SKILL_PROGRESS = builder()
                 .withLocation(academy("pipeline/skill_progress"))
                 .withVertexShader(R.shaders.core.image)
-                .withFragmentShader(R.shaders.core.SKILL_PROGRESS)
+                .withFragmentShader(R.shaders.core.skill_progress)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
@@ -738,8 +738,8 @@ public final class Render {
 
         public static final RenderPipeline IMAGE_STENCIL_PREMULTIPLIED_ALPHA = builder()
                 .withLocation(academy("pipeline/image_stencil_premultiplied_alpha"))
-                .withVertexShader(R.shaders.POSITION_TEX_COLOR)
-                .withFragmentShader(R.shaders.POSITION_TEX_COLOR)
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.position_tex_color)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -764,8 +764,8 @@ public final class Render {
 
         public static final RenderPipeline POS_COLOR = builder()
                 .withLocation(academy("pipeline/pos_color"))
-                .withVertexShader(R.shaders.POSITION_COLOR)
-                .withFragmentShader(R.shaders.core.POS_COLOR)
+                .withVertexShader(R.shaders.position_color)
+                .withFragmentShader(R.shaders.core.pos_color)
                 .withCull(true)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
@@ -776,8 +776,8 @@ public final class Render {
 
         public static final RenderPipeline SDF_SHARP_MARGIN = builder()
                 .withLocation(academy("pipeline/sdf_sharp_margin"))
-                .withVertexShader(R.shaders.POSITION_TEX)
-                .withFragmentShader(R.shaders.core.SDF_SHARP_MARGIN)
+                .withVertexShader(R.shaders.position_tex)
+                .withFragmentShader(R.shaders.core.sdf_sharp_margin)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withBindGroupLayout(
@@ -793,8 +793,8 @@ public final class Render {
 
         public static final RenderPipeline GLOW_CIRCLE = builder()
                 .withLocation(academy("pipeline/glow_circle"))
-                .withVertexShader(R.shaders.POSITION_TEX)
-                .withFragmentShader(R.shaders.core.GLOW_CIRCLE)
+                .withVertexShader(R.shaders.position_tex)
+                .withFragmentShader(R.shaders.core.glow_circle)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
                                 .withUniform("Uniforms", UniformType.UNIFORM_BUFFER)
@@ -810,8 +810,8 @@ public final class Render {
 
         public static final RenderPipeline SDF_CIRCLE_GLOW = builder()
                 .withLocation(academy("pipeline/sdf_circle_glow"))
-                .withVertexShader(R.shaders.POSITION_TEX)
-                .withFragmentShader(R.shaders.core.SDF_CIRCLE_GLOW)
+                .withVertexShader(R.shaders.position_tex)
+                .withFragmentShader(R.shaders.core.sdf_circle_glow)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
                                 .withUniform("GlowUniforms", UniformType.UNIFORM_BUFFER)
@@ -827,8 +827,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_tex_color"))
-                .withVertexShader(R.shaders.POSITION_TEX_COLOR)
-                .withFragmentShader(R.shaders.POSITION_TEX_COLOR)
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.position_tex_color)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
@@ -839,8 +839,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR_HELLFLARE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_tex_color_hellflare"))
-                .withVertexShader(R.shaders.POSITION_TEX_COLOR)
-                .withFragmentShader(R.shaders.core.HELLFLARE_STEAM)
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.core.hellflare_steam)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
@@ -851,8 +851,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_tex_color_hellflare_additive"))
-                .withVertexShader(R.shaders.POSITION_TEX_COLOR)
-                .withFragmentShader(R.shaders.core.HELLFLARE_STEAM)
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.core.hellflare_steam)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
@@ -863,8 +863,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_quads"))
-                .withVertexShader(R.shaders.POSITION_COLOR)
-                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withVertexShader(R.shaders.position_color)
+                .withFragmentShader(R.shaders.position_color)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
@@ -874,8 +874,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_trangles"))
-                .withVertexShader(R.shaders.POSITION_COLOR)
-                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withVertexShader(R.shaders.position_color)
+                .withFragmentShader(R.shaders.position_color)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
@@ -885,8 +885,8 @@ public final class Render {
 
         public static final RenderPipeline DISTORTION_RING = builder()
                 .withLocation(academy("pipeline/distortion_ring"))
-                .withVertexShader(R.shaders.DISTORTION_RING)
-                .withFragmentShader(R.shaders.DISTORTION_RING)
+                .withVertexShader(R.shaders.core.distortion_ring)
+                .withFragmentShader(R.shaders.core.distortion_ring)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -903,8 +903,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_TEX_COLOR_ADDITIVE_BLOOM = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_tex_color_additive_bloom"))
-                .withVertexShader(R.shaders.POSITION_TEX_COLOR)
-                .withFragmentShader(R.shaders.core.PARTICLE_ADDITIVE)
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.core.particle_additive)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
@@ -915,8 +915,8 @@ public final class Render {
 
         public static final RenderPipeline SPATIAL_DISTORTION = builder()
                 .withLocation(academy("pipeline/spatial_distortion"))
-                .withVertexShader(R.shaders.POSITION_TEX)
-                .withFragmentShader(R.shaders.core.SPATIAL_DISTORTION)
+                .withVertexShader(R.shaders.position_tex)
+                .withFragmentShader(R.shaders.core.spatial_distortion)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
                                 .withUniform("SpatialUniforms", UniformType.UNIFORM_BUFFER)
@@ -956,7 +956,7 @@ public final class Render {
                 "storm_wing",
                 RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
                         .withTexture(
-                                "Sampler0", R.textures.storm_wing,
+                                "Sampler0", R.textures.ability.accelerator.skill.storm_wing.effect.tornado_ring,
                                 () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                         )
                         .sortOnUpload()
@@ -967,7 +967,7 @@ public final class Render {
                 "arc",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR)
                         .withTexture(
-                                "Sampler0", R.textures.arc,
+                                "Sampler0", R.textures.ability.electromaster.skill.arc_generate.effect.line_segment,
                                 () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                         )
                         .setOutputTarget(BLOOM_TARGET)
@@ -1044,9 +1044,9 @@ public final class Render {
         );
 
         public static final RenderType DISTORTION_RING;
-        public static final RenderType ABILITY_DEVELOPER = entityTranslucent(R.textures.MODEL_ABILITY_DEVELOPER);
-        public static final RenderType CAT_ENGINE = entityTranslucent(R.textures.CAT_ENGINE);
-        public static final RenderType CLEANING_ROBOT = entitySolid(R.textures.CLEANING_ROBOT);
+        public static final RenderType ABILITY_DEVELOPER = entityTranslucent(R.textures.model.ability_developer);
+        public static final RenderType CAT_ENGINE = entityTranslucent(R.textures.item.cat_engine);
+        public static final RenderType CLEANING_ROBOT = entitySolid(R.textures.model.cleaning_robot);
 
         static {
             var id = academy("render/distortion_ring");

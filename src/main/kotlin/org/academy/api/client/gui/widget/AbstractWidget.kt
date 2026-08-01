@@ -185,9 +185,11 @@ abstract class AbstractWidget : Widget {
 
     override var isRenderDirty: Boolean = true
 
+    override var bypassRenderCache: Boolean = false
+
     override fun invalidate() {
         isRenderDirty = true
-        parent?.invalidate()
+        parent?.onChildInvalidated(this)
     }
 
     override fun render(context: RenderContext) {
@@ -241,13 +243,17 @@ abstract class AbstractWidget : Widget {
         if (isClickable && isMouseOver(event.x, event.y)) {
             protectedIsPressed = true
             updateStateAnimator()
+            invalidate()
             event.consume()
         }
     }
 
     protected open fun onMouseReleased(event: MouseEvent) {
-        protectedIsPressed = false
-        updateStateAnimator()
+        if (protectedIsPressed) {
+            protectedIsPressed = false
+            updateStateAnimator()
+            invalidate()
+        }
         if (isMouseOver(event.x, event.y)) {
             event.consume()
         }
@@ -320,7 +326,7 @@ abstract class AbstractWidget : Widget {
         return state
     }
 
-    private fun updateStateAnimator() {
+    protected fun updateStateAnimator() {
         stateListAnimator?.setState(getWidgetState())
     }
 

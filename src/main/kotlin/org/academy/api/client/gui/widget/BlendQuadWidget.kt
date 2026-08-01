@@ -19,14 +19,62 @@ import kotlin.math.max
 
 class BlendQuadWidget : AbstractWidget() {
     var marginTop: Float = 4f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
     var marginBottom: Float = 4f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
     var marginLeft: Float = 4f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
     var marginRight: Float = 4f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
     var drawLine: Boolean = true
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
 
     var red: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
     var green: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
     var blue: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
 
     override fun render(context: RenderContext) {
         if (!isVisible()) return
@@ -83,7 +131,7 @@ class BlendQuadWidget : AbstractWidget() {
     private fun renderLines(context: RenderContext, finalAlpha: Float, paddedWidth: Float, paddedHeight: Float) {
         val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
         val textureManager = Minecraft.getInstance().textureManager
-        val lineTextureView = textureManager.getTexture(R.textures.ELEMENT_LINE).getTextureView()
+        val lineTextureView = textureManager.getTexture(R.textures.gui.element.line).getTextureView()
         val lineH = 4.0f
         run {
             val topLineCommand = ImageDrawCommand(

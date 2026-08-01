@@ -214,10 +214,10 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
 
     public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords) {
         submitNodeCollector.submitModelPart(
-                base2, poseStack, renderType(R.textures.WIRELESS_NODE_MODEL), lightCoords, overlayCoords, null
+                base2, poseStack, renderType(R.textures.model.wireless_node), lightCoords, overlayCoords, null
         );
         submitNodeCollector.submitModelPart(
-                core_li, poseStack, renderType(R.textures.WIRELESS_NODE_MODEL), lightCoords, overlayCoords, null
+                core_li, poseStack, renderType(R.textures.model.wireless_node), lightCoords, overlayCoords, null
         );
 
         if (IrisCompat.isShaderPackInUse()) {

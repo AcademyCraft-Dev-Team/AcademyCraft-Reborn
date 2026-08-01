@@ -14,11 +14,11 @@ import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.internal.common.world.level.block.entity.WindGenPillarBlockEntity;
 
-import static org.academy.api.client.resources.R.textures.BLOCK_WIND_GEN_PILLAR;
+import static org.academy.api.client.resources.R.textures.block.wind_gen_pillar;
 
 public final class WindGenPillarRenderer implements BlockEntityRenderer<WindGenPillarBlockEntity, BlockEntityRenderState> {
     public static final WindGenPillarRenderer INSTANCE = new WindGenPillarRenderer();
-    public static final RenderType PILLAR_RENDER_TYPE = RenderTypes.entitySolid(BLOCK_WIND_GEN_PILLAR);
+    public static final RenderType PILLAR_RENDER_TYPE = RenderTypes.entitySolid(wind_gen_pillar);
     public static final float[][] PILLAR_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.3f, 8, true);
     public static final float[][] PILLAR_OUTLINE_VERTEX_BUFFER = VertexUtil.Cylinder.getCylinderWireframeBuffer(0, 1, 0.3f, 8);
 

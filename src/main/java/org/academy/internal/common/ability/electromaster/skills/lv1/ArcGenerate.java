@@ -76,7 +76,7 @@ public final class ArcGenerate extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ELECTROMASTER.get(),
-                new AbilitySystemClient.SkillInfo(Skills.ARC_GENERATE.get(), List.of(), R.textures.arc_generate_icon, 24, 46)
+                new AbilitySystemClient.SkillInfo(Skills.ARC_GENERATE.get(), List.of(), R.textures.ability.electromaster.skill.arc_generate.icon, 24, 46)
         );
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 

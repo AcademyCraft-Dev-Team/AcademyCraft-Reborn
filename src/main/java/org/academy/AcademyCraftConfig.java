@@ -37,6 +37,10 @@ public final class AcademyCraftConfig {
         registerTypeHandler(Util.makeDescriptionId("config", configKey), handler);
     }
 
+    public boolean hasTypeHandler(Identifier configKey) {
+        return HANDLER_MAP.containsKey(Util.makeDescriptionId("config", configKey));
+    }
+
     private synchronized void load() {
         if (configFile.exists() && configFile.length() > 0) {
             try (var reader = new FileReader(configFile)) {

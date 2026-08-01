@@ -276,6 +276,8 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         }
         context.drawOrder().pop()
         context.pose().popPose()
+        isRenderDirty = false
+        dirtyChildrenSet.clear()
     }
 
     /**
@@ -363,7 +365,12 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
             context.alpha().push(alpha)
             run {
-                child.render(context)
+                child.bypassRenderCache = true
+                try {
+                    child.render(context)
+                } finally {
+                    child.bypassRenderCache = false
+                }
             }
             context.alpha().pop()
         }

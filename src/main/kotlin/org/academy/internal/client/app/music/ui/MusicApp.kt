@@ -16,7 +16,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.SeekBarWidget.OnSeekBarChangeListener
-import org.academy.api.client.hud.terminal.TerminalHUD
+import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend
 import org.academy.internal.client.app.music.common.PlaybackMode
 import kotlin.math.min
@@ -37,7 +37,7 @@ object MusicApp : App {
     }
 
     override fun icon(): Identifier {
-        return R.textures.ICON_MUSIC_PLAYER
+        return R.textures.gui.app.music.icon
     }
 
     private class Context : WidgetContext {
@@ -94,11 +94,11 @@ object MusicApp : App {
                             .margin(2f, 2f, 2f, 0f)
                             .size(16f, 16f)
                         backButton.onClickListener = { _: Widget? ->
-                            TerminalHUD.instance.closeApp()
+                            TerminalHud.Companion.INSTANCE.closeApp()
                         }
                         topBar.addChild("back_button", backButton)
                         run {
-                            val arrow = ImageWidget(R.textures.ARROW_BACK)
+                            val arrow = ImageWidget(R.textures.gui.icon.arrow_back)
                             arrow.setSampler(FilterMode.LINEAR, false)
                             arrow.layoutParams = FrameLayoutWidget.LayoutParams()
                                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -232,7 +232,7 @@ object MusicApp : App {
                         }
                         controlArea.addChild("previous", previousButton)
                         run {
-                            val icon = ImageWidget(R.textures.ICON_PREV)
+                            val icon = ImageWidget(R.textures.gui.app.music.previous)
                             icon.setSampler(FilterMode.LINEAR, false)
                             previousButton.addChild("icon", icon)
                         }
@@ -253,7 +253,7 @@ object MusicApp : App {
                         nextButton.onClickListener = { MusicPlayerBackend.getInstance().playNext() }
                         controlArea.addChild("next", nextButton)
                         run {
-                            val icon = ImageWidget(R.textures.ICON_NEXT)
+                            val icon = ImageWidget(R.textures.gui.app.music.next)
                             icon.setSampler(FilterMode.LINEAR, false)
                             nextButton.addChild("icon", icon)
                         }
@@ -284,7 +284,7 @@ object MusicApp : App {
                     musicButton.onClickListener = { MusicPlayerBackend.getInstance().play(mediaInfo) }
                     musicList.addChild(mediaInfo.name, musicButton)
                     run {
-                        val back = FillWidget(TerminalHUD.COLOR)
+                        val back = FillWidget(TerminalHud.COLOR)
                         back.layoutParams = FrameLayoutWidget.LayoutParams()
                             .sizeMode(SizeMode.MATCH_PARENT)
                         musicButton.addChild("back", back)
@@ -333,7 +333,7 @@ object MusicApp : App {
         }
 
         fun createVinyl(): ImageWidget {
-            return object : ImageWidget(R.textures.ICON_NOW_PLAYING) {
+            return object : ImageWidget(R.textures.gui.app.music.now_playing) {
                 override fun generateDrawCommand(
                     texture: GpuTextureView,
                     sampler: GpuSampler,
@@ -407,7 +407,7 @@ object MusicApp : App {
                     .width(0f)
                     .heightMode(SizeMode.MATCH_PARENT)
 
-                val icon = ImageWidget(R.textures.ICON_VOLUME)
+                val icon = ImageWidget(R.textures.gui.app.music.volume)
                 icon.setSampler(FilterMode.LINEAR, false)
                 icon.layoutParams = p
                 content.addChild("icon", icon)
@@ -473,16 +473,16 @@ object MusicApp : App {
             get() = MusicPlayerBackend.getInstance().isPlaying
 
         fun getPlayPauseIcon(): Identifier {
-            return if (isPlaying) R.textures.ICON_PAUSE
-            else R.textures.ICON_PLAY
+            return if (isPlaying) R.textures.gui.app.music.pause
+            else R.textures.gui.app.music.play
         }
 
         fun getPlaybackModeIcon(): Identifier {
             val musicPlayerBackend = MusicPlayerBackend.getInstance()
             return when (musicPlayerBackend.playbackMode) {
-                PlaybackMode.REPEAT_LIST -> R.textures.ICON_CYCLE
-                PlaybackMode.REPEAT_ONE -> R.textures.ICON_SINGLE_CYCLE
-                PlaybackMode.SHUFFLE -> R.textures.ICON_RANDOM_PLAY
+                PlaybackMode.REPEAT_LIST -> R.textures.gui.app.music.cycle
+                PlaybackMode.REPEAT_ONE -> R.textures.gui.app.music.single_cycle
+                PlaybackMode.SHUFFLE -> R.textures.gui.app.music.random_play
             }
         }
 

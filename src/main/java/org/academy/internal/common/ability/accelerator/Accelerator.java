@@ -11,7 +11,7 @@ public final class Accelerator extends AbilityCategory {
 
     @Override
     public Identifier getDeveloperIcon() {
-        return R.textures.ICON_ACCELERATOR;
+        return R.textures.gui.icon.icon_accelerator;
     }
 
     @Override

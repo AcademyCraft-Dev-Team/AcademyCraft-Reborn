@@ -8,6 +8,10 @@ import org.academy.api.client.gui.render.RenderContext
 
 open class ScrollBarWidget(protected val panel: ScrollPanelWidget, orientation: Orientation) :
     DragBarWidget(orientation) {
+    init {
+        panel.addScrollChangeListener { invalidate() }
+    }
+
     override fun render(context: RenderContext) {
         if (!isVisible()) return
 

@@ -86,7 +86,7 @@ public class PlasmaGeneration extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
-                new AbilitySystemClient.SkillInfo(Skills.PLASMA_GENERATION.get(), List.of(StormWing.Client.SKILL_INFO), R.textures.plasma_generation_icon, 175, 14)
+                new AbilitySystemClient.SkillInfo(Skills.PLASMA_GENERATION.get(), List.of(StormWing.Client.SKILL_INFO), R.textures.ability.accelerator.skill.plasma_generation.icon, 175, 14)
         );
         public static final String KEY_NAME_CHARGE = SkillNames.PLASMA_GENERATION + "_charge";
         public static final String KEY_NAME_FIRE = SkillNames.PLASMA_GENERATION + "_fire";

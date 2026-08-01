@@ -33,7 +33,7 @@ import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.HudManager;
-import org.academy.api.client.hud.terminal.TerminalHUD;
+import org.academy.api.client.hud.terminal.TerminalHud;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
@@ -44,6 +44,7 @@ import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
+import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
@@ -66,7 +67,8 @@ public final class AcademyCraftClient {
     private static boolean renderInitialized = false;
 
     public static void initMain() {
-        TerminalHUD.Companion.addApp(MusicApp.INSTANCE);
+        TerminalHud.Companion.addApp(MusicApp.INSTANCE);
+        TerminalHud.Companion.addApp(SettingsApp.INSTANCE);
 
         MusicPlayerBackend.Companion.init();
         Screens.register();

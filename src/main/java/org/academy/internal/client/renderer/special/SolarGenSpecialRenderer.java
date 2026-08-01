@@ -34,7 +34,7 @@ public final class SolarGenSpecialRenderer implements NoDataSpecialModelRenderer
         poseStack.translate(0.5f, 1.5f, 0.5f);
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         MODEL.resetPose();
-        nodeCollector.submitModel(MODEL, new SolarGenRenderState(), poseStack, RenderTypes.entityCutout(R.textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, null);
+        nodeCollector.submitModel(MODEL, new SolarGenRenderState(), poseStack, RenderTypes.entityCutout(R.textures.model.solar_gen), packedLight, packedOverlay, 0, null);
         poseStack.popPose();
     }
 

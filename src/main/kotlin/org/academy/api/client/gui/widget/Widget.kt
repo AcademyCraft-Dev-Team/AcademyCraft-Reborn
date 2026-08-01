@@ -50,6 +50,14 @@ interface Widget : Tickable {
     fun requestLayout()
     var isRenderDirty: Boolean
     fun invalidate()
+
+    /** Transiently set by parents that re-render this widget at a changing pose
+     * (e.g. WheelPicker items), forcing its subtree to regenerate every render. */
+    var bypassRenderCache: Boolean
+
+    fun hasPendingRender(): Boolean {
+        return isRenderDirty
+    }
     fun isVisible(): Boolean
     fun getWidgetState(): Int
     fun isAbsoluteEnabled(): Boolean

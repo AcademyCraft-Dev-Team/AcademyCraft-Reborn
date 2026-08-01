@@ -30,11 +30,35 @@ public final class InputSystem {
     }
 
     public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
-        KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler));
+        KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler, true));
     }
 
     public static void removeKeyBinding(String keyName) {
         KEY_BINDINGS.remove(keyName);
+    }
+
+    /**
+     * Replaces the KeyCombination of an existing binding, keeping its handler intact.
+     */
+    public static void updateKeyBinding(String keyName, KeyCombination combo) {
+        var existing = KEY_BINDINGS.get(keyName);
+        if (existing == null) {
+            return;
+        }
+        KEY_BINDINGS.put(keyName, new KeyBinding(combo, existing.handler, existing.enabled));
+    }
+
+    /**
+     * Enables or disables an existing binding without discarding its handler.
+     */
+    public static void setKeyBindingEnabled(String keyName, boolean enabled) {
+        var existing = KEY_BINDINGS.get(keyName);
+        if (existing == null) {
+            return;
+        }
+        if (existing.enabled != enabled) {
+            KEY_BINDINGS.put(keyName, new KeyBinding(existing.combo, existing.handler, enabled));
+        }
     }
 
     public static boolean isDown(InputType type, int key) {
@@ -151,6 +175,7 @@ public final class InputSystem {
 
     private static void dispatch(InputType eventType, int input, int action, int modifiers) {
         for (var binding : KEY_BINDINGS.values()) {
+            if (!binding.enabled) continue;
             var combo = binding.combo;
             if (!matches(combo, eventType, input, action, modifiers)) continue;
             binding.handler.accept(new BindingContext(eventType, input, action, modifiers));
@@ -186,11 +211,35 @@ public final class InputSystem {
         public KeyCombination {
             keys = keys == null ? Set.of() : keys;
         }
+
+        public String displayName() {
+            if (keys.isEmpty()) {
+                return "Any";
+            }
+            var builder = new StringBuilder();
+            if ((modifiers & InputConstants.MOD_SHIFT) != 0) builder.append("Shift+");
+            if ((modifiers & InputConstants.MOD_CONTROL) != 0) builder.append("Ctrl+");
+            if ((modifiers & InputConstants.MOD_ALT) != 0) builder.append("Alt+");
+            var keyCodes = keys.stream().sorted().toList();
+            for (int i = 0; i < keyCodes.size(); i++) {
+                if (i > 0) builder.append('+');
+                builder.append(keyName(type, keyCodes.get(i)));
+            }
+            return builder.toString();
+        }
+
+        private static String keyName(InputType type, int key) {
+            return switch (type) {
+                case MOUSE -> InputConstants.Type.MOUSE.getOrCreate(key).getDisplayName().getString();
+                case KEYBOARD -> InputConstants.getKey(new net.minecraft.client.input.KeyEvent(key, -1, 0))
+                        .getDisplayName().getString();
+            };
+        }
     }
 
     public record BindingContext(InputType type, int input, int action, int modifiers) {
     }
 
-    private record KeyBinding(KeyCombination combo, Consumer<BindingContext> handler) {
+    private record KeyBinding(KeyCombination combo, Consumer<BindingContext> handler, boolean enabled) {
     }
 }

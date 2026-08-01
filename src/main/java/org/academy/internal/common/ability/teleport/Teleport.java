@@ -11,7 +11,7 @@ public final class Teleport extends AbilityCategory {
 
     @Override
     public Identifier getDeveloperIcon() {
-        return R.textures.ICON_TELEPORTER;
+        return R.textures.gui.icon.icon_teleporter;
     }
 
     @Override
