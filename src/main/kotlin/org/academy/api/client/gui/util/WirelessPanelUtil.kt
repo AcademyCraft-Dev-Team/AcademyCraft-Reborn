@@ -45,7 +45,7 @@ object WirelessPanelUtil {
                 .padding(WirelessPanelUtil.MARGIN_HORIZONTAL, WirelessPanelUtil.MARGIN_VERTICAL)
             content.spacing = WirelessPanelUtil.SPACING_MINOR
             root.addChild("content", content) {
-                val icon = ImageWidget(R.textures.ICON_OPEN_WIRELESS_PANEL)
+                val icon = ImageWidget(R.textures.gui.icon.icon_tonode)
                 icon.layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(16f, 16f)
                 content.addChild("icon", icon)
@@ -175,7 +175,7 @@ object WirelessPanelUtil {
                 .paddingHorizontal(4f)
             itemContent.spacing = 4f
             nodeViewPanel.addChild("content", itemContent) {
-                val nodeIcon = ImageWidget(R.textures.ICON_NODE)
+                val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
                 nodeIcon.layoutParams = LinearLayoutWidget.LayoutParams()
                     .gravity(Gravity.CENTER)
                     .size(14f, 14f)
@@ -212,10 +212,10 @@ object WirelessPanelUtil {
                     connectButton.onClickListener = { _ -> connectAction(inputBox.text) }
                     itemContent.addChild("button", connectButton) {
                         val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(R.textures.ICON_UNCONNECTED)
+                        val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
                         defaultDrawable.tintColor = -0x444445
 
-                        val hoveredDrawable = TextureDrawable(R.textures.ICON_UNCONNECTED)
+                        val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
                         hoveredDrawable.tintColor = -0x1
 
                         val sld = StateListDrawable()
@@ -238,10 +238,10 @@ object WirelessPanelUtil {
                         .size(14f, 14f)
                     itemContent.addChild("button", disconnectButton) {
                         val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(R.textures.ICON_CONNECTED)
+                        val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
                         defaultDrawable.tintColor = -0x444445
 
-                        val hoveredDrawable = TextureDrawable(R.textures.ICON_CONNECTED)
+                        val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
                         hoveredDrawable.tintColor = -0x1
 
                         val sld = StateListDrawable()

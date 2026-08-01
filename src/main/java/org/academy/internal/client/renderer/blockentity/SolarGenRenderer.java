@@ -51,7 +51,7 @@ public final class SolarGenRenderer implements BlockEntityRenderer<SolarGenBlock
         poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
         MODEL.setupAnim(renderState);
-        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(R.textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, renderState.breakProgress);
+        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(R.textures.model.solar_gen), packedLight, packedOverlay, 0, renderState.breakProgress);
 
         poseStack.popPose();
     }

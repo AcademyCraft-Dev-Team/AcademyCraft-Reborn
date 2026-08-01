@@ -87,7 +87,7 @@ public class VectorReduction extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
-                new AbilitySystemClient.SkillInfo(Skills.VECTOR_REDUCTION.get(), List.of(VectorAccel.Client.SKILL_INFO), R.textures.vector_reduction_icon, 145, 53)
+                new AbilitySystemClient.SkillInfo(Skills.VECTOR_REDUCTION.get(), List.of(VectorAccel.Client.SKILL_INFO), R.textures.ability.accelerator.skill.vector_reduction.icon, 145, 53)
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REDUCTION + "_toggle";
         public static Config CONFIG = new Config();

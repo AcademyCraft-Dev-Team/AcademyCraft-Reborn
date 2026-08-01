@@ -86,7 +86,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
             main.addChild("radio_group_page_button", pageButtons)
             val invButton: RadioButtonWidget
             run {
-                invButton = createButton(R.textures.ICON_INV)
+                invButton = createButton(R.textures.gui.icon.icon_inv)
                 invButton.layoutParams = WidgetContainer.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(16f)
@@ -126,7 +126,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
                     back.alpha = 0.5f
                     invPage.addChild("back", back)
 
-                    val inv = ImageWidget(R.textures.UI_INVENTORY)
+                    val inv = ImageWidget(R.textures.gui.element.ui_inventory)
                     inv.layoutParams = FrameLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .heightMode(SizeMode.MATCH_PARENT)

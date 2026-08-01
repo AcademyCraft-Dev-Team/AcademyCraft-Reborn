@@ -36,6 +36,13 @@ class RenderContext {
         commands.add(SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder))
     }
 
+    fun addCached(cached: List<SubmittedCommand>) {
+        for (command in cached) {
+            if (command.drawOrder > recordedMax) recordedMax = command.drawOrder
+        }
+        commands.addAll(cached)
+    }
+
     fun pose(): PoseStack2D {
         return pose2D
     }

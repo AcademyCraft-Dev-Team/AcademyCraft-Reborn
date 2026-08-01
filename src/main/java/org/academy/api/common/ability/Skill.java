@@ -195,6 +195,10 @@ public abstract class Skill {
         return energyCostToLearn;
     }
 
+    public Identifier getIcon() {
+        return icon;
+    }
+
     public Identifier getKey() {
         var key = Registries.SKILLS.getKey(this);
         if (key == null) {
@@ -305,7 +309,7 @@ public abstract class Skill {
         private DataFactory dataFactory = _ -> new CommonSkillData();
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
-        private Identifier icon = R.textures.ICON_CLOSE;
+        private Identifier icon = R.textures.gui.icon.close;
 
         private Builder(AbilityCategory category) {
             this.category = category;

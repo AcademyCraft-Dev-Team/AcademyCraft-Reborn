@@ -19,6 +19,10 @@ open class LabelWidget(text: String) : AbstractWidget() {
         }
     protected var layoutScale: Float = 1.0f
     protected var dropShadow: Boolean = false
+    private var measuredText: String? = null
+    private var measuredFontSize = 0f
+    private var measuredTextWidth = 0f
+    private var measuredTextHeight = 0f
     open var text: String = text
         set(text) {
             if (field != text) {
@@ -57,12 +61,23 @@ open class LabelWidget(text: String) : AbstractWidget() {
         return Math.clamp(finalScale, 0.0f, 1.0f)
     }
 
+    private fun ensureMeasured(text: String) {
+        if (text !== measuredText || baseFontSize != measuredFontSize) {
+            measuredText = text
+            measuredFontSize = baseFontSize
+            measuredTextWidth = getTextWidth(text, baseFontSize)
+            measuredTextHeight = getTextHeight(text, baseFontSize)
+        }
+    }
+
     protected fun getTextWidth(text: String): Float {
-        return getTextWidth(text, baseFontSize)
+        ensureMeasured(text)
+        return measuredTextWidth
     }
 
     protected fun getTextHeight(text: String): Float {
-        return getTextHeight(text, baseFontSize)
+        ensureMeasured(text)
+        return measuredTextHeight
     }
 
     override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
@@ -132,7 +147,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
             context.pose().scale(finalScale, finalScale)
 
             val finalAlpha = alpha * context.accumulatedAlpha
-            if (colorChanged || lastFinalAlpha != finalAlpha || (text != lastText) || isRenderDirty) {
+            if (colorChanged || lastFinalAlpha != finalAlpha || (text != lastText)) {
                 drawCommands = generateDrawCommands(
                     text, baseFontSize, 0f, red, green, blue, finalAlpha
                 )
@@ -162,6 +177,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
         if (red != this.red) {
             this.red = red
             colorChanged = true
+            invalidate()
         }
     }
 
@@ -173,6 +189,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
         if (blue != this.blue) {
             this.blue = blue
             colorChanged = true
+            invalidate()
         }
     }
 
@@ -184,6 +201,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
         if (green != this.green) {
             this.green = green
             colorChanged = true
+            invalidate()
         }
     }
 

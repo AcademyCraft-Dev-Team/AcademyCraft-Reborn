@@ -105,17 +105,26 @@ open class ImageWidget : AbstractWidget {
     }
 
     fun setRed(red: Float): ImageWidget {
-        this.brightness = red
+        if (this.brightness != red) {
+            this.brightness = red
+            invalidate()
+        }
         return this
     }
 
     fun setGreen(green: Float): ImageWidget {
-        this.green = green
+        if (this.green != green) {
+            this.green = green
+            invalidate()
+        }
         return this
     }
 
     fun setBlue(blue: Float): ImageWidget {
-        this.blue = blue
+        if (this.blue != blue) {
+            this.blue = blue
+            invalidate()
+        }
         return this
     }
 
@@ -124,7 +133,10 @@ open class ImageWidget : AbstractWidget {
     }
 
     fun setSampler(sampler: GpuSampler): ImageWidget {
-        this.sampler = sampler
+        if (this.sampler != sampler) {
+            this.sampler = sampler
+            invalidate()
+        }
         return this
     }
 
@@ -147,38 +159,50 @@ open class ImageWidget : AbstractWidget {
     }
 
     fun setUv(u0: Float, v0: Float, u1: Float, v1: Float, u2: Float, v2: Float, u3: Float, v3: Float): ImageWidget {
-        this.u0 = u0
-        this.v0 = v0
+        if (this.u0 != u0 || this.v0 != v0 || this.u1 != u1 || this.v1 != v1 ||
+            this.u2 != u2 || this.v2 != v2 || this.u3 != u3 || this.v3 != v3
+        ) {
+            this.u0 = u0
+            this.v0 = v0
 
-        this.u1 = u1
-        this.v1 = v1
+            this.u1 = u1
+            this.v1 = v1
 
-        this.u2 = u2
-        this.v2 = v2
+            this.u2 = u2
+            this.v2 = v2
 
-        this.u3 = u3
-        this.v3 = v3
+            this.u3 = u3
+            this.v3 = v3
+            invalidate()
+        }
         return this
     }
 
     fun setColor(red: Float, green: Float, blue: Float): ImageWidget {
-        this.brightness = red
-        this.green = green
-        this.blue = blue
+        if (this.brightness != red || this.green != green || this.blue != blue) {
+            this.brightness = red
+            this.green = green
+            this.blue = blue
+            invalidate()
+        }
         return this
     }
 
     fun setColor(color: Int): ImageWidget {
-        this.brightness = ARGB.red(color) / 255.0f
-        green = ARGB.green(color) / 255.0f
-        blue = ARGB.blue(color) / 255.0f
-        return this
+        return setColor(
+            ARGB.red(color) / 255.0f,
+            ARGB.green(color) / 255.0f,
+            ARGB.blue(color) / 255.0f
+        )
     }
 
     fun setBrightness(value: Float): ImageWidget {
-        this.brightness = value
-        green = value
-        blue = value
+        if (this.brightness != value || green != value || blue != value) {
+            this.brightness = value
+            green = value
+            blue = value
+            invalidate()
+        }
         return this
     }
 

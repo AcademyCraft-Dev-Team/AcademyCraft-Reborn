@@ -31,7 +31,10 @@ class FillWidget(color: Int) : AbstractWidget() {
     fun setColor(color: Int): FillWidget {
         val bg = background
         if (bg is ColorDrawable) {
-            bg.color = color
+            if (bg.color != color) {
+                bg.color = color
+                invalidate()
+            }
         } else {
             background = ColorDrawable(color)
         }

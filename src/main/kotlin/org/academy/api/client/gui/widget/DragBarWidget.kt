@@ -52,17 +52,26 @@ abstract class DragBarWidget(protected val orientation: Orientation) : AbstractW
     }
 
     fun setThumbColor(color: Int): DragBarWidget {
-        thumbColor = color
+        if (thumbColor != color) {
+            thumbColor = color
+            invalidate()
+        }
         return this
     }
 
     fun setTrackColor(color: Int): DragBarWidget {
-        trackColor = color
+        if (trackColor != color) {
+            trackColor = color
+            invalidate()
+        }
         return this
     }
 
     fun setShowBackground(show: Boolean): DragBarWidget {
-        this.isShowBackground = show
+        if (this.isShowBackground != show) {
+            this.isShowBackground = show
+            invalidate()
+        }
         return this
     }
 

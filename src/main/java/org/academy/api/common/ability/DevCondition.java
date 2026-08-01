@@ -41,11 +41,11 @@ public interface DevCondition {
         @Override
         public Identifier getIcon() {
             return switch (requiredLevel.levelCode) {
-                case 1 -> R.textures.condition_any1;
-                case 2 -> R.textures.condition_any2;
-                case 3 -> R.textures.condition_any3;
-                case 4 -> R.textures.condition_any4;
-                case 5 -> R.textures.condition_any5;
+                case 1 -> R.textures.ability.condition.any1;
+                case 2 -> R.textures.ability.condition.any2;
+                case 3 -> R.textures.ability.condition.any3;
+                case 4 -> R.textures.ability.condition.any4;
+                case 5 -> R.textures.ability.condition.any5;
                 default -> null;
             };
         }
@@ -126,11 +126,11 @@ public interface DevCondition {
         @Override
         public Identifier getIcon() {
             return switch (requiredLevel) {
-                case 1 -> R.textures.condition_any1;
-                case 2 -> R.textures.condition_any2;
-                case 3 -> R.textures.condition_any3;
-                case 4 -> R.textures.condition_any4;
-                case 5 -> R.textures.condition_any5;
+                case 1 -> R.textures.ability.condition.any1;
+                case 2 -> R.textures.ability.condition.any2;
+                case 3 -> R.textures.ability.condition.any3;
+                case 4 -> R.textures.ability.condition.any4;
+                case 5 -> R.textures.ability.condition.any5;
                 default -> null;
             };
         }

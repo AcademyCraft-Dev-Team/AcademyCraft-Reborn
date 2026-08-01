@@ -111,7 +111,7 @@ public final class Railgun extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ELECTROMASTER.get(),
-                new AbilitySystemClient.SkillInfo(Skills.RAILGUN.get(), List.of(), R.textures.railgun_icon, 164, 59)
+                new AbilitySystemClient.SkillInfo(Skills.RAILGUN.get(), List.of(), R.textures.ability.electromaster.skill.railgun.icon, 164, 59)
         );
         public static final String KEY_NAME_START = SkillNames.RAILGUN + "_start";
         public static Config CLIENT_CONFIG = new Config();

@@ -56,7 +56,7 @@ public class Thunderclap extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ELECTROMASTER.get(),
-                new AbilitySystemClient.SkillInfo(Skills.THUNDERCLAP.get(), List.of(), R.textures.thunderclap_icon, 204, 80)
+                new AbilitySystemClient.SkillInfo(Skills.THUNDERCLAP.get(), List.of(), R.textures.ability.electromaster.skill.thunderclap.icon, 204, 80)
         );
         public static final String KEY = SkillNames.THUNDERCLAP + "_use";
         public static Config CONFIG = new Config();

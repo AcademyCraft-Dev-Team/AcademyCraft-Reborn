@@ -53,7 +53,7 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
             submitNodeCollector.submitModel(
                     WindGenBaseModel.MODEL,
                     state,
-                    poseStack, R.textures.MODEL_WIND_GEN, state.lightCoords, OverlayTexture.NO_OVERLAY,
+                    poseStack, R.textures.model.wind_gen, state.lightCoords, OverlayTexture.NO_OVERLAY,
                     0, null
             );
             poseStack.popPose();

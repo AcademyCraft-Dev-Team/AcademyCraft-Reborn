@@ -44,7 +44,7 @@ class WindGenScreen(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(R.textures.UI_GEN)
+        val ui = ImageWidget(R.textures.gui.element.ui_gen)
         ui.layoutParams = FrameLayoutWidget.LayoutParams()
             .sizeMode(SizeMode.MATCH_PARENT)
 
@@ -59,7 +59,7 @@ class WindGenScreen(
 
         invPage.addChild("effect", effect)
         run {
-            val topIcon = ImageWidget(R.textures.ICON_WIND_GEN_TOP)
+            val topIcon = ImageWidget(R.textures.gui.wind_gen.icon_wind_top)
             topAlphaSetter = { topIcon.alpha = it }
             topIcon.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -67,7 +67,7 @@ class WindGenScreen(
 
             effect.addChild("icon_top", topIcon)
 
-            val pillarIcon = ImageWidget(R.textures.ICON_WIND_GEN_PILLAR)
+            val pillarIcon = ImageWidget(R.textures.gui.wind_gen.icon_wind_pillar)
             pillarAlphaSetter = { pillarIcon.alpha = it }
             pillarIcon.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -75,7 +75,7 @@ class WindGenScreen(
 
             effect.addChild("icon_pillar", pillarIcon)
 
-            val baseIcon = ImageWidget(R.textures.ICON_WIND_GEN_BASE)
+            val baseIcon = ImageWidget(R.textures.gui.wind_gen.icon_wind_base)
             baseAlphaSetter = { baseIcon.alpha = it }
             baseIcon.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -88,7 +88,7 @@ class WindGenScreen(
         wirelessPage.isEnabled = false
         content.addChild("page_wireless", wirelessPage)
 
-        val wirelessButton = createButton(R.textures.ICON_WIRELESS)
+        val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
         wirelessButton.layoutParams = WidgetContainer.LayoutParams()
             .widthMode(SizeMode.MATCH_PARENT)
             .height(16f)

@@ -36,14 +36,14 @@ class SolarGenScreen private constructor(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(R.textures.UI_GEN)
+        val ui = ImageWidget(R.textures.gui.element.ui_gen)
         ui.layoutParams = FrameLayoutWidget.LayoutParams()
             .sizeMode(SizeMode.MATCH_PARENT)
 
         invPage.addChild("ui", ui)
 
         val effect: SpriteSheetWidget = object : SpriteSheetWidget(
-            R.textures.ICON_SOLAR_GEN_SUNNY,
+            R.textures.gui.solar_gen.icon_solar_gen_sunny,
             Orientation.VERTICAL,
             48, 96,
             48, 48,
@@ -62,9 +62,9 @@ class SolarGenScreen private constructor(
         stateConsumer = {
             effect.setTexture(
                 when (it) {
-                    SolarGenBlockEntity.State.SUNNY -> R.textures.ICON_SOLAR_GEN_SUNNY
-                    SolarGenBlockEntity.State.RAINY -> R.textures.ICON_SOLAR_GEN_RAINY
-                    SolarGenBlockEntity.State.NIGHT -> R.textures.ICON_SOLAR_GEN_NIGHT
+                    SolarGenBlockEntity.State.SUNNY -> R.textures.gui.solar_gen.icon_solar_gen_sunny
+                    SolarGenBlockEntity.State.RAINY -> R.textures.gui.solar_gen.icon_solar_gen_rainy
+                    SolarGenBlockEntity.State.NIGHT -> R.textures.gui.solar_gen.icon_solar_gen_night
                 }
             )
         }
@@ -81,7 +81,7 @@ class SolarGenScreen private constructor(
         wirelessPage.isEnabled = false
         content.addChild("page_wireless", wirelessPage)
 
-        val wirelessButton = createButton(R.textures.ICON_WIRELESS)
+        val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
         wirelessButton.layoutParams = WidgetContainer.LayoutParams()
             .widthMode(SizeMode.MATCH_PARENT)
             .height(16f)

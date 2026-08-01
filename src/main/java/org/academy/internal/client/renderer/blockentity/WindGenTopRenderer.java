@@ -52,7 +52,7 @@ public final class WindGenTopRenderer implements BlockEntityRenderer<WindGenTopB
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
         poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
-        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(R.textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, 0, renderState.breakProgress);
+        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(R.textures.model.wind_gen_top), packedLight, packedOverlay, 0, renderState.breakProgress);
         poseStack.pushPose();
         poseStack.translate(-0.5f, 1.5f, 0.5f);
         poseStack.scale(1, 1f / 16f, 1);

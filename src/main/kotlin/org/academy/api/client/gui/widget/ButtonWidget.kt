@@ -44,12 +44,18 @@ open class ButtonWidget() : FrameLayoutWidget() {
     override fun onMousePressed(event: MouseEvent) {
         if (event.button == 0 && isHovered) {
             isPointerDown = true
+            updateStateAnimator()
+            invalidate()
             handlePress(event)
         }
     }
 
     override fun onMouseReleased(event: MouseEvent) {
-        if (event.button == 0) isPointerDown = false
+        if (event.button == 0 && isPointerDown) {
+            isPointerDown = false
+            updateStateAnimator()
+            invalidate()
+        }
     }
 
     protected fun handlePress(event: MouseEvent) {

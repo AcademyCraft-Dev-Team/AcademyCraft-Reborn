@@ -90,7 +90,7 @@ public final class StormWing extends Skill {
                 new AbilitySystemClient.SkillInfo(
                         Skills.STORM_WING.get(),
                         List.of(VectorAccel.Client.SKILL_INFO),
-                        R.textures.storm_wing_icon,
+                        R.textures.ability.accelerator.skill.storm_wing.icon,
                         130, 20
                 )
         );

@@ -35,7 +35,7 @@ public final class WindGenBaseSpecialRenderer implements NoDataSpecialModelRende
         submitNodeCollector.submitModel(
                 WindGenBaseModel.MODEL,
                 WindGenBaseRenderState.NONE,
-                poseStack, R.textures.MODEL_WIND_GEN, lightCoords, overlayCoords, 0, null
+                poseStack, R.textures.model.wind_gen, lightCoords, overlayCoords, 0, null
         );
         poseStack.popPose();
     }

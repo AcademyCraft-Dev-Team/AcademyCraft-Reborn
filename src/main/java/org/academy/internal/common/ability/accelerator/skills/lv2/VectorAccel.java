@@ -101,7 +101,7 @@ public final class VectorAccel extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
-                new AbilitySystemClient.SkillInfo(Skills.VECTOR_ACCEL.get(), List.of(DirectedShock.Client.SKILL_INFO), R.textures.vec_accel_icon, 76, 40)
+                new AbilitySystemClient.SkillInfo(Skills.VECTOR_ACCEL.get(), List.of(DirectedShock.Client.SKILL_INFO), R.textures.ability.accelerator.skill.vec_accel.icon, 76, 40)
         );
         public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
         public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";

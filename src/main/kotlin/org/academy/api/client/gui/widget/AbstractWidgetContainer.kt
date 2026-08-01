@@ -4,6 +4,7 @@ import com.mojang.math.Axis
 import net.minecraft.util.ARGB
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.FillRectDrawCommand
+import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.InputEvent
 import org.academy.api.client.gui.event.MouseEvent
@@ -12,11 +13,23 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.util.GlyphCommandGenerator
+import java.util.IdentityHashMap
 import kotlin.math.max
 
 abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     protected val protectedChildren: MutableMap<String, Widget> = LinkedHashMap()
     override val children: Map<String, Widget> get() = protectedChildren
+
+    protected val dirtyChildrenSet: MutableSet<Widget> = linkedSetOf()
+    override val dirtyChildren: Set<Widget> get() = dirtyChildrenSet
+
+    private class ChildRenderCache(
+        val commands: MutableList<SubmittedCommand>,
+        val coverBaseRecordedMax: Int
+    )
+
+    private val childRenderCaches: MutableMap<Widget, ChildRenderCache> = IdentityHashMap()
+    private var ownRenderCache: MutableList<SubmittedCommand>? = null
 
     override var isLayoutDirty: Boolean = true
         protected set
@@ -173,6 +186,30 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         super.requestLayout()
     }
 
+    override fun invalidate() {
+        isRenderDirty = true
+        parent?.onChildInvalidated(this)
+        for (child in protectedChildren.values.toList()) {
+            child.isRenderDirty = true
+            dirtyChildrenSet.add(child)
+            if (child is AbstractWidgetContainer) child.deepInvalidate()
+        }
+    }
+
+    private fun deepInvalidate() {
+        isRenderDirty = true
+        for (child in protectedChildren.values.toList()) {
+            child.isRenderDirty = true
+            dirtyChildrenSet.add(child)
+            if (child is AbstractWidgetContainer) child.deepInvalidate()
+        }
+    }
+
+    override fun onChildInvalidated(child: Widget) {
+        dirtyChildrenSet.add(child)
+        parent?.onChildInvalidated(this)
+    }
+
     override fun render(context: RenderContext) {
         if (visibility != Widget.Visibility.VISIBLE) {
             return
@@ -202,13 +239,30 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                 if (AcademyCraft.DEBUG_UI) {
                     renderDebugLayoutBounds(this, context)
                 }
-                renderInternal(context)
+                renderOwnCached(context)
                 renderChildren(context)
             }
             context.alpha().pop()
         }
         context.drawOrder().pop()
         context.pose().popPose()
+    }
+
+    private fun renderOwnCached(context: RenderContext) {
+        if (AcademyCraft.DEBUG_UI || bypassRenderCache) {
+            renderInternal(context)
+            isRenderDirty = false
+            return
+        }
+        val cache = ownRenderCache
+        if (!isRenderDirty && cache != null) {
+            context.addCached(cache)
+            return
+        }
+        val start = context.commands.size
+        renderInternal(context)
+        ownRenderCache = context.commands.subList(start, context.commands.size).toMutableList()
+        isRenderDirty = false
     }
 
     protected open fun renderChildren(context: RenderContext) {
@@ -222,12 +276,16 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                 run {
                     context.pose().translate(child.x, child.y)
                     context.pose().translate(child.translationX, child.translationY)
-                    child.render(context)
+                    renderChildCached(context, child)
                 }
                 context.pose().popPose()
                 context.drawOrder().pop()
+            } else {
+                dirtyChildrenSet.remove(child)
             }
         }
+
+        dirtyChildrenSet.retainAll(protectedChildren.values)
 
         if (AcademyCraft.DEBUG_UI) {
             for (child in children.values) {
@@ -240,6 +298,33 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                     context.pose().popPose()
                 }
             }
+        }
+    }
+
+    private fun renderChildCached(context: RenderContext, child: Widget) {
+        val wasDirty = child in dirtyChildrenSet || child.isRenderDirty
+        val cache = childRenderCaches[child]
+        if (cache != null && !wasDirty && !AcademyCraft.DEBUG_UI && !bypassRenderCache &&
+            (!child.coverAllPrev || context.recordedMax <= cache.coverBaseRecordedMax)
+        ) {
+            context.addCached(cache.commands)
+            return
+        }
+        // Remove the child from the pending set before rendering so that any
+        // invalidate() issued during child.render() re-adds it and keeps it
+        // scheduled for the next frame (drives per-frame animations like scroll
+        // chase). isRenderDirty is left intact until the render completes so that
+        // the child's own render path can still decide whether to regenerate.
+        dirtyChildrenSet.remove(child)
+        val start = context.commands.size
+        val baseline = context.recordedMax
+        child.render(context)
+        childRenderCaches[child] = ChildRenderCache(
+            context.commands.subList(start, context.commands.size).toMutableList(),
+            baseline
+        )
+        if (child !in dirtyChildrenSet) {
+            child.isRenderDirty = false
         }
     }
 
@@ -269,6 +354,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         super.layout(left, top, right, bottom)
         onLayout()
         isLayoutDirty = false
+        invalidate()
     }
 
     protected open fun onLayout() {
@@ -453,6 +539,8 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                 gestureTarget = null
             }
             protectedChildren.remove(name)
+            dirtyChildrenSet.remove(widget)
+            childRenderCaches.remove(widget)
             requestLayout()
             invalidate()
         }
