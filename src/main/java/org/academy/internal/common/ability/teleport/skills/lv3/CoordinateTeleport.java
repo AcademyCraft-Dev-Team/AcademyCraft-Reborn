@@ -25,7 +25,6 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.CoordinateTeleportData;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -34,9 +33,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.WeakHashMap;
 
 public class CoordinateTeleport extends Skill {
@@ -63,16 +60,12 @@ public class CoordinateTeleport extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_SAVE, Client.CONFIG.getKeyBinding(Client.KEY_SAVE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_T)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onSave);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_T, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onSave());
 
         InputSystem.addKeyBinding(Client.KEY_TP, Client.CONFIG.getKeyBinding(Client.KEY_TP,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_Y)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onTeleport);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onTeleport());
     }
 
     @Override

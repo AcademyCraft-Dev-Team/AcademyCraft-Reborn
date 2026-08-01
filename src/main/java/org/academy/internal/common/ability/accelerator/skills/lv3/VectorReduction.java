@@ -17,9 +17,12 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -27,8 +30,8 @@ import org.academy.internal.client.renderer.effect.VectorFieldEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -37,20 +40,20 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
+import java.util.List;
 public class VectorReduction extends Skill {
     private static final int POTION_DURATION = 30;
 
     public VectorReduction() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL3)
+                .level(AbilityLevel.LEVEL2)
                 .passive()
                 .maintenanceCost(75)
                 .iterationTicks(0)
                 .dependsOn(Skills.VECTOR_ACCEL)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
+                .devCondition(new DevCondition.DependencyCondition("Vector Acceleration", "academy:vector_accel"))
         );
     }
 
@@ -72,15 +75,8 @@ public class VectorReduction extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                new InputSystem.InputPair(
-                        InputSystem.InputType.KEYBOARD,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_N)),
-                                InputConstants.RELEASE,
-                                new LinkedHashSet<>()
-                        )
-                )
-        ), Client::onToggle);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N, InputConstants.PRESS, 0)
+        ), ctx -> Client.onToggle());
     }
 
     @Override
@@ -89,6 +85,10 @@ public class VectorReduction extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(Skills.VECTOR_REDUCTION.get(), List.of(VectorAccel.Client.SKILL_INFO), R.textures.vector_reduction_icon, 145, 53)
+        );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REDUCTION + "_toggle";
         public static Config CONFIG = new Config();
 

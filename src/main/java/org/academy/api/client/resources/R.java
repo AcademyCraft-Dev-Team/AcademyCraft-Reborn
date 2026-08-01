@@ -1,18 +1,18 @@
-package org.academy.api.client;
+package org.academy.api.client.resources;
 
 import net.minecraft.resources.Identifier;
 
 import static org.academy.AcademyCraft.academy;
 import static org.academy.AcademyCraft.vanilla;
 
-public final class Resource {
-    private Resource() {
+public final class R {
+    private R() {
     }
 
     /**
      * Normally, vert and frag share the same name.
      */
-    public static final class Shaders {
+    public static final class shaders {
         /**
          * Vanilla
          */
@@ -20,30 +20,15 @@ public final class Resource {
         public static final Identifier POSITION_COLOR = vanilla("core/position_color");
         public static final Identifier POSITION_TEX_COLOR = vanilla("core/position_tex_color");
         public static final Identifier POSITION_COLOR_LIGHTMAP = vanilla("core/position_color_lightmap");
-        /**
-         * AcademyCraft
-         */
-        public static final Identifier IMAGE = academy("core/image");
         public static final Identifier SCREEN_BLIT = academy("core/screen_blit");
         public static final Identifier DISTORTION_RING = academy("core/distortion_ring");
 
-        private Shaders() {
+        private shaders() {
         }
 
-        /**
-         * Vert only.
-         */
-        public static final class Vertex {
-            public static final Identifier MSDF_TEXT_INSTANCED = academy("core/msdf_text_instanced");
-
-            private Vertex() {
-            }
-        }
-
-        /**
-         * Frag only.
-         */
-        public static final class Fragment {
+        public static final class core {
+            public static final Identifier imgui = academy("core/imgui");
+            public static final Identifier msdf_text_instanced = academy("core/msdf_text_instanced");
             public static final Identifier BLOOM_BLEND = academy("core/bloom_blend");
             public static final Identifier GAUSSIAN_BLUR = academy("core/gaussian_blur");
             public static final Identifier GLOW_CIRCLE = academy("core/glow_circle");
@@ -58,13 +43,19 @@ public final class Resource {
             public static final Identifier TRAIL = academy("core/trail");
             public static final Identifier AURA_FIELD = academy("core/aura_field");
             public static final Identifier SPATIAL_DISTORTION = academy("core/spatial_distortion");
+            public static final Identifier SKILL_PROGRESS = academy("core/skill_progress");
+            public static final Identifier IMAGE_MONOCHROME = academy("core/image_monochrome");
+            /**
+             * AcademyCraft
+             */
+            public static final Identifier image = academy("core/image");
 
-            private Fragment() {
+            private core() {
             }
         }
     }
 
-    public static final class Textures {
+    public static final class textures {
         /**
          * Ability Developer
          */
@@ -75,6 +66,11 @@ public final class Resource {
         public static final Identifier UI_DEVELOPER_PANEL_RIGHT = academy("textures/gui/developer/ui_developerright.png");
         public static final Identifier UI_DEVELOPER_SKILL_AREA_BG = academy("textures/gui/developer/skill_panel_back.png");
         public static final Identifier UI_DEVELOPER_SKILL_ICON_BG = academy("textures/gui/developer/skill_back.png");
+        public static final Identifier ICON_ACCELERATOR = academy("textures/gui/icon/icon_accelerator.png");
+        public static final Identifier ICON_ELECTROMASTER = academy("textures/gui/icon/icon_electromaster.png");
+        public static final Identifier ICON_MELTDOWNER = academy("textures/gui/icon/icon_meltdowner.png");
+        public static final Identifier ICON_NOCATEGORY = academy("textures/gui/icon/icon_nocategory.png");
+        public static final Identifier ICON_TELEPORTER = academy("textures/gui/icon/icon_teleporter.png");
         /**
          * HUD
          */
@@ -130,18 +126,39 @@ public final class Resource {
         /**
          * Electromaster
          */
-        public static final Identifier ARC = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
-        public static final Identifier RAILGUN_ICON = academy("textures/ability/electromaster/skill/railgun/icon.png");
-        public static final Identifier ARC_GENERATE_ICON = academy("textures/ability/electromaster/skill/railgun/icon.png");
+        public static final Identifier arc = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
+        public static final Identifier arc_generate_icon = academy("textures/ability/electromaster/skill/arc_generate/icon.png");
+        public static final Identifier railgun_icon = academy("textures/ability/electromaster/skill/railgun/icon.png");
+        public static final Identifier thunderclap_icon = academy("textures/ability/electromaster/skill/thunderclap/icon.png");
+        public static final Identifier iron_sand_arsenal_icon = academy("textures/ability/electromaster/skill/iron_sand_arsenal/icon.png");
         /**
          * Accelerator
          */
-        public static final Identifier VECTOR_REFLECTION_ICON = academy("textures/ability/accelerator/skill/vector_reflection/icon.png");
-        public static final Identifier BLOODFLOW_REVERSE_ICON = academy("textures/ability/accelerator/skill/bloodflow_reverse/icon.png");
-        public static final Identifier STORM_WING_ICON = academy("textures/ability/accelerator/skill/storm_wing/icon.png");
-        public static final Identifier PLASMA_GENERATION_ICON = academy("textures/ability/accelerator/skill/plasma_generation/icon.png");
-        public static final Identifier DIR_STRIKE_ICON = academy("textures/ability/accelerator/skill/dir_strike/icon.png");
-        public static final Identifier STORM_WING = academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
+        public static final Identifier vector_reflection_icon = academy("textures/ability/accelerator/skill/vector_reflection/icon.png");
+        public static final Identifier bloodflow_reverse_icon = academy("textures/ability/accelerator/skill/bloodflow_reverse/icon.png");
+        public static final Identifier storm_wing_icon = academy("textures/ability/accelerator/skill/storm_wing/icon.png");
+        public static final Identifier plasma_generation_icon = academy("textures/ability/accelerator/skill/plasma_generation/icon.png");
+        public static final Identifier dir_strike_icon = academy("textures/ability/accelerator/skill/dir_strike/icon.png");
+        public static final Identifier storm_wing = academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
+        public static final Identifier directed_shock_icon = academy("textures/ability/accelerator/skill/directed_shock/icon.png");
+        public static final Identifier vec_accel_icon = academy("textures/ability/accelerator/skill/vec_accel/icon.png");
+        public static final Identifier vector_reduction_icon = academy("textures/ability/accelerator/skill/vector_reduction/icon.png");
+        /**
+         * Level0
+         */
+        public static final Identifier level0_passive_lv1_icon = academy("textures/ability/level0/skill/level0_passive_lv1/icon.png");
+        public static final Identifier level0_passive_lv2_icon = academy("textures/ability/level0/skill/level0_passive_lv2/icon.png");
+        public static final Identifier level0_passive_lv3_icon = academy("textures/ability/level0/skill/level0_passive_lv3/icon.png");
+        public static final Identifier level0_passive_lv4_icon = academy("textures/ability/level0/skill/level0_passive_lv4/icon.png");
+        public static final Identifier level0_passive_lv5_icon = academy("textures/ability/level0/skill/level0_passive_lv5/icon.png");
+        /**
+         * Condition
+         */
+        public static final Identifier condition_any1 = academy("textures/ability/condition/any1.png");
+        public static final Identifier condition_any2 = academy("textures/ability/condition/any2.png");
+        public static final Identifier condition_any3 = academy("textures/ability/condition/any3.png");
+        public static final Identifier condition_any4 = academy("textures/ability/condition/any4.png");
+        public static final Identifier condition_any5 = academy("textures/ability/condition/any5.png");
         /**
          * Imag Phase Dowsing Rod
          */
@@ -177,11 +194,7 @@ public final class Resource {
         public static final Identifier ICON_PLAY = academy(MUSIC + "play.png");
         public static final Identifier ICON_VOLUME = academy(MUSIC + "volume.png");
 
-        private Textures() {
+        private textures() {
         }
-    }
-
-    public static final class Models {
-        public static final Identifier COIN_ITEM_MODEL_ID = academy("builtin/coin");
     }
 }

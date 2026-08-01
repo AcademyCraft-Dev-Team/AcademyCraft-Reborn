@@ -11,14 +11,14 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import java.util.*;
 
 /**
- * 名称可以参考 <a href="https://toarumajutsunoindex.fandom.com/wiki/Category:Esper_Abilities">...</a> 喵
+ * 名称可以参考 <a href="https://toarumajutsunoindex.fandom.com/wiki/Category:Esper_Abilities">这里</a> 喵
  */
 public abstract class AbilityCategory {
     /**
      * CODEC 因性能开销并不适合用于网络数据传输喵, 请使用 STREAM_CODEC 喵
      */
     public static final Codec<AbilityCategory> CODEC =
-            Codec.INT.xmap(Registries.ABILITY_CATEGORIES::byId, Registries.ABILITY_CATEGORIES::getId);
+            Codec.INT.xmap(Registries.ABILITY_CATEGORIES::byIdOrThrow, Registries.ABILITY_CATEGORIES::getId);
     public static final StreamCodec<ByteBuf, AbilityCategory> STREAM_CODEC =
             ByteBufCodecs.idMapper(Registries.ABILITY_CATEGORIES);
     /**
@@ -55,6 +55,20 @@ public abstract class AbilityCategory {
     public Identifier getKey() {
         return Objects.requireNonNull(Registries.ABILITY_CATEGORIES.getKey(this), "This ability category has not been registered.");
     }
+
+    /**
+     * 能力在开发机左侧面板中显示的图标喵
+     */
+    public float getProgIncrRate() {
+        return 1.0f;
+    }
+
+    public abstract Identifier getDeveloperIcon();
+
+    /**
+     * 能力在开发机左侧面板中显示的名称喵
+     */
+    public abstract String getDisplayName();
 
     public void initClient() {
     }

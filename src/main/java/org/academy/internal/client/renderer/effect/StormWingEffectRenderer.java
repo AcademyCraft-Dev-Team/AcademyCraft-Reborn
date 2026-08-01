@@ -14,7 +14,7 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 import static org.academy.AcademyCraft.academy;
-import static org.academy.api.client.Render.RenderTypes.STORM_WING;
+import static org.academy.api.client.render.Render.RenderTypes.STORM_WING;
 
 @SuppressWarnings("SuspiciousNameCombination")
 public final class StormWingEffectRenderer implements EffectRenderer {

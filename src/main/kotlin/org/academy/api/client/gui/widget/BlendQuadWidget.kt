@@ -6,8 +6,8 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
-import org.academy.api.client.Render
-import org.academy.api.client.Resource
+import org.academy.api.client.render.Render
+import org.academy.api.client.resources.R
 import org.academy.api.client.gui.command.ImageDrawCommand
 import org.academy.api.client.gui.command.PosTexRectDrawCommand
 import org.academy.api.client.gui.render.RenderContext
@@ -83,7 +83,7 @@ class BlendQuadWidget : AbstractWidget() {
     private fun renderLines(context: RenderContext, finalAlpha: Float, paddedWidth: Float, paddedHeight: Float) {
         val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
         val textureManager = Minecraft.getInstance().textureManager
-        val lineTextureView = textureManager.getTexture(Resource.Textures.ELEMENT_LINE).getTextureView()
+        val lineTextureView = textureManager.getTexture(R.textures.ELEMENT_LINE).getTextureView()
         val lineH = 4.0f
         run {
             val topLineCommand = ImageDrawCommand(

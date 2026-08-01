@@ -3,12 +3,16 @@ package org.academy.api.client.gui.widget
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.RenderContext
 import kotlin.math.max
 
 open class FrameLayoutWidget : AbstractWidgetContainer() {
     var measureAllChildren: Boolean = false
     private val matchParentChildren: MutableList<Widget> = ArrayList(1)
+
+    override fun addChild(name: String, child: Widget) {
+        child.coverAllPrev = true
+        super.addChild(name, child)
+    }
 
     override fun generateDefaultLayoutParams(): LayoutParams {
         return LayoutParams()
@@ -20,25 +24,6 @@ open class FrameLayoutWidget : AbstractWidgetContainer() {
 
     override fun checkLayoutParams(p: WidgetContainer.LayoutParams): Boolean {
         return p is LayoutParams
-    }
-
-    override fun renderChildren(context: RenderContext) {
-        context.drawOrder().push()
-        run {
-            for (child in children.values) {
-                if (child.isVisible()) {
-                    context.pose().pushPose()
-                    run {
-                        context.pose().translate(child.x, child.y)
-                        context.pose().translate(child.translationX, child.translationY)
-                        child.render(context)
-                    }
-                    context.pose().popPose()
-                    context.drawOrder().advance()
-                }
-            }
-        }
-        context.drawOrder().pop()
     }
 
     override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {

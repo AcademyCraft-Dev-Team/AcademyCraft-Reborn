@@ -7,11 +7,16 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+
+import java.util.List;
 
 public class Level0PassiveLv4 extends Skill {
     public Level0PassiveLv4() {
@@ -20,6 +25,15 @@ public class Level0PassiveLv4 extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .passive()
                 .maintenanceCost(0)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
+                .devCondition(new DevCondition.AnySkillOfLevelCondition(4))
+        );
+    }
+
+    public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.LEVEL0.get(),
+                new AbilitySystemClient.SkillInfo(Skills.LEVEL0_PASSIVE_LV4.get(), List.of(Level0PassiveLv3.Client.SKILL_INFO), R.textures.level0_passive_lv4_icon, 160, 110)
         );
     }
 

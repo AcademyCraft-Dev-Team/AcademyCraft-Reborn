@@ -20,8 +20,8 @@ class CommandExecutor : AutoCloseable {
     private var globalBuffer: GpuBuffer? = null
     private var writeOffset = 0L
 
-    private val activeRegions: Deque<FrameRegion> = ArrayDeque<FrameRegion>()
-    private val retiredBuffers: Deque<RetiredBuffer> = ArrayDeque<RetiredBuffer>()
+    private val activeRegions = ArrayDeque<FrameRegion>()
+    private val retiredBuffers = ArrayDeque<RetiredBuffer>()
 
     fun execute(
         batches: List<PendingBatch>,
@@ -129,9 +129,9 @@ class CommandExecutor : AutoCloseable {
     ): List<DrawCall> {
         buffer.map(allocation.start, allocation.length, false, true).use { mapped ->
             val mappedBuffer = mapped.data()
-            for (info in offsets) {
-                val mesh = batches[info.batchIndex].meshDataList[info.meshIndex]
-                mappedBuffer.position(Math.toIntExact(info.absoluteOffset - allocation.start))
+            for ((batchIndex, meshIndex, absoluteOffset) in offsets) {
+                val mesh = batches[batchIndex].meshDataList[meshIndex]
+                mappedBuffer.position(Math.toIntExact(absoluteOffset - allocation.start))
                 mappedBuffer.put(mesh.vertexBuffer())
             }
         }
@@ -180,7 +180,6 @@ class CommandExecutor : AutoCloseable {
         val sequentialIndexBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS)
         val indexBuffer = sequentialIndexBuffer.getBuffer(drawCalls.maxOf { it.indexCount })
         val indexType = sequentialIndexBuffer.type()
-        val physicalHeight = Minecraft.getInstance().window.height
 
         val commandEncoder = RenderSystem.getDevice().createCommandEncoder()
         commandEncoder.createRenderPass(
@@ -193,8 +192,7 @@ class CommandExecutor : AutoCloseable {
                         drawCall,
                         projectionUbo,
                         dynamicTransformsUbo,
-                        guiScale,
-                        physicalHeight
+                        guiScale
                     )
                 ) {
                     renderPass.drawIndexed(
@@ -214,8 +212,7 @@ class CommandExecutor : AutoCloseable {
         drawCall: DrawCall,
         projectionUbo: GpuBufferSlice,
         dynamicTransformsUbo: GpuBuffer,
-        guiScale: Float,
-        physicalHeight: Int
+        guiScale: Float
     ): Boolean {
         renderPass.setPipeline(drawCall.pipeline)
 
@@ -232,14 +229,29 @@ class CommandExecutor : AutoCloseable {
         }
 
         val scissor = drawCall.scissorArea
+        var scissorEnabled = false
         if (scissor != null) {
+            val physicalWidth = Minecraft.getInstance().window.width
+            val physicalHeight = Minecraft.getInstance().window.height
             val pos = scissor.position
             val screenX = (pos.x * guiScale).toInt()
             val screenWidth = (scissor.width * guiScale).toInt()
             val screenHeight = (scissor.height * guiScale).toInt()
             val screenY = (physicalHeight - (pos.y + scissor.height) * guiScale).toInt()
-            renderPass.enableScissor(screenX, screenY, screenWidth, screenHeight)
-        } else renderPass.disableScissor()
+            if (screenWidth > 0 && screenHeight > 0) {
+                val clampedX = screenX.coerceIn(0, physicalWidth)
+                val clampedY = screenY.coerceIn(0, physicalHeight)
+                val clampedRight = (screenX + screenWidth).coerceIn(0, physicalWidth)
+                val clampedBottom = (screenY + screenHeight).coerceIn(0, physicalHeight)
+                val clampedWidth = clampedRight - clampedX
+                val clampedHeight = clampedBottom - clampedY
+                if (clampedWidth > 0 && clampedHeight > 0) {
+                    renderPass.enableScissor(clampedX, clampedY, clampedWidth, clampedHeight)
+                    scissorEnabled = true
+                }
+            }
+        }
+        if (!scissorEnabled) renderPass.disableScissor()
 
         RenderSystem.bindDefaultUniforms(renderPass)
         renderPass.setUniform("Projection", projectionUbo)
@@ -326,7 +338,7 @@ class CommandExecutor : AutoCloseable {
             globalBuffer!!.close()
             globalBuffer = null
         }
-        for (region in activeRegions) region.fence.close()
+        for ((_, _, fence) in activeRegions) fence.close()
         activeRegions.clear()
         for (retired in retiredBuffers) retired.free()
         retiredBuffers.clear()
@@ -342,12 +354,11 @@ class CommandExecutor : AutoCloseable {
     private data class RetiredBuffer(val buffer: GpuBuffer, val regions: Deque<FrameRegion>) {
         val isReady: Boolean
             get() {
-                if (regions.isEmpty()) return true
-                return regions.last.fence.awaitCompletion(0)
+                return regions.isEmpty() || regions.last.fence.awaitCompletion(0)
             }
 
         fun free() {
-            for (region in regions) region.fence.close()
+            for ((_, _, fence) in regions) fence.close()
             regions.clear()
             buffer.close()
         }

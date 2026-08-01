@@ -10,17 +10,20 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -29,9 +32,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
+import java.util.List;
 public class PlasmaGeneration extends Skill {
     private static final int MAX_CHARGE_MS = 20_000;
     private static final int MIN_CHARGE_MS = 3_000;
@@ -45,6 +46,8 @@ public class PlasmaGeneration extends Skill {
                 .iterationTicks(0)
                 .maxStacks(1)
                 .dependsOn(Skills.STORM_WING)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
+                .devCondition(new DevCondition.DependencyCondition("Storm Wing", "academy:storm_wing"))
         );
     }
 
@@ -68,15 +71,11 @@ public class PlasmaGeneration extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_C)), InputConstants.PRESS,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_CONTROL)))))
-                , Client::onChargeStart);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_CONTROL))
+                , ctx -> Client.onChargeStart());
         InputSystem.addKeyBinding(Client.KEY_NAME_FIRE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_FIRE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_C)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_CONTROL)))))
-                , Client::onFire);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.RELEASE, InputConstants.MOD_ALT | InputConstants.MOD_CONTROL))
+                , ctx -> Client.onFire());
     }
 
     @Override
@@ -85,6 +84,10 @@ public class PlasmaGeneration extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(Skills.PLASMA_GENERATION.get(), List.of(StormWing.Client.SKILL_INFO), R.textures.plasma_generation_icon, 175, 14)
+        );
         public static final String KEY_NAME_CHARGE = SkillNames.PLASMA_GENERATION + "_charge";
         public static final String KEY_NAME_FIRE = SkillNames.PLASMA_GENERATION + "_fire";
         public static Config CONFIG = new Config();

@@ -12,11 +12,15 @@ import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
 import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.model.ExtraFaceData;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
+import static org.academy.AcademyCraft.academy;
+
 public class CoinModelGenerator implements UnbakedModel {
+    public static final Identifier COIN_ITEM_MODEL_ID = academy("builtin/coin");
     public static final CoinModelGenerator INSTANCE = new CoinModelGenerator();
 
     public static final String TEXTURE_KEY_FRONT = "front";

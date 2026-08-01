@@ -16,20 +16,20 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.event.AbilityOverloadEvent;
 import org.academy.api.common.ability.event.AbilityRecoveryEvent;
-import org.academy.api.common.data.CPData;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.*;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.NotNull;
 import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.slf4j.Logger;
 
@@ -38,12 +38,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
+    private static final ConcurrentHashMap<UUID, DevelopData> DEVELOP_DATA_MAP = new ConcurrentHashMap<>();
     private static volatile boolean DEV_MODE = false;
     private final Map<UUID, Set<ServerContext>> activeContexts;
     private final SkillDataManager skillDataManager;
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
     private final SyncManager syncManager;
+    private final ConcurrentHashMap<UUID, DevelopData> developDataMap = new ConcurrentHashMap<>();
+
     public AbilitySystemServer(MinecraftServerContext context, WorldData worldData, AbilityConfig abilityConfig) {
         syncManager = new SyncManager(context);
 
@@ -73,6 +76,7 @@ public final class AbilitySystemServer {
         NeoForge.EVENT_BUS.register(this);
 
         MisakaNetworkServer.FUTURE_MANAGER.register(AbilitySystemServer.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(AbilitySystemServer.class);
     }
 
     public static boolean isDevMode() {
@@ -86,45 +90,18 @@ public final class AbilitySystemServer {
         }
     }
 
-    @HandleFuture
-    public static AcquireCategoryPacket.Response handleAcquireCategory(AcquireCategoryPacket payload) {
-        var player = payload.getPacketListener().getPlayer();
-        var userPos = payload.getUserPos();
-        if (player.position().distanceToSqr(Vec3.atCenterOf(userPos)) > 64.0) {
-            return new AcquireCategoryPacket.Response(List.of("Error: You are too far away."));
+    @SubscribePacket
+    public static void handleStopDev(StopDevPacket packet) {
+        var player = packet.getPacketListener().getPlayer();
+        var devPos = packet.getUserPos();
+        if (player.position().distanceToSqr(Vec3.atCenterOf(devPos)) > 64.0) {
+            return;
         }
 
-        var level = player.level();
-        var be = level.getBlockEntity(userPos);
-        if (be instanceof AbilityDeveloperBlockEntity blockEntity) {
-            var outputList = new ArrayList<String>();
-            var energyStored = blockEntity.getEnergyStored();
-            if (energyStored > 10_000) {
-                blockEntity.setEnergyStored(energyStored - 10_000);
-                var weightedRandom = new MathUtil.WeightedRandom<AbilityCategory>();
-                for (var category : Registries.ABILITY_CATEGORIES) {
-                    if (category != AbilityCategories.LEVEL0.get()) {
-                        weightedRandom.addItem(category, category.getProbability());
-                    }
-                }
-
-                var serverContext = level.getServer();
-                var instance = serverContext.getAcademyCraftServer().getAbilitySystemServer();
-
-                var abilityCategory = weightedRandom.getRandomItem();
-                if (abilityCategory != null) {
-                    instance.setPlayerAbilityCategory(player.getUUID(), abilityCategory);
-                    outputList.add("Learning complete. Type 'exit' to shut down, then reopen the screen to proceed.");
-                } else {
-                    outputList.add("Error: No ability category could be selected.");
-                    LOGGER.error("WeightedRandom returned null for ability category selection.");
-                }
-            } else {
-                outputList.add("Insufficient energy to develop ability.");
-            }
-            return new AcquireCategoryPacket.Response(outputList);
+        var data = DEVELOP_DATA_MAP.get(player.getUUID());
+        if (data != null && devPos.equals(data.getDeveloperPos())) {
+            data.abort();
         }
-        return new AcquireCategoryPacket.Response(List.of("Error: Block is not an Ability Developer."));
     }
 
     @HandleFuture
@@ -165,6 +142,146 @@ public final class AbilitySystemServer {
         return new LearnSkillPacket.Response(false);
     }
 
+    @HandleFuture
+    public static StartSkillDevPacket.Response handleStartSkillDev(StartSkillDevPacket payload) {
+        var player = payload.getPacketListener().getPlayer();
+        var devPos = BlockPos.of(payload.getUserPos());
+        if (player.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(devPos)) > 64.0) {
+            return new StartSkillDevPacket.Response(false, "Too far away");
+        }
+
+        var level = player.level();
+        var be = level.getBlockEntity(devPos);
+        if (!(be instanceof org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity developer)) {
+            return new StartSkillDevPacket.Response(false, "Invalid developer");
+        }
+
+        var skillKey = payload.getSkillName();
+        var skillRef = org.academy.api.common.registries.Registries.SKILLS.get(net.minecraft.resources.Identifier.parse(skillKey));
+        if (skillRef.isEmpty()) {
+            return new StartSkillDevPacket.Response(false, "Unknown skill");
+        }
+        var skill = skillRef.get().value();
+        var server = level.getServer();
+        var instance = server.getAcademyCraftServer().getAbilitySystemServer();
+        var playerData = instance.getPlayerData(player.getUUID());
+
+        // Dependency check
+        for (var dep : skill.getDependencies()) {
+            if (!playerData.isSkillLearned(dep.getKeyString())) {
+                return new StartSkillDevPacket.Response(false, "Dependencies not met");
+            }
+        }
+
+        // Already learned
+        if (playerData.isSkillLearned(skillKey)) {
+            return new StartSkillDevPacket.Response(false, "Already learned");
+        }
+
+        // Level check
+        int playerLevel = instance.getPlayerLevel(player.getUUID());
+        int recommendedLevel = skill.getRecommendedLevel().getLevelCode();
+        if (playerLevel < recommendedLevel) {
+            return new StartSkillDevPacket.Response(false, "Level too low");
+        }
+
+        // Energy check
+        if (developer.getEnergyStored() < skill.getEnergyCostToLearn()) {
+            return new StartSkillDevPacket.Response(false, "Insufficient energy");
+        }
+
+        // DevCondition check
+        for (var cond : skill.getDevConditions()) {
+            if (!cond.accepts(player, developer)) {
+                return new StartSkillDevPacket.Response(false, cond.getHintText());
+            }
+        }
+
+        // Start development
+        var developData = getDevelopData(player.getUUID());
+        developData.start(new DevelopAction() {
+            @Override
+            public int getTotalTicks() {
+                return 200; // 10 seconds at 20 ticks/sec
+            }
+
+            @Override
+            public void onComplete(ServerPlayer sp, org.academy.api.common.wireless.WirelessUser dev) {
+                developer.setEnergyStored(developer.getEnergyStored() - skill.getEnergyCostToLearn());
+                instance.addPlayerSkill(sp, skillKey);
+            }
+        }, devPos);
+
+        return new StartSkillDevPacket.Response(true, "Started");
+    }
+
+    @HandleFuture
+    public static StartLevelDevPacket.Response handleStartLevelDev(StartLevelDevPacket payload) {
+        var player = payload.getPacketListener().getPlayer();
+        var devPos = BlockPos.of(payload.getUserPos());
+        if (player.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(devPos)) > 64.0) {
+            return new StartLevelDevPacket.Response(false, "Too far away");
+        }
+
+        var level = player.level();
+        var be = level.getBlockEntity(devPos);
+        if (!(be instanceof org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity developer)) {
+            return new StartLevelDevPacket.Response(false, "Invalid developer");
+        }
+
+        var server = level.getServer();
+        var instance = server.getAcademyCraftServer().getAbilitySystemServer();
+        var currentLevel = instance.getPlayerLevel(player.getUUID());
+        if (currentLevel >= 5) {
+            return new StartLevelDevPacket.Response(false, "Already max level");
+        }
+
+        var hasCategory = instance.getPlayerAbilityCategory(player.getUUID()) != AbilityCategories.LEVEL0.get();
+        if (hasCategory && !instance.canPlayerLevelUp(player.getUUID())) {
+            return new StartLevelDevPacket.Response(false, "Ability exp not full");
+        }
+
+        var cost = LearningHelper.getEstimatedLevelUpConsumption(currentLevel);
+        if (developer.getEnergyStored() < cost) {
+            return new StartLevelDevPacket.Response(false, "Insufficient energy");
+        }
+
+        var developData = getDevelopData(player.getUUID());
+        developData.start(new DevelopAction() {
+            @Override
+            public int getTotalTicks() {
+                return 400; // 20 seconds
+            }
+
+            @Override
+            public void onComplete(ServerPlayer sp, org.academy.api.common.wireless.WirelessUser dev) {
+                developer.setEnergyStored(developer.getEnergyStored() - cost);
+                if (instance.getPlayerAbilityCategory(sp.getUUID()) == AbilityCategories.LEVEL0.get()) {
+                    var weightedRandom = new MathUtil.WeightedRandom<AbilityCategory>();
+                    for (var category : Registries.ABILITY_CATEGORIES) {
+                        if (category != AbilityCategories.LEVEL0.get()) {
+                            weightedRandom.addItem(category, category.getProbability());
+                        }
+                    }
+                    var abilityCategory = weightedRandom.getRandomItem();
+                    if (abilityCategory != null) {
+                        instance.setPlayerAbilityCategory(sp.getUUID(), abilityCategory);
+                    } else {
+                        LOGGER.error("WeightedRandom returned null for ability category selection.");
+                    }
+                } else {
+                    instance.setPlayerLevel(sp.getUUID(), currentLevel + 1);
+                    var levels = org.academy.api.common.ability.AbilityLevel.values();
+                    if (currentLevel + 1 < levels.length) {
+                        instance.setPlayerMaxCP(sp.getUUID(), levels[currentLevel + 1].getBasicCP());
+                    }
+                }
+            }
+        }, devPos);
+
+        return new StartLevelDevPacket.Response(true, "Started");
+    }
+
     public static void registerContext(ServerContext serverContext) {
         var player = serverContext.player;
         if (player == null) return;
@@ -199,6 +316,20 @@ public final class AbilitySystemServer {
                     .getAbilitySystemServer();
         }
         throw new IllegalStateException("Entity is not in a ServerLevel");
+    }
+
+    public static DevelopData getDevelopData(UUID uuid) {
+        return DEVELOP_DATA_MAP.computeIfAbsent(uuid, DevelopData::new);
+    }
+
+    public static void tickDevelopments(net.minecraft.server.MinecraftServer server) {
+        for (var entry : DEVELOP_DATA_MAP.entrySet()) {
+            var data = entry.getValue();
+            if (!data.isDeveloping()) continue;
+            var player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player == null) continue;
+            data.tick(player);
+        }
     }
 
     public static float getSPReductionRate(LivingEntity entity) {
@@ -317,6 +448,7 @@ public final class AbilitySystemServer {
 
     public void addPlayerSkillExp(UUID uuid, Skill skill, SkillDataManager.ExpEvent expEvent) {
         skillDataManager.addSkillExp(uuid, skill, expEvent);
+        playerCPManager.addLevelProgress(uuid, expEvent.getIncrement());
     }
 
     public void addPlayerSkill(ServerPlayer serverPlayer, String skillKey) {
@@ -406,6 +538,22 @@ public final class AbilitySystemServer {
         playerCPManager.setLevel(uuid, level);
     }
 
+    public float getPlayerAbilityExp(UUID uuid) {
+        return playerCPManager.getAbilityExp(uuid);
+    }
+
+    public void setPlayerAbilityExp(UUID uuid, float amount) {
+        playerCPManager.setAbilityExp(uuid, amount);
+    }
+
+    public void addPlayerAbilityExp(UUID uuid, float amount) {
+        playerCPManager.addLevelProgress(uuid, amount);
+    }
+
+    public boolean canPlayerLevelUp(UUID uuid) {
+        return playerCPManager.canLevelUp(uuid);
+    }
+
     public float getPlayerAvailableCP(UUID uuid) {
         return playerCPManager.getAvailableCP(uuid);
     }
@@ -422,11 +570,11 @@ public final class AbilitySystemServer {
         playerCPManager.setMaxCP(uuid, maxCP);
     }
 
-    public CPData.Status getPlayerStatus(UUID uuid) {
+    public AbilityData.Status getPlayerStatus(UUID uuid) {
         return playerCPManager.getStatus(uuid);
     }
 
-    public void setPlayerStatus(UUID uuid, CPData.Status status) {
+    public void setPlayerStatus(UUID uuid, AbilityData.Status status) {
         playerCPManager.setStatus(uuid, status);
     }
 
@@ -524,11 +672,30 @@ public final class AbilitySystemServer {
             var syncManager = instance.getSyncManager();
             syncManager.processPendingTasks();
 
+            tickDevelopments(server);
+
             var playerList = server.getPlayerList().getPlayers();
             playerList.forEach(serverPlayer -> {
                 SubsystemRegistry.getSubsystems().forEach(abilitySubsystem -> abilitySubsystem.tick(serverPlayer));
                 instance.getSyncManager().tick(serverPlayer);
             });
+
+            // Send DevSyncPacket for all developing/completed players
+            var devMap = DEVELOP_DATA_MAP;
+            var keys = List.copyOf(devMap.keySet());
+            for (var uuid : keys) {
+                var data = devMap.get(uuid);
+                if (data == null || data.getState() == DevState.IDLE) continue;
+                var player = server.getPlayerList().getPlayer(uuid);
+                if (player == null) continue;
+                String message = data.getState() == DevState.DEVELOPING
+                        ? "Developing... " + (int) (data.getProgress() * 100) + "%"
+                        : data.getState() == DevState.DONE ? "Success!" : "Failed";
+                MisakaNetworkServer.send(player, new DevSyncPacket(data.getState(), data.getProgress(), message));
+                if (data.getState() != DevState.DEVELOPING) {
+                    devMap.remove(uuid);
+                }
+            }
         }
     }
 }

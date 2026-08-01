@@ -11,7 +11,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.internal.client.model.SolarGenModel;
 import org.academy.internal.client.renderer.blockentity.state.SolarGenRenderState;
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity;
@@ -51,7 +51,7 @@ public final class SolarGenRenderer implements BlockEntityRenderer<SolarGenBlock
         poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
 
         MODEL.setupAnim(renderState);
-        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(Resource.Textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, renderState.breakProgress);
+        nodeCollector.submitModel(MODEL, renderState, poseStack, RenderTypes.entityCutout(R.textures.SOLAR_GEN_MODEL), packedLight, packedOverlay, 0, renderState.breakProgress);
 
         poseStack.popPose();
     }

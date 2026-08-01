@@ -36,9 +36,9 @@ import org.slf4j.Logger;
 public final class WirelessNodeBlock extends BaseEntityBlock {
     public static final String WIRELESS_NODE_SCREEN = "wireless_node_screen";
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
+    public static final MapCodec<WirelessNodeBlock> CODEC = simpleCodec(WirelessNodeBlock::new);
     private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final IntegerProperty ENERGY = IntegerProperty.create("energy_cost", 0, 4);
-    public static final MapCodec<WirelessNodeBlock> CODEC = simpleCodec(WirelessNodeBlock::new);
 
     public WirelessNodeBlock(Properties properties) {
         super(properties.noOcclusion());

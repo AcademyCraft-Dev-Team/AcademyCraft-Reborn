@@ -212,8 +212,12 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     }
 
     protected open fun renderChildren(context: RenderContext) {
+        context.resetRecordedMax()
         for (child in children.values) {
             if (child.isVisible()) {
+                context.drawOrder().push()
+                if (child.coverAllPrev) context.drawOrder()
+                    .advance(context.recordedMax + 1)
                 context.pose().pushPose()
                 run {
                     context.pose().translate(child.x, child.y)
@@ -221,6 +225,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                     child.render(context)
                 }
                 context.pose().popPose()
+                context.drawOrder().pop()
             }
         }
 

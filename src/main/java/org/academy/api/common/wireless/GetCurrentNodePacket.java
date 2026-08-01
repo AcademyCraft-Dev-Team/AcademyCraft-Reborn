@@ -41,7 +41,7 @@ public class GetCurrentNodePacket extends RequestPacket<ServerGamePacketListener
     public static class Response extends ResponsePacket<ClientPacketListener, Response> {
         public static final StreamCodec<ByteBuf, Response> CODEC = StreamCodec.composite(
                 ByteBufCodecs.BOOL,
-                Response::isNull,
+                Response::isNone,
                 ByteBufCodecs.STRING_UTF8,
                 Response::getNodeName,
                 Response::new
@@ -55,7 +55,7 @@ public class GetCurrentNodePacket extends RequestPacket<ServerGamePacketListener
             this.nodeName = nodeName;
         }
 
-        public boolean isNull() {
+        public boolean isNone() {
             return isNull;
         }
 

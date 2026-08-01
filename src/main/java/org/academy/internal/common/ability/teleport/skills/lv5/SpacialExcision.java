@@ -27,7 +27,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -35,9 +34,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 public class SpacialExcision extends Skill {
     public SpacialExcision() {
@@ -59,10 +55,8 @@ public class SpacialExcision extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_O)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT, InputConstants.MOD_CONTROL)))))
-                , Client::onUse);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_O, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT | InputConstants.MOD_CONTROL))
+                , ctx -> Client.onUse());
     }
 
     @Override

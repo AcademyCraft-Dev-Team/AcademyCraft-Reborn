@@ -11,7 +11,7 @@ import org.academy.api.common.vanilla.Tickable
 interface Widget : Tickable {
     val x: Float
     val y: Float
-    var z: Float
+    var coverAllPrev: Boolean
     var width: Float
     var height: Float
     var translationX: Float
@@ -34,6 +34,7 @@ interface Widget : Tickable {
     var origin: Float
     var background: Drawable?
     var foreground: Drawable?
+    var tooltipText: CharSequence?
     val measuredWidth: Float
     val measuredHeight: Float
     var layoutParams: WidgetContainer.LayoutParams
@@ -85,5 +86,4 @@ interface Widget : Tickable {
         const val CHECKED = 1 shl 4
         const val SELECTED = 1 shl 5
     }
-
 }

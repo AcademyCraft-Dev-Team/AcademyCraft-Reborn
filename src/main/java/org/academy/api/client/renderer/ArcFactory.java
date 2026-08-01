@@ -13,7 +13,7 @@ import org.joml.Vector3fc;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.academy.api.client.Render.RenderTypes;
+import static org.academy.api.client.render.Render.RenderTypes;
 
 public final class ArcFactory {
     private static final Vector3f DEFAULT_COLOR = new Vector3f(1.0f, 1.0f, 1.0f);

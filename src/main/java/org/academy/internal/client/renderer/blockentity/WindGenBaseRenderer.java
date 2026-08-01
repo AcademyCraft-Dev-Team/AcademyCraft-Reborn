@@ -11,7 +11,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.renderer.blockentity.state.WindGenBaseRenderState;
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity;
@@ -53,7 +53,7 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
             submitNodeCollector.submitModel(
                     WindGenBaseModel.MODEL,
                     state,
-                    poseStack, Resource.Textures.MODEL_WIND_GEN, state.lightCoords, OverlayTexture.NO_OVERLAY,
+                    poseStack, R.textures.MODEL_WIND_GEN, state.lightCoords, OverlayTexture.NO_OVERLAY,
                     0, null
             );
             poseStack.popPose();

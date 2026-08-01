@@ -2,7 +2,7 @@ package org.academy.api.client.gui.command
 
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
-import org.academy.api.client.Render
+import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 
 class ImageDrawCommand : PosTexColorRectDrawCommand {

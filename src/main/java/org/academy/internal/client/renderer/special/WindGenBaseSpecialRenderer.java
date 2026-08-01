@@ -6,7 +6,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.internal.client.model.WindGenBaseModel;
 import org.academy.internal.client.renderer.blockentity.state.WindGenBaseRenderState;
 import org.joml.Vector3fc;
@@ -35,7 +35,7 @@ public final class WindGenBaseSpecialRenderer implements NoDataSpecialModelRende
         submitNodeCollector.submitModel(
                 WindGenBaseModel.MODEL,
                 WindGenBaseRenderState.NONE,
-                poseStack, Resource.Textures.MODEL_WIND_GEN, lightCoords, overlayCoords, 0, null
+                poseStack, R.textures.MODEL_WIND_GEN, lightCoords, overlayCoords, 0, null
         );
         poseStack.popPose();
     }

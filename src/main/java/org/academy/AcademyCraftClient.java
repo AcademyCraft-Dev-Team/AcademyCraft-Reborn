@@ -26,15 +26,15 @@ import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
-import org.academy.api.client.Render;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
-import org.academy.api.client.hud.HUDManager;
+import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.hud.terminal.TerminalHUD;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.renderer.CylinderRenderer;
@@ -70,7 +70,7 @@ public final class AcademyCraftClient {
 
         MusicPlayerBackend.Companion.init();
         Screens.register();
-        HUDManager.INSTANCE.initMain();
+        HudManager.INSTANCE.initMain();
         AbilitySystemClient.init();
         ClientSyncManager.init();
     }
@@ -79,7 +79,7 @@ public final class AcademyCraftClient {
         Render.init();
         BloomEffect.init();
         ScreenDispatcher.Companion.init();
-        HUDManager.INSTANCE.initRender();
+        HudManager.INSTANCE.initRender();
 
         MsdfFontService.genDefaultGlyph();
 
@@ -110,7 +110,7 @@ public final class AcademyCraftClient {
     public static void resize(int width, int height) {
         Render.resize();
         PostEffect.resize(width, height);
-        HUDManager.INSTANCE.resize(width, height);
+        HudManager.INSTANCE.resize(width, height);
     }
 
     @SubscribeEvent

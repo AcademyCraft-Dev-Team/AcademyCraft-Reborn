@@ -10,9 +10,12 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -21,7 +24,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -30,12 +32,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
+import java.util.List;
 public class Thunderclap extends Skill {
     public Thunderclap() {
-        super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL5).cpCost(0).iterationTicks(60).maxStacks(1).dependsOn(Skills.LIGHTNING_STORM));
+        super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL5).cpCost(0).iterationTicks(60).maxStacks(1).dependsOn(Skills.LIGHTNING_STORM).devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5)).devCondition(new DevCondition.DependencyCondition("Lightning Storm", "academy:lightning_storm")));
     }
 
     @Override
@@ -44,10 +44,8 @@ public class Thunderclap extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_Y)), InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)))))
-                , Client::onUse);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                , ctx -> Client.onUse());
     }
 
     @Override
@@ -56,6 +54,10 @@ public class Thunderclap extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(Skills.THUNDERCLAP.get(), List.of(), R.textures.thunderclap_icon, 204, 80)
+        );
         public static final String KEY = SkillNames.THUNDERCLAP + "_use";
         public static Config CONFIG = new Config();
 

@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Unit;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 
 
 /**
@@ -65,8 +65,8 @@ public class WindGenTurbineModel extends Model<Unit> {
     public void render(PoseStack poseStack, SubmitNodeCollector nodeCollector, int packedLight, int packedOverlay) {
         poseStack.pushPose();
         all.translateAndRotate(poseStack);
-        nodeCollector.submitModelPart(main, poseStack, renderType(Resource.Textures.MODEL_WIND_GEN), packedLight, packedOverlay, null);
-        nodeCollector.submitModelPart(tip_li, poseStack, renderType(Resource.Textures.MODEL_WIND_GEN), LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
+        nodeCollector.submitModelPart(main, poseStack, renderType(R.textures.MODEL_WIND_GEN), packedLight, packedOverlay, null);
+        nodeCollector.submitModelPart(tip_li, poseStack, renderType(R.textures.MODEL_WIND_GEN), LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null);
         poseStack.popPose();
     }
 }

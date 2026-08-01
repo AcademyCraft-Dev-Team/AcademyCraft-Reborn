@@ -28,9 +28,6 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 public class VisualTeleport extends Skill {
     public VisualTeleport() {
         super(Builder
@@ -53,11 +50,8 @@ public class VisualTeleport extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                        new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_X)),
-                                InputConstants.RELEASE,
-                                new LinkedHashSet<>(Set.of(InputConstants.MOD_SHIFT)))))
-                , Client::onUse);
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, InputConstants.MOD_SHIFT))
+                , ctx -> Client.onUse());
     }
 
     @Override

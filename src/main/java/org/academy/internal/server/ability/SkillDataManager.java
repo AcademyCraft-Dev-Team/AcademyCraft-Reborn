@@ -14,7 +14,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class SkillDataManager implements AbilitySubsystem {
-
     private final SyncManager syncManager;
     private final PlayerDataManager playerDataManager;
 

@@ -29,7 +29,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -38,12 +37,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 public final class SelfTeleport extends Skill {
-    public static InputSystem.@Nullable InputPair KEY_START;
-    public static InputSystem.@Nullable InputPair KEY_END;
+    public static InputSystem.@Nullable KeyCombination KEY_START;
+    public static InputSystem.@Nullable KeyCombination KEY_END;
     public static Client.@Nullable Config CONFIG;
 
     public SelfTeleport() {
@@ -63,20 +59,12 @@ public final class SelfTeleport extends Skill {
         CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         KEY_START = CONFIG.getKeyBinding(Client.KEY_NAME_START,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_Z)),
-                        InputConstants.PRESS,
-                        new LinkedHashSet<>()
-                )));
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Z, InputConstants.PRESS, 0));
         KEY_END = CONFIG.getKeyBinding(Client.KEY_NAME_END,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_Z)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>()
-                )));
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Z, InputConstants.RELEASE, 0));
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_START, KEY_START, Client::start);
-        InputSystem.addKeyBinding(Client.KEY_NAME_END, KEY_END, Client::end);
+        InputSystem.addKeyBinding(Client.KEY_NAME_START, KEY_START, ctx -> Client.start());
+        InputSystem.addKeyBinding(Client.KEY_NAME_END, KEY_END, ctx -> Client.end());
     }
 
     @Override

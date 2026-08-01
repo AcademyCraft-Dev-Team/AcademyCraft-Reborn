@@ -5,9 +5,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 
 public final class SpatialDistortionRenderer {
+    private final float intensity;
     private float time;
     private float lifetime;
-    private final float intensity;
     private float coreR, coreG, coreB, coreA;
     private float edgeR, edgeG, edgeB, edgeA;
     private float centerX, centerY, centerZ;

@@ -7,8 +7,8 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.Render;
-import org.academy.api.client.hud.HUDManager;
+import org.academy.api.client.hud.HudManager;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.joml.Matrix4fStack;
@@ -44,7 +44,7 @@ public abstract class MixinGameRenderer {
     private void render(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
         var resourcesLoaded = minecraft.isGameLoadFinished();
         var shouldRenderLevel = resourcesLoaded && advanceGameTime && minecraft.level != null;
-        if (shouldRenderLevel) HUDManager.INSTANCE.render();
+        if (shouldRenderLevel) HudManager.INSTANCE.render();
     }
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/resource/CrossFrameResourcePool;endFrame()V"))

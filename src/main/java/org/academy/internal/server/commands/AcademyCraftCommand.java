@@ -23,7 +23,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.SyncTypes;
-import org.academy.api.common.data.CPData;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 
@@ -70,6 +70,25 @@ public final class AcademyCraftCommand {
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("state", BoolArgumentType.bool())
                                 .executes(AcademyCraftCommand::toggleDevMode))
+                )
+                .then(Commands.literal("ability_exp")
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.literal("get")
+                                .executes(ctx -> AbilityExpCommands.get(ctx, ctx.getSource().getPlayerOrException()))
+                                .then(Commands.argument("target", EntityArgument.player())
+                                        .executes(ctx -> AbilityExpCommands.get(ctx, EntityArgument.getPlayer(ctx, "target")))))
+                        .then(Commands.literal("set")
+                                .then(Commands.argument("target", EntityArgument.player())
+                                        .then(Commands.argument("amount", FloatArgumentType.floatArg(0))
+                                                .executes(ctx -> AbilityExpCommands.set(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "amount"))))))
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("target", EntityArgument.player())
+                                        .then(Commands.argument("amount", FloatArgumentType.floatArg())
+                                                .executes(ctx -> AbilityExpCommands.add(ctx, EntityArgument.getPlayer(ctx, "target"), FloatArgumentType.getFloat(ctx, "amount"))))))
+                        .then(Commands.literal("info")
+                                .executes(ctx -> AbilityExpCommands.info(ctx, ctx.getSource().getPlayerOrException()))
+                                .then(Commands.argument("target", EntityArgument.player())
+                                        .executes(ctx -> AbilityExpCommands.info(ctx, EntityArgument.getPlayer(ctx, "target")))))
                 )
         );
     }
@@ -398,7 +417,7 @@ public final class AcademyCraftCommand {
         private static int setStatus(CommandContext<CommandSourceStack> context, ServerPlayer player, String statusName, int timer, boolean broadcast) {
             var uuid = player.getUUID();
             try {
-                var status = CPData.Status.valueOf(statusName.toUpperCase());
+                var status = AbilityData.Status.valueOf(statusName.toUpperCase());
                 var serverContext = player.level().getServer();
                 var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
                 abilitySystemServer.setPlayerStatus(uuid, status);
@@ -423,9 +442,60 @@ public final class AcademyCraftCommand {
 
         private static CompletableFuture<Suggestions> suggestStatus(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
             return SharedSuggestionProvider.suggest(
-                    Arrays.stream(CPData.Status.values()).map(Enum::name),
+                    Arrays.stream(AbilityData.Status.values()).map(Enum::name),
                     builder
             );
+        }
+    }
+
+    private static final class AbilityExpCommands {
+        private static int get(CommandContext<CommandSourceStack> context, ServerPlayer player) {
+            var uuid = player.getUUID();
+            var system = CommandUtils.getSystem(context);
+            var exp = system.getPlayerAbilityExp(uuid);
+            Component message = Component.literal(
+                    String.format("§e[AC]§r Ability exp for %s: §b%.2f", player.getName().getString(), exp));
+            context.getSource().sendSuccess(() -> message, true);
+            return 1;
+        }
+
+        private static int set(CommandContext<CommandSourceStack> context, ServerPlayer player, float amount) {
+            var uuid = player.getUUID();
+            var system = CommandUtils.getSystem(context);
+            system.setPlayerAbilityExp(uuid, amount);
+            Component message = Component.literal(
+                    String.format("§e[AC]§r Set ability exp for %s to: §b%.2f", player.getName().getString(), amount));
+            context.getSource().sendSuccess(() -> message, true);
+            return 1;
+        }
+
+        private static int add(CommandContext<CommandSourceStack> context, ServerPlayer player, float amount) {
+            var uuid = player.getUUID();
+            var system = CommandUtils.getSystem(context);
+            system.addPlayerAbilityExp(uuid, amount);
+            var total = system.getPlayerAbilityExp(uuid);
+            Component message = Component.literal(
+                    String.format("§e[AC]§r Added §b%.2f§r ability exp for %s. Total: §b%.2f", amount, player.getName().getString(), total));
+            context.getSource().sendSuccess(() -> message, true);
+            return 1;
+        }
+
+        private static int info(CommandContext<CommandSourceStack> context, ServerPlayer player) {
+            var uuid = player.getUUID();
+            var system = CommandUtils.getSystem(context);
+            var exp = system.getPlayerAbilityExp(uuid);
+            var canLevelUp = system.canPlayerLevelUp(uuid);
+            var level = system.getPlayerLevel(uuid);
+            Component message = Component.literal(String.format(
+                    """
+                            §e[AC]§r Ability exp info for %s:
+                            §fLevel: §d%d§r
+                            §fExp: §b%.2f§r
+                            §fCan Level Up: %s§r""",
+                    player.getName().getString(), level, exp,
+                    canLevelUp ? "§aYES" : "§cNO"));
+            context.getSource().sendSuccess(() -> message, true);
+            return 1;
         }
     }
 }

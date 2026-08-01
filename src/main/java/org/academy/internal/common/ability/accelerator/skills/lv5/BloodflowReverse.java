@@ -11,9 +11,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -21,7 +24,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -30,17 +32,16 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
+import java.util.List;
 public class BloodflowReverse extends Skill {
     public BloodflowReverse() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL5)
+                .level(AbilityLevel.LEVEL4)
                 .cpCost(100)
                 .iterationTicks(10)
                 .maxStacks(16)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
         );
     }
 
@@ -51,18 +52,8 @@ public class BloodflowReverse extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME,
-                        new InputSystem.InputPair(
-                                InputSystem.InputType.KEYBOARD,
-                                new InputSystem.KeyInfo(
-                                        new LinkedHashSet<>(Set.of(InputConstants.KEY_R)),
-                                        InputConstants.RELEASE,
-                                        new LinkedHashSet<>(
-                                                Set.of(InputConstants.MOD_ALT, InputConstants.MOD_SHIFT)
-                                        )
-                                )
-                        )
-                ), Client::reverseBloodflow
-        );
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)
+                ), ctx -> Client.reverseBloodflow());
     }
 
     @Override
@@ -71,6 +62,10 @@ public class BloodflowReverse extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(Skills.BLOODFLOW_REVERSE.get(), List.of(), R.textures.bloodflow_reverse_icon, 204, 83)
+        );
         public static final String KEY_NAME = SkillNames.BLOODFLOW_REVERSE + "_use";
         public static Config CONFIG = new Config();
 

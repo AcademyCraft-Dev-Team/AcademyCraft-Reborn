@@ -24,7 +24,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -33,10 +32,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
-
 public class ElectronBarrier extends Skill {
     public ElectronBarrier() {
         super(Builder
@@ -55,12 +51,8 @@ public class ElectronBarrier extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_B)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT)))
-                )
-        ), Client::onToggle);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_B, InputConstants.PRESS, InputConstants.MOD_ALT)
+        ), ctx -> Client.onToggle());
     }
 
     @Override

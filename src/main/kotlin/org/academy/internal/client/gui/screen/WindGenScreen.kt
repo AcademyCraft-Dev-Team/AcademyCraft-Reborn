@@ -5,7 +5,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.neoforged.bus.api.SubscribeEvent
-import org.academy.api.client.Resource
+import org.academy.api.client.resources.R
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
@@ -44,7 +44,7 @@ class WindGenScreen(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(Resource.Textures.UI_GEN)
+        val ui = ImageWidget(R.textures.UI_GEN)
         ui.layoutParams = FrameLayoutWidget.LayoutParams()
             .sizeMode(SizeMode.MATCH_PARENT)
 
@@ -59,7 +59,7 @@ class WindGenScreen(
 
         invPage.addChild("effect", effect)
         run {
-            val topIcon = ImageWidget(Resource.Textures.ICON_WIND_GEN_TOP)
+            val topIcon = ImageWidget(R.textures.ICON_WIND_GEN_TOP)
             topAlphaSetter = { topIcon.alpha = it }
             topIcon.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -67,7 +67,7 @@ class WindGenScreen(
 
             effect.addChild("icon_top", topIcon)
 
-            val pillarIcon = ImageWidget(Resource.Textures.ICON_WIND_GEN_PILLAR)
+            val pillarIcon = ImageWidget(R.textures.ICON_WIND_GEN_PILLAR)
             pillarAlphaSetter = { pillarIcon.alpha = it }
             pillarIcon.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -75,7 +75,7 @@ class WindGenScreen(
 
             effect.addChild("icon_pillar", pillarIcon)
 
-            val baseIcon = ImageWidget(Resource.Textures.ICON_WIND_GEN_BASE)
+            val baseIcon = ImageWidget(R.textures.ICON_WIND_GEN_BASE)
             baseAlphaSetter = { baseIcon.alpha = it }
             baseIcon.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
@@ -88,7 +88,7 @@ class WindGenScreen(
         wirelessPage.isEnabled = false
         content.addChild("page_wireless", wirelessPage)
 
-        val wirelessButton = createButton(Resource.Textures.ICON_WIRELESS)
+        val wirelessButton = createButton(R.textures.ICON_WIRELESS)
         wirelessButton.layoutParams = WidgetContainer.LayoutParams()
             .widthMode(SizeMode.MATCH_PARENT)
             .height(16f)

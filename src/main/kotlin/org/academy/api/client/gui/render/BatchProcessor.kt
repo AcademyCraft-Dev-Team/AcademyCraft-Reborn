@@ -4,7 +4,7 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.vertex.MeshData
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
-import org.academy.api.client.Render.Buffers.getByteBufferBuilder
+import org.academy.api.client.render.Render.Buffers.getByteBufferBuilder
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformBinding

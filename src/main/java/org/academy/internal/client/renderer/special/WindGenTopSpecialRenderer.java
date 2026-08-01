@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import org.academy.api.client.Resource;
+import org.academy.api.client.resources.R;
 import org.academy.internal.client.renderer.blockentity.WindGenTopRenderer;
 import org.academy.internal.client.renderer.blockentity.state.WindGenTopRenderState;
 import org.joml.Vector3fc;
@@ -25,7 +25,7 @@ public final class WindGenTopSpecialRenderer implements NoDataSpecialModelRender
         poseStack.pushPose();
         poseStack.translate(0.5f, 1.5f, 0.5f);
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
-        nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderTypes.entityTranslucent(Resource.Textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, outlineColor, null);
+        nodeCollector.submitModel(WindGenTopRenderer.MODEL, new WindGenTopRenderState(), poseStack, RenderTypes.entityTranslucent(R.textures.MODEL_WIND_GEN_TOP), packedLight, packedOverlay, outlineColor, null);
         poseStack.popPose();
     }
 

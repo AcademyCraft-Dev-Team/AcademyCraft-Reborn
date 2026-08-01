@@ -13,12 +13,13 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
-import org.academy.api.client.Resource;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -26,6 +27,7 @@ import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -37,9 +39,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -47,11 +47,13 @@ public final class StormWing extends Skill {
     public StormWing() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL4)
+                .level(AbilityLevel.LEVEL3)
                 .cpCost(200)
                 .iterationTicks(30)
                 .maxStacks(1)
-                .dependsOn(Skills.FLOW_CONTROL)
+                .dependsOn(Skills.VECTOR_ACCEL)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+                .devCondition(new DevCondition.DependencyCondition("Vector Acceleration", "academy:vector_accel"))
         );
     }
 
@@ -63,15 +65,13 @@ public final class StormWing extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                new InputSystem.InputPair(
+                InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(GLFW_KEY_B)),
-                                GLFW_RELEASE,
-                                new LinkedHashSet<>()
-                        )
+                        GLFW_KEY_B,
+                        GLFW_PRESS,
+                        0
                 )
-        ), Client::toggle);
+        ), ctx -> Client.toggle());
         NeoForge.EVENT_BUS.register(Client.class);
     }
 
@@ -89,9 +89,9 @@ public final class StormWing extends Skill {
                 AbilityCategories.ACCELERATOR.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.STORM_WING.get(),
-                        List.of(VectorReflection.Client.SKILL_INFO),
-                        Resource.Textures.STORM_WING_ICON,
-                        100, 50
+                        List.of(VectorAccel.Client.SKILL_INFO),
+                        R.textures.storm_wing_icon,
+                        130, 20
                 )
         );
 
@@ -102,12 +102,10 @@ public final class StormWing extends Skill {
         public static void tick(ClientTickEvent.Post event) {
             var mc = Minecraft.getInstance();
             if (mc.level != null && mc.player != null && mc.player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())) {
-                var keyStates = InputSystem.KEYBOARD_STATE;
-
-                var front = keyStates.getOrDefault(GLFW_KEY_W, GLFW_RELEASE) != GLFW_RELEASE;
-                var back = keyStates.getOrDefault(GLFW_KEY_S, GLFW_RELEASE) != GLFW_RELEASE;
-                var left = keyStates.getOrDefault(GLFW_KEY_A, GLFW_RELEASE) != GLFW_RELEASE;
-                var right = keyStates.getOrDefault(GLFW_KEY_D, GLFW_RELEASE) != GLFW_RELEASE;
+                var front = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_W);
+                var back = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_S);
+                var left = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_A);
+                var right = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_D);
 
                 var states = new HashSet<State>();
 

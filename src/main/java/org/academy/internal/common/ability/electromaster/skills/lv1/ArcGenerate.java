@@ -8,9 +8,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.Branch;
@@ -28,7 +31,6 @@ import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -38,10 +40,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
-
 public final class ArcGenerate extends Skill {
     public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
     public static final float DAMAGE_MULTIPLIER = 1.0F;
@@ -54,6 +53,7 @@ public final class ArcGenerate extends Skill {
                         .cpCost(10)
                         .iterationTicks(4)
                         .maxStacks(1)
+                        .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }
 
@@ -64,12 +64,8 @@ public final class ArcGenerate extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(KEY_NAME_GENERATE, Client.CONFIG.getKeyBinding(KEY_NAME_GENERATE,
-                new InputSystem.InputPair(InputSystem.InputType.KEYBOARD, new InputSystem.KeyInfo(
-                        new LinkedHashSet<>(Set.of(InputConstants.KEY_G)),
-                        InputConstants.RELEASE,
-                        new LinkedHashSet<>(Set.of(InputConstants.MOD_ALT)))
-                )
-        ), Client::handler);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.PRESS, InputConstants.MOD_ALT)
+        ), ctx -> Client.handler());
     }
 
     @Override
@@ -78,6 +74,10 @@ public final class ArcGenerate extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(Skills.ARC_GENERATE.get(), List.of(), R.textures.arc_generate_icon, 24, 46)
+        );
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {

@@ -10,13 +10,13 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
+import org.academy.api.client.resources.model.cuboid.CoinModelGenerator;
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 
 import static net.minecraft.client.data.models.model.TexturedModel.createDefault;
 import static org.academy.AcademyCraft.academy;
-import static org.academy.api.client.Resource.Models.COIN_ITEM_MODEL_ID;
 
 public final class AcademyCraftModelProvider extends ModelProvider {
     public AcademyCraftModelProvider(PackOutput output) {
@@ -61,7 +61,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
             var modelTemplate =
                     ExtendedModelTemplateBuilder
                             .builder()
-                            .parent(COIN_ITEM_MODEL_ID)
+                            .parent(CoinModelGenerator.COIN_ITEM_MODEL_ID)
                             .requiredTextureSlot(TextureSlot.BACK)
                             .requiredTextureSlot(TextureSlot.FRONT)
                             .guiLight(UnbakedModel.GuiLight.FRONT)

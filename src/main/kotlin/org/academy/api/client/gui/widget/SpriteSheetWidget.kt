@@ -12,25 +12,26 @@ open class SpriteSheetWidget(
     protected val frameHeight: Int,
     protected val frameCount: Int
 ) : ImageWidget(texture) {
-    protected var currentFrame: Int = 0
-
     fun nextFrame() {
-        this.frameIndex = (currentFrame + 1) % frameCount
+        this.frameIndex = (frameIndex + 1) % frameCount
     }
 
     fun previousFrame() {
-        this.frameIndex = (currentFrame - 1 + frameCount) % frameCount
+        this.frameIndex = (frameIndex - 1 + frameCount) % frameCount
     }
 
-    var frameIndex: Int
-        get() = currentFrame
+    var frameIndex: Int = -1
         set(index) {
             require(index in 0..<frameCount) {
                 "Frame index $index is out of bounds for frame count $frameCount"
             }
-            currentFrame = index
+            field = index
             computeUV(index)
         }
+
+    init {
+        frameIndex = 0
+    }
 
     protected fun computeUV(index: Int) {
         val newU0: Float

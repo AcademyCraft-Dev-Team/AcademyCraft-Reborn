@@ -35,8 +35,10 @@ import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.effect.AfterimageRenderer;
 import org.academy.api.client.renderer.RendererManager;
+import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -44,11 +46,11 @@ import org.academy.internal.client.renderer.effect.AfterimageEffectWrapper;
 import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -58,10 +60,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
-
 public final class VectorAccel extends Skill {
     public static final long MAX_CHARGE_TIME_MS = 2000;
 
@@ -72,6 +71,9 @@ public final class VectorAccel extends Skill {
                 .cpCost(45)
                 .maxStacks(4)
                 .iterationTicks(6)
+                .dependsOn(Skills.DIRECTED_SHOCK)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
+                .devCondition(new DevCondition.DependencyCondition("Directed Shock", "academy:directed_shock"))
         );
     }
 
@@ -84,25 +86,11 @@ public final class VectorAccel extends Skill {
         RendererManager.registerEffectRenderer(AfterimageEffectWrapper.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
-                new InputSystem.InputPair(
-                        InputSystem.InputType.KEYBOARD,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_C)),
-                                InputConstants.PRESS,
-                                new LinkedHashSet<>()
-                        )
-                )
-        ), Client::onChargeStart);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.PRESS, 0)
+        ), ctx -> Client.onChargeStart());
         InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE,
-                new InputSystem.InputPair(
-                        InputSystem.InputType.KEYBOARD,
-                        new InputSystem.KeyInfo(
-                                new LinkedHashSet<>(Set.of(InputConstants.KEY_C)),
-                                InputConstants.RELEASE,
-                                new LinkedHashSet<>()
-                        )
-                )
-        ), Client::onChargeRelease);
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.RELEASE, 0)
+        ), ctx -> Client.onChargeRelease());
     }
 
     @Override
@@ -111,6 +99,10 @@ public final class VectorAccel extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(Skills.VECTOR_ACCEL.get(), List.of(DirectedShock.Client.SKILL_INFO), R.textures.vec_accel_icon, 76, 40)
+        );
         public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
         public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";
         public static Config CONFIG = new Config();

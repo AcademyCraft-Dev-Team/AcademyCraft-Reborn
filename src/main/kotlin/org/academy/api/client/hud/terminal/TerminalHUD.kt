@@ -20,8 +20,8 @@ import net.neoforged.neoforge.client.event.ScreenEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraftClient
 import org.academy.AcademyCraftConfig
-import org.academy.api.client.Render
-import org.academy.api.client.Resource
+import org.academy.api.client.render.Render
+import org.academy.api.client.resources.R
 import org.academy.api.client.app.App
 import org.academy.api.client.gui.animation.*
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
@@ -43,7 +43,6 @@ import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.*
-import org.academy.api.client.input.InputSystem.InputPair
 import org.academy.api.client.render.UniformPayload
 import org.academy.api.client.thread.MainThread
 import org.academy.api.client.util.ClientUtil
@@ -90,12 +89,10 @@ class TerminalHUD private constructor() {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE)
         val config: TerminalConfig = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY)
 
-        val defaultKey = InputPair(
+        val defaultKey = InputSystem.combo(
             InputSystem.InputType.KEYBOARD,
-            InputSystem.KeyInfo(
-                LinkedHashSet(setOf(InputConstants.KEY_RALT)),
-                InputConstants.RELEASE
-            )
+            InputConstants.KEY_RALT,
+            InputConstants.PRESS
         )
         InputSystem.addKeyBinding(
             KEY_NAME_TOGGLE,
@@ -430,7 +427,7 @@ class TerminalHUD private constructor() {
                     content.spacing = 2f
                     main.addChild("content", content)
                     run {
-                        val logo = ImageWidget(Resource.Textures.ICON_TERMINAL)
+                        val logo = ImageWidget(R.textures.ICON_TERMINAL)
                         logo.layoutParams = LinearLayoutWidget.LayoutParams()
                             .size(16f, 16f)
                             .gravity(Gravity.START)
@@ -612,7 +609,7 @@ class TerminalHUD private constructor() {
                 iconArea.onClickListener = OnClickListener { openApp(app) }
                 layout.addChild("icon_area", iconArea)
                 run {
-                    val back = ImageWidget(Resource.Textures.APP_BACK)
+                    val back = ImageWidget(R.textures.APP_BACK)
                     back.setColor(0.8f, 0.8f, 0.8f)
                     iconArea.addChild("back", back)
 

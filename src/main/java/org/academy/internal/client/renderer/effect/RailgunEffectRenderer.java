@@ -18,7 +18,7 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.item.Items;
 
 import static org.academy.AcademyCraft.academy;
-import static org.academy.api.client.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
 import static org.academy.internal.common.ability.electromaster.skills.lv5.Railgun.CHARGE_TIME;
 
 public final class RailgunEffectRenderer implements EffectRenderer {

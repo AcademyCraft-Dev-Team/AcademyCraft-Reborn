@@ -11,7 +11,7 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.rendertype.OutputTarget;
-import org.academy.api.client.Render;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.joml.Vector2f;
@@ -20,20 +20,21 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.List;
+import java.util.Objects;
 
-import static org.academy.api.client.Render.BlurUniforms.getBlurUniformsBuffer;
-import static org.academy.api.client.Render.BlurUniforms.writeBlurUniforms;
+import static org.academy.api.client.render.Render.BlurUniforms.getBlurUniformsBuffer;
+import static org.academy.api.client.render.Render.BlurUniforms.writeBlurUniforms;
 
 public final class BloomEffect {
+    public static final OutputTarget BLOOM_TARGET = new OutputTarget(
+            "bloom_target",
+            () -> getInstance().getInput()
+    );
     private static final Phase BEFORE = new Phase("before");
     private static final Phase AFTER = new Phase("after");
     @Nullable
     private static BloomEffect instance;
     private static boolean hasBeenUsed;
-    public static final OutputTarget BLOOM_TARGET = new OutputTarget(
-            "bloom_target",
-            () -> getInstance().getInput()
-    );
     private final GpuBuffer bloomUniformsBuffer;
     private @Nullable RenderTarget input;
 
@@ -73,9 +74,9 @@ public final class BloomEffect {
         AFTER.close();
     }
 
-    public @Nullable RenderTarget getInput() {
+    public RenderTarget getInput() {
         hasBeenUsed = true;
-        return input;
+        return Objects.requireNonNull(input);
     }
 
     private void runBlurPass(GpuTextureView output, GpuTextureView input, Vector2f outSize, float dirX, float dirY, int radius) {

@@ -19,17 +19,17 @@ open class ImageWidget : AbstractWidget {
 
     private var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
 
-    protected var u0: Float = 0f
-    protected var v0: Float = 0f
+    var u0: Float = 0f
+    var v0: Float = 0f
 
-    protected var u1: Float = 0f
-    protected var v1: Float = 1f
+    var u1: Float = 0f
+    var v1: Float = 1f
 
-    protected var u2: Float = 1f
-    protected var v2: Float = 1f
+    var u2: Float = 1f
+    var v2: Float = 1f
 
-    protected var u3: Float = 1f
-    protected var v3: Float = 0f
+    var u3: Float = 1f
+    var v3: Float = 0f
 
     var brightness: Float = 1.0f
         protected set

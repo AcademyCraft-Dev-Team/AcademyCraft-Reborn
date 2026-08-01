@@ -10,8 +10,8 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
-import org.academy.api.client.Render
-import org.academy.api.client.hud.ability.AbilityInfoHUD
+import org.academy.api.client.render.Render
+import org.academy.api.client.hud.ability.AbilityInfoHud
 import org.academy.api.client.hud.terminal.TerminalHUD
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 负责管理本模组内置的 UI 帧缓冲区与 HUD 喵
  */
 @EventBusSubscriber(Dist.CLIENT)
-object HUDManager {
+object HudManager {
     val logger: Logger = AcademyCraft.getLogger()
 
     fun initRender() {
@@ -33,7 +33,7 @@ object HUDManager {
 
     fun initMain() {
         TerminalHUD.initMain()
-        AbilityInfoHUD.initMain()
+        AbilityInfoHud.initMain()
     }
 
     @RenderThread
@@ -54,7 +54,7 @@ object HUDManager {
         val mouseY = m.getScaledYPos(w)
         val deltaPartialTick = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
         TerminalHUD.instance.perform(mouseX, mouseY, deltaPartialTick)
-        AbilityInfoHUD.instance.perform(mouseX, mouseY, deltaPartialTick)
+        AbilityInfoHud.instance.perform(mouseX, mouseY, deltaPartialTick)
     }
 
     fun render() {
@@ -82,7 +82,7 @@ object HUDManager {
             val drewStencil = AtomicBoolean()
 
             TerminalHUD.instance.render(width, height, uiColor, uiDepth, drewStencil)
-            AbilityInfoHUD.instance.render(ui)
+            AbilityInfoHud.instance.render(ui)
 
             if (drewStencil.get()) {
                 BlurEffect.apply(
