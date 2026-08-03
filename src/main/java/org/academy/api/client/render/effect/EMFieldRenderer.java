@@ -45,6 +45,10 @@ public final class EMFieldRenderer {
         return line;
     }
 
+    public int getFieldLineCount() {
+        return fieldLines.size();
+    }
+
     public void clearFieldLines() {
         fieldLines.clear();
     }

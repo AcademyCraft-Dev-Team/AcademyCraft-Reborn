@@ -116,9 +116,13 @@ public class MagnetManipulation extends Skill {
     }
 
     static Vec3 calculatePullVelocity(Vec3 currentVelocity, Vec3 origin, Vec3 target,
-                                      Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
+                                       Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
+        if (!isFinite(currentVelocity) || !isFinite(origin) || !isFinite(target) || !isFinite(fallbackDirection)) {
+            return Vec3.ZERO;
+        }
         var direction = target.subtract(origin);
         var distance = direction.length();
+        if (!Double.isFinite(distance)) return Vec3.ZERO;
         if (distance <= stopDistance) return currentVelocity.scale(0.25);
         if (distance <= 1.0e-6) direction = fallbackDirection;
         if (direction.lengthSqr() <= 1.0e-6) return Vec3.ZERO;
@@ -127,6 +131,10 @@ public class MagnetManipulation extends Skill {
         var velocity = currentVelocity.scale(0.2).add(desired.scale(0.8));
         var length = velocity.length();
         return length > maxSpeed ? velocity.scale(maxSpeed / length) : velocity;
+    }
+
+    private static boolean isFinite(Vec3 value) {
+        return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
 
     static boolean isIronRelatedPath(String path) {
@@ -278,6 +286,7 @@ public class MagnetManipulation extends Skill {
         private static void tickVisual() {
             var player = Minecraft.getInstance().player;
             if (activeMode == null || player == null) return;
+            if ((player.tickCount & 1) != 0) return;
             var center = player.position().add(0, player.getBbHeight() * 0.5, 0);
             var time = player.tickCount * 0.18;
             EMFieldEffectWrapper.INSTANCE.createField(3.0f);
@@ -286,7 +295,7 @@ public class MagnetManipulation extends Skill {
                 var start = center.add(Math.cos(angle) * 0.8, -0.55, Math.sin(angle) * 0.8);
                 var end = center.add(Math.cos(angle + 1.1) * 0.65, 0.75, Math.sin(angle + 1.1) * 0.65);
                 EMFieldEffectWrapper.INSTANCE.addFieldLine(
-                        start, end, 0.25f, 0.65f, 1.0f, 0.035f, 0.8f, 0.18f, 12);
+                        start, end, 0.25f, 0.65f, 1.0f, 0.035f, 0.8f, 0.18f, 8);
             }
         }
 

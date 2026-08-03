@@ -8,4 +8,5 @@ public class HighSpeedElectronBeamRenderState extends LivingEntityRenderState {
     public float beamScale = 1.0f;
     public float visualSideOffset = 0.0f;
     public boolean isCharging = false;
+    public float[] visibleSegments = new float[]{0.0f, 50.0f};
 }
