@@ -66,6 +66,15 @@ public final class InputSystem {
         return binding == null ? null : binding.combo;
     }
 
+    public static boolean matchesKeyBinding(
+            String keyName, InputType eventType, int input, int action, int modifiers
+    ) {
+        var binding = KEY_BINDINGS.get(keyName);
+        return binding != null
+                && binding.enabled
+                && matches(binding.combo, eventType, input, action, modifiers);
+    }
+
     public static void setKeyBinding(String keyName, KeyCombination combo) {
         var binding = KEY_BINDINGS.get(keyName);
         if (binding == null) return;

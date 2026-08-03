@@ -1062,6 +1062,13 @@ public final class Render {
                         .createRenderSetup()
         );
 
+        public static final RenderType POS_COLOR_QUADS_ADDITIVE = create(
+                "pos_color_quads_additive",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE)
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
         public static final RenderType POS_COLOR_QUADS_BLOOM_ADDITIVE = create(
                 "pos_color_quads_bloom_additive",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE)

@@ -2,12 +2,15 @@ package org.academy.internal.client.app.settings.ui
 
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.blaze3d.textures.FilterMode
+import net.minecraft.client.Minecraft
+import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import net.neoforged.fml.ModList
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.app.App
+import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.config.KeyBindingConfig
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
@@ -31,11 +34,11 @@ import org.academy.api.client.gui.widget.ToggleButtonWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.hud.terminal.TerminalConfig
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
 import org.academy.api.common.ability.Skill
-import org.academy.api.common.registries.Registries
 import org.lwjgl.glfw.GLFW
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
@@ -79,9 +82,16 @@ object SettingsApp : App {
             return root
         }
 
-        private data class CaptureTarget(
-            val skill: Skill,
+        private data class BindingSection(
+            val id: String,
+            val title: String,
+            val icon: Identifier,
             val config: KeyBindingConfig,
+            val persist: (KeyBindingConfig) -> Unit
+        )
+
+        private data class CaptureTarget(
+            val section: BindingSection,
             val bindingName: String
         )
 
@@ -235,13 +245,55 @@ object SettingsApp : App {
             list.layoutParams = WidgetContainer.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
-            for (skill in Registries.SKILLS) {
+            for (section in createGeneralSections()) {
+                if (section.config.keyBindings.isEmpty()) continue
+                list.addChild(section.id, createBindingSection(section))
+            }
+
+            for (info in AbilitySystemClient.getSkillInfosForCategory(AbilitySystemClient.getCategory())) {
+                val skill = info.skill
                 val config = tryGetConfig(skill) ?: continue
                 if (config.keyBindings.isEmpty()) continue
-                list.addChild(skill.getKeyString(), createSkillSection(skill, config))
+                val section = BindingSection(
+                    skill.getKeyString(),
+                    skill.translatedName,
+                    resolveSkillIcon(info),
+                    config
+                ) { updated ->
+                    AcademyCraftClient.Config.INSTANCE.setConfig(skill.getKey(), updated)
+                }
+                list.addChild(section.id, createBindingSection(section))
             }
             panel.setContent(list)
             return panel
+        }
+
+        private fun createGeneralSections(): List<BindingSection> {
+            val terminalConfig = AcademyCraftClient.Config.INSTANCE
+                .getConfig<TerminalConfig>(TerminalHud.CONFIG_KEY)
+            val abilityConfig = AcademyCraftClient.Config.INSTANCE
+                .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
+            return listOf(
+                BindingSection(
+                    "general_terminal",
+                    Language.getInstance().getOrDefault("app.academy.settings.keybind.group.terminal"),
+                    R.textures.gui.terminal.icon,
+                    terminalConfig
+                ) { updated ->
+                    AcademyCraftClient.Config.INSTANCE.setConfig(TerminalHud.CONFIG_KEY, updated)
+                },
+                BindingSection(
+                    "general_ability_hud",
+                    Language.getInstance().getOrDefault("app.academy.settings.keybind.group.ability_hud"),
+                    AbilitySystemClient.getCategory().developerIcon,
+                    abilityConfig
+                ) { updated ->
+                    AcademyCraftClient.Config.INSTANCE.setConfig(
+                        AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM,
+                        updated
+                    )
+                }
+            )
         }
 
         private fun tryGetConfig(skill: Skill): KeyBindingConfig? {
@@ -251,7 +303,26 @@ object SettingsApp : App {
             }.getOrNull()
         }
 
-        private fun createSkillSection(skill: Skill, config: KeyBindingConfig): LinearLayoutWidget {
+        private fun resolveSkillIcon(info: AbilitySystemClient.SkillInfo): Identifier {
+            val skill = info.skill
+            val placeholder = R.textures.gui.icon.close
+            val categoryIcon = skill.category.developerIcon
+            val inferred = Identifier.fromNamespaceAndPath(
+                skill.getKey().namespace,
+                "textures/ability/${skill.category.getKey().path}/skill/${skill.getKey().path}/icon.png"
+            )
+            val resourceManager = Minecraft.getInstance().resourceManager
+            return sequenceOf(info.texture, skill.icon, inferred)
+                .distinct()
+                .firstOrNull { icon ->
+                    icon != placeholder
+                            && icon != categoryIcon
+                            && resourceManager.getResource(icon).isPresent
+                }
+                ?: placeholder
+        }
+
+        private fun createBindingSection(sectionInfo: BindingSection): LinearLayoutWidget {
             val section = LinearLayoutWidget()
             section.orientation = Orientation.VERTICAL
             section.spacing = 1f
@@ -265,13 +336,13 @@ object SettingsApp : App {
                 .widthMode(SizeMode.MATCH_PARENT)
             section.addChild("header", header)
             run {
-                val icon = ImageWidget(skill.icon)
+                val icon = ImageWidget(sectionInfo.icon)
                 icon.setSampler(FilterMode.LINEAR, false)
                 icon.layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(16f, 16f)
                 header.addChild("icon", icon)
 
-                val name = LabelWidget(skill.translatedName)
+                val name = LabelWidget(sectionInfo.title)
                 name.layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .height(0f)
@@ -279,15 +350,14 @@ object SettingsApp : App {
                 header.addChild("name", name)
             }
 
-            for ((bindingName, combo) in config.keyBindings) {
-                section.addChild(bindingName, createBindingRow(skill, config, bindingName, combo))
+            for ((bindingName, combo) in sectionInfo.config.keyBindings) {
+                section.addChild(bindingName, createBindingRow(sectionInfo, bindingName, combo))
             }
             return section
         }
 
         private fun createBindingRow(
-            skill: Skill,
-            config: KeyBindingConfig,
+            section: BindingSection,
             bindingName: String,
             combo: InputSystem.KeyCombination
         ): LinearLayoutWidget {
@@ -297,7 +367,9 @@ object SettingsApp : App {
             row.layoutParams = WidgetContainer.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
 
-            val name = LabelWidget(bindingName)
+            val name = LabelWidget(
+                Language.getInstance().getOrDefault("key.academy.$bindingName")
+            )
             name.layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
                 .height(10f)
@@ -312,15 +384,15 @@ object SettingsApp : App {
             row.addChild("key", keyLabel)
 
             val toggle = ToggleButtonWidget()
-            toggle.setChecked(config.isKeyBindingEnabled(bindingName))
+            toggle.setChecked(section.config.isKeyBindingEnabled(bindingName))
             toggle.layoutParams = LinearLayoutWidget.LayoutParams()
                 .size(16f, 9f)
                 .gravity(Gravity.CENTER)
             toggle.setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
                 override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
-                    config.setKeyBindingEnabled(bindingName, isChecked)
+                    section.config.setKeyBindingEnabled(bindingName, isChecked)
                     InputSystem.setKeyBindingEnabled(bindingName, isChecked)
-                    AcademyCraftClient.Config.INSTANCE.setConfig(skill.getKey(), config)
+                    section.persist(section.config)
                     AcademyCraftClient.Config.INSTANCE.save()
                 }
             })
@@ -331,7 +403,7 @@ object SettingsApp : App {
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
             rebindButton.onClickListener = { _: Widget? ->
-                startCapture(skill, config, bindingName)
+                startCapture(section, bindingName)
             }
             rebindButton.addChild("text", LabelWidget("改键").apply {
                 scale = 0.7f
@@ -471,9 +543,9 @@ object SettingsApp : App {
             pendingCancel = false
         }
 
-        private fun startCapture(skill: Skill, config: KeyBindingConfig, bindingName: String) {
+        private fun startCapture(section: BindingSection, bindingName: String) {
             resetCaptureState()
-            capturing = CaptureTarget(skill, config, bindingName)
+            capturing = CaptureTarget(section, bindingName)
             captureLayer.isEnabled = true
             captureLayer.visibility = Widget.Visibility.VISIBLE
             updateHint()
@@ -488,9 +560,9 @@ object SettingsApp : App {
 
         private fun applyCapture(combo: InputSystem.KeyCombination) {
             val target = capturing ?: return
-            target.config.setKeyBinding(target.bindingName, combo)
+            target.section.config.setKeyBinding(target.bindingName, combo)
             InputSystem.updateKeyBinding(target.bindingName, combo)
-            AcademyCraftClient.Config.INSTANCE.setConfig(target.skill.getKey(), target.config)
+            target.section.persist(target.section.config)
             AcademyCraftClient.Config.INSTANCE.save()
             exitCapture()
             showPage(PAGE_KEYBINDINGS)

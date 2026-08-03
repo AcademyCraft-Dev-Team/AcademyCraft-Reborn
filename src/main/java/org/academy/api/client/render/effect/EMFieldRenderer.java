@@ -19,6 +19,8 @@ import java.util.List;
 public final class EMFieldRenderer {
     private static final float GLOW_ALPHA_MULT = 0.25f;
     private static final float GLOW_WIDTH_MULT = 2.5f;
+    private static final int MAX_SEGMENTS = 64;
+    private static final int MAX_BRANCHES = 8;
 
     private final List<FieldLine> fieldLines = new ArrayList<>();
     private final long seed = 42;
@@ -61,7 +63,10 @@ public final class EMFieldRenderer {
     }
 
     private void renderFieldLine(PoseStack poseStack, FieldLine line, float currentTime, Camera camera, long lineSeed) {
-        if (line.to.distance(line.from) < 0.1f) return;
+        var distance = line.to.distance(line.from);
+        if (!Float.isFinite(distance) || distance < 0.1f) return;
+        var segmentCount = Math.clamp(line.segments, 2, MAX_SEGMENTS);
+        var resolution = segmentCount / distance;
 
         // Time-varying waviness: crackling effect
         var crackle = 1.0f + (float) Math.sin(currentTime * 8.0f + lineSeed * 0.1f) * 0.3f
@@ -82,8 +87,8 @@ public final class EMFieldRenderer {
 
                 var branchPath = new ArcPath(
                         new LinePath(new Vector3f(0, 0, 0), branchEnd),
-                        List.of(new JaggedModifier(dynamicWaviness * 0.7f, 3, lineSeed * 7 + b)),
-                        2.0f,
+                        List.of(new JaggedModifier(dynamicWaviness * 0.7f, 1, lineSeed * 7 + b)),
+                        Math.max(2.0f, segmentCount * 0.35f / Math.max(branchEnd.length(), 0.1f)),
                         List.of()
                 );
                 branches.add(new Branch(branchProgress, branchPath));
@@ -93,13 +98,13 @@ public final class EMFieldRenderer {
         var arcPath = new ArcPath(
                 new LinePath(line.from, line.to),
                 List.of(
-                        new JaggedModifier(dynamicWaviness, line.segments, lineSeed),
+                        new JaggedModifier(dynamicWaviness, 1, lineSeed),
                         new TaperModifier(new AttributeCurve(java.util.List.of(
                                 new Knot(0.0f, 0.0f), new Knot(0.1f, 1.0f),
                                 new Knot(0.9f, 1.0f), new Knot(1.0f, 0.0f)
                         )), 1.0f)
                 ),
-                line.segments,
+                resolution,
                 branches
         );
 
@@ -107,13 +112,15 @@ public final class EMFieldRenderer {
         var worldOffset = new Vector3f((float) camPos.x, (float) camPos.y, (float) camPos.z);
 
         // Glow layer: wider, more transparent, rendered first
-        var glowData = PathProcessor.process(arcPath, currentTime, worldOffset);
+        var glowData = PathProcessor.process(
+                arcPath, currentTime, worldOffset, line.thickness * GLOW_WIDTH_MULT
+        );
         ArcFactory.render(poseStack, glowData,
                 line.color.x * 0.6f, line.color.y * 0.6f, line.color.z * 0.6f,
                 line.alpha * GLOW_ALPHA_MULT);
 
         // Main layer
-        var renderData = PathProcessor.process(arcPath, currentTime, worldOffset);
+        var renderData = PathProcessor.process(arcPath, currentTime, worldOffset, line.thickness);
         ArcFactory.render(poseStack, renderData,
                 line.color.x, line.color.y, line.color.z, line.alpha);
     }
@@ -146,23 +153,23 @@ public final class EMFieldRenderer {
         }
 
         public FieldLine setThickness(float thickness) {
-            this.thickness = thickness;
+            if (Float.isFinite(thickness)) this.thickness = Math.clamp(thickness, 0.001f, 1.0f);
             return this;
         }
 
         public FieldLine setAlpha(float alpha) {
-            this.alpha = alpha;
+            if (Float.isFinite(alpha)) this.alpha = Math.clamp(alpha, 0.0f, 1.0f);
             return this;
         }
 
         public FieldLine setWaviness(float waviness, int segments) {
-            this.waviness = waviness;
-            this.segments = segments;
+            if (Float.isFinite(waviness)) this.waviness = Math.clamp(waviness, 0.0f, 4.0f);
+            this.segments = Math.clamp(segments, 2, MAX_SEGMENTS);
             return this;
         }
 
         public FieldLine setBranchCount(int count) {
-            branchCount = count;
+            branchCount = Math.clamp(count, 0, MAX_BRANCHES);
             return this;
         }
     }

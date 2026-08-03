@@ -331,7 +331,16 @@ public final class Railgun extends Skill {
                             calculateDamage(multiplier),
                             player
                     );
-                    railgunRay.level().playSound(null, player, SoundEvents.RAILGUN.get(), SoundSource.PLAYERS, 1, 1);
+                    railgunRay.level().playSound(
+                            null,
+                            startPos.x,
+                            startPos.y,
+                            startPos.z,
+                            SoundEvents.RAILGUN.get(),
+                            SoundSource.PLAYERS,
+                            1.0f,
+                            1.0f
+                    );
                     end();
                     startReleaseVisual(player, rightHand);
                 }
