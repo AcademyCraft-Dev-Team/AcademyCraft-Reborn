@@ -2,6 +2,7 @@ package org.academy.internal.common.world.item;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.equipment.ArmorType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -12,6 +13,20 @@ public final class Items {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     public static final DeferredHolder<Item, Item> ICON =
             ITEMS.registerItem("icon", Item::new);
+    public static final DeferredHolder<Item, Item> DARKMATTER =
+            ITEMS.registerItem("darkmatter", Item::new);
+    public static final DeferredHolder<Item, Item> DARK_MATTER_HELMET =
+            ITEMS.registerItem("dark_matter_helmet", properties -> new Item(
+                    properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.HELMET)));
+    public static final DeferredHolder<Item, Item> DARK_MATTER_CHESTPLATE =
+            ITEMS.registerItem("dark_matter_chestplate", properties -> new Item(
+                    properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.CHESTPLATE)));
+    public static final DeferredHolder<Item, Item> DARK_MATTER_LEGGINGS =
+            ITEMS.registerItem("dark_matter_leggings", properties -> new Item(
+                    properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.LEGGINGS)));
+    public static final DeferredHolder<Item, Item> DARK_MATTER_BOOTS =
+            ITEMS.registerItem("dark_matter_boots", properties -> new Item(
+                    properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.BOOTS)));
     public static final DeferredHolder<Item, DataTerminalItem> DATA_TERMINAL =
             ITEMS.registerItem("data_terminal", DataTerminalItem::new);
     public static final DeferredHolder<Item, CoinItem> COIN =

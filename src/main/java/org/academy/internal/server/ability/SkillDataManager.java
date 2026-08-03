@@ -19,6 +19,8 @@ public class SkillDataManager implements AbilitySubsystem {
 
     private BiConsumer<UUID, Integer> onSkillLevelUp = (uuid, level) -> {
     };
+    private Consumer<UUID> onSkillSetChanged = uuid -> {
+    };
 
     public SkillDataManager(PlayerDataManager playerDataManager, SyncManager syncManager) {
         this.syncManager = syncManager;
@@ -41,15 +43,25 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     private void modify(UUID uuid, String skillId, Consumer<SkillData> action) {
+        mutate(uuid, skillId, SkillData.class, action);
+    }
+
+    public <T extends SkillData> boolean mutate(
+            UUID uuid,
+            String skillId,
+            Class<T> type,
+            Consumer<T> action
+    ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null) return;
+        if (playerData == null) return false;
 
         var data = playerData.getSkillDataMap().get(skillId);
-        if (data == null) return;
+        if (!type.isInstance(data)) return false;
 
-        action.accept(data);
+        action.accept(type.cast(data));
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        return true;
     }
 
     private void query(UUID uuid, String skillId, Consumer<SkillData> action) {
@@ -104,6 +116,7 @@ public class SkillDataManager implements AbilitySubsystem {
             if (skillData == null) {
                 playerData.markDirty();
                 syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+                onSkillSetChanged.accept(uuid);
             }
         });
     }
@@ -117,6 +130,7 @@ public class SkillDataManager implements AbilitySubsystem {
 
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        onSkillSetChanged.accept(uuid);
     }
 
     public void toggleSkill(UUID uuid, String skillId) {
@@ -125,6 +139,10 @@ public class SkillDataManager implements AbilitySubsystem {
 
     public void setOnSkillLevelUp(BiConsumer<UUID, Integer> onSkillLevelUp) {
         this.onSkillLevelUp = onSkillLevelUp;
+    }
+
+    public void setOnSkillSetChanged(Consumer<UUID> onSkillSetChanged) {
+        this.onSkillSetChanged = onSkillSetChanged;
     }
 
     public enum ExpEvent {

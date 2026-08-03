@@ -79,6 +79,27 @@ public class AbilityData {
         markDirty();
     }
 
+    public void setAvailableCP(float availableCP, float effectiveMaxCP) {
+        this.availableCP = Math.min(availableCP, effectiveMaxCP);
+        markDirty();
+    }
+
+    public AbilityData copyWithMaxCP(float effectiveMaxCP) {
+        var copy = new AbilityData();
+        copy.maxCP = effectiveMaxCP;
+        copy.availableCP = Math.min(availableCP, effectiveMaxCP);
+        copy.level = level;
+        copy.status = status;
+        copy.stateTimer = stateTimer;
+        copy.currSP = currSP;
+        copy.maxSP = maxSP;
+        copy.spRegenTimer = spRegenTimer;
+        copy.currMP = currMP;
+        copy.maxMP = maxMP;
+        copy.abilityExp = abilityExp;
+        return copy;
+    }
+
     public AbilityLevel getLevel() {
         return level;
     }
@@ -111,12 +132,12 @@ public class AbilityData {
     }
 
     public void setCurrSP(int currSP) {
-        this.currSP = Math.clamp(maxSP, 0, currSP);
+        this.currSP = Math.clamp(currSP, 0, maxSP);
         markDirty();
     }
 
     public void addSP(int amount) {
-        currSP = Math.clamp(maxSP, 0, currSP + amount);
+        currSP = Math.clamp(currSP + amount, 0, maxSP);
         markDirty();
     }
 
@@ -125,7 +146,8 @@ public class AbilityData {
     }
 
     public void setMaxSP(int maxSP) {
-        this.maxSP = maxSP;
+        this.maxSP = Math.max(0, maxSP);
+        currSP = Math.min(currSP, this.maxSP);
         markDirty();
     }
 

@@ -12,6 +12,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
@@ -35,7 +36,9 @@ public class FlashBack extends Skill {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL4)
+                .energyCost(60_000)
                 .passive()
+                .initiallyDisabled()
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SELF_TELEPORT)
                 .dependsOn(Skills.CLIP_THROUGH)
@@ -62,6 +65,7 @@ public class FlashBack extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.FLASH_BACK.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

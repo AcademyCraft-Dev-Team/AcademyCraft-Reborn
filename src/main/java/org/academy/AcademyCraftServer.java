@@ -16,6 +16,8 @@ import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -34,6 +36,7 @@ public final class AcademyCraftServer {
     private final AcademyCraftConfig serverConfig;
     private final WorldData worldData;
     private final AbilitySystemServer abilitySystemServer;
+    private final GenericConfig genericConfig;
     private final MinecraftServer server;
     private long lastSaveTick = 0;
 
@@ -59,11 +62,14 @@ public final class AcademyCraftServer {
         AcademyCraftConfig.registerTypeHandler(AbilityConfig.KEY, AbilityConfig.Action.INSTANCE);
         AcademyCraftConfig.registerTypeHandler(GenericConfig.KEY, GenericConfig.Action.INSTANCE);
         AbilityConfig abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
+        genericConfig = serverConfig.getConfig(GenericConfig.KEY);
         serverConfig.save();
 
         worldData = WorldData.getWorldData(worldDataFile);
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
         WirelessManager.initServer();
+        FriendlyFireSetting.initServer();
+        DestroyBlocksSetting.initServer();
 
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
     }
@@ -85,6 +91,10 @@ public final class AcademyCraftServer {
 
     public AbilitySystemServer getAbilitySystemServer() {
         return abilitySystemServer;
+    }
+
+    public GenericConfig getGenericConfig() {
+        return genericConfig;
     }
 
     public void onServerTick(ServerTickEvent.Post event) {

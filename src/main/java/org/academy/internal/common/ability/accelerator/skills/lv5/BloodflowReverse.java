@@ -2,28 +2,44 @@ package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.LevelRenderEvent;
+import org.academy.api.client.render.Render;
+import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -34,14 +50,22 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 public class BloodflowReverse extends Skill {
+    public static final double RANGE_BONUS = 2.0;
+    public static final double TARGET_BOX_INFLATE = 0.2;
+    public static final double SEARCH_HALF_WIDTH = 0.85;
+    public static final double SEARCH_HALF_HEIGHT = 1.15;
+
     public BloodflowReverse() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL4)
+                .level(AbilityLevel.LEVEL5)
+                .energyCost(100_000)
                 .cpCost(100)
                 .iterationTicks(10)
                 .maxStacks(16)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
+                .dependsOn(Skills.VECTOR_REFLECTION)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
+                .devCondition(new DevCondition.DependencyCondition("Vector Reflection", "academy:vector_reflection"))
         );
     }
 
@@ -52,8 +76,10 @@ public class BloodflowReverse extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)
+                        InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_RIGHT,
+                                InputConstants.RELEASE, InputConstants.MOD_ALT)
                 ), ctx -> Client.reverseBloodflow());
+        NeoForge.EVENT_BUS.register(Client.class);
     }
 
     @Override
@@ -64,13 +90,74 @@ public class BloodflowReverse extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
-                new AbilitySystemClient.SkillInfo(Skills.BLOODFLOW_REVERSE.get(), List.of(), R.textures.ability.accelerator.skill.bloodflow_reverse.icon, 204, 83)
+                new AbilitySystemClient.SkillInfo(Skills.BLOODFLOW_REVERSE.get(), List.of(VectorReflection.Client.SKILL_INFO), R.textures.ability.accelerator.skill.bloodflow_reverse.icon, 204, 83)
         );
         public static final String KEY_NAME = SkillNames.BLOODFLOW_REVERSE + "_use";
         public static Config CONFIG = new Config();
 
         public static void reverseBloodflow() {
             MisakaNetworkClient.send(ReverseBloodflowPacket.INSTANCE);
+        }
+
+        @SubscribeEvent
+        public static void onLevelRender(LevelRenderEvent event) {
+            var minecraft = Minecraft.getInstance();
+            var player = minecraft.player;
+            if (player == null
+                    || minecraft.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.BLOODFLOW_REVERSE.get())
+                    || !isPreviewing()) {
+                return;
+            }
+            var target = findTarget(player, event.getPartialTick());
+            if (target == null) return;
+
+            var renderType = Render.RenderTypes.MINE_DETECT_LINES;
+            var camera = minecraft.gameRenderer.mainCamera().position();
+            var bounds = target.getBoundingBox().inflate(TARGET_BOX_INFLATE);
+            var matrices = event.getMatrixStack();
+            matrices.pushPose();
+            matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
+            event.submitCustomGeometry(renderType, (snapshot, consumer) ->
+                    LineBoxRenderer.renderWireframeBox(
+                            snapshot, consumer, bounds,
+                            1.0f, 0.15f, 0.15f, 1.0f
+                    ));
+            matrices.popPose();
+        }
+
+        private static boolean isPreviewing() {
+            return InputSystem.isDown(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_RIGHT)
+                    && (InputSystem.isDown(InputSystem.InputType.KEYBOARD, InputConstants.KEY_LALT)
+                    || InputSystem.isDown(InputSystem.InputType.KEYBOARD, InputConstants.KEY_RALT));
+        }
+
+        private static LivingEntity findTarget(LocalPlayer player, float partialTick) {
+            var eyePosition = player.getEyePosition(partialTick);
+            var direction = player.getViewVector(partialTick).normalize();
+            if (direction.lengthSqr() < 1.0e-6) return null;
+            var reach = player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
+            var range = RANGE_BONUS + (reach == null ? 0.0 : Math.max(0.0, reach.getValue()));
+            var end = eyePosition.add(direction.scale(range));
+            var searchBox = new AABB(eyePosition, end)
+                    .inflate(SEARCH_HALF_WIDTH, SEARCH_HALF_HEIGHT, SEARCH_HALF_WIDTH);
+
+            LivingEntity best = null;
+            var bestProjection = Double.MAX_VALUE;
+            for (var candidate : player.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+                    entity -> entity != player && entity.isAlive() && !entity.isSpectator())) {
+                var candidateBox = candidate.getBoundingBox().inflate(TARGET_BOX_INFLATE);
+                var projection = candidateBox.getCenter().subtract(eyePosition).dot(direction);
+                if (projection < 0.0 || projection > range || !player.hasLineOfSight(candidate)) continue;
+                var closestPoint = eyePosition.add(direction.scale(projection));
+                if (distanceToBoxSqr(closestPoint, candidateBox)
+                        > TARGET_BOX_INFLATE * TARGET_BOX_INFLATE) continue;
+                if (projection < bestProjection) {
+                    bestProjection = projection;
+                    best = candidate;
+                }
+            }
+            return best;
         }
 
         public static class Config extends KeyBindingConfig {
@@ -96,21 +183,18 @@ public class BloodflowReverse extends Skill {
     public static final class Server {
         private static final String EFFECT_KEY = "bloodflow_reverse_level";
 
+        public static float calculateDamage(float currentHealth, float playerMultiplier) {
+            return Math.max(0.0f, currentHealth) * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribePacket
         public static void onAction(ReverseBloodflowPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             Skills.BLOODFLOW_REVERSE.get().executeActive(player, (ctx, actualCost) -> {
                 var serverLevel = player.level();
                 if (!(serverLevel instanceof ServerLevel)) return;
-                var lookVec = player.getViewVector(1.0f);
-                var eyePos = player.getEyePosition();
-                var targetPos = eyePos.add(lookVec.scale(4.5));
-                var box = new AABB(targetPos.add(-1.5, -1.5, -1.5), targetPos.add(1.5, 1.5, 1.5));
-
-                var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box,
-                        e -> e != player && e.isAlive() && !e.isSpectator());
-                if (targets.isEmpty()) return;
-                var target = targets.getFirst();
+                var target = findTarget(player);
+                if (target == null) return;
 
                 var currentStacks = getBloodflowStacks(target);
                 var newStacks = currentStacks + 1;
@@ -121,12 +205,55 @@ public class BloodflowReverse extends Skill {
                 target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, amplifier));
                 target.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, duration, amplifier));
 
-                var hpPercent = 0.20f + newStacks * 0.02f;
-                var damage = target.getMaxHealth() * hpPercent;
-                target.hurtServer(serverLevel, player.damageSources().magic(), Math.max(1.0f, damage));
+                var multiplier = AbilitySystemServer.getSystem(player)
+                        .getPlayerDamageMultiplier(player.getUUID());
+                var damage = calculateDamage(target.getHealth(), multiplier);
+                target.hurtServer(serverLevel,
+                        SkillDamageSource.of(player, Skills.BLOODFLOW_REVERSE.get()), damage);
+
+                serverLevel.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
+                        target.getX(), target.getY(0.6), target.getZ(),
+                        16, 0.45, 0.6, 0.45, 0.08);
+                serverLevel.playSound(null, target.blockPosition(), SoundEvents.BLOODFLOW_REVERSE.get(),
+                        SoundSource.PLAYERS, 1.0f, 1.0f);
 
                 setBloodflowStacks(target, newStacks);
             });
+        }
+
+        private static LivingEntity findTarget(ServerPlayer player) {
+            var eyePosition = player.getEyePosition();
+            var direction = player.getLookAngle().normalize();
+            if (direction.lengthSqr() < 1.0e-6) return null;
+            var reach = player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
+            var range = RANGE_BONUS + (reach == null ? 0.0 : Math.max(0.0, reach.getValue()));
+            var end = eyePosition.add(direction.scale(range));
+            var searchBox = new AABB(eyePosition, end)
+                    .inflate(SEARCH_HALF_WIDTH, SEARCH_HALF_HEIGHT, SEARCH_HALF_WIDTH);
+
+            LivingEntity best = null;
+            var bestProjection = Double.MAX_VALUE;
+            for (var candidate : player.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+                    entity -> entity != player && entity.isAlive() && !entity.isSpectator())) {
+                var candidateBox = candidate.getBoundingBox().inflate(TARGET_BOX_INFLATE);
+                var center = candidateBox.getCenter();
+                var projection = center.subtract(eyePosition).dot(direction);
+                if (projection < 0.0 || projection > range || !player.hasLineOfSight(candidate)) continue;
+                var closestPoint = eyePosition.add(direction.scale(projection));
+                if (distanceToBoxSqr(closestPoint, candidateBox) > TARGET_BOX_INFLATE * TARGET_BOX_INFLATE) continue;
+                if (projection < bestProjection) {
+                    bestProjection = projection;
+                    best = candidate;
+                }
+            }
+            return best;
+        }
+
+        private static double distanceToBoxSqr(Vec3 point, AABB box) {
+            var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
+            var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
+            var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
+            return dx * dx + dy * dy + dz * dz;
         }
 
         private static int getBloodflowStacks(LivingEntity entity) {
@@ -142,6 +269,13 @@ public class BloodflowReverse extends Skill {
             var data = entity.getPersistentData();
             data.putInt(EFFECT_KEY, stacks);
         }
+    }
+
+    private static double distanceToBoxSqr(Vec3 point, AABB box) {
+        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
+        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
+        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
+        return dx * dx + dy * dy + dz * dz;
     }
 
     @PacketTarget(ThreadType.SERVER)

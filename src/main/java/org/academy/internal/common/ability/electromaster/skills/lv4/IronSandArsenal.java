@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,11 +14,13 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -54,7 +57,9 @@ public class IronSandArsenal extends Skill {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL4)
+                .energyCost(60_000)
                 .passive()
+                .initiallyDisabled()
                 .maintenanceCost(50)
                 .dependsOn(Skills.MAGNETIC_WEAPON)
         );
@@ -72,7 +77,7 @@ public class IronSandArsenal extends Skill {
                 , ctx -> Client.onToggle());
 
         InputSystem.addKeyBinding(Client.KEY_FORM, Client.CONFIG.getKeyBinding(Client.KEY_FORM,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_J, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
                 , ctx -> Client.onSwitchForm());
     }
 
@@ -95,6 +100,7 @@ public class IronSandArsenal extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.IRON_SAND_ARSENAL.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
@@ -104,6 +110,7 @@ public class IronSandArsenal extends Skill {
         }
 
         public static void onSwitchForm() {
+            if (!AbilitySystemClient.canUseSkill(Skills.IRON_SAND_ARSENAL.get())) return;
             MisakaNetworkClient.send(FormSelectPacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
@@ -134,6 +141,10 @@ public class IronSandArsenal extends Skill {
 
     public static final class Server {
         private static final Map<Player, Context> CONTEXT_MAP = createContextMap();
+
+        public static float calculateDamage(float baseDamage, float playerMultiplier) {
+            return Math.max(0.0f, baseDamage) * Math.max(0.0f, playerMultiplier);
+        }
 
         @SubscribePacket
         public static void handleToggle(TogglePacket p) {
@@ -180,6 +191,12 @@ public class IronSandArsenal extends Skill {
                 end();
                 return;
             }
+            if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                if (skill.isEnabled(player)) skill.toggle(player);
+                end();
+                return;
+            }
 
             for (var entry : new HashMap<>(cooldowns).entrySet()) {
                 if (entry.getValue() > 0) {
@@ -194,6 +211,9 @@ public class IronSandArsenal extends Skill {
 
             var level = player.level();
             if (!(level instanceof ServerLevel sl)) return;
+            var multiplier = AbilitySystemServer.getSystem(player)
+                    .getPlayerDamageMultiplier(player.getUUID());
+            var source = SkillDamageSource.of(player, skill);
 
             switch (currentForm) {
                 case SWORD -> {
@@ -201,9 +221,16 @@ public class IronSandArsenal extends Skill {
                     var attackPos = player.getEyePosition().add(lookDir.scale(SWORD_RANGE));
                     var targets = sl.getEntitiesOfClass(LivingEntity.class,
                             player.getBoundingBox().expandTowards(lookDir.scale(SWORD_RANGE)).inflate(1.0),
-                            e -> e != player && e.isAlive());
+                            e -> e != player && e.isAlive() && !player.isAlliedTo(e)
+                                    && player.hasLineOfSight(e));
                     if (!targets.isEmpty()) {
-                        targets.getFirst().hurtServer(sl, sl.damageSources().magic(), SWORD_DAMAGE);
+                        var target = targets.stream()
+                                .min(java.util.Comparator.comparingDouble(player::distanceToSqr))
+                                .orElseThrow();
+                        target.hurtServer(sl, source, Server.calculateDamage(SWORD_DAMAGE, multiplier));
+                        sl.sendParticles(ParticleTypes.CRIT,
+                                target.getX(), target.getY(0.6), target.getZ(),
+                                12, 0.25, 0.4, 0.25, 0.08);
                         cooldowns.put(IronSandForm.SWORD, SWORD_COOLDOWN);
                     }
                 }
@@ -216,11 +243,15 @@ public class IronSandArsenal extends Skill {
                                 checkPos.x - 0.5, checkPos.y - 0.5, checkPos.z - 0.5,
                                 checkPos.x + 0.5, checkPos.y + 0.5, checkPos.z + 0.5);
                         var targets = sl.getEntitiesOfClass(LivingEntity.class, box,
-                                e -> e != player && e.isAlive());
+                                e -> e != player && e.isAlive() && !player.isAlliedTo(e));
                         if (!targets.isEmpty()) {
-                            targets.getFirst().hurtServer(sl, sl.damageSources().magic(), WHIP_DAMAGE);
+                            targets.getFirst().hurtServer(sl, source,
+                                    Server.calculateDamage(WHIP_DAMAGE, multiplier));
                             var knockback = lookDir.scale(0.5);
                             targets.getFirst().setDeltaMovement(targets.getFirst().getDeltaMovement().add(knockback));
+                            sl.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                                    targets.getFirst().getX(), targets.getFirst().getY(0.6), targets.getFirst().getZ(),
+                                    8, 0.25, 0.4, 0.25, 0.05);
                             cooldowns.put(IronSandForm.WHIP, WHIP_COOLDOWN);
                             break;
                         }
@@ -229,14 +260,17 @@ public class IronSandArsenal extends Skill {
                 case HAMMER -> {
                     var targets = sl.getEntitiesOfClass(LivingEntity.class,
                             player.getBoundingBox().inflate(HAMMER_RADIUS),
-                            e -> e != player && e.isAlive());
+                            e -> e != player && e.isAlive() && !player.isAlliedTo(e));
                     for (var t : targets) {
-                        t.hurtServer(sl, sl.damageSources().magic(), HAMMER_DAMAGE);
+                        t.hurtServer(sl, source, Server.calculateDamage(HAMMER_DAMAGE, multiplier));
                         var knockback = t.position().subtract(player.position()).normalize().scale(1.5);
                         t.setDeltaMovement(t.getDeltaMovement().add(knockback.x, 0.4, knockback.z));
                         t.hurtMarked = true;
                     }
                     if (!targets.isEmpty()) {
+                        sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                                player.getX(), player.getY(), player.getZ(),
+                                20, HAMMER_RADIUS * 0.5, 0.2, HAMMER_RADIUS * 0.5, 0.05);
                         cooldowns.put(IronSandForm.HAMMER, HAMMER_COOLDOWN);
                     }
                 }

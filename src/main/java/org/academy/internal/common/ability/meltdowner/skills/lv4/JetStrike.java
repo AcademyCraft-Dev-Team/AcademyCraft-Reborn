@@ -2,23 +2,27 @@ package org.academy.internal.common.ability.meltdowner.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -28,9 +32,12 @@ import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
+import org.academy.internal.common.ability.meltdowner.skills.lv3.LightShield;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.Smoke;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -39,14 +46,25 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-public class JetStrike extends Skill {
+import java.util.List;
+
+public final class JetStrike extends Skill {
+    static final double DISTANCE = 8.0;
+    static final double DAMAGE_RADIUS = 3.25;
+    static final float BASE_DAMAGE = 10.0f;
+    static final int TRAIL_TICKS = 10;
+
     public JetStrike() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL4)
-                .cpCost(160)
-                .iterationTicks(4)
+                .energyCost(60_000)
+                .cpCost(20)
+                .iterationTicks(10)
                 .maxStacks(1)
+                .dependsOn(Skills.LIGHT_SHIELD)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
+                .devCondition(new DevCondition.DependencyCondition("Light Shield", "academy:light_shield"))
         );
     }
 
@@ -57,9 +75,10 @@ public class JetStrike extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_J, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
-                , ctx -> Client.onUse());
+        InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_USE,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0)
+        ), ctx -> Client.onUse());
     }
 
     @Override
@@ -68,18 +87,31 @@ public class JetStrike extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.MELTDOWNER.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.JET_STRIKE.get(),
+                        List.of(LightShield.Client.SKILL_INFO),
+                        R.textures.jet_strike_icon,
+                        160,
+                        90
+                )
+        );
         public static final String KEY_NAME_USE = SkillNames.JET_STRIKE + "_use";
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            var mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc.player == null) return;
-            MisakaNetworkClient.send(new DashPacket(mc.player.getViewVector(1.0f)));
-            var p = mc.player;
+            if (!AbilitySystemClient.canUseSkill(Skills.JET_STRIKE.get())) return;
+            var player = net.minecraft.client.Minecraft.getInstance().player;
+            if (player == null) return;
+            MisakaNetworkClient.send(DashPacket.INSTANCE);
             TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.1f, 1.0f, 0.4f, 0.1f)
-                    .addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());
+                    .addPoint((float) player.getX(), (float) player.getY(), (float) player.getZ());
             var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
-                    (float) p.getX(), (float) p.getY() + 0.5f, (float) p.getZ());
+                    (float) player.getX(),
+                    (float) player.getY() + 0.5f,
+                    (float) player.getZ()
+            );
             emitter.setColor(1.0f, 0.6f, 0.2f);
             emitter.setEmissionRate(0);
             emitter.burst(15);
@@ -95,7 +127,7 @@ public class JetStrike extends Skill {
                 }
 
                 @Override
-                public JetStrike.Client.Config getDefault() {
+                public Config getDefault() {
                     return new Config();
                 }
 
@@ -111,70 +143,93 @@ public class JetStrike extends Skill {
         @SubscribePacket
         public static void handle(DashPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.JET_STRIKE.get().executeActive(player, (ctx, actualCost) -> {
-                var dir = packet.getDirection().normalize();
-                var speed = 2.5;
-                player.setDeltaMovement(dir.scale(speed));
+            var direction = normalizeDirection(player.getLookAngle());
+            if (direction == null) return;
+            var base = player.position().add(direction.scale(DISTANCE));
+            var safe = findSafe(player, base);
+            var delta = safe == null ? Vec3.ZERO : safe.subtract(player.position());
+            Skills.JET_STRIKE.get().executeActive(player, (_, _) -> dash(player, delta));
+        }
+
+        private static void dash(ServerPlayer player, Vec3 delta) {
+            var level = player.level();
+            if (delta.lengthSqr() > 1.0e-8) {
                 player.resetFallDistance();
+                player.setDeltaMovement(delta.x, delta.y + 0.15, delta.z);
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
-                AbilitySystemServer.registerContext(new Context(player, dir));
-            });
+            }
+
+            var skill = Skills.JET_STRIKE.get();
+            var system = AbilitySystemServer.getSystem(player);
+            var damage = calculateDamage(system.getPlayerDamageMultiplier(player.getUUID()));
+            var source = SkillDamageSource.of(player, skill);
+            var targetBox = player.getBoundingBox().move(delta).inflate(DAMAGE_RADIUS);
+            var targets = level.getEntitiesOfClass(
+                    LivingEntity.class,
+                    targetBox,
+                    target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+            );
+            for (var target : targets) target.hurtServer(level, source, damage);
+            if (delta.lengthSqr() > 1.0e-8) AbilitySystemServer.registerContext(new TrailContext(player));
+        }
+
+        private static @Nullable Vec3 findSafe(ServerPlayer player, Vec3 base) {
+            var origin = player.getBoundingBox();
+            int[] dx = {0, 1, -1, 0, 0, 2, -2, 1, -1};
+            int[] dz = {0, 0, 0, 1, -1, 0, 0, 2, -2};
+            int[] dy = {0, 1, -1, 2, -2};
+            for (var offsetY : dy) {
+                for (var i = 0; i < dx.length; i++) {
+                    var candidate = base.add(dx[i], offsetY, dz[i]);
+                    var moved = origin.move(
+                            candidate.x - player.getX(),
+                            candidate.y - player.getY(),
+                            candidate.z - player.getZ()
+                    );
+                    if (player.level().noCollision(player, moved)) return candidate;
+                }
+            }
+            return null;
         }
     }
 
-    public static final class Context extends ServerContext {
-        private final Vec3 direction;
-        private int trailTicks = 10;
-        private boolean ended;
+    public static final class TrailContext extends ServerContext {
+        private final ServerLevel initialLevel;
+        private int ticks = TRAIL_TICKS;
 
-        private Context(ServerPlayer player, Vec3 direction) {
+        private TrailContext(ServerPlayer player) {
             super(player);
-            this.direction = direction;
+            initialLevel = player.level();
         }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
-            trailTicks--;
-            if (trailTicks < 0 || player.hasDisconnected() || !player.isAlive()) {
-                end();
+            if (player.level() != initialLevel || player.hasDisconnected() || !player.isAlive() || ticks-- <= 0) {
+                unregister();
                 return;
             }
-
-            if (trailTicks % 2 == 0 && level() instanceof ServerLevel serverLevel) {
-                var pos = player.position().add(0, 0.5, 0);
-                var smoke = new Smoke(EntityTypes.SMOKE.get(), level());
-                smoke.setPos(pos);
-                level().addFreshEntity(smoke);
-
-                var box = player.getBoundingBox().inflate(1.0);
-                var targets = level().getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
-                for (var target : targets) {
-                    target.hurtServer(serverLevel, player.damageSources().magic(), 8.0f);
-                    target.setRemainingFireTicks(40);
-                }
+            if (ticks % 2 == 0) {
+                var smoke = new Smoke(EntityTypes.SMOKE.get(), initialLevel);
+                smoke.setPos(player.position().add(0, 0.5, 0));
+                initialLevel.addFreshEntity(smoke);
             }
         }
+    }
 
-        private void end() {
-            if (ended) return;
-            ended = true;
-            unregister();
-        }
+    static @Nullable Vec3 normalizeDirection(Vec3 direction) {
+        return direction.lengthSqr() <= 1.0e-8 ? null : direction.normalize();
+    }
+
+    static float calculateDamage(float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(BASE_DAMAGE, 0.0f, 0.0f, playerMultiplier, false);
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class DashPacket extends Packet<ServerGamePacketListenerImpl, DashPacket> {
-        private static final StreamCodec<ByteBuf, Vec3> VEC3_CODEC = StreamCodec.composite(
-                ByteBufCodecs.DOUBLE, Vec3::x, ByteBufCodecs.DOUBLE, Vec3::y, ByteBufCodecs.DOUBLE, Vec3::z, Vec3::new);
-        public static final StreamCodec<ByteBuf, DashPacket> CODEC = VEC3_CODEC.map(DashPacket::new, DashPacket::getDirection);
-        private final Vec3 direction;
+        public static final DashPacket INSTANCE = new DashPacket();
+        public static final StreamCodec<ByteBuf, DashPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public DashPacket(Vec3 direction) {
-            this.direction = direction;
-        }
-
-        public Vec3 getDirection() {
-            return direction;
+        private DashPacket() {
         }
 
         @Override

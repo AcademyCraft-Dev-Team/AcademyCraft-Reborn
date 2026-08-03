@@ -34,6 +34,7 @@ public class Shackle extends Skill {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
                 .cpCost(80)
                 .iterationTicks(8)
                 .maxStacks(1)

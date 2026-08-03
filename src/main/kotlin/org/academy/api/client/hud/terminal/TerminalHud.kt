@@ -65,6 +65,7 @@ import kotlin.math.tan
 class TerminalHud private constructor() {
     private var context: Context = Context()
     private val uiContext: UiContext
+    private val config: TerminalConfig
 
     /**
      * 0.0f : 面向鼠标喵
@@ -87,7 +88,7 @@ class TerminalHud private constructor() {
 
     init {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE)
-        val config: TerminalConfig = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY)
+        config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY)
 
         val defaultKey = InputSystem.combo(
             InputSystem.InputType.KEYBOARD,
@@ -171,6 +172,7 @@ class TerminalHud private constructor() {
 
         val last: Boolean = isActive
         isActive = !last
+        if (!isActive) InputSystem.cancelRebind()
 
         val mc = Minecraft.getInstance()
         val w = mc.window
@@ -685,6 +687,16 @@ class TerminalHud private constructor() {
         fun initMain() {
             INSTANCE = TerminalHud()
             NeoForge.EVENT_BUS.register(INSTANCE)
+        }
+
+        @JvmStatic
+        fun getBlurRadius(): Float = INSTANCE?.config?.blurRadius?.coerceIn(0f, 20f) ?: 20f
+
+        @JvmStatic
+        fun setBlurRadius(value: Float) {
+            val terminal = INSTANCE ?: return
+            terminal.config.blurRadius = value.coerceIn(0f, 20f)
+            AcademyCraftClient.Config.INSTANCE.save()
         }
 
         private fun createDynamicTransformsSlice(viewMatrix: Matrix4f): GpuBufferSlice {

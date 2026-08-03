@@ -521,7 +521,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     private fun fillSkillTreeArea(area: FrameLayoutWidget) {
         val category = AbilitySystemClient.getCategory()
-        val skillInfos = AbilitySystemClient.getSkillInfos()[category] ?: emptyList()
+        val skillInfos = AbilitySystemClient.getSkillInfosForCategory(category)
 
         val bg = ParallaxImageWidget(R.textures.gui.developer.skill_panel_back)
         bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
@@ -849,7 +849,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private fun rebuildSkillTree() {
         area.clearChildren()
         val category = AbilitySystemClient.getCategory()
-        val skillInfos = AbilitySystemClient.getSkillInfos()[category] ?: emptyList()
+        val skillInfos = AbilitySystemClient.getSkillInfosForCategory(category)
         for (info in skillInfos) {
             for (dep in info.dependencies) {
                 val line = createSkillLine(info, dep)

@@ -11,10 +11,14 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -23,7 +27,11 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
+import org.academy.internal.common.ability.meltdowner.skills.ContinuousBeam;
+import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -32,15 +40,33 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.List;
 import java.util.Map;
-public class MiningBeam extends Skill {
+
+public final class MiningBeam extends Skill {
+    static final int CP_INTERVAL_TICKS = 2;
+    static final int BREAK_INTERVAL_TICKS = 3;
+    static final int DAMAGE_INTERVAL_TICKS = 20;
+    static final float MAX_LENGTH = 48.0f;
+    static final float DAMAGE_RADIUS = 0.6f;
+    static final float BASE_DAMAGE = 12.0f;
+    static final float BREAK_RADIUS = 0.35f;
+    static final int MINING_TIER = 3;
+
     public MiningBeam() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL2)
-                .passive()
-                .maintenanceCost(100)
-                .iterationTicks(0)
+                .energyCost(10_000)
+                .cpCost(5)
+                .iterationTicks(CP_INTERVAL_TICKS)
+                .maxStacks(1)
+                .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
+                .devCondition(new DevCondition.DependencyCondition(
+                        "Single High-Speed Electron Beam",
+                        "academy:single_high_speed_electron_beam"
+                ))
         );
     }
 
@@ -50,9 +76,24 @@ public class MiningBeam extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_M, InputConstants.PRESS, InputConstants.MOD_ALT)
-        ), ctx -> Client.onToggle());
+        InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_START,
+                InputSystem.combo(
+                        InputSystem.InputType.KEYBOARD,
+                        InputConstants.KEY_M,
+                        InputConstants.PRESS,
+                        0
+                )
+        ), ctx -> Client.start());
+        InputSystem.addKeyBinding(Client.KEY_NAME_STOP, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_STOP,
+                InputSystem.combo(
+                        InputSystem.InputType.KEYBOARD,
+                        InputConstants.KEY_M,
+                        InputConstants.RELEASE,
+                        0
+                )
+        ), ctx -> Client.stop());
     }
 
     @Override
@@ -61,11 +102,27 @@ public class MiningBeam extends Skill {
     }
 
     public static final class Client {
-        public static final String KEY_NAME_TOGGLE = SkillNames.MINING_BEAM + "_toggle";
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.MELTDOWNER.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.MINING_BEAM.get(),
+                        List.of(SingleHighSpeedElectronBeam.Client.SKILL_INFO),
+                        R.textures.mining_beam_icon,
+                        75,
+                        75
+                )
+        );
+        public static final String KEY_NAME_START = SkillNames.MINING_BEAM + "_start";
+        public static final String KEY_NAME_STOP = SkillNames.MINING_BEAM + "_stop";
         public static Config CONFIG = new Config();
 
-        public static void onToggle() {
-            MisakaNetworkClient.send(TogglePacket.INSTANCE);
+        public static void start() {
+            if (!AbilitySystemClient.canUseSkill(Skills.MINING_BEAM.get())) return;
+            MisakaNetworkClient.send(StartPacket.INSTANCE);
+        }
+
+        public static void stop() {
+            MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -76,7 +133,7 @@ public class MiningBeam extends Skill {
                 }
 
                 @Override
-                public MiningBeam.Client.Config getDefault() {
+                public Config getDefault() {
                     return new Config();
                 }
 
@@ -92,69 +149,135 @@ public class MiningBeam extends Skill {
         private static final Map<Player, Context> CONTEXT_MAP = createContextMap();
 
         @SubscribePacket
-        public static void handleToggle(TogglePacket packet) {
+        public static void handleStart(StartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.MINING_BEAM.get();
-            skill.toggle(player);
-            if (!skill.isEnabled(player)) {
-                var ctx = CONTEXT_MAP.remove(player);
-                if (ctx != null) ctx.end();
-                return;
-            }
-            if (CONTEXT_MAP.containsKey(player)) return;
+            if (!skill.isEnabled(player) || CONTEXT_MAP.containsKey(player)) return;
             var context = new Context(player);
             CONTEXT_MAP.put(player, context);
             AbilitySystemServer.registerContext(context);
         }
+
+        @SubscribePacket
+        public static void handleStop(StopPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            var context = CONTEXT_MAP.get(player);
+            if (context != null) context.end();
+        }
     }
 
     public static final class Context extends ServerContext {
+        private final ServerLevel initialLevel;
         private boolean ended;
-        private int tickCounter;
+        private int ticks;
+        private float currentLength = MAX_LENGTH;
+        private final HighSpeedElectronBeam visual;
 
         private Context(ServerPlayer player) {
             super(player);
+            initialLevel = player.level();
+            visual = ContinuousBeam.spawnFromMainHand(initialLevel, player, 1.0f, MAX_LENGTH);
         }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             var skill = Skills.MINING_BEAM.get();
-            if (!skill.isEnabled(player) || !player.isAlive() || player.hasDisconnected()) {
+            if (player.level() != initialLevel
+                    || !skill.isEnabled(player)
+                    || !player.isAlive()
+                    || player.hasDisconnected()) {
                 end();
                 return;
             }
-            tickCounter++;
-            if (tickCounter % 4 != 0) return;
 
-            var eyePos = player.getEyePosition();
-            var lookDir = player.getLookAngle();
-            var range = 12f;
-            var target = eyePos.add(lookDir.scale(range));
+            ticks++;
+            if (!ContinuousBeam.follow(player, visual, currentLength)) {
+                end();
+                return;
+            }
+            if (ticks % CP_INTERVAL_TICKS == 0
+                    && !skill.executeActive(player, (_, _) -> {
+                    })) {
+                end();
+                return;
+            }
 
-            if (level() instanceof ServerLevel serverLevel) {
-                LevelUtil.destroyBlocksAlongPath(serverLevel, eyePos, target, 0.15f, 2, false, true, true, false);
+            var start = player.getEyePosition();
+            if (ticks % BREAK_INTERVAL_TICKS == 0) {
+                var result = LevelUtil.destroyBlocksAlongPath(
+                        initialLevel,
+                        start,
+                        start.add(player.getLookAngle().scale(MAX_LENGTH)),
+                        BREAK_RADIUS,
+                        MINING_TIER,
+                        true,
+                        true,
+                        true,
+                        false,
+                        player
+                );
+                currentLength = (float) result.getValue().doubleValue();
+                visual.setBeamLength(currentLength);
+            }
+
+            if (ticks % DAMAGE_INTERVAL_TICKS == 0) {
+                var system = AbilitySystemServer.getSystem(player);
+                var damage = calculateDamage(system.getPlayerDamageMultiplier(player.getUUID()));
+                var end = start.add(player.getLookAngle().scale(currentLength));
+                LevelUtil.attackEntitiesAlongPath(
+                        initialLevel,
+                        start,
+                        end,
+                        DAMAGE_RADIUS,
+                        SkillDamageSource.of(player, skill),
+                        damage,
+                        player
+                );
             }
         }
 
         private void end() {
             if (ended) return;
-            ended = true;
-            Server.CONTEXT_MAP.remove(player);
             unregister();
+        }
+
+        @Override
+        protected void onUnregistered() {
+            ended = true;
+            Server.CONTEXT_MAP.remove(player, this);
+            ContinuousBeam.kill(visual);
+        }
+    }
+
+    static float calculateDamage(float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(BASE_DAMAGE, 0.0f, 0.0f, playerMultiplier, false);
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
+        public static final StartPacket INSTANCE = new StartPacket();
+        public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private StartPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+            return PacketTypes.MINING_BEAM_START.get();
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
-        public static final TogglePacket INSTANCE = new TogglePacket();
-        public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
+    public static final class StopPacket extends Packet<ServerGamePacketListenerImpl, StopPacket> {
+        public static final StopPacket INSTANCE = new StopPacket();
+        public static final StreamCodec<ByteBuf, StopPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        private TogglePacket() {
+        private StopPacket() {
         }
 
         @Override
-        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
-            return PacketTypes.MINING_BEAM_TOGGLE.get();
+        public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() {
+            return PacketTypes.MINING_BEAM_STOP.get();
         }
     }
 }

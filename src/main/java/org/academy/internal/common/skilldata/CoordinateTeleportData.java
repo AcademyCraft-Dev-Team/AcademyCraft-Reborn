@@ -9,6 +9,7 @@ import java.util.List;
 
 public final class CoordinateTeleportData extends SkillData {
     public static final Identifier ID = AcademyCraft.academy("coordinate_teleport_data");
+    public static final int MAX_POSITIONS = 32;
 
     @SerializedName("savedPositions")
     private List<SavedPosition> savedPositions = new ArrayList<>();
@@ -19,11 +20,14 @@ public final class CoordinateTeleportData extends SkillData {
     }
 
     public List<SavedPosition> getSavedPositions() {
+        if (savedPositions == null) savedPositions = new ArrayList<>();
         return savedPositions;
     }
 
     public void addPosition(SavedPosition pos) {
-        savedPositions.add(pos);
+        var positions = getSavedPositions();
+        if (positions.size() >= MAX_POSITIONS) positions.removeFirst();
+        positions.add(pos);
     }
 
     public void removePosition(int index) {

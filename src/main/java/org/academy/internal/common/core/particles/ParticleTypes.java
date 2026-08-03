@@ -18,4 +18,6 @@ public class ParticleTypes {
             () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ARC_MEDIUM = PARTICLE_TYPES.register("arc_medium",
             () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> VECTOR_BLAST = PARTICLE_TYPES.register("vector_blast",
+            () -> new SimpleParticleType(false));
 }

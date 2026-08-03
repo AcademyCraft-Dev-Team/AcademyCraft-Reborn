@@ -1,6 +1,7 @@
 package org.academy.api.client.ability;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
@@ -33,6 +34,7 @@ public final class AbilitySystemClient {
     public static final InputSystem.KeyCombination ACTIVATE_HUD_KEY;
     private static final Map<String, SkillData> SKILL_DATA = new ConcurrentHashMap<>();
     private static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
+    private static final List<SkillInfo> COMMON_SKILL_INFOS = new ArrayList<>();
     @Nullable
     public static AbilityCategory category;
     private static boolean activeHUD = false;
@@ -56,6 +58,10 @@ public final class AbilitySystemClient {
     }
 
     public static SkillInfo addSkillInfo(AbilityCategory category, SkillInfo skillInfo) {
+        if (skillInfo.skill().getScope() != SkillScope.CATEGORY
+                || skillInfo.skill().getCategory() != category) {
+            throw new IllegalArgumentException("Category skill info does not match its skill scope or owner");
+        }
         if (!SKILL_INFOS.containsKey(category)) {
             SKILL_INFOS.put(category, new ArrayList<>());
         }
@@ -63,8 +69,28 @@ public final class AbilitySystemClient {
         return skillInfo;
     }
 
+    public static SkillInfo addCommonSkillInfo(SkillInfo skillInfo) {
+        if (skillInfo.skill().getScope() != SkillScope.COMMON) {
+            throw new IllegalArgumentException("Common skill info requires a common-scoped skill");
+        }
+        COMMON_SKILL_INFOS.add(skillInfo);
+        return skillInfo;
+    }
+
     public static Map<AbilityCategory, List<SkillInfo>> getSkillInfos() {
         return SKILL_INFOS;
+    }
+
+    public static List<SkillInfo> getSkillInfosForCategory(@Nullable AbilityCategory category) {
+        if (category == null) return List.of();
+
+        var categoryInfos = SKILL_INFOS.getOrDefault(category, List.of());
+        if (!category.supportsCommonSkills()) return List.copyOf(categoryInfos);
+
+        var result = new ArrayList<SkillInfo>(categoryInfos.size() + COMMON_SKILL_INFOS.size());
+        result.addAll(categoryInfos);
+        result.addAll(COMMON_SKILL_INFOS);
+        return List.copyOf(result);
     }
 
     public static void init() {
@@ -81,6 +107,86 @@ public final class AbilitySystemClient {
         for (var skill : Registries.SKILLS) {
             skill.initClient();
         }
+
+        ensureCompleteSkillInfos();
+    }
+
+    /**
+     * Keeps the HUD and developer screen complete even while a newly ported skill has not yet
+     * received a hand-authored tree node. Explicit registrations remain authoritative; only
+     * missing category skills receive deterministic fallback entries.
+     */
+    private static void ensureCompleteSkillInfos() {
+        for (var category : Registries.ABILITY_CATEGORIES) {
+            var infos = SKILL_INFOS.computeIfAbsent(category, ignored -> new ArrayList<>());
+            var bySkill = new IdentityHashMap<Skill, SkillInfo>();
+            infos.forEach(info -> bySkill.put(info.skill(), info));
+
+            var fallbackSkills = Registries.SKILLS.stream()
+                    .filter(skill -> skill.getScope() == SkillScope.CATEGORY)
+                    .filter(skill -> skill.getCategory() == category)
+                    .filter(skill -> !bySkill.containsKey(skill))
+                    .sorted(Comparator
+                            .comparingInt((Skill skill) -> skill.getRecommendedLevel().getLevelCode())
+                            .thenComparing(Skill::getKeyString))
+                    .toList();
+
+            for (var skill : fallbackSkills) {
+                var position = findFallbackPosition(infos, skill);
+                var info = new SkillInfo(
+                        skill,
+                        List.of(),
+                        resolveFallbackTexture(skill),
+                        position[0],
+                        position[1]
+                );
+                infos.add(info);
+                bySkill.put(skill, info);
+            }
+
+            if (!fallbackSkills.isEmpty()) {
+                for (var index = 0; index < infos.size(); index++) {
+                    var info = infos.get(index);
+                    if (!fallbackSkills.contains(info.skill())) continue;
+                    var dependencies = info.skill().getDependencies().stream()
+                            .map(bySkill::get)
+                            .filter(Objects::nonNull)
+                            .toList();
+                    infos.set(index, new SkillInfo(
+                            info.skill(), dependencies, info.texture(), info.x(), info.y()
+                    ));
+                }
+            }
+        }
+    }
+
+    private static float[] findFallbackPosition(List<SkillInfo> infos, Skill skill) {
+        var level = Math.max(1, skill.getRecommendedLevel().getLevelCode());
+        var x = 24f + (level - 1) * 48f;
+        var y = 18f;
+        while (isFallbackPositionOccupied(infos, x, y)) {
+            y += 28f;
+        }
+        return new float[]{x, y};
+    }
+
+    private static boolean isFallbackPositionOccupied(List<SkillInfo> infos, float x, float y) {
+        for (var info : infos) {
+            if (Math.abs(info.x() - x) < 20f && Math.abs(info.y() - y) < 20f) return true;
+        }
+        return false;
+    }
+
+    private static Identifier resolveFallbackTexture(Skill skill) {
+        var skillKey = skill.getKey();
+        var categoryPath = skill.getCategory().getKey().getPath();
+        var inferred = Identifier.fromNamespaceAndPath(
+                skillKey.getNamespace(),
+                "textures/ability/" + categoryPath + "/skill/" + skillKey.getPath() + "/icon.png"
+        );
+        return Minecraft.getInstance().getResourceManager().getResource(inferred).isPresent()
+                ? inferred
+                : skill.getCategory().getDeveloperIcon();
     }
 
     @SubscribePacket
@@ -131,8 +237,14 @@ public final class AbilitySystemClient {
     }
 
     public static boolean canUseSkill(Skill skill) {
-        return LEARNED_SKILLS.contains(skill)
+        return LearningHelper.isSkillAvailableForCategory(category, skill)
+                && LEARNED_SKILLS.contains(skill)
                 && getSkillData(skill).map(SkillData::isEnabled).orElse(false);
+    }
+
+    public static boolean canToggleSkill(Skill skill) {
+        return LearningHelper.isSkillAvailableForCategory(category, skill)
+                && LEARNED_SKILLS.contains(skill);
     }
 
     public static boolean isSkillLearned(Skill skill) {

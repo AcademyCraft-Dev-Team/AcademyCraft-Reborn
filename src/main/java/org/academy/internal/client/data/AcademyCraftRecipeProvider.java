@@ -4,6 +4,10 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import org.academy.AcademyCraft;
+import org.academy.internal.common.world.item.crafting.DarkmatterDuplicationRecipe;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -14,6 +18,11 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
 
     @Override
     protected void buildRecipes() {
+        output.accept(
+                ResourceKey.create(Registries.RECIPE, AcademyCraft.academy("darkmatter_duplication")),
+                new DarkmatterDuplicationRecipe(),
+                null
+        );
     }
 
     public static final class Runner extends RecipeProvider.Runner {

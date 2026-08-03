@@ -9,28 +9,43 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDrownEvent;
+import net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
+import net.neoforged.neoforge.event.level.ExplosionKnockbackEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
-import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.sync.SyncKeys;
+import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
@@ -42,18 +57,25 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 public class VectorReflection extends Skill {
     public VectorReflection() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL4)
+                .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
                 .iterationTicks(200)
-                .maintenanceCost(50)
                 .passive()
+                .initiallyDisabled()
                 .maxStacks(NO_STACK_LIMIT)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
-                .devCondition(new DevCondition.DependencyCondition("Vector Reduction", "academy:vector_reduction"))
+                .dependsOn(Skills.KINETIC_ENERGY_APPLIED)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+                .devCondition(new DevCondition.DependencyCondition("Kinetic Energy Applied", "academy:kinetic_energy_applied"))
         );
     }
 
@@ -63,21 +85,6 @@ public class VectorReflection extends Skill {
         return super.getIterationTicks(skillLevel);
     }
 
-    public float getMaxAbsorptionRate(int level) {
-        if (level >= 3) return 0.08f;
-        return 0.05f;
-    }
-
-    public float getReflectionCostFactor(int level) {
-        if (level >= 2) return 2.5f;
-        return 3.0f;
-    }
-
-    public float getReflectionDamageFactor(int level) {
-        if (level >= 1) return 1.5f;
-        return 1f;
-    }
-
     @Override
     public void initClient() {
         var key = getKey();
@@ -85,9 +92,8 @@ public class VectorReflection extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0)
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT)
                 ), ctx -> Client.onToggle());
-        ClientSyncManager.register(SyncKeys.VECTOR_REFLECTION_ACTIVE.get(), Client::setActive);
     }
 
     @Override
@@ -100,24 +106,15 @@ public class VectorReflection extends Skill {
                 AbilityCategories.ACCELERATOR.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.VECTOR_REFLECTION.get(),
-                        List.of(VectorReduction.Client.SKILL_INFO),
+                        List.of(KineticEnergyApplied.Client.SKILL_INFO),
                         R.textures.ability.accelerator.skill.vector_reflection.icon,
                         210, 50
                 )
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
         public static Config CONFIG = new Config();
-        private static boolean active = false;
-
-        public static boolean isActive() {
-            return active;
-        }
-
-        public static void setActive(boolean active) {
-            Client.active = active;
-        }
-
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.VECTOR_REFLECTION.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
@@ -142,104 +139,363 @@ public class VectorReflection extends Skill {
     }
 
     public static final class Server {
+        private static final long REFLECTION_SOUND_COOLDOWN_TICKS = 10;
+        private static final Map<UUID, Long> LAST_SOUND_TICK = new HashMap<>();
+        private static final Map<UUID, Float> PROTECTED_HEALTH = new ConcurrentHashMap<>();
+        private static final ThreadLocal<Map<UUID, Integer>> LEGITIMATE_HEALTH_MUTATIONS =
+                ThreadLocal.withInitial(HashMap::new);
+
+        private Server() {
+        }
+
         @SubscribePacket
         public static void toggleReflection(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.VECTOR_REFLECTION.get().toggle(player);
+            var skill = Skills.VECTOR_REFLECTION.get();
+            skill.toggle(player);
+            if (skill.isEnabled(player)) maintainProtection(player);
+            else clearProtection(player);
+        }
+
+        public static boolean isActive(ServerPlayer player) {
+            return player != null
+                    && player.connection != null
+                    && !player.isSpectator()
+                    && Skills.VECTOR_REFLECTION.get().isEnabled(player)
+                    && (AbilitySystemServer.isDevMode()
+                    || AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID()) > 0.0f);
+        }
+
+        public static void purgeProtectedEffects(ServerPlayer player) {
+            for (var effect : new ArrayList<>(player.getActiveEffects())) {
+                if (ReflectionFilter.shouldReflectEffect(player, effect)) {
+                    player.removeEffect(effect.getEffect());
+                }
+            }
         }
 
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
-            if (player.isCreative() || player.isSpectator()) return false;
-
-            return !damageSource.is(DamageTypes.STARVE)
-                    && !damageSource.is(DamageTypes.DROWN)
-                    && !damageSource.is(DamageTypes.GENERIC_KILL);
+            if (!(player instanceof ServerPlayer serverPlayer) || player.isSpectator()) return false;
+            if (!isActive(serverPlayer)) return false;
+            if (damageSource instanceof SkillDamageSource skillSource
+                    && skillSource.getSkill() == Skills.VECTOR_REFLECTION.get()) return false;
+            return true;
         }
 
         public static Pair<Boolean, Float> hurtServer(Player player, ServerLevel level, DamageSource source, float originalDamage) {
-            if (player.invulnerableTime > 0) return Pair.of(false, 0f);
             if (!shouldReflection(player, source)) return Pair.of(false, originalDamage);
+            if (!(originalDamage > 0.0f) || !Float.isFinite(originalDamage)) return Pair.of(true, 0.0f);
+            var serverPlayer = (ServerPlayer) player;
             var skill = Skills.VECTOR_REFLECTION.get();
-
-            final var remainingDamage = new float[]{originalDamage};
-            var success = skill.executeActive((ServerPlayer) player,
-                    ctx -> {
-                        var limit = ctx.system().getPlayerMaxCP(player.getUUID()) * skill.getMaxAbsorptionRate(ctx.level());
-                        var target = Math.min(originalDamage, limit);
-                        return target * skill.getReflectionCostFactor(ctx.level());
-                    },
-                    (ctx, actualCost) -> {
-                        var factor = skill.getReflectionCostFactor(ctx.level());
-                        var targetDamage = actualCost / factor;
-                        var canFullyAfford = ctx.availableCP() >= actualCost - 1E-3f;
-
-                        if (canFullyAfford) {
-                            player.invulnerableTime = 20;
-                            remainingDamage[0] = Math.max(0, originalDamage - targetDamage);
-                        } else {
-                            var absorbed = ctx.availableCP() / factor;
-                            remainingDamage[0] = originalDamage - absorbed;
-                        }
-                        applyReflection(player, level, source, targetDamage);
-                    }
+            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(serverPlayer);
+            var result = calculateReflection(
+                    originalDamage,
+                    system.getPlayerAvailableCP(player.getUUID()),
+                    system.getPlayerCalculationIntensity(player.getUUID()),
+                    org.academy.api.server.ability.AbilitySystemServer.isDevMode()
             );
-            return Pair.of(success && remainingDamage[0] <= 1E-3f, remainingDamage[0]);
+            var reflectedDamage = result.reflectedDamage();
+            var executed = reflectedDamage <= 0.0f;
+            if (reflectedDamage > 0.0f) {
+                executed = skill.executeActive(serverPlayer, _ -> result.baseCpCost(),
+                        (_, _) -> {
+                            playReflectionSound(serverPlayer);
+                            applyReflection(serverPlayer, level, source, reflectedDamage);
+                        });
+            }
+            player.invulnerableTime = 0;
+            maintainProtection(serverPlayer);
+            return Pair.of(true, executed ? result.remainingDamage() : originalDamage);
         }
 
-        private static void applyReflection(Player player, ServerLevel level, DamageSource source, float reflectedDamage) {
-            var causingEntity = source.getEntity();
-            var directEntity = source.getDirectEntity();
+        static float calculateReflectedDamage(float damage, float availableCP,
+                                              float calculationIntensity, boolean devMode) {
+            return calculateReflection(damage, availableCP, calculationIntensity, devMode).reflectedDamage();
+        }
 
-            var hasCausingEntity = causingEntity != null;
-            var hasDirectEntity = directEntity != null;
-
-            if ((!hasCausingEntity && !hasDirectEntity) || directEntity == player || causingEntity == player) return;
-
-            player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(), SoundSource.PLAYERS, 1, 1);
-
-            var sourceEntity = hasDirectEntity ? directEntity : causingEntity;
-
-            var sourcePos = sourceEntity.getBoundingBox().getCenter();
-
-            var width = player.getBbWidth();
-
-            var direction = player.getBoundingBox().getCenter().subtract(sourcePos).normalize();
-            var pos = MathUtil.intersectRayCapsule(sourcePos, direction, player.getBoundingBox().getCenter(), width, player.getBbHeight());
-
-            var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
-            glowCircle.setPos(pos);
-
-            var radius = width / 2.0;
-            var halfEffectiveHeight = player.getBbHeight() / 2.0 - radius;
-            var center = player.getBoundingBox().getCenter();
-            var topCenterY = center.y + halfEffectiveHeight;
-            var bottomCenterY = center.y - halfEffectiveHeight;
-
-            Vec3 normal;
-
-            if (halfEffectiveHeight > 0) {
-                if (pos.y >= topCenterY) {
-                    normal = pos.subtract(center.x, topCenterY, center.z);
-                } else if (pos.y <= bottomCenterY) {
-                    normal = pos.subtract(center.x, bottomCenterY, center.z);
-                } else {
-                    normal = new Vec3(pos.x - center.x, 0, pos.z - center.z);
-                }
-            } else {
-                normal = pos.subtract(center);
+        static ReflectionResult calculateReflection(float damage, float availableCP,
+                                                    float calculationIntensity, boolean devMode) {
+            if (!(damage > 0.0f) || !Float.isFinite(damage)) {
+                return new ReflectionResult(0.0f, 0.0f, 0.0f);
+            }
+            if (devMode) return new ReflectionResult(damage, 0.0f, 0.0f);
+            if (!(availableCP > 0.0f) || !Float.isFinite(availableCP)
+                    || !(calculationIntensity > 0.0f) || !Float.isFinite(calculationIntensity)) {
+                return new ReflectionResult(0.0f, damage, 0.0f);
             }
 
-            normal = normal.normalize();
+            var requiredPower = damage * calculationIntensity;
+            if (Float.isFinite(requiredPower) && availableCP >= requiredPower) {
+                return new ReflectionResult(damage, 0.0f, damage);
+            }
 
-            var yaw = (float) (Math.toDegrees(Math.atan2(normal.z, normal.x))) - 90.0F;
-            var pitch = (float) (-Math.toDegrees(Math.asin(normal.y)));
+            var reflectedDamage = Math.min(damage, availableCP / 10.0f);
+            var remainingDamage = Math.max(0.0f, damage - reflectedDamage);
+            var baseCpCost = availableCP / calculationIntensity;
+            return new ReflectionResult(reflectedDamage, remainingDamage, baseCpCost);
+        }
 
+        public static Vec3 reflectedVelocity(Vec3 incoming) {
+            if (incoming == null || incoming.lengthSqr() < 1.0E-8 || !Double.isFinite(incoming.lengthSqr())) {
+                return Vec3.ZERO;
+            }
+            return incoming.scale(-1.2);
+        }
+
+        public static boolean shouldReflectProjectileFor(ServerPlayer player, Projectile projectile) {
+            if (!isActive(player) || projectile == null || projectile.isRemoved()) return false;
+            if (projectile.getData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get())) return false;
+            var owner = projectile.getOwner();
+            if (owner == player || owner != null && owner.getUUID().equals(player.getUUID())) return false;
+            var velocity = projectile.getDeltaMovement();
+            if (!isFiniteVector(velocity) || velocity.lengthSqr() < 1.0E-8) return false;
+            var toPlayer = player.getBoundingBox().getCenter().subtract(projectile.position());
+            return toPlayer.lengthSqr() <= 1.0E-8 || velocity.dot(toPlayer) > 0.0;
+        }
+
+        public static boolean reflectProjectile(ServerPlayer player, Projectile projectile) {
+            return reflectProjectile(player, projectile, true);
+        }
+
+        private static boolean reflectProjectile(ServerPlayer player, Projectile projectile,
+                                                 boolean spawnEffect) {
+            if (!shouldReflectProjectileFor(player, projectile)) return false;
+            var velocity = projectile.getDeltaMovement();
+            var speed = velocity.length();
+            if (!Double.isFinite(speed)) return false;
+            speed = Math.max(speed, 1.5);
+            var reflected = velocity.normalize().scale(-speed * 1.2);
+            if (!isFiniteVector(reflected) || reflected.lengthSqr() < 1.0E-8) return false;
+
+            projectile.setData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get(), true);
+            projectile.setOwner(player);
+            projectile.setDeltaMovement(reflected);
+            var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
+            projectile.setPos(player.getBoundingBox().getCenter().add(reflected.normalize().scale(pushDistance)));
+            projectile.hurtMarked = true;
+            if (spawnEffect) {
+                spawnGlowCircle(player, projectile.getBoundingBox().getCenter()
+                        .subtract(player.getBoundingBox().getCenter()));
+            }
+            playReflectionSound(player);
+            return true;
+        }
+
+        private static boolean isFiniteVector(Vec3 vector) {
+            return vector != null
+                    && Double.isFinite(vector.x)
+                    && Double.isFinite(vector.y)
+                    && Double.isFinite(vector.z);
+        }
+
+        public static void maintainProtection(ServerPlayer player) {
+            if (!isActive(player)) return;
+            VectorReflectionRuntime.maintain(player);
+            var protectedHealth = protectedHealth(player, player.getHealth());
+            player.clearFire();
+            player.setTicksFrozen(0);
+            if (player.getAirSupply() < player.getMaxAirSupply()) {
+                player.setAirSupply(player.getMaxAirSupply());
+            }
+            if (Float.isFinite(protectedHealth) && protectedHealth > 0.0f
+                    && Float.compare(player.getHealth(), protectedHealth) != 0) {
+                beginLegitimateHealthMutation(player);
+                try {
+                    player.setHealth(protectedHealth);
+                } finally {
+                    endLegitimateHealthMutation(player, false);
+                }
+            }
+            purgeProtectedEffects(player);
+        }
+
+        public static float protectHealthWrite(ServerPlayer player, float requested) {
+            if (!isActive(player) || isLegitimateHealthMutation(player)) return requested;
+            return protectedHealth(player, player.getHealth());
+        }
+
+        public static float protectHealthRead(ServerPlayer player, float original) {
+            if (!isActive(player) || isLegitimateHealthMutation(player)) return original;
+            return protectedHealth(player, original);
+        }
+
+        public static boolean shouldForceAlive(ServerPlayer player) {
+            return isActive(player) && protectedHealth(player, player.getHealth()) > 0.0f
+                    && !isLegitimateHealthMutation(player);
+        }
+
+        public static void beginLegitimateHealthMutation(ServerPlayer player) {
+            if (player == null) return;
+            var depths = LEGITIMATE_HEALTH_MUTATIONS.get();
+            depths.merge(player.getUUID(), 1, Integer::sum);
+        }
+
+        public static void endLegitimateHealthMutation(ServerPlayer player, boolean captureHealth) {
+            if (player == null) return;
+            var uuid = player.getUUID();
+            var depths = LEGITIMATE_HEALTH_MUTATIONS.get();
+            var depth = depths.getOrDefault(uuid, 0);
+            if (captureHealth && depth > 0) {
+                var health = player.getHealth();
+                if (Float.isFinite(health)) PROTECTED_HEALTH.put(uuid, Math.max(0.0f, health));
+            }
+            if (depth <= 1) depths.remove(uuid);
+            else depths.put(uuid, depth - 1);
+            if (depths.isEmpty()) LEGITIMATE_HEALTH_MUTATIONS.remove();
+        }
+
+        public static boolean isLegitimateHealthMutation(ServerPlayer player) {
+            return player != null
+                    && LEGITIMATE_HEALTH_MUTATIONS.get().getOrDefault(player.getUUID(), 0) > 0;
+        }
+
+        public static void clearProtection(ServerPlayer player) {
+            if (player == null) return;
+            VectorReflectionRuntime.deactivate(player);
+            PROTECTED_HEALTH.remove(player.getUUID());
+            LAST_SOUND_TICK.remove(player.getUUID());
+        }
+
+        private static float protectedHealth(ServerPlayer player, float fallback) {
+            var safeFallback = Float.isFinite(fallback) ? Math.max(0.0f, fallback) : 0.0f;
+            return PROTECTED_HEALTH.computeIfAbsent(player.getUUID(), _ -> safeFallback);
+        }
+
+        private static void applyReflection(ServerPlayer player, ServerLevel level,
+                                            DamageSource source, float reflectedDamage) {
+            var causingEntity = source.getEntity();
+            var directEntity = source.getDirectEntity();
+            if ((causingEntity == null && directEntity == null)
+                    || directEntity == player || causingEntity == player) return;
+
+            playReflectionSound(player);
+            var sourceEntity = directEntity != null ? directEntity : causingEntity;
+            var playerCenter = player.getBoundingBox().getCenter();
+            var sourcePos = sourceEntity.getBoundingBox().getCenter();
+            var direction = sourcePos.subtract(playerCenter);
+            if (direction.lengthSqr() < 1.0E-6) direction = player.getLookAngle();
+            direction = direction.normalize();
+            var offset = Math.max(player.getBbWidth() * 0.95, 0.75);
+            var pos = directEntity instanceof Projectile && sourcePos.distanceToSqr(playerCenter) < 4.0
+                    ? sourcePos
+                    : playerCenter.add(direction.scale(offset));
+
+            spawnGlowCircle(player, direction, pos);
+
+            if (directEntity instanceof Projectile projectile
+                    && !projectile.getData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get())) {
+                reflectProjectile(player, projectile, false);
+            }
+
+            if (causingEntity instanceof LivingEntity attacker
+                    && attacker != player
+                    && attacker.isAlive()) {
+                CTADamageUtil.applyCompositeDamage(
+                        attacker,
+                        player,
+                        SkillDamageSource.of(player, Skills.VECTOR_REFLECTION.get()),
+                        reflectedDamage
+                );
+            }
+        }
+
+        private static void spawnGlowCircle(ServerPlayer player, Vec3 direction) {
+            var normalized = direction.lengthSqr() < 1.0E-6
+                    ? player.getLookAngle()
+                    : direction.normalize();
+            var offset = Math.max(player.getBbWidth() * 0.95, 0.75);
+            spawnGlowCircle(player, normalized,
+                    player.getBoundingBox().getCenter().add(normalized.scale(offset)));
+        }
+
+        private static void spawnGlowCircle(ServerPlayer player, Vec3 direction, Vec3 position) {
+            var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
+            glowCircle.setPos(position);
+            var yaw = (float) Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90.0f;
+            var pitch = (float) -Math.toDegrees(Math.asin(direction.y));
             glowCircle.setYRot(yaw);
             glowCircle.setXRot(pitch);
-
             player.level().addFreshEntity(glowCircle);
+        }
 
-            sourceEntity.hurtServer(level, source, reflectedDamage);
+        public static void playReflectionSound(ServerPlayer player) {
+            var tick = player.level().getGameTime();
+            var last = LAST_SOUND_TICK.get(player.getUUID());
+            if (last != null && tick - last < REFLECTION_SOUND_COOLDOWN_TICKS) return;
+            LAST_SOUND_TICK.put(player.getUUID(), tick);
+            player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(),
+                    SoundSource.PLAYERS, 1.0f, 1.0f);
+        }
+
+        record ReflectionResult(float reflectedDamage, float remainingDamage, float baseCpCost) {
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            if (!Server.isActive(player)) {
+                Server.clearProtection(player);
+                return;
+            }
+            Server.maintainProtection(player);
+        }
+
+        @SubscribeEvent
+        public static void onServerTick(ServerTickEvent.Post event) {
+            VectorReflectionRuntime.onServerTick();
+        }
+
+        @SubscribeEvent
+        public static void onKnockBack(LivingKnockBackEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player && Server.isActive(player)) {
+                event.setCanceled(true);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onExplosionKnockback(ExplosionKnockbackEvent event) {
+            if (event.getAffectedEntity() instanceof ServerPlayer player && Server.isActive(player)) {
+                event.setKnockbackVelocity(Vec3.ZERO);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onDrown(LivingDrownEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player) || !Server.isActive(player)) return;
+            player.setAirSupply(player.getMaxAirSupply());
+            event.setCanceled(true);
+        }
+
+        @SubscribeEvent
+        public static void onDeath(LivingDeathEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            if (!Server.isActive(player)) {
+                Server.clearProtection(player);
+                return;
+            }
+            if (Server.isLegitimateHealthMutation(player)) return;
+            if (!Server.shouldForceAlive(player)) {
+                Server.clearProtection(player);
+                return;
+            }
+            event.setCanceled(true);
+            VectorReflectionRuntime.requestObserverRebuild(player);
+            Server.maintainProtection(player);
+        }
+
+        @SubscribeEvent
+        public static void onEffectApplicable(MobEffectEvent.Applicable event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            if (!Skills.VECTOR_REFLECTION.get().isEnabled(player)) return;
+            if (ReflectionFilter.shouldReflectEffect(player, event.getEffectInstance())) {
+                event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
+            }
         }
     }
 

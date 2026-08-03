@@ -12,8 +12,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
 import org.academy.api.client.util.QuantumUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
@@ -35,6 +37,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.common.world.entity.skill.LightOrb;
@@ -52,14 +55,17 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 public class BallLightning extends Skill {
-    public static final String KEY_NAME_ACTIVATE = SkillNames.BALL_LIGHTNING + ".activate";
+    public static final String KEY_NAME_ACTIVATE = SkillNames.BALL_LIGHTNING + "_activate";
     public static final float MAX_RADIUS = 64.0F;
     public static final int MAX_DURATION_TICKS = 2000;
 
     public BallLightning() {
         super(Builder.of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL5)
+                .energyCost(100_000)
                 .cpCost(80)
                 .iterationTicks(60)
                 .maxStacks(1)
@@ -83,9 +89,22 @@ public class BallLightning extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.BALL_LIGHTNING.get(),
+                        List.of(CurrentSymbiosis.Client.SKILL_INFO),
+                        R.textures.ICON_ELECTROMASTER,
+                        184,
+                        72
+                )
+        );
         public static BallLightningConfig CONFIG = new BallLightningConfig();
 
         public static void handler() {
+            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            if (minecraft.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.BALL_LIGHTNING.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
         }
 
@@ -110,10 +129,22 @@ public class BallLightning extends Skill {
     }
 
     public static final class Server {
+        private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
+
+        public static float calculateImpactDamage(float currentHealth, float playerMultiplier) {
+            return (Math.max(0.0f, currentHealth) * 0.3f + 10.0f)
+                    * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribePacket
         public static void handle(ActivatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            AbilitySystemServer.registerContext(new Context(player));
+            if (ACTIVE.containsKey(player)) return;
+            Skills.BALL_LIGHTNING.get().executeActive(player, (_, _) -> {
+                var context = new Context(player);
+                ACTIVE.put(player, context);
+                AbilitySystemServer.registerContext(context);
+            });
         }
 
         public static class Context extends ServerContext {
@@ -144,6 +175,7 @@ public class BallLightning extends Skill {
 
             private BehaviorState currentState;
             private int stateTimer = 0;
+            private boolean ended;
 
             public Context(ServerPlayer player) {
                 super(player);
@@ -168,7 +200,9 @@ public class BallLightning extends Skill {
 
             @SubscribeEvent
             public void onTick(ServerTickEvent.Post event) {
-                if (player.hasDisconnected() || existedTicks++ >= MAX_DURATION_TICKS || visualEntity.isRemoved()) {
+                if (player.hasDisconnected() || !player.isAlive()
+                        || !Skills.BALL_LIGHTNING.get().isEnabled(player)
+                        || existedTicks++ >= MAX_DURATION_TICKS || visualEntity.isRemoved()) {
                     end();
                     return;
                 }
@@ -332,9 +366,11 @@ public class BallLightning extends Skill {
                     var level = level();
                     var entities = MathUtil.getEntitiesInSphereByHP(level, position, 5.0, e -> e != player);
                     var damageSource = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
+                    var multiplier = AbilitySystemServer.getSystem(player)
+                            .getPlayerDamageMultiplier(player.getUUID());
                     for (var entity : entities) {
-                        entity.setHealth(entity.getHealth() * 0.7f);
-                        entity.hurtServer(level, damageSource, 10f);
+                        entity.hurtServer(level, damageSource,
+                                calculateImpactDamage(entity.getHealth(), multiplier));
                         QuantumUtil.enableQuantum(entity, 0.5f, 0x3366FF);
                     }
                     end();
@@ -342,6 +378,9 @@ public class BallLightning extends Skill {
             }
 
             private void end() {
+                if (ended) return;
+                ended = true;
+                ACTIVE.remove(player, this);
                 unregister();
                 visualEntity.discard();
                 coreOrb.setLifeTime(10);

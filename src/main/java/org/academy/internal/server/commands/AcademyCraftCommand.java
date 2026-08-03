@@ -22,6 +22,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.academy.AcademyCraftServer;
+import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
@@ -64,6 +65,8 @@ public final class AcademyCraftCommand {
                 )
                 .then(Commands.literal("debug")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.literal("god")
+                                .executes(AcademyCraftCommand::toggleSkillDebugMode))
                         .then(CPDebugCommands.register())
                 )
                 .then(Commands.literal("dev")
@@ -102,6 +105,18 @@ public final class AcademyCraftCommand {
         return 1;
     }
 
+    private static int toggleSkillDebugMode(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        var player = context.getSource().getPlayerOrException();
+        var enabled = CommandUtils.getSystem(context).togglePlayerSkillDebugMode(player.getUUID());
+        context.getSource().sendSuccess(
+                () -> Component.literal("§e[AC Debug]§r Skill god mode: "
+                        + (enabled ? "§aON" : "§cOFF")),
+                false
+        );
+        return 1;
+    }
+
     private static int learnAllSkills(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var value = 1;
 
@@ -113,12 +128,13 @@ public final class AcademyCraftCommand {
         var categoryKey = Registries.ABILITY_CATEGORIES.getKey(currentCategory);
         var categoryName = categoryKey != null ? categoryKey.toString() : "Unknown";
 
-        if (currentCategory.getSkills().isEmpty()) {
+        var availableSkills = LearningHelper.getAvailableSkillsForCategory(currentCategory);
+        if (availableSkills.isEmpty()) {
             context.getSource().sendSuccess(() -> Component.literal("Current ability category " + categoryName + " has no skills to learn."), false);
             return value;
         }
 
-        for (var skill : currentCategory.getSkills()) {
+        for (var skill : availableSkills) {
             abilitySystemServer.addPlayerSkill(player, skill.getKeyString());
         }
 
@@ -159,7 +175,7 @@ public final class AcademyCraftCommand {
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
 
         var playerCategory = abilitySystemServer.getPlayerAbilityCategory(playerUuid);
-        if (skillToLearn.get().value().getCategory() != playerCategory) {
+        if (!LearningHelper.isSkillAvailableForCategory(playerCategory, skillToLearn.get().value())) {
             var playerCategoryKey = Registries.ABILITY_CATEGORIES.getKey(playerCategory);
             var playerCategoryName = playerCategoryKey != null ? playerCategoryKey.toString() : "None";
             context.getSource().sendFailure(Component.literal("Skill '" + skillIdentifier + "' does not belong to your current ability category (" + playerCategoryName + ")."));
@@ -219,7 +235,7 @@ public final class AcademyCraftCommand {
             var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
 
             return SharedSuggestionProvider.suggest(
-                    currentCategory.getSkills().stream()
+                    LearningHelper.getAvailableSkillsForCategory(currentCategory).stream()
                             .map(skill -> skill.getKey().toString())
                             .filter(skillName -> !learnedSkills.containsKey(skillName)),
                     builder

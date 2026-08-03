@@ -6,12 +6,14 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityTeleportEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
@@ -22,6 +24,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -39,7 +42,9 @@ public class SpatialSynergy extends Skill {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL2)
+                .energyCost(10_000)
                 .passive()
+                .initiallyDisabled()
                 .maintenanceCost(20)
                 .maxSkillLevel(0)
                 .dependsOn(Skills.SELF_TELEPORT)
@@ -67,6 +72,7 @@ public class SpatialSynergy extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.SPATIAL_SYNERGY.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
@@ -101,6 +107,22 @@ public class SpatialSynergy extends Skill {
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
         @SubscribeEvent
+        public static void onPlayerTick(net.neoforged.neoforge.event.tick.PlayerTickEvent.Post event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            var skill = Skills.SPATIAL_SYNERGY.get();
+            if (!skill.isEnabled(player)) return;
+            var system = AbilitySystemServer.getSystem(player);
+            if (!player.isAlive() || player.hasDisconnected()
+                    || !system.ensurePermanentOccupation(
+                    player.getUUID(),
+                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill
+            )) {
+                if (skill.isEnabled(player)) skill.toggle(player);
+            }
+        }
+
+        @SubscribeEvent
         public static void onEntityTeleport(EntityTeleportEvent event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var skill = Skills.SPATIAL_SYNERGY.get();
@@ -125,7 +147,7 @@ public class SpatialSynergy extends Skill {
                     system.setPlayerAvailableCP(player.getUUID(), availableCP - extraCost);
                     var dimensions = nearby.getDimensions(Pose.STANDING);
                     var teleportY = targetPos.y() - (dimensions.height() / 2.0);
-                    nearby.teleportTo(targetPos.x(), teleportY, targetPos.z());
+                    TeleportSync.teleportInstantly(nearby, new Vec3(targetPos.x(), teleportY, targetPos.z()));
                     nearby.resetFallDistance();
                 }
             }

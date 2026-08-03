@@ -1,5 +1,10 @@
 package org.academy.api.common.ability;
 
+import org.academy.api.common.registries.Registries;
+
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Judging utilities about ability development costs.
  * Mirrors the legacy {@code LearningHelper.getEstimatedConsumption},
@@ -27,5 +32,28 @@ public final class LearningHelper {
      */
     public static int getEstimatedSkillConsumption(Skill skill) {
         return skill.getEnergyCostToLearn();
+    }
+
+    public static boolean isSkillAvailableForCategory(AbilityCategory category, Skill skill) {
+        if (category == null || skill == null) return false;
+        return switch (skill.getScope()) {
+            case CATEGORY -> skill.getCategory() == category;
+            case COMMON -> category.supportsCommonSkills();
+        };
+    }
+
+    /**
+     * Returns the complete server-authoritative skill set exposed by a category.
+     */
+    public static List<Skill> getAvailableSkillsForCategory(AbilityCategory category) {
+        if (category == null) return List.of();
+
+        var result = new ArrayList<Skill>();
+        for (var skill : Registries.SKILLS) {
+            if (isSkillAvailableForCategory(category, skill)) {
+                result.add(skill);
+            }
+        }
+        return List.copyOf(result);
     }
 }

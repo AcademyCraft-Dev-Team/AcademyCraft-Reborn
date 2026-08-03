@@ -21,6 +21,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
+import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
@@ -47,12 +48,17 @@ import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
+import org.academy.internal.client.particle.VectorBlastParticle;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
+import org.academy.internal.client.renderer.effect.WingEffectRenderer;
+import org.academy.internal.client.renderer.effect.DarkmatterSixWingsEffectRenderer;
+import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
 
@@ -87,6 +93,7 @@ public final class AcademyCraftClient {
 
         if (IrisCompat.hasIris()) {
             IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_QUADS, ShaderKey.BASIC_COLOR);
+            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE, ShaderKey.BASIC_COLOR);
             IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_TRANGLES, ShaderKey.BASIC_COLOR);
             IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR, ShaderKey.TEXTURED_COLOR);
         }
@@ -205,13 +212,34 @@ public final class AcademyCraftClient {
         event.registerAvatarEntityModifier(new AvatarRenderStateModifier() {
             @Override
             public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState) {
+                renderState.setRenderData(WingEffectRenderer.ENTITY_ID_CONTEXT, avatar.getId());
                 renderState.setRenderData(
                         StormWingEffectRenderer.CONTEXT_KEY,
                         avatar.getData(AttachmentTypes.ACTIVATED_STORM_WING)
                 );
                 renderState.setRenderData(
+                        WingEffectRenderer.BLACK_CONTEXT,
+                        avatar.getData(AttachmentTypes.ACTIVATED_BLACK_WING)
+                );
+                renderState.setRenderData(
+                        WingEffectRenderer.WHITE_CONTEXT,
+                        avatar.getData(AttachmentTypes.ACTIVATED_WHITE_WING)
+                );
+                renderState.setRenderData(
+                        WingEffectRenderer.PLATINUM_CONTEXT,
+                        avatar.getData(AttachmentTypes.ACTIVATED_PLATINUM_WING)
+                );
+                renderState.setRenderData(
+                        DarkmatterSixWingsEffectRenderer.CONTEXT_KEY,
+                        avatar.getData(AttachmentTypes.DARKMATTER_SIX_WINGS)
+                );
+                renderState.setRenderData(
                         RailgunEffectRenderer.CONTEXT_KEY,
                         avatar.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA)
+                );
+                renderState.setRenderData(
+                        LightShieldEffectRenderer.CONTEXT_KEY,
+                        avatar.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE)
                 );
             }
         });
@@ -228,6 +256,11 @@ public final class AcademyCraftClient {
                         QuantumInterferenceLayer.CONTEXT_KEY,
                         livingEntity.getExistingDataOrNull(AttachmentTypes.QUANTUM_DATA.get())
                 );
+    }
+
+    @SubscribeEvent
+    public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
+        event.registerSpriteSet(ParticleTypes.VECTOR_BLAST.get(), VectorBlastParticle.Provider::new);
     }
 
     @SubscribeEvent

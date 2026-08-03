@@ -23,6 +23,29 @@ val modId = project.property("mod_id").toString()
 val renderDocVersion = libs.versions.renderdoc.get()
 val renderNurseVersion = libs.versions.rendernurse.get()
 val renderNurseJar = layout.buildDirectory.file("renderdoc/render-nurse/render-nurse.jar")
+val academyAgentBuildJar = layout.projectDirectory.file("academy-agent/build/libs/academy-agent.jar")
+val academyAgentJar = layout.projectDirectory.file("libs/academy-agent.jar")
+
+val updateAcademyAgentJar = tasks.register<Copy>("updateAcademyAgentJar") {
+    description = "Rebuilds the Git-tracked embedded Academy javaagent"
+    group = "academy"
+    dependsOn(":academy-agent:jar")
+    from(academyAgentBuildJar)
+    into(layout.projectDirectory.dir("libs"))
+    rename { "academy-agent.jar" }
+}
+
+val verifyAcademyAgentJar = tasks.register("verifyAcademyAgentJar") {
+    description = "Checks that the Git-tracked embedded Academy javaagent exists"
+    group = "verification"
+    mustRunAfter(updateAcademyAgentJar)
+    inputs.file(academyAgentJar)
+    doLast {
+        require(academyAgentJar.asFile.isFile) {
+            "Missing libs/academy-agent.jar; run ./gradlew updateAcademyAgentJar"
+        }
+    }
+}
 
 val renderDocDownloadDir = layout.buildDirectory.dir("renderdoc/download")
 val renderDocInstallDir = layout.buildDirectory.dir("renderdoc/installation").get().asFile
@@ -49,7 +72,7 @@ java {
     withJavadocJar()
 }
 
-val generateModMetadata = tasks.register<Copy>("generateModMetadata") {
+val generateModMetadata = tasks.register<Sync>("generateModMetadata") {
     description = "generateModMetadata"
     dependsOn(generateModsToml)
     from(generateModsToml.map { it.outputs.files.singleFile }) { into("META-INF") }
@@ -140,6 +163,11 @@ sourceSets.named("main") {
         srcDir(generateModMetadata)
         exclude(".cache/**")
     }
+}
+
+sourceSets.named("test") {
+    compileClasspath += sourceSets.named("main").get().compileClasspath
+    runtimeClasspath += sourceSets.named("main").get().compileClasspath
 }
 
 repositories {
@@ -252,8 +280,16 @@ neoForge {
             // due to shit iris
             systemProperty("neoforge.disableGlValidation", "true")
 
-            jvmArgument("-XX:+AllowEnhancedClassRedefinition")
+            val vmVendor = System.getProperty("java.vm.vendor", "")
+            val runtimeName = System.getProperty("java.runtime.name", "")
+            if (vmVendor.contains("JetBrains", ignoreCase = true)
+                || runtimeName.contains("JetBrains", ignoreCase = true)
+            ) {
+                jvmArgument("-XX:+AllowEnhancedClassRedefinition")
+            }
             jvmArgument("-Xverify:none")
+            jvmArgument("-javaagent:${academyAgentJar.asFile.absolutePath}")
+            systemProperty("academy.agent.vr.enabled", "true")
         }
     }
 
@@ -304,6 +340,10 @@ dependencies {
     apiAndJarJar(libs.jmsdfgen.ext)
 
     annotationProcessor(libs.auto)
+
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     implAndJarJar(libs.jflac)
     implAndJarJar(libs.jlayer)
@@ -384,4 +424,26 @@ tasks.register("setupRenderDoc") {
 
 tasks.withType<JavaCompile>().configureEach {
     options.isFork = true
+}
+
+tasks.withType<Jar>().configureEach {
+    if (name == "jar" || name == "noJarJarJar") {
+        dependsOn(verifyAcademyAgentJar)
+        from(zipTree(academyAgentJar)) {
+            exclude("META-INF/MANIFEST.MF")
+        }
+        manifest {
+            attributes(
+                "Premain-Class" to "org.academy.agent.AcademyAgent",
+                "Agent-Class" to "org.academy.agent.AcademyAgent",
+                "Can-Redefine-Classes" to "true",
+                "Can-Retransform-Classes" to "true"
+            )
+        }
+    }
+}
+
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }

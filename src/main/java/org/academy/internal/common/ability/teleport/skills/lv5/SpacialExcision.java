@@ -2,13 +2,21 @@ package org.academy.internal.common.ability.teleport.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.block.GameMasterBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -17,6 +25,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -35,11 +44,15 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 public class SpacialExcision extends Skill {
     public SpacialExcision() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL5)
+                .energyCost(100_000)
                 .cpCost(0)
                 .iterationTicks(60)
                 .maxStacks(1)
@@ -106,15 +119,22 @@ public class SpacialExcision extends Skill {
     }
 
     public static final class Server {
+        private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
+
         @SubscribePacket
         public static void handle(ActivatePacket p) {
             var player = p.getPacketListener().getPlayer();
+            if (ACTIVE.containsKey(player)) return;
             Skills.SPACIAL_EXCISION.get().executeActive(player,
                     ctx -> {
                         var maxCP = AbilitySystemServer.getSystem(player).getPlayerMaxCP(player.getUUID());
                         return maxCP;
                     },
-                    (ctx, actualCost) -> AbilitySystemServer.registerContext(new Context(player)));
+                    (ctx, actualCost) -> {
+                        var context = new Context(player);
+                        ACTIVE.put(player, context);
+                        AbilitySystemServer.registerContext(context);
+                    });
         }
     }
 
@@ -123,7 +143,7 @@ public class SpacialExcision extends Skill {
         private static final int CHARGE_TICKS = 40;
         private static final float BASE_RADIUS = 2.0f;
         private static final float RADIUS_GROWTH = 0.05f;
-        private static final float DAMAGE = 20.0f;
+        public static final float DAMAGE = 20.0f;
         private static final int EFFECT_INTERVAL = 10;
 
         private int ticks;
@@ -152,6 +172,9 @@ public class SpacialExcision extends Skill {
             if (ticks % EFFECT_INTERVAL == 0 && level() instanceof ServerLevel sl) {
                 var center = player.position();
                 var radius = BASE_RADIUS + ticks * RADIUS_GROWTH;
+                var damage = DAMAGE * AbilitySystemServer.getSystem(player)
+                        .getPlayerDamageMultiplier(player.getUUID());
+                var source = SkillDamageSource.of(player, Skills.SPACIAL_EXCISION.get());
 
                 var targets = sl.getEntitiesOfClass(LivingEntity.class,
                         new net.minecraft.world.phys.AABB(
@@ -161,8 +184,14 @@ public class SpacialExcision extends Skill {
                                 && target.position().distanceToSqr(center) <= radius * radius);
 
                 for (var t : targets) {
-                    t.hurtServer(sl, sl.damageSources().magic(), DAMAGE);
+                    t.hurtServer(sl, source, damage);
                 }
+
+                sl.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                        center.x, center.y + 1.0, center.z, 80,
+                        radius * 0.5, radius * 0.5, radius * 0.5, 0.12);
+                sl.playSound(null, player.blockPosition(), SoundEvents.PORTAL_TRIGGER,
+                        SoundSource.PLAYERS, 0.6f, 0.65f + ticks / (float) MAX_TICKS * 0.5f);
 
                 var intRadius = (int) Math.ceil(radius);
                 var centerBlock = player.blockPosition();
@@ -172,8 +201,10 @@ public class SpacialExcision extends Skill {
                         for (var dz = -intRadius; dz <= intRadius; dz++) {
                             if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
                             var pos = centerBlock.offset(dx, dy, dz);
+                            if (!sl.hasChunkAt(pos)) continue;
                             var state = sl.getBlockState(pos);
-                            if (!state.isAir() && state.getDestroySpeed(sl, pos) >= 0) {
+                            if (!state.isAir() && state.getDestroySpeed(sl, pos) >= 0
+                                    && canBreak(sl, player, pos, state)) {
                                 sl.removeBlock(pos, false);
                             }
                         }
@@ -188,14 +219,23 @@ public class SpacialExcision extends Skill {
             if (ev.getEntity() != player) return;
             if (ticks < CHARGE_TICKS) {
                 chargeCancelled = true;
-                ev.setCanceled(true);
-                ev.setAmount(0);
             }
+        }
+
+        private static boolean canBreak(ServerLevel level, ServerPlayer player,
+                                        BlockPos pos, BlockState state) {
+            var restricted = player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
+                    || state.getBlock() instanceof GameMasterBlock && !player.canUseGameMasterBlocks();
+            var event = new BreakBlockEvent(level, pos.immutable(), state, player);
+            event.setCanceled(restricted);
+            NeoForge.EVENT_BUS.post(event);
+            return !event.isCanceled();
         }
 
         private void end() {
             if (ended) return;
             ended = true;
+            Server.ACTIVE.remove(player, this);
             unregister();
         }
     }
