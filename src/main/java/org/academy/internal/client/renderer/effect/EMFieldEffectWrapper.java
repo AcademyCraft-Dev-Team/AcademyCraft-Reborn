@@ -6,6 +6,9 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.render.effect.EMFieldRenderer;
 import org.academy.api.client.renderer.EffectRenderer;
 
@@ -24,6 +27,7 @@ public final class EMFieldEffectWrapper implements EffectRenderer {
     private final Map<EMFieldRenderer, Float> fieldLifetimes = new IdentityHashMap<>();
 
     private EMFieldEffectWrapper() {
+        NeoForge.EVENT_BUS.register(this);
     }
 
     public EMFieldRenderer createField() {
@@ -96,29 +100,33 @@ public final class EMFieldEffectWrapper implements EffectRenderer {
         }
     }
 
+    @SubscribeEvent
+    public void onClientTick(ClientTickEvent.Post event) {
+        for (var it = activeFields.iterator(); it.hasNext(); ) {
+            var field = it.next();
+            field.update(1.0f);
+
+            var remaining = fieldLifetimes.getOrDefault(field, 0f) - 1.0f;
+            if (remaining <= 0) {
+                field.clearFieldLines();
+                fieldLifetimes.remove(field);
+                it.remove();
+            } else {
+                fieldLifetimes.put(field, remaining);
+            }
+        }
+    }
+
     @Override
     public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector,
                        int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
         if (activeFields.isEmpty()) return;
 
-        var deltaTime = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks();
         var camera = Minecraft.getInstance().gameRenderer.mainCamera();
 
-        for (var it = activeFields.iterator(); it.hasNext(); ) {
-            var field = it.next();
-            field.update(deltaTime);
-
-            var remaining = fieldLifetimes.getOrDefault(field, 0f) - deltaTime;
-            if (remaining <= 0) {
-                field.clearFieldLines();
-                fieldLifetimes.remove(field);
-                it.remove();
-                continue;
-            }
-            fieldLifetimes.put(field, remaining);
-
+        for (var field : activeFields) {
             submitNodeCollector.submitCustomGeometry(poseStack, POS_COLOR_QUADS_BLOOM,
-                    (pose, vc) -> field.render(poseStack, camera, deltaTime));
+                    (pose, vc) -> field.render(poseStack, camera, 0.0f));
         }
     }
 

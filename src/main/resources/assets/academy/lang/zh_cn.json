@@ -47,6 +47,8 @@
   "app.academy.settings.keycap.mouse.middle": "中键",
   "app.academy.settings.keybind.reset": "重置",
   "app.academy.settings.keybind.empty": "当前没有可配置的按键。",
+  "app.academy.settings.keybind.group.terminal": "数据终端",
+  "app.academy.settings.keybind.group.ability_hud": "能力 HUD",
   "key.academy.activate_ability_hud": "切换能力HUD",
   "key.academy.terminal_hud_config_toggle": "切换数据终端",
   "key.academy.academy_ability_hud_wheel_up": "技能HUD：上",

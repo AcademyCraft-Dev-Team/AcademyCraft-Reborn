@@ -13,6 +13,7 @@ import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
+import org.academy.AcademyCraftClient
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.ability.AbilitySystemClient.SkillInfo
 import org.academy.api.client.gui.animation.Animator
@@ -632,13 +633,21 @@ class AbilityInfoHud private constructor() {
         fun initMain() {
             INSTANCE = AbilityInfoHud()
             NeoForge.EVENT_BUS.register(INSTANCE)
+            val config = AcademyCraftClient.Config.INSTANCE
+                .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_UP,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_UP, InputConstants.PRESS)
+                config.getKeyBinding(
+                    KEY_NAME_WHEEL_UP,
+                    InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_UP, InputConstants.PRESS)
+                )
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(-1) }
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_DOWN,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_DOWN, InputConstants.PRESS)
+                config.getKeyBinding(
+                    KEY_NAME_WHEEL_DOWN,
+                    InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_DOWN, InputConstants.PRESS)
+                )
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(1) }
         }
     }

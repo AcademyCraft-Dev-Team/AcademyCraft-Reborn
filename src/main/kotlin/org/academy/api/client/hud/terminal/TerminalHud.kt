@@ -335,6 +335,18 @@ class TerminalHud private constructor() {
     @SubscribeEvent
     fun onMouseButton(event: MouseButtonEvent) {
         if (isActive && Minecraft.getInstance().gui.screen() == null) {
+            if (InputSystem.matchesKeyBinding(
+                    KEY_NAME_TOGGLE,
+                    InputSystem.InputType.MOUSE,
+                    event.button,
+                    event.action,
+                    event.modifiers
+                )
+            ) {
+                toggleActive()
+                event.setCanceled(true)
+                return
+            }
             InputSystem.currentMouseButton = event.button
             InputSystem.currentMouseAction = event.action
             InputSystem.currentMouseModifier = event.modifiers
@@ -362,16 +374,25 @@ class TerminalHud private constructor() {
 
     @SubscribeEvent
     fun onKey(event: KeyInputEvent) {
-        if (isActive
-            && ClientUtil.hasNoScreen()
-            && !ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)
+        if (!isActive || !ClientUtil.hasNoScreen()) return
+        if (InputSystem.matchesKeyBinding(
+                KEY_NAME_TOGGLE,
+                InputSystem.InputType.KEYBOARD,
+                event.key,
+                event.action,
+                event.modifiers
+            )
         ) {
+            toggleActive()
+            event.setCanceled(true)
+            return
+        }
+        if (!ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)) {
             val keyEvent = KeyEvent(
                 if (event.action == InputConstants.RELEASE) EventType.KEY_RELEASED else EventType.KEY_PRESSED,
                 event.key, event.scanCode, event.modifiers
             )
             context.get().dispatchEvent(keyEvent)
-            if (event.action == InputConstants.RELEASE && !keyEvent.isConsumed) toggleActive()
             event.setCanceled(true)
         }
     }

@@ -73,8 +73,8 @@ public final class AcademyCraftClient {
     private static boolean renderInitialized = false;
 
     public static void initMain() {
-        TerminalHud.Companion.addApp(MusicApp.INSTANCE);
         TerminalHud.Companion.addApp(SettingsApp.INSTANCE);
+        TerminalHud.Companion.addApp(MusicApp.INSTANCE);
 
         MusicPlayerBackend.Companion.init();
         Screens.register();

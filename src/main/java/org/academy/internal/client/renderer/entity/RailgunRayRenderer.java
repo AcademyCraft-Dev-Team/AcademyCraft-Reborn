@@ -12,6 +12,7 @@ import org.academy.internal.client.renderer.entity.state.RailgunRayRenderState;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.joml.Matrix4f;
 
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_ADDITIVE;
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM_ADDITIVE;
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE;
 
@@ -41,29 +42,43 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
         );
 
         poseStack.pushPose();
-        poseStack.scale(0.54f, 1.002f, 0.54f);
+        poseStack.scale(0.62f, 1.002f, 0.62f);
+        nodeCollector.submitCustomGeometry(
+                poseStack,
+                POS_COLOR_QUADS_ADDITIVE,
+                (pose, consumer) -> CylinderRenderer.renderCylinder(
+                        pose.pose(), consumer, BUFFERED_VERTEX, 1.0f, 0.72f, 0.18f, 0.92f
+                )
+        );
         nodeCollector.submitCustomGeometry(
                 poseStack,
                 POS_COLOR_QUADS_BLOOM_ADDITIVE,
                 (pose, consumer) -> CylinderRenderer.renderCylinder(
-                        pose.pose(), consumer, BUFFERED_VERTEX, 1.0f, 0.72f, 0.18f, 0.72f
+                        pose.pose(), consumer, BUFFERED_VERTEX, 1.0f, 0.72f, 0.18f, 0.55f
                 )
         );
         poseStack.popPose();
 
         poseStack.pushPose();
-        poseStack.scale(0.31f, 1.004f, 0.31f);
+        poseStack.scale(0.32f, 1.004f, 0.32f);
         nodeCollector.submitCustomGeometry(
                 poseStack,
-                POS_COLOR_QUADS_BLOOM_ADDITIVE,
+                POS_COLOR_QUADS_ADDITIVE,
                 (pose, consumer) -> CylinderRenderer.renderCylinder(
                         pose.pose(), consumer, BUFFERED_VERTEX, 1.0f, 1.0f, 1.0f, 1.0f
                 )
         );
+        nodeCollector.submitCustomGeometry(
+                poseStack,
+                POS_COLOR_QUADS_BLOOM_ADDITIVE,
+                (pose, consumer) -> CylinderRenderer.renderCylinder(
+                        pose.pose(), consumer, BUFFERED_VERTEX, 1.0f, 1.0f, 1.0f, 0.8f
+                )
+        );
         poseStack.popPose();
 
         poseStack.pushPose();
-        poseStack.scale(0.20f, 1.006f, 0.20f);
+        poseStack.scale(0.18f, 1.006f, 0.18f);
         nodeCollector.submitCustomGeometry(
                 poseStack,
                 POS_COLOR_QUADS_NO_DEPTH_WRITE,
