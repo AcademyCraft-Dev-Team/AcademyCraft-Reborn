@@ -87,6 +87,7 @@ object SettingsApp : App {
             val title: String,
             val icon: Identifier,
             val config: KeyBindingConfig,
+            val hiddenBindings: Set<String> = emptySet(),
             val persist: (KeyBindingConfig) -> Unit
         )
 
@@ -233,7 +234,41 @@ object SettingsApp : App {
             }
         }
 
-        private fun createKeybindPage(): ScrollPanelWidget {
+        private fun createKeybindPage(): LinearLayoutWidget {
+            val page = LinearLayoutWidget()
+            page.orientation = Orientation.VERTICAL
+            page.spacing = 1f
+            page.layoutParams = WidgetContainer.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+
+            val columnHeader = LinearLayoutWidget()
+            columnHeader.orientation = Orientation.HORIZONTAL
+            columnHeader.spacing = 2f
+            columnHeader.layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+            columnHeader.addChild("spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(0f)
+            })
+            columnHeader.addChild("key_spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams().size(44f, 0f)
+            })
+            columnHeader.addChild("toggle_title", LabelWidget(
+                Language.getInstance().getOrDefault("app.academy.settings.keybind.toggle")
+            ).apply {
+                scale = 0.65f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .width(22f)
+                    .height(10f)
+                    .gravity(Gravity.CENTER)
+            })
+            columnHeader.addChild("rebind_spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
+            })
+            page.addChild("column_header", columnHeader)
+
             val panel = ScrollPanelWidget()
             panel.layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
@@ -246,7 +281,7 @@ object SettingsApp : App {
                 .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
             for (section in createGeneralSections()) {
-                if (section.config.keyBindings.isEmpty()) continue
+                if (section.config.keyBindings.keys.all(section.hiddenBindings::contains)) continue
                 list.addChild(section.id, createBindingSection(section))
             }
 
@@ -265,7 +300,8 @@ object SettingsApp : App {
                 list.addChild(section.id, createBindingSection(section))
             }
             panel.setContent(list)
-            return panel
+            page.addChild("bindings", panel)
+            return page
         }
 
         private fun createGeneralSections(): List<BindingSection> {
@@ -281,7 +317,7 @@ object SettingsApp : App {
                     terminalConfig
                 ) { updated ->
                     AcademyCraftClient.Config.INSTANCE.setConfig(TerminalHud.CONFIG_KEY, updated)
-                },
+                }.copy(hiddenBindings = setOf(TerminalHud.KEY_NAME_TOGGLE)),
                 BindingSection(
                     "general_ability_hud",
                     Language.getInstance().getOrDefault("app.academy.settings.keybind.group.ability_hud"),
@@ -351,6 +387,7 @@ object SettingsApp : App {
             }
 
             for ((bindingName, combo) in sectionInfo.config.keyBindings) {
+                if (bindingName in sectionInfo.hiddenBindings) continue
                 section.addChild(bindingName, createBindingRow(sectionInfo, bindingName, combo))
             }
             return section
@@ -379,6 +416,7 @@ object SettingsApp : App {
             val keyLabel = LabelWidget(combo.displayName())
             keyLabel.scale = 0.7f
             keyLabel.layoutParams = LinearLayoutWidget.LayoutParams()
+                .width(44f)
                 .height(10f)
                 .gravity(Gravity.CENTER)
             row.addChild("key", keyLabel)
@@ -544,6 +582,7 @@ object SettingsApp : App {
         }
 
         private fun startCapture(section: BindingSection, bindingName: String) {
+            if (bindingName in section.hiddenBindings || bindingName == TerminalHud.KEY_NAME_TOGGLE) return
             resetCaptureState()
             capturing = CaptureTarget(section, bindingName)
             captureLayer.isEnabled = true

@@ -77,7 +77,7 @@ open class ToggleButtonWidget : AbstractWidget() {
     }
 
     override fun onMousePressed(event: MouseEvent) {
-        if (isMouseOver(event.x, event.y)) {
+        if (event.button == 0 && (isHovered || isMouseOver(event.x, event.y))) {
             event.consume()
             ClientUtil.playDownSound()
             isChecked = !isChecked

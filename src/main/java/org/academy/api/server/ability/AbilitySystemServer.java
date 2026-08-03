@@ -476,6 +476,7 @@ public final class AbilitySystemServer {
         if (contexts != null) {
             List.copyOf(contexts).forEach(ServerContext::unregister);
         }
+        playerCPManager.releaseAllOccupations(uuid);
         playerDataManager.setPlayerAbilityCategory(uuid, abilityCategory);
         playerCPManager.refreshCommonSkillBonuses(uuid);
     }

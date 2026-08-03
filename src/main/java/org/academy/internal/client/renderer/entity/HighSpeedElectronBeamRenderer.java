@@ -65,7 +65,7 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.scale(0.5f, 0.5f, 0.5f);
         nodeCollector.submitCustomGeometry(
                 poseStack,
-                Render.RenderTypes.POS_COLOR_QUADS,
+                Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE,
                 (pose, vertexConsumer) -> BoxRenderer.renderFilledBox(
                         pose, vertexConsumer, HEAD, 1, 1, 1, 1
                 )
@@ -73,28 +73,11 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         poseStack.popPose();
 
         var rayVisualProgress = renderState.isCharging ? 0f : renderState.progress;
-
-        poseStack.pushPose();
         var rayScale = rayVisualProgress * 0.25f * renderState.beamScale;
-        poseStack.mulPose(new Matrix4f().scale(rayScale, visualLength, rayScale));
-        nodeCollector.submitCustomGeometry(
-                poseStack,
-                Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE,
-                (pose, vertexConsumer) -> BoxRenderer.renderFilledBox(
-                        pose, vertexConsumer, RAY, 0, 1, 0, 0.125f
-                )
-        );
-        poseStack.scale(0.75f, 1, 0.75f);
-        nodeCollector.submitCustomGeometry(
-                poseStack,
-                Render.RenderTypes.POS_COLOR_QUADS,
-                (pose, vertexConsumer) -> BoxRenderer.renderFilledBox(
-                        pose,
-                        vertexConsumer,
-                        RAY, 1, 1, 1, 1f
-                )
-        );
-        poseStack.popPose();
+        renderRaySegments(poseStack, nodeCollector, renderState.visibleSegments, rayScale,
+                0, 1, 0, 0.125f);
+        renderRaySegments(poseStack, nodeCollector, renderState.visibleSegments, rayScale * 0.75f,
+                1, 1, 1, 1.0f);
 
         poseStack.popPose();
     }
@@ -112,6 +95,24 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         reusedState.visualSideOffset = entity.getVisualSideOffset();
         reusedState.isCharging = entity.isCharging();
 
+        var logicalDirection = entity.getLookAngle();
+        var visualStart = entity.position();
+        if (Math.abs(reusedState.visualSideOffset) > 1.0e-4f) {
+            var horizontalForward = Vec3.directionFromRotation(0.0f, entity.getYRot());
+            var right = horizontalForward.cross(WORLD_UP).normalize();
+            visualStart = visualStart.add(right.scale(reusedState.visualSideOffset));
+        }
+        var visualEnd = entity.position().add(logicalDirection.scale(reusedState.length));
+        var visualDirection = visualEnd.subtract(visualStart);
+        var visualLength = (float) visualDirection.length();
+        reusedState.visibleSegments = BeamOcclusion.visibleSegments(
+                entity,
+                visualStart,
+                visualDirection,
+                visualLength,
+                Math.max(0.05, reusedState.beamScale * 0.25)
+        );
+
         float progress;
         if (entity.isContinuous()) {
             progress = 1.0f;
@@ -124,6 +125,35 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         reusedState.yRot = entity.getYRot();
         reusedState.xRot = entity.getXRot();
         reusedState.progress = Math.clamp(progress, 0.0f, 1.0f);
+    }
+
+    private static void renderRaySegments(
+            PoseStack poseStack,
+            SubmitNodeCollector nodeCollector,
+            float[] visibleSegments,
+            float radius,
+            float red,
+            float green,
+            float blue,
+            float alpha
+    ) {
+        if (radius <= 0.0f) return;
+        for (var i = 0; i + 1 < visibleSegments.length; i += 2) {
+            var start = visibleSegments[i];
+            var end = visibleSegments[i + 1];
+            if (end <= start) continue;
+            poseStack.pushPose();
+            poseStack.translate(0.0f, start, 0.0f);
+            poseStack.scale(radius, end - start, radius);
+            nodeCollector.submitCustomGeometry(
+                    poseStack,
+                    Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE,
+                    (pose, vertexConsumer) -> BoxRenderer.renderFilledBox(
+                            pose, vertexConsumer, RAY, red, green, blue, alpha
+                    )
+            );
+            poseStack.popPose();
+        }
     }
 
     @Override

@@ -49,6 +49,7 @@
   "app.academy.settings.keybind.empty": "No configurable bindings are registered.",
   "app.academy.settings.keybind.group.terminal": "Data Terminal",
   "app.academy.settings.keybind.group.ability_hud": "Ability HUD",
+  "app.academy.settings.keybind.toggle": "Key Toggle",
   "key.academy.activate_ability_hud": "Toggle Ability HUD",
   "key.academy.terminal_hud_config_toggle": "Toggle Data Terminal",
   "key.academy.academy_ability_hud_wheel_up": "Skill HUD: Up",

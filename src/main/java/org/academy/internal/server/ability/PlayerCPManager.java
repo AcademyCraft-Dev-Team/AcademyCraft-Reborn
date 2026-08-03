@@ -284,6 +284,23 @@ public class PlayerCPManager implements AbilitySubsystem {
         });
     }
 
+    public void releaseAllOccupations(UUID uuid) {
+        modify(uuid, cpData -> {
+            var playerData = playerDataManager.getData(uuid);
+            if (playerData == null) return;
+            var occupations = playerData.getCpOccupations();
+            if (occupations.isEmpty()) return;
+
+            var released = 0.0f;
+            for (var occupation : occupations) {
+                released += occupation.getAmount();
+            }
+            occupations.clear();
+            cpData.setAvailableCP(cpData.getAvailableCP() + released, getMaxCP(uuid));
+        });
+        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
