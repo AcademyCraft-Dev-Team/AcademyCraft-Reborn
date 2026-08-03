@@ -892,6 +892,28 @@ public final class Render {
                 .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .build();
 
+        public static final RenderPipeline LEVEL_POS_COLOR_QUADS_ALWAYS_VISIBLE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_color_quads_always_visible"))
+                .withVertexShader(R.shaders.POSITION_COLOR)
+                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+                .build();
+
+        public static final RenderPipeline LEVEL_POS_COLOR_QUADS_ADDITIVE_ALWAYS_VISIBLE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_color_quads_additive_always_visible"))
+                .withVertexShader(R.shaders.POSITION_COLOR)
+                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+                .build();
+
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_trangles"))
                 .withVertexShader(R.shaders.position_color)
@@ -1066,6 +1088,27 @@ public final class Render {
                 "pos_color_quads_additive",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE)
                         .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType POS_COLOR_QUADS_ALWAYS_VISIBLE = create(
+                "pos_color_quads_always_visible",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ALWAYS_VISIBLE)
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType POS_COLOR_QUADS_ADDITIVE_ALWAYS_VISIBLE = create(
+                "pos_color_quads_additive_always_visible",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE_ALWAYS_VISIBLE)
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType POS_COLOR_QUADS_BLOOM_ADDITIVE_ALWAYS_VISIBLE = create(
+                "pos_color_quads_bloom_additive_always_visible",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE_ALWAYS_VISIBLE)
+                        .setOutputTarget(BLOOM_TARGET)
                         .createRenderSetup()
         );
 

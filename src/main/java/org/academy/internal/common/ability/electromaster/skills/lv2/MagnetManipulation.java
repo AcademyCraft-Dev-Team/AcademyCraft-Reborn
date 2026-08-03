@@ -7,6 +7,7 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.Identifier;
@@ -101,6 +102,11 @@ public class MagnetManipulation extends Skill {
             EquipmentSlot.LEGS,
             EquipmentSlot.FEET
     };
+
+    enum PullMode {
+        PLAYER_TO_TARGET,
+        TARGET_TO_PLAYER
+    }
 
     static Vec3 calculateMoveVelocity(Vec3 origin, Vec3 target, Vec3 fallbackDirection) {
         var direction = target.subtract(origin);
@@ -200,10 +206,16 @@ public class MagnetManipulation extends Skill {
         }
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(Client.KEY_NAME_START,
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0))
-                , _ -> Client.onMoveStart());
+                , _ -> Client.onMoveStart(PullMode.PLAYER_TO_TARGET));
         InputSystem.addKeyBinding(Client.KEY_NAME_STOP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_STOP,
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.RELEASE, 0))
-                , _ -> Client.onMoveStop());
+                , _ -> Client.onMoveStop(PullMode.PLAYER_TO_TARGET));
+        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_START, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TARGET_START,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0))
+                , _ -> Client.onMoveStart(PullMode.TARGET_TO_PLAYER));
+        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_STOP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TARGET_STOP,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.RELEASE, 0))
+                , _ -> Client.onMoveStop(PullMode.TARGET_TO_PLAYER));
     }
 
     @Override
@@ -224,27 +236,35 @@ public class MagnetManipulation extends Skill {
         );
         public static final String KEY_NAME_START = SkillNames.MAGNET_MANIPULATION + "_start";
         public static final String KEY_NAME_STOP = SkillNames.MAGNET_MANIPULATION + "_stop";
+        public static final String KEY_NAME_TARGET_START = SkillNames.MAGNET_MANIPULATION + "_target_start";
+        public static final String KEY_NAME_TARGET_STOP = SkillNames.MAGNET_MANIPULATION + "_target_stop";
         private static final String OLD_KEY_NAME_MOVE_START = SkillNames.MAGNET_MANIPULATION + "_move_start";
         private static final String OLD_KEY_NAME_MOVE_STOP = SkillNames.MAGNET_MANIPULATION + "_move_stop";
         public static Config CONFIG = new Config();
         private static SoundInstance loopSound;
-        private static boolean active;
+        private static @Nullable PullMode activeMode;
 
-        public static void onMoveStart() {
+        public static void onMoveStart(PullMode mode) {
             if (!AbilitySystemClient.canUseSkill(Skills.MAGNET_MANIPULATION.get())) return;
             var player = Minecraft.getInstance().player;
             if (player == null) return;
-            active = true;
+            if (activeMode != null && activeMode != mode) {
+                MisakaNetworkClient.send(MoveStopPacket.INSTANCE);
+            }
+            activeMode = mode;
             stopLoopSound();
             loopSound = new LoopingPlayerSoundInstance(
                     player, SoundEvents.MAGNET_MOVE_LOOP.get(), 1.0f, 1.0f,
-                    () -> active && Minecraft.getInstance().player == player);
+                    () -> activeMode != null && Minecraft.getInstance().player == player);
             Minecraft.getInstance().getSoundManager().play(loopSound);
-            MisakaNetworkClient.send(MoveStartPacket.INSTANCE);
+            MisakaNetworkClient.send(mode == PullMode.TARGET_TO_PLAYER
+                    ? MoveStartPacket.TARGET_TO_PLAYER
+                    : MoveStartPacket.PLAYER_TO_TARGET);
         }
 
-        public static void onMoveStop() {
-            active = false;
+        public static void onMoveStop(PullMode mode) {
+            if (activeMode != mode) return;
+            activeMode = null;
             stopLoopSound();
             MisakaNetworkClient.send(MoveStopPacket.INSTANCE);
         }
@@ -257,7 +277,7 @@ public class MagnetManipulation extends Skill {
 
         private static void tickVisual() {
             var player = Minecraft.getInstance().player;
-            if (!active || player == null) return;
+            if (activeMode == null || player == null) return;
             var center = player.position().add(0, player.getBbHeight() * 0.5, 0);
             var time = player.tickCount * 0.18;
             EMFieldEffectWrapper.INSTANCE.createField(3.0f);
@@ -296,12 +316,14 @@ public class MagnetManipulation extends Skill {
         @SubscribePacket
         public static void handleMoveStart(MoveStartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (ACTIVE_MOVEMENT.containsKey(player)
-                    || !Skills.MAGNET_MANIPULATION.get().isEnabled(player)) {
+            if (!Skills.MAGNET_MANIPULATION.get().isEnabled(player)) {
                 return;
             }
 
-            var context = new MoveContext(player);
+            var previous = ACTIVE_MOVEMENT.get(player);
+            if (previous != null) previous.end();
+
+            var context = new MoveContext(player, packet.getMode());
             ACTIVE_MOVEMENT.put(player, context);
             setVisualState(player, true);
             AbilitySystemServer.registerContext(context);
@@ -321,13 +343,15 @@ public class MagnetManipulation extends Skill {
 
     public static final class MoveContext extends ServerContext {
         private final ResourceKey<Level> dimension;
+        private final PullMode mode;
         private @Nullable Entity controlledTarget;
         private boolean controlsFallingBlock;
         private boolean ended;
 
-        private MoveContext(ServerPlayer player) {
+        private MoveContext(ServerPlayer player, PullMode mode) {
             super(player);
             dimension = player.level().dimension();
+            this.mode = mode;
         }
 
         @SubscribeEvent
@@ -349,7 +373,9 @@ public class MagnetManipulation extends Skill {
                 end();
                 return;
             }
-            var moved = player.isShiftKeyDown() ? pullTargetToPlayer() : pullPlayerToTarget();
+            var moved = mode == PullMode.TARGET_TO_PLAYER
+                    ? pullTargetToPlayer()
+                    : pullPlayerToTarget();
             if (!moved) return;
             system.setPlayerAvailableCP(uuid, availableCP - actualCost);
         }
@@ -494,10 +520,21 @@ public class MagnetManipulation extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class MoveStartPacket extends Packet<ServerGamePacketListenerImpl, MoveStartPacket> {
-        public static final MoveStartPacket INSTANCE = new MoveStartPacket();
-        public static final StreamCodec<ByteBuf, MoveStartPacket> CODEC = StreamCodec.unit(INSTANCE);
+        public static final MoveStartPacket PLAYER_TO_TARGET = new MoveStartPacket(PullMode.PLAYER_TO_TARGET);
+        public static final MoveStartPacket TARGET_TO_PLAYER = new MoveStartPacket(PullMode.TARGET_TO_PLAYER);
+        public static final StreamCodec<ByteBuf, MoveStartPacket> CODEC = StreamCodec.composite(
+                ByteBufCodecs.BOOL,
+                packet -> packet.mode == PullMode.TARGET_TO_PLAYER,
+                pullTarget -> pullTarget ? TARGET_TO_PLAYER : PLAYER_TO_TARGET
+        );
+        private final PullMode mode;
 
-        private MoveStartPacket() {
+        private MoveStartPacket(PullMode mode) {
+            this.mode = mode;
+        }
+
+        private PullMode getMode() {
+            return mode;
         }
 
         @Override

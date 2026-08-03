@@ -387,6 +387,20 @@ class TerminalHud private constructor() {
             event.setCanceled(true)
             return
         }
+        if (event.action == InputConstants.PRESS) {
+            val vanillaEvent = net.minecraft.client.input.KeyEvent(
+                event.key,
+                event.scanCode,
+                event.modifiers
+            )
+            if (event.key == InputConstants.KEY_ESCAPE
+                || Minecraft.getInstance().options.keyInventory.matches(vanillaEvent)
+            ) {
+                toggleActive()
+                event.setCanceled(true)
+                return
+            }
+        }
         if (!ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)) {
             val keyEvent = KeyEvent(
                 if (event.action == InputConstants.RELEASE) EventType.KEY_RELEASED else EventType.KEY_PRESSED,
