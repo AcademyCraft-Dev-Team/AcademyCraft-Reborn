@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
@@ -13,6 +14,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -21,6 +23,9 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jspecify.annotations.Nullable;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -52,6 +57,32 @@ public class LevelUtil {
     }
 
     public static Pair<Boolean, Double> destroyBlocksAlongPath(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean dropBlock, boolean spawnParticles, boolean canBlock, boolean simulate) {
+        return destroyBlocksAlongPath(
+                level,
+                start,
+                end,
+                radius,
+                miningLevel,
+                dropBlock,
+                spawnParticles,
+                canBlock,
+                simulate,
+                null
+        );
+    }
+
+    public static Pair<Boolean, Double> destroyBlocksAlongPath(
+            Level level,
+            Vec3 start,
+            Vec3 end,
+            float radius,
+            int miningLevel,
+            boolean dropBlock,
+            boolean spawnParticles,
+            boolean canBlock,
+            boolean simulate,
+            @Nullable ServerPlayer breaker
+    ) {
         var pathLength = start.distanceTo(end);
         var collectedBlocks = collectBlocksOptimized(level, start, end, radius, miningLevel, canBlock);
 
@@ -60,7 +91,18 @@ public class LevelUtil {
         var minBlockedDist = calculateMinBlockedDistance(level, unbreakableBlocks, start, end, radius, pathLength, canBlock);
 
         if (!simulate) {
-            destroyBreakableBlocks(level, breakableBlocks, start, end, radius, pathLength, minBlockedDist, dropBlock, spawnParticles);
+            destroyBreakableBlocks(
+                    level,
+                    breakableBlocks,
+                    start,
+                    end,
+                    radius,
+                    pathLength,
+                    minBlockedDist,
+                    dropBlock,
+                    spawnParticles,
+                    breaker
+            );
         }
         return Pair.of(minBlockedDist < pathLength, minBlockedDist);
     }
@@ -171,7 +213,18 @@ public class LevelUtil {
         return minT * pathLength;
     }
 
-    private static void destroyBreakableBlocks(Level level, List<BlockPos> breakableBlocks, Vec3 start, Vec3 end, float radius, double pathLength, double minBlockedDist, boolean dropBlock, boolean spawnParticles) {
+    private static void destroyBreakableBlocks(
+            Level level,
+            List<BlockPos> breakableBlocks,
+            Vec3 start,
+            Vec3 end,
+            float radius,
+            double pathLength,
+            double minBlockedDist,
+            boolean dropBlock,
+            boolean spawnParticles,
+            @Nullable ServerPlayer breaker
+    ) {
         var air = Blocks.AIR.defaultBlockState();
         for (var pos : breakableBlocks) {
             var shape = level.getBlockState(pos).getCollisionShape(level, pos);
@@ -182,6 +235,7 @@ public class LevelUtil {
 
             if (dist < minBlockedDist) {
                 var blockState = level.getBlockState(pos);
+                if (!canAbilityBreak(level, pos, blockState, breaker)) continue;
                 // Capture BE before setting block to air meow
                 var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
 
@@ -196,11 +250,47 @@ public class LevelUtil {
         }
     }
 
+    private static boolean canAbilityBreak(
+            Level level,
+            BlockPos pos,
+            BlockState state,
+            @Nullable ServerPlayer breaker
+    ) {
+        if (breaker == null) return true;
+        var restricted = breaker.blockActionRestricted(
+                level,
+                pos,
+                breaker.gameMode.getGameModeForPlayer()
+        ) || state.getBlock() instanceof GameMasterBlock && !breaker.canUseGameMasterBlocks();
+        var event = new BreakBlockEvent(level, pos, state, breaker);
+        event.setCanceled(restricted);
+        NeoForge.EVENT_BUS.post(event);
+        return !event.isCanceled();
+    }
+
     public static void attackEntitiesAlongPath(Level level, Vec3 start, Vec3 end, float radius, DamageSource damageSource, float damage) {
+        attackEntitiesAlongPath(level, start, end, radius, damageSource, damage, null);
+    }
+
+    public static void attackEntitiesAlongPath(
+            Level level,
+            Vec3 start,
+            Vec3 end,
+            float radius,
+            DamageSource damageSource,
+            float damage,
+            @Nullable Entity excludedEntity
+    ) {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
         var pathBB = new AABB(start, end).inflate(radius);
-        var candidates = serverLevel.getEntities((Entity) null, pathBB, e -> e.isAlive() && e.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get());
+        var candidates = serverLevel.getEntities(
+                excludedEntity,
+                pathBB,
+                e -> e != excludedEntity
+                        && e.isAlive()
+                        && e.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get()
+        );
         var hitSet = new HashSet<Entity>();
 
         for (var entity : candidates) {

@@ -2,24 +2,27 @@ package org.academy.internal.common.ability.teleport.skills.lv1;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.sounds.SoundSource;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.DistortionEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -39,12 +42,13 @@ public class ClipThrough extends Skill {
         );
     }
 
-    public float getMaxDistance(int level) {
+    public static float getMaxDistance(int level) {
         return 2.0f + level;
     }
 
     @Override
     public void initClient() {
+        RendererManager.registerEffectRenderer(DistortionEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -65,9 +69,16 @@ public class ClipThrough extends Skill {
 
         public static void onUse() {
             var mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc.player == null) return;
-            var lookVec = mc.player.getViewVector(1.0f);
-            MisakaNetworkClient.send(new TeleportPacket(lookVec));
+            if (mc.player == null || mc.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.CLIP_THROUGH.get())) return;
+            MisakaNetworkClient.send(TeleportPacket.INSTANCE);
+            var player = mc.player;
+            DistortionEffectWrapper.INSTANCE.trigger(
+                    (float) player.getX(), (float) player.getY() + 1.0f, (float) player.getZ(),
+                    0.75f, 0.7f,
+                    0.35f, 0.25f, 0.75f, 0.65f,
+                    0.08f, 0.0f, 0.25f, 0.0f
+            );
         }
 
         public static class Config extends KeyBindingConfig {
@@ -94,43 +105,32 @@ public class ClipThrough extends Skill {
         @SubscribePacket
         public static void handle(TeleportPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.CLIP_THROUGH.get().executeActive(player, (ctx, actualCost) -> {
-                var skill = Skills.CLIP_THROUGH.get();
-                var maxDist = skill.getMaxDistance(ctx.level());
-                var dir = packet.getDirection().normalize();
-                var targetPos = player.getEyePosition().add(dir.scale(maxDist));
-                var dimensions = player.getDimensions(Pose.STANDING);
-                var teleportY = targetPos.y() - (dimensions.height() / 2.0);
-                var teleportX = targetPos.x();
-                var teleportZ = targetPos.z();
-
-                if (!player.level().noCollision(player, player.getBoundingBox().move(targetPos.subtract(player.position())))) {
-                    teleportX = player.getX() + dir.x * (maxDist - 0.5);
-                    teleportY = player.getY();
-                    teleportZ = player.getZ() + dir.z * (maxDist - 0.5);
-                }
-
-                player.teleportTo(teleportX, teleportY, teleportZ);
+            var skill = Skills.CLIP_THROUGH.get();
+            if (!skill.isEnabled(player)) return;
+            var dir = player.getLookAngle().normalize();
+            if (dir.lengthSqr() < 1.0e-6) return;
+            var safe = TeleportSafety.findSafe(
+                    player,
+                    player.position().add(dir.scale(getMaxDistance(skill.getLevel(player))))
+            );
+            if (safe == null) return;
+            skill.executeActive(player, (_, _) -> {
+                player.teleportTo(safe.x, safe.y, safe.z);
                 player.resetFallDistance();
                 player.setDeltaMovement(dir.scale(0.1));
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
+                player.level().playSound(null, player.blockPosition(), SoundEvents.PENETRATE_TELEPORT.get(),
+                        SoundSource.PLAYERS, 0.75f, 1.25f);
             });
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class TeleportPacket extends Packet<ServerGamePacketListenerImpl, TeleportPacket> {
-        private static final StreamCodec<ByteBuf, Vec3> VEC3_CODEC = StreamCodec.composite(
-                ByteBufCodecs.DOUBLE, Vec3::x, ByteBufCodecs.DOUBLE, Vec3::y, ByteBufCodecs.DOUBLE, Vec3::z, Vec3::new);
-        public static final StreamCodec<ByteBuf, TeleportPacket> CODEC = VEC3_CODEC.map(TeleportPacket::new, TeleportPacket::getDirection);
-        private final Vec3 direction;
+        public static final TeleportPacket INSTANCE = new TeleportPacket();
+        public static final StreamCodec<ByteBuf, TeleportPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public TeleportPacket(Vec3 direction) {
-            this.direction = direction;
-        }
-
-        public Vec3 getDirection() {
-            return direction;
+        private TeleportPacket() {
         }
 
         @Override

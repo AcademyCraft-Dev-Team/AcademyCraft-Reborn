@@ -9,6 +9,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -26,6 +27,7 @@ import org.academy.internal.client.renderer.effect.DistortionEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -43,6 +45,7 @@ public class PhantomFalling extends Skill {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL4)
+                .energyCost(60_000)
                 .cpCost(60)
                 .iterationTicks(15)
                 .maxStacks(1)
@@ -134,7 +137,8 @@ public class PhantomFalling extends Skill {
                         e -> e != player && e.isAlive() && !e.isSpectator());
 
                 for (var target : targets) {
-                    target.teleportTo(target.getX(), target.getY() + TELEPORT_HEIGHT, target.getZ());
+                    TeleportSync.teleportInstantly(target,
+                            new Vec3(target.getX(), target.getY() + TELEPORT_HEIGHT, target.getZ()));
                     target.setDeltaMovement(target.getDeltaMovement().add(0, -2.0, 0));
                     target.hurtMarked = true;
                     target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 40, 1, false, false));

@@ -23,6 +23,13 @@ public final class MatrixStack {
         return this;
     }
 
+    public MatrixStack copy() {
+        var copy = new MatrixStack();
+        copy.matrixStack.getLast().set(lastMatrix());
+        copy.normalStack.getLast().set(lastNormal());
+        return copy;
+    }
+
     public Matrix4f lastMatrix() {
         return matrixStack.getLast();
     }

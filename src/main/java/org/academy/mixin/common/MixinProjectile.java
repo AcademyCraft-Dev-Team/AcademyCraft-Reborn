@@ -2,8 +2,13 @@ package org.academy.mixin.common;
 
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,6 +16,39 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Projectile.class)
 public abstract class MixinProjectile {
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void academy$reflectNearProtectedPlayer(CallbackInfo ci) {
+        var projectile = (Projectile) (Object) this;
+        if (projectile.level().isClientSide()
+                || projectile.getData(org.academy.internal.common.attachment.AttachmentTypes
+                .VECTOR_REFLECTED_PROJECTILE.get())) return;
+        var velocity = projectile.getDeltaMovement();
+        var path = projectile.getBoundingBox()
+                .minmax(projectile.getBoundingBox().move(velocity))
+                .inflate(1.5);
+        var owner = projectile.getOwner();
+        var closest = projectile.level().getEntitiesOfClass(Player.class, path, candidate ->
+                        candidate instanceof ServerPlayer player
+                                && candidate != owner
+                                && VectorReflection.Server.shouldReflectProjectileFor(player, projectile))
+                .stream()
+                .min(java.util.Comparator.comparingDouble(projectile::distanceToSqr))
+                .orElse(null);
+        if (closest instanceof ServerPlayer player) {
+            VectorReflection.Server.reflectProjectile(player, projectile);
+        }
+    }
+
+    @Inject(method = "onHit", at = @At("HEAD"), cancellable = true)
+    private void academy$reflectProtectedPlayerHit(HitResult result, CallbackInfo ci) {
+        var projectile = (Projectile) (Object) this;
+        if (projectile.level().isClientSide() || !(result instanceof EntityHitResult entityHit)) return;
+        if (entityHit.getEntity() instanceof ServerPlayer player
+                && VectorReflection.Server.reflectProjectile(player, projectile)) {
+            ci.cancel();
+        }
+    }
+
     @Inject(
             method = "shootFromRotation",
             at = @At("HEAD"),

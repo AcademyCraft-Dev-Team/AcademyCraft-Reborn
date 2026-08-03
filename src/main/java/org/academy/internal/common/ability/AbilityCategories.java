@@ -6,10 +6,12 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.accelerator.Accelerator;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.electromaster.Electromaster;
 import org.academy.internal.common.ability.level0.Level0;
 import org.academy.internal.common.ability.meltdowner.Meltdowner;
 import org.academy.internal.common.ability.teleport.Teleport;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 
 public final class AbilityCategories {
     public static final DeferredRegister<AbilityCategory> ABILITY_CATEGORIES = DeferredRegister.create(Registries.Keys.ABILITY_CATEGORIES, AcademyCraft.MOD_ID);
@@ -18,6 +20,8 @@ public final class AbilityCategories {
     public static final DeferredHolder<AbilityCategory, Teleport> TELEPORT = ABILITY_CATEGORIES.register(AbilityCategoryNames.TELEPORT, Teleport::new);
     public static final DeferredHolder<AbilityCategory, Accelerator> ACCELERATOR = ABILITY_CATEGORIES.register(AbilityCategoryNames.ACCELERATOR, Accelerator::new);
     public static final DeferredHolder<AbilityCategory, Meltdowner> MELTDOWNER = ABILITY_CATEGORIES.register(AbilityCategoryNames.MELTDOWNER, Meltdowner::new);
+    public static final DeferredHolder<AbilityCategory, Aeromanip> AEROMANIP = ABILITY_CATEGORIES.register(AbilityCategoryNames.AEROMANIP, Aeromanip::new);
+    public static final DeferredHolder<AbilityCategory, Darkmatter> DARKMATTER = ABILITY_CATEGORIES.register(AbilityCategoryNames.DARKMATTER, Darkmatter::new);
 
     private AbilityCategories() {
     }

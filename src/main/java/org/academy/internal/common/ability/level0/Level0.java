@@ -10,6 +10,11 @@ public final class Level0 extends AbilityCategory {
     }
 
     @Override
+    public boolean supportsCommonSkills() {
+        return false;
+    }
+
+    @Override
     public Identifier getDeveloperIcon() {
         return R.textures.gui.icon.icon_nocategory;
     }

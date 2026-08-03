@@ -19,9 +19,11 @@ import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.Branch;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.path.LinePath;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -43,18 +45,23 @@ import java.util.ArrayList;
 import java.util.List;
 public final class ArcGenerate extends Skill {
     public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
-    public static final float DAMAGE_MULTIPLIER = 1.0F;
+    static final float BASE_DAMAGE = 4.0f;
 
     public ArcGenerate() {
         super(
                 Builder
                         .of(AbilityCategories.ELECTROMASTER.get())
                         .level(AbilityLevel.LEVEL1)
+                        .energyCost(5_000)
                         .cpCost(10)
                         .iterationTicks(4)
                         .maxStacks(1)
                         .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
+    }
+
+    static float getDamage(float playerDamageMultiplier) {
+        return BASE_DAMAGE * Math.max(0, playerDamageMultiplier);
     }
 
     @Override
@@ -64,7 +71,7 @@ public final class ArcGenerate extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(KEY_NAME_GENERATE, Client.CONFIG.getKeyBinding(KEY_NAME_GENERATE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.PRESS, InputConstants.MOD_ALT)
+                InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE, InputConstants.MOD_ALT)
         ), ctx -> Client.handler());
     }
 
@@ -81,6 +88,7 @@ public final class ArcGenerate extends Skill {
         public static ArcGenerateConfig CONFIG = new ArcGenerateConfig();
 
         public static void handler() {
+            if (!AbilitySystemClient.canUseSkill(Skills.ARC_GENERATE.get())) return;
             MisakaNetworkClient.send(GeneratePacket.INSTANCE);
         }
 
@@ -109,7 +117,7 @@ public final class ArcGenerate extends Skill {
         public static void handle(GeneratePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var level = player.level();
-            Skills.ARC_GENERATE.get().executeActive(player, (_, actualCost) -> {
+            Skills.ARC_GENERATE.get().executeActive(player, (_, _) -> {
                 var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
                 var eyePos = player.getEyePosition();
 
@@ -172,9 +180,11 @@ public final class ArcGenerate extends Skill {
                 level.addFreshEntity(arc);
                 arc.playSound(SoundEvents.ARC_WEAK.get());
 
-                var radius = 0.25f;
-                var src = player.damageSources().playerAttack(player);
-                LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, actualCost * DAMAGE_MULTIPLIER);
+                var radius = 0.125f;
+                var system = AbilitySystemServer.getSystem(player);
+                var src = SkillDamageSource.of(player, Skills.ARC_GENERATE.get());
+                var damage = getDamage(system.getPlayerDamageMultiplier(player.getUUID()));
+                LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, damage, player);
             });
         }
     }

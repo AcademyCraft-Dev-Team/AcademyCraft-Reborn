@@ -23,6 +23,7 @@ import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.server.ability.*;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
@@ -35,6 +36,7 @@ import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -63,6 +65,7 @@ public final class AbilitySystemServer {
             var currentMax = playerCPManager.getMaxCP(uuid);
             playerCPManager.setMaxCP(uuid, currentMax + (5.0f * levelsGained));
         });
+        skillDataManager.setOnSkillSetChanged(playerCPManager::refreshCommonSkillBonuses);
 
         for (var category : Registries.ABILITY_CATEGORIES) {
             category.initServer(context);
@@ -116,13 +119,19 @@ public final class AbilitySystemServer {
         var skillKey = payload.getSkillName();
         var be = level.getBlockEntity(userPos);
         if (be instanceof WirelessUser user) {
-            var skillReference = Registries.SKILLS.get(Identifier.parse(skillKey));
+            var skillId = Identifier.tryParse(skillKey);
+            if (skillId == null) return new LearnSkillPacket.Response(false);
+            var skillReference = Registries.SKILLS.get(skillId);
             if (skillReference.isPresent()) {
                 var skill = skillReference.get().value();
                 var energy = skill.getEnergyCostToLearn();
                 var depLearned = true;
                 var serverContext = level.getServer();
                 var instance = serverContext.getAcademyCraftServer().getAbilitySystemServer();
+                var currentCategory = instance.getPlayerAbilityCategory(player.getUUID());
+                if (!LearningHelper.isSkillAvailableForCategory(currentCategory, skill)) {
+                    return new LearnSkillPacket.Response(false);
+                }
 
                 for (var dep : skill.getDependencies()) {
                     if (!instance.getPlayerData(player.getUUID()).isSkillLearned(dep.getKeyString())) {
@@ -157,7 +166,11 @@ public final class AbilitySystemServer {
         }
 
         var skillKey = payload.getSkillName();
-        var skillRef = org.academy.api.common.registries.Registries.SKILLS.get(net.minecraft.resources.Identifier.parse(skillKey));
+        var skillId = net.minecraft.resources.Identifier.tryParse(skillKey);
+        if (skillId == null) {
+            return new StartSkillDevPacket.Response(false, "Invalid skill id");
+        }
+        var skillRef = org.academy.api.common.registries.Registries.SKILLS.get(skillId);
         if (skillRef.isEmpty()) {
             return new StartSkillDevPacket.Response(false, "Unknown skill");
         }
@@ -165,6 +178,12 @@ public final class AbilitySystemServer {
         var server = level.getServer();
         var instance = server.getAcademyCraftServer().getAbilitySystemServer();
         var playerData = instance.getPlayerData(player.getUUID());
+
+        if (!LearningHelper.isSkillAvailableForCategory(
+                instance.getPlayerAbilityCategory(player.getUUID()), skill
+        )) {
+            return new StartSkillDevPacket.Response(false, "Skill is not available for the current category");
+        }
 
         // Dependency check
         for (var dep : skill.getDependencies()) {
@@ -298,15 +317,19 @@ public final class AbilitySystemServer {
         var player = serverContext.player;
         if (player == null) return;
 
-        var instance = getSystem(player);
-        var contexts = instance.activeContexts.get(player.getUUID());
-        if (contexts == null) return;
+        getSystem(player).removeContext(serverContext);
+    }
 
-        contexts.remove(serverContext);
-        if (contexts.isEmpty()) instance.activeContexts.remove(player.getUUID());
+    private void removeContext(ServerContext serverContext) {
+        var player = serverContext.player;
+        var contexts = activeContexts.get(player.getUUID());
+        if (contexts == null || !contexts.remove(serverContext)) return;
+
+        if (contexts.isEmpty()) activeContexts.remove(player.getUUID(), contexts);
 
         NeoForge.EVENT_BUS.unregister(serverContext);
         MisakaNetworkServer.NETWORK_MANAGER.unregister(serverContext);
+        serverContext.onUnregistered();
     }
 
     public static AbilitySystemServer getSystem(Entity entity) {
@@ -363,14 +386,9 @@ public final class AbilitySystemServer {
             sub.onPlayerLogout(player);
         }
 
-        var contexts = activeContexts.remove(player.getUUID());
+        var contexts = activeContexts.get(player.getUUID());
         if (contexts == null) return;
-        contexts.forEach(NeoForge.EVENT_BUS::unregister);
-
-        contexts.forEach(ctx -> {
-            NeoForge.EVENT_BUS.unregister(ctx);
-            MisakaNetworkServer.NETWORK_MANAGER.unregister(ctx);
-        });
+        List.copyOf(contexts).forEach(ServerContext::unregister);
     }
 
     public SyncManager getSyncManager() {
@@ -406,7 +424,7 @@ public final class AbilitySystemServer {
             Registries.SKILLS.get(Identifier.parse(skillId)).ifPresent(skillRef -> {
                 var skill = skillRef.value();
                 var level = getPlayerSkillLevel(uuid, skillId);
-                if (skill.getMaintenanceCost(level) <= 0) {
+                if (skill.getMaintenanceCost(level) > 0) {
                     tryPermanentOccupation(uuid, skill.getMaintenanceCost(level), skill);
                 }
             });
@@ -417,8 +435,10 @@ public final class AbilitySystemServer {
     public void onServerStopping() {
         NeoForge.EVENT_BUS.unregister(playerCPManager);
         NeoForge.EVENT_BUS.unregister(this);
-        activeContexts.values().forEach(set ->
-                set.forEach(NeoForge.EVENT_BUS::unregister));
+        activeContexts.values().stream()
+                .flatMap(Set::stream)
+                .toList()
+                .forEach(ServerContext::unregister);
         activeContexts.clear();
     }
 
@@ -435,7 +455,29 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        if (playerDataManager.getPlayerAbilityCategory(uuid) == abilityCategory) return;
+
+        var playerData = getPlayerData(uuid);
+        if (playerData != null) {
+            playerData.getSkillDataMap().forEach((skillId, data) -> {
+                if (!data.isEnabled()) return;
+                var id = Identifier.tryParse(skillId);
+                if (id == null) return;
+                Registries.SKILLS.get(id).ifPresent(skillReference -> {
+                    var skill = skillReference.value();
+                    if (LearningHelper.isSkillAvailableForCategory(abilityCategory, skill)) return;
+                    skillDataManager.toggleSkill(uuid, skillId);
+                    playerCPManager.releaseMaintenanceOccupation(uuid, skillId);
+                });
+            });
+        }
+
+        var contexts = activeContexts.get(uuid);
+        if (contexts != null) {
+            List.copyOf(contexts).forEach(ServerContext::unregister);
+        }
         playerDataManager.setPlayerAbilityCategory(uuid, abilityCategory);
+        playerCPManager.refreshCommonSkillBonuses(uuid);
     }
 
 
@@ -449,6 +491,15 @@ public final class AbilitySystemServer {
     public void addPlayerSkillExp(UUID uuid, Skill skill, SkillDataManager.ExpEvent expEvent) {
         skillDataManager.addSkillExp(uuid, skill, expEvent);
         playerCPManager.addLevelProgress(uuid, expEvent.getIncrement());
+    }
+
+    public <T extends SkillData> boolean updatePlayerSkillData(
+            UUID uuid,
+            Skill skill,
+            Class<T> type,
+            Consumer<T> action
+    ) {
+        return skillDataManager.mutate(uuid, skill.getKeyString(), type, action);
     }
 
     public void addPlayerSkill(ServerPlayer serverPlayer, String skillKey) {
@@ -479,6 +530,14 @@ public final class AbilitySystemServer {
         return playerCPManager.getOccupiedCP(uuid);
     }
 
+    public boolean isPlayerSkillDebugMode(UUID uuid) {
+        return playerCPManager.isSkillDebugMode(uuid);
+    }
+
+    public boolean togglePlayerSkillDebugMode(UUID uuid) {
+        return playerCPManager.toggleSkillDebugMode(uuid);
+    }
+
     public int getPlayerLevel(UUID uuid) {
         return playerCPManager.getLevel(uuid);
     }
@@ -498,7 +557,9 @@ public final class AbilitySystemServer {
             return true;
         }
 
-        var actualCost = calculator.calculate(ctx);
+        var baseCost = calculator.calculate(ctx);
+        if (!Float.isFinite(baseCost) || baseCost < 0) return false;
+        var actualCost = Math.max(0, baseCost * playerCPManager.getCalculationIntensity(uuid));
         if (playerCPManager.tryOccupation(uuid, actualCost, skill, skill.getIterationTicks(level), false)) {
             action.execute(ctx, actualCost);
             addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
@@ -522,8 +583,10 @@ public final class AbilitySystemServer {
             return true;
         }
 
-        if (playerCPManager.tryOccupation(uuid, cost, skill, skill.getIterationTicks(level), false)) {
-            action.execute(ctx, cost);
+        if (!Float.isFinite(cost) || cost < 0) return false;
+        var actualCost = Math.max(0, cost * playerCPManager.getCalculationIntensity(uuid));
+        if (playerCPManager.tryOccupation(uuid, actualCost, skill, skill.getIterationTicks(level), false)) {
+            action.execute(ctx, actualCost);
             addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
             return true;
         }
@@ -531,7 +594,15 @@ public final class AbilitySystemServer {
     }
 
     public boolean tryPermanentOccupation(UUID uuid, float amount, Skill skill) {
-        return playerCPManager.tryOccupation(uuid, amount, skill, 0, true);
+        if (!Float.isFinite(amount) || amount < 0) return false;
+        var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
+        return playerCPManager.tryOccupation(uuid, actualAmount, skill, 0, true);
+    }
+
+    public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
+        if (!Float.isFinite(amount) || amount < 0) return false;
+        var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
+        return playerCPManager.ensurePermanentOccupation(uuid, actualAmount, skill);
     }
 
     public void setPlayerLevel(UUID uuid, int level) {
@@ -612,6 +683,18 @@ public final class AbilitySystemServer {
 
     public float getPlayerDamageMultiplier(UUID uuid) {
         return playerCPManager.getDamageMultiplier(uuid);
+    }
+
+    public float getPlayerCalculationEfficiency(UUID uuid) {
+        return playerCPManager.getCalculationEfficiency(uuid);
+    }
+
+    public float getPlayerCalculationIntensity(UUID uuid) {
+        return playerCPManager.getCalculationIntensity(uuid);
+    }
+
+    public float getPlayerAbilityPowerMultiplier(UUID uuid) {
+        return playerCPManager.getAbilityPowerMultiplier(uuid);
     }
 
     public float getPlayerRangeMultiplier(UUID uuid) {

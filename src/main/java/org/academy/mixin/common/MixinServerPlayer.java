@@ -27,7 +27,15 @@ public abstract class MixinServerPlayer extends Player {
     )
     public boolean redirectHurtServer(Player instance, ServerLevel level, DamageSource source, float damage) {
         var pair = VectorReflection.Server.hurtServer(instance, level, source, damage);
-        if (pair.getLeft()) return false;
-        return super.hurtServer(level, source, pair.getRight());
+        if (!pair.getLeft()) return super.hurtServer(level, source, pair.getRight());
+        var remainingDamage = pair.getRight();
+        if (!(remainingDamage > 0.0f) || !Float.isFinite(remainingDamage)) return false;
+        var player = (ServerPlayer) (Object) this;
+        VectorReflection.Server.beginLegitimateHealthMutation(player);
+        try {
+            return super.hurtServer(level, source, remainingDamage);
+        } finally {
+            VectorReflection.Server.endLegitimateHealthMutation(player, true);
+        }
     }
 }

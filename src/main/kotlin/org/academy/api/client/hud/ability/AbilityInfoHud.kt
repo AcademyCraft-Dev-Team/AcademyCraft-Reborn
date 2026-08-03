@@ -8,6 +8,7 @@ import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.Minecraft
+import net.minecraft.locale.Language
 import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
@@ -21,7 +22,6 @@ import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger
 import org.academy.api.client.gui.layout.Gravity
-import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.UiContext
@@ -429,6 +429,93 @@ class AbilityInfoHud private constructor() {
                     content.layoutParams = FrameLayoutWidget.LayoutParams()
                         .sizeMode(SizeMode.MATCH_PARENT)
                     cp.addChild("content", content)
+
+                    val sp = object : AbstractWidget() {
+                        private var textureView: GpuTextureView? = null
+
+                        override fun renderInternal(context: RenderContext) {
+                            super.renderInternal(context)
+
+                            val maximum = AbilitySystemClient.getMaxSP()
+                            if (maximum <= 0) return
+                            val progress = (AbilitySystemClient.getCurrSP().toFloat() / maximum)
+                                .coerceIn(0f, 1f)
+                            if (progress <= 0f) return
+
+                            var view = textureView
+                            if (view == null || view.isClosed) {
+                                try {
+                                    val texture = Minecraft.getInstance().textureManager
+                                        .getTexture(R.textures.SP_BAR_VALUE)
+                                    view = texture.getTextureView()
+                                    textureView = view
+                                } catch (_: Exception) {
+                                    return
+                                }
+                            }
+
+                            val textureWidth = 960f
+                            val textureHeight = 108f
+                            val sourceLeft = 497f
+                            val sourceTop = 69f
+                            val sourceRight = 883f
+                            val sourceBottom = 84f
+                            val scale = 0.25f
+                            val destLeft = sourceLeft * scale
+                            val destTop = sourceTop * scale
+                            val fullWidth = (sourceRight - sourceLeft) * scale
+                            val destHeight = (sourceBottom - sourceTop) * scale
+                            val fillWidth = fullWidth * progress
+                            val sourceFillRight = sourceLeft + (sourceRight - sourceLeft) * progress
+                            val finalAlpha = alpha * context.accumulatedAlpha
+
+                            context.pose().pushPose()
+                            context.pose().translate(destLeft, destTop)
+                            context.submit(object : DrawCommand(
+                                Render.RenderPipelines.IMAGE,
+                                listOf(TextureBinding("Sampler0", view, sampler)),
+                                mutableListOf()
+                            ) {
+                                override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+                                    val matrix = pose.pose()
+                                    val dest = Vector3f()
+                                    val u0 = sourceLeft / textureWidth
+                                    val u1 = sourceFillRight / textureWidth
+                                    val v0 = sourceTop / textureHeight
+                                    val v1 = sourceBottom / textureHeight
+                                    val a = (finalAlpha * 255f).toInt()
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(0f, 0f, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(u0, v0)
+                                    writer.putColor(255, 255, 255, a)
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(0f, destHeight, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(u0, v1)
+                                    writer.putColor(255, 255, 255, a)
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(fillWidth, destHeight, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(u1, v1)
+                                    writer.putColor(255, 255, 255, a)
+
+                                    writer.beginVertex()
+                                    matrix.transformPosition(fillWidth, 0f, 0f, dest)
+                                    writer.putVec3f(dest.x, dest.y, dest.z)
+                                    writer.putVec2f(u1, v0)
+                                    writer.putColor(255, 255, 255, a)
+                                }
+                            })
+                            context.pose().popPose()
+                        }
+                    }
+                    sp.layoutParams = FrameLayoutWidget.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT)
+                    cp.addChild("sp", sp)
                 }
             }
 
@@ -493,22 +580,43 @@ class AbilityInfoHud private constructor() {
 
         private fun buildSkills(): List<SkillInfo> {
             val category = AbilitySystemClient.getCategory()
-            return AbilitySystemClient.getSkillInfos()[category]
-                ?.filter { AbilitySystemClient.isSkillLearned(it.skill) }
-                ?: emptyList()
+            return AbilitySystemClient.getSkillInfosForCategory(category)
+                .filter { AbilitySystemClient.isSkillLearned(it.skill) }
         }
 
         private fun createSkillItem(info: SkillInfo): Widget {
-            val row = LinearLayoutWidget()
-            row.orientation = Orientation.HORIZONTAL
-            row.spacing = 2f
+            val row = FrameLayoutWidget()
+            row.layoutParams = WidgetContainer.LayoutParams().size(104f, 15f)
+
             val icon = ImageWidget(info.texture)
-            icon.layoutParams = WidgetContainer.LayoutParams().size(14f, 14f)
+            icon.layoutParams = FrameLayoutWidget.LayoutParams()
+                .size(14f, 14f)
+                .gravity(Gravity.CENTER_VERTICAL)
             row.addChild("icon", icon)
+
             val name = LabelWidget(info.skill.translatedName)
-            name.baseFontSize = 8f
-            name.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.CENTER_VERTICAL)
+            name.baseFontSize = 7f
+            name.layoutParams = FrameLayoutWidget.LayoutParams()
+                .gravity(Gravity.TOP_LEFT)
+                .margin(16f, 0f, 1f, 0f)
             row.addChild("name", name)
+
+            val binding = object : LabelWidget("") {
+                override fun tick() {
+                    val current = InputSystem.formatBindingsForSkill(info.skill).ifBlank {
+                        Language.getInstance().getOrDefault("app.academy.settings.keybind.format.none")
+                    }
+                    text = current
+                }
+            }
+            binding.baseFontSize = 5f
+            binding.setRed(0.72f)
+            binding.setGreen(0.82f)
+            binding.setBlue(0.9f)
+            binding.layoutParams = FrameLayoutWidget.LayoutParams()
+                .gravity(Gravity.BOTTOM_RIGHT)
+                .margin(0f, 0f, 1f, 0f)
+            row.addChild("binding", binding)
             return row
         }
     }

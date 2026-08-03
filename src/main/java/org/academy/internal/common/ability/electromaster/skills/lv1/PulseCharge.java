@@ -2,27 +2,47 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
+import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.path.LinePath;
+import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.LevelUtil;
-import org.academy.api.common.util.MathUtil;
+import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetManipulation;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.world.entity.skill.ArcEffect;
+import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.common.util.EnergyChargeHelper;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -31,22 +51,27 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+
 public final class PulseCharge extends Skill {
-    public static final String KEY_NAME_USE = SkillNames.PULSE_CHARGE + ".use";
+    static final double CHARGE_REACH = 5.0;
+    static final float CP_COST_PER_CHARGE_TICK = 5.0f;
+    private static final String LEGACY_CURRENT_RECHARGE = "academy:current_recharge";
 
     public PulseCharge() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
-                .level(AbilityLevel.LEVEL1)
-                .cpCost(15)
-                .iterationTicks(10)
-                .maxStacks(3)
+                .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
+                .dependsOn(Skills.MAGNET_MANIPULATION)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+                .devCondition(new DevCondition.DependencyCondition(
+                        "Magnet Manipulation", "academy:magnet_manipulation"))
         );
-    }
-
-    public int getMaxDistance(int level) {
-        return 6 + level * 2;
     }
 
     @Override
@@ -54,10 +79,27 @@ public final class PulseCharge extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-
-        InputSystem.addKeyBinding(KEY_NAME_USE, Client.CONFIG.getKeyBinding(KEY_NAME_USE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.PRESS, InputConstants.MOD_CONTROL)
-        ), ctx -> Client.onUse());
+        if (!Client.CONFIG.containsKeyBinding(Client.KEY_NAME_START)
+                && Client.CONFIG.containsKeyBinding(Client.OLD_KEY_NAME_START)) {
+            Client.CONFIG.setKeyBinding(Client.KEY_NAME_START,
+                    Client.CONFIG.getKeyBinding(Client.OLD_KEY_NAME_START));
+        }
+        if (!Client.CONFIG.containsKeyBinding(Client.KEY_NAME_END)
+                && Client.CONFIG.containsKeyBinding(Client.OLD_KEY_NAME_STOP)) {
+            Client.CONFIG.setKeyBinding(Client.KEY_NAME_END,
+                    Client.CONFIG.getKeyBinding(Client.OLD_KEY_NAME_STOP));
+        }
+        InputSystem.addKeyBinding(Client.KEY_NAME_START,
+                Client.CONFIG.getKeyBinding(Client.KEY_NAME_START,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
+                                InputConstants.PRESS, 0)),
+                ctx -> Client.start());
+        InputSystem.addKeyBinding(Client.KEY_NAME_END,
+                Client.CONFIG.getKeyBinding(Client.KEY_NAME_END,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
+                                InputConstants.RELEASE, 0)),
+                ctx -> Client.stop());
+        ToggleStatusHud.registerStateProvider(Skills.PULSE_CHARGE.get(), () -> Client.active);
     }
 
     @Override
@@ -66,10 +108,35 @@ public final class PulseCharge extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.PULSE_CHARGE.get(),
+                        List.of(MagnetManipulation.Client.SKILL_INFO),
+                        R.textures.current_recharge_icon,
+                        104,
+                        46
+                )
+        );
+        public static final String KEY_NAME_START = SkillNames.PULSE_CHARGE + "_start";
+        public static final String KEY_NAME_END = SkillNames.PULSE_CHARGE + "_end";
+        private static final String OLD_KEY_NAME_START = SkillNames.PULSE_CHARGE + ".use";
+        private static final String OLD_KEY_NAME_STOP = SkillNames.PULSE_CHARGE + ".stop";
         public static Config CONFIG = new Config();
+        private static boolean active;
 
-        public static void onUse() {
-            MisakaNetworkClient.send(UsePacket.INSTANCE);
+        private Client() {
+        }
+
+        private static void start() {
+            if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.PULSE_CHARGE.get())) return;
+            active = true;
+            MisakaNetworkClient.send(StartPacket.INSTANCE);
+        }
+
+        private static void stop() {
+            active = false;
+            MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -80,7 +147,7 @@ public final class PulseCharge extends Skill {
                 }
 
                 @Override
-                public PulseCharge.Client.Config getDefault() {
+                public Config getDefault() {
                     return new Config();
                 }
 
@@ -93,44 +160,172 @@ public final class PulseCharge extends Skill {
     }
 
     public static final class Server {
+        private static final Map<Player, Context> ACTIVE = createContextMap();
+        private static final Set<ServerPlayer> MIGRATED_PLAYERS = Collections.newSetFromMap(new WeakHashMap<>());
+
+        private Server() {
+        }
+
         @SubscribePacket
-        public static void handle(UsePacket packet) {
+        public static void handle(StartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var level = player.level();
-            Skills.PULSE_CHARGE.get().executeActive(player, (ctx, actualCost) -> {
-                var eyePos = player.getEyePosition();
-                var maxDist = Skills.PULSE_CHARGE.get().getMaxDistance(ctx.level());
-                var distance = LevelUtil.getValidViewDistance(player, maxDist);
-                var targetPos = eyePos.add(player.getLookAngle().scale(distance));
+            migrateLegacySkill(player);
+            if (ACTIVE.containsKey(player)) return;
 
-                var arc = new ArcEffect(level, 10);
-                arc.setPos(eyePos);
-                var rootPath = new ArcPath(
-                        new LinePath(eyePos.toVector3f(), targetPos.toVector3f()),
-                        List.of(new JaggedModifier(1, 2, MathUtil.RANDOM.nextLong())),
-                        1.5f,
-                        List.of()
-                );
-                arc.setArcPath(rootPath);
-                level.addFreshEntity(arc);
+            var skill = Skills.PULSE_CHARGE.get();
+            if (!skill.isEnabled(player)) return;
+            var context = new Context(player);
+            ACTIVE.put(player, context);
+            AbilitySystemServer.registerContext(context);
+        }
 
-                var blockPos = BlockPos.containing(targetPos);
-                level.updateNeighborsAt(blockPos, level.getBlockState(blockPos).getBlock());
-            });
+        @SubscribePacket
+        public static void handle(StopPacket packet) {
+            var context = ACTIVE.get(packet.getPacketListener().getPlayer());
+            if (context != null) context.end();
+        }
+
+        private static ChargeTarget resolveChargeTarget(ServerLevel level, ServerPlayer player) {
+            var eye = player.getEyePosition();
+            var look = player.getLookAngle();
+            if (look.lengthSqr() <= 1.0E-6) return null;
+            var end = eye.add(look.normalize().scale(CHARGE_REACH));
+            var blockHit = level.clip(new ClipContext(
+                    eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+            var blockPoint = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
+            var entityHit = ProjectileUtil.getEntityHitResult(
+                    level, player, eye, blockPoint,
+                    new AABB(eye, blockPoint).inflate(1.0),
+                    entity -> entity instanceof LivingEntity
+                            && entity != player
+                            && entity.isAlive()
+                            && entity.isPickable()
+                            && !entity.isSpectator(),
+                    0.3f
+            );
+            if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {
+                return new ChargeTarget(() -> EnergyChargeHelper.chargeEntity(living));
+            }
+            if (blockHit.getType() == HitResult.Type.BLOCK) {
+                return new ChargeTarget(
+                        () -> EnergyChargeHelper.chargeBlock(
+                                level, blockHit.getBlockPos(), blockHit.getDirection()));
+            }
+            return null;
+        }
+
+        private static void migrateLegacySkill(ServerPlayer player) {
+            if (MIGRATED_PLAYERS.contains(player)) return;
+            var system = AbilitySystemServer.getSystem(player);
+            var playerData = system.getPlayerData(player.getUUID());
+            if (playerData == null) return;
+            var map = playerData.getSkillDataMap();
+            var legacy = map.remove(LEGACY_CURRENT_RECHARGE);
+            if (legacy != null) {
+                var skill = Skills.PULSE_CHARGE.get();
+                var target = map.get(skill.getKeyString());
+                if (target == null) {
+                    target = skill.createData(player);
+                    map.put(skill.getKeyString(), target);
+                }
+                mergeProgress(target, legacy);
+                playerData.markDirty();
+                system.releaseMaintenanceOccupation(player.getUUID(), LEGACY_CURRENT_RECHARGE);
+                system.getSyncManager().schedulePlayerSync(player.getUUID(), SyncTypes.SKILL_DATA);
+            }
+            MIGRATED_PLAYERS.add(player);
+        }
+
+        private static void mergeProgress(SkillData target, SkillData legacy) {
+            target.setLevel(Math.max(target.getLevel(), legacy.getLevel()));
+            target.setMaxExp(Math.max(target.getMaxExp(), legacy.getMaxExp()));
+            target.setExp(Math.max(target.getExp(), legacy.getExp()));
+        }
+    }
+
+    public static final class Context extends ServerContext {
+        private final ResourceKey<Level> dimension;
+        private boolean ended;
+
+        private Context(ServerPlayer player) {
+            super(player);
+            dimension = player.level().dimension();
+        }
+
+        @SubscribeEvent
+        public void onTick(ServerTickEvent.Pre event) {
+            var skill = Skills.PULSE_CHARGE.get();
+            if (player.hasDisconnected()
+                    || !player.isAlive()
+                    || !player.level().dimension().equals(dimension)
+                    || !skill.isEnabled(player)) {
+                end();
+                return;
+            }
+            var target = Server.resolveChargeTarget(level(), player);
+            if (target == null) return;
+
+            var system = AbilitySystemServer.getSystem(player);
+            var actualCost = CP_COST_PER_CHARGE_TICK
+                    * system.getPlayerCalculationIntensity(player.getUUID());
+            var available = system.getPlayerAvailableCP(player.getUUID());
+            if (available < actualCost) return;
+            target.charge().run();
+            system.setPlayerAvailableCP(player.getUUID(), available - actualCost);
+        }
+
+        private void end() {
+            if (ended) return;
+            ended = true;
+            unregister();
+        }
+
+        @Override
+        protected void onUnregistered() {
+            ended = true;
+            Server.ACTIVE.remove(player, this);
+        }
+    }
+
+    private record ChargeTarget(Runnable charge) {
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.migrateLegacySkill(player);
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
-    public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
-        public static final UsePacket INSTANCE = new UsePacket();
-        public static final StreamCodec<ByteBuf, UsePacket> CODEC = StreamCodec.unit(INSTANCE);
+    public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
+        public static final StartPacket INSTANCE = new StartPacket();
+        public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        private UsePacket() {
+        private StartPacket() {
         }
 
         @Override
-        public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
-            return PacketTypes.PULSE_CHARGE_USE.get();
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+            return PacketTypes.PULSE_CHARGE_START.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class StopPacket extends Packet<ServerGamePacketListenerImpl, StopPacket> {
+        public static final StopPacket INSTANCE = new StopPacket();
+        public static final StreamCodec<ByteBuf, StopPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private StopPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() {
+            return PacketTypes.PULSE_CHARGE_STOP.get();
         }
     }
 }

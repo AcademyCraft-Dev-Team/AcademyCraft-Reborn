@@ -52,6 +52,13 @@ public abstract class AbilityCategory {
         return probability;
     }
 
+    /**
+     * Whether this category exposes skills registered with {@link SkillScope#COMMON}.
+     */
+    public boolean supportsCommonSkills() {
+        return true;
+    }
+
     public Identifier getKey() {
         return Objects.requireNonNull(Registries.ABILITY_CATEGORIES.getKey(this), "This ability category has not been registered.");
     }

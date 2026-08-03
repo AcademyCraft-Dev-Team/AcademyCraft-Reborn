@@ -12,12 +12,14 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.effect.ParticleEmitter;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -44,6 +46,7 @@ public class ChainFusion extends Skill {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL5)
+                .energyCost(100_000)
                 .cpCost(150)
                 .iterationTicks(60)
                 .maxStacks(1)
@@ -72,6 +75,9 @@ public class ChainFusion extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
+            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            if (minecraft.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.CHAIN_FUSION.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
@@ -108,11 +114,21 @@ public class ChainFusion extends Skill {
     }
 
     public static final class Server {
+        private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
+
+        public static float calculateDamage(float baseDamage, float playerMultiplier) {
+            return Math.max(0.0f, baseDamage) * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribePacket
         public static void handle(ActivatePacket p) {
             var player = p.getPacketListener().getPlayer();
-            Skills.CHAIN_FUSION.get().executeActive(player, (ctx, c) ->
-                    AbilitySystemServer.registerContext(new Context(player)));
+            if (ACTIVE.containsKey(player)) return;
+            Skills.CHAIN_FUSION.get().executeActive(player, (ctx, c) -> {
+                var context = new Context(player);
+                ACTIVE.put(player, context);
+                AbilitySystemServer.registerContext(context);
+            });
         }
     }
 
@@ -143,7 +159,9 @@ public class ChainFusion extends Skill {
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre ev) {
             ticks++;
-            if (player.hasDisconnected() || !player.isAlive() || ticks >= ORB_LIFETIME || orb.isRemoved()) {
+            if (player.hasDisconnected() || !player.isAlive()
+                    || !Skills.CHAIN_FUSION.get().isEnabled(player)
+                    || ticks >= ORB_LIFETIME || orb.isRemoved()) {
                 end();
                 return;
             }
@@ -168,7 +186,8 @@ public class ChainFusion extends Skill {
 
             var targets = sl.getEntitiesOfClass(LivingEntity.class,
                     orb.getBoundingBox().inflate(CHAIN_RADIUS),
-                    e -> e != player && e.isAlive() && !chainedEntities.contains(e.getId()));
+                    e -> e != player && e.isAlive() && !player.isAlliedTo(e)
+                            && !chainedEntities.contains(e.getId()));
 
             for (var target : targets) {
                 chainedEntities.add(target.getId());
@@ -190,7 +209,11 @@ public class ChainFusion extends Skill {
                     var entity = level().getEntity(entityId);
                     if (entity instanceof LivingEntity target && target.isAlive()) {
                         chainFrom(sl, target.position(), CHAIN_DAMAGE);
-                        target.hurtServer(sl, sl.damageSources().magic(), CHAIN_DAMAGE);
+                        target.hurtServer(sl,
+                                SkillDamageSource.of(player, Skills.CHAIN_FUSION.get()),
+                                Server.calculateDamage(CHAIN_DAMAGE,
+                                        AbilitySystemServer.getSystem(player)
+                                                .getPlayerDamageMultiplier(player.getUUID())));
                     }
                     it.remove();
                 } else {
@@ -204,12 +227,18 @@ public class ChainFusion extends Skill {
                     new net.minecraft.world.phys.AABB(
                             pos.x - CHAIN_RADIUS, pos.y - CHAIN_RADIUS, pos.z - CHAIN_RADIUS,
                             pos.x + CHAIN_RADIUS, pos.y + CHAIN_RADIUS, pos.z + CHAIN_RADIUS),
-                    e -> e != player && e.isAlive() && !chainedEntities.contains(e.getId()));
+                    e -> e != player && e.isAlive() && !player.isAlliedTo(e)
+                            && !chainedEntities.contains(e.getId()));
+
+            var scaledDamage = Server.calculateDamage(damage,
+                    AbilitySystemServer.getSystem(player)
+                            .getPlayerDamageMultiplier(player.getUUID()));
+            var source = SkillDamageSource.of(player, Skills.CHAIN_FUSION.get());
 
             for (var target : nearby) {
                 chainedEntities.add(target.getId());
                 chainQueue.put(target.getId(), CHAIN_DELAY);
-                target.hurtServer(sl, sl.damageSources().magic(), damage);
+                target.hurtServer(sl, source, scaledDamage);
                 spawnChainMarker(sl, target.position());
                 chainDepth++;
                 if (chainDepth >= MAX_CHAIN_DEPTH) break;
@@ -226,6 +255,7 @@ public class ChainFusion extends Skill {
         private void end() {
             if (ended) return;
             ended = true;
+            Server.ACTIVE.remove(player, this);
             if (!orb.isRemoved()) orb.discard();
             unregister();
         }

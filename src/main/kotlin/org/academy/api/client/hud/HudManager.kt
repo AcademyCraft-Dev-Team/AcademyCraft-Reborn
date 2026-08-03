@@ -12,6 +12,7 @@ import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.render.Render
 import org.academy.api.client.hud.ability.AbilityInfoHud
+import org.academy.api.client.hud.ability.ToggleStatusHud
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
@@ -34,6 +35,7 @@ object HudManager {
     fun initMain() {
         TerminalHud.initMain()
         AbilityInfoHud.initMain()
+        ToggleStatusHud.initMain()
     }
 
     @RenderThread
@@ -55,6 +57,7 @@ object HudManager {
         val deltaPartialTick = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
         TerminalHud.INSTANCE.perform(mouseX, mouseY, deltaPartialTick)
         AbilityInfoHud.instance.perform(mouseX, mouseY, deltaPartialTick)
+        ToggleStatusHud.instance.perform(mouseX, mouseY, deltaPartialTick)
     }
 
     fun render() {
@@ -83,6 +86,7 @@ object HudManager {
 
             TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
             AbilityInfoHud.instance.render(ui)
+            ToggleStatusHud.instance.render(ui)
 
             if (drewStencil.get()) {
                 BlurEffect.apply(
@@ -90,7 +94,7 @@ object HudManager {
                     mainColor,
                     blurColor,
                     uiDepth,
-                    20
+                    Math.round(TerminalHud.getBlurRadius())
                 )
                 Render.runBlitPass(
                     mainColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,

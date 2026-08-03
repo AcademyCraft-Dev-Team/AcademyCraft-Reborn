@@ -2,31 +2,40 @@ package org.academy.internal.common.ability.accelerator.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
+import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.DirStrikeBlockFx;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -36,17 +45,41 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Comparator;
+import java.util.List;
+
 public class DirStrike extends Skill {
+    public static final int EFFECT_RADIUS = 12;
+    public static final int ATTACK_RADIUS = 12;
+    private static final int EFFECT_RADIUS_SQUARED = EFFECT_RADIUS * EFFECT_RADIUS;
+    private static final int EFFECT_MIN_Y_OFFSET = -3;
+    private static final int EFFECT_MAX_Y_OFFSET = 5;
+    private static final int MAX_EFFECT_BLOCKS = 96;
+    private static final int EFFECT_BASE_DURATION = 18;
+    private static final int EFFECT_PEAK_HOLD_TICKS = 20;
+    private static final float EFFECT_BASE_PEAK = 0.38f;
+    private static final float BASE_DAMAGE = 12.0f;
+
     public DirStrike() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL3)
-                .cpCost(75)
+                .level(AbilityLevel.LEVEL2)
+                .energyCost(10_000)
+                .cpCost(20)
                 .iterationTicks(5)
                 .maxStacks(1)
-                .dependsOn(Skills.DIRECTED_SHOCK)
+                .dependsOn(Skills.VECTOR_BLAST)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
+                .devCondition(new DevCondition.DependencyCondition("Vector Blast", "academy:vector_blast"))
         );
+    }
+
+    public static boolean isInsideAttackRadius(double xOffset, double zOffset) {
+        return xOffset * xOffset + zOffset * zOffset <= ATTACK_RADIUS * ATTACK_RADIUS;
+    }
+
+    public static float getDamage(float abilityPower, float damageMultiplier) {
+        return BASE_DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, damageMultiplier);
     }
 
     @Override
@@ -54,9 +87,11 @@ public class DirStrike extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
-
-        InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME, InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT)), ctx -> Client.onAction());
+        InputSystem.addKeyBinding(Client.KEY_NAME,
+                Client.CONFIG.getKeyBinding(Client.KEY_NAME,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_S,
+                                InputConstants.PRESS, InputConstants.MOD_ALT)),
+                ctx -> Client.onAction());
     }
 
     @Override
@@ -65,20 +100,24 @@ public class DirStrike extends Skill {
     }
 
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ACCELERATOR.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.DIR_STRIKE.get(),
+                        List.of(VectorBlast.Client.SKILL_INFO),
+                        R.textures.dir_strike_icon,
+                        100,
+                        110
+                )
+        );
         public static final String KEY_NAME = SkillNames.DIR_STRIKE + "_use";
         public static Config CONFIG = new Config();
 
+        private Client() {
+        }
+
         public static void onAction() {
-            if (Minecraft.getInstance().player == null) return;
             MisakaNetworkClient.send(ActionPacket.INSTANCE);
-            var p = Minecraft.getInstance().player;
-            var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
-                    (float) p.getX(), (float) p.getY() + 0.5f, (float) p.getZ());
-            emitter.setColor(0.9f, 0.7f, 0.2f);
-            emitter.setEmissionRate(0);
-            emitter.burst(30);
-            emitter.setLifetime(1.5f, 0.5f);
-            emitter.setVelocity(1.5f, 0.5f);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -89,7 +128,7 @@ public class DirStrike extends Skill {
                 }
 
                 @Override
-                public DirStrike.Client.Config getDefault() {
+                public Config getDefault() {
                     return new Config();
                 }
 
@@ -102,71 +141,106 @@ public class DirStrike extends Skill {
     }
 
     public static final class Server {
+        private Server() {
+        }
+
         @SubscribePacket
         public static void onAction(ActionPacket packet) {
-            var serverPlayer = packet.getPacketListener().getPlayer();
+            var player = packet.getPacketListener().getPlayer();
+            var skill = Skills.DIR_STRIKE.get();
+            skill.executeActive(player, (ctx, actualCost) -> {
+                var level = player.level();
+                var playerPos = player.blockPosition();
+                level.playSound(null, playerPos, SoundEvents.DIR_STRIKE.get(),
+                        SoundSource.PLAYERS, 1.0f, 1.0f);
+                spawnGroundFx(level, player.position(), playerPos);
 
-            var level = serverPlayer.level();
-            var lookDir = serverPlayer.getLookAngle();
-            var horizontalLookDir = new Vec3(lookDir.x, 0, lookDir.z).normalize();
+                var minY = playerPos.getY() + EFFECT_MIN_Y_OFFSET;
+                var maxY = playerPos.getY() + EFFECT_MAX_Y_OFFSET + 1;
+                var center = player.position();
+                var area = new AABB(
+                        center.x - ATTACK_RADIUS, minY, center.z - ATTACK_RADIUS,
+                        center.x + ATTACK_RADIUS, maxY, center.z + ATTACK_RADIUS
+                );
+                var damage = getDamage(
+                        ctx.system().getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        ctx.system().getPlayerDamageMultiplier(player.getUUID())
+                );
+                var source = SkillDamageSource.of(player, skill);
+                var targets = level.getEntitiesOfClass(LivingEntity.class, area,
+                        target -> target != player
+                                && target.isAlive()
+                                && !target.isSpectator()
+                                && !player.isAlliedTo(target)
+                                && target.getY() >= minY
+                                && target.getY() <= maxY
+                                && isInsideAttackRadius(target.getX() - center.x, target.getZ() - center.z));
+                for (var target : targets) {
+                    target.hurtServer(level, source, damage);
+                }
+            });
+        }
 
-            var playerPos = serverPlayer.blockPosition();
-
-            var range = 5;
-            var width = 5;
-            var verticalRange = 2;
-
-            var affectedBlocks = new ArrayList<BlockPos>();
-            var processedPositions = new HashSet<BlockPos>();
-
-            level.playSound(null, playerPos, SoundEvents.GENERIC_BIG_FALL, SoundSource.PLAYERS, 0.7f, 0.9f);
-
-            for (var yOffset = -1; yOffset <= verticalRange - 1; ++yOffset) {
-                var targetY = playerPos.getY() + yOffset;
-                for (var i = 1; i <= range; ++i) {
-                    for (var j = -width / 2; j <= width / 2; ++j) {
-                        var forwardOffset = horizontalLookDir.scale(i);
-                        var sideOffset = horizontalLookDir.yRot((float) Math.toRadians(90)).scale(j);
-
-                        var groundPos = BlockPos.containing(playerPos.getX() + forwardOffset.x + sideOffset.x,
-                                targetY,
-                                playerPos.getZ() + forwardOffset.z + sideOffset.z);
-
-                        if (processedPositions.add(groundPos)) {
-                            affectedBlocks.add(groundPos);
-                        }
-                    }
+        private static void spawnGroundFx(ServerLevel level, Vec3 playerCenter, BlockPos playerPos) {
+            var candidates = new ArrayList<BlockPos>();
+            for (var xOffset = -EFFECT_RADIUS; xOffset <= EFFECT_RADIUS; xOffset++) {
+                for (var zOffset = -EFFECT_RADIUS; zOffset <= EFFECT_RADIUS; zOffset++) {
+                    var distanceSquared = xOffset * xOffset + zOffset * zOffset;
+                    if (distanceSquared > EFFECT_RADIUS_SQUARED) continue;
+                    if (((xOffset + zOffset) & 1) != 0 && level.getRandom().nextFloat() < 0.45f) continue;
+                    var surface = findSurfaceBlock(level, playerPos, xOffset, zOffset);
+                    if (surface != null) candidates.add(surface);
                 }
             }
 
-            for (var pos : affectedBlocks) {
+            candidates.sort(Comparator.comparingDouble(pos -> pos.distToCenterSqr(playerCenter)));
+            var limit = Math.min(MAX_EFFECT_BLOCKS, candidates.size());
+            for (var index = 0; index < limit; index++) {
+                var pos = candidates.get(index);
                 var blockState = level.getBlockState(pos);
-                if (!blockState.isAir() && !blockState.hasBlockEntity() && blockState.getDestroySpeed(level, pos) >= 0 && blockState.getFluidState().isEmpty()) {
-                    var fallingBlock = FallingBlockEntity.fall(level, pos, blockState);
-                    fallingBlock.disableDrop();
-                    fallingBlock.setHurtsEntities(0.0f, 0);
+                var blockCenter = Vec3.atCenterOf(pos);
+                var outward = blockCenter.subtract(playerCenter);
+                outward = outward.lengthSqr() < 1.0E-4
+                        ? new Vec3(0.0, 0.0, 1.0)
+                        : outward.normalize();
 
-                    var blockCenter = Vec3.atCenterOf(pos);
-                    var playerCenter = serverPlayer.position();
-                    var outwardDir = blockCenter.subtract(playerCenter).normalize();
+                var distance = (float) Math.sqrt(pos.distToCenterSqr(playerCenter));
+                var delay = Math.max(0, Mth.floor(distance * 1.1f) - 1) + level.getRandom().nextInt(2);
+                var duration = EFFECT_BASE_DURATION + level.getRandom().nextInt(3);
+                var peak = EFFECT_BASE_PEAK
+                        + level.getRandom().nextFloat() * 0.2f
+                        + Math.max(0.0f, 1.0f - distance / EFFECT_RADIUS) * 0.08f;
 
-                    var yVel = MathUtil.RANDOM.nextDouble(0.2, 0.3);
-                    var outwardVel = 0.1 + level.getRandom().nextDouble();
-
-                    var velocity = new Vec3(outwardDir.x * outwardVel, yVel, outwardDir.z * outwardVel);
-
-                    fallingBlock.setDeltaMovement(velocity);
-                }
+                var effect = new DirStrikeBlockFx(
+                        EntityTypes.DIR_STRIKE_BLOCK_FX.get(), level,
+                        pos, blockState, delay, duration, EFFECT_PEAK_HOLD_TICKS, peak);
+                effect.setYRot((float) Math.toDegrees(Math.atan2(outward.x, outward.z)));
+                level.addFreshEntity(effect);
+                level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, blockState),
+                        pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5,
+                        4, 0.18, 0.08, 0.18, 0.02);
             }
+        }
 
-            var basePos = serverPlayer.position();
-            var attackArea = new AABB(basePos, basePos.add(horizontalLookDir.scale(5))).inflate(1.0);
-            var targets = level.getEntitiesOfClass(LivingEntity.class, attackArea, e ->
-                    e != serverPlayer && e.isAlive());
-
-            for (var target : targets) {
-                target.hurtServer(level, level.damageSources().playerAttack(serverPlayer), 6.0f);
+        private static BlockPos findSurfaceBlock(Level level, BlockPos playerPos, int xOffset, int zOffset) {
+            for (var yOffset = EFFECT_MAX_Y_OFFSET; yOffset >= EFFECT_MIN_Y_OFFSET; yOffset--) {
+                var pos = playerPos.offset(xOffset, yOffset, zOffset);
+                var state = level.getBlockState(pos);
+                if (!isRenderableGroundBlock(level, pos, state)) continue;
+                var abovePos = pos.above();
+                var aboveState = level.getBlockState(abovePos);
+                if (!aboveState.isAir() && !aboveState.getCollisionShape(level, abovePos).isEmpty()) continue;
+                return pos;
             }
+            return null;
+        }
+
+        private static boolean isRenderableGroundBlock(Level level, BlockPos pos, BlockState state) {
+            return !state.isAir()
+                    && !state.hasBlockEntity()
+                    && state.getRenderShape() != RenderShape.INVISIBLE
+                    && state.getDestroySpeed(level, pos) >= 0.0f
+                    && state.getFluidState().isEmpty();
         }
     }
 

@@ -12,6 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
@@ -44,7 +45,9 @@ public class Cloudroom extends Skill {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
                 .passive()
+                .initiallyDisabled()
                 .maintenanceCost(30)
         );
     }
@@ -69,6 +72,7 @@ public class Cloudroom extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.CLOUDROOM.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
@@ -127,10 +131,16 @@ public class Cloudroom extends Skill {
                 end();
                 return;
             }
+            if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                if (skill.isEnabled(player)) skill.toggle(player);
+                end();
+                return;
+            }
 
             var entities = level().getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(RADIUS),
-                    e -> e != player && e.isAlive());
+                    e -> e != player && e.isAlive() && !e.isSpectator());
 
             for (var entity : entities) {
                 var currentPos = entity.position();

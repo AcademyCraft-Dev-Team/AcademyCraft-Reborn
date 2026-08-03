@@ -11,6 +11,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
@@ -37,6 +38,7 @@ public class MagnetMomentCharge extends Skill {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL2)
+                .energyCost(10_000)
                 .cpCost(40)
                 .iterationTicks(15)
                 .dependsOn(Skills.ARC_GENERATE)
@@ -64,6 +66,9 @@ public class MagnetMomentCharge extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
+            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            if (minecraft.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.MAGNET_MOMENT_CHARGE.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
         }
 
@@ -117,7 +122,9 @@ public class MagnetMomentCharge extends Skill {
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             lifetime--;
-            if (player.hasDisconnected() || !player.isAlive() || lifetime <= 0 || orb.isRemoved()) {
+            if (player.hasDisconnected() || !player.isAlive()
+                    || !Skills.MAGNET_MOMENT_CHARGE.get().isEnabled(player)
+                    || lifetime <= 0 || orb.isRemoved()) {
                 end();
                 return;
             }
@@ -126,7 +133,7 @@ public class MagnetMomentCharge extends Skill {
             var radius = 4.0f;
             var box = orb.getBoundingBox().inflate(radius);
             var targets = level().getEntitiesOfClass(LivingEntity.class, box,
-                    e -> e != player && e.isAlive());
+                    e -> e != player && e.isAlive() && !player.isAlliedTo(e));
 
             if (level() instanceof ServerLevel serverLevel) {
                 for (var target : targets) {

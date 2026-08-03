@@ -2,9 +2,12 @@ package org.academy.internal.common.ability.teleport.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
@@ -23,6 +26,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
+import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.CoordinateTeleportData;
 import org.misaka.MisakaNetworkClient;
@@ -43,6 +48,7 @@ public class CoordinateTeleport extends Skill {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
                 .cpCost(0)
                 .iterationTicks(30)
                 .maxStacks(1)
@@ -80,11 +86,10 @@ public class CoordinateTeleport extends Skill {
 
         public static void onSave() {
             var mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc.player == null) return;
-            var pos = mc.player.position();
-            var dim = mc.player.level().dimension().toString();
-            var name = String.format("(%.0f, %.0f, %.0f)", pos.x, pos.y, pos.z);
-            MisakaNetworkClient.send(new SavePositionPacket(pos, dim, name));
+            if (mc.player == null || mc.gui.screen() != null
+                    || !org.academy.api.client.ability.AbilitySystemClient.canUseSkill(
+                    Skills.COORDINATE_TELEPORT.get())) return;
+            MisakaNetworkClient.send(SavePositionPacket.INSTANCE);
         }
 
         public static void onTeleport() {
@@ -117,14 +122,17 @@ public class CoordinateTeleport extends Skill {
         @SubscribePacket
         public static void handleSave(SavePositionPacket p) {
             var player = p.getPacketListener().getPlayer();
-            var data = Skills.COORDINATE_TELEPORT.get()
-                    .<CoordinateTeleportData>getRuntimeData(player).orElse(null);
-            if (data == null) return;
-
+            var skill = Skills.COORDINATE_TELEPORT.get();
+            if (!skill.isEnabled(player)) return;
+            var pos = player.position();
             var dim = player.level().dimension().toString();
-            data.addPosition(new CoordinateTeleportData.SavedPosition(
-                    p.getName(), p.getPosition().x, p.getPosition().y, p.getPosition().z, dim));
-            player.sendSystemMessage(Component.translatable("academy.coordinate.saved", p.getName()));
+            var name = String.format("(%.0f, %.0f, %.0f)", pos.x, pos.y, pos.z);
+            var updated = AbilitySystemServer.getSystem(player).updatePlayerSkillData(
+                    player.getUUID(), skill, CoordinateTeleportData.class,
+                    data -> data.addPosition(new CoordinateTeleportData.SavedPosition(
+                            name, pos.x, pos.y, pos.z, dim))
+            );
+            if (updated) player.sendSystemMessage(Component.translatable("academy.coordinate.saved", name));
         }
 
         @SubscribePacket
@@ -179,11 +187,42 @@ public class CoordinateTeleport extends Skill {
             }
 
             if (ticks >= COMPUTE_TICKS) {
-                player.teleportTo(target.x(), target.y(), target.z());
+                var destinationLevel = resolveLevel();
+                if (destinationLevel == null) {
+                    player.sendSystemMessage(Component.translatable("academy.coordinate.invalid"));
+                    end();
+                    return;
+                }
+                var operation = "coordinate_" + player.getStringUUID();
+                TeleportChunkForceManager.forceChunk(destinationLevel, operation,
+                        (int) Math.floor(target.x()),
+                        (int) Math.floor(target.z()),
+                        TeleportChunkForceManager.DEFAULT_TIMEOUT_TICKS);
+                destinationLevel.getChunk(
+                        ((int) Math.floor(target.x())) >> 4,
+                        ((int) Math.floor(target.z())) >> 4
+                );
+                var safe = TeleportSafety.findSafe(
+                        player, destinationLevel, new Vec3(target.x(), target.y(), target.z())
+                );
+                if (safe == null) {
+                    player.sendSystemMessage(Component.translatable("academy.coordinate.invalid"));
+                    end();
+                    return;
+                }
+                player.teleportTo(destinationLevel, safe.x, safe.y, safe.z,
+                        java.util.Set.of(), player.getYRot(), player.getXRot(), false);
                 player.resetFallDistance();
                 player.sendSystemMessage(Component.translatable("academy.coordinate.teleported"));
                 end();
             }
+        }
+
+        private ServerLevel resolveLevel() {
+            var id = Identifier.tryParse(target.dimension());
+            return id == null ? null : player.level().getServer().getLevel(
+                    ResourceKey.create(Registries.DIMENSION, id)
+            );
         }
 
         private void end() {
@@ -196,35 +235,10 @@ public class CoordinateTeleport extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class SavePositionPacket extends Packet<ServerGamePacketListenerImpl, SavePositionPacket> {
-        public static final StreamCodec<ByteBuf, SavePositionPacket> CODEC = StreamCodec.composite(
-                ByteBufCodecs.DOUBLE, p -> p.pos.x,
-                ByteBufCodecs.DOUBLE, p -> p.pos.y,
-                ByteBufCodecs.DOUBLE, p -> p.pos.z,
-                ByteBufCodecs.STRING_UTF8, p -> p.dimension,
-                ByteBufCodecs.STRING_UTF8, p -> p.name,
-                (x, y, z, dim, name) -> new SavePositionPacket(new Vec3(x, y, z), dim, name)
-        );
+        public static final SavePositionPacket INSTANCE = new SavePositionPacket();
+        public static final StreamCodec<ByteBuf, SavePositionPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        private final Vec3 pos;
-        private final String dimension;
-        private final String name;
-
-        public SavePositionPacket(Vec3 pos, String dimension, String name) {
-            this.pos = pos;
-            this.dimension = dimension;
-            this.name = name;
-        }
-
-        public Vec3 getPosition() {
-            return pos;
-        }
-
-        public String getDimension() {
-            return dimension;
-        }
-
-        public String getName() {
-            return name;
+        private SavePositionPacket() {
         }
 
         @Override

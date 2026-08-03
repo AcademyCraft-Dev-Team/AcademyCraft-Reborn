@@ -6,14 +6,13 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.StagedVertexBuffer;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
@@ -33,8 +32,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.effect.AfterimageRenderer;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -42,12 +39,11 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.AfterimageEffectWrapper;
-import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -61,19 +57,21 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 public final class VectorAccel extends Skill {
     public static final long MAX_CHARGE_TIME_MS = 2000;
+    public static final long MAX_CHARGE_TICKS = 40;
 
     public VectorAccel() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL2)
-                .cpCost(45)
+                .level(AbilityLevel.LEVEL1)
+                .energyCost(5_000)
+                .cpCost(10)
                 .maxStacks(4)
                 .iterationTicks(6)
-                .dependsOn(Skills.DIRECTED_SHOCK)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
-                .devCondition(new DevCondition.DependencyCondition("Directed Shock", "academy:directed_shock"))
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }
 
@@ -82,14 +80,12 @@ public final class VectorAccel extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
-        RendererManager.registerEffectRenderer(AfterimageEffectWrapper.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_CHARGE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CHARGE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.PRESS, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0)
         ), ctx -> Client.onChargeStart());
         InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.RELEASE, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.RELEASE, 0)
         ), ctx -> Client.onChargeRelease());
     }
 
@@ -101,7 +97,7 @@ public final class VectorAccel extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
-                new AbilitySystemClient.SkillInfo(Skills.VECTOR_ACCEL.get(), List.of(DirectedShock.Client.SKILL_INFO), R.textures.ability.accelerator.skill.vec_accel.icon, 76, 40)
+                new AbilitySystemClient.SkillInfo(Skills.VECTOR_ACCEL.get(), List.of(), R.textures.ability.accelerator.skill.vec_accel.icon, 76, 40)
         );
         public static final String KEY_NAME_CHARGE = SkillNames.VECTOR_ACCEL + "_charge";
         public static final String KEY_NAME_RELEASE = SkillNames.VECTOR_ACCEL + "_release";
@@ -113,8 +109,10 @@ public final class VectorAccel extends Skill {
             if (player == null || currentContext != null || Minecraft.getInstance().gui.screen() != null) {
                 return;
             }
+            if (!AbilitySystemClient.canUseSkill(Skills.VECTOR_ACCEL.get())) return;
             currentContext = new Context(player);
             AbilitySystemClient.registerContext(currentContext);
+            MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
 
         public static void onChargeRelease() {
@@ -146,8 +144,6 @@ public final class VectorAccel extends Skill {
             private final LocalPlayer player;
             private final long chargeStartTime;
             private final List<Vec3> trajectoryPath = new ArrayList<>();
-            private final AfterimageRenderer afterimage = new AfterimageRenderer(0.05f, 8, 2.0f);
-            private final java.util.Map<net.minecraft.client.renderer.rendertype.RenderType, StagedVertexBuffer.Draw> activeDraws = new java.util.HashMap<>();
             private boolean released = false;
             private float chargeRatio;
             private @Nullable HitResult lastHitResult;
@@ -158,18 +154,12 @@ public final class VectorAccel extends Skill {
             public Context(LocalPlayer player) {
                 this.player = player;
                 chargeStartTime = System.nanoTime();
-                afterimage.setActive(true);
             }
 
             public void release() {
                 if (released) return;
                 released = true;
-                MisakaNetworkClient.send(new DashPacket(chargeRatio, lastCalculatedDirection));
-                var p = player;
-                var trail = TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.12f, 0.2f, 0.6f, 1.0f);
-                trail.addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());
-                AfterimageEffectWrapper.INSTANCE.setActive(true);
-                AfterimageEffectWrapper.INSTANCE.captureAt((float) p.getX(), (float) p.getY(), (float) p.getZ());
+                MisakaNetworkClient.send(DashPacket.INSTANCE);
                 cleanup();
             }
 
@@ -215,16 +205,20 @@ public final class VectorAccel extends Skill {
                 lastHitResult = null;
 
                 var level = player.level();
-                var currentPos = player.getPosition(partialTick);
+                var startPos = player.getPosition(partialTick);
+                var currentPos = startPos;
                 var currentVel = calculateInitSpeed();
-                var playerBox = player.getBoundingBox();
+                var startBox = player.getBoundingBox().move(startPos.subtract(player.position()));
 
                 for (var i = 0; i < 300; i++) {
                     trajectoryPath.add(currentPos);
 
-                    var collisionBox = playerBox.move(currentPos.vectorTo(currentPos.add(currentVel)));
+                    var currentBox = startBox.move(currentPos.subtract(startPos));
+                    var collisionBox = currentBox.expandTowards(currentVel).inflate(1.0e-4);
                     var collisions = level.getEntityCollisions(player, collisionBox);
-                    var adjustedVel = currentVel.lengthSqr() == 0.0D ? currentVel : collideWithShapes(currentVel, playerBox, collisions);
+                    var adjustedVel = currentVel.lengthSqr() == 0.0D
+                            ? currentVel
+                            : collideWithShapes(currentVel, currentBox, collisions);
 
                     var nextPos = currentPos.add(adjustedVel);
 
@@ -233,7 +227,7 @@ public final class VectorAccel extends Skill {
                         nextPos = blockHit.getLocation();
                     }
 
-                    var searchBox = playerBox.move(nextPos.subtract(currentPos)).inflate(1.0);
+                    var searchBox = currentBox.expandTowards(adjustedVel).inflate(1.0);
                     var entityHit = ProjectileUtil.getEntityHitResult(level, player, currentPos, nextPos, searchBox, e -> !e.isSpectator() && e.isPickable() && !e.is(player), 0.3f);
 
                     if (entityHit != null) {
@@ -291,23 +285,25 @@ public final class VectorAccel extends Skill {
                 }
             }
 
-            private VertexConsumer getStagingVertexConsumer(StagedVertexBuffer staging, RenderType type) {
-                var draw = activeDraws.get(type);
-                if (draw == null) {
-                    draw = staging.appendDraw(type.format(), type.primitiveTopology());
-                    activeDraws.put(type, draw);
-                }
-                return staging.getVertexBuilder(draw);
+            private Vec3 calculateLeftHandOffset(float partialTick) {
+                var yaw = Mth.lerp(partialTick, player.yRotO, player.getYRot());
+                var forward = Vec3.directionFromRotation(0.0f, yaw);
+                var flatForward = new Vec3(forward.x, 0.0, forward.z);
+                if (flatForward.lengthSqr() <= 1.0e-6) flatForward = new Vec3(0.0, 0.0, 1.0);
+                flatForward = flatForward.normalize();
+                var left = new Vec3(0.0, 1.0, 0.0).cross(flatForward).normalize();
+                return left.scale(0.42)
+                        .add(flatForward.scale(0.16))
+                        .add(0.0, player.getEyeHeight() - 0.32, 0.0);
             }
 
-            private void renderTrajectoryPath(MatrixStack matrixStack, StagedVertexBuffer staging, Camera camera) {
+            private void renderTrajectoryPath(MatrixStack matrixStack, VertexConsumer buffer, Camera camera,
+                                              Vec3 renderOffset) {
                 if (trajectoryPath.size() < 2) return;
 
-                var buffer = getStagingVertexConsumer(staging, RenderTypes.lightning());
-
                 for (var i = 0; i < trajectoryPath.size() - 1; i++) {
-                    var p1 = trajectoryPath.get(i);
-                    var p2 = trajectoryPath.get(i + 1);
+                    var p1 = trajectoryPath.get(i).add(renderOffset);
+                    var p2 = trajectoryPath.get(i + 1).add(renderOffset);
 
                     var dir = p2.subtract(p1).normalize();
                     var cross = dir.cross(p1.subtract(camera.position())).normalize();
@@ -327,11 +323,11 @@ public final class VectorAccel extends Skill {
                 }
             }
 
-            private void renderLandingPoint(MatrixStack matrixStack, StagedVertexBuffer staging) {
+            private void renderLandingPoint(MatrixStack matrixStack, VertexConsumer consumer, Vec3 renderOffset) {
                 if (lastHitResult == null) return;
 
                 if (lastHitResult instanceof BlockHitResult blockHitResult) {
-                    var hitPos = blockHitResult.getLocation();
+                    var hitPos = blockHitResult.getLocation().add(renderOffset);
                     var normal = Vec3.atLowerCornerOf(blockHitResult.getDirection().getUnitVec3i());
 
                     var lerpFactor = ClientUtil.animationFactor(1.5f);
@@ -347,7 +343,6 @@ public final class VectorAccel extends Skill {
 
                     matrixStack.translate(0, 0.005f, 0);
 
-                    var consumer = getStagingVertexConsumer(staging, RenderTypes.lightning());
                     var matrix = matrixStack.lastMatrix();
                     var ringHeight = 0.25f;
                     var y_bottom = -ringHeight / 2.0f;
@@ -389,23 +384,21 @@ public final class VectorAccel extends Skill {
                 var elapsedMillis = (currentTime - chargeStartTime) / 1_000_000;
                 chargeRatio = Mth.clamp((float) elapsedMillis / MAX_CHARGE_TIME_MS, 0f, 1f);
 
-                afterimage.update(event.getPartialTick());
-
                 lastCalculatedDirection = calculateDashDirection(event.getPartialTick());
                 simulatePath(event.getPartialTick());
-
-                var staging = Minecraft.getInstance().gameRenderer.renderBuffers().stagedVertexBuffer();
-                activeDraws.clear();
 
                 var matrixStack = event.getMatrixStack();
                 var camera = Minecraft.getInstance().gameRenderer.mainCamera();
                 var camPos = camera.position();
+                var renderOffset = calculateLeftHandOffset(event.getPartialTick());
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
 
-                renderTrajectoryPath(matrixStack, staging, camera);
-                renderLandingPoint(matrixStack, staging);
+                event.submitCustomGeometry(RenderTypes.lightning(), (matrices, consumer) -> {
+                    renderTrajectoryPath(matrices, consumer, camera, renderOffset);
+                    renderLandingPoint(matrices, consumer, renderOffset);
+                });
 
                 matrixStack.popPose();
 
@@ -417,54 +410,65 @@ public final class VectorAccel extends Skill {
     }
 
     public static final class Server {
-        public static final double MAX_VELOCITY_SCALAR = 2.5;
+        public static final double MAX_VELOCITY_SCALAR = 7.0;
+        private static final Map<ServerPlayer, Long> CHARGE_START_TICKS = new WeakHashMap<>();
+
+        public static float getChargeRatio(long startTick, long releaseTick) {
+            return Mth.clamp((float) Math.max(0, releaseTick - startTick) / MAX_CHARGE_TICKS, 0.0f, 1.0f);
+        }
+
+        public static double getSpeed(float chargeRatio) {
+            var speedScalarProg = Mth.lerp(Mth.clamp(chargeRatio, 0.0f, 1.0f), 0.4f, 1.0f);
+            return Math.sin(speedScalarProg) * MAX_VELOCITY_SCALAR;
+        }
+
+        @SubscribePacket
+        public static void handleStart(StartPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            if (!Skills.VECTOR_ACCEL.get().isEnabled(player)) return;
+            CHARGE_START_TICKS.put(player, player.level().getGameTime());
+        }
 
         @SubscribePacket
         public static void handleDash(DashPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var startTick = CHARGE_START_TICKS.remove(player);
+            if (startTick == null) return;
+            var chargeRatio = getChargeRatio(startTick, player.level().getGameTime());
+            Skills.VECTOR_ACCEL.get().executeActive(player, (_, _) -> {
+                var direction = player.getLookAngle();
+                if (direction.y < -0.5) {
+                    direction = new Vec3(direction.x, -0.5, direction.z).normalize();
+                }
+                player.setDeltaMovement(direction.normalize().scale(getSpeed(chargeRatio)));
+                player.resetFallDistance();
+                player.level().playSound(null, player.blockPosition(), SoundEvents.VECTOR_ACCEL.get(),
+                        SoundSource.PLAYERS, 1.0f, 1.0f);
+                player.connection.send(new ClientboundSetEntityMotionPacket(player));
+            });
+        }
+    }
 
-            var speedScalarProg = Mth.lerp(packet.getChargeRatio(), 0.4f, 1.0f);
-            var actualSpeedScalar = Math.sin(speedScalarProg) * MAX_VELOCITY_SCALAR;
+    @PacketTarget(ThreadType.SERVER)
+    public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
+        public static final StartPacket INSTANCE = new StartPacket();
+        public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-            var dashVelocity = packet.getDirection().scale(actualSpeedScalar);
-            player.setDeltaMovement(dashVelocity);
+        private StartPacket() {
+        }
 
-            player.resetFallDistance();
-            player.connection.send(new ClientboundSetEntityMotionPacket(player));
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+            return PacketTypes.VECTOR_ACCEL_START.get();
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class DashPacket extends Packet<ServerGamePacketListenerImpl, DashPacket> {
-        private static final StreamCodec<ByteBuf, Vec3> VEC3_STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.DOUBLE, Vec3::x,
-                ByteBufCodecs.DOUBLE, Vec3::y,
-                ByteBufCodecs.DOUBLE, Vec3::z,
-                Vec3::new
-        );
+        public static final DashPacket INSTANCE = new DashPacket();
+        public static final StreamCodec<ByteBuf, DashPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public static final StreamCodec<ByteBuf, DashPacket> CODEC = StreamCodec.composite(
-                ByteBufCodecs.FLOAT,
-                DashPacket::getChargeRatio,
-                VEC3_STREAM_CODEC,
-                DashPacket::getDirection,
-                DashPacket::new
-        );
-
-        private final float chargeRatio;
-        private final Vec3 direction;
-
-        public DashPacket(float chargeRatio, Vec3 direction) {
-            this.chargeRatio = chargeRatio;
-            this.direction = direction;
-        }
-
-        public float getChargeRatio() {
-            return chargeRatio;
-        }
-
-        public Vec3 getDirection() {
-            return direction;
+        private DashPacket() {
         }
 
         @Override

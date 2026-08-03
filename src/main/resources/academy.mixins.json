@@ -5,17 +5,22 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "org.academy.mixin.plugin.MixinPlugin",
   "mixins": [
+    "common.EntitySharedFlagInvoker",
     "common.MixinCombatTracker",
     "common.MixinEntity",
     "common.MixinLivingEntity",
     "common.MixinMinecraftServer",
     "common.MixinPlayerList",
     "common.MixinProjectile",
-    "common.MixinServerPlayer"
+    "common.MixinServerEntity",
+    "common.MixinServerPlayer",
+    "common.item.MixinItemStackDarkmatterEnchantment",
+    "common.item.MixinItemEntityDarkmatterFireImmune"
   ],
   "client": [
     "client.MixinGameRenderer",
     "client.MixinHud",
+    "client.MixinClientEntity",
     "client.MixinKeyboardHandler",
     "client.MixinLevelRenderer",
     "client.MixinLivingEntityRenderer",

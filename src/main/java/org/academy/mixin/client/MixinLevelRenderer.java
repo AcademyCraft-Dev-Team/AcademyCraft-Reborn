@@ -55,7 +55,9 @@ public abstract class MixinLevelRenderer {
     ) {
         var event = new LevelRenderEvent(
                 Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks(),
-                new MatrixStack().setFrom(poseStack.last())
+                new MatrixStack().setFrom(poseStack.last()),
+                poseStack,
+                output
         );
         NeoForge.EVENT_BUS.post(event);
     }

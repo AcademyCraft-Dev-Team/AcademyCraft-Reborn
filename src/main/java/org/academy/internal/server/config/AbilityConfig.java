@@ -22,6 +22,29 @@ public class AbilityConfig {
     public float damageMultiplier = 1.0f;
     @SerializedName("cpRatingOffset")
     public float cpRatingOffset = 0.0f;
+    @SerializedName("brainDevelopment")
+    public final BrainDevelopmentSettings brainDevelopment = new BrainDevelopmentSettings();
+
+    public static class BrainDevelopmentSettings {
+        @SerializedName("level1MaxCpBonus")
+        public float level1MaxCpBonus = 20.0f;
+        @SerializedName("level1RecoveryBonus")
+        public float level1RecoveryBonus = 1.0f;
+        @SerializedName("level2EfficiencyBonus")
+        public float level2EfficiencyBonus = 0.05f;
+        @SerializedName("level3MaxCpBonus")
+        public float level3MaxCpBonus = 100.0f;
+        @SerializedName("level3RecoveryBonus")
+        public float level3RecoveryBonus = 5.0f;
+        @SerializedName("level4EfficiencyBonus")
+        public float level4EfficiencyBonus = 0.15f;
+        @SerializedName("level5MaxCpBonus")
+        public float level5MaxCpBonus = 500.0f;
+        @SerializedName("level5RecoveryBonus")
+        public float level5RecoveryBonus = 25.0f;
+        @SerializedName("level5EfficiencyBonus")
+        public float level5EfficiencyBonus = 0.30f;
+    }
 
     public static class SkillSettings {
         @SerializedName("booleanMap")

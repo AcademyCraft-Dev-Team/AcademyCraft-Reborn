@@ -3,6 +3,7 @@ package org.academy;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import org.academy.agent.AcademyAgentBootstrap;
 import org.academy.internal.client.data.AcademyCraftClientData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ public final class AcademyCraft {
     public static boolean DEBUG_UI = false;
 
     public AcademyCraft(IEventBus modEventBus) {
+        AcademyAgentBootstrap.ensureInstalled();
         AcademyCraftRegister.register(modEventBus);
         modEventBus.addListener(AcademyCraftClientData::dataSetup);
     }
