@@ -21,7 +21,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     public static final ContextKey<Boolean> CONTEXT_KEY = new ContextKey<>(academy("storm_wing"));
     public static final StormWingEffectRenderer INSTANCE = new StormWingEffectRenderer();
     public static final int RING_SEGMENTS = 4;
-    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, -0.25f);
+    private static final Matrix4f BASE_MATRIX = new Matrix4f().rotateX((float) Math.toRadians(90.0f)).translate(0, 0.25f, 0);
     private static final int NUM_RINGS = 24;
     private static final float HEIGHT = 3.5f;
     private static final float SIZE = 1.0f;
@@ -122,7 +122,12 @@ public final class StormWingEffectRenderer implements EffectRenderer {
         tempTiltQuat.identity().rotateZ((float) (tiltNoiseZ * RING_TILT_SCALE)).rotateX((float) (tiltNoiseX * RING_TILT_SCALE));
     }
 
-    private static void renderSingleTornado(PoseStack poseStack, VertexConsumer vertexConsumer, float effectiveTime) {
+    static void renderSingleTornado(PoseStack poseStack, VertexConsumer vertexConsumer, float effectiveTime) {
+        renderSingleTornado(poseStack, vertexConsumer, effectiveTime, 1.0f);
+    }
+
+    static void renderSingleTornado(PoseStack poseStack, VertexConsumer vertexConsumer,
+                                    float effectiveTime, float ringWidthScale) {
         var tPosBase = effectiveTime * TIME_POS_BASE;
         var tWarp = effectiveTime * TIME_POS_WARP;
         var tGap = effectiveTime * TIME_GAP;
@@ -158,7 +163,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
             var finalRadiusMain = (float) Math.max(0.015 * SIZE, (rWithExtra + rJitter) * SIZE);
 
             var rotationAngle = calculateRotation(normalizedY, i, tRotBase, tRotMod);
-            var ringWidth = calculateRingWidth(normalizedY, i, tWidthBase, tWidthDetail);
+            var ringWidth = calculateRingWidth(normalizedY, i, tWidthBase, tWidthDetail) * ringWidthScale;
             calculateTilt(i, tTilt);
 
             poseStack.pushPose();

@@ -17,16 +17,112 @@
       "academy:ability/electromaster/skill/arc_weak"
     ]
   },
+  "magnet_move_loop": {
+    "subtitle": "academy.magnet_move_loop",
+    "sounds": [
+      "academy:ability/electromaster/skill/move_loop"
+    ]
+  },
   "vector_reflection": {
     "subtitle": "academy.vector_reflection",
     "sounds": [
       "academy:ability/accelerator/skill/vector_reflection"
     ]
   },
+  "kinetic_shockwave": {
+    "subtitle": "academy.kinetic_shockwave",
+    "sounds": [
+      "academy:ability/accelerator/skill/kinetic_shockwave"
+    ]
+  },
+  "dir_strike": {
+    "subtitle": "academy.dir_strike",
+    "sounds": [
+      "academy:ability/accelerator/skill/dir_strike"
+    ]
+  },
+  "vector_accel": {
+    "subtitle": "academy.vector_accel",
+    "sounds": [
+      "academy:ability/accelerator/skill/vector_accel"
+    ]
+  },
+  "plasma_generation": {
+    "subtitle": "academy.plasma_generation",
+    "sounds": [
+      "academy:ability/accelerator/skill/plasma_generation"
+    ]
+  },
+  "plasma_generation_boom": {
+    "subtitle": "academy.plasma_generation_boom",
+    "sounds": [
+      "academy:ability/accelerator/skill/plasma_generation_boom"
+    ]
+  },
+  "bloodflow_reverse": {
+    "subtitle": "academy.bloodflow_reverse",
+    "sounds": [
+      "academy:ability/accelerator/skill/bloodflow_reverse"
+    ]
+  },
+  "light_shield_startup": {
+    "subtitle": "academy.light_shield_startup",
+    "sounds": [
+      "academy:ability/meltdowner/skill/light_shield_startup"
+    ]
+  },
+  "light_shield_loop": {
+    "subtitle": "academy.light_shield_loop",
+    "sounds": [
+      "academy:ability/meltdowner/skill/light_shield_loop"
+    ]
+  },
+  "single_high_speed_electron_beam": {
+    "subtitle": "academy.single_high_speed_electron_beam",
+    "sounds": [
+      "academy:ability/meltdowner/skill/single_high_speed_electron_beam"
+    ]
+  },
+  "scatter_bomb_charge": {
+    "subtitle": "academy.scatter_bomb_charge",
+    "sounds": [
+      "academy:ability/meltdowner/skill/scatter_bomb_charge"
+    ]
+  },
   "select": {
     "subtitle": "academy.select",
     "sounds": [
       "academy:gui/select"
+    ]
+  },
+  "threatening_teleport": {
+    "subtitle": "academy.threatening_teleport",
+    "sounds": [
+      "academy:ability/teleport/skill/threatening_teleport"
+    ]
+  },
+  "self_teleport": {
+    "subtitle": "academy.self_teleport",
+    "sounds": [
+      "academy:ability/teleport/skill/self_teleport"
+    ]
+  },
+  "flesh_ripping": {
+    "subtitle": "academy.flesh_ripping",
+    "sounds": [
+      "academy:ability/teleport/skill/flesh_ripping"
+    ]
+  },
+  "penetrate_teleport": {
+    "subtitle": "academy.penetrate_teleport",
+    "sounds": [
+      "academy:ability/teleport/skill/penetrate_teleport"
+    ]
+  },
+  "flashing": {
+    "subtitle": "academy.flashing",
+    "sounds": [
+      "academy:ability/teleport/skill/flashing"
     ]
   }
 }

@@ -17,6 +17,7 @@ import static org.academy.api.client.render.Render.RenderTypes;
 
 public final class ArcFactory {
     private static final Vector3f DEFAULT_COLOR = new Vector3f(1.0f, 1.0f, 1.0f);
+    private static final int MAX_QUADS_PER_RENDER = 65_536;
 
     public static void render(PoseStack ps, ArcRenderData data) {
         render(ps, data, 1, 1, 1, 1);
@@ -25,11 +26,15 @@ public final class ArcFactory {
     public static void render(PoseStack ps, ArcRenderData data, float r, float g, float b, float a) {
         if (IrisCompat.isShadowRendererActive()) return;
         var vc = BloomEffect.getBefore().getBuffer(RenderTypes.ARC);
-        renderRecursive(ps.last(), vc, data, r, g, b, a);
+        renderRecursive(ps.last(), vc, data, r, g, b, a, MAX_QUADS_PER_RENDER);
     }
 
-    private static void renderRecursive(PoseStack.Pose pose, VertexConsumer vc, ArcRenderData data, float r, float g, float b, float a) {
+    private static int renderRecursive(
+            PoseStack.Pose pose, VertexConsumer vc, ArcRenderData data,
+            float r, float g, float b, float a, int remainingQuads
+    ) {
         for (var quad : data.quads) {
+            if (remainingQuads <= 0) return 0;
             var v1 = quad.v1();
             var v2 = quad.v2();
             var v3 = quad.v3();
@@ -38,11 +43,14 @@ public final class ArcFactory {
             addVertex(pose, vc, v2, r, g, b, a);
             addVertex(pose, vc, v3, r, g, b, a);
             addVertex(pose, vc, v4, r, g, b, a);
+            remainingQuads--;
         }
 
         for (var branch : data.branches) {
-            renderRecursive(pose, vc, branch, r, g, b, a);
+            remainingQuads = renderRecursive(pose, vc, branch, r, g, b, a, remainingQuads);
+            if (remainingQuads <= 0) return 0;
         }
+        return remainingQuads;
     }
 
     private static void addVertex(

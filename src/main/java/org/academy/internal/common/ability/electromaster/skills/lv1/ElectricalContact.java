@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,11 +15,14 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -38,6 +42,7 @@ public class ElectricalContact extends Skill {
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL1)
                 .passive()
+                .initiallyDisabled()
                 .maintenanceCost(15)
                 .iterationTicks(40)
         );
@@ -49,9 +54,20 @@ public class ElectricalContact extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H, InputConstants.PRESS, 0)
-        ), ctx -> Client.onToggle());
+        var legacyBinding = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD, InputConstants.KEY_H, InputConstants.PRESS, 0);
+        var defaultBinding = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
+                InputConstants.PRESS, InputConstants.MOD_ALT);
+        if (Client.CONFIG.containsKeyBinding(Client.KEY_NAME_TOGGLE)
+                && legacyBinding.equals(Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE))) {
+            Client.CONFIG.setKeyBinding(Client.KEY_NAME_TOGGLE, defaultBinding);
+            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
+        InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE,
+                Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE, defaultBinding),
+                ctx -> Client.onToggle());
     }
 
     @Override
@@ -64,6 +80,7 @@ public class ElectricalContact extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.ELECTRICAL_CONTACT.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
@@ -101,11 +118,20 @@ public class ElectricalContact extends Skill {
         private static final float DAMAGE_AMOUNT = 2.0f;
         private static final float RADIUS = 2.0f;
 
+        public static float calculateDamage(float abilityPower, float playerMultiplier) {
+            return DAMAGE_AMOUNT * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var skill = Skills.ELECTRICAL_CONTACT.get();
             if (!skill.isEnabled(player)) return;
+            if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                if (skill.isEnabled(player)) skill.toggle(player);
+                return;
+            }
             if (player.level().getGameTime() % DAMAGE_INTERVAL != 0) return;
 
             var level = player.level();
@@ -115,9 +141,18 @@ public class ElectricalContact extends Skill {
                             && !player.isAlliedTo(e));
 
             if (!(level instanceof ServerLevel serverLevel)) return;
-            var damageSource = player.damageSources().lightningBolt();
+            var damageSource = SkillDamageSource.of(player, skill,
+                    net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT);
+            var system = AbilitySystemServer.getSystem(player);
+            var damage = calculateDamage(
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID())
+            );
             for (var target : targets) {
-                target.hurtServer(serverLevel, damageSource, DAMAGE_AMOUNT);
+                target.hurtServer(serverLevel, damageSource, damage);
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                        target.getX(), target.getY(0.6), target.getZ(),
+                        8, 0.25, 0.45, 0.25, 0.04);
             }
         }
 
@@ -129,9 +164,18 @@ public class ElectricalContact extends Skill {
             if (!skill.isEnabled(player)) return;
 
             var attacker = event.getSource().getEntity();
-            if (attacker instanceof LivingEntity livingAttacker && livingAttacker != player) {
+            if (attacker instanceof LivingEntity livingAttacker && livingAttacker != player
+                    && !player.isAlliedTo(livingAttacker)) {
                 if (player.level() instanceof ServerLevel serverLevel) {
-                    livingAttacker.hurtServer(serverLevel, player.damageSources().lightningBolt(), DAMAGE_AMOUNT);
+                    var system = AbilitySystemServer.getSystem(player);
+                    var damage = calculateDamage(
+                            system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                            system.getPlayerDamageMultiplier(player.getUUID())
+                    );
+                    livingAttacker.hurtServer(serverLevel,
+                            SkillDamageSource.of(player, skill,
+                                    net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT),
+                            damage);
                 }
             }
         }

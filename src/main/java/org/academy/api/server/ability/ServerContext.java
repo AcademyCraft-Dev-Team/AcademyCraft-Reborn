@@ -26,4 +26,8 @@ public abstract class ServerContext implements Context {
     public void unregister() {
         AbilitySystemServer.unregisterContext(this);
     }
+
+    /** Called exactly once when the ability system removes this registered context. */
+    protected void onUnregistered() {
+    }
 }

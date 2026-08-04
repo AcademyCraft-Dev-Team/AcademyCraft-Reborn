@@ -25,6 +25,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.VectorFieldEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -48,21 +49,23 @@ public class VectorReduction extends Skill {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL2)
+                .energyCost(10_000)
                 .passive()
+                .initiallyDisabled()
                 .maintenanceCost(75)
-                .iterationTicks(0)
+                .iterationTicks(40)
                 .dependsOn(Skills.VECTOR_ACCEL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition("Vector Acceleration", "academy:vector_accel"))
         );
     }
 
-    public float getRadius(int level) {
+    public static float getRadius(int level) {
         if (level >= 3) return 10.0f;
         return 6.0f;
     }
 
-    public double getSlowdownPercent(int level) {
+    public static double getSlowdownPercent(int level) {
         if (level >= 2) return 0.80;
         return 0.50;
     }
@@ -93,6 +96,7 @@ public class VectorReduction extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.VECTOR_REDUCTION.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
@@ -138,6 +142,11 @@ public class VectorReduction extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var skill = Skills.VECTOR_REDUCTION.get();
             if (!skill.isEnabled(player)) return;
+            if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                if (skill.isEnabled(player)) skill.toggle(player);
+                return;
+            }
             var level = skill.getLevel(player);
             var radius = skill.getRadius(level);
             var slowdown = skill.getSlowdownPercent(level);
@@ -148,7 +157,8 @@ public class VectorReduction extends Skill {
                     e -> e != player && e.isAlive());
             for (var target : livingTargets) {
                 var distance = target.distanceTo(player);
-                var factor = 1.0 - slowdown * (1.0 - distance / radius);
+                if (distance > radius) continue;
+                var factor = Math.clamp(1.0 - slowdown * (1.0 - distance / radius), 0.05, 1.0);
                 target.setDeltaMovement(target.getDeltaMovement().scale(factor));
 
                 if (level >= 1) {
@@ -160,6 +170,7 @@ public class VectorReduction extends Skill {
             var projectileTargets = player.level().getEntitiesOfClass(Projectile.class, box,
                     Entity::isAlive);
             for (var proj : projectileTargets) {
+                if (proj.distanceTo(player) > radius) continue;
                 proj.setDeltaMovement(proj.getDeltaMovement().scale(PROJECTILE_SLOW_FACTOR));
             }
         }

@@ -26,7 +26,9 @@ import org.misaka.MisakaNetworkServer;
 import org.slf4j.Logger;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -36,9 +38,13 @@ public class PlayerCPManager implements AbilitySubsystem {
     private static final int PERSONAL_REALITY_OVERLOAD_TICKS = 100;
     private static final int MAX_OVERLOAD_TICKS = 1200;
     private static final int MIN_OVERLOAD_TICKS = 200;
+    private static final float TICKS_PER_ITERATION_POINT = 20.0f;
 
     private final PlayerDataManager playerDataManager;
     private final SyncManager syncManager;
+    private final AbilityConfig.BrainDevelopmentSettings brainDevelopmentSettings;
+    private final Set<UUID> skillDebugPlayers = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<UUID, Float> cpIterationProgress = new ConcurrentHashMap<>();
 
     private final float CP_RATING_OFFSET;//等级评定修正值(Z)
     private final float DAMAGE_MULTIPLIER;//伤害修正值(X)
@@ -49,11 +55,24 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         CP_RATING_OFFSET = config.cpRatingOffset;
         DAMAGE_MULTIPLIER = config.damageMultiplier;
+        brainDevelopmentSettings = config.brainDevelopment != null
+                ? config.brainDevelopment
+                : new AbilityConfig.BrainDevelopmentSettings();
     }
 
     @Override
     public void onPlayerLogin(ServerPlayer player) {
+        if (isAutomaticSkillDebugPlayer(player.getScoreboardName())) {
+            skillDebugPlayers.add(player.getUUID());
+        }
+        refreshCommonSkillBonuses(player.getUUID());
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);
+    }
+
+    @Override
+    public void onPlayerLogout(ServerPlayer player) {
+        skillDebugPlayers.remove(player.getUUID());
+        cpIterationProgress.remove(player.getUUID());
     }
 
     @Override
@@ -89,7 +108,9 @@ public class PlayerCPManager implements AbilitySubsystem {
         var player = playerDataManager.getData(serverPlayer.getUUID());
         if (player == null) return;
         var cpData = player.getCpData();
-        MisakaNetworkServer.send(serverPlayer, new SyncAbilityDataPacket(cpData));
+        MisakaNetworkServer.send(serverPlayer, new SyncAbilityDataPacket(
+                cpData.copyWithMaxCP(getMaxCP(serverPlayer.getUUID()))
+        ));
         cpData.clearDirty();
     }
 
@@ -113,7 +134,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         // 个人现实超负荷状态下，定时器结束时，切换到过载状态
         if (cpData.getStateTimer() > 0) return false;
-        var maxCP = cpData.getMaxCP();
+        var maxCP = getMaxCP(player.getUUID());
         if (maxCP <= 0) return false;
         var overflow = -cpData.getAvailableCP();
         var durationSeconds = overflow / (maxCP / 30.0f);
@@ -132,7 +153,8 @@ public class PlayerCPManager implements AbilitySubsystem {
             cpData.setStateTimer(0);
 
             occupations.clear(); // 清空占用队列
-            cpData.setAvailableCP(cpData.getMaxCP()); // 恢复 CP
+            var maxCP = getMaxCP(player.getUUID());
+            cpData.setAvailableCP(maxCP, maxCP); // 恢复 CP
 
             NeoForge.EVENT_BUS.post(new AbilityRecoveryEvent(player));
             return true;
@@ -149,9 +171,21 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private boolean processOccupations(ServerPlayer player, AbilityData cpData, List<AbilityData.CpOccupationData> occupations) {
-        if (AbilitySystemServer.isDevMode()) {
-            occupations.removeIf(occ -> !occ.isPermanent());
-            return true;
+        var hasTimedOccupation = occupations.stream().anyMatch(occupation -> !occupation.isPermanent());
+        if (!hasTimedOccupation) {
+            cpIterationProgress.remove(player.getUUID());
+            return false;
+        }
+
+        var recoveryRate = getCpIterationRate(isSkillDebugMode(player.getUUID()))
+                * (1.0f + getBonuses(player.getUUID()).recovery());
+        var progress = cpIterationProgress.merge(player.getUUID(), recoveryRate, Float::sum);
+        var recoverySteps = (int) Math.floor(progress / TICKS_PER_ITERATION_POINT);
+        if (recoverySteps > 0) {
+            cpIterationProgress.put(
+                    player.getUUID(),
+                    progress - recoverySteps * TICKS_PER_ITERATION_POINT
+            );
         }
 
         var dirty = false;
@@ -163,23 +197,50 @@ public class PlayerCPManager implements AbilitySubsystem {
             if (occupation.isPermanent()) continue;
 
             // cp迭代
-            if (cpData.getStatus() != AbilityData.Status.OVERLOAD) {
-                occupation.setIterationTicks(Math.max(occupation.getIterationTicks() - 1, 0));
+            if (cpData.getStatus() != AbilityData.Status.OVERLOAD && recoverySteps > 0) {
+                occupation.setIterationTicks(Math.max(
+                        occupation.getIterationTicks() - recoverySteps,
+                        0
+                ));
+                dirty = true;
             }
 
             if (!occupation.isFree()) continue;
             //sp消耗 =（cp迭代量*系数X）* 50% * sp消耗减少率
             var spReductionRate = AbilitySystemServer.getSPReductionRate(player);
             var spCost = (int) (occupation.getAmount() * DAMAGE_MULTIPLIER * 0.5f * spReductionRate);
-            if (cpData.getCurrSP() < spCost) continue;
-            cpData.addSP(-spCost);
+            if (!isSkillDebugMode(player.getUUID())) {
+                if (cpData.getCurrSP() < spCost) continue;
+                cpData.addSP(-spCost);
+            }
 
             // 归还迭代完成的CP占用
-            cpData.setAvailableCP(cpData.getAvailableCP() + occupation.getAmount());
+            cpData.setAvailableCP(
+                    cpData.getAvailableCP() + occupation.getAmount(),
+                    getMaxCP(player.getUUID())
+            );
             it.remove();
             dirty = true;
         }
         return dirty;
+    }
+
+    public boolean isSkillDebugMode(UUID uuid) {
+        return skillDebugPlayers.contains(uuid);
+    }
+
+    public boolean toggleSkillDebugMode(UUID uuid) {
+        if (skillDebugPlayers.remove(uuid)) return false;
+        skillDebugPlayers.add(uuid);
+        return true;
+    }
+
+    static boolean isAutomaticSkillDebugPlayer(String playerName) {
+        return "Dev".equals(playerName) || "Dusk_ark".equals(playerName);
+    }
+
+    static int getCpIterationRate(boolean skillDebugMode) {
+        return skillDebugMode ? 5 : 1;
     }
 
     public boolean tryOccupation(UUID uuid, float amount, Skill skill, int iterationTicks, boolean isPermanent) {
@@ -191,21 +252,30 @@ public class PlayerCPManager implements AbilitySubsystem {
         var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
         var level = (skillData != null) ? skillData.getLevel() : 0;
 
-        if (cpData.getStatus() == AbilityData.Status.OVERLOAD && !AbilitySystemServer.isDevMode()) return false;
-        if (!skill.isPassive(level) && cpData.getAvailableCP() < amount && !AbilitySystemServer.isDevMode())
-            return false;
+        if (cpData.getStatus() == AbilityData.Status.OVERLOAD) return false;
+        if (cpData.getAvailableCP() < amount) return false;
 
         if (!isPermanent && skill.getMaxStacks(level) != Skill.NO_STACK_LIMIT) {
             var currentStacks = occupations.stream()
+                    .filter(occupation -> !occupation.isPermanent())
                     .filter(occ -> skill.getKeyString().equals(occ.getSkillId()))
                     .count();
             if (currentStacks >= skill.getMaxStacks(level)) return false;
         }
 
-        if (!AbilitySystemServer.isDevMode()) {
-            occupations.add(new AbilityData.CpOccupationData(amount, iterationTicks, skill.getKeyString(), isPermanent));
-            cpData.setAvailableCP(cpData.getAvailableCP() - amount);
+        if (amount <= 0) return true;
+
+        var effectiveIterationTicks = iterationTicks;
+        if (!isPermanent && effectiveIterationTicks <= 0) {
+            effectiveIterationTicks = Math.max(1, (int) Math.ceil(amount * 0.5f));
         }
+        occupations.add(new AbilityData.CpOccupationData(
+                amount,
+                effectiveIterationTicks,
+                skill.getKeyString(),
+                isPermanent
+        ));
+        cpData.setAvailableCP(cpData.getAvailableCP() - amount, getMaxCP(uuid));
         return true;
     }
 
@@ -219,11 +289,40 @@ public class PlayerCPManager implements AbilitySubsystem {
             while (it.hasNext()) {
                 var occ = it.next();
                 if (occ.isPermanent() && skillId.equals(occ.getSkillId())) {
-                    cpData.setAvailableCP(cpData.getAvailableCP() + occ.getAmount());
+                    cpData.setAvailableCP(cpData.getAvailableCP() + occ.getAmount(), getMaxCP(uuid));
                     it.remove();
                 }
             }
         });
+    }
+
+    public void releaseAllOccupations(UUID uuid) {
+        modify(uuid, cpData -> {
+            var playerData = playerDataManager.getData(uuid);
+            if (playerData == null) return;
+            var occupations = playerData.getCpOccupations();
+            occupations.clear();
+            cpIterationProgress.remove(uuid);
+            var maxCP = getMaxCP(uuid);
+            cpData.setAvailableCP(maxCP, maxCP);
+        });
+        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null) return false;
+
+        var matching = playerData.getCpOccupations().stream()
+                .filter(occupation -> occupation.isPermanent()
+                        && skill.getKeyString().equals(occupation.getSkillId()))
+                .toList();
+        if (matching.size() == 1 && Float.compare(matching.getFirst().getAmount(), amount) == 0) {
+            return true;
+        }
+
+        releaseMaintenanceOccupation(uuid, skill.getKeyString());
+        return tryOccupation(uuid, amount, skill, 0, true);
     }
 
 
@@ -298,14 +397,18 @@ public class PlayerCPManager implements AbilitySubsystem {
 
     public void setMaxCP(UUID uuid, float newMaxCP) {
         modify(uuid, cpData -> {
-            var maxCP = cpData.getMaxCP();
-            if (Float.compare(maxCP, newMaxCP) == 0) return;
+            var requestedMaxCP = Float.isFinite(newMaxCP) ? Math.max(0, newMaxCP) : 0;
+            var bonus = getBonuses(uuid).maxCp();
+            var safeMaxCP = Math.max(bonus, requestedMaxCP);
+            var oldEffectiveMaxCP = getMaxCP(uuid);
+            if (Float.compare(oldEffectiveMaxCP, safeMaxCP) == 0) return;
 
-            var diff = newMaxCP - maxCP;
+            var newBaseMaxCP = Math.max(0, safeMaxCP - bonus);
+            var diff = safeMaxCP - oldEffectiveMaxCP;
             var newAvailableCP = cpData.getAvailableCP() + diff;
 
-            cpData.setAvailableCP(newAvailableCP);
-            cpData.setMaxCP(newMaxCP);
+            cpData.setMaxCP(newBaseMaxCP);
+            cpData.setAvailableCP(newAvailableCP, safeMaxCP);
             checkAndUpgradeLevel(cpData);
         });
     }
@@ -373,7 +476,8 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getMaxCP(UUID uuid) {
-        return query(uuid, AbilityData::getMaxCP, 1f);
+        var base = query(uuid, AbilityData::getMaxCP, 1f);
+        return base + getBonuses(uuid).maxCp();
     }
 
     public float getAvailableCP(UUID uuid) {
@@ -384,7 +488,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         var safeCP = Float.isFinite(availableCP) ? availableCP : 0f;
         modify(uuid, cpData -> {
             if (Float.compare(cpData.getAvailableCP(), safeCP) != 0) {
-                cpData.setAvailableCP(safeCP);
+                cpData.setAvailableCP(safeCP, getMaxCP(uuid));
             }
         });
     }
@@ -436,19 +540,61 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getDamageMultiplier(UUID uuid) {
-        var ratio = getFreeCPRatio(uuid);
-        if (ratio >= 0.5f) return 1.0f;
-        return 0.25f + (ratio / 0.5f) * 0.75f;
+        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
+        var cpMultiplier = ratio >= 0.5f
+                ? 1.0f
+                : 0.25f + (ratio / 0.5f) * 0.75f;
+        return cpMultiplier * getAbilityPowerMultiplier(uuid);
+    }
+
+    public float getCalculationEfficiency(UUID uuid) {
+        return getBonuses(uuid).efficiency();
+    }
+
+    public float getCalculationIntensity(UUID uuid) {
+        return 1.0f / (1.0f + getCalculationEfficiency(uuid) * 2.0f);
+    }
+
+    public float getAbilityPowerMultiplier(UUID uuid) {
+        return 1.0f + getCalculationEfficiency(uuid);
+    }
+
+    public void refreshCommonSkillBonuses(UUID uuid) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null) return;
+
+        var desiredBonus = getBonuses(uuid).maxCp();
+        var appliedBonus = playerData.getAppliedCommonSkillMaxCpBonus();
+        if (Float.compare(desiredBonus, appliedBonus) == 0) return;
+
+        var effectiveMaxCP = playerData.getCpData().getMaxCP() + desiredBonus;
+        var diff = desiredBonus - appliedBonus;
+        var cpData = playerData.getCpData();
+        cpData.setAvailableCP(cpData.getAvailableCP() + diff, effectiveMaxCP);
+        playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
+        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    private BrainDevelopmentBonuses.Bonuses getBonuses(UUID uuid) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null) return BrainDevelopmentBonuses.NONE;
+
+        var category = playerDataManager.getPlayerAbilityCategory(uuid);
+        return BrainDevelopmentBonuses.calculate(
+                playerData.getSkillDataMap().keySet(),
+                brainDevelopmentSettings,
+                category.supportsCommonSkills()
+        );
     }
 
     public float getRangeMultiplier(UUID uuid) {
-        var ratio = getFreeCPRatio(uuid);
+        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
         if (ratio >= 0.5f) return 1.0f;
         return 0.50f + (ratio / 0.5f) * 0.50f;
     }
 
     public float getEffectiveDistanceMultiplier(UUID uuid) {
-        var ratio = getFreeCPRatio(uuid);
+        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
         if (ratio >= 0.5f) return 1.0f;
         return 0.40f + (ratio / 0.5f) * 0.60f;
     }

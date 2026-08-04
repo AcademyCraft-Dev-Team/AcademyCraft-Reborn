@@ -3,20 +3,31 @@ package org.academy;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import org.academy.agent.AcademyAgentBootstrap;
 import org.academy.internal.client.data.AcademyCraftClientData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Mod(AcademyCraft.MODID)
 public final class AcademyCraft {
     public static final String MODID = "academy";
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final ExecutorService executorService = Executors.newFixedThreadPool(2, runnable -> {
+        var thread = new Thread(runnable, "academy-async");
+        thread.setDaemon(true);
+        return thread;
+    });
     private static final StackWalker STACK_WALKER =
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     public static boolean DEBUG_UI = false;
 
     public AcademyCraft(IEventBus modEventBus) {
+        AcademyAgentBootstrap.ensureInstalled();
         AcademyCraftRegister.register(modEventBus);
         modEventBus.addListener(AcademyCraftClientData::dataSetup);
     }

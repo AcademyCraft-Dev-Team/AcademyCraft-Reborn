@@ -39,6 +39,7 @@ public abstract class Skill {
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
     private final AbilityCategory category;
+    private final SkillScope scope;
     private final DataFactory dataFactory;
     private final int maxSkillLevel;
     /**
@@ -54,6 +55,7 @@ public abstract class Skill {
      */
     private final float maintenanceCost;
     private final boolean isPassive;
+    private final boolean initiallyEnabled;
     private final float cpCost;
     private final Identifier icon;
     private final List<DevCondition> devConditions;
@@ -66,11 +68,15 @@ public abstract class Skill {
         energyCostToLearn = builder.energyCostToLearn;
         maxSkillLevel = builder.maxSkillLevel;
         category = builder.category;
-        category.addSkill(this);
+        scope = builder.scope;
+        if (scope == SkillScope.CATEGORY) {
+            category.addSkill(this);
+        }
         iterationTicks = builder.iterationTicks;
         maxStacks = builder.maxStacks;
         maintenanceCost = builder.maintenanceCost;
         isPassive = builder.isPassive;
+        initiallyEnabled = builder.initiallyEnabled;
         cpCost = builder.cpCost;
 
         dataFactory = builder.dataFactory;
@@ -134,10 +140,13 @@ public abstract class Skill {
     public final void toggle(ServerPlayer player) {
         var uuid = player.getUUID();
         var system = AbilitySystemServer.getSystem(player);
-        var level = system.getPlayerSkillLevel(uuid, getKeyString());
+        if (!LearningHelper.isSkillAvailableForCategory(system.getPlayerAbilityCategory(uuid), this)) return;
+        var runtimeData = getRuntimeData(player);
+        if (runtimeData.isEmpty()) return;
+        var level = runtimeData.get().getLevel();
         var cost = getMaintenanceCost(level);
 
-        var goingToEnable = !isEnabled(player);
+        var goingToEnable = !runtimeData.get().isEnabled();
 
         if (cost <= 0) {
             system.toggleSkill(uuid, getKeyString());
@@ -155,12 +164,17 @@ public abstract class Skill {
     }
 
     public final boolean isEnabled(ServerPlayer player) {
-        return getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
+        var system = AbilitySystemServer.getSystem(player);
+        return LearningHelper.isSkillAvailableForCategory(
+                system.getPlayerAbilityCategory(player.getUUID()), this
+        ) && getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
     }
 
     // 考虑到后续可能需要传入上下文，因此传入ServerPlayer
     public SkillData createData(ServerPlayer player) {
-        return dataFactory.create(player);
+        var data = dataFactory.create(player);
+        data.setEnabled(initiallyEnabled);
+        return data;
     }
 
     public final Set<Skill> getDependencies() {
@@ -189,6 +203,10 @@ public abstract class Skill {
 
     public AbilityCategory getCategory() {
         return category;
+    }
+
+    public SkillScope getScope() {
+        return scope;
     }
 
     public int getEnergyCostToLearn() {
@@ -300,11 +318,14 @@ public abstract class Skill {
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
         private int maxSkillLevel = 3;
-        private int iterationTicks = 20;
+        // CP iteration points; zero lets the server derive half of the CP cost.
+        private int iterationTicks = 0;
         private int maxStacks = 2;
         private float maintenanceCost = 0f;
         private boolean isPassive = false;
+        private boolean initiallyEnabled = true;
         private float cpCost = 0;
+        private SkillScope scope = SkillScope.CATEGORY;
 
         private DataFactory dataFactory = _ -> new CommonSkillData();
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
@@ -326,6 +347,16 @@ public abstract class Skill {
 
         public Builder passive() {
             isPassive = true;
+            return this;
+        }
+
+        public Builder initiallyDisabled() {
+            initiallyEnabled = false;
+            return this;
+        }
+
+        public Builder common() {
+            scope = SkillScope.COMMON;
             return this;
         }
 

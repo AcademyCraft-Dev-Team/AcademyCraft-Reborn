@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,15 +10,18 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -45,6 +47,7 @@ public class LightningStorm extends Skill {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL4)
+                .energyCost(60_000)
                 .cpCost(80)
                 .iterationTicks(30)
                 .maxStacks(1)
@@ -73,10 +76,9 @@ public class LightningStorm extends Skill {
 
         public static void onUse() {
             var mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc.player == null) return;
-            var hitResult = mc.player.pick(50, 1.0f, false);
-            var targetPos = hitResult.getLocation();
-            MisakaNetworkClient.send(new ActivatePacket(targetPos));
+            if (mc.player == null || mc.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.LIGHTNING_STORM.get())) return;
+            MisakaNetworkClient.send(ActivatePacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -100,10 +102,17 @@ public class LightningStorm extends Skill {
     }
 
     public static final class Server {
+        public static float calculateDamage(float abilityPower, float playerMultiplier) {
+            return DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribePacket
         public static void handle(ActivatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.LIGHTNING_STORM.get().executeActive(player, (_, _) -> AbilitySystemServer.registerContext(new Context(player, packet.getTargetPos())));
+            var center = player.pick(50.0, 1.0f, false).getLocation();
+            if (!player.level().hasChunkAt(BlockPos.containing(center))) return;
+            Skills.LIGHTNING_STORM.get().executeActive(player,
+                    (_, _) -> AbilitySystemServer.registerContext(new Context(player, center)));
         }
     }
 
@@ -145,8 +154,15 @@ public class LightningStorm extends Skill {
 
                 var box = new net.minecraft.world.phys.AABB(strikePos).inflate(3);
                 var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
+                var system = AbilitySystemServer.getSystem(player);
+                var damage = Server.calculateDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID())
+                );
+                var source = SkillDamageSource.of(
+                        player, Skills.LIGHTNING_STORM.get(), DamageTypes.LIGHTNING_BOLT);
                 for (var target : targets) {
-                    target.hurtServer(serverLevel, player.damageSources().lightningBolt(), DAMAGE);
+                    target.hurtServer(serverLevel, source, damage);
                 }
             }
         }
@@ -160,20 +176,10 @@ public class LightningStorm extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class ActivatePacket extends Packet<ServerGamePacketListenerImpl, ActivatePacket> {
-        private static final StreamCodec<ByteBuf, net.minecraft.world.phys.Vec3> VEC3_CODEC = StreamCodec.composite(
-                ByteBufCodecs.DOUBLE, net.minecraft.world.phys.Vec3::x,
-                ByteBufCodecs.DOUBLE, net.minecraft.world.phys.Vec3::y,
-                ByteBufCodecs.DOUBLE, net.minecraft.world.phys.Vec3::z,
-                net.minecraft.world.phys.Vec3::new);
-        public static final StreamCodec<ByteBuf, ActivatePacket> CODEC = VEC3_CODEC.map(ActivatePacket::new, ActivatePacket::getTargetPos);
-        private final net.minecraft.world.phys.Vec3 targetPos;
+        public static final ActivatePacket INSTANCE = new ActivatePacket();
+        public static final StreamCodec<ByteBuf, ActivatePacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public ActivatePacket(net.minecraft.world.phys.Vec3 targetPos) {
-            this.targetPos = targetPos;
-        }
-
-        public net.minecraft.world.phys.Vec3 getTargetPos() {
-            return targetPos;
+        private ActivatePacket() {
         }
 
         @Override

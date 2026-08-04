@@ -12,6 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
@@ -38,13 +39,19 @@ import java.util.HashMap;
 import java.util.Map;
 public class Cloudroom extends Skill {
     private static final float RADIUS = 16.0f;
-    private static final int TRAIL_LIFETIME = 40;
+    private static final int TRAIL_LIFETIME = 30;
+    private static final int TRAIL_INTERVAL_TICKS = 5;
+    private static final int MAX_TRAILS_PER_TICK = 6;
+    private static final int MAX_GLOBAL_TRAILS_PER_TICK = 16;
+    private static final double MIN_TRAIL_DISTANCE_SQR = 0.05 * 0.05;
 
     public Cloudroom() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
                 .passive()
+                .initiallyDisabled()
                 .maintenanceCost(30)
         );
     }
@@ -69,6 +76,7 @@ public class Cloudroom extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.CLOUDROOM.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
@@ -94,6 +102,8 @@ public class Cloudroom extends Skill {
 
     public static final class Server {
         private static final Map<Player, Context> CONTEXT_MAP = createContextMap();
+        private static long trailBudgetTick = Long.MIN_VALUE;
+        private static int trailsSpawnedThisTick;
 
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
@@ -109,6 +119,16 @@ public class Cloudroom extends Skill {
             var context = new Context(player);
             CONTEXT_MAP.put(player, context);
             AbilitySystemServer.registerContext(context);
+        }
+
+        private static boolean tryClaimTrailSlot(long gameTime) {
+            if (trailBudgetTick != gameTime) {
+                trailBudgetTick = gameTime;
+                trailsSpawnedThisTick = 0;
+            }
+            if (trailsSpawnedThisTick >= MAX_GLOBAL_TRAILS_PER_TICK) return false;
+            trailsSpawnedThisTick++;
+            return true;
         }
     }
 
@@ -127,19 +147,32 @@ public class Cloudroom extends Skill {
                 end();
                 return;
             }
+            if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                if (skill.isEnabled(player)) skill.toggle(player);
+                end();
+                return;
+            }
 
             var entities = level().getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(RADIUS),
-                    e -> e != player && e.isAlive());
+                    e -> e != player && e.isAlive() && !e.isSpectator());
 
+            var spawnedTrails = 0;
             for (var entity : entities) {
                 var currentPos = entity.position();
                 var lastPos = lastPositions.get(entity);
-                if (lastPos != null && !lastPos.equals(currentPos)) {
+                if (lastPos != null
+                        && lastPos.distanceToSqr(currentPos) >= MIN_TRAIL_DISTANCE_SQR
+                        && Math.floorMod(entity.tickCount + entity.getId(), TRAIL_INTERVAL_TICKS) == 0
+                        && spawnedTrails < MAX_TRAILS_PER_TICK
+                        && Server.tryClaimTrailSlot(level().getGameTime())) {
                     var smoke = new Smoke(EntityTypes.SMOKE.get(), level());
                     smoke.setPos(currentPos);
                     smoke.size = 0.5f;
+                    smoke.setLifetimeTicks(TRAIL_LIFETIME);
                     level().addFreshEntity(smoke);
+                    spawnedTrails++;
                 }
                 lastPositions.put(entity, currentPos);
             }

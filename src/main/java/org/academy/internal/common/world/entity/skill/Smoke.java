@@ -7,12 +7,14 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 public class Smoke extends RenderOnlyEntity {
+    private static final int DEFAULT_LIFETIME_TICKS = 80;
     public final int frame;
     private final float lifeModifier;
     private final float rotSpeed;
     private final int initTick;
     public float size = 1.0f;
     public float rotation = 0.0f;
+    private int lifetimeTicks = DEFAULT_LIFETIME_TICKS;
 
     public Smoke(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -36,13 +38,16 @@ public class Smoke extends RenderOnlyEntity {
         }
     }
 
+    public void setLifetimeTicks(int lifetimeTicks) {
+        this.lifetimeTicks = Math.clamp(lifetimeTicks, 1, DEFAULT_LIFETIME_TICKS);
+    }
+
     @Override
     public void tick() {
         super.tick();
         rotation += rotSpeed;
 
-        var deltaTime = (tickCount - initTick) / 20.0f;
-        if (deltaTime >= 4.0f) {
+        if (tickCount - initTick >= lifetimeTicks) {
             if (level() instanceof ServerLevel serverLevel) {
                 kill(serverLevel);
             }

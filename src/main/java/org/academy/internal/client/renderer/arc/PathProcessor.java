@@ -17,13 +17,22 @@ public final class PathProcessor {
     }
 
     public static ArcFactory.ArcRenderData process(ArcPath rootPath, float time, Vector3fc cameraPos) {
-        return processRecursive(rootPath, time, new Matrix4f().identity(), 0, cameraPos);
+        return process(rootPath, time, cameraPos, 0.1f);
     }
 
-    private static ArcFactory.ArcRenderData processRecursive(ArcPath currentPath, float time, Matrix4f transform, int depth, Vector3fc cameraPos) {
+    public static ArcFactory.ArcRenderData process(
+            ArcPath rootPath, float time, Vector3fc cameraPos, float baseThickness
+    ) {
+        return processRecursive(rootPath, time, new Matrix4f().identity(), 0, cameraPos, baseThickness);
+    }
+
+    private static ArcFactory.ArcRenderData processRecursive(
+            ArcPath currentPath, float time, Matrix4f transform, int depth,
+            Vector3fc cameraPos, float baseThickness
+    ) {
         var worldSpacePath = currentPath.path().transform(transform);
         var pathData = generateLinearData(worldSpacePath, currentPath.modifiers(), currentPath.resolution(), time);
-        var renderData = ArcFactory.Generator.generate(pathData, 0.1f, cameraPos);
+        var renderData = ArcFactory.Generator.generate(pathData, baseThickness, cameraPos);
 
         if (!currentPath.branches().isEmpty() && !pathData.getFrames().isEmpty()) {
             for (var branch : currentPath.branches()) {
@@ -32,7 +41,9 @@ public final class PathProcessor {
                 var attachmentFrame = pathData.getFrames().get(frameIndex);
 
                 var childTransform = calculateChildTransform(attachmentFrame);
-                renderData.branches.add(processRecursive(branch.child(), time, childTransform, depth + 1, cameraPos));
+                renderData.branches.add(processRecursive(
+                        branch.child(), time, childTransform, depth + 1, cameraPos, baseThickness
+                ));
             }
         }
 

@@ -3,21 +3,26 @@ package org.academy.internal.server.ability;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillScope;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.SkillData;
 import org.misaka.MisakaNetworkServer;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class SkillDataManager implements AbilitySubsystem {
     private final SyncManager syncManager;
     private final PlayerDataManager playerDataManager;
 
     private BiConsumer<UUID, Integer> onSkillLevelUp = (uuid, level) -> {
+    };
+    private Consumer<UUID> onSkillSetChanged = uuid -> {
     };
 
     public SkillDataManager(PlayerDataManager playerDataManager, SyncManager syncManager) {
@@ -41,15 +46,25 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     private void modify(UUID uuid, String skillId, Consumer<SkillData> action) {
+        mutate(uuid, skillId, SkillData.class, action);
+    }
+
+    public <T extends SkillData> boolean mutate(
+            UUID uuid,
+            String skillId,
+            Class<T> type,
+            Consumer<T> action
+    ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null) return;
+        if (playerData == null) return false;
 
         var data = playerData.getSkillDataMap().get(skillId);
-        if (data == null) return;
+        if (!type.isInstance(data)) return false;
 
-        action.accept(data);
+        action.accept(type.cast(data));
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        return true;
     }
 
     private void query(UUID uuid, String skillId, Consumer<SkillData> action) {
@@ -104,6 +119,7 @@ public class SkillDataManager implements AbilitySubsystem {
             if (skillData == null) {
                 playerData.markDirty();
                 syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+                onSkillSetChanged.accept(uuid);
             }
         });
     }
@@ -117,6 +133,39 @@ public class SkillDataManager implements AbilitySubsystem {
 
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        onSkillSetChanged.accept(uuid);
+    }
+
+    public void clearCategorySkills(UUID uuid) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null) return;
+
+        var removed = removeCategorySkills(
+                playerData.getSkillDataMap(),
+                SkillDataManager::resolveSkillScope
+        );
+        if (removed == 0) return;
+
+        playerData.markDirty();
+        syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        onSkillSetChanged.accept(uuid);
+    }
+
+    static int removeCategorySkills(
+            Map<String, SkillData> skillDataMap,
+            Function<String, SkillScope> scopeResolver
+    ) {
+        var previousSize = skillDataMap.size();
+        skillDataMap.keySet().removeIf(skillId -> scopeResolver.apply(skillId) != SkillScope.COMMON);
+        return previousSize - skillDataMap.size();
+    }
+
+    private static SkillScope resolveSkillScope(String skillId) {
+        var identifier = Identifier.tryParse(skillId);
+        if (identifier == null) return null;
+        return Registries.SKILLS.get(identifier)
+                .map(reference -> reference.value().getScope())
+                .orElse(null);
     }
 
     public void toggleSkill(UUID uuid, String skillId) {
@@ -125,6 +174,10 @@ public class SkillDataManager implements AbilitySubsystem {
 
     public void setOnSkillLevelUp(BiConsumer<UUID, Integer> onSkillLevelUp) {
         this.onSkillLevelUp = onSkillLevelUp;
+    }
+
+    public void setOnSkillSetChanged(Consumer<UUID> onSkillSetChanged) {
+        this.onSkillSetChanged = onSkillSetChanged;
     }
 
     public enum ExpEvent {

@@ -1,13 +1,12 @@
 package org.academy.internal.common.world.entity;
 
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.*;
+import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 
 import static org.academy.AcademyCraft.MODID;
@@ -25,6 +24,11 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "railgun_ray", RailgunRay::new, MobCategory.MISC
             );
+    public static final DeferredHolder<EntityType<?>, EntityType<Plasma>> PLASMA =
+            ENTITY_TYPES.registerEntityType(
+                    "plasma", Plasma::new, MobCategory.MISC,
+                    builder -> builder.sized(1.0f, 1.0f).clientTrackingRange(160).updateInterval(1)
+            );
     public static final DeferredHolder<EntityType<?>, EntityType<Arc>> ARC =
             ENTITY_TYPES.registerEntityType(
                     "arc", Arc::new, MobCategory.MISC
@@ -37,11 +41,6 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "high_speed_electron_beam", HighSpeedElectronBeam::new, MobCategory.MISC
             );
-    public static final DeferredHolder<EntityType<?>, EntityType<HellFlareRay>> HELL_FLARE_RAY =
-            ENTITY_TYPES.register("hell_flare_ray", (id) ->
-                    EntityType.Builder.<HellFlareRay>of(HellFlareRay::new, MobCategory.MISC)
-                            .build(ResourceKey.create(Registries.ENTITY_TYPE, id))
-            );
     public static final DeferredHolder<EntityType<?>, EntityType<LightOrb>> LIGHT_ORB =
             ENTITY_TYPES.registerEntityType(
                     "light_orb", LightOrb::new, MobCategory.MISC
@@ -50,9 +49,27 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "glow_circle", GlowCircle::new, MobCategory.MISC
             );
+    public static final DeferredHolder<EntityType<?>, EntityType<KineticShockwave>> KINETIC_SHOCKWAVE =
+            ENTITY_TYPES.registerEntityType(
+                    "kinetic_shockwave", KineticShockwave::new, MobCategory.MISC,
+                    builder -> builder.sized(0.1f, 0.1f).clientTrackingRange(64).updateInterval(1)
+            );
+    public static final DeferredHolder<EntityType<?>, EntityType<DirStrikeBlockFx>> DIR_STRIKE_BLOCK_FX =
+            ENTITY_TYPES.registerEntityType(
+                    "dir_strike_block_fx", DirStrikeBlockFx::new, MobCategory.MISC,
+                    builder -> builder.sized(1.0f, 1.0f).clientTrackingRange(64).updateInterval(1)
+            );
     public static final DeferredHolder<EntityType<?>, EntityType<Smoke>> SMOKE =
             ENTITY_TYPES.registerEntityType(
                     "smoke", Smoke::new, MobCategory.MISC);
+    public static final DeferredHolder<EntityType<?>, EntityType<DarkmatterCutSlash>> DARKMATTER_CUT_SLASH =
+            ENTITY_TYPES.registerEntityType(
+                    "darkmatter_cut_slash", DarkmatterCutSlash::new, MobCategory.MISC,
+                    builder -> builder.sized(0.1f, 0.1f).clientTrackingRange(64).updateInterval(1));
+    public static final DeferredHolder<EntityType<?>, EntityType<DarkmatterBeetle>> DARKMATTER_BEETLE =
+            ENTITY_TYPES.registerEntityType(
+                    "darkmatter_beetle", DarkmatterBeetle::new, MobCategory.MISC,
+                    builder -> builder.sized(0.55f, 0.4f).clientTrackingRange(48).updateInterval(2));
     public static final DeferredHolder<EntityType<?>, EntityType<CleaningRobot>> CLEANING_ROBOT =
             ENTITY_TYPES.registerEntityType(
                     "cleaning_robot", CleaningRobot::new, MobCategory.MISC
