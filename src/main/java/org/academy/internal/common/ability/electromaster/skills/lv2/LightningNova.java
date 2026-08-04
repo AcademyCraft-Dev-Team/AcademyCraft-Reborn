@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,10 +12,12 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -40,6 +43,7 @@ public class LightningNova extends Skill {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL2)
+                .energyCost(10_000)
                 .cpCost(60)
                 .iterationTicks(30)
                 .maxStacks(1)
@@ -67,6 +71,9 @@ public class LightningNova extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
+            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            if (minecraft.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.LIGHTNING_NOVA.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
         }
 
@@ -91,6 +98,10 @@ public class LightningNova extends Skill {
     }
 
     public static final class Server {
+        public static float calculateDamage(float abilityPower, float playerMultiplier) {
+            return DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribePacket
         public static void handle(ActivatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
@@ -118,13 +129,31 @@ public class LightningNova extends Skill {
             var innerRadius = Math.max(0, currentRadius - 1.5f);
 
             if (level() instanceof ServerLevel serverLevel) {
+                if ((ticks & 1) == 0) {
+                    var center = player.position().add(0, 1.0, 0);
+                    for (var i = 0; i < 16; i++) {
+                        var angle = i * Math.PI * 2.0 / 16.0;
+                        serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                                center.x + Math.cos(angle) * currentRadius,
+                                center.y,
+                                center.z + Math.sin(angle) * currentRadius,
+                                1, 0.02, 0.08, 0.02, 0.01);
+                    }
+                }
                 var targets = level().getEntitiesOfClass(LivingEntity.class,
                         player.getBoundingBox().inflate(currentRadius + 1),
                         e -> e != player && e.isAlive());
+                var system = AbilitySystemServer.getSystem(player);
+                var damage = Server.calculateDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID())
+                );
+                var source = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
+                        net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT);
                 for (var target : targets) {
                     var dist = target.distanceTo(player);
                     if (dist <= currentRadius && dist >= innerRadius) {
-                        target.hurtServer(serverLevel, player.damageSources().lightningBolt(), DAMAGE);
+                        target.hurtServer(serverLevel, source, damage);
                     }
                 }
             }

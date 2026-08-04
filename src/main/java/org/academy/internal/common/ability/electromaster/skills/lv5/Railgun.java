@@ -5,6 +5,8 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -13,6 +15,9 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -27,11 +32,8 @@ import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.modifier.HelixModifier;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -43,14 +45,17 @@ import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.skills.lv3.ThunderLance;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
+import org.academy.internal.common.world.entity.projectile.ThrownCoin;
+import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.Items;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -67,20 +72,20 @@ import java.util.*;
 import static org.misaka.MisakaNetworkClient.send;
 
 public final class Railgun extends Skill {
-    public static final int CHARGE_TIME = 20;
+    public static final int CHARGE_TIME = 0;
+    public static final int RELEASE_VISUAL_TICKS = 12;
 
     public Railgun() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL4)
-                .cpCost(200)
-                .iterationTicks(40)
-                .maxStacks(1)
+                .energyCost(60_000)
+                .cpCost(100)
+                .iterationTicks(80)
+                .maxStacks(Skill.NO_STACK_LIMIT)
                 .dependsOn(Skills.THUNDER_LANCE)
-                .dependsOn(Skills.MAGNET_MANIPULATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition("Thunder Lance", "academy:thunder_lance"))
-                .devCondition(new DevCondition.DependencyCondition("Magnet Manipulation", "academy:magnet_manipulation"))
         );
     }
 
@@ -102,7 +107,8 @@ public final class Railgun extends Skill {
         Client.CLIENT_CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CLIENT_CONFIG.getKeyBinding(Client.KEY_NAME_START,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
+                        InputConstants.RELEASE, InputConstants.MOD_ALT)
         ), ctx -> Client.start());
 
         ClientSyncManager.register(SyncKeys.RAILGUN_CHARGING.get(), Client::setCharging);
@@ -111,7 +117,13 @@ public final class Railgun extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ELECTROMASTER.get(),
-                new AbilitySystemClient.SkillInfo(Skills.RAILGUN.get(), List.of(), R.textures.ability.electromaster.skill.railgun.icon, 164, 59)
+                new AbilitySystemClient.SkillInfo(
+                        Skills.RAILGUN.get(),
+                        List.of(ThunderLance.Client.SKILL_INFO),
+                        R.textures.ability.electromaster.skill.railgun.icon,
+                        164,
+                        59
+                )
         );
         public static final String KEY_NAME_START = SkillNames.RAILGUN + "_start";
         public static Config CLIENT_CONFIG = new Config();
@@ -126,13 +138,9 @@ public final class Railgun extends Skill {
         }
 
         public static void start() {
-            if (Minecraft.getInstance().gui.screen() == null) {
-                var player = Minecraft.getInstance().player;
-                if (player == null) return;
-                if (player.isHolding(Items.COIN.get())) {
-                    send(StartPacket.INSTANCE);
-                }
-            }
+            if (Minecraft.getInstance().gui.screen() != null) return;
+            if (!AbilitySystemClient.canUseSkill(Skills.RAILGUN.get())) return;
+            send(StartPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -157,6 +165,7 @@ public final class Railgun extends Skill {
 
     public static final class Server {
         public static final Map<Player, Context> CONTEXT_MAP = createContextMap();
+        private static final Map<Player, ReleaseVisualContext> RELEASE_VISUALS = createContextMap();
         @Nullable
         private static DataSyncManager<Boolean> chargingSyncManager;
 
@@ -166,39 +175,97 @@ public final class Railgun extends Skill {
 
             var player = packet.getPacketListener().getPlayer();
             if (CONTEXT_MAP.containsKey(player)) return;
-            var uuid = player.getUUID();
-            var off = player.getItemInHand(InteractionHand.OFF_HAND);
-            var main = player.getItemInHand(InteractionHand.MAIN_HAND);
-            var offEmpty = off.isEmpty();
-            var mainEmpty = main.isEmpty();
+            var releaseVisual = RELEASE_VISUALS.get(player);
+            if (releaseVisual != null) releaseVisual.end();
+            var ammo = findAmmo(player);
+            if (ammo == null) return;
 
-            if (offEmpty && mainEmpty) return;
+            Skills.RAILGUN.get().executeActive(player, (_, _) -> {
+                ammo.consume(player);
+                chargingSyncManager.set(player.getUUID(), true);
 
-            if (!player.isCreative()) (offEmpty ? main : off).shrink(1);
-            chargingSyncManager.set(uuid, true);
+                var context = new Context(player, ammo.renderHand());
+                CONTEXT_MAP.put(player, context);
+                AbilitySystemServer.registerContext(context);
+            });
+        }
 
-            var context = new Context(player, offEmpty ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
-            CONTEXT_MAP.put(player, context);
-            AbilitySystemServer.registerContext(context);
+        @SubscribePacket
+        public static void onThrowCoin(CoinItem.ThrowCoinPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            if (!Skills.RAILGUN.get().isEnabled(player)) return;
+
+            var hand = findHeldAmmoHand(player, true);
+            if (hand == null) return;
+            var stack = player.getItemInHand(hand);
+            if (player.getCooldowns().isOnCooldown(stack)) return;
+            player.getCooldowns().addCooldown(stack, 5);
+            if (!player.isCreative()) stack.shrink(1);
+
+            var thrownCoin = new ThrownCoin(player.level(), player);
+            thrownCoin.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
+            var initialVelocity = player.onGround()
+                    ? player.getDeltaMovement().multiply(2.25, 0, 2.25)
+                    : player.getDeltaMovement().multiply(1.5, 0, 1.5);
+            thrownCoin.setDeltaMovement(initialVelocity.add(0, 0.5, 0));
+            thrownCoin.setYRot(player.getYRot());
+            thrownCoin.setXRot(player.getXRot());
+            thrownCoin.yRotO = player.getYRot();
+            thrownCoin.xRotO = player.getXRot();
+            player.level().addFreshEntity(thrownCoin);
+            player.level().playSound(
+                    null,
+                    player,
+                    SoundEvents.COIN.get(),
+                    SoundSource.PLAYERS,
+                    1.0f,
+                    1.0f
+            );
+        }
+
+        private static @Nullable AmmoSource findAmmo(ServerPlayer player) {
+            var center = player.position().add(0, player.getBbHeight() / 2.0, 0);
+            var box = new AABB(center.subtract(1.5, 1.5, 1.5), center.add(1.5, 1.5, 1.5));
+            var thrownCoins = player.level().getEntitiesOfClass(
+                    ThrownCoin.class,
+                    box,
+                    coin -> coin.isAlive()
+            );
+            if (!thrownCoins.isEmpty()) {
+                return new AmmoSource(null, thrownCoins.getFirst());
+            }
+
+            var hand = findHeldAmmoHand(player, false);
+            return hand == null ? null : new AmmoSource(hand, null);
+        }
+
+        private static @Nullable InteractionHand findHeldAmmoHand(Player player, boolean coinOnly) {
+            for (var hand : InteractionHand.values()) {
+                var stack = player.getItemInHand(hand);
+                if (coinOnly ? stack.is(Items.COIN.get()) : isAmmo(stack)) return hand;
+            }
+            return null;
         }
 
         public static class Context extends ServerContext {
             private final InteractionHand hand;
-            private final ArcEffect arcEffect;
+            private final boolean rightHand;
+            private final ResourceKey<Level> dimension;
             private int ticks = 0;
+            private boolean ended;
 
             public Context(ServerPlayer player, InteractionHand hand) {
                 super(player);
                 this.hand = hand;
-                arcEffect = new ArcEffect(player.level(), 40);
-                arcEffect.setPos(player.position());
-                player.level().addFreshEntity(arcEffect);
+                rightHand = (player.getMainArm() == HumanoidArm.RIGHT)
+                        == (hand == InteractionHand.MAIN_HAND);
+                dimension = player.level().dimension();
             }
 
             @Override
-            public void unregister() {
-                super.unregister();
-                CONTEXT_MAP.remove(player);
+            protected void onUnregistered() {
+                ended = true;
+                CONTEXT_MAP.remove(player, this);
                 player.removeData(AttachmentTypes.RAILGUN_DATA);
                 if (chargingSyncManager != null) {
                     chargingSyncManager.set(player.getUUID(), false);
@@ -209,66 +276,31 @@ public final class Railgun extends Skill {
             public void onTick(ServerTickEvent.Post event) {
                 ticks++;
 
-                if (player.isRemoved()) {
-                    unregister();
+                if (ended
+                        || player.hasDisconnected()
+                        || !player.isAlive()
+                        || !player.level().dimension().equals(dimension)
+                        || !Skills.RAILGUN.get().isEnabled(player)) {
+                    end();
                     return;
                 }
 
                 player.setData(
                         AttachmentTypes.RAILGUN_DATA,
-                        new Data(
-                                (player.getMainArm() == HumanoidArm.RIGHT) ==
-                                        (hand == InteractionHand.MAIN_HAND), ticks
-                        )
+                        new Data(rightHand, ticks, false)
                 );
 
-                var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
-                var eyePos = player.getEyePosition();
-
-                var playerOrientation = new Quaternionf().rotateY(yawRad);
-
-                var look = new Vector3f(0, 0, 1).rotate(playerOrientation);
-                var up = new Vector3f(0, 1, 0).rotate(playerOrientation);
-                var right = new Vector3f(-1, 0, 0).rotate(playerOrientation);
-
-                var startPos = eyePos
-                        .add(new Vec3(right).scale(0.35))
-                        .add(new Vec3(up).scale(-0.8))
-                        .add(new Vec3(look).scale(0.35));
-                var yCurve = MathUtil.getParabolaHeight(CHARGE_TIME, 1, ticks);
-
-                if (ticks <= CHARGE_TIME) {
-                    var branchCount = MathUtil.RANDOM.nextInt(2, 4);
-
-                    var coinPos = startPos.add(0, yCurve, 0);
-                    var level = player.level();
-                    var arcs = new ArrayList<ArcPath>();
-                    for (var i = 0; i < branchCount; i++) {
-                        var pos = coinPos.add(
-                                MathUtil.RANDOM.nextDouble(-2, 2),
-                                MathUtil.RANDOM.nextDouble(-2, 2),
-                                MathUtil.RANDOM.nextDouble(-2, 2)
-                        );
-                        arcs.add(
-                                new ArcPath(
-                                        new LinePath(pos.toVector3f(), coinPos.toVector3f()),
-                                        List.of(
-                                                new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())
-                                        ),
-                                        2.0f,
-                                        List.of()
-                                )
-                        );
-                    }
-                    var arc = new ArcEffect(level, 2);
-                    arc.setArcPaths(arcs);
-                    arc.setPos(coinPos);
-                    level.addFreshEntity(arc);
-                } else {
+                var lookDir = player.getLookAngle();
+                var right = lookDir.cross(new Vec3(0, 1, 0));
+                if (right.lengthSqr() < 1.0E-6) right = new Vec3(1, 0, 0);
+                var startPos = player.position()
+                        .add(right.normalize().scale(0.4))
+                        .add(0, 1.2, 0)
+                        .add(lookDir.scale(0.5));
+                if (ticks > CHARGE_TIME) {
 
                     var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
                     float length = 50;
-                    var lookDir = player.getLookAngle();
 
                     var endPos = startPos.add(lookDir.scale(length));
                     railgunRay.setPos(startPos);
@@ -276,80 +308,150 @@ public final class Railgun extends Skill {
                     railgunRay.setXRot(player.getXRot());
                     player.level().addFreshEntity(railgunRay);
 
-                    var branchCount = MathUtil.RANDOM.nextInt(12, 16);
-                    var level = player.level();
-                    var arcs = new ArrayList<ArcPath>();
-
-                    var axis = lookDir.normalize();
-                    var globalUp = new Vec3(0, 1, 0);
-                    var axisRight = axis.cross(globalUp);
-                    if (axisRight.lengthSqr() < 1.0E-4) {
-                        axisRight = axis.cross(new Vec3(1, 0, 0));
-                    }
-                    axisRight = axisRight.normalize();
-                    var axisUp = axisRight.cross(axis).normalize();
-
-                    for (var i = 0; i < branchCount; i++) {
-                        var h = MathUtil.RANDOM.nextDouble(10, 20);
-                        var rMax = h * Math.tan(Math.toRadians(MathUtil.RANDOM.nextInt(15, 30)));
-                        var r = rMax * Math.sqrt(MathUtil.RANDOM.nextDouble());
-                        var theta = MathUtil.RANDOM.nextDouble() * 2 * Math.PI;
-
-                        var offset = axisRight.scale(r * Math.cos(theta)).add(axisUp.scale(r * Math.sin(theta)));
-                        var pos = startPos.add(axis.scale(h)).add(offset);
-
-                        arcs.add(
-                                new ArcPath(
-                                        new LinePath(pos.toVector3f(), startPos.toVector3f()),
-                                        List.of(
-                                                new JaggedModifier(1, 2, MathUtil.RANDOM.nextLong())
-                                        ),
-                                        1.0f,
-                                        List.of()
-                                )
+                    if (DestroyBlocksSetting.canDestroyBlocks(player)) {
+                        LevelUtil.destroyBlocksAlongPath(
+                                railgunRay.level(), startPos, endPos,
+                                0.125f, 3, !player.isCreative(), false, false, false
                         );
                     }
-                    arcs.add(
-                            new ArcPath(
-                                    new LinePath(startPos.toVector3f(), endPos.toVector3f()),
-                                    List.of(
-                                            new HelixModifier(0.5f, 16, 0),
-                                            new JaggedModifier(5, 1, MathUtil.RANDOM.nextLong())
-                                    ),
-                                    8,
-                                    List.of()
-                            )
+                    var originalSource = new DamageSource(
+                            railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK),
+                            railgunRay,
+                            player
                     );
-                    var arc = new ArcEffect(level, 30);
-                    arc.setArcPaths(arcs);
-                    arc.setPos(startPos);
-                    level.addFreshEntity(arc);
-
-                    var result = LevelUtil.destroyBlocksAlongPath(railgunRay.level(), startPos, endPos, 0.025f, 10, false, true, true, false);
-                    if (result.getKey()) {
-                        double d = result.getValue();
-                        length = (float) d;
-                        endPos = startPos.add(lookDir.scale(length));
-                    }
-                    LevelUtil.attackEntitiesAlongPath(railgunRay.level(), startPos, endPos, 0.125f, new DamageSource(railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK), railgunRay), 150);
-                    railgunRay.level().playSound(null, player, SoundEvents.RAILGUN.get(), SoundSource.PLAYERS, 1, 1);
-                    unregister();
+                    var damageSource = SkillDamageSource.from(originalSource, Skills.RAILGUN.get());
+                    var system = AbilitySystemServer.getSystem(player);
+                    LevelUtil.attackEntitiesAlongPath(
+                            railgunRay.level(),
+                            startPos,
+                            endPos,
+                            0.125f,
+                            damageSource,
+                            calculateDamage(
+                                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                                    system.getPlayerDamageMultiplier(player.getUUID())
+                            ),
+                            player
+                    );
+                    railgunRay.level().playSound(
+                            null,
+                            startPos.x,
+                            startPos.y,
+                            startPos.z,
+                            SoundEvents.RAILGUN.get(),
+                            SoundSource.PLAYERS,
+                            1.0f,
+                            1.0f
+                    );
+                    end();
+                    startReleaseVisual(player, rightHand);
                 }
             }
 
             public void end() {
+                if (ended) return;
+                ended = true;
+                unregister();
             }
 
         }
+
+        private static void startReleaseVisual(ServerPlayer player, boolean rightHand) {
+            var previous = RELEASE_VISUALS.get(player);
+            if (previous != null) previous.end();
+            var context = new ReleaseVisualContext(player, rightHand);
+            RELEASE_VISUALS.put(player, context);
+            AbilitySystemServer.registerContext(context);
+        }
+
+        private static final class ReleaseVisualContext extends ServerContext {
+            private final boolean rightHand;
+            private final ResourceKey<Level> dimension;
+            private int ticks;
+            private boolean ended;
+
+            private ReleaseVisualContext(ServerPlayer player, boolean rightHand) {
+                super(player);
+                this.rightHand = rightHand;
+                dimension = player.level().dimension();
+                player.setData(AttachmentTypes.RAILGUN_DATA, new Data(rightHand, 0, true));
+            }
+
+            @SubscribeEvent
+            public void onTick(ServerTickEvent.Post event) {
+                if (ended
+                        || player.hasDisconnected()
+                        || !player.isAlive()
+                        || !player.level().dimension().equals(dimension)
+                        || ticks >= RELEASE_VISUAL_TICKS) {
+                    end();
+                    return;
+                }
+                ticks++;
+                player.setData(AttachmentTypes.RAILGUN_DATA, new Data(rightHand, ticks, true));
+            }
+
+            private void end() {
+                if (ended) return;
+                ended = true;
+                unregister();
+            }
+
+            @Override
+            protected void onUnregistered() {
+                ended = true;
+                RELEASE_VISUALS.remove(player, this);
+                var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
+                if (data != null && data.released()) {
+                    player.removeData(AttachmentTypes.RAILGUN_DATA);
+                }
+            }
+        }
+
+        private record AmmoSource(
+                @Nullable InteractionHand hand,
+                @Nullable ThrownCoin thrownCoin
+        ) {
+            private InteractionHand renderHand() {
+                return hand == null ? InteractionHand.MAIN_HAND : hand;
+            }
+
+            private void consume(ServerPlayer player) {
+                if (thrownCoin != null) {
+                    thrownCoin.discard();
+                } else if (hand != null && !player.isCreative()) {
+                    player.getItemInHand(hand).shrink(1);
+                }
+            }
+        }
     }
 
-    public record Data(boolean rightHand, int ticks) {
+    static boolean isVanillaAmmo(ItemStack stack) {
+        return isVanillaAmmoId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    }
+
+    static boolean isVanillaAmmoId(Identifier id) {
+        return Identifier.withDefaultNamespace("iron_ingot").equals(id)
+                || Identifier.withDefaultNamespace("iron_block").equals(id);
+    }
+
+    static boolean isAmmo(ItemStack stack) {
+        return isVanillaAmmo(stack) || stack.is(Items.COIN.get());
+    }
+
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        if (!Float.isFinite(abilityPower) || !Float.isFinite(playerMultiplier)) return 0;
+        return 150.0f * Math.max(0, abilityPower) * Math.max(0, playerMultiplier);
+    }
+
+    public record Data(boolean rightHand, int ticks, boolean released) {
         public static final StreamCodec<ByteBuf, Data> CODEC = StreamCodec.composite(
                 ByteBufCodecs.BOOL, Data::rightHand,
                 ByteBufCodecs.INT, Data::ticks,
+                ByteBufCodecs.BOOL, Data::released,
                 Data::new
         );
-        private static final Data DEFAULT = new Data(true, 0);
+        private static final Data DEFAULT = new Data(true, 0, false);
 
         public static Data getDefault() {
             return DEFAULT;

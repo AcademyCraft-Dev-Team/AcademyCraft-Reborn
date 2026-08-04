@@ -2,11 +2,10 @@ package org.academy.internal.common.ability.accelerator.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -14,6 +13,8 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
@@ -29,11 +30,17 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 public class HyperAccelerate extends Skill {
+    public static final long MAX_CHARGE_TICKS = 40;
+
     public HyperAccelerate() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
                 .cpCost(50)
                 .iterationTicks(8)
                 .maxStacks(1)
@@ -71,19 +78,17 @@ public class HyperAccelerate extends Skill {
         public static final String KEY_NAME_PRESS = SkillNames.HYPER_ACCELERATE + "_press";
         public static final String KEY_NAME_USE = SkillNames.HYPER_ACCELERATE + "_use";
         public static Config CONFIG = new Config();
-        private static long chargeStartTime;
 
         public static void onChargeStart() {
-            chargeStartTime = System.nanoTime();
+            if (!org.academy.api.client.ability.AbilitySystemClient.canUseSkill(
+                    Skills.HYPER_ACCELERATE.get())) return;
+            MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
 
         public static void onUse() {
             var mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.player == null) return;
-            var lookVec = mc.player.getViewVector(1.0f);
-            var elapsedMs = (System.nanoTime() - chargeStartTime) / 1_000_000f;
-            var chargeRatio = Math.clamp(elapsedMs / 2000f, 0.1f, 1.0f);
-            MisakaNetworkClient.send(new LaunchPacket(chargeRatio, lookVec));
+            MisakaNetworkClient.send(LaunchPacket.INSTANCE);
             var p = mc.player;
             var trail = TrailEffectWrapper.INSTANCE.createTrail(0.8f, 0.15f, 0.3f, 0.7f, 1.0f);
             trail.addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());
@@ -110,16 +115,33 @@ public class HyperAccelerate extends Skill {
     }
 
     public static final class Server {
-        private static final double MAX_LAUNCH_SPEED = 3.0;
+        public static final double MAX_LAUNCH_SPEED = 3.0;
+        private static final Map<ServerPlayer, Long> CHARGE_START_TICKS = new WeakHashMap<>();
+
+        public static float getChargeRatio(long startTick, long releaseTick) {
+            return Math.clamp((float) Math.max(0, releaseTick - startTick) / MAX_CHARGE_TICKS, 0.1f, 1.0f);
+        }
+
+        public static double getLaunchSpeed(float chargeRatio) {
+            return MAX_LAUNCH_SPEED * (0.5 + 0.5 * Math.clamp(chargeRatio, 0.1f, 1.0f));
+        }
+
+        @SubscribePacket
+        public static void handleStart(StartPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            if (!Skills.HYPER_ACCELERATE.get().isEnabled(player)) return;
+            CHARGE_START_TICKS.put(player, player.level().getGameTime());
+        }
 
         @SubscribePacket
         public static void handle(LaunchPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var startTick = CHARGE_START_TICKS.remove(player);
+            if (startTick == null) return;
+            var chargeRatio = getChargeRatio(startTick, player.level().getGameTime());
             Skills.HYPER_ACCELERATE.get().executeActive(player, (ctx, actualCost) -> {
-                var dir = packet.getDirection();
-                var chargeRatio = packet.getChargeRatio();
-                var speed = MAX_LAUNCH_SPEED * (0.5 + 0.5 * chargeRatio);
-                var velocity = dir.normalize().scale(speed);
+                var speed = getLaunchSpeed(chargeRatio);
+                var velocity = player.getLookAngle().normalize().scale(speed);
                 player.setDeltaMovement(velocity);
                 player.resetFallDistance();
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
@@ -129,35 +151,37 @@ public class HyperAccelerate extends Skill {
                 for (var target : nearby) {
                     target.setDeltaMovement(target.position().subtract(player.position()).normalize().scale(0.5));
                     target.hurtMarked = true;
-                    target.hurtServer(player.level(), player.damageSources().playerAttack(player), 1.0f);
+                    var system = AbilitySystemServer.getSystem(player);
+                    var damage = 4.0f
+                            * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                            * system.getPlayerDamageMultiplier(player.getUUID());
+                    target.hurtServer(player.level(),
+                            SkillDamageSource.of(player, Skills.HYPER_ACCELERATE.get()), damage);
                 }
             });
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
+    public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
+        public static final StartPacket INSTANCE = new StartPacket();
+        public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private StartPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+            return PacketTypes.HYPER_ACCELERATE_START.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
     public static final class LaunchPacket extends Packet<ServerGamePacketListenerImpl, LaunchPacket> {
-        private static final StreamCodec<ByteBuf, Vec3> VEC3_CODEC = StreamCodec.composite(
-                ByteBufCodecs.DOUBLE, Vec3::x, ByteBufCodecs.DOUBLE, Vec3::y, ByteBufCodecs.DOUBLE, Vec3::z, Vec3::new);
-        public static final StreamCodec<ByteBuf, LaunchPacket> CODEC = StreamCodec.composite(
-                ByteBufCodecs.FLOAT, LaunchPacket::getChargeRatio,
-                VEC3_CODEC, LaunchPacket::getDirection,
-                LaunchPacket::new
-        );
-        private final float chargeRatio;
-        private final Vec3 direction;
+        public static final LaunchPacket INSTANCE = new LaunchPacket();
+        public static final StreamCodec<ByteBuf, LaunchPacket> CODEC = StreamCodec.unit(INSTANCE);
 
-        public LaunchPacket(float chargeRatio, Vec3 direction) {
-            this.chargeRatio = chargeRatio;
-            this.direction = direction;
-        }
-
-        public float getChargeRatio() {
-            return chargeRatio;
-        }
-
-        public Vec3 getDirection() {
-            return direction;
+        private LaunchPacket() {
         }
 
         @Override

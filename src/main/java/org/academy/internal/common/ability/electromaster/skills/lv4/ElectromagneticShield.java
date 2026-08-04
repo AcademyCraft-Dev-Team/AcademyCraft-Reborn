@@ -1,0 +1,286 @@
+package org.academy.internal.common.ability.electromaster.skills.lv4;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.hud.ability.ToggleStatusHud;
+import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
+import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
+import org.academy.api.common.ability.Skill;
+import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetManipulation;
+import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.skilldata.ElectromagneticShieldData;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.ThreadType;
+import org.misaka.api.common.network.annotation.PacketTarget;
+import org.misaka.api.common.network.annotation.SubscribePacket;
+import org.misaka.api.common.network.packet.Packet;
+import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
+
+public final class ElectromagneticShield extends Skill {
+    static final float BASE_CAPACITY = 100.0f;
+    static final float BASE_COOLING = 10.0f;
+    static final float BASE_COOLING_CP_COST = 20.0f;
+    private static final int COOLING_INTERVAL_TICKS = 20;
+
+    public ElectromagneticShield() {
+        super(Builder
+                .of(AbilityCategories.ELECTROMASTER.get())
+                .level(AbilityLevel.LEVEL4)
+                .energyCost(60_000)
+                .passive()
+                .initiallyDisabled()
+                .maintenanceCost(40)
+                .iterationTicks(COOLING_INTERVAL_TICKS)
+                .maxStacks(NO_STACK_LIMIT)
+                .withCustomData(
+                        ElectromagneticShieldData.ID,
+                        ElectromagneticShieldData.class,
+                        _ -> new ElectromagneticShieldData()
+                )
+                .dependsOn(Skills.MAGNET_MANIPULATION)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
+        );
+    }
+
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        InputSystem.addKeyBinding(
+                Client.KEY_NAME_TOGGLE,
+                Client.CONFIG.getKeyBinding(
+                        Client.KEY_NAME_TOGGLE,
+                        InputSystem.combo(
+                                InputSystem.InputType.KEYBOARD,
+                                InputConstants.KEY_K,
+                                InputConstants.RELEASE,
+                                InputConstants.MOD_ALT
+                        )
+                ),
+                _ -> Client.toggle()
+        );
+        ToggleStatusHud.registerDetailProvider(
+                Skills.ELECTROMAGNETIC_SHIELD.get(), Client::statusText);
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    static AbsorptionResult absorbDamage(float storedDamage, float capacity, float incomingDamage) {
+        var safeCapacity = Float.isFinite(capacity) ? Math.max(0, capacity) : 0;
+        var safeStored = Float.isFinite(storedDamage)
+                ? Math.clamp(storedDamage, 0, safeCapacity)
+                : 0;
+        var safeIncoming = Float.isFinite(incomingDamage) ? Math.max(0, incomingDamage) : 0;
+        var absorbed = Math.min(safeIncoming, safeCapacity - safeStored);
+        return new AbsorptionResult(safeStored + absorbed, safeIncoming - absorbed);
+    }
+
+    static float coolStoredDamage(float storedDamage, float coolingAmount) {
+        if (!Float.isFinite(storedDamage) || !Float.isFinite(coolingAmount)) return 0;
+        return Math.max(0, storedDamage - Math.max(0, coolingAmount));
+    }
+
+    record AbsorptionResult(float storedDamage, float remainingDamage) {
+    }
+
+    public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.ELECTROMAGNETIC_SHIELD.get(),
+                        List.of(MagnetManipulation.Client.SKILL_INFO),
+                        R.textures.electromagnetic_shield_icon,
+                        104,
+                        80
+                )
+        );
+        public static final String KEY_NAME_TOGGLE = SkillNames.ELECTROMAGNETIC_SHIELD + "_toggle";
+        public static Config CONFIG = new Config();
+
+        private Client() {
+        }
+
+        private static void toggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.ELECTROMAGNETIC_SHIELD.get())) return;
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
+        }
+
+        private static String statusText() {
+            var data = AbilitySystemClient.getSkillData(
+                    Skills.ELECTROMAGNETIC_SHIELD.get(), ElectromagneticShieldData.class);
+            if (data.isEmpty()) return "0 / 0";
+            var shield = data.get();
+            var remaining = Math.max(0.0f, shield.getCapacity() - shield.getAbsorbedDamage());
+            return String.format(java.util.Locale.ROOT, "%.0f / %.0f", remaining, shield.getCapacity());
+        }
+
+        public static final class Config extends KeyBindingConfig {
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
+        }
+    }
+
+    public static final class Server {
+        private Server() {
+        }
+
+        @SubscribePacket
+        public static void handle(TogglePacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            var skill = Skills.ELECTROMAGNETIC_SHIELD.get();
+            var wasEnabled = skill.isEnabled(player);
+            skill.toggle(player);
+            if (wasEnabled != skill.isEnabled(player)) {
+                setShieldState(player, 0, currentCapacity(player));
+            }
+        }
+
+        private static void setStoredDamage(ServerPlayer player, float value) {
+            setShieldState(player, value, currentCapacity(player));
+        }
+
+        private static float currentCapacity(ServerPlayer player) {
+            return BASE_CAPACITY * AbilitySystemServer.getSystem(player)
+                    .getPlayerAbilityPowerMultiplier(player.getUUID());
+        }
+
+        private static void setShieldState(ServerPlayer player, float value, float capacity) {
+            var skill = Skills.ELECTROMAGNETIC_SHIELD.get();
+            AbilitySystemServer.getSystem(player).updatePlayerSkillData(
+                    player.getUUID(),
+                    skill,
+                    ElectromagneticShieldData.class,
+                    data -> {
+                        data.setCapacity(capacity);
+                        data.setAbsorbedDamage(value);
+                    }
+            );
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+            var skill = Skills.ELECTROMAGNETIC_SHIELD.get();
+            if (!skill.isEnabled(player) || event.getAmount() <= 0) return;
+
+            var system = AbilitySystemServer.getSystem(player);
+            var data = skill.<ElectromagneticShieldData>getRuntimeData(player).orElse(null);
+            if (data == null) return;
+
+            var capacity = BASE_CAPACITY * system.getPlayerAbilityPowerMultiplier(player.getUUID());
+            var result = absorbDamage(data.getAbsorbedDamage(), capacity, event.getAmount());
+            if (Float.compare(result.storedDamage(), data.getAbsorbedDamage()) != 0
+                    || Float.compare(capacity, data.getCapacity()) != 0) {
+                system.updatePlayerSkillData(
+                        player.getUUID(),
+                        skill,
+                        ElectromagneticShieldData.class,
+                        shieldData -> {
+                            shieldData.setCapacity(capacity);
+                            shieldData.setAbsorbedDamage(result.storedDamage());
+                        }
+                );
+            }
+
+            event.setAmount(result.remainingDamage());
+            if (result.remainingDamage() <= 0) {
+                event.setCanceled(true);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+            var skill = Skills.ELECTROMAGNETIC_SHIELD.get();
+            if (!skill.isEnabled(player)) return;
+
+            var system = AbilitySystemServer.getSystem(player);
+            var uuid = player.getUUID();
+            var capacity = BASE_CAPACITY * system.getPlayerAbilityPowerMultiplier(uuid);
+            var syncedData = skill.<ElectromagneticShieldData>getRuntimeData(player).orElse(null);
+            if (syncedData != null && Float.compare(syncedData.getCapacity(), capacity) != 0) {
+                Server.setShieldState(player, syncedData.getAbsorbedDamage(), capacity);
+            }
+            if (!system.ensurePermanentOccupation(
+                    uuid,
+                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill
+            )) {
+                system.toggleSkill(uuid, skill.getKeyString());
+                Server.setStoredDamage(player, 0);
+                return;
+            }
+
+            if (player.level().getGameTime() % COOLING_INTERVAL_TICKS != 0) return;
+            var data = skill.<ElectromagneticShieldData>getRuntimeData(player).orElse(null);
+            if (data == null || data.getAbsorbedDamage() <= 0) return;
+
+            if (!system.tryTimedOccupation(uuid, BASE_COOLING_CP_COST, skill)) return;
+            var cooling = BASE_COOLING * system.getPlayerAbilityPowerMultiplier(uuid);
+            Server.setStoredDamage(player, coolStoredDamage(data.getAbsorbedDamage(), cooling));
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
+        public static final TogglePacket INSTANCE = new TogglePacket();
+        public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private TogglePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+            return PacketTypes.ELECTROMAGNETIC_SHIELD_TOGGLE.get();
+        }
+    }
+}

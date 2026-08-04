@@ -1,6 +1,12 @@
 package org.academy.api.client.render;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.neoforged.bus.api.Event;
+
+import java.util.function.BiConsumer;
 
 public class LevelRenderEvent extends Event {
     /**
@@ -8,10 +14,15 @@ public class LevelRenderEvent extends Event {
      */
     private final MatrixStack matrixStack;
     private final float partialTick;
+    private final PoseStack poseStack;
+    private final SubmitNodeCollector submitNodeCollector;
 
-    public LevelRenderEvent(float partialTick, MatrixStack matrixStack) {
+    public LevelRenderEvent(float partialTick, MatrixStack matrixStack, PoseStack poseStack,
+                            SubmitNodeCollector submitNodeCollector) {
         this.matrixStack = matrixStack;
         this.partialTick = partialTick;
+        this.poseStack = poseStack;
+        this.submitNodeCollector = submitNodeCollector;
     }
 
     public MatrixStack getMatrixStack() {
@@ -20,5 +31,15 @@ public class LevelRenderEvent extends Event {
 
     public float getPartialTick() {
         return partialTick;
+    }
+
+    public void submitCustomGeometry(RenderType renderType,
+                                     BiConsumer<MatrixStack, VertexConsumer> renderer) {
+        var snapshot = matrixStack.copy();
+        submitNodeCollector.submitCustomGeometry(
+                poseStack,
+                renderType,
+                (_, vertexConsumer) -> renderer.accept(snapshot, vertexConsumer)
+        );
     }
 }

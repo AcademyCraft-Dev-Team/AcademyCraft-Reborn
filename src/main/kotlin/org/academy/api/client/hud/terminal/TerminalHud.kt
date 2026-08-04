@@ -12,6 +12,8 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.client.Minecraft
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.PreeditEvent
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
@@ -28,6 +30,7 @@ import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
 import org.academy.api.client.gui.animation.ValueAnimator.Companion.ofFloat
 import org.academy.api.client.gui.command.PosTexRectDrawCommand
 import org.academy.api.client.gui.event.EventType
+import org.academy.api.client.gui.event.CharTypedEvent
 import org.academy.api.client.gui.event.KeyEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createDragEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createMoveEvent
@@ -65,6 +68,8 @@ import kotlin.math.tan
 class TerminalHud private constructor() {
     private var context: Context = Context()
     private val uiContext: UiContext
+    private val config: TerminalConfig
+    private var pendingToggle: PendingToggle? = null
 
     /**
      * 0.0f : 面向鼠标喵
@@ -87,7 +92,7 @@ class TerminalHud private constructor() {
 
     init {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, TerminalConfig.Action.INSTANCE)
-        val config: TerminalConfig = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY)
+        config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY)
 
         val defaultKey = InputSystem.combo(
             InputSystem.InputType.KEYBOARD,
@@ -97,8 +102,8 @@ class TerminalHud private constructor() {
         InputSystem.addKeyBinding(
             KEY_NAME_TOGGLE,
             config.getKeyBinding(KEY_NAME_TOGGLE, defaultKey)
-        ) {
-            INSTANCE.toggleActive()
+        ) { bindingContext ->
+            INSTANCE.requestToggle(bindingContext)
         }
 
         uiContext = createUiContext()
@@ -169,8 +174,10 @@ class TerminalHud private constructor() {
     fun toggleActive() {
         if (ClientUtil.hasScreen()) return
 
+        pendingToggle = null
         val last: Boolean = isActive
         isActive = !last
+        if (!isActive) InputSystem.cancelRebind()
 
         val mc = Minecraft.getInstance()
         val w = mc.window
@@ -187,6 +194,15 @@ class TerminalHud private constructor() {
             startYPos = m.ypos
             context.get().requestLayout()
         } else GLFW.glfwSetCursorPos(w.handle(), startXPos, startYPos)
+    }
+
+    @MainThread
+    private fun requestToggle(bindingContext: InputSystem.BindingContext) {
+        if (isActive || bindingContext.action != InputConstants.PRESS) {
+            toggleActive()
+            return
+        }
+        pendingToggle = PendingToggle(bindingContext.type, bindingContext.input)
     }
 
     @MainThread
@@ -332,7 +348,32 @@ class TerminalHud private constructor() {
 
     @SubscribeEvent
     fun onMouseButton(event: MouseButtonEvent) {
+        val pending = pendingToggle
+        if (!isActive && pending != null) {
+            if (pending.type == InputSystem.InputType.MOUSE
+                && event.button == pending.input
+                && event.action == InputConstants.RELEASE
+            ) {
+                pendingToggle = null
+                toggleActive()
+                event.setCanceled(true)
+                return
+            }
+            if (event.action == InputConstants.PRESS) pendingToggle = null
+        }
         if (isActive && Minecraft.getInstance().gui.screen() == null) {
+            if (InputSystem.matchesKeyBinding(
+                    KEY_NAME_TOGGLE,
+                    InputSystem.InputType.MOUSE,
+                    event.button,
+                    event.action,
+                    event.modifiers
+                )
+            ) {
+                toggleActive()
+                event.setCanceled(true)
+                return
+            }
             InputSystem.currentMouseButton = event.button
             InputSystem.currentMouseAction = event.action
             InputSystem.currentMouseModifier = event.modifiers
@@ -348,6 +389,7 @@ class TerminalHud private constructor() {
 
     @SubscribeEvent
     fun onMouseScroll(event: MouseScrollEvent) {
+        if (!isActive) pendingToggle = null
         if (isActive && ClientUtil.hasNoScreen()) {
             val options = Minecraft.getInstance().options
             val d0 = ((if (options.discreteMouseScroll().get()) sign(event.yOffset) else
@@ -360,18 +402,68 @@ class TerminalHud private constructor() {
 
     @SubscribeEvent
     fun onKey(event: KeyInputEvent) {
-        if (isActive
-            && ClientUtil.hasNoScreen()
-            && !ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)
+        val pending = pendingToggle
+        if (!isActive && pending != null) {
+            if (pending.type == InputSystem.InputType.KEYBOARD
+                && event.key == pending.input
+                && event.action == InputConstants.RELEASE
+            ) {
+                pendingToggle = null
+                toggleActive()
+                event.setCanceled(true)
+                return
+            }
+            if (event.action == InputConstants.PRESS && event.key != pending.input) {
+                pendingToggle = null
+            }
+        }
+        if (!isActive || !ClientUtil.hasNoScreen()) return
+        if (InputSystem.matchesKeyBinding(
+                KEY_NAME_TOGGLE,
+                InputSystem.InputType.KEYBOARD,
+                event.key,
+                event.action,
+                event.modifiers
+            )
         ) {
+            toggleActive()
+            event.setCanceled(true)
+            return
+        }
+        if (event.action == InputConstants.PRESS) {
+            val vanillaEvent = net.minecraft.client.input.KeyEvent(
+                event.key,
+                event.scanCode,
+                event.modifiers
+            )
+            if (event.key == InputConstants.KEY_ESCAPE
+                || Minecraft.getInstance().options.keyInventory.matches(vanillaEvent)
+            ) {
+                toggleActive()
+                event.setCanceled(true)
+                return
+            }
+        }
+        if (!ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)) {
             val keyEvent = KeyEvent(
                 if (event.action == InputConstants.RELEASE) EventType.KEY_RELEASED else EventType.KEY_PRESSED,
                 event.key, event.scanCode, event.modifiers
             )
             context.get().dispatchEvent(keyEvent)
-            if (event.action == InputConstants.RELEASE && !keyEvent.isConsumed) toggleActive()
             event.setCanceled(true)
         }
+    }
+
+    private fun onCharacterInput(event: CharacterEvent): Boolean {
+        if (!isActive || !ClientUtil.hasNoScreen()) return false
+        val inputEvent = CharTypedEvent(event.codepoint())
+        context.get().dispatchEvent(inputEvent)
+        return inputEvent.isConsumed
+    }
+
+    private fun onPreeditInput(event: PreeditEvent?): Boolean {
+        if (!isActive || !ClientUtil.hasNoScreen()) return false
+        return TextBoxWidget.handlePreeditInput(event)
     }
 
     @SubscribeEvent
@@ -394,6 +486,11 @@ class TerminalHud private constructor() {
             val UBO_SIZE: Int = Std140SizeCalculator().putVec4().putFloat().putFloat().get()
         }
     }
+
+    private data class PendingToggle(
+        val type: InputSystem.InputType,
+        val input: Int
+    )
 
     inner class Context : WidgetContext {
         private var main = FrameLayoutWidget()
@@ -676,6 +773,16 @@ class TerminalHud private constructor() {
 
         lateinit var INSTANCE: TerminalHud
 
+        @JvmStatic
+        fun handleCharacterInput(event: CharacterEvent): Boolean {
+            return this::INSTANCE.isInitialized && INSTANCE.onCharacterInput(event)
+        }
+
+        @JvmStatic
+        fun handlePreeditInput(event: PreeditEvent?): Boolean {
+            return this::INSTANCE.isInitialized && INSTANCE.onPreeditInput(event)
+        }
+
         private val APPS: MutableList<App> = ArrayList<App>()
 
         fun addApp(app: App) {
@@ -685,6 +792,16 @@ class TerminalHud private constructor() {
         fun initMain() {
             INSTANCE = TerminalHud()
             NeoForge.EVENT_BUS.register(INSTANCE)
+        }
+
+        @JvmStatic
+        fun getBlurRadius(): Float = INSTANCE?.config?.blurRadius?.coerceIn(0f, 20f) ?: 20f
+
+        @JvmStatic
+        fun setBlurRadius(value: Float) {
+            val terminal = INSTANCE ?: return
+            terminal.config.blurRadius = value.coerceIn(0f, 20f)
+            AcademyCraftClient.Config.INSTANCE.save()
         }
 
         private fun createDynamicTransformsSlice(viewMatrix: Matrix4f): GpuBufferSlice {

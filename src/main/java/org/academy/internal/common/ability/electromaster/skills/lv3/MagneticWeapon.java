@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,11 +17,13 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -41,7 +44,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.Map;
 public class MagneticWeapon extends Skill {
     public MagneticWeapon() {
-        super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL3).passive().maintenanceCost(40).dependsOn(Skills.MAGNET_MANIPULATION).dependsOn(Skills.MAGNET_MOMENT_CHARGE));
+        super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL3).energyCost(30_000).passive().initiallyDisabled().maintenanceCost(40).iterationTicks(40).dependsOn(Skills.MAGNET_MANIPULATION));
     }
 
     @Override
@@ -65,6 +68,7 @@ public class MagneticWeapon extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
+            if (!AbilitySystemClient.canToggleSkill(Skills.MAGNETIC_WEAPON.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
             var p = net.minecraft.client.Minecraft.getInstance().player;
             if (p == null) return;
@@ -102,6 +106,10 @@ public class MagneticWeapon extends Skill {
     public static final class Server {
         private static final Map<Player, Context> CONTEXT_MAP = createContextMap();
 
+        public static float calculateDamage(float attackDamage, float playerMultiplier) {
+            return Math.max(0.0f, attackDamage) * 0.6f * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribePacket
         public static void handleToggle(TogglePacket p) {
             var player = p.getPacketListener().getPlayer();
@@ -134,15 +142,32 @@ public class MagneticWeapon extends Skill {
                 end();
                 return;
             }
+            var skill = Skills.MAGNETIC_WEAPON.get();
+            if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                if (skill.isEnabled(player)) skill.toggle(player);
+                end();
+                return;
+            }
 
             if (player.level().getGameTime() % ATTACK_INTERVAL == 0 && player.level() instanceof ServerLevel sl) {
                 var box = player.getBoundingBox().inflate(RADIUS);
                 var targets = sl.getEntitiesOfClass(LivingEntity.class, box,
-                        ee -> ee != player && ee.isAlive() && player.hasLineOfSight(ee));
+                        ee -> ee != player && ee.isAlive() && !player.isAlliedTo(ee)
+                                && player.hasLineOfSight(ee));
                 if (!targets.isEmpty()) {
-                    var target = targets.getFirst();
+                    var target = targets.stream()
+                            .min(java.util.Comparator.comparingDouble(player::distanceToSqr))
+                            .orElseThrow();
                     var weaponDamage = (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-                    target.hurtServer(sl, sl.damageSources().mobAttack(player), weaponDamage * 0.6f);
+                    var damage = Server.calculateDamage(weaponDamage,
+                            AbilitySystemServer.getSystem(player)
+                                    .getPlayerDamageMultiplier(player.getUUID()));
+                    target.hurtServer(sl,
+                            SkillDamageSource.of(player, Skills.MAGNETIC_WEAPON.get()), damage);
+                    sl.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                            target.getX(), target.getY(0.6), target.getZ(),
+                            10, 0.3, 0.45, 0.3, 0.05);
                 }
             }
         }

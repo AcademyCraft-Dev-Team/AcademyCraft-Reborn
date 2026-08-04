@@ -38,6 +38,7 @@ import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.resources.R;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -71,6 +72,7 @@ public final class Render {
     }
 
     public static void resize() {
+        BloomEffect.onResize();
         Buffers.getResourcePool().clear();
         if (Buffers.instance != null) {
             Buffers.getInstance().recreateSDC();
@@ -666,6 +668,11 @@ public final class Render {
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
                 .build();
 
+        public static final RenderPipeline MINE_DETECT_LINES = builder(LINES_SNIPPET)
+                .withLocation(academy("pipeline/mine_detect_lines"))
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+                .build();
+
         public static final RenderPipeline IMAGE = builder()
                 .withLocation(academy("pipeline/image"))
                 .withVertexShader(R.shaders.core.image)
@@ -837,28 +844,19 @@ public final class Render {
                 .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
-        public static final RenderPipeline LEVEL_POS_TEX_COLOR_HELLFLARE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                .withLocation(academy("pipeline/level_pos_tex_color_hellflare"))
-                .withVertexShader(R.shaders.position_tex_color)
-                .withFragmentShader(R.shaders.core.hellflare_steam)
-                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+        public static final RenderPipeline PLATINUM_COSMIC_WING = builder()
+                .withLocation(academy("pipeline/platinum_cosmic_wing"))
+                .withVertexShader(R.shaders.core.PLATINUM_COSMIC_WING)
+                .withFragmentShader(R.shaders.core.PLATINUM_COSMIC_WING)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.GLOBALS)
                 .withCull(false)
-                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
-                .build();
-
-        public static final RenderPipeline LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                .withLocation(academy("pipeline/level_pos_tex_color_hellflare_additive"))
-                .withVertexShader(R.shaders.position_tex_color)
-                .withFragmentShader(R.shaders.core.hellflare_steam)
-                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
-                .withCull(false)
-                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
-                .withPrimitiveTopology(PrimitiveTopology.QUADS)
-                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
@@ -870,6 +868,28 @@ public final class Render {
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
                 .withDepthStencilState(DepthStencilState.DEFAULT)
+                .build();
+
+        public static final RenderPipeline LEVEL_POS_COLOR_QUADS_NO_DEPTH_WRITE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_color_quads_no_depth_write"))
+                .withVertexShader(R.shaders.POSITION_COLOR)
+                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+                .build();
+
+        public static final RenderPipeline LEVEL_POS_COLOR_QUADS_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_color_quads_additive"))
+                .withVertexShader(R.shaders.POSITION_COLOR)
+                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_TRANGLES = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
@@ -952,11 +972,65 @@ public final class Render {
     }
 
     public abstract static class RenderTypes extends net.minecraft.client.renderer.rendertype.RenderTypes {
+        public static final RenderType MINE_DETECT_LINES = create(
+                "mine_detect_lines",
+                RenderSetup.builder(RenderPipelines.MINE_DETECT_LINES)
+                        .createRenderSetup()
+        );
+
         public static final RenderType STORM_WING = create(
                 "storm_wing",
                 RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
                         .withTexture(
                                 "Sampler0", R.textures.ability.accelerator.skill.storm_wing.effect.tornado_ring,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType PLASMA_CLOUD = create(
+                "plasma_cloud",
+                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
+                        .withTexture(
+                                "Sampler0", R.textures.plasma_generation_cloud,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType BLACK_WING = create(
+                "black_wing",
+                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
+                        .withTexture(
+                                "Sampler0", R.textures.black_wing,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType WHITE_WING = create(
+                "white_wing",
+                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
+                        .withTexture(
+                                "Sampler0", R.textures.white_wing,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType PLATINUM_WING = create(
+                "platinum_wing",
+                RenderSetup.builder(Render.RenderPipelines.PLATINUM_COSMIC_WING)
+                        .withTexture(
+                                "Sampler0", R.textures.white_wing,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .withTexture(
+                                "Sampler1", R.textures.platinum_wing_starfield,
                                 () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                         )
                         .sortOnUpload()
@@ -978,6 +1052,27 @@ public final class Render {
         public static final RenderType POS_COLOR_QUADS = create(
                 "pos_color_quads",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
+                        .createRenderSetup()
+        );
+
+        public static final RenderType POS_COLOR_QUADS_NO_DEPTH_WRITE = create(
+                "pos_color_quads_no_depth_write",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_NO_DEPTH_WRITE)
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType POS_COLOR_QUADS_ADDITIVE = create(
+                "pos_color_quads_additive",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE)
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType POS_COLOR_QUADS_BLOOM_ADDITIVE = create(
+                "pos_color_quads_bloom_additive",
+                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE)
+                        .setOutputTarget(BLOOM_TARGET)
                         .createRenderSetup()
         );
 
@@ -1095,29 +1190,5 @@ public final class Render {
         private RenderTypes() {
         }
 
-        public static RenderType getHellFlareSteam(Identifier identifier) {
-            return create(
-                    "hellflare_steam",
-                    RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE)
-                            .withTexture(
-                                    "Sampler0", identifier,
-                                    () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                            )
-                            .createRenderSetup()
-            );
-        }
-
-        public static RenderType getHellFlareSteamBloom(Identifier identifier) {
-            return create(
-                    "hellflare_steam_bloom",
-                    RenderSetup.builder(RenderPipelines.LEVEL_POS_TEX_COLOR_HELLFLARE_ADDITIVE)
-                            .withTexture(
-                                    "Sampler0", identifier,
-                                    () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                            )
-                            .setOutputTarget(BLOOM_TARGET)
-                            .createRenderSetup()
-            );
-        }
     }
 }

@@ -13,6 +13,9 @@ import java.util.Map;
 
 public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<T>, JsonDeserializer<T> {
     private static final Logger LOGGER = AcademyCraft.getLogger();
+    private static final String LEGACY_TYPE_KEY = "_type";
+    private static final String LEGACY_REFLECTION_FILTER_DATA_SUFFIX =
+            ".accelerator.skills.ReflectionFilter$Data";
 
     private static final Map<Identifier, Class<? extends SkillData>> TYPE_MAP = new HashMap<>();
 
@@ -36,8 +39,17 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
         var jsonObject = json.getAsJsonObject();
         Class<? extends SkillData> targetClass = CommonSkillData.class;
 
+        String typeStr = null;
         if (jsonObject.has("type")) {
-            var typeStr = jsonObject.get("type").getAsString();
+            typeStr = jsonObject.get("type").getAsString();
+        } else if (jsonObject.has(LEGACY_TYPE_KEY)) {
+            var legacyType = jsonObject.get(LEGACY_TYPE_KEY).getAsString();
+            if (legacyType.endsWith(LEGACY_REFLECTION_FILTER_DATA_SUFFIX)) {
+                typeStr = AcademyCraft.academy("reflection_filter").toString();
+            }
+        }
+
+        if (typeStr != null) {
             try {
                 var typeId = Identifier.parse(typeStr);
                 var registeredClass = TYPE_MAP.get(typeId);

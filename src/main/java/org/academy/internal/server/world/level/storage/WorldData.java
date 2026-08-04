@@ -68,10 +68,19 @@ public final class WorldData {
         }
 
         try (var reader = new FileReader(file)) {
-            return gson.fromJson(reader, WorldData.class);
+            var worldData = gson.fromJson(reader, WorldData.class);
+            if (worldData == null) return new WorldData();
+            worldData.migrateLegacyData();
+            return worldData;
         } catch (IOException e) {
             throw new RuntimeException("Failed to read world data file", e);
         }
+    }
+
+    boolean migrateLegacyData() {
+        var changed = false;
+        for (var player : players.values()) changed |= player.migrateLegacyData();
+        return changed;
     }
 
     public Map<UUID, Player> getPlayers() {

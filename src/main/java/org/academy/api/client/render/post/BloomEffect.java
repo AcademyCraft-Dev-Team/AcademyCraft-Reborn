@@ -20,7 +20,6 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.List;
-import java.util.Objects;
 
 import static org.academy.api.client.render.Render.BlurUniforms.getBlurUniformsBuffer;
 import static org.academy.api.client.render.Render.BlurUniforms.writeBlurUniforms;
@@ -37,6 +36,7 @@ public final class BloomEffect {
     private static boolean hasBeenUsed;
     private final GpuBuffer bloomUniformsBuffer;
     private @Nullable RenderTarget input;
+    private @Nullable RenderTargetDescriptor inputDescriptor;
 
     {
         var device = RenderSystem.getDevice();
@@ -69,6 +69,7 @@ public final class BloomEffect {
     }
 
     public void close() {
+        releaseInput();
         bloomUniformsBuffer.close();
         BEFORE.close();
         AFTER.close();
@@ -76,7 +77,42 @@ public final class BloomEffect {
 
     public RenderTarget getInput() {
         hasBeenUsed = true;
-        return Objects.requireNonNull(input);
+        return ensureInput(Minecraft.getInstance().gameRenderer.mainRenderTarget());
+    }
+
+    public static void onResize() {
+        if (instance != null) instance.releaseInput();
+    }
+
+    private RenderTarget ensureInput(RenderTarget mainRenderTarget) {
+        if (input != null
+                && input.width == mainRenderTarget.width
+                && input.height == mainRenderTarget.height
+                && input.useDepth == mainRenderTarget.useDepth
+                && input.useStencil == mainRenderTarget.useStencil) {
+            return input;
+        }
+
+        releaseInput();
+        inputDescriptor = new RenderTargetDescriptor(
+                mainRenderTarget.width,
+                mainRenderTarget.height,
+                mainRenderTarget.useDepth,
+                mainRenderTarget.useStencil,
+                new Vector4f(0),
+                GpuFormat.RGBA8_UNORM
+        );
+        input = Render.Buffers.getResourcePool().acquire(inputDescriptor);
+        input.copyDepthFrom(mainRenderTarget);
+        return input;
+    }
+
+    private void releaseInput() {
+        if (input != null && inputDescriptor != null) {
+            Render.Buffers.getResourcePool().release(inputDescriptor, input);
+        }
+        input = null;
+        inputDescriptor = null;
     }
 
     private void runBlurPass(GpuTextureView output, GpuTextureView input, Vector2f outSize, float dirX, float dirY, int radius) {
@@ -109,9 +145,6 @@ public final class BloomEffect {
         var height = mainRenderTarget.height;
         var resourcePool = Render.Buffers.getResourcePool();
 
-        var descInput = new RenderTargetDescriptor(
-                width, height, mainRenderTarget.useDepth, mainRenderTarget.useStencil, new Vector4f(0), GpuFormat.RGBA8_UNORM
-        );
         var descHalf = new RenderTargetDescriptor(
                 width / 2, height / 2, false, new Vector4f(0), GpuFormat.RGBA8_UNORM
         );
@@ -129,7 +162,7 @@ public final class BloomEffect {
             var scene = PostEffect.MAIN_SCENE.getColorTextureView();
             var main = mainRenderTarget.getColorTextureView();
 
-            input = resourcePool.acquire(descInput);
+            input = ensureInput(mainRenderTarget);
             var inputView = input.getColorTextureView();
 
             if (scene == null || main == null || inputView == null) return;
@@ -231,7 +264,7 @@ public final class BloomEffect {
             );
             RenderSystem.getDevice().createCommandEncoder().clearColorTexture(inputView.texture(), new Vector4f(0));
         } finally {
-            if (input != null) resourcePool.release(descInput, input);
+            releaseInput();
             if (ping != null) {
                 if (ping.width == width / 2) resourcePool.release(descHalf, ping);
                 else if (ping.width == width / 4) resourcePool.release(descQuarter, ping);
@@ -240,8 +273,8 @@ public final class BloomEffect {
             if (pongHalf != null) resourcePool.release(descHalf, pongHalf);
             if (pongQuarter != null) resourcePool.release(descQuarter, pongQuarter);
             if (pongEighth != null) resourcePool.release(descEighth, pongEighth);
+            hasBeenUsed = false;
         }
-        hasBeenUsed = false;
     }
 
     public record BloomUniforms(float radius, float intensity) {

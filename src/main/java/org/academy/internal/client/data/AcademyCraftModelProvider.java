@@ -55,6 +55,11 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.ICON.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.CAT_ENGINE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DATA_TERMINAL.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.DARKMATTER.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.DARK_MATTER_HELMET.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.DARK_MATTER_CHESTPLATE.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.DARK_MATTER_LEGGINGS.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.DARK_MATTER_BOOTS.get(), ModelTemplates.FLAT_ITEM);
 
         {
             var coinItem = Items.COIN.get();

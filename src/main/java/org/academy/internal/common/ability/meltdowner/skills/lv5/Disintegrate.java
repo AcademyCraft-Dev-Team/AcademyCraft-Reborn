@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.meltdowner.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -14,6 +15,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -33,7 +35,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 public class Disintegrate extends Skill {
     public Disintegrate() {
-        super(Builder.of(AbilityCategories.MELTDOWNER.get()).level(AbilityLevel.LEVEL5).cpCost(200).iterationTicks(60).maxStacks(1));
+        super(Builder.of(AbilityCategories.MELTDOWNER.get()).level(AbilityLevel.LEVEL5).energyCost(100_000).cpCost(200).iterationTicks(60).maxStacks(1));
     }
 
     @Override
@@ -94,6 +96,10 @@ public class Disintegrate extends Skill {
     }
 
     public static final class Server {
+        public static float calculateDamage(float currentHealth, float playerMultiplier) {
+            return Math.max(0.0f, currentHealth) * 0.99f * Math.max(0.0f, playerMultiplier);
+        }
+
         @SubscribePacket
         public static void handle(UsePacket p) {
             var player = p.getPacketListener().getPlayer();
@@ -104,14 +110,38 @@ public class Disintegrate extends Skill {
                 var range = LevelUtil.getValidViewDistance(player, 30);
                 var target = eye.add(look.scale(range));
                 if (l instanceof ServerLevel sl) {
-                    LevelUtil.destroyBlocksAlongPath(sl, eye, target, 0.2f, 999, true, true, true, false);
+                    LevelUtil.destroyBlocksAlongPath(
+                            sl, eye, target, 0.2f, 999,
+                            true, true, true, false, player
+                    );
+                    var multiplier = ctx.system().getPlayerDamageMultiplier(player.getUUID());
+                    var source = SkillDamageSource.of(player, Skills.DISINTEGRATE.get());
+                    var box = new net.minecraft.world.phys.AABB(eye, target).inflate(1.0);
+                    for (var entity : sl.getEntitiesOfClass(LivingEntity.class, box,
+                            entity -> entity != player && entity.isAlive()
+                                    && !player.isAlliedTo(entity)
+                                    && distanceToSegmentSqr(entity.getBoundingBox().getCenter(), eye, target) <= 1.0)) {
+                        entity.hurtServer(sl, source,
+                                calculateDamage(entity.getHealth(), multiplier));
+                    }
+                    var delta = target.subtract(eye);
+                    for (var i = 0; i <= 24; i++) {
+                        var point = eye.add(delta.scale(i / 24.0));
+                        sl.sendParticles(ParticleTypes.END_ROD,
+                                point.x, point.y, point.z, 1, 0.02, 0.02, 0.02, 0.0);
+                    }
                 }
-                double dmg = 0;
-                for (var e : l.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(eye, target).inflate(1), e -> e != player && e.isAlive()))
-                    dmg = e.getHealth() * 0.99;
-                for (var e : l.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(eye, target).inflate(1), e -> e != player && e.isAlive()))
-                    e.hurtServer(l, l.damageSources().magic(), (float) dmg);
             });
+        }
+
+        private static double distanceToSegmentSqr(net.minecraft.world.phys.Vec3 point,
+                                                   net.minecraft.world.phys.Vec3 start,
+                                                   net.minecraft.world.phys.Vec3 end) {
+            var segment = end.subtract(start);
+            var lengthSqr = segment.lengthSqr();
+            if (lengthSqr < 1.0e-9) return point.distanceToSqr(start);
+            var t = Math.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
+            return point.distanceToSqr(start.add(segment.scale(t)));
         }
     }
 

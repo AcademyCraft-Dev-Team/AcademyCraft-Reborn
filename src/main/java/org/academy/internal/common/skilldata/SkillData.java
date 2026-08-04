@@ -53,6 +53,10 @@ public abstract class SkillData {
         return enabled;
     }
 
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
     public void toggleEnabled() {
         enabled = !enabled;
     }

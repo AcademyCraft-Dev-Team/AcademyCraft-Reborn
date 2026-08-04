@@ -2,12 +2,15 @@ package org.academy.internal.client.app.settings.ui
 
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.blaze3d.textures.FilterMode
+import net.minecraft.client.Minecraft
+import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import net.neoforged.fml.ModList
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.app.App
+import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.config.KeyBindingConfig
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
@@ -31,25 +34,28 @@ import org.academy.api.client.gui.widget.ToggleButtonWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.hud.terminal.TerminalConfig
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
-import org.academy.api.common.ability.Skill
-import org.academy.api.common.registries.Registries
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting
+import org.misaka.MisakaNetworkClient
 import org.lwjgl.glfw.GLFW
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 
 object SettingsApp : App {
-    private const val PAGE_KEYBINDINGS = 0
-    private const val PAGE_ABOUT = 1
+    private const val PAGE_GENERAL = 0
+    private const val PAGE_KEYBINDINGS = 1
+    private const val PAGE_ABOUT = 2
 
     override fun createContext(): WidgetContext {
         return Context()
     }
 
     override fun name(): String {
-        return "Settings"
+        return Language.getInstance().getOrDefault("app.academy.settings.name")
     }
 
     override fun icon(): Identifier {
@@ -79,9 +85,17 @@ object SettingsApp : App {
             return root
         }
 
-        private data class CaptureTarget(
-            val skill: Skill,
+        private data class BindingSection(
+            val id: String,
+            val title: String,
+            val icon: Identifier,
             val config: KeyBindingConfig,
+            val hiddenBindings: Set<String> = emptySet(),
+            val persist: (KeyBindingConfig) -> Unit
+        )
+
+        private data class CaptureTarget(
+            val section: BindingSection,
             val bindingName: String
         )
 
@@ -146,7 +160,7 @@ object SettingsApp : App {
                         .padding(2f)
                     content.addChild("panel", panelContainer)
 
-                    showPage(PAGE_KEYBINDINGS)
+                    showPage(PAGE_GENERAL)
                 }
             }
 
@@ -165,7 +179,14 @@ object SettingsApp : App {
             tabBar.spacing = 2f
             tabBar.layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
-            tabBar.addChild("keybindings", createTabButton(name(), PAGE_KEYBINDINGS))
+            tabBar.addChild("general", createTabButton(
+                Language.getInstance().getOrDefault("app.academy.settings.tab.general"),
+                PAGE_GENERAL
+            ))
+            tabBar.addChild("keybindings", createTabButton(
+                Language.getInstance().getOrDefault("app.academy.settings.tab.keybindings"),
+                PAGE_KEYBINDINGS
+            ))
             tabBar.addChild("about", createTabButton("About", PAGE_ABOUT))
             tabBar.selectButton(tabBar.children.values.first() as RadioButtonWidget)
             return tabBar
@@ -218,12 +239,102 @@ object SettingsApp : App {
         private fun showPage(page: Int) {
             panelContainer.clearChildren()
             when (page) {
+                PAGE_GENERAL -> panelContainer.addChild("general", createGeneralPage())
                 PAGE_KEYBINDINGS -> panelContainer.addChild("keybindings", createKeybindPage())
                 PAGE_ABOUT -> panelContainer.addChild("about", createAboutPage())
             }
         }
 
-        private fun createKeybindPage(): ScrollPanelWidget {
+        private fun createGeneralPage(): LinearLayoutWidget {
+            val page = LinearLayoutWidget()
+            page.orientation = Orientation.VERTICAL
+            page.spacing = 3f
+            page.layoutParams = WidgetContainer.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+
+            val player = Minecraft.getInstance().player
+            page.addChild("friendly_fire", createSettingToggle(
+                Language.getInstance().getOrDefault("app.academy.settings.general.friendly_fire"),
+                player?.let(FriendlyFireSetting::isFriendlyFireEnabled) ?: true
+            ) { enabled ->
+                MisakaNetworkClient.send(FriendlyFireSetting.SetPacket(enabled))
+            })
+            page.addChild("destroy_blocks", createSettingToggle(
+                Language.getInstance().getOrDefault("app.academy.settings.general.destroy_blocks"),
+                player?.let(DestroyBlocksSetting::isDestroyBlocksEnabled) ?: true
+            ) { enabled ->
+                MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
+            })
+            return page
+        }
+
+        private fun createSettingToggle(
+            text: String,
+            checked: Boolean,
+            onChanged: (Boolean) -> Unit
+        ): LinearLayoutWidget {
+            val row = LinearLayoutWidget()
+            row.orientation = Orientation.HORIZONTAL
+            row.spacing = 4f
+            row.layoutParams = WidgetContainer.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(18f)
+
+            row.addChild("label", LabelWidget(text).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(0f)
+                    .gravity(Gravity.CENTER_LEFT)
+            })
+            row.addChild("toggle", ToggleButtonWidget().apply {
+                setChecked(checked)
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .size(20f, 10f)
+                    .gravity(Gravity.CENTER)
+                setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
+                    override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
+                        onChanged(isChecked)
+                    }
+                })
+            })
+            return row
+        }
+
+        private fun createKeybindPage(): LinearLayoutWidget {
+            val page = LinearLayoutWidget()
+            page.orientation = Orientation.VERTICAL
+            page.spacing = 1f
+            page.layoutParams = WidgetContainer.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+
+            val columnHeader = LinearLayoutWidget()
+            columnHeader.orientation = Orientation.HORIZONTAL
+            columnHeader.spacing = 2f
+            columnHeader.layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+            columnHeader.addChild("spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(0f)
+            })
+            columnHeader.addChild("key_spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams().size(44f, 0f)
+            })
+            columnHeader.addChild("toggle_title", LabelWidget(
+                Language.getInstance().getOrDefault("app.academy.settings.keybind.toggle")
+            ).apply {
+                scale = 0.65f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .width(22f)
+                    .height(10f)
+                    .gravity(Gravity.CENTER)
+            })
+            columnHeader.addChild("rebind_spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
+            })
+            page.addChild("column_header", columnHeader)
+
             val panel = ScrollPanelWidget()
             panel.layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
@@ -235,23 +346,45 @@ object SettingsApp : App {
             list.layoutParams = WidgetContainer.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
-            for (skill in Registries.SKILLS) {
-                val config = tryGetConfig(skill) ?: continue
-                if (config.keyBindings.isEmpty()) continue
-                list.addChild(skill.getKeyString(), createSkillSection(skill, config))
+            for (section in createGeneralSections()) {
+                if (section.config.keyBindings.keys.all(section.hiddenBindings::contains)) continue
+                list.addChild(section.id, createBindingSection(section))
             }
+
             panel.setContent(list)
-            return panel
+            page.addChild("bindings", panel)
+            return page
         }
 
-        private fun tryGetConfig(skill: Skill): KeyBindingConfig? {
-            if (!AcademyCraftClient.Config.INSTANCE.hasTypeHandler(skill.getKey())) return null
-            return runCatching {
-                AcademyCraftClient.Config.INSTANCE.getConfig<KeyBindingConfig>(skill.getKey())
-            }.getOrNull()
+        private fun createGeneralSections(): List<BindingSection> {
+            val terminalConfig = AcademyCraftClient.Config.INSTANCE
+                .getConfig<TerminalConfig>(TerminalHud.CONFIG_KEY)
+            val abilityConfig = AcademyCraftClient.Config.INSTANCE
+                .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
+            return listOf(
+                BindingSection(
+                    "general_terminal",
+                    Language.getInstance().getOrDefault("app.academy.settings.keybind.group.terminal"),
+                    R.textures.gui.terminal.icon,
+                    terminalConfig
+                ) { updated ->
+                    AcademyCraftClient.Config.INSTANCE.setConfig(TerminalHud.CONFIG_KEY, updated)
+                }.copy(hiddenBindings = setOf(TerminalHud.KEY_NAME_TOGGLE)),
+                BindingSection(
+                    "general_ability_hud",
+                    Language.getInstance().getOrDefault("app.academy.settings.keybind.group.ability_hud"),
+                    AbilitySystemClient.getCategory().developerIcon,
+                    abilityConfig
+                ) { updated ->
+                    AcademyCraftClient.Config.INSTANCE.setConfig(
+                        AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM,
+                        updated
+                    )
+                }
+            )
         }
 
-        private fun createSkillSection(skill: Skill, config: KeyBindingConfig): LinearLayoutWidget {
+        private fun createBindingSection(sectionInfo: BindingSection): LinearLayoutWidget {
             val section = LinearLayoutWidget()
             section.orientation = Orientation.VERTICAL
             section.spacing = 1f
@@ -265,13 +398,13 @@ object SettingsApp : App {
                 .widthMode(SizeMode.MATCH_PARENT)
             section.addChild("header", header)
             run {
-                val icon = ImageWidget(skill.icon)
+                val icon = ImageWidget(sectionInfo.icon)
                 icon.setSampler(FilterMode.LINEAR, false)
                 icon.layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(16f, 16f)
                 header.addChild("icon", icon)
 
-                val name = LabelWidget(skill.translatedName)
+                val name = LabelWidget(sectionInfo.title)
                 name.layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .height(0f)
@@ -279,15 +412,15 @@ object SettingsApp : App {
                 header.addChild("name", name)
             }
 
-            for ((bindingName, combo) in config.keyBindings) {
-                section.addChild(bindingName, createBindingRow(skill, config, bindingName, combo))
+            for ((bindingName, combo) in sectionInfo.config.keyBindings) {
+                if (bindingName in sectionInfo.hiddenBindings) continue
+                section.addChild(bindingName, createBindingRow(sectionInfo, bindingName, combo))
             }
             return section
         }
 
         private fun createBindingRow(
-            skill: Skill,
-            config: KeyBindingConfig,
+            section: BindingSection,
             bindingName: String,
             combo: InputSystem.KeyCombination
         ): LinearLayoutWidget {
@@ -297,7 +430,9 @@ object SettingsApp : App {
             row.layoutParams = WidgetContainer.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
 
-            val name = LabelWidget(bindingName)
+            val name = LabelWidget(
+                Language.getInstance().getOrDefault("key.academy.$bindingName")
+            )
             name.layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
                 .height(10f)
@@ -307,20 +442,21 @@ object SettingsApp : App {
             val keyLabel = LabelWidget(combo.displayName())
             keyLabel.scale = 0.7f
             keyLabel.layoutParams = LinearLayoutWidget.LayoutParams()
+                .width(44f)
                 .height(10f)
                 .gravity(Gravity.CENTER)
             row.addChild("key", keyLabel)
 
             val toggle = ToggleButtonWidget()
-            toggle.setChecked(config.isKeyBindingEnabled(bindingName))
+            toggle.setChecked(section.config.isKeyBindingEnabled(bindingName))
             toggle.layoutParams = LinearLayoutWidget.LayoutParams()
                 .size(16f, 9f)
                 .gravity(Gravity.CENTER)
             toggle.setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
                 override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
-                    config.setKeyBindingEnabled(bindingName, isChecked)
+                    section.config.setKeyBindingEnabled(bindingName, isChecked)
                     InputSystem.setKeyBindingEnabled(bindingName, isChecked)
-                    AcademyCraftClient.Config.INSTANCE.setConfig(skill.getKey(), config)
+                    section.persist(section.config)
                     AcademyCraftClient.Config.INSTANCE.save()
                 }
             })
@@ -331,9 +467,11 @@ object SettingsApp : App {
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
             rebindButton.onClickListener = { _: Widget? ->
-                startCapture(skill, config, bindingName)
+                startCapture(section, bindingName)
             }
-            rebindButton.addChild("text", LabelWidget("改键").apply {
+            rebindButton.addChild("text", LabelWidget(
+                Language.getInstance().getOrDefault("app.academy.settings.keybind.rebind")
+            ).apply {
                 scale = 0.7f
                 layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT)
@@ -471,9 +609,10 @@ object SettingsApp : App {
             pendingCancel = false
         }
 
-        private fun startCapture(skill: Skill, config: KeyBindingConfig, bindingName: String) {
+        private fun startCapture(section: BindingSection, bindingName: String) {
+            if (bindingName in section.hiddenBindings || bindingName == TerminalHud.KEY_NAME_TOGGLE) return
             resetCaptureState()
-            capturing = CaptureTarget(skill, config, bindingName)
+            capturing = CaptureTarget(section, bindingName)
             captureLayer.isEnabled = true
             captureLayer.visibility = Widget.Visibility.VISIBLE
             updateHint()
@@ -488,9 +627,9 @@ object SettingsApp : App {
 
         private fun applyCapture(combo: InputSystem.KeyCombination) {
             val target = capturing ?: return
-            target.config.setKeyBinding(target.bindingName, combo)
+            target.section.config.setKeyBinding(target.bindingName, combo)
             InputSystem.updateKeyBinding(target.bindingName, combo)
-            AcademyCraftClient.Config.INSTANCE.setConfig(target.skill.getKey(), target.config)
+            target.section.persist(target.section.config)
             AcademyCraftClient.Config.INSTANCE.save()
             exitCapture()
             showPage(PAGE_KEYBINDINGS)

@@ -122,6 +122,8 @@ runs/
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
+# The embedded Vector Reflection javaagent is a release build input.
+!libs/academy-agent.jar
 
 # Local
 *.py
@@ -130,3 +132,6 @@ runs/
 
 .vscode
 /.kotlin/
+node_modules/
+/.tmp/
+/outputs/
