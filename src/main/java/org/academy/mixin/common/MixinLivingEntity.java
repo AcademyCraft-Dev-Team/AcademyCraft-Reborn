@@ -12,6 +12,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAby
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -102,6 +103,8 @@ public abstract class MixinLivingEntity {
     private void academy$onSkillHurt(ServerLevel level, DamageSource source, float damage, CallbackInfoReturnable<Boolean> cir) {
         if (source instanceof SkillDamageSource skillSource) {
             if (skillSource.getEntity() instanceof ServerPlayer player) {
+                if (skillSource instanceof ReflectedSkillDamageSource reflected
+                        && !reflected.shouldTriggerSkillCallbacks()) return;
                 skillSource.getSkill().onHurt(player, (LivingEntity) (Object) this, damage);
             }
         }
@@ -111,6 +114,8 @@ public abstract class MixinLivingEntity {
     private void academy$onSkillKill(DamageSource source, CallbackInfo ci) {
         if (source instanceof SkillDamageSource skillSource) {
             if (skillSource.getEntity() instanceof ServerPlayer player) {
+                if (skillSource instanceof ReflectedSkillDamageSource reflected
+                        && !reflected.shouldTriggerSkillCallbacks()) return;
                 skillSource.getSkill().onKill(player, (LivingEntity) (Object) this);
             }
         }

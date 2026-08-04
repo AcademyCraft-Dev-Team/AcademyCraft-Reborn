@@ -39,7 +39,8 @@ public class EntityTypes {
             );
     public static final DeferredHolder<EntityType<?>, EntityType<HighSpeedElectronBeam>> HIGH_SPEED_ELECTRON_BEAM =
             ENTITY_TYPES.registerEntityType(
-                    "high_speed_electron_beam", HighSpeedElectronBeam::new, MobCategory.MISC
+                    "high_speed_electron_beam", HighSpeedElectronBeam::new, MobCategory.MISC,
+                    builder -> builder.clientTrackingRange(10).updateInterval(1)
             );
     public static final DeferredHolder<EntityType<?>, EntityType<LightOrb>> LIGHT_ORB =
             ENTITY_TYPES.registerEntityType(

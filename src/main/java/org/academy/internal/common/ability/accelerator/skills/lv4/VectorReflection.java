@@ -46,6 +46,7 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
+import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
@@ -63,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
 public class VectorReflection extends Skill {
     public VectorReflection() {
         super(Builder
@@ -153,11 +155,15 @@ public class VectorReflection extends Skill {
         }
 
         public static boolean isActive(ServerPlayer player) {
+            return canMaintainLinearReflectionLease(player)
+                    && AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID()) > 0.0f;
+        }
+
+        public static boolean canMaintainLinearReflectionLease(ServerPlayer player) {
             return player != null
                     && player.connection != null
                     && !player.isSpectator()
-                    && Skills.VECTOR_REFLECTION.get().isEnabled(player)
-                    && AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID()) > 0.0f;
+                    && Skills.VECTOR_REFLECTION.get().isEnabled(player);
         }
 
         public static void purgeProtectedEffects(ServerPlayer player) {
@@ -171,8 +177,47 @@ public class VectorReflection extends Skill {
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
             if (!(player instanceof ServerPlayer serverPlayer) || player.isSpectator()) return false;
             if (!isActive(serverPlayer)) return false;
+            if (ReflectedSkillDamageSource.isReflected(damageSource)) return false;
             if (damageSource instanceof SkillDamageSource skillSource
                     && skillSource.getSkill() == Skills.VECTOR_REFLECTION.get()) return false;
+            return true;
+        }
+
+        public static boolean tryReflectLinearAttack(
+                ServerPlayer player,
+                float incomingDamage,
+                Vec3 mirrorPoint,
+                Vec3 incomingDirection
+        ) {
+            if (!isActive(player)
+                    || !(incomingDamage > 0.0f)
+                    || !Float.isFinite(incomingDamage)
+                    || !isFiniteVector(mirrorPoint)
+                    || !isFiniteVector(incomingDirection)
+                    || incomingDirection.lengthSqr() < 1.0E-8) {
+                return false;
+            }
+
+            var skill = Skills.VECTOR_REFLECTION.get();
+            var system = AbilitySystemServer.getSystem(player);
+            var result = calculateReflection(
+                    incomingDamage,
+                    system.getPlayerAvailableCP(player.getUUID()),
+                    system.getPlayerCalculationIntensity(player.getUUID()),
+                    system.isPlayerSkillDebugMode(player.getUUID())
+            );
+            if (result.remainingDamage() > 0.0f
+                    || result.reflectedDamage() + 1.0E-5f < incomingDamage) {
+                return false;
+            }
+
+            var executed = skill.executeActive(player, _ -> result.baseCpCost(), (_, _) -> {
+                playReflectionSound(player);
+                spawnGlowCircle(player, incomingDirection.scale(-1.0), mirrorPoint);
+            });
+            if (!executed) return false;
+            player.invulnerableTime = 0;
+            maintainProtection(player);
             return true;
         }
 

@@ -17,18 +17,22 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.path.LinePath;
-import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.api.common.util.LevelUtil;
+import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
+import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
+import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -38,13 +42,15 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ThunderLance extends Skill {
     static final float QUICK_BASE_DAMAGE = 16.0f;
     static final float QUICK_RANGE = 32.0f;
     static final float QUICK_RADIUS = 2.0f;
     static final float QUICK_CP_COST = 40.0f;
+    private static final long RETURN_SEED_MASK = 0xA24BAED4963EE407L;
 
     public ThunderLance() {
         super(Builder
@@ -142,6 +148,27 @@ public class ThunderLance extends Skill {
             var handPos = calculateHandPosition(player.position(), look);
             var targetPos = player.getEyePosition().add(look.scale(QUICK_RANGE));
 
+            var system = AbilitySystemServer.getSystem(player);
+            var source = SkillDamageSource.of(player, Skills.THUNDER_LANCE.get());
+            var damage = calculateQuickDamage(
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID())
+            );
+            var payload = LinearAttackPayload.builder(
+                            player,
+                            Skills.THUNDER_LANCE.get(),
+                            source,
+                            QUICK_RADIUS
+                    )
+                    .damage(_ -> damage)
+                    .targetFilter(entity -> entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get())
+                    .build();
+            var resolved = LinearReflectionResolver.resolve(
+                    level,
+                    new LinearSegment(handPos, targetPos),
+                    payload
+            );
+
             var right = look.cross(new Vec3(0, 1, 0));
             if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
             else right = right.normalize();
@@ -153,34 +180,24 @@ public class ThunderLance extends Skill {
                     right.scale(-endOffset).add(up.scale(endOffset)),
                     right.scale(-endOffset).add(up.scale(-endOffset))
             );
-            var arcs = offsets.stream()
-                    .map(offset -> new ArcPath(
-                            new LinePath(handPos.toVector3f(), targetPos.add(offset).toVector3f()),
-                            List.of(new JaggedModifier(1, 4, MathUtil.RANDOM.nextLong())),
-                            3.0f,
-                            List.of()
-                    ))
-                    .toList();
+            var strandSeeds = offsets.stream().map(_ -> MathUtil.RANDOM.nextLong()).toList();
+            var arcs = resolved.isReflected()
+                    ? createReflectedQuickArcPaths(
+                    handPos,
+                    resolved.mirrorPoint(),
+                    resolved.returnSegment().orElseThrow().end(),
+                    resolved.reflectionProgress(),
+                    offsets,
+                    strandSeeds
+            )
+                    : createUnreflectedQuickArcPaths(handPos, targetPos, offsets, strandSeeds);
             var arc = new ArcEffect(level, 10);
             arc.setPos(handPos);
             arc.setArcPaths(arcs);
             level.addFreshEntity(arc);
             arc.playSound(SoundEvents.ARC_WEAK.get());
 
-            var system = AbilitySystemServer.getSystem(player);
-            var source = SkillDamageSource.of(player, Skills.THUNDER_LANCE.get());
-            var damage = calculateQuickDamage(
-                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                    system.getPlayerDamageMultiplier(player.getUUID()));
-            LevelUtil.attackEntitiesAlongPath(
-                    level,
-                    handPos,
-                    targetPos,
-                    QUICK_RADIUS,
-                    source,
-                    damage,
-                    player
-            );
+            LinearAttackExecutor.execute(level, resolved, payload);
         }
     }
 
@@ -194,6 +211,70 @@ public class ThunderLance extends Skill {
         if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
         else right = right.normalize();
         return playerPosition.add(right.scale(0.4)).add(0, 1.2, 0).add(look.scale(0.5));
+    }
+
+    static long deriveReturnSeed(long seed) {
+        return seed ^ RETURN_SEED_MASK;
+    }
+
+    static List<ArcPath> createUnreflectedQuickArcPaths(
+            Vec3 handPos,
+            Vec3 targetPos,
+            List<Vec3> offsets,
+            List<Long> seeds
+    ) {
+        validateStrands(offsets, seeds);
+        var paths = new ArrayList<ArcPath>(offsets.size());
+        for (var i = 0; i < offsets.size(); i++) {
+            paths.add(createQuickArcPath(handPos, targetPos.add(offsets.get(i)), seeds.get(i)));
+        }
+        return List.copyOf(paths);
+    }
+
+    static List<ArcPath> createReflectedQuickArcPaths(
+            Vec3 handPos,
+            Vec3 mirrorPoint,
+            Vec3 returnEnd,
+            double reflectionProgress,
+            List<Vec3> offsets,
+            List<Long> seeds
+    ) {
+        validateStrands(offsets, seeds);
+        var t = Math.clamp(reflectionProgress, 0.0, 1.0);
+        var reflectionPoints = new ArrayList<Vec3>(offsets.size());
+        var returnEndpoints = new ArrayList<Vec3>(offsets.size());
+        var paths = new ArrayList<ArcPath>(offsets.size() * 2);
+
+        for (var i = 0; i < offsets.size(); i++) {
+            var offset = offsets.get(i);
+            var reflectionPoint = mirrorPoint.add(offset.scale(t));
+            reflectionPoints.add(reflectionPoint);
+            returnEndpoints.add(returnEnd.subtract(offset.scale(1.0 - t)));
+            paths.add(createQuickArcPath(handPos, reflectionPoint, seeds.get(i)));
+        }
+        for (var i = 0; i < reflectionPoints.size(); i++) {
+            paths.add(createQuickArcPath(
+                    reflectionPoints.get(i),
+                    returnEndpoints.get(i),
+                    deriveReturnSeed(seeds.get(i))
+            ));
+        }
+        return List.copyOf(paths);
+    }
+
+    private static ArcPath createQuickArcPath(Vec3 start, Vec3 end, long seed) {
+        return new ArcPath(
+                new LinePath(start.toVector3f(), end.toVector3f()),
+                List.of(new JaggedModifier(1, 4, seed)),
+                3.0f,
+                List.of()
+        );
+    }
+
+    private static void validateStrands(List<Vec3> offsets, List<Long> seeds) {
+        if (offsets.size() != seeds.size()) {
+            throw new IllegalArgumentException("Each Thunder Lance strand requires one seed");
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)

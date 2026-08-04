@@ -1,27 +1,28 @@
 package org.academy.internal.common.world.entity.skill;
 
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.util.LevelUtil;
-import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.ability.Skill;
-import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
-import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
+import org.academy.api.common.util.LevelUtil;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
+import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
+import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
+import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 import java.util.UUID;
 
 public class HighSpeedElectronBeam extends RenderOnlyEntity {
+    private static final int BLOCK_MINING_TIER = 3;
     private static final EntityDataAccessor<Float> BEAM_LENGTH = SynchedEntityData.defineId(
             HighSpeedElectronBeam.class,
             EntityDataSerializers.FLOAT
@@ -50,6 +51,22 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             HighSpeedElectronBeam.class,
             EntityDataSerializers.INT
     );
+    private static final EntityDataAccessor<Boolean> RAY_FIRED = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.BOOLEAN
+    );
+    private static final EntityDataAccessor<Boolean> REFLECTION_ACTIVE = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.BOOLEAN
+    );
+    private static final EntityDataAccessor<Float> REFLECTION_DISTANCE = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.FLOAT
+    );
+    private static final EntityDataAccessor<Float> REFLECTION_RETURN_LENGTH = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.FLOAT
+    );
     public static final int MAX_CHARGE_TICKS = 40;
     public static final int MAX_RAY_LIFE_TICKS = 15;
 
@@ -64,6 +81,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private float targetMaxHealthDamageRatio;
     private float playerDamageMultiplier;
     private boolean radiationEnabled;
+    private boolean betaTrailOnFire;
 
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -116,12 +134,21 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         builder.define(CONTINUOUS, false);
         builder.define(HELD_CHARGE, false);
         builder.define(ATTACK_DELAY_TICKS, MAX_CHARGE_TICKS);
+        builder.define(RAY_FIRED, false);
+        builder.define(REFLECTION_ACTIVE, false);
+        builder.define(REFLECTION_DISTANCE, 0.0f);
+        builder.define(REFLECTION_RETURN_LENGTH, 0.0f);
     }
 
     @Override
     public void tick() {
         super.tick();
         length = entityData.get(BEAM_LENGTH);
+
+        if (level().isClientSide() && hasFired() && !fired) {
+            currentChargerTicks = Math.max(currentChargerTicks, getAttackDelayTicks());
+            fired = true;
+        }
 
         if (isContinuous()) {
             currentChargerTicks = getAttackDelayTicks();
@@ -132,7 +159,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             return;
         }
 
-        if (isHeldCharge()) {
+        if (isHeldCharge() && !hasFired()) {
             currentChargerTicks = Math.min(currentChargerTicks + 1, Math.max(0, getAttackDelayTicks() - 1));
             currentRayLifeTicks = MAX_RAY_LIFE_TICKS;
             shouldStopRay = true;
@@ -181,73 +208,109 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                     kill(serverLevel);
                     return;
                 }
-                if (destroysBlocks()) updateBlockPath(serverLevel, owner, false);
-                else setBeamLength((float) LevelUtil.getValidViewDistance(this, length));
-            } else if (destroysBlocks()) {
-                updateBlockPath(level(), null, true);
-            } else {
-                setBeamLength((float) LevelUtil.getValidViewDistance(this, length));
+                fire(serverLevel, owner);
+                markFired();
             }
-
-            if (!level().isClientSide() && (baseDamage > 0.0f || targetMaxHealthDamageRatio > 0.0f)) {
-                attackEntities((ServerLevel) level());
-            }
-            fired = true;
         }
     }
 
-    private void updateBlockPath(Level level, ServerPlayer owner, boolean simulate) {
+    private void fire(ServerLevel level, ServerPlayer owner) {
         var start = position();
         var end = start.add(getLookAngle().scale(length));
-        var result = LevelUtil.destroyBlocksAlongPath(
+        if (destroysBlocks()) {
+            var simulated = LevelUtil.destroyBlocksAlongPath(
+                    level,
+                    start,
+                    end,
+                    0.25f,
+                    BLOCK_MINING_TIER,
+                    false,
+                    true,
+                    true,
+                    true,
+                    owner
+            );
+            if (simulated.getKey()) {
+                setBeamLength(simulated.getValue().floatValue());
+                end = start.add(getLookAngle().scale(getBeamLength()));
+            }
+        } else {
+            setBeamLength((float) LevelUtil.getValidViewDistance(this, length));
+            end = start.add(getLookAngle().scale(getBeamLength()));
+        }
+
+        var payload = MeltdownerBeamActions.createPayload(
                 level,
-                start,
-                end,
-                0.25f,
-                10,
-                false,
-                true,
-                true,
-                simulate,
-                owner
+                owner,
+                sourceSkill,
+                0.125f,
+                baseDamage,
+                targetMaxHealthDamageRatio,
+                playerDamageMultiplier,
+                radiationEnabled,
+                target -> target.getType() != getType()
         );
-        if (result.getKey()) setBeamLength(result.getValue().floatValue());
+        var attack = LinearReflectionResolver.resolve(level, new LinearSegment(start, end), payload);
+
+        if (destroysBlocks()) executeBlocks(level, owner, attack.outbound(), true);
+        var outboundResult = LinearAttackExecutor.executeOutbound(level, attack, payload);
+        if (attack.isReflected()) {
+            var returnSegment = attack.returnSegment().orElseThrow();
+            var returnLength = executeBlocks(
+                    level,
+                    attack.reflectionCandidate().orElseThrow().reflector(),
+                    returnSegment,
+                    destroysBlocks()
+            );
+            attack = attack.limitReturnLength(returnLength);
+        }
+        if (attack.isReflected()) {
+            setReflection((float) attack.outbound().length(), (float) attack.returnVisualLength());
+        } else clearReflection();
+        LinearAttackExecutor.executeReturn(level, attack, payload, outboundResult);
+        if (betaTrailOnFire) {
+            spawnBetaTrail(level, attack);
+            betaTrailOnFire = false;
+        }
     }
 
-    private void attackEntities(ServerLevel level) {
-        var owner = resolveOwner(level);
-        if (owner == null) return;
-        var start = position();
-        var end = start.add(getLookAngle().scale(length));
-        var radius = 0.125f;
-        var pathBounds = new AABB(start, end).inflate(radius);
-        var damageSource = SkillDamageSource.of(owner, sourceSkill);
-        var now = level.getGameTime();
-        var candidates = level.getEntities(
-                this,
-                pathBounds,
-                entity -> entity != owner
-                        && entity.isAlive()
-                        && entity.getType() != getType()
-                        && !owner.isAlliedTo(entity)
+    private static double executeBlocks(
+            ServerLevel level,
+            ServerPlayer breaker,
+            LinearSegment segment,
+            boolean destroyBlocks
+    ) {
+        var result = LevelUtil.destroyBlocksAlongPath(
+                level,
+                segment.start(),
+                segment.end(),
+                0.25f,
+                destroyBlocks ? BLOCK_MINING_TIER : -1,
+                false,
+                destroyBlocks,
+                true,
+                !destroyBlocks,
+                breaker
         );
-        for (var target : candidates) {
-            var hitBounds = target.getBoundingBox().inflate(radius);
-            if (!hitBounds.contains(start) && hitBounds.clip(start, end).isEmpty()) continue;
-            var maxHealth = target instanceof LivingEntity living ? living.getMaxHealth() : 0.0f;
-            var marked = radiationEnabled
-                    && target instanceof LivingEntity living
-                    && RadiationIntensify.isMarked(living, now);
-            var damage = MeltdownerBeamDamage.calculate(
-                    baseDamage,
-                    targetMaxHealthDamageRatio,
-                    maxHealth,
-                    playerDamageMultiplier,
-                    marked
-            );
-            var hurt = target.hurtServer(level, damageSource, damage);
-            if (hurt && radiationEnabled && target instanceof LivingEntity living) {
-                RadiationIntensify.mark(living, now);
+        return Math.clamp(result.getValue(), 0.0, segment.length());
+    }
+
+    private static void spawnBetaTrail(ServerLevel level, ResolvedLinearAttack attack) {
+        for (var segment : attack.segments()) {
+            var delta = segment.delta();
+            for (var step = 0; step <= 12; step++) {
+                var point = segment.start().add(delta.scale(step / 12.0));
+                level.sendParticles(
+                        ParticleTypes.ELECTRIC_SPARK,
+                        point.x,
+                        point.y,
+                        point.z,
+                        1,
+                        0.02,
+                        0.02,
+                        0.02,
+                        0.01
+                );
             }
         }
     }
@@ -320,5 +383,52 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
 
     public boolean destroysBlocks() {
         return entityData.get(DESTROYS_BLOCKS);
+    }
+
+    public void setBetaTrailOnFire(boolean betaTrailOnFire) {
+        this.betaTrailOnFire = betaTrailOnFire;
+    }
+
+    public void setReflection(float distance) {
+        setReflection(distance, getBeamLength());
+    }
+
+    public void setReflection(float distance, float returnLength) {
+        if (!Float.isFinite(distance) || !Float.isFinite(returnLength)) {
+            clearReflection();
+            return;
+        }
+        var safeDistance = Math.max(0.0f, distance);
+        var safeReturnLength = Math.max(0.0f, returnLength);
+        entityData.set(REFLECTION_DISTANCE, safeDistance);
+        entityData.set(REFLECTION_RETURN_LENGTH, safeReturnLength);
+        entityData.set(REFLECTION_ACTIVE, true);
+    }
+
+    public void clearReflection() {
+        entityData.set(REFLECTION_ACTIVE, false);
+        entityData.set(REFLECTION_DISTANCE, 0.0f);
+        entityData.set(REFLECTION_RETURN_LENGTH, 0.0f);
+    }
+
+    public boolean isReflectionActive() {
+        return entityData.get(REFLECTION_ACTIVE);
+    }
+
+    public float getReflectionDistance() {
+        return entityData.get(REFLECTION_DISTANCE);
+    }
+
+    public float getReflectionReturnLength() {
+        return entityData.get(REFLECTION_RETURN_LENGTH);
+    }
+
+    public boolean hasFired() {
+        return entityData.get(RAY_FIRED);
+    }
+
+    private void markFired() {
+        fired = true;
+        entityData.set(RAY_FIRED, true);
     }
 }

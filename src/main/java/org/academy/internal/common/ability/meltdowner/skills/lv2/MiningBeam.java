@@ -27,10 +27,18 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
+import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
+import org.academy.internal.common.ability.meltdowner.ContinuousBeamReflection;
+import org.academy.internal.common.ability.meltdowner.ContinuousReflectionSession;
+import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.ContinuousBeam;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -172,6 +180,7 @@ public final class MiningBeam extends Skill {
         private int ticks;
         private float currentLength = MAX_LENGTH;
         private final HighSpeedElectronBeam visual;
+        private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
 
         private Context(ServerPlayer player) {
             super(player);
@@ -195,6 +204,8 @@ public final class MiningBeam extends Skill {
                 end();
                 return;
             }
+            var start = player.getEyePosition();
+            visual.setPos(start);
             if (ticks % CP_INTERVAL_TICKS == 0
                     && !skill.executeActive(player, (_, _) -> {
                     })) {
@@ -202,8 +213,10 @@ public final class MiningBeam extends Skill {
                 return;
             }
 
-            var start = player.getEyePosition();
-            if (ticks % BREAK_INTERVAL_TICKS == 0) {
+            var breakTick = ticks % BREAK_INTERVAL_TICKS == 0;
+            var damageTick = ticks % DAMAGE_INTERVAL_TICKS == 0;
+            var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player);
+            if (breakTick) {
                 var result = LevelUtil.destroyBlocksAlongPath(
                         initialLevel,
                         start,
@@ -213,30 +226,78 @@ public final class MiningBeam extends Skill {
                         true,
                         true,
                         true,
-                        false,
+                        true,
                         player
                 );
                 currentLength = (float) result.getValue().doubleValue();
                 visual.setBeamLength(currentLength);
             }
 
-            if (ticks % DAMAGE_INTERVAL_TICKS == 0) {
-                var system = AbilitySystemServer.getSystem(player);
-                var damage = calculateDamage(
-                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                        system.getPlayerDamageMultiplier(player.getUUID())
-                );
-                var end = start.add(player.getLookAngle().scale(currentLength));
-                LevelUtil.attackEntitiesAlongPath(
+            var system = AbilitySystemServer.getSystem(player);
+            var damage = calculateDamage(
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID())
+            );
+            var end = start.add(player.getLookAngle().scale(currentLength));
+            var payload = LinearAttackPayload.builder(
+                            player,
+                            skill,
+                            SkillDamageSource.of(player, skill),
+                            DAMAGE_RADIUS
+                    )
+                    .damage(_ -> damage)
+                    .build();
+            var attack = ContinuousBeamReflection.resolve(
+                    initialLevel,
+                    new LinearSegment(start, end),
+                    payload,
+                    reflectionSession,
+                    ticks,
+                    DAMAGE_INTERVAL_TICKS,
+                    damageTick
+            );
+
+            if (breakTick && destroyBlocks) {
+                MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
-                        start,
-                        end,
-                        DAMAGE_RADIUS,
-                        SkillDamageSource.of(player, skill),
-                        damage,
+                        attack.outbound(),
+                        BREAK_RADIUS,
+                        MINING_TIER,
+                        true,
+                        true,
+                        true,
                         player
                 );
             }
+            LinearAttackExecutor.SegmentExecutionResult outboundResult = null;
+            if (damageTick) {
+                outboundResult = LinearAttackExecutor.executeOutbound(initialLevel, attack, payload);
+            }
+            if (attack.isReflected()) {
+                var returnSegment = attack.returnSegment().orElseThrow();
+                var returnLength = MeltdownerBeamActions.executeBlocksAlongSegment(
+                        initialLevel,
+                        returnSegment,
+                        BREAK_RADIUS,
+                        MINING_TIER,
+                        true,
+                        true,
+                        true,
+                        !(breakTick && destroyBlocks),
+                        attack.reflectionCandidate().orElseThrow().reflector()
+                );
+                attack = attack.limitReturnLength(returnLength);
+            }
+            updateVisual(attack);
+            if (damageTick) {
+                LinearAttackExecutor.executeReturn(initialLevel, attack, payload, outboundResult);
+            }
+        }
+
+        private void updateVisual(ResolvedLinearAttack attack) {
+            if (attack.isReflected()) {
+                visual.setReflection((float) attack.outbound().length(), (float) attack.returnVisualLength());
+            } else visual.clearReflection();
         }
 
         private void end() {
