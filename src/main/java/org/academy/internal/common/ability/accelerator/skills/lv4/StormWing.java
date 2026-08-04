@@ -56,7 +56,9 @@ import java.util.UUID;
 import static org.lwjgl.glfw.GLFW.*;
 
 public final class StormWing extends Skill {
-    public static final float RESERVED_CP = 20.0f;
+    public static final float RESERVED_CP = 40.0f;
+    private static final float UPKEEP_CP = 10.0f;
+    private static final int UPKEEP_INTERVAL_TICKS = 20;
 
     public StormWing() {
         super(Builder
@@ -66,8 +68,8 @@ public final class StormWing extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(RESERVED_CP)
-                .iterationTicks(30)
-                .maxStacks(1)
+                .iterationTicks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_REFLECTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition("Vector Reflection", "academy:vector_reflection"))
@@ -279,9 +281,15 @@ public final class StormWing extends Skill {
             var skill = Skills.STORM_WING.get();
             var active = skill.isEnabled(player) && player.isAlive() && !player.hasDisconnected();
             if (active) {
-                active = AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+                var system = AbilitySystemServer.getSystem(player);
+                active = system.ensurePermanentOccupation(
                         player.getUUID(), RESERVED_CP, skill);
                 if (!active && skill.isEnabled(player)) skill.toggle(player);
+                if (active && player.tickCount % UPKEEP_INTERVAL_TICKS == 0
+                        && !system.tryTimedOccupation(player.getUUID(), UPKEEP_CP, skill, 1)) {
+                    forceDeactivate(player);
+                    active = false;
+                }
             }
             sync(player);
             if (!isActive(player)) return;

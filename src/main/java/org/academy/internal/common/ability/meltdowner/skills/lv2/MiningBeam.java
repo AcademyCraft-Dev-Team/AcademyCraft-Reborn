@@ -60,7 +60,7 @@ public final class MiningBeam extends Skill {
                 .energyCost(10_000)
                 .cpCost(5)
                 .iterationTicks(CP_INTERVAL_TICKS)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -222,7 +222,10 @@ public final class MiningBeam extends Skill {
 
             if (ticks % DAMAGE_INTERVAL_TICKS == 0) {
                 var system = AbilitySystemServer.getSystem(player);
-                var damage = calculateDamage(system.getPlayerDamageMultiplier(player.getUUID()));
+                var damage = calculateDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID())
+                );
                 var end = start.add(player.getLookAngle().scale(currentLength));
                 LevelUtil.attackEntitiesAlongPath(
                         initialLevel,
@@ -249,8 +252,14 @@ public final class MiningBeam extends Skill {
         }
     }
 
-    static float calculateDamage(float playerMultiplier) {
-        return MeltdownerBeamDamage.calculate(BASE_DAMAGE, 0.0f, 0.0f, playerMultiplier, false);
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(
+                BASE_DAMAGE * Math.max(0.0f, abilityPower),
+                0.0f,
+                0.0f,
+                playerMultiplier,
+                false
+        );
     }
 
     @PacketTarget(ThreadType.SERVER)

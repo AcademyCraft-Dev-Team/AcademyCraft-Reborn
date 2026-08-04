@@ -81,7 +81,8 @@ public class MagnetManipulation extends Skill {
     static final double PLAYER_STOP_DISTANCE = 1.35;
     static final double TARGET_STOP_DISTANCE = 0.65;
     static final double TARGET_FRONT_DISTANCE = 2.5;
-    static final float MOVE_CP_COST_PER_TICK = 10.0f / 20.0f;
+    static final float MOVE_CP_COST = 10.0f;
+    static final int MOVE_CP_INTERVAL_TICKS = 20;
     private static final TagKey<Block> MAGNETIC_BLOCKS = TagKey.create(
             Registries.BLOCK,
             Identifier.fromNamespaceAndPath(AcademyCraft.MOD_ID, "magnetic_blocks")
@@ -191,6 +192,8 @@ public class MagnetManipulation extends Skill {
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.ARC_GENERATE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
@@ -355,6 +358,7 @@ public class MagnetManipulation extends Skill {
         private final PullMode mode;
         private @Nullable Entity controlledTarget;
         private boolean controlsFallingBlock;
+        private int movingTicks;
         private boolean ended;
 
         private MoveContext(ServerPlayer player, PullMode mode) {
@@ -376,17 +380,15 @@ public class MagnetManipulation extends Skill {
 
             var system = AbilitySystemServer.getSystem(player);
             var uuid = player.getUUID();
-            var actualCost = MOVE_CP_COST_PER_TICK * system.getPlayerCalculationIntensity(uuid);
-            var availableCP = system.getPlayerAvailableCP(uuid);
-            if (availableCP < actualCost) {
-                end();
-                return;
-            }
             var moved = mode == PullMode.TARGET_TO_PLAYER
                     ? pullTargetToPlayer()
                     : pullPlayerToTarget();
             if (!moved) return;
-            system.setPlayerAvailableCP(uuid, availableCP - actualCost);
+            movingTicks++;
+            if (movingTicks % MOVE_CP_INTERVAL_TICKS == 0
+                    && !system.tryTimedOccupation(uuid, MOVE_CP_COST, skill, 10)) {
+                end();
+            }
         }
 
         private boolean pullPlayerToTarget() {

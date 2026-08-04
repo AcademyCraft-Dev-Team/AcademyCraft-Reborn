@@ -81,7 +81,7 @@ public final class Railgun extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(100)
-                .iterationTicks(100)
+                .iterationTicks(80)
                 .maxStacks(Skill.NO_STACK_LIMIT)
                 .dependsOn(Skills.THUNDER_LANCE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
@@ -320,15 +320,17 @@ public final class Railgun extends Skill {
                             player
                     );
                     var damageSource = SkillDamageSource.from(originalSource, Skills.RAILGUN.get());
-                    var multiplier = AbilitySystemServer.getSystem(player)
-                            .getPlayerDamageMultiplier(player.getUUID());
+                    var system = AbilitySystemServer.getSystem(player);
                     LevelUtil.attackEntitiesAlongPath(
                             railgunRay.level(),
                             startPos,
                             endPos,
                             0.125f,
                             damageSource,
-                            calculateDamage(multiplier),
+                            calculateDamage(
+                                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                                    system.getPlayerDamageMultiplier(player.getUUID())
+                            ),
                             player
                     );
                     railgunRay.level().playSound(
@@ -437,9 +439,9 @@ public final class Railgun extends Skill {
         return isVanillaAmmo(stack) || stack.is(Items.COIN.get());
     }
 
-    static float calculateDamage(float playerMultiplier) {
-        if (!Float.isFinite(playerMultiplier)) return 0;
-        return 150.0f * Math.max(0, playerMultiplier);
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        if (!Float.isFinite(abilityPower) || !Float.isFinite(playerMultiplier)) return 0;
+        return 150.0f * Math.max(0, abilityPower) * Math.max(0, playerMultiplier);
     }
 
     public record Data(boolean rightHand, int ticks, boolean released) {

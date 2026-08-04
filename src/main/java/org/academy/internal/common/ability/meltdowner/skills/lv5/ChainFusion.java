@@ -116,8 +116,10 @@ public class ChainFusion extends Skill {
     public static final class Server {
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
 
-        public static float calculateDamage(float baseDamage, float playerMultiplier) {
-            return Math.max(0.0f, baseDamage) * Math.max(0.0f, playerMultiplier);
+        public static float calculateDamage(float baseDamage, float abilityPower, float playerMultiplier) {
+            return Math.max(0.0f, baseDamage)
+                    * Math.max(0.0f, abilityPower)
+                    * Math.max(0.0f, playerMultiplier);
         }
 
         @SubscribePacket
@@ -168,57 +170,39 @@ public class ChainFusion extends Skill {
 
             if (!(level() instanceof ServerLevel sl)) return;
 
-            if (ticks < 15) {
-                return;
-            }
-
-            if (ticks % 10 == 0) {
+            if (ticks == 15) {
                 chainFrom(sl, orb.position(), INITIAL_DAMAGE);
             }
-
-            searchChainTargets(sl);
 
             processChainQueue(sl);
         }
 
-        private void searchChainTargets(ServerLevel sl) {
-            if (chainDepth >= MAX_CHAIN_DEPTH) return;
-
-            var targets = sl.getEntitiesOfClass(LivingEntity.class,
-                    orb.getBoundingBox().inflate(CHAIN_RADIUS),
-                    e -> e != player && e.isAlive() && !player.isAlliedTo(e)
-                            && !chainedEntities.contains(e.getId()));
-
-            for (var target : targets) {
-                chainedEntities.add(target.getId());
-                chainQueue.put(target.getId(), CHAIN_DELAY);
-                chainDepth++;
-                spawnChainMarker(sl, target.position());
-
-                if (chainDepth >= MAX_CHAIN_DEPTH) break;
-            }
-        }
-
         private void processChainQueue(ServerLevel sl) {
+            var dueTargets = new ArrayList<Integer>();
             var it = chainQueue.entrySet().iterator();
             while (it.hasNext()) {
                 var entry = it.next();
                 var remaining = entry.getValue() - 1;
                 if (remaining <= 0) {
-                    var entityId = entry.getKey();
-                    var entity = level().getEntity(entityId);
-                    if (entity instanceof LivingEntity target && target.isAlive()) {
-                        chainFrom(sl, target.position(), CHAIN_DAMAGE);
-                        target.hurtServer(sl,
-                                SkillDamageSource.of(player, Skills.CHAIN_FUSION.get()),
-                                Server.calculateDamage(CHAIN_DAMAGE,
-                                        AbilitySystemServer.getSystem(player)
-                                                .getPlayerDamageMultiplier(player.getUUID())));
-                    }
+                    dueTargets.add(entry.getKey());
                     it.remove();
                 } else {
                     entry.setValue(remaining);
                 }
+            }
+
+            for (var entityId : dueTargets) {
+                var entity = level().getEntity(entityId);
+                if (!(entity instanceof LivingEntity target) || !target.isAlive()) continue;
+                chainFrom(sl, target.position(), CHAIN_DAMAGE);
+                var system = AbilitySystemServer.getSystem(player);
+                target.hurtServer(sl,
+                        SkillDamageSource.of(player, Skills.CHAIN_FUSION.get()),
+                        Server.calculateDamage(
+                                CHAIN_DAMAGE,
+                                system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                                system.getPlayerDamageMultiplier(player.getUUID())
+                        ));
             }
         }
 
@@ -230,9 +214,12 @@ public class ChainFusion extends Skill {
                     e -> e != player && e.isAlive() && !player.isAlliedTo(e)
                             && !chainedEntities.contains(e.getId()));
 
-            var scaledDamage = Server.calculateDamage(damage,
-                    AbilitySystemServer.getSystem(player)
-                            .getPlayerDamageMultiplier(player.getUUID()));
+            var system = AbilitySystemServer.getSystem(player);
+            var scaledDamage = Server.calculateDamage(
+                    damage,
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID())
+            );
             var source = SkillDamageSource.of(player, Skills.CHAIN_FUSION.get());
 
             for (var target : nearby) {

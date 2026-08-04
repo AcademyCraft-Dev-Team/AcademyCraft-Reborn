@@ -43,7 +43,7 @@ public final class ElectromagneticShield extends Skill {
     static final float BASE_CAPACITY = 100.0f;
     static final float BASE_COOLING = 10.0f;
     static final float BASE_COOLING_CP_COST = 20.0f;
-    private static final int COOLING_INTERVAL_TICKS = 40;
+    private static final int COOLING_INTERVAL_TICKS = 20;
 
     public ElectromagneticShield() {
         super(Builder
@@ -54,7 +54,7 @@ public final class ElectromagneticShield extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(40)
                 .iterationTicks(COOLING_INTERVAL_TICKS)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .withCustomData(
                         ElectromagneticShieldData.ID,
                         ElectromagneticShieldData.class,
@@ -264,12 +264,7 @@ public final class ElectromagneticShield extends Skill {
             var data = skill.<ElectromagneticShieldData>getRuntimeData(player).orElse(null);
             if (data == null || data.getAbsorbedDamage() <= 0) return;
 
-            var efficiency = system.getPlayerCalculationEfficiency(uuid);
-            var actualCost = BASE_COOLING_CP_COST / (1.0f + efficiency * 2.0f);
-            var availableCP = system.getPlayerAvailableCP(uuid);
-            if (availableCP < actualCost) return;
-
-            system.setPlayerAvailableCP(uuid, availableCP - actualCost);
+            if (!system.tryTimedOccupation(uuid, BASE_COOLING_CP_COST, skill)) return;
             var cooling = BASE_COOLING * system.getPlayerAbilityPowerMultiplier(uuid);
             Server.setStoredDamage(player, coolStoredDamage(data.getAbsorbedDamage(), cooling));
         }

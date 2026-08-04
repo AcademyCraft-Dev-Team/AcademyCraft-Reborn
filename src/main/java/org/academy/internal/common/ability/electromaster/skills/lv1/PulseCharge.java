@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -12,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -59,7 +61,8 @@ import java.util.WeakHashMap;
 
 public final class PulseCharge extends Skill {
     static final double CHARGE_REACH = 5.0;
-    static final float CP_COST_PER_CHARGE_TICK = 5.0f;
+    static final float CP_COST_PER_CHARGE_TICK = 20.0f;
+    static final int CP_CHARGE_INTERVAL_TICKS = 5;
     private static final String LEGACY_CURRENT_RECHARGE = "academy:current_recharge";
 
     public PulseCharge() {
@@ -67,6 +70,8 @@ public final class PulseCharge extends Skill {
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
+                .iterationTicks(20)
+                .maxStacks(Skill.NO_STACK_LIMIT)
                 .dependsOn(Skills.MAGNET_MANIPULATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -162,6 +167,7 @@ public final class PulseCharge extends Skill {
     public static final class Server {
         private static final Map<Player, Context> ACTIVE = createContextMap();
         private static final Set<ServerPlayer> MIGRATED_PLAYERS = Collections.newSetFromMap(new WeakHashMap<>());
+        private static final Map<ServerLevel, Map<BlockPos, Integer>> POWERED_BLOCKS = new WeakHashMap<>();
 
         private Server() {
         }
@@ -204,14 +210,45 @@ public final class PulseCharge extends Skill {
                     0.3f
             );
             if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {
-                return new ChargeTarget(() -> EnergyChargeHelper.chargeEntity(living));
+                return ChargeTarget.forEntity(living);
             }
             if (blockHit.getType() == HitResult.Type.BLOCK) {
-                return new ChargeTarget(
-                        () -> EnergyChargeHelper.chargeBlock(
-                                level, blockHit.getBlockPos(), blockHit.getDirection()));
+                return ChargeTarget.forBlock(blockHit.getBlockPos(), blockHit.getDirection());
             }
             return null;
+        }
+
+        public static synchronized boolean hasArtificialSignal(Level level, BlockPos pos) {
+            if (!(level instanceof ServerLevel serverLevel)) return false;
+            var positions = POWERED_BLOCKS.get(serverLevel);
+            return positions != null && positions.getOrDefault(pos, 0) > 0;
+        }
+
+        private static synchronized void addArtificialSignal(ServerLevel level, BlockPos pos) {
+            var positions = POWERED_BLOCKS.computeIfAbsent(level, ignored -> new java.util.HashMap<>());
+            var previous = positions.getOrDefault(pos, 0);
+            positions.put(pos.immutable(), previous + 1);
+            if (previous == 0) refreshRedstoneTarget(level, pos);
+        }
+
+        private static synchronized void removeArtificialSignal(ServerLevel level, BlockPos pos) {
+            var positions = POWERED_BLOCKS.get(level);
+            if (positions == null) return;
+            var count = positions.getOrDefault(pos, 0);
+            if (count <= 1) {
+                positions.remove(pos);
+                if (positions.isEmpty()) POWERED_BLOCKS.remove(level);
+                refreshRedstoneTarget(level, pos);
+            } else {
+                positions.put(pos.immutable(), count - 1);
+            }
+        }
+
+        private static void refreshRedstoneTarget(ServerLevel level, BlockPos pos) {
+            if (!level.isLoaded(pos)) return;
+            var state = level.getBlockState(pos);
+            level.neighborChanged(pos, Blocks.REDSTONE_BLOCK, null);
+            level.updateNeighborsAt(pos, state.getBlock());
         }
 
         private static void migrateLegacySkill(ServerPlayer player) {
@@ -245,11 +282,15 @@ public final class PulseCharge extends Skill {
 
     public static final class Context extends ServerContext {
         private final ResourceKey<Level> dimension;
+        private final ServerLevel startedLevel;
+        private BlockPos poweredBlock;
+        private int ticks;
         private boolean ended;
 
         private Context(ServerPlayer player) {
             super(player);
             dimension = player.level().dimension();
+            startedLevel = player.level();
         }
 
         @SubscribeEvent
@@ -263,15 +304,52 @@ public final class PulseCharge extends Skill {
                 return;
             }
             var target = Server.resolveChargeTarget(level(), player);
-            if (target == null) return;
+            if (target == null) {
+                clearPoweredBlock();
+                return;
+            }
 
+            ticks++;
             var system = AbilitySystemServer.getSystem(player);
-            var actualCost = CP_COST_PER_CHARGE_TICK
-                    * system.getPlayerCalculationIntensity(player.getUUID());
-            var available = system.getPlayerAvailableCP(player.getUUID());
-            if (available < actualCost) return;
-            target.charge().run();
-            system.setPlayerAvailableCP(player.getUUID(), available - actualCost);
+            var costTick = ticks % CP_CHARGE_INTERVAL_TICKS == 0;
+            if (costTick && !system.tryTimedOccupation(
+                    player.getUUID(), CP_COST_PER_CHARGE_TICK, skill, 20
+            )) {
+                clearPoweredBlock();
+                return;
+            }
+
+            boolean effective;
+            if (target.entity() != null) {
+                clearPoweredBlock();
+                effective = EnergyChargeHelper.chargeEntity(target.entity());
+            } else {
+                effective = EnergyChargeHelper.chargeBlock(
+                        startedLevel,
+                        target.blockPos(),
+                        target.side()
+                );
+                if (effective) clearPoweredBlock();
+                else {
+                    setPoweredBlock(target.blockPos());
+                    effective = true;
+                }
+            }
+            if (!effective && costTick) clearPoweredBlock();
+        }
+
+        private void setPoweredBlock(BlockPos pos) {
+            var immutable = pos.immutable();
+            if (immutable.equals(poweredBlock)) return;
+            clearPoweredBlock();
+            poweredBlock = immutable;
+            Server.addArtificialSignal(startedLevel, immutable);
+        }
+
+        private void clearPoweredBlock() {
+            if (poweredBlock == null) return;
+            Server.removeArtificialSignal(startedLevel, poweredBlock);
+            poweredBlock = null;
         }
 
         private void end() {
@@ -283,11 +361,19 @@ public final class PulseCharge extends Skill {
         @Override
         protected void onUnregistered() {
             ended = true;
+            clearPoweredBlock();
             Server.ACTIVE.remove(player, this);
         }
     }
 
-    private record ChargeTarget(Runnable charge) {
+    private record ChargeTarget(LivingEntity entity, BlockPos blockPos, net.minecraft.core.Direction side) {
+        private static ChargeTarget forEntity(LivingEntity entity) {
+            return new ChargeTarget(entity, null, null);
+        }
+
+        private static ChargeTarget forBlock(BlockPos pos, net.minecraft.core.Direction side) {
+            return new ChargeTarget(null, pos.immutable(), side);
+        }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)

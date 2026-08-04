@@ -46,7 +46,7 @@ public final class QuickLocationTeleport extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(30)
-                .iterationTicks(20)
+                .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
@@ -110,30 +110,31 @@ public final class QuickLocationTeleport extends Skill {
             var level = LocationTeleport.Server.resolveLevel(player, mark);
             if (level == null) return;
             var picked = pickEntity(player);
-            var target = picked == null ? player : picked;
-
-            if (target != player && target.level() != level) return;
-            Vec3 destination;
-            if (target == player) {
-                destination = LocationTeleport.Server.safeDestination(player, level, mark);
-            } else {
+            Entity target = player;
+            Vec3 destination = LocationTeleport.Server.safeDestination(player, level, mark);
+            if (picked != null && picked.level() == level) {
                 LocationTeleport.Server.forceDestinationChunk(level, mark.x(), mark.z(),
                         "quick_location_" + player.getStringUUID());
                 level.getChunk(mark.x() >> 4, mark.z() >> 4);
-                destination = new Vec3(mark.x() + 0.5, mark.y() + 0.5, mark.z() + 0.5);
-                var moved = target.getBoundingBox().move(destination.subtract(target.position()));
-                if (!level.noCollision(target, moved)) return;
+                var entityDestination = new Vec3(mark.x() + 0.5, mark.y() + 0.5, mark.z() + 0.5);
+                var moved = picked.getBoundingBox().move(entityDestination.subtract(picked.position()));
+                if (level.noCollision(picked, moved)) {
+                    target = picked;
+                    destination = entityDestination;
+                }
             }
             if (destination == null) return;
 
+            var finalTarget = target;
+            var finalDestination = destination;
             Skills.QUICK_LOCATION_TELEPORT.get().executeActive(player, (ctx, actualCost) -> {
-                if (target == player) {
-                    player.teleportTo(level, destination.x, destination.y, destination.z,
+                if (finalTarget == player) {
+                    player.teleportTo(level, finalDestination.x, finalDestination.y, finalDestination.z,
                             java.util.Set.of(), player.getYRot(), player.getXRot(), false);
                 } else {
-                    TeleportSync.teleportInstantly(target, destination);
+                    TeleportSync.teleportInstantly(finalTarget, finalDestination);
                 }
-                target.resetFallDistance();
+                finalTarget.resetFallDistance();
             });
         }
 

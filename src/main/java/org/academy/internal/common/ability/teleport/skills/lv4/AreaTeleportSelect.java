@@ -52,7 +52,7 @@ public final class AreaTeleportSelect extends Skill {
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
-                .iterationTicks(8)
+                .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))

@@ -53,6 +53,7 @@ public final class DarkmatterSixWings extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(RESERVED_CP)
+                .iterationTicks(40)
                 .dependsOn(Skills.DARKMATTER_SHAPING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition(

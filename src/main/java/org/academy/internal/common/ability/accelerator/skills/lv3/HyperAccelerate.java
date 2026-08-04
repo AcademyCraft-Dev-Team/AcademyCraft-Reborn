@@ -14,6 +14,7 @@ import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
@@ -150,8 +151,12 @@ public class HyperAccelerate extends Skill {
                 for (var target : nearby) {
                     target.setDeltaMovement(target.position().subtract(player.position()).normalize().scale(0.5));
                     target.hurtMarked = true;
+                    var system = AbilitySystemServer.getSystem(player);
+                    var damage = 4.0f
+                            * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                            * system.getPlayerDamageMultiplier(player.getUUID());
                     target.hurtServer(player.level(),
-                            SkillDamageSource.of(player, Skills.HYPER_ACCELERATE.get()), 1.0f);
+                            SkillDamageSource.of(player, Skills.HYPER_ACCELERATE.get()), damage);
                 }
             });
         }

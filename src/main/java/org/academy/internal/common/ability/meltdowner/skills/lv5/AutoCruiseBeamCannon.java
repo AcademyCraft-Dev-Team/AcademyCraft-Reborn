@@ -35,6 +35,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
+import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -56,10 +57,17 @@ import java.util.WeakHashMap;
 public final class AutoCruiseBeamCannon extends Skill {
     static final int DETECT_INTERVAL_TICKS = 10;
     static final int FIRE_INTERVAL_TICKS = 2;
-    static final int DAMAGE_DELAY_TICKS = HighSpeedElectronBeam.MAX_CHARGE_TICKS;
     static final double SCAN_RADIUS = 16.0;
     static final float BASE_DAMAGE = 10.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
+
+    static int normalizeAttackDelay(int configuredDelay) {
+        return Math.max(1, configuredDelay);
+    }
+
+    static int soundDelayTicks(int attackDelay) {
+        return Math.max(0, attackDelay - 1);
+    }
 
     public AutoCruiseBeamCannon() {
         super(Builder
@@ -187,6 +195,10 @@ public final class AutoCruiseBeamCannon extends Skill {
             if (pending == null || pending.isEmpty()) return;
             var now = owner.level().getGameTime();
             pending.removeIf(shot -> {
+                if (!shot.soundPlayed && now >= shot.soundAtTick) {
+                    playFireSound(owner);
+                    shot.soundPlayed = true;
+                }
                 if (now < shot.applyAtTick) return false;
                 var target = findTarget(owner, shot.targetId);
                 if (target != null) applyShot(owner, target, shot.playerMultiplier);
@@ -229,18 +241,35 @@ public final class AutoCruiseBeamCannon extends Skill {
 
         private static void fire(ServerPlayer owner, LivingEntity target, float playerMultiplier) {
             if (!(owner.level() instanceof ServerLevel level)) return;
-            spawnVisual(level, owner, target);
-            level.playSound(null, owner.blockPosition(),
-                    org.academy.internal.common.sounds.SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
-                    SoundSource.PLAYERS, 0.28f, 1.35f);
-            PENDING.computeIfAbsent(owner, ignored -> new ArrayList<>()).add(new PendingShot(
+            var attackDelay = normalizeAttackDelay(
+                    SingleHighSpeedElectronBeam.getConfiguredAttackDelayTicks(owner));
+            spawnVisual(level, owner, target, attackDelay);
+            var now = level.getGameTime();
+            var shot = new PendingShot(
                     target.getUUID(),
                     playerMultiplier,
-                    level.getGameTime() + DAMAGE_DELAY_TICKS
-            ));
+                    now + soundDelayTicks(attackDelay),
+                    now + attackDelay
+            );
+            if (shot.soundAtTick <= now) {
+                playFireSound(owner);
+                shot.soundPlayed = true;
+            }
+            PENDING.computeIfAbsent(owner, ignored -> new ArrayList<>()).add(shot);
         }
 
-        private static void spawnVisual(ServerLevel level, ServerPlayer owner, LivingEntity target) {
+        private static void playFireSound(ServerPlayer owner) {
+            owner.level().playSound(null, owner.blockPosition(),
+                    org.academy.internal.common.sounds.SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
+                    SoundSource.PLAYERS, 0.28f, 1.35f);
+        }
+
+        private static void spawnVisual(
+                ServerLevel level,
+                ServerPlayer owner,
+                LivingEntity target,
+                int attackDelay
+        ) {
             var eye = owner.getEyePosition().add(0, -0.3, 0);
             var center = target.getBoundingBox().getCenter();
             var toTarget = center.subtract(eye);
@@ -268,6 +297,7 @@ public final class AutoCruiseBeamCannon extends Skill {
                     false
             );
             beam.setBeamLength((float) distance);
+            beam.setAttackDelayTicks(attackDelay);
             beam.setPos(spawn);
             beam.setYRot((float) yaw);
             beam.setXRot((float) pitch);
@@ -332,7 +362,24 @@ public final class AutoCruiseBeamCannon extends Skill {
             return null;
         }
 
-        private record PendingShot(UUID targetId, float playerMultiplier, long applyAtTick) {
+        private static final class PendingShot {
+            private final UUID targetId;
+            private final float playerMultiplier;
+            private final long soundAtTick;
+            private final long applyAtTick;
+            private boolean soundPlayed;
+
+            private PendingShot(
+                    UUID targetId,
+                    float playerMultiplier,
+                    long soundAtTick,
+                    long applyAtTick
+            ) {
+                this.targetId = targetId;
+                this.playerMultiplier = playerMultiplier;
+                this.soundAtTick = soundAtTick;
+                this.applyAtTick = applyAtTick;
+            }
         }
     }
 

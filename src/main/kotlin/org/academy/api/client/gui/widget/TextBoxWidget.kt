@@ -2,6 +2,7 @@ package org.academy.api.client.gui.widget
 
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.Minecraft
+import net.minecraft.client.input.PreeditEvent
 import net.neoforged.bus.api.Event
 import net.neoforged.bus.api.ICancellableEvent
 import net.neoforged.neoforge.common.NeoForge
@@ -50,6 +51,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     private var lastBlinkTime = 0L
     private var mouseDragging = false
     private var dragStartPos = 0
+    private var preeditText = ""
 
     init {
         isClickable = true
@@ -81,7 +83,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     private fun renderCaret(context: RenderContext) {
         val lp = layoutParams
         val finalScale = layoutScale * scale
-        val textBeforeCaret = stringBuilder.substring(0, getCodeUnitIndexForCodePoint(caretPos))
+        val textBeforeCaret = stringBuilder.substring(0, getCodeUnitIndexForCodePoint(caretPos)) + preeditText
         val caretXOffset = getTextWidth(textBeforeCaret) * finalScale
         val availableHeight = height - lp.paddingTop - lp.paddingBottom
         val visualTextHeight = availableHeight * finalScale
@@ -171,6 +173,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     }
 
     override fun onCharTyped(event: CharTypedEvent) {
+        clearPreedit()
         if (!isFocused || stringBuilder.codePointCount(
                 0,
                 stringBuilder.length
@@ -357,7 +360,29 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     }
 
     private fun updateTextComponent() {
-        super.text = stringBuilder.toString()
+        if (preeditText.isEmpty() || !isFocused) {
+            super.text = stringBuilder.toString()
+            return
+        }
+        super.text = StringBuilder(stringBuilder)
+            .insert(getCodeUnitIndexForCodePoint(caretPos), preeditText)
+            .toString()
+    }
+
+    private fun updatePreedit(event: PreeditEvent?): Boolean {
+        if (!isFocused) return false
+        val remainingCapacity = maxLength - stringBuilder.codePointCount(0, stringBuilder.length)
+        preeditText = event?.fullText()?.takeCodePoints(remainingCapacity.coerceAtLeast(0)) ?: ""
+        updateTextComponent()
+        invalidate()
+        return true
+    }
+
+    private fun clearPreedit() {
+        if (preeditText.isEmpty()) return
+        preeditText = ""
+        updateTextComponent()
+        invalidate()
     }
 
     override fun tick() {
@@ -538,6 +563,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         NeoForge.EVENT_BUS.post<FocusGainedEvent>(event)
         if (event.isCanceled()) return
 
+        activeTextBox = this
         Minecraft.getInstance().textInputManager().onTextInputFocusChange(true)
         showCaret = true
         lastBlinkTime = System.currentTimeMillis()
@@ -548,6 +574,8 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         NeoForge.EVENT_BUS.post<FocusLostEvent>(event)
         if (event.isCanceled()) return
 
+        clearPreedit()
+        if (activeTextBox === this) activeTextBox = null
         Minecraft.getInstance().textInputManager().onTextInputFocusChange(false)
         showCaret = false
         if (onFocusLostCallback != null) onFocusLostCallback!!.run()
@@ -581,4 +609,21 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     class FocusGainedEvent(val textBoxWidget: TextBoxWidget) : Event(), ICancellableEvent
 
     class FocusLostEvent(val textBoxWidget: TextBoxWidget) : Event(), ICancellableEvent
+
+    companion object {
+        @Volatile
+        private var activeTextBox: TextBoxWidget? = null
+
+        @JvmStatic
+        fun handlePreeditInput(event: PreeditEvent?): Boolean {
+            return activeTextBox?.updatePreedit(event) == true
+        }
+
+        private fun String.takeCodePoints(count: Int): String {
+            if (count <= 0 || isEmpty()) return ""
+            val codePointCount = codePointCount(0, length)
+            if (codePointCount <= count) return this
+            return substring(0, offsetByCodePoints(0, count))
+        }
+    }
 }

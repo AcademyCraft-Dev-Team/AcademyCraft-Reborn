@@ -80,9 +80,9 @@ public final class PlatinumWing extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(WingFlightSupport.RESERVED_CP)
-                .iterationTicks(30)
-                .maxStacks(1)
+                .maintenanceCost(160)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.WHITE_WING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("White Wing", "academy:white_wing")));
@@ -220,6 +220,7 @@ public final class PlatinumWing extends Skill {
 
         public static void onEntitySwing(ServerPlayer player, InteractionHand hand) {
             if (hand != InteractionHand.MAIN_HAND || !isActive(player)) return;
+            if (!WingFlightSupport.trySweepCost(player, Skills.PLATINUM_WING.get())) return;
             try {
                 WingFlightSupport.broadcastSweep(player, AdvancedWingSweepPacket.WingKind.PLATINUM);
                 if (player.isShiftKeyDown()) executeCrosshairTarget(player);

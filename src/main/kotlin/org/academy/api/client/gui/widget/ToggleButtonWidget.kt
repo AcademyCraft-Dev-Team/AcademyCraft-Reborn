@@ -26,9 +26,9 @@ open class ToggleButtonWidget : AbstractWidget() {
 
     var onCheckedChangeListener: OnCheckedChangeListener? = null
 
-    var trackColor: Int = 0x66000000
+    var trackColor: Int = -0x1
     var checkedTrackColor: Int = -0x1
-    var thumbColor: Int = -0x1
+    var thumbColor: Int = 0xFF000000.toInt()
     var checkedThumbColor: Int = 0xFF000000.toInt()
 
     private var animatedOffset: Float = 0f
@@ -91,9 +91,18 @@ open class ToggleButtonWidget : AbstractWidget() {
         )
     }
 
+    override fun layout(left: Float, top: Float, right: Float, bottom: Float) {
+        val sizeChanged = width != right - left || height != bottom - top
+        super.layout(left, top, right, bottom)
+        if (sizeChanged) {
+            cancelAnimations()
+            animatedOffset = targetOffset()
+            invalidate()
+        }
+    }
+
     private fun animateThumb() {
-        val maxOffset = (width - (height - thumbPadding * 2) - thumbPadding * 2).coerceAtLeast(0f)
-        val target = if (isChecked) maxOffset else 0f
+        val target = targetOffset()
         cancelAnimations()
 
         val animator = ValueAnimator.ofFloat(animatedOffset, target)
@@ -104,6 +113,11 @@ open class ToggleButtonWidget : AbstractWidget() {
             invalidate()
         }
         startAnimation(animator)
+    }
+
+    private fun targetOffset(): Float {
+        val maxOffset = (width - (height - thumbPadding * 2) - thumbPadding * 2).coerceAtLeast(0f)
+        return if (isChecked) maxOffset else 0f
     }
 
     fun setChecked(checked: Boolean): ToggleButtonWidget {

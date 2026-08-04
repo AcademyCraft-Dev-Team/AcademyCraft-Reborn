@@ -20,15 +20,20 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
 
 class MusicPlayerBackend private constructor() {
     private val audioPlayer = AudioPlayer()
     private val playlistManager = PlaylistManager()
+    private val resourceTracks = mutableListOf<MusicInfo>()
+    private val onlineTracks = mutableListOf<MusicInfo>()
+    private val playlistRevisionCounter = AtomicInteger()
 
     private var currentTrackData: ByteBuffer? = null
     private val isSessionActive = AtomicBoolean(false)
+    private val resumeAfterGamePause = AtomicBoolean(false)
 
     private val soundExecutor: SoundEngineExecutor
         get() = Minecraft.getInstance().soundManager.soundEngine.executor
@@ -39,7 +44,17 @@ class MusicPlayerBackend private constructor() {
 
     @SubscribeEvent
     fun onClientPauseChangePost(event: ClientPauseChangeEvent.Post) {
-        if (event.isPaused) stop()
+        runOnSoundEngine {
+            if (event.isPaused) {
+                val wasPlaying = audioPlayer.state == PlaybackState.PLAYING
+                resumeAfterGamePause.set(wasPlaying)
+                if (wasPlaying) audioPlayer.pause()
+            } else if (resumeAfterGamePause.getAndSet(false)
+                && audioPlayer.state == PlaybackState.PAUSED
+            ) {
+                audioPlayer.resume()
+            }
+        }
     }
 
     @SubscribeEvent
@@ -87,8 +102,49 @@ class MusicPlayerBackend private constructor() {
 
         runOnSoundEngine {
             performStop()
-            playlistManager.updatePlaylist(newPlaylist)
+            resourceTracks.clear()
+            resourceTracks.addAll(newPlaylist)
+            rebuildPlaylist()
         }
+    }
+
+    fun addOnlineTrack(info: MusicInfo, playNow: Boolean = false) {
+        runOnSoundEngine {
+            val existingIndex = onlineTracks.indexOfFirst {
+                it.provider == info.provider && it.externalId == info.externalId
+            }
+            if (existingIndex < 0) onlineTracks.add(info) else onlineTracks[existingIndex] = info
+            rebuildPlaylist()
+            if (playNow) {
+                val index = playlistManager.getPlaylist().indexOf(info)
+                if (index >= 0) performPlay(index)
+            }
+        }
+    }
+
+    fun replaceOnlineTracks(tracks: List<MusicInfo>) {
+        runOnSoundEngine {
+            onlineTracks.clear()
+            onlineTracks.addAll(tracks.distinctBy { it.provider to it.externalId })
+            rebuildPlaylist()
+        }
+    }
+
+    fun removeOnlineTrack(provider: String, externalId: String) {
+        runOnSoundEngine {
+            val current = currentMusicInfo
+            onlineTracks.removeIf { it.provider == provider && it.externalId == externalId }
+            if (current?.provider == provider && current.externalId == externalId) performStop()
+            rebuildPlaylist()
+        }
+    }
+
+    private fun rebuildPlaylist() {
+        val current = currentMusicInfo
+        val rebuilt = (resourceTracks + onlineTracks).toMutableList()
+        playlistManager.updatePlaylist(rebuilt)
+        if (current != null) playlistManager.setCurrentTrackIndex(rebuilt.indexOf(current))
+        playlistRevisionCounter.incrementAndGet()
     }
 
     private fun parseMusicEntry(name: String, data: MusicData, sourceDescription: String): Optional<MusicInfo> {
@@ -145,6 +201,7 @@ class MusicPlayerBackend private constructor() {
 
     private fun performStop() {
         isSessionActive.set(false)
+        resumeAfterGamePause.set(false)
         playlistManager.setCurrentTrackIndex(-1)
         audioPlayer.stop()
         currentTrackData = null
@@ -211,6 +268,7 @@ class MusicPlayerBackend private constructor() {
     val totalDuration: Float get() = audioPlayer.totalDuration
     val playbackMode: PlaybackMode get() = playlistManager.playbackMode
     val currentTrackIndex: Int get() = playlistManager.getCurrentTrackIndex()
+    val playlistRevision: Int get() = playlistRevisionCounter.get()
     val currentMusicInfo: MusicInfo?
         get() = if (currentTrackIndex == -1) null else playlist[currentTrackIndex]
 
@@ -224,8 +282,10 @@ class MusicPlayerBackend private constructor() {
 
         fun init() {
             if (instance == null) {
+                AlbumArtworkCache.init()
                 instance = MusicPlayerBackend()
                 NeoForge.EVENT_BUS.register(instance)
+                OnlineMusicManager.init()
             }
         }
 

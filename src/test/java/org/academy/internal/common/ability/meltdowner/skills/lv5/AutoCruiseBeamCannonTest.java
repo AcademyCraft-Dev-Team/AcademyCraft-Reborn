@@ -25,10 +25,13 @@ class AutoCruiseBeamCannonTest {
     }
 
     @Test
-    void scanFireAndVisualDelayRemainBounded() {
+    void scanFireAndSoundLeadRemainBounded() {
         assertEquals(10, AutoCruiseBeamCannon.DETECT_INTERVAL_TICKS);
         assertEquals(2, AutoCruiseBeamCannon.FIRE_INTERVAL_TICKS);
-        assertEquals(40, AutoCruiseBeamCannon.DAMAGE_DELAY_TICKS);
         assertEquals(16.0, AutoCruiseBeamCannon.SCAN_RADIUS);
+        assertEquals(1, AutoCruiseBeamCannon.normalizeAttackDelay(0));
+        assertEquals(10, AutoCruiseBeamCannon.normalizeAttackDelay(10));
+        assertEquals(0, AutoCruiseBeamCannon.soundDelayTicks(1));
+        assertEquals(9, AutoCruiseBeamCannon.soundDelayTicks(10));
     }
 }

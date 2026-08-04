@@ -18,6 +18,7 @@ import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.network.MusicSyncPackets;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -36,6 +37,7 @@ public final class AcademyCraftServer {
     private final AcademyCraftConfig serverConfig;
     private final WorldData worldData;
     private final AbilitySystemServer abilitySystemServer;
+    private final AbilityConfig abilityConfig;
     private final GenericConfig genericConfig;
     private final MinecraftServer server;
     private long lastSaveTick = 0;
@@ -61,7 +63,10 @@ public final class AcademyCraftServer {
 
         AcademyCraftConfig.registerTypeHandler(AbilityConfig.KEY, AbilityConfig.Action.INSTANCE);
         AcademyCraftConfig.registerTypeHandler(GenericConfig.KEY, GenericConfig.Action.INSTANCE);
-        AbilityConfig abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
+        abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
+        abilityConfig.skills
+                .computeIfAbsent("single_high_speed_electron_beam", _ -> new AbilityConfig.SkillSettings())
+                .floatMap.putIfAbsent("attackDelayTicks", 10.0f);
         genericConfig = serverConfig.getConfig(GenericConfig.KEY);
         serverConfig.save();
 
@@ -70,6 +75,7 @@ public final class AcademyCraftServer {
         WirelessManager.initServer();
         FriendlyFireSetting.initServer();
         DestroyBlocksSetting.initServer();
+        MusicSyncPackets.initServer();
 
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
     }
@@ -95,6 +101,10 @@ public final class AcademyCraftServer {
 
     public GenericConfig getGenericConfig() {
         return genericConfig;
+    }
+
+    public AbilityConfig getAbilityConfig() {
+        return abilityConfig;
     }
 
     public void onServerTick(ServerTickEvent.Post event) {

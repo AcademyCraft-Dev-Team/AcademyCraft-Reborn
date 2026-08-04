@@ -118,8 +118,8 @@ public class ElectricalContact extends Skill {
         private static final float DAMAGE_AMOUNT = 2.0f;
         private static final float RADIUS = 2.0f;
 
-        public static float calculateDamage(float playerMultiplier) {
-            return DAMAGE_AMOUNT * Math.max(0.0f, playerMultiplier);
+        public static float calculateDamage(float abilityPower, float playerMultiplier) {
+            return DAMAGE_AMOUNT * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
         }
 
         @SubscribeEvent
@@ -143,8 +143,11 @@ public class ElectricalContact extends Skill {
             if (!(level instanceof ServerLevel serverLevel)) return;
             var damageSource = SkillDamageSource.of(player, skill,
                     net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT);
-            var damage = calculateDamage(AbilitySystemServer.getSystem(player)
-                    .getPlayerDamageMultiplier(player.getUUID()));
+            var system = AbilitySystemServer.getSystem(player);
+            var damage = calculateDamage(
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID())
+            );
             for (var target : targets) {
                 target.hurtServer(serverLevel, damageSource, damage);
                 serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
@@ -164,8 +167,11 @@ public class ElectricalContact extends Skill {
             if (attacker instanceof LivingEntity livingAttacker && livingAttacker != player
                     && !player.isAlliedTo(livingAttacker)) {
                 if (player.level() instanceof ServerLevel serverLevel) {
-                    var damage = calculateDamage(AbilitySystemServer.getSystem(player)
-                            .getPlayerDamageMultiplier(player.getUUID()));
+                    var system = AbilitySystemServer.getSystem(player);
+                    var damage = calculateDamage(
+                            system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                            system.getPlayerDamageMultiplier(player.getUUID())
+                    );
                     livingAttacker.hurtServer(serverLevel,
                             SkillDamageSource.of(player, skill,
                                     net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT),

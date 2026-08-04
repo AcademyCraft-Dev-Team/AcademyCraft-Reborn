@@ -27,6 +27,7 @@ public final class BreathingFilm extends Skill {
                 .energyCost(10_000)
                 .passive()
                 .maintenanceCost(20)
+                .iterationTicks(40)
                 .dependsOn(Skills.ATMOSPHERE_SHIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
         );

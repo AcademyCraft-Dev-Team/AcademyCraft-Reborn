@@ -161,7 +161,10 @@ public final class JetStrike extends Skill {
 
             var skill = Skills.JET_STRIKE.get();
             var system = AbilitySystemServer.getSystem(player);
-            var damage = calculateDamage(system.getPlayerDamageMultiplier(player.getUUID()));
+            var damage = calculateDamage(
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID())
+            );
             var source = SkillDamageSource.of(player, skill);
             var targetBox = player.getBoundingBox().move(delta).inflate(DAMAGE_RADIUS);
             var targets = level.getEntitiesOfClass(
@@ -220,8 +223,14 @@ public final class JetStrike extends Skill {
         return direction.lengthSqr() <= 1.0e-8 ? null : direction.normalize();
     }
 
-    static float calculateDamage(float playerMultiplier) {
-        return MeltdownerBeamDamage.calculate(BASE_DAMAGE, 0.0f, 0.0f, playerMultiplier, false);
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(
+                BASE_DAMAGE * Math.max(0.0f, abilityPower),
+                0.0f,
+                0.0f,
+                playerMultiplier,
+                false
+        );
     }
 
     @PacketTarget(ThreadType.SERVER)

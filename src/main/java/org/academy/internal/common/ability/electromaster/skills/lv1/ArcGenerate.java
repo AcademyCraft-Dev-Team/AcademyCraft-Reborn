@@ -60,8 +60,8 @@ public final class ArcGenerate extends Skill {
         );
     }
 
-    static float getDamage(float playerDamageMultiplier) {
-        return BASE_DAMAGE * Math.max(0, playerDamageMultiplier);
+    static float getDamage(float abilityPower, float playerDamageMultiplier) {
+        return BASE_DAMAGE * Math.max(0, abilityPower) * Math.max(0, playerDamageMultiplier);
     }
 
     @Override
@@ -183,7 +183,10 @@ public final class ArcGenerate extends Skill {
                 var radius = 0.125f;
                 var system = AbilitySystemServer.getSystem(player);
                 var src = SkillDamageSource.of(player, Skills.ARC_GENERATE.get());
-                var damage = getDamage(system.getPlayerDamageMultiplier(player.getUUID()));
+                var damage = getDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID())
+                );
                 LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, damage, player);
             });
         }

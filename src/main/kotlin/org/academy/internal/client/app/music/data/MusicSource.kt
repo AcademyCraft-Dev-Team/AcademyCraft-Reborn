@@ -6,6 +6,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.function.Supplier
 
 data class MusicSource(val path: Any) {
     val data: ByteBuffer
@@ -17,6 +18,12 @@ data class MusicSource(val path: Any) {
                 }
 
                 is String -> bytes = Files.readAllBytes(Path.of(path))
+
+                is Supplier<*> -> {
+                    val supplied = path.get()
+                    if (supplied !is ByteBuffer) throw IOException("Music source did not provide a ByteBuffer")
+                    return supplied.duplicate()
+                }
 
                 else -> throw IOException("Unsupported media source type: " + path.javaClass.getName())
             }
@@ -33,6 +40,10 @@ data class MusicSource(val path: Any) {
 
         fun fromAbsolutePath(absolutePath: String): MusicSource {
             return MusicSource(absolutePath)
+        }
+
+        fun fromSupplier(supplier: Supplier<ByteBuffer>): MusicSource {
+            return MusicSource(supplier)
         }
     }
 }

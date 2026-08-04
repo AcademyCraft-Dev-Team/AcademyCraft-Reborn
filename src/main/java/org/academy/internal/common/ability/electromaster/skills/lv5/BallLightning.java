@@ -142,8 +142,9 @@ public class BallLightning extends Skill {
     public static final class Server {
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
 
-        public static float calculateImpactDamage(float currentHealth, float playerMultiplier) {
+        public static float calculateImpactDamage(float currentHealth, float abilityPower, float playerMultiplier) {
             return (Math.max(0.0f, currentHealth) * 0.3f + 10.0f)
+                    * Math.max(0.0f, abilityPower)
                     * Math.max(0.0f, playerMultiplier);
         }
 
@@ -377,11 +378,14 @@ public class BallLightning extends Skill {
                     var level = level();
                     var entities = MathUtil.getEntitiesInSphereByHP(level, position, 5.0, e -> e != player);
                     var damageSource = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
-                    var multiplier = AbilitySystemServer.getSystem(player)
-                            .getPlayerDamageMultiplier(player.getUUID());
+                    var system = AbilitySystemServer.getSystem(player);
                     for (var entity : entities) {
                         entity.hurtServer(level, damageSource,
-                                calculateImpactDamage(entity.getHealth(), multiplier));
+                                calculateImpactDamage(
+                                        entity.getHealth(),
+                                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                                        system.getPlayerDamageMultiplier(player.getUUID())
+                                ));
                         QuantumUtil.enableQuantum(entity, 0.5f, 0x3366FF);
                     }
                     end();

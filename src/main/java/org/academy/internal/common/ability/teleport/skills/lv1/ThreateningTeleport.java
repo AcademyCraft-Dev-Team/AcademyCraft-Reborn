@@ -51,7 +51,7 @@ public final class ThreateningTeleport extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)
-                .iterationTicks(4)
+                .iterationTicks(40)
                 .maxStacks(1)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );

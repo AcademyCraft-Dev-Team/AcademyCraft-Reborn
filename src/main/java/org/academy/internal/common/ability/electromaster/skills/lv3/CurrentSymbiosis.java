@@ -48,6 +48,7 @@ public final class CurrentSymbiosis extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(30)
+                .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.PULSE_CHARGE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))

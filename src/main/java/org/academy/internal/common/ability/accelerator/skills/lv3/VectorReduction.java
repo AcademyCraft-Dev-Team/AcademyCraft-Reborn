@@ -53,7 +53,7 @@ public class VectorReduction extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(75)
-                .iterationTicks(0)
+                .iterationTicks(40)
                 .dependsOn(Skills.VECTOR_ACCEL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition("Vector Acceleration", "academy:vector_accel"))

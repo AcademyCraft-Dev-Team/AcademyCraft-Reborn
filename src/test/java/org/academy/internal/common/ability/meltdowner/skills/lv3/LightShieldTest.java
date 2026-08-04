@@ -7,9 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class LightShieldTest {
     @Test
     void hostilePulseDamageUsesPlayerScaling() {
-        assertEquals(3.0f, LightShield.calculateDamage(1.0f));
-        assertEquals(4.5f, LightShield.calculateDamage(1.5f));
-        assertEquals(0.0f, LightShield.calculateDamage(-1.0f));
+        assertEquals(3.0f, LightShield.calculateDamage(1.0f, 1.0f));
+        assertEquals(6.75f, LightShield.calculateDamage(1.5f, 1.5f));
+        assertEquals(0.0f, LightShield.calculateDamage(-1.0f, 1.0f));
     }
 
     @Test

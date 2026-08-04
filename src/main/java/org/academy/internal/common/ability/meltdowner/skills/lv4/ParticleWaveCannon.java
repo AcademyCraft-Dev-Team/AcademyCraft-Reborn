@@ -61,7 +61,7 @@ public final class ParticleWaveCannon extends Skill {
                 .energyCost(60_000)
                 .cpCost(10)
                 .iterationTicks(CP_INTERVAL_TICKS)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SCATTER_BOMB)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition(

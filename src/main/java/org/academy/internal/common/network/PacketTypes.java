@@ -39,7 +39,6 @@ import org.academy.internal.common.ability.electromaster.skills.lv1.ElectricalCo
 import org.academy.internal.common.ability.electromaster.skills.lv1.PulseCharge;
 import org.academy.internal.common.ability.electromaster.skills.lv2.LightningNova;
 import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetManipulation;
-import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetMomentCharge;
 import org.academy.internal.common.ability.electromaster.skills.lv2.MineDetect;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
@@ -54,7 +53,6 @@ import org.academy.internal.common.ability.electromaster.skills.lv5.Thunderclap;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
-import org.academy.internal.common.ability.meltdowner.skills.lv3.BetaParticleStream;
 import org.academy.internal.common.ability.meltdowner.skills.lv3.Cloudroom;
 import org.academy.internal.common.ability.meltdowner.skills.lv3.LightShield;
 import org.academy.internal.common.ability.meltdowner.skills.lv4.JetStrike;
@@ -63,25 +61,18 @@ import org.academy.internal.common.ability.meltdowner.skills.lv5.ChainFusion;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.AutoCruiseBeamCannon;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
-import org.academy.internal.common.ability.teleport.skills.lv1.ClipThrough;
-import org.academy.internal.common.ability.teleport.skills.lv1.MatterWarp;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
-import org.academy.internal.common.ability.teleport.skills.lv2.VisualTeleport;
-import org.academy.internal.common.ability.teleport.skills.lv3.CoordinateTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv3.CutThrough;
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv3.Shackle;
-import org.academy.internal.common.ability.teleport.skills.lv4.FlashBack;
-import org.academy.internal.common.ability.teleport.skills.lv4.PhantomFalling;
 import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSelect;
 import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSetup;
 import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportStart;
 import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
-import org.academy.internal.common.ability.teleport.skills.lv5.SpacialReplace;
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.ability.teleport.skills.lv5.DefensiveTeleport;
 import org.academy.internal.common.ability.darkmatter.skills.DarkmatterShaping;
@@ -137,6 +128,13 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, OpenScreenPacket>>
             OPEN_SCREEN = PACKET_TYPES.register("open_screen",
             () -> new PacketType<>(OpenScreenPacket.class, OpenScreenPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicSyncPackets.SharePacket>>
+            MUSIC_SHARE = PACKET_TYPES.register("music_share",
+            () -> new PacketType<>(MusicSyncPackets.SharePacket.class, MusicSyncPackets.SharePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicSyncPackets.SyncPacket>>
+            MUSIC_SYNC = PACKET_TYPES.register("music_sync",
+            () -> new PacketType<>(MusicSyncPackets.SyncPacket.class, MusicSyncPackets.SyncPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CoinItem.ThrowCoinPacket>>
             THROW_COIN_WITH_VELOCITY = PACKET_TYPES.register("throw_coin_with_velocity",
@@ -415,9 +413,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PulseCharge.StopPacket>>
             PULSE_CHARGE_STOP = PACKET_TYPES.register("pulse_charge_stop",
             () -> new PacketType<>(PulseCharge.StopPacket.class, PulseCharge.StopPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MatterWarp.UsePacket>>
-            MATTER_WARP_USE = PACKET_TYPES.register("matter_warp_use",
-            () -> new PacketType<>(MatterWarp.UsePacket.class, MatterWarp.UsePacket.CODEC));
     /**
      * Phase 2 - Aura and Toggle Skills
      */
@@ -445,9 +440,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlasmaGeneration.ReleasePacket>>
             PLASMA_GENERATION_RELEASE = PACKET_TYPES.register("plasma_generation_release",
             () -> new PacketType<>(PlasmaGeneration.ReleasePacket.class, PlasmaGeneration.ReleasePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagnetMomentCharge.ActivatePacket>>
-            MAGNET_MOMENT_CHARGE_ACTIVATE = PACKET_TYPES.register("magnet_moment_charge_activate",
-            () -> new PacketType<>(MagnetMomentCharge.ActivatePacket.class, MagnetMomentCharge.ActivatePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ThunderLance.StartPacket>>
             THUNDER_LANCE_START = PACKET_TYPES.register("thunder_lance_start",
             () -> new PacketType<>(ThunderLance.StartPacket.class, ThunderLance.StartPacket.CODEC));
@@ -475,12 +467,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AutoCruiseBeamCannon.TogglePacket>>
             AUTO_CRUISE_BEAM_CANNON_TOGGLE = PACKET_TYPES.register("auto_cruise_beam_cannon_toggle",
             () -> new PacketType<>(AutoCruiseBeamCannon.TogglePacket.class, AutoCruiseBeamCannon.TogglePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ClipThrough.TeleportPacket>>
-            CLIP_THROUGH_TELEPORT = PACKET_TYPES.register("clip_through_teleport",
-            () -> new PacketType<>(ClipThrough.TeleportPacket.class, ClipThrough.TeleportPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VisualTeleport.TeleportPacket>>
-            VISUAL_TELEPORT = PACKET_TYPES.register("visual_teleport",
-            () -> new PacketType<>(VisualTeleport.TeleportPacket.class, VisualTeleport.TeleportPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CutThrough.TeleportPacket>>
             CUT_THROUGH_TELEPORT = PACKET_TYPES.register("cut_through_teleport",
             () -> new PacketType<>(CutThrough.TeleportPacket.class, CutThrough.TeleportPacket.CODEC));
@@ -493,12 +479,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Cloudroom.TogglePacket>>
             CLOUDROOM_TOGGLE = PACKET_TYPES.register("cloudroom_toggle",
             () -> new PacketType<>(Cloudroom.TogglePacket.class, Cloudroom.TogglePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BetaParticleStream.StartPacket>>
-            BETA_PARTICLE_STREAM_START = PACKET_TYPES.register("beta_particle_stream_start",
-            () -> new PacketType<>(BetaParticleStream.StartPacket.class, BetaParticleStream.StartPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BetaParticleStream.MulticastPacket>>
-            BETA_PARTICLE_STREAM_MULTICAST = PACKET_TYPES.register("beta_particle_stream_multicast",
-            () -> new PacketType<>(BetaParticleStream.MulticastPacket.class, BetaParticleStream.MulticastPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, JetStrike.DashPacket>>
             JET_STRIKE_DASH = PACKET_TYPES.register("jet_strike_dash",
             () -> new PacketType<>(JetStrike.DashPacket.class, JetStrike.DashPacket.CODEC));
@@ -511,9 +491,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Shackle.UsePacket>>
             SHACKLE_USE = PACKET_TYPES.register("shackle_use",
             () -> new PacketType<>(Shackle.UsePacket.class, Shackle.UsePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PhantomFalling.UsePacket>>
-            PHANTOM_FALLING_USE = PACKET_TYPES.register("phantom_falling_use",
-            () -> new PacketType<>(PhantomFalling.UsePacket.class, PhantomFalling.UsePacket.CODEC));
     /**
      * Phase 5 - Ultimate and Signature Skills
      */
@@ -535,21 +512,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Disintegrate.UsePacket>>
             DISINTEGRATE_USE = PACKET_TYPES.register("disintegrate_use",
             () -> new PacketType<>(Disintegrate.UsePacket.class, Disintegrate.UsePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FlashBack.TogglePacket>>
-            FLASH_BACK_TOGGLE = PACKET_TYPES.register("flash_back_toggle",
-            () -> new PacketType<>(FlashBack.TogglePacket.class, FlashBack.TogglePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CoordinateTeleport.SavePositionPacket>>
-            COORDINATE_TELEPORT_SAVE = PACKET_TYPES.register("coordinate_teleport_save",
-            () -> new PacketType<>(CoordinateTeleport.SavePositionPacket.class, CoordinateTeleport.SavePositionPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CoordinateTeleport.RequestTeleportPacket>>
-            COORDINATE_TELEPORT_REQUEST = PACKET_TYPES.register("coordinate_teleport_request",
-            () -> new PacketType<>(CoordinateTeleport.RequestTeleportPacket.class, CoordinateTeleport.RequestTeleportPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpacialReplace.SetCornerPacket>>
-            SPACIAL_REPLACE_SET_CORNER = PACKET_TYPES.register("spacial_replace_set_corner",
-            () -> new PacketType<>(SpacialReplace.SetCornerPacket.class, SpacialReplace.SetCornerPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpacialReplace.PastePacket>>
-            SPACIAL_REPLACE_PASTE = PACKET_TYPES.register("spacial_replace_paste",
-            () -> new PacketType<>(SpacialReplace.PastePacket.class, SpacialReplace.PastePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpacialExcision.ActivatePacket>>
             SPACIAL_EXCISION_ACTIVATE = PACKET_TYPES.register("spacial_excision_activate",
             () -> new PacketType<>(SpacialExcision.ActivatePacket.class, SpacialExcision.ActivatePacket.CODEC));

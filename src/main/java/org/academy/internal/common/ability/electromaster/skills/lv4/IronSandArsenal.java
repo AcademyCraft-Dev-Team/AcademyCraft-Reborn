@@ -61,6 +61,7 @@ public class IronSandArsenal extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(50)
+                .iterationTicks(40)
                 .dependsOn(Skills.MAGNETIC_WEAPON)
         );
     }

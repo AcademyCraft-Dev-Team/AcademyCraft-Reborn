@@ -62,7 +62,7 @@ public final class DefensiveTeleport extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(30)
                 .cpCost(10)
-                .iterationTicks(1)
+                .iterationTicks(40)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.QUICK_LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
