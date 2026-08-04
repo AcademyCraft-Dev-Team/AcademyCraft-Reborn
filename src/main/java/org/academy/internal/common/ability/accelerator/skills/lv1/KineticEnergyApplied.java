@@ -73,6 +73,7 @@ import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -766,6 +767,7 @@ public class KineticEnergyApplied extends Skill {
         @SubscribeEvent
         public static void onIncomingDamage(LivingIncomingDamageEvent event) {
             var source = event.getSource();
+            if (ReflectedSkillDamageSource.isReflected(source)) return;
             if (source instanceof SkillDamageSource skillSource
                     && skillSource.getSkill() == Skills.KINETIC_ENERGY_APPLIED.get()) return;
 

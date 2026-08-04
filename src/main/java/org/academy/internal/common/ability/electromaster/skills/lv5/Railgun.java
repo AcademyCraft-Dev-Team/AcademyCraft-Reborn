@@ -45,6 +45,10 @@ import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
+import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
+import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.electromaster.skills.lv3.ThunderLance;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
@@ -300,20 +304,11 @@ public final class Railgun extends Skill {
                 if (ticks > CHARGE_TIME) {
 
                     var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
-                    float length = 50;
-
+                    var length = RailgunRay.DEFAULT_LENGTH;
                     var endPos = startPos.add(lookDir.scale(length));
                     railgunRay.setPos(startPos);
                     railgunRay.setYRot(player.getYRot());
                     railgunRay.setXRot(player.getXRot());
-                    player.level().addFreshEntity(railgunRay);
-
-                    if (DestroyBlocksSetting.canDestroyBlocks(player)) {
-                        LevelUtil.destroyBlocksAlongPath(
-                                railgunRay.level(), startPos, endPos,
-                                0.125f, 3, !player.isCreative(), false, false, false
-                        );
-                    }
                     var originalSource = new DamageSource(
                             railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK),
                             railgunRay,
@@ -321,17 +316,50 @@ public final class Railgun extends Skill {
                     );
                     var damageSource = SkillDamageSource.from(originalSource, Skills.RAILGUN.get());
                     var system = AbilitySystemServer.getSystem(player);
-                    LevelUtil.attackEntitiesAlongPath(
-                            railgunRay.level(),
-                            startPos,
-                            endPos,
-                            0.125f,
-                            damageSource,
-                            calculateDamage(
-                                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                                    system.getPlayerDamageMultiplier(player.getUUID())
-                            ),
-                            player
+                    var damage = calculateDamage(
+                            system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                            system.getPlayerDamageMultiplier(player.getUUID())
+                    );
+                    var payload = LinearAttackPayload.builder(
+                                    player,
+                                    Skills.RAILGUN.get(),
+                                    damageSource,
+                                    0.125f
+                            )
+                            .damage(_ -> damage)
+                            .build();
+                    var resolved = LinearReflectionResolver.resolve(
+                            player.level(),
+                            new LinearSegment(startPos, endPos),
+                            payload
+                    );
+                    railgunRay.setBeamPath(
+                            (float) resolved.original().length(),
+                            resolved.isReflected(),
+                            (float) resolved.outbound().length()
+                    );
+                    player.level().addFreshEntity(railgunRay);
+
+                    if (DestroyBlocksSetting.canDestroyBlocks(player)) {
+                        destroyBlocksAlongSegment(resolved.outbound(), player);
+                    }
+                    var outboundResult = LinearAttackExecutor.executeOutbound(
+                            player.level(),
+                            resolved,
+                            payload
+                    );
+                    if (DestroyBlocksSetting.canDestroyBlocks(player)) {
+                        resolved.returnSegment().ifPresent(returnSegment -> resolved.reflectionCandidate()
+                                .ifPresent(candidate -> destroyBlocksAlongSegment(
+                                        returnSegment,
+                                        candidate.reflector()
+                                )));
+                    }
+                    LinearAttackExecutor.executeReturn(
+                            player.level(),
+                            resolved,
+                            payload,
+                            outboundResult
                     );
                     railgunRay.level().playSound(
                             null,
@@ -346,6 +374,21 @@ public final class Railgun extends Skill {
                     end();
                     startReleaseVisual(player, rightHand);
                 }
+            }
+
+            private static void destroyBlocksAlongSegment(LinearSegment segment, ServerPlayer breaker) {
+                LevelUtil.destroyBlocksAlongPath(
+                        breaker.level(),
+                        segment.start(),
+                        segment.end(),
+                        0.125f,
+                        3,
+                        !breaker.isCreative(),
+                        false,
+                        false,
+                        false,
+                        breaker
+                );
             }
 
             public void end() {

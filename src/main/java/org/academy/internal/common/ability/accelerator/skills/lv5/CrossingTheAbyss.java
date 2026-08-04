@@ -36,6 +36,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -193,6 +194,7 @@ public final class CrossingTheAbyss extends Skill {
 
         private static void recordIncoming(LivingIncomingDamageEvent event) {
             if (event.getEntity().level().isClientSide() || event.isCanceled() || event.getAmount() <= 0) return;
+            if (ReflectedSkillDamageSource.isReflected(event.getSource())) return;
             var attacker = resolvePlayer(event.getSource());
             var target = event.getEntity();
             if (attacker == null || !isActive(attacker) || target == attacker
@@ -212,6 +214,7 @@ public final class CrossingTheAbyss extends Skill {
 
         private static void commitDamage(LivingDamageEvent.Post event) {
             if (event.getEntity().level().isClientSide()) return;
+            if (ReflectedSkillDamageSource.isReflected(event.getSource())) return;
             var target = event.getEntity();
             var pending = PENDING_HITS.remove(target.getUUID());
             if (pending == null) return;

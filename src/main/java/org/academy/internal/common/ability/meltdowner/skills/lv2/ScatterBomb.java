@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.meltdowner.skills.lv2;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -254,29 +253,10 @@ public final class ScatterBomb extends Skill {
                     );
                     beam.currentChargerTicks = beam.getAttackDelayTicks();
                     beam.setHeldCharge(false);
-                    spawnBetaParticleTrail(level, beam);
+                    beam.setBetaTrailOnFire(true);
                 }
             });
             if (state.beams.stream().allMatch(HighSpeedElectronBeam::isHeldCharge)) state.cleanup();
-        }
-
-        private static void spawnBetaParticleTrail(ServerLevel level, HighSpeedElectronBeam beam) {
-            var start = beam.position();
-            var delta = beam.getLookAngle().scale(BEAM_LENGTH);
-            for (var step = 0; step <= 12; step++) {
-                var point = start.add(delta.scale(step / 12.0));
-                level.sendParticles(
-                        ParticleTypes.ELECTRIC_SPARK,
-                        point.x,
-                        point.y,
-                        point.z,
-                        1,
-                        0.02,
-                        0.02,
-                        0.02,
-                        0.01
-                );
-            }
         }
 
         private static void tick(ServerPlayer player) {

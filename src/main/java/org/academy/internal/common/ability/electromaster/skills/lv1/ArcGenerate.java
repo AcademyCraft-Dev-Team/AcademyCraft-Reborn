@@ -28,8 +28,13 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
+import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
+import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -43,9 +48,11 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
+
 public final class ArcGenerate extends Skill {
     public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
     static final float BASE_DAMAGE = 4.0f;
+    private static final long RETURN_SEED_MASK = 0xD1B54A32D192ED03L;
 
     public ArcGenerate() {
         super(
@@ -62,6 +69,82 @@ public final class ArcGenerate extends Skill {
 
     static float getDamage(float abilityPower, float playerDamageMultiplier) {
         return BASE_DAMAGE * Math.max(0, abilityPower) * Math.max(0, playerDamageMultiplier);
+    }
+
+    static long deriveReturnSeed(long seed) {
+        return seed ^ RETURN_SEED_MASK;
+    }
+
+    static List<ArcPath> createUnreflectedArcPaths(
+            Vec3 start,
+            Vec3 end,
+            long trunkSeed,
+            List<BranchSpec> branchSpecs
+    ) {
+        var branches = branchSpecs.stream()
+                .map(spec -> createBranch(spec.progress(), spec, spec.seed(), 1.0f))
+                .toList();
+        return List.of(createRootPath(start, end, trunkSeed, branches));
+    }
+
+    static List<ArcPath> createReflectedArcPaths(
+            Vec3 start,
+            Vec3 mirrorPoint,
+            Vec3 returnEnd,
+            double reflectionProgress,
+            long trunkSeed,
+            List<BranchSpec> branchSpecs
+    ) {
+        var t = (float) Math.clamp(reflectionProgress, 0.0, 1.0);
+        var reflectedSpecs = t <= 0.0f
+                ? List.<BranchSpec>of()
+                : branchSpecs.stream().filter(spec -> spec.progress() <= t).toList();
+        var outboundBranches = reflectedSpecs.stream()
+                .map(spec -> createBranch(spec.progress() / t, spec, spec.seed(), t))
+                .toList();
+        var returnBranches = reflectedSpecs.stream()
+                .map(spec -> createBranch(
+                        t - spec.progress(),
+                        spec,
+                        deriveReturnSeed(spec.seed()),
+                        t
+                ))
+                .toList();
+
+        return List.of(
+                createRootPath(start, mirrorPoint, trunkSeed, outboundBranches),
+                createRootPath(mirrorPoint, returnEnd, deriveReturnSeed(trunkSeed), returnBranches)
+        );
+    }
+
+    private static Branch createBranch(
+            float attachmentProgress,
+            BranchSpec spec,
+            long seed,
+            float lengthScale
+    ) {
+        var childPath = new ArcPath(
+                new LinePath(
+                        new Vector3f(0, 0, 0),
+                        new Vector3f(spec.localEnd()).mul(Math.max(0.0f, lengthScale))
+                ),
+                List.of(new JaggedModifier(1, 3, seed)),
+                2.0f,
+                List.of()
+        );
+        return new Branch(attachmentProgress, childPath);
+    }
+
+    private static ArcPath createRootPath(Vec3 start, Vec3 end, long seed, List<Branch> branches) {
+        return new ArcPath(
+                new LinePath(start.toVector3f(), end.toVector3f()),
+                List.of(new JaggedModifier(1, 4, seed)),
+                2.0f,
+                branches
+        );
+    }
+
+    record BranchSpec(float progress, Vector3f localEnd, long seed) {
     }
 
     @Override
@@ -136,10 +219,32 @@ public final class ArcGenerate extends Skill {
                 var targetPos = eyePos.add(player.getLookAngle().scale(length));
                 var trunkLength = (float) handPos.distanceTo(targetPos);
 
+                var radius = 0.125f;
+                var system = AbilitySystemServer.getSystem(player);
+                var src = SkillDamageSource.of(player, Skills.ARC_GENERATE.get());
+                var damage = getDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID())
+                );
+                var payload = LinearAttackPayload.builder(
+                                player,
+                                Skills.ARC_GENERATE.get(),
+                                src,
+                                radius
+                        )
+                        .damage(_ -> damage)
+                        .targetFilter(entity -> entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get())
+                        .build();
+                var resolved = LinearReflectionResolver.resolve(
+                        level,
+                        new LinearSegment(handPos, targetPos),
+                        payload
+                );
+
                 var arc = new ArcEffect(level, 20);
                 arc.setPos(handPos);
 
-                var branches = new ArrayList<Branch>();
+                var branchSpecs = new ArrayList<BranchSpec>();
                 var branchCount = 4 + MathUtil.RANDOM.nextInt(3);
                 var maxAngleRad = Math.toRadians(10.0);
 
@@ -155,39 +260,25 @@ public final class ArcGenerate extends Skill {
 
                     var localDir = new Vector3f(x, y, z).normalize().mul(branchLength);
 
-                    var childPath = new ArcPath(
-                            new LinePath(new Vector3f(0, 0, 0), localDir),
-                            List.of(
-                                    new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())
-                            ),
-                            2.0f,
-                            List.of()
-                    );
-
-                    branches.add(new Branch(progress, childPath));
+                    branchSpecs.add(new BranchSpec(progress, localDir, MathUtil.RANDOM.nextLong()));
                 }
 
-                var rootPath = new ArcPath(
-                        new LinePath(handPos.toVector3f(), targetPos.toVector3f()),
-                        List.of(
-                                new JaggedModifier(1, 4, MathUtil.RANDOM.nextLong())
-                        ),
-                        2,
-                        branches
-                );
-
-                arc.setArcPath(rootPath);
+                var trunkSeed = MathUtil.RANDOM.nextLong();
+                var arcPaths = resolved.isReflected()
+                        ? createReflectedArcPaths(
+                        handPos,
+                        resolved.mirrorPoint(),
+                        resolved.returnSegment().orElseThrow().end(),
+                        resolved.reflectionProgress(),
+                        trunkSeed,
+                        branchSpecs
+                )
+                        : createUnreflectedArcPaths(handPos, targetPos, trunkSeed, branchSpecs);
+                arc.setArcPaths(arcPaths);
                 level.addFreshEntity(arc);
                 arc.playSound(SoundEvents.ARC_WEAK.get());
 
-                var radius = 0.125f;
-                var system = AbilitySystemServer.getSystem(player);
-                var src = SkillDamageSource.of(player, Skills.ARC_GENERATE.get());
-                var damage = getDamage(
-                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                        system.getPlayerDamageMultiplier(player.getUUID())
-                );
-                LevelUtil.attackEntitiesAlongPath(level, handPos, targetPos, radius, src, damage, player);
+                LinearAttackExecutor.execute(level, resolved, payload);
             });
         }
     }

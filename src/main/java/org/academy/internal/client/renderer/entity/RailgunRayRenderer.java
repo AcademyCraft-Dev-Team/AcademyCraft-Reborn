@@ -14,6 +14,7 @@ import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.joml.Matrix4f;
 
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_ADDITIVE;
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM_ADDITIVE;
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE;
 
 public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRenderState> {
@@ -32,20 +33,77 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
                 .rotateZ((float) Math.toRadians(90 + renderState.xRot))
         );
         var progress = Math.max(0.0f, MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5)) * 0.1f;
-        submitBeam(nodeCollector, poseStack,
+        var originalLength = ReflectedBeamVisualGeometry.safeLength(renderState.length);
+        var outgoingLength = renderState.reflectionActive
+                ? Math.min(originalLength, ReflectedBeamVisualGeometry.safeLength(renderState.reflectionDistance))
+                : originalLength;
+        submitBeamShellLayers(nodeCollector, poseStack, outgoingLength, progress);
+
+        if (renderState.reflectionActive) {
+            poseStack.pushPose();
+            poseStack.translate(0.0f, outgoingLength, 0.0f);
+            poseStack.mulPose(new Matrix4f().rotateZ((float) Math.PI));
+            submitBeamShellLayers(nodeCollector, poseStack, originalLength, progress * 1.08f);
+            poseStack.popPose();
+        }
+
+        submitBeamCoreLayers(nodeCollector, poseStack, outgoingLength, progress);
+
+        if (renderState.reflectionActive) {
+            poseStack.pushPose();
+            poseStack.translate(0.0f, outgoingLength, 0.0f);
+            poseStack.mulPose(new Matrix4f().rotateZ((float) Math.PI));
+            submitBeamCoreLayers(nodeCollector, poseStack, originalLength, progress * 1.08f);
+            poseStack.popPose();
+
+            submitReflectionHighlight(nodeCollector, poseStack, outgoingLength, progress);
+        }
+        poseStack.popPose();
+    }
+
+    private static void submitBeamShellLayers(
+            SubmitNodeCollector nodeCollector,
+            PoseStack poseStack,
+            float length,
+            float progress
+    ) {
+        submitBeam(nodeCollector, poseStack, length,
                 progress, POS_COLOR_QUADS_NO_DEPTH_WRITE, 0.78f, 0.48f, 0.02f, 0.92f);
-        submitBeam(nodeCollector, poseStack,
+        submitBeam(nodeCollector, poseStack, length,
                 progress * 0.62f, POS_COLOR_QUADS_ADDITIVE, 1.0f, 0.72f, 0.18f, 0.92f);
-        submitBeam(nodeCollector, poseStack,
-                progress * 0.32f, POS_COLOR_QUADS_ADDITIVE, 1.0f, 1.0f, 1.0f, 1.0f);
-        submitBeam(nodeCollector, poseStack,
+    }
+
+    private static void submitBeamCoreLayers(
+            SubmitNodeCollector nodeCollector,
+            PoseStack poseStack,
+            float length,
+            float progress
+    ) {
+        submitBeam(nodeCollector, poseStack, length,
+                progress * 0.32f, POS_COLOR_QUADS_BLOOM_ADDITIVE, 1.0f, 1.0f, 1.0f, 1.0f);
+        submitBeam(nodeCollector, poseStack, length,
                 progress * 0.18f, POS_COLOR_QUADS_NO_DEPTH_WRITE, 1.0f, 1.0f, 1.0f, 0.98f);
+    }
+
+    private static void submitReflectionHighlight(
+            SubmitNodeCollector nodeCollector,
+            PoseStack poseStack,
+            float reflectionDistance,
+            float progress
+    ) {
+        if (progress <= 0.0f) return;
+        poseStack.pushPose();
+        poseStack.translate(0.0f, reflectionDistance, 0.0f);
+        poseStack.translate(0.0f, -Math.min(0.12f, reflectionDistance), 0.0f);
+        submitBeam(nodeCollector, poseStack, Math.min(0.24f, reflectionDistance),
+                progress * 1.55f, POS_COLOR_QUADS_ADDITIVE, 1.0f, 0.92f, 0.58f, 0.95f);
         poseStack.popPose();
     }
 
     private static void submitBeam(
             SubmitNodeCollector nodeCollector,
             PoseStack poseStack,
+            float length,
             float radius,
             net.minecraft.client.renderer.rendertype.RenderType renderType,
             float red,
@@ -53,9 +111,9 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
             float blue,
             float alpha
     ) {
-        if (radius <= 0.0f) return;
+        if (radius <= 0.0f || length <= 0.0f) return;
         poseStack.pushPose();
-        poseStack.scale(radius, 50.0f, radius);
+        poseStack.scale(radius, length, radius);
         nodeCollector.submitCustomGeometry(
                 poseStack,
                 renderType,
@@ -102,6 +160,9 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
         super.extractRenderState(entity, reusedState, partialTick);
         reusedState.xRot = entity.getXRot();
         reusedState.yRot = entity.getYRot();
+        reusedState.length = entity.getBeamLength();
+        reusedState.reflectionActive = entity.isReflectionActive();
+        reusedState.reflectionDistance = entity.getReflectionDistance();
     }
 
     @Override
