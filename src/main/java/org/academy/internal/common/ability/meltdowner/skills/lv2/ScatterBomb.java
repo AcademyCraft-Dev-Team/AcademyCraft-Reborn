@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.meltdowner.skills.lv2;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -89,7 +90,7 @@ public final class ScatterBomb extends Skill {
                         InputConstants.PRESS,
                         InputConstants.MOD_ALT
                 )
-        ), _ -> Client.start());
+        ), Client::start);
         InputSystem.addKeyBinding(Client.KEY_NAME_END, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_END,
                 InputSystem.combo(
@@ -123,11 +124,13 @@ public final class ScatterBomb extends Skill {
         public static Config CONFIG = new Config();
         private static boolean charging;
         private static int chargeTicks;
+        private static InputSystem.InputType heldInputType;
+        private static int heldInput = -1;
 
         private Client() {
         }
 
-        private static void start() {
+        private static void start(InputSystem.BindingContext context) {
             var minecraft = Minecraft.getInstance();
             var player = minecraft.player;
             if (charging
@@ -138,6 +141,8 @@ public final class ScatterBomb extends Skill {
             }
             charging = true;
             chargeTicks = 0;
+            heldInputType = context.type();
+            heldInput = context.input();
             MisakaNetworkClient.send(new ShootPacket(-1));
             player.level().playLocalSound(
                     player.getX(),
@@ -154,7 +159,8 @@ public final class ScatterBomb extends Skill {
         private static void end() {
             if (!charging) return;
             charging = false;
-            if (Minecraft.getInstance().gui.screen() != null) return;
+            heldInputType = null;
+            heldInput = -1;
             MisakaNetworkClient.send(new ShootPacket(chargeTicks));
         }
 
@@ -165,9 +171,15 @@ public final class ScatterBomb extends Skill {
             if (player == null || !AbilitySystemClient.canUseSkill(Skills.SCATTER_BOMB.get())) {
                 charging = false;
                 chargeTicks = 0;
+                heldInputType = null;
+                heldInput = -1;
                 return;
             }
             chargeTicks = Math.min(chargeTicks + 1, MAX_CHARGE_TICKS);
+            if (heldInputType != null && heldInput >= 0
+                    && !InputSystem.isDown(heldInputType, heldInput)) {
+                end();
+            }
         }
 
         public static class Config extends KeyBindingConfig {
@@ -240,11 +252,31 @@ public final class ScatterBomb extends Skill {
                             radiationEnabled,
                             DestroyBlocksSetting.canDestroyBlocks(player)
                     );
-                    beam.currentChargerTicks = HighSpeedElectronBeam.MAX_CHARGE_TICKS;
+                    beam.currentChargerTicks = beam.getAttackDelayTicks();
                     beam.setHeldCharge(false);
+                    spawnBetaParticleTrail(level, beam);
                 }
             });
             if (state.beams.stream().allMatch(HighSpeedElectronBeam::isHeldCharge)) state.cleanup();
+        }
+
+        private static void spawnBetaParticleTrail(ServerLevel level, HighSpeedElectronBeam beam) {
+            var start = beam.position();
+            var delta = beam.getLookAngle().scale(BEAM_LENGTH);
+            for (var step = 0; step <= 12; step++) {
+                var point = start.add(delta.scale(step / 12.0));
+                level.sendParticles(
+                        ParticleTypes.ELECTRIC_SPARK,
+                        point.x,
+                        point.y,
+                        point.z,
+                        1,
+                        0.02,
+                        0.02,
+                        0.02,
+                        0.01
+                );
+            }
         }
 
         private static void tick(ServerPlayer player) {
@@ -284,6 +316,8 @@ public final class ScatterBomb extends Skill {
                     var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
                     beam.configure(player, Skills.SCATTER_BOMB.get(), 0, 0, 0, false, false);
                     beam.setNoGravity(true);
+                    beam.setAttackDelayTicks(
+                            SingleHighSpeedElectronBeam.getConfiguredAttackDelayTicks(player));
                     beam.setHeldCharge(true);
                     beam.setBeamLength(BEAM_LENGTH);
                     beams.add(beam);

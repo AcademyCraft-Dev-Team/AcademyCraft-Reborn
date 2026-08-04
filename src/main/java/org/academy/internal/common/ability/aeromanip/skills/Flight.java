@@ -48,6 +48,7 @@ public final class Flight extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(50)
+                .iterationTicks(40)
                 .dependsOn(Skills.BREATHING_FILM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
         );

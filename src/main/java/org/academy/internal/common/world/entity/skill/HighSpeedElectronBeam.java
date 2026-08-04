@@ -46,6 +46,10 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             HighSpeedElectronBeam.class,
             EntityDataSerializers.BOOLEAN
     );
+    private static final EntityDataAccessor<Integer> ATTACK_DELAY_TICKS = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.INT
+    );
     public static final int MAX_CHARGE_TICKS = 40;
     public static final int MAX_RAY_LIFE_TICKS = 15;
 
@@ -111,6 +115,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         builder.define(VISUAL_SIDE_OFFSET, 0.0f);
         builder.define(CONTINUOUS, false);
         builder.define(HELD_CHARGE, false);
+        builder.define(ATTACK_DELAY_TICKS, MAX_CHARGE_TICKS);
     }
 
     @Override
@@ -119,7 +124,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         length = entityData.get(BEAM_LENGTH);
 
         if (isContinuous()) {
-            currentChargerTicks = MAX_CHARGE_TICKS;
+            currentChargerTicks = getAttackDelayTicks();
             currentRayLifeTicks = MAX_RAY_LIFE_TICKS;
             shouldStopRay = false;
             fired = true;
@@ -128,7 +133,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         }
 
         if (isHeldCharge()) {
-            currentChargerTicks = Math.min(currentChargerTicks + 1, MAX_CHARGE_TICKS - 1);
+            currentChargerTicks = Math.min(currentChargerTicks + 1, Math.max(0, getAttackDelayTicks() - 1));
             currentRayLifeTicks = MAX_RAY_LIFE_TICKS;
             shouldStopRay = true;
             fired = false;
@@ -199,7 +204,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 start,
                 end,
                 0.25f,
-                3,
+                10,
                 false,
                 true,
                 true,
@@ -260,7 +265,15 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     }
 
     public boolean isCharging() {
-        return currentChargerTicks < MAX_CHARGE_TICKS;
+        return currentChargerTicks < getAttackDelayTicks();
+    }
+
+    public void setAttackDelayTicks(int ticks) {
+        entityData.set(ATTACK_DELAY_TICKS, Math.clamp(ticks, 0, 20 * 60));
+    }
+
+    public int getAttackDelayTicks() {
+        return entityData.get(ATTACK_DELAY_TICKS);
     }
 
     public void setBeamLength(float length) {

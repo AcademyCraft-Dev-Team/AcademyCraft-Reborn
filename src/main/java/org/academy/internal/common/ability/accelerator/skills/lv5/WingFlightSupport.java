@@ -33,7 +33,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_W;
 
 final class WingFlightSupport {
-    static final float RESERVED_CP = 20.0f;
     static final double ATTACK_RANGE = 32.0;
     static final double FAN_COS_THRESHOLD = 0.35;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
@@ -117,8 +116,17 @@ final class WingFlightSupport {
         var active = skill.isEnabled(player) && player.isAlive() && !player.hasDisconnected();
         if (active) {
             var system = AbilitySystemServer.getSystem(player);
-            active = system.ensurePermanentOccupation(player.getUUID(), RESERVED_CP, skill);
+            active = system.ensurePermanentOccupation(
+                    player.getUUID(),
+                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill
+            );
             if (!active && skill.isEnabled(player)) skill.toggle(player);
+            if (active && player.tickCount % 20 == 0
+                    && !system.tryTimedOccupation(player.getUUID(), upkeepCost(skill), skill, 1)) {
+                forceDeactivateSkill(player, skill);
+                active = false;
+            }
         }
         if (!active && skill.getRuntimeData(player).map(data -> data.isEnabled()).orElse(false)) {
             forceDeactivateSkill(player, skill);
@@ -191,6 +199,17 @@ final class WingFlightSupport {
             }
         });
         return hitCount[0];
+    }
+
+    static boolean trySweepCost(ServerPlayer player, Skill skill) {
+        return AbilitySystemServer.getSystem(player)
+                .tryTimedOccupation(player.getUUID(), 20.0f, skill, 10);
+    }
+
+    private static float upkeepCost(Skill skill) {
+        if (skill instanceof PlatinumWing) return 80.0f;
+        if (skill instanceof WhiteWing) return 40.0f;
+        return 20.0f;
     }
 
     static void broadcastSweep(ServerPlayer player, AdvancedWingSweepPacket.WingKind kind) {

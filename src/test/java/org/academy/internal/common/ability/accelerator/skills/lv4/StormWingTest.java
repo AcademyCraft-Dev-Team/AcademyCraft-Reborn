@@ -7,6 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class StormWingTest {
     @Test
     void reservationMatchesReferenceContract() {
-        assertEquals(20.0f, StormWing.RESERVED_CP, 0.0001f);
+        assertEquals(40.0f, StormWing.RESERVED_CP, 0.0001f);
     }
 }

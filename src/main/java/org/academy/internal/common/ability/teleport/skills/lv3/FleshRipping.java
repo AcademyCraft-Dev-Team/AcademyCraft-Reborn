@@ -35,6 +35,8 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportDamage;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
+import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -55,7 +57,7 @@ public final class FleshRipping extends Skill {
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .cpCost(30)
-                .iterationTicks(8)
+                .iterationTicks(10)
                 .maxStacks(1)
                 .dependsOn(Skills.CUT_THROUGH)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
@@ -197,6 +199,7 @@ public final class FleshRipping extends Skill {
             var player = packet.getPacketListener().getPlayer();
             if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
                     || target == player || !target.isAlive()
+                    || CtaFriendlyFireWhitelist.shouldProtect(player, target)
                     || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
 
             Skills.FLESH_RIPPING.get().executeActive(player, (ctx, actualCost) -> {
@@ -206,10 +209,14 @@ public final class FleshRipping extends Skill {
                         BASE_DAMAGE,
                         target.getMaxHealth(),
                         Skills.SPACE_FOLDING_THEOREM.get().isEnabled(player)
-                );
+                ) * ctx.system().getPlayerDamageMultiplier(player.getUUID());
                 player.level().playSound(null, target.blockPosition(), SoundEvents.FLESH_RIPPING.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
-                target.hurtServer(player.level(), SkillDamageSource.of(player, Skills.FLESH_RIPPING.get()), damage);
+                new CTAEntityActuallyHurt(target).actuallyHurt(
+                        SkillDamageSource.of(player, Skills.FLESH_RIPPING.get()),
+                        damage,
+                        true
+                );
             });
         }
     }

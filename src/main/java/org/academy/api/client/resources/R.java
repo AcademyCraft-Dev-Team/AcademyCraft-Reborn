@@ -363,6 +363,13 @@ public final class R {
 
         public static final class gui {
             public static final class app {
+                public static final class abilitysettings {
+                    public static final Identifier ability_settings = academy("textures/gui/app/abilitysettings/ability_settings.png");
+
+                    private abilitysettings() {
+                    }
+                }
+
                 public static final class music {
                     public static final Identifier cycle = academy("textures/gui/app/music/cycle.png");
                     public static final Identifier icon = academy("textures/gui/app/music/icon.png");

@@ -19,6 +19,7 @@ public class Level0PassiveLv1 extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .passive()
                 .maintenanceCost(0)
+                .iterationTicks(40)
                 .energyCost(5000)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
                 .devCondition(new DevCondition.AnySkillOfLevelCondition(3))

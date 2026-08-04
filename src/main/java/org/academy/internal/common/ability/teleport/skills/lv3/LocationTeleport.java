@@ -58,7 +58,7 @@ public final class LocationTeleport extends Skill {
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .cpCost(30)
-                .iterationTicks(20)
+                .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.CUT_THROUGH)
                 .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, player -> new LocationTeleportData())
@@ -225,11 +225,10 @@ public final class LocationTeleport extends Skill {
             var center = new Vec3(mark.x() + 0.5, mark.y() + 0.5, mark.z() + 0.5);
             var dimensions = player.getDimensions(Pose.STANDING);
             var halfWidth = dimensions.width() / 2.0;
-            var halfHeight = dimensions.height() / 2.0;
-            var box = new AABB(center.x - halfWidth, center.y - halfHeight, center.z - halfWidth,
-                    center.x + halfWidth, center.y + halfHeight, center.z + halfWidth);
+            var box = new AABB(center.x - halfWidth, center.y, center.z - halfWidth,
+                    center.x + halfWidth, center.y + dimensions.height(), center.z + halfWidth);
             return level.noCollision(player, box)
-                    ? new Vec3(center.x, center.y - halfHeight, center.z)
+                    ? center
                     : null;
         }
 

@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class WingFlightSupportTest {
     @Test
     void keepsReferenceCombatConstants() {
-        assertEquals(20.0f, WingFlightSupport.RESERVED_CP);
         assertEquals(32.0, WingFlightSupport.ATTACK_RANGE);
         assertEquals(0.35, WingFlightSupport.FAN_COS_THRESHOLD);
         assertEquals(0.01f, WingFlightSupport.MAX_HEALTH_DAMAGE_RATIO);

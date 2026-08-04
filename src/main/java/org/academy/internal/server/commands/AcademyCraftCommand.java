@@ -209,17 +209,12 @@ public final class AcademyCraftCommand {
 
         var serverContext = player.level().getServer();
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
-        abilitySystemServer.setPlayerAbilityCategory(playerUuid, categoryToSet.get().value());
-        var learnedSkills = abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap();
-        learnedSkills.clear();
-        var playerData = abilitySystemServer.getPlayerData(playerUuid);
-        if (playerData != null) playerData.markDirty();
-        abilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_DATA);
+        abilitySystemServer.replacePlayerAbilityCategory(playerUuid, categoryToSet.get().value());
 
         context.getSource().sendSuccess(
                 () -> Component.literal(
                         "Ability category set to: " + categoryIdentifier +
-                                ". All previous skills have been cleared."
+                                ". Previous category skills have been cleared; common skills were preserved."
                 ), true
         );
         return 1;

@@ -33,7 +33,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class AirflowJet extends Skill {
-    private static final double LAUNCH_SPEED = 1.2;
+    private static final double LAUNCH_SPEED = 1.8;
 
     public AirflowJet() {
         super(Builder
@@ -122,7 +122,7 @@ public final class AirflowJet extends Skill {
             var player = packet.getPacketListener().getPlayer();
             Skills.AIRFLOW_JET.get().executeActive(player, (_, _) -> {
                 var direction = player.getLookAngle().normalize();
-                var velocity = direction.scale(LAUNCH_SPEED).add(0.0, 0.2, 0.0);
+                var velocity = direction.scale(LAUNCH_SPEED).add(0.0, 0.25, 0.0);
                 player.setDeltaMovement(velocity);
                 player.resetFallDistance();
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));

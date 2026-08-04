@@ -318,7 +318,8 @@ public abstract class Skill {
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
         private int maxSkillLevel = 3;
-        private int iterationTicks = 20;
+        // CP iteration points; zero lets the server derive half of the CP cost.
+        private int iterationTicks = 0;
         private int maxStacks = 2;
         private float maintenanceCost = 0f;
         private boolean isPassive = false;

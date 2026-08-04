@@ -52,7 +52,7 @@ public class ThunderLance extends Skill {
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(40)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.ARC_GENERATE)
         );

@@ -71,7 +71,7 @@ public class PlasmaGeneration extends Skill {
                 .energyCost(100_000)
                 .cpCost(CP_PER_SECOND)
                 .iterationTicks(20)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_REFLECTION, Skills.STORM_WING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("Storm Wing", "academy:storm_wing"))
@@ -200,8 +200,8 @@ public class PlasmaGeneration extends Skill {
         private static void launch(ServerPlayer player, Plasma plasma) {
             var targetPos = findTarget(player);
             var damage = BASE_DAMAGE
-                    * AbilitySystemServer.getSystem(player)
-                    .getPlayerDamageMultiplier(player.getUUID());
+                    * AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
+                    * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
             var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player);
             plasma.launch(
                     player.getUUID(),

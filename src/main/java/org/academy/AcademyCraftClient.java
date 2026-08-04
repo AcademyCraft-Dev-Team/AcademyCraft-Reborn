@@ -45,6 +45,7 @@ import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
+import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
@@ -74,6 +75,7 @@ public final class AcademyCraftClient {
 
     public static void initMain() {
         TerminalHud.Companion.addApp(SettingsApp.INSTANCE);
+        TerminalHud.Companion.addApp(SkillSettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(MusicApp.INSTANCE);
 
         MusicPlayerBackend.Companion.init();

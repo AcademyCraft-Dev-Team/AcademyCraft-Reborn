@@ -44,7 +44,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.Map;
 public class MagneticWeapon extends Skill {
     public MagneticWeapon() {
-        super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL3).energyCost(30_000).passive().initiallyDisabled().maintenanceCost(40).dependsOn(Skills.MAGNET_MANIPULATION).dependsOn(Skills.MAGNET_MOMENT_CHARGE));
+        super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL3).energyCost(30_000).passive().initiallyDisabled().maintenanceCost(40).iterationTicks(40).dependsOn(Skills.MAGNET_MANIPULATION));
     }
 
     @Override

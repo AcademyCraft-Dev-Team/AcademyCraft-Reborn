@@ -69,7 +69,8 @@ public class VectorReflection extends Skill {
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
-                .iterationTicks(200)
+                .maintenanceCost(50)
+                .iterationTicks(10)
                 .passive()
                 .initiallyDisabled()
                 .maxStacks(NO_STACK_LIMIT)
@@ -77,12 +78,6 @@ public class VectorReflection extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition("Kinetic Energy Applied", "academy:kinetic_energy_applied"))
         );
-    }
-
-    @Override
-    public int getIterationTicks(int skillLevel) {
-        if (skillLevel >= 1) return 160;
-        return super.getIterationTicks(skillLevel);
     }
 
     @Override
@@ -162,8 +157,7 @@ public class VectorReflection extends Skill {
                     && player.connection != null
                     && !player.isSpectator()
                     && Skills.VECTOR_REFLECTION.get().isEnabled(player)
-                    && (AbilitySystemServer.isDevMode()
-                    || AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID()) > 0.0f);
+                    && AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID()) > 0.0f;
         }
 
         public static void purgeProtectedEffects(ServerPlayer player) {
@@ -192,7 +186,7 @@ public class VectorReflection extends Skill {
                     originalDamage,
                     system.getPlayerAvailableCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
-                    org.academy.api.server.ability.AbilitySystemServer.isDevMode()
+                    false
             );
             var reflectedDamage = result.reflectedDamage();
             var executed = reflectedDamage <= 0.0f;
@@ -439,6 +433,18 @@ public class VectorReflection extends Skill {
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            var skill = Skills.VECTOR_REFLECTION.get();
+            if (skill.isEnabled(player)) {
+                var system = AbilitySystemServer.getSystem(player);
+                var maintained = system.ensurePermanentOccupation(
+                        player.getUUID(),
+                        ReflectionFilter.getReflectionMaintenanceCost(player),
+                        skill
+                );
+                if (!maintained) {
+                    skill.toggle(player);
+                }
+            }
             if (!Server.isActive(player)) {
                 Server.clearProtection(player);
                 return;

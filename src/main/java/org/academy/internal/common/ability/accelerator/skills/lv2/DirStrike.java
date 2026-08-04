@@ -66,7 +66,7 @@ public class DirStrike extends Skill {
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(20)
-                .iterationTicks(5)
+                .iterationTicks(10)
                 .maxStacks(1)
                 .dependsOn(Skills.VECTOR_BLAST)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))

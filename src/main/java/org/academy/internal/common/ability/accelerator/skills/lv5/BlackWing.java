@@ -57,9 +57,9 @@ public final class BlackWing extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(WingFlightSupport.RESERVED_CP)
-                .iterationTicks(30)
-                .maxStacks(1)
+                .maintenanceCost(60)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.STORM_WING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("Storm Wing", "academy:storm_wing")));
@@ -178,6 +178,7 @@ public final class BlackWing extends Skill {
 
         public static void onEntitySwing(ServerPlayer player, InteractionHand hand) {
             if (hand != InteractionHand.MAIN_HAND || !isActive(player)) return;
+            if (!WingFlightSupport.trySweepCost(player, Skills.BLACK_WING.get())) return;
             WingFlightSupport.broadcastSweep(player, AdvancedWingSweepPacket.WingKind.BLACK);
             WingFlightSupport.fanAttack(player, Skills.BLACK_WING.get());
         }

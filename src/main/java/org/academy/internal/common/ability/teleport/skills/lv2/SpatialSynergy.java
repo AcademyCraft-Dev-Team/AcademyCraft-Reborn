@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -36,7 +35,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 public class SpatialSynergy extends Skill {
     private static final float RADIUS = 2.0f;
-    private static final float EXTRA_CP_COST_PER_PLAYER = 0.5f;
 
     public SpatialSynergy() {
         super(Builder
@@ -45,7 +43,7 @@ public class SpatialSynergy extends Skill {
                 .energyCost(10_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(20)
+                .maintenanceCost(50)
                 .maxSkillLevel(0)
                 .dependsOn(Skills.SELF_TELEPORT)
         );
@@ -137,19 +135,10 @@ public class SpatialSynergy extends Skill {
 
             if (nearbyPlayers.isEmpty()) return;
 
-            var system = AbilitySystemServer.getSystem(player);
-            var maxCP = system.getPlayerMaxCP(player.getUUID());
-
             for (var nearby : nearbyPlayers) {
-                var extraCost = EXTRA_CP_COST_PER_PLAYER * maxCP;
-                var availableCP = system.getPlayerAvailableCP(player.getUUID());
-                if (availableCP >= extraCost) {
-                    system.setPlayerAvailableCP(player.getUUID(), availableCP - extraCost);
-                    var dimensions = nearby.getDimensions(Pose.STANDING);
-                    var teleportY = targetPos.y() - (dimensions.height() / 2.0);
-                    TeleportSync.teleportInstantly(nearby, new Vec3(targetPos.x(), teleportY, targetPos.z()));
-                    nearby.resetFallDistance();
-                }
+                var teleportY = targetPos.y() - (nearby.getBbHeight() / 2.0);
+                TeleportSync.teleportInstantly(nearby, new Vec3(targetPos.x(), teleportY, targetPos.z()));
+                nearby.resetFallDistance();
             }
         }
     }

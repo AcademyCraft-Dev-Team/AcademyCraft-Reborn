@@ -15,9 +15,9 @@ class JetStrikeTest {
 
     @Test
     void damageAndGeometryMatchReferenceContract() {
-        assertEquals(10.0f, JetStrike.calculateDamage(1.0f));
-        assertEquals(15.0f, JetStrike.calculateDamage(1.5f));
-        assertEquals(0.0f, JetStrike.calculateDamage(-1.0f));
+        assertEquals(10.0f, JetStrike.calculateDamage(1.0f, 1.0f));
+        assertEquals(22.5f, JetStrike.calculateDamage(1.5f, 1.5f));
+        assertEquals(0.0f, JetStrike.calculateDamage(-1.0f, 1.0f));
         assertEquals(8.0, JetStrike.DISTANCE);
         assertEquals(3.25, JetStrike.DAMAGE_RADIUS);
     }

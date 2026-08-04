@@ -17,8 +17,8 @@ class RailgunTest {
 
     @Test
     void damageKeepsTheReferenceBaseAndUsesPlayerScaling() {
-        assertEquals(150.0f, Railgun.calculateDamage(1.0f));
-        assertEquals(225.0f, Railgun.calculateDamage(1.5f));
-        assertEquals(0.0f, Railgun.calculateDamage(-1.0f));
+        assertEquals(150.0f, Railgun.calculateDamage(1.0f, 1.0f));
+        assertEquals(337.5f, Railgun.calculateDamage(1.5f, 1.5f));
+        assertEquals(0.0f, Railgun.calculateDamage(-1.0f, 1.0f));
     }
 }

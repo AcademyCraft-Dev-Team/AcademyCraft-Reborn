@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.meltdowner.skills;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import org.academy.AcademyCraftClient;
@@ -36,8 +37,26 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class SingleHighSpeedElectronBeam extends Skill {
+    public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
+    public static final int DEFAULT_ATTACK_DELAY_TICKS = 10;
     static final float BASE_DAMAGE = 20.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
+
+    public static int getConfiguredAttackDelayTicks(ServerPlayer player) {
+        var server = player.level().getServer();
+        if (server == null || server.getAcademyCraftServer() == null) {
+            return DEFAULT_ATTACK_DELAY_TICKS;
+        }
+        var settings = server.getAcademyCraftServer().getAbilityConfig().skills
+                .get(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM);
+        var configuredDelay = settings == null
+                ? DEFAULT_ATTACK_DELAY_TICKS
+                : settings.floatMap.getOrDefault(
+                CONFIG_ATTACK_DELAY_TICKS,
+                (float) DEFAULT_ATTACK_DELAY_TICKS
+        );
+        return Math.clamp(Math.round(configuredDelay), 0, 20 * 60);
+    }
 
     public SingleHighSpeedElectronBeam() {
         super(Builder
@@ -45,7 +64,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(20)
-                .iterationTicks(4)
+                .iterationTicks(10)
                 .maxStacks(1)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
@@ -141,6 +160,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                         Skills.RADIATION_INTENSIFY.get().isEnabled(player),
                         DestroyBlocksSetting.canDestroyBlocks(player)
                 );
+                beam.setAttackDelayTicks(getConfiguredAttackDelayTicks(player));
                 beam.setPos(spawnPos);
                 beam.setYRot(yaw);
                 beam.setXRot(pitch);

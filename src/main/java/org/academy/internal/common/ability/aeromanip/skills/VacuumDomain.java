@@ -233,8 +233,9 @@ public final class VacuumDomain extends Skill {
                             && isInsideDomain(center, target.getBoundingBox().getCenter())
             );
             var source = SkillDamageSource.of(player, Skills.VACUUM_DOMAIN.get());
-            var power = AbilitySystemServer.getSystem(player)
-                    .getPlayerAbilityPowerMultiplier(player.getUUID());
+            var system = AbilitySystemServer.getSystem(player);
+            var power = system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                    * system.getPlayerDamageMultiplier(player.getUUID());
             for (var target : targets) {
                 target.setAirSupply(0);
                 target.invulnerableTime = 0;

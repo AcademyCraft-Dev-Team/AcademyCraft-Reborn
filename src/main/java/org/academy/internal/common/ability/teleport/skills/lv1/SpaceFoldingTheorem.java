@@ -19,6 +19,7 @@ public final class SpaceFoldingTheorem extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .passive()
+                .iterationTicks(40)
                 .dependsOn(Skills.THREATENING_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
                 .devCondition(new DevCondition.DependencyCondition(

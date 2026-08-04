@@ -22,6 +22,7 @@ import org.academy.api.client.gui.widget.WidgetContext
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.ability.Skill
+import org.academy.api.common.ability.LearningHelper
 import org.academy.api.common.registries.Registries
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BooleanSupplier
@@ -78,7 +79,7 @@ class ToggleStatusHud private constructor() {
             if (Minecraft.getInstance().player == null) return emptyList()
             val category = AbilitySystemClient.getCategory()
             return Registries.SKILLS.asSequence()
-                .filter { skill -> skill.category === category }
+                .filter { skill -> LearningHelper.isSkillAvailableForCategory(category, skill) }
                 .filter(AbilitySystemClient::isSkillLearned)
                 .filter { skill ->
                     InputSystem.hasToggleBindingForSkill(skill) || hasStateProvider(skill)

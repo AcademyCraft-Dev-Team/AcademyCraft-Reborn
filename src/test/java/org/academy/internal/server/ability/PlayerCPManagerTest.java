@@ -21,7 +21,7 @@ class PlayerCPManagerTest {
 
     @Test
     void acceleratesCpRecoveryFivefoldInSkillDebugMode() {
-        assertEquals(5, PlayerCPManager.getCpRecoveryStep(true));
-        assertEquals(1, PlayerCPManager.getCpRecoveryStep(false));
+        assertEquals(5, PlayerCPManager.getCpIterationRate(true));
+        assertEquals(1, PlayerCPManager.getCpIterationRate(false));
     }
 }

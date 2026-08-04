@@ -90,6 +90,10 @@ public class AbilityConfig {
             railgunSettings.floatMap.put("exp_incr_speed", 1.0f);
             defaultConfig.skills.put("railgun", railgunSettings);
 
+            var singleBeamSettings = new SkillSettings();
+            singleBeamSettings.floatMap.put("attackDelayTicks", 10.0f);
+            defaultConfig.skills.put("single_high_speed_electron_beam", singleBeamSettings);
+
             return defaultConfig;
         }
 

@@ -74,9 +74,9 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
 
         var rayVisualProgress = renderState.isCharging ? 0f : renderState.progress;
         var rayScale = rayVisualProgress * 0.25f * renderState.beamScale;
-        renderRaySegments(poseStack, nodeCollector, renderState.visibleSegments, rayScale,
+        renderRay(poseStack, nodeCollector, visualLength, rayScale,
                 0, 1, 0, 0.125f);
-        renderRaySegments(poseStack, nodeCollector, renderState.visibleSegments, rayScale * 0.75f,
+        renderRay(poseStack, nodeCollector, visualLength, rayScale * 0.75f,
                 1, 1, 1, 1.0f);
 
         poseStack.popPose();
@@ -95,30 +95,12 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         reusedState.visualSideOffset = entity.getVisualSideOffset();
         reusedState.isCharging = entity.isCharging();
 
-        var logicalDirection = entity.getLookAngle();
-        var visualStart = entity.position();
-        if (Math.abs(reusedState.visualSideOffset) > 1.0e-4f) {
-            var horizontalForward = Vec3.directionFromRotation(0.0f, entity.getYRot());
-            var right = horizontalForward.cross(WORLD_UP).normalize();
-            visualStart = visualStart.add(right.scale(reusedState.visualSideOffset));
-        }
-        var visualEnd = entity.position().add(logicalDirection.scale(reusedState.length));
-        var visualDirection = visualEnd.subtract(visualStart);
-        var visualLength = (float) visualDirection.length();
-        reusedState.visibleSegments = BeamOcclusion.visibleSegments(
-                entity,
-                visualStart,
-                visualDirection,
-                visualLength,
-                Math.max(0.05, reusedState.beamScale * 0.25)
-        );
-
         float progress;
         if (entity.isContinuous()) {
             progress = 1.0f;
             reusedState.isCharging = false;
         } else if (entity.isCharging()) {
-            progress = (entity.currentChargerTicks + partialTick) / HighSpeedElectronBeam.MAX_CHARGE_TICKS;
+            progress = (entity.currentChargerTicks + partialTick) / Math.max(1.0f, entity.getAttackDelayTicks());
         } else {
             progress = (entity.currentRayLifeTicks - partialTick) / HighSpeedElectronBeam.MAX_RAY_LIFE_TICKS;
         }
@@ -127,33 +109,27 @@ public class HighSpeedElectronBeamRenderer extends EntityRenderer<HighSpeedElect
         reusedState.progress = Math.clamp(progress, 0.0f, 1.0f);
     }
 
-    private static void renderRaySegments(
+    private static void renderRay(
             PoseStack poseStack,
             SubmitNodeCollector nodeCollector,
-            float[] visibleSegments,
+            float length,
             float radius,
             float red,
             float green,
             float blue,
             float alpha
     ) {
-        if (radius <= 0.0f) return;
-        for (var i = 0; i + 1 < visibleSegments.length; i += 2) {
-            var start = visibleSegments[i];
-            var end = visibleSegments[i + 1];
-            if (end <= start) continue;
-            poseStack.pushPose();
-            poseStack.translate(0.0f, start, 0.0f);
-            poseStack.scale(radius, end - start, radius);
-            nodeCollector.submitCustomGeometry(
-                    poseStack,
-                    Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE,
-                    (pose, vertexConsumer) -> BoxRenderer.renderFilledBox(
-                            pose, vertexConsumer, RAY, red, green, blue, alpha
-                    )
-            );
-            poseStack.popPose();
-        }
+        if (radius <= 0.0f || length <= 0.0f) return;
+        poseStack.pushPose();
+        poseStack.scale(radius, length, radius);
+        nodeCollector.submitCustomGeometry(
+                poseStack,
+                Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE,
+                (pose, vertexConsumer) -> BoxRenderer.renderFilledBox(
+                        pose, vertexConsumer, RAY, red, green, blue, alpha
+                )
+        );
+        poseStack.popPose();
     }
 
     @Override

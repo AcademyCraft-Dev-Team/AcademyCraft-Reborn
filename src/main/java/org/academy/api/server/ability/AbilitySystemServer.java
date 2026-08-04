@@ -455,10 +455,24 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
-        if (playerDataManager.getPlayerAbilityCategory(uuid) == abilityCategory) return;
+        changePlayerAbilityCategory(uuid, abilityCategory, false);
+    }
+
+    public void replacePlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        changePlayerAbilityCategory(uuid, abilityCategory, true);
+    }
+
+    private void changePlayerAbilityCategory(
+            UUID uuid,
+            AbilityCategory abilityCategory,
+            boolean clearCategorySkills
+    ) {
+        var previousCategory = playerDataManager.getPlayerAbilityCategory(uuid);
+        var categoryChanged = previousCategory != abilityCategory;
+        if (!categoryChanged && !clearCategorySkills) return;
 
         var playerData = getPlayerData(uuid);
-        if (playerData != null) {
+        if (playerData != null && !clearCategorySkills) {
             playerData.getSkillDataMap().forEach((skillId, data) -> {
                 if (!data.isEnabled()) return;
                 var id = Identifier.tryParse(skillId);
@@ -476,9 +490,14 @@ public final class AbilitySystemServer {
         if (contexts != null) {
             List.copyOf(contexts).forEach(ServerContext::unregister);
         }
-        playerCPManager.releaseAllOccupations(uuid);
-        playerDataManager.setPlayerAbilityCategory(uuid, abilityCategory);
+        if (categoryChanged) {
+            playerDataManager.setPlayerAbilityCategory(uuid, abilityCategory);
+        }
+        if (clearCategorySkills) {
+            skillDataManager.clearCategorySkills(uuid);
+        }
         playerCPManager.refreshCommonSkillBonuses(uuid);
+        playerCPManager.releaseAllOccupations(uuid);
     }
 
 
@@ -513,6 +532,11 @@ public final class AbilitySystemServer {
 
     public void toggleSkill(UUID uuid, String skillId) {
         skillDataManager.toggleSkill(uuid, skillId);
+        var playerData = getPlayerData(uuid);
+        var skillData = playerData == null ? null : playerData.getSkillDataMap().get(skillId);
+        if (skillData == null || !skillData.isEnabled()) {
+            playerCPManager.releaseMaintenanceOccupation(uuid, skillId);
+        }
     }
 
     public void releaseMaintenanceOccupation(UUID uuid, String skillId) {
@@ -553,15 +577,11 @@ public final class AbilitySystemServer {
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
 
-        if (DEV_MODE) {
-            action.execute(ctx, 0f);
-            return true;
-        }
-
         var baseCost = calculator.calculate(ctx);
         if (!Float.isFinite(baseCost) || baseCost < 0) return false;
         var actualCost = Math.max(0, baseCost * playerCPManager.getCalculationIntensity(uuid));
-        if (playerCPManager.tryOccupation(uuid, actualCost, skill, skill.getIterationTicks(level), false)) {
+        var iterationPoints = resolveIterationPoints(skill.getIterationTicks(level), baseCost);
+        if (playerCPManager.tryOccupation(uuid, actualCost, skill, iterationPoints, false)) {
             action.execute(ctx, actualCost);
             addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
             return true;
@@ -579,14 +599,10 @@ public final class AbilitySystemServer {
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
 
-        if (DEV_MODE) {
-            action.execute(ctx, 0f);
-            return true;
-        }
-
         if (!Float.isFinite(cost) || cost < 0) return false;
         var actualCost = Math.max(0, cost * playerCPManager.getCalculationIntensity(uuid));
-        if (playerCPManager.tryOccupation(uuid, actualCost, skill, skill.getIterationTicks(level), false)) {
+        var iterationPoints = resolveIterationPoints(skill.getIterationTicks(level), cost);
+        if (playerCPManager.tryOccupation(uuid, actualCost, skill, iterationPoints, false)) {
             action.execute(ctx, actualCost);
             addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
             return true;
@@ -598,6 +614,28 @@ public final class AbilitySystemServer {
         if (!Float.isFinite(amount) || amount < 0) return false;
         var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.tryOccupation(uuid, actualAmount, skill, 0, true);
+    }
+
+    public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill) {
+        var level = getPlayerSkillLevel(uuid, skill.getKeyString());
+        return tryTimedOccupation(uuid, amount, skill, skill.getIterationTicks(level));
+    }
+
+    public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill, int iterationPoints) {
+        if (!Float.isFinite(amount) || amount < 0) return false;
+        var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
+        return playerCPManager.tryOccupation(
+                uuid,
+                actualAmount,
+                skill,
+                resolveIterationPoints(iterationPoints, amount),
+                false
+        );
+    }
+
+    private static int resolveIterationPoints(int configuredPoints, float baseCost) {
+        if (configuredPoints > 0) return configuredPoints;
+        return Math.max(1, (int) Math.ceil(baseCost * 0.5f));
     }
 
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {

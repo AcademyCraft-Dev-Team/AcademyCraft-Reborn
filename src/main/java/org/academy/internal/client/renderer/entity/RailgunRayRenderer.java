@@ -32,21 +32,20 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
                 .rotateZ((float) Math.toRadians(90 + renderState.xRot))
         );
         var progress = Math.max(0.0f, MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5)) * 0.1f;
-        submitBeamSegments(nodeCollector, poseStack, renderState.visibleSegments,
+        submitBeam(nodeCollector, poseStack,
                 progress, POS_COLOR_QUADS_NO_DEPTH_WRITE, 0.78f, 0.48f, 0.02f, 0.92f);
-        submitBeamSegments(nodeCollector, poseStack, renderState.visibleSegments,
+        submitBeam(nodeCollector, poseStack,
                 progress * 0.62f, POS_COLOR_QUADS_ADDITIVE, 1.0f, 0.72f, 0.18f, 0.92f);
-        submitBeamSegments(nodeCollector, poseStack, renderState.visibleSegments,
+        submitBeam(nodeCollector, poseStack,
                 progress * 0.32f, POS_COLOR_QUADS_ADDITIVE, 1.0f, 1.0f, 1.0f, 1.0f);
-        submitBeamSegments(nodeCollector, poseStack, renderState.visibleSegments,
+        submitBeam(nodeCollector, poseStack,
                 progress * 0.18f, POS_COLOR_QUADS_NO_DEPTH_WRITE, 1.0f, 1.0f, 1.0f, 0.98f);
         poseStack.popPose();
     }
 
-    private static void submitBeamSegments(
+    private static void submitBeam(
             SubmitNodeCollector nodeCollector,
             PoseStack poseStack,
-            float[] visibleSegments,
             float radius,
             net.minecraft.client.renderer.rendertype.RenderType renderType,
             float red,
@@ -55,22 +54,16 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
             float alpha
     ) {
         if (radius <= 0.0f) return;
-        for (var i = 0; i + 1 < visibleSegments.length; i += 2) {
-            var start = visibleSegments[i];
-            var end = visibleSegments[i + 1];
-            if (end <= start) continue;
-            poseStack.pushPose();
-            poseStack.translate(0.0f, start, 0.0f);
-            poseStack.scale(radius, end - start, radius);
-            nodeCollector.submitCustomGeometry(
-                    poseStack,
-                    renderType,
-                    (pose, consumer) -> renderBeamLayer(
-                            pose.pose(), consumer, red, green, blue, alpha
-                    )
-            );
-            poseStack.popPose();
-        }
+        poseStack.pushPose();
+        poseStack.scale(radius, 50.0f, radius);
+        nodeCollector.submitCustomGeometry(
+                poseStack,
+                renderType,
+                (pose, consumer) -> renderBeamLayer(
+                        pose.pose(), consumer, red, green, blue, alpha
+                )
+        );
+        poseStack.popPose();
     }
 
     private static void renderBeamLayer(
@@ -109,13 +102,6 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
         super.extractRenderState(entity, reusedState, partialTick);
         reusedState.xRot = entity.getXRot();
         reusedState.yRot = entity.getYRot();
-        reusedState.visibleSegments = BeamOcclusion.visibleSegments(
-                entity,
-                entity.position(),
-                entity.getLookAngle(),
-                50.0f,
-                0.08
-        );
     }
 
     @Override

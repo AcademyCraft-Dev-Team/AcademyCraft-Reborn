@@ -310,7 +310,9 @@ public final class VectorBlast extends Skill {
             }
 
             var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
-            var damage = BASE_DAMAGE * system.getPlayerDamageMultiplier(player.getUUID());
+            var damage = BASE_DAMAGE
+                    * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                    * system.getPlayerDamageMultiplier(player.getUUID());
             var source = SkillDamageSource.of(player, Skills.VECTOR_BLAST.get());
             var search = new AABB(origin, end).inflate(BEAM_RADIUS);
             for (var target : level.getEntitiesOfClass(

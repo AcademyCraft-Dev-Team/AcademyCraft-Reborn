@@ -22,6 +22,8 @@ public final class LocationTeleportScreen extends Screen {
     private static final int PANEL_W = 300;
     private static final int PANEL_H = 212;
     private static final int ROW_H = 18;
+    private static final int TELEPORT_ACTION_WIDTH = 24;
+    private static final int REMOVE_ACTION_WIDTH = 18;
 
     private final List<Mark> marks = new ArrayList<>();
     private EditBox nameBox;
@@ -106,9 +108,13 @@ public final class LocationTeleportScreen extends Screen {
             var name = mark.name() == null || mark.name().isBlank() ? "Mark " + (index + 1) : mark.name();
             graphics.text(font, font.plainSubstrByWidth(name, 130), left + 5, y + 5, TEXT, false);
             var coords = mark.x() + ", " + mark.y() + ", " + mark.z();
-            graphics.text(font, coords, right - 42 - font.width(coords), y + 5, DIM, false);
-            graphics.text(font, ">", right - 28, y + 5, 0xFF55CC55, false);
-            graphics.text(font, "x", right - 12, y + 5, 0xFFCC5555, false);
+            var removeLeft = right - REMOVE_ACTION_WIDTH;
+            var teleportLeft = removeLeft - TELEPORT_ACTION_WIDTH;
+            graphics.text(font, coords, teleportLeft - 4 - font.width(coords), y + 5, DIM, false);
+            graphics.centeredText(font, ">", teleportLeft + TELEPORT_ACTION_WIDTH / 2, y + 5,
+                    0xFF55CC55);
+            graphics.centeredText(font, "x", removeLeft + REMOVE_ACTION_WIDTH / 2, y + 5,
+                    0xFFCC5555);
         }
         graphics.disableScissor();
         if (marks.isEmpty()) {
@@ -151,9 +157,11 @@ public final class LocationTeleportScreen extends Screen {
                 var index = scroll + (int) ((mouseY - listTop) / ROW_H);
                 if (index >= 0 && index < marks.size()) {
                     var right = panelX + PANEL_W - 12;
-                    if (mouseX >= right - 16) {
+                    var removeLeft = right - REMOVE_ACTION_WIDTH;
+                    var teleportLeft = removeLeft - TELEPORT_ACTION_WIDTH;
+                    if (mouseX >= removeLeft && mouseX < right) {
                         MisakaNetworkClient.send(new LocationTeleport.RemoveMarkPacket(index));
-                    } else if (mouseX >= right - 34) {
+                    } else if (mouseX >= teleportLeft && mouseX < removeLeft) {
                         MisakaNetworkClient.send(new LocationTeleport.TeleportToMarkPacket(index));
                         onClose();
                     } else {

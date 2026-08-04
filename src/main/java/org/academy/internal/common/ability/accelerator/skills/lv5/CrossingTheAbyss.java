@@ -63,7 +63,7 @@ public final class CrossingTheAbyss extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(RESERVED_CP)
-                .iterationTicks(30)
+                .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.WHITE_WING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))

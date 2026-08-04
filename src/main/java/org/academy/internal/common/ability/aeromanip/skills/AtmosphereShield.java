@@ -5,11 +5,16 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -52,6 +57,7 @@ public final class AtmosphereShield extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(50)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.AIRFLOW_JET)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
@@ -170,6 +176,27 @@ public final class AtmosphereShield extends Skill {
                     ATTACK_KNOCKBACK_MODIFIER_ID,
                     power,
                     enabled
+            );
+        }
+
+        @SubscribeEvent(priority = EventPriority.HIGH)
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
+            if (!(event.getAmount() > 0.0f) || event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
+            var skill = Skills.ATMOSPHERE_SHIELD.get();
+            if (!skill.isEnabled(player)) return;
+            var system = AbilitySystemServer.getSystem(player);
+            if (!system.tryTimedOccupation(player.getUUID(), 20.0f, skill, 10)) return;
+
+            event.setAmount(0.0f);
+            event.setCanceled(true);
+            player.level().playSound(
+                    null,
+                    player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.SHIELD_BLOCK,
+                    SoundSource.PLAYERS,
+                    1.0f,
+                    0.9f + player.getRandom().nextFloat() * 0.2f
             );
         }
 

@@ -57,9 +57,9 @@ public final class WhiteWing extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(WingFlightSupport.RESERVED_CP)
-                .iterationTicks(30)
-                .maxStacks(1)
+                .maintenanceCost(80)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.BLACK_WING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("Black Wing", "academy:black_wing")));
@@ -178,6 +178,7 @@ public final class WhiteWing extends Skill {
 
         public static void onEntitySwing(ServerPlayer player, InteractionHand hand) {
             if (hand != InteractionHand.MAIN_HAND || !isActive(player)) return;
+            if (!WingFlightSupport.trySweepCost(player, Skills.WHITE_WING.get())) return;
             WingFlightSupport.broadcastSweep(player, AdvancedWingSweepPacket.WingKind.WHITE);
             WingFlightSupport.fanAttack(player, Skills.WHITE_WING.get());
         }

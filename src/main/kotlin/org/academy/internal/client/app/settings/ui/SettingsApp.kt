@@ -38,21 +38,24 @@ import org.academy.api.client.hud.terminal.TerminalConfig
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
-import org.academy.api.common.ability.Skill
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting
+import org.misaka.MisakaNetworkClient
 import org.lwjgl.glfw.GLFW
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 
 object SettingsApp : App {
-    private const val PAGE_KEYBINDINGS = 0
-    private const val PAGE_ABOUT = 1
+    private const val PAGE_GENERAL = 0
+    private const val PAGE_KEYBINDINGS = 1
+    private const val PAGE_ABOUT = 2
 
     override fun createContext(): WidgetContext {
         return Context()
     }
 
     override fun name(): String {
-        return "Settings"
+        return Language.getInstance().getOrDefault("app.academy.settings.name")
     }
 
     override fun icon(): Identifier {
@@ -157,7 +160,7 @@ object SettingsApp : App {
                         .padding(2f)
                     content.addChild("panel", panelContainer)
 
-                    showPage(PAGE_KEYBINDINGS)
+                    showPage(PAGE_GENERAL)
                 }
             }
 
@@ -176,7 +179,14 @@ object SettingsApp : App {
             tabBar.spacing = 2f
             tabBar.layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
-            tabBar.addChild("keybindings", createTabButton(name(), PAGE_KEYBINDINGS))
+            tabBar.addChild("general", createTabButton(
+                Language.getInstance().getOrDefault("app.academy.settings.tab.general"),
+                PAGE_GENERAL
+            ))
+            tabBar.addChild("keybindings", createTabButton(
+                Language.getInstance().getOrDefault("app.academy.settings.tab.keybindings"),
+                PAGE_KEYBINDINGS
+            ))
             tabBar.addChild("about", createTabButton("About", PAGE_ABOUT))
             tabBar.selectButton(tabBar.children.values.first() as RadioButtonWidget)
             return tabBar
@@ -229,9 +239,65 @@ object SettingsApp : App {
         private fun showPage(page: Int) {
             panelContainer.clearChildren()
             when (page) {
+                PAGE_GENERAL -> panelContainer.addChild("general", createGeneralPage())
                 PAGE_KEYBINDINGS -> panelContainer.addChild("keybindings", createKeybindPage())
                 PAGE_ABOUT -> panelContainer.addChild("about", createAboutPage())
             }
+        }
+
+        private fun createGeneralPage(): LinearLayoutWidget {
+            val page = LinearLayoutWidget()
+            page.orientation = Orientation.VERTICAL
+            page.spacing = 3f
+            page.layoutParams = WidgetContainer.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+
+            val player = Minecraft.getInstance().player
+            page.addChild("friendly_fire", createSettingToggle(
+                Language.getInstance().getOrDefault("app.academy.settings.general.friendly_fire"),
+                player?.let(FriendlyFireSetting::isFriendlyFireEnabled) ?: true
+            ) { enabled ->
+                MisakaNetworkClient.send(FriendlyFireSetting.SetPacket(enabled))
+            })
+            page.addChild("destroy_blocks", createSettingToggle(
+                Language.getInstance().getOrDefault("app.academy.settings.general.destroy_blocks"),
+                player?.let(DestroyBlocksSetting::isDestroyBlocksEnabled) ?: true
+            ) { enabled ->
+                MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
+            })
+            return page
+        }
+
+        private fun createSettingToggle(
+            text: String,
+            checked: Boolean,
+            onChanged: (Boolean) -> Unit
+        ): LinearLayoutWidget {
+            val row = LinearLayoutWidget()
+            row.orientation = Orientation.HORIZONTAL
+            row.spacing = 4f
+            row.layoutParams = WidgetContainer.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(18f)
+
+            row.addChild("label", LabelWidget(text).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(0f)
+                    .gravity(Gravity.CENTER_LEFT)
+            })
+            row.addChild("toggle", ToggleButtonWidget().apply {
+                setChecked(checked)
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .size(20f, 10f)
+                    .gravity(Gravity.CENTER)
+                setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
+                    override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
+                        onChanged(isChecked)
+                    }
+                })
+            })
+            return row
         }
 
         private fun createKeybindPage(): LinearLayoutWidget {
@@ -285,20 +351,6 @@ object SettingsApp : App {
                 list.addChild(section.id, createBindingSection(section))
             }
 
-            for (info in AbilitySystemClient.getSkillInfosForCategory(AbilitySystemClient.getCategory())) {
-                val skill = info.skill
-                val config = tryGetConfig(skill) ?: continue
-                if (config.keyBindings.isEmpty()) continue
-                val section = BindingSection(
-                    skill.getKeyString(),
-                    skill.translatedName,
-                    resolveSkillIcon(info),
-                    config
-                ) { updated ->
-                    AcademyCraftClient.Config.INSTANCE.setConfig(skill.getKey(), updated)
-                }
-                list.addChild(section.id, createBindingSection(section))
-            }
             panel.setContent(list)
             page.addChild("bindings", panel)
             return page
@@ -330,32 +382,6 @@ object SettingsApp : App {
                     )
                 }
             )
-        }
-
-        private fun tryGetConfig(skill: Skill): KeyBindingConfig? {
-            if (!AcademyCraftClient.Config.INSTANCE.hasTypeHandler(skill.getKey())) return null
-            return runCatching {
-                AcademyCraftClient.Config.INSTANCE.getConfig<KeyBindingConfig>(skill.getKey())
-            }.getOrNull()
-        }
-
-        private fun resolveSkillIcon(info: AbilitySystemClient.SkillInfo): Identifier {
-            val skill = info.skill
-            val placeholder = R.textures.gui.icon.close
-            val categoryIcon = skill.category.developerIcon
-            val inferred = Identifier.fromNamespaceAndPath(
-                skill.getKey().namespace,
-                "textures/ability/${skill.category.getKey().path}/skill/${skill.getKey().path}/icon.png"
-            )
-            val resourceManager = Minecraft.getInstance().resourceManager
-            return sequenceOf(info.texture, skill.icon, inferred)
-                .distinct()
-                .firstOrNull { icon ->
-                    icon != placeholder
-                            && icon != categoryIcon
-                            && resourceManager.getResource(icon).isPresent
-                }
-                ?: placeholder
         }
 
         private fun createBindingSection(sectionInfo: BindingSection): LinearLayoutWidget {
@@ -443,7 +469,9 @@ object SettingsApp : App {
             rebindButton.onClickListener = { _: Widget? ->
                 startCapture(section, bindingName)
             }
-            rebindButton.addChild("text", LabelWidget("改键").apply {
+            rebindButton.addChild("text", LabelWidget(
+                Language.getInstance().getOrDefault("app.academy.settings.keybind.rebind")
+            ).apply {
                 scale = 0.7f
                 layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT)

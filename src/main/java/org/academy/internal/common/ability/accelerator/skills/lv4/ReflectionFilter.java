@@ -121,6 +121,16 @@ public final class ReflectionFilter extends Skill {
         return !shouldAcceptEffect(player, effect);
     }
 
+    public static float getReflectionMaintenanceCost(ServerPlayer player) {
+        var data = normalizeData(Server.getOrCreateData(player));
+        var modeCost = switch (data.getMode()) {
+            case REFLECT_ALL -> 50.0f;
+            case POSITIVE_FILTER -> 60.0f;
+            case NEUTRAL_FILTER -> 70.0f;
+        };
+        return modeCost + (data.whitelist.size() + data.blacklist.size()) * 5.0f;
+    }
+
     private static String effectId(MobEffectInstance effect) {
         var id = BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value());
         return id == null ? null : id.toString();

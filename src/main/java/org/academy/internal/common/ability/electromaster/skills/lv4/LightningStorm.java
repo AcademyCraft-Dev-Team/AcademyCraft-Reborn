@@ -102,8 +102,8 @@ public class LightningStorm extends Skill {
     }
 
     public static final class Server {
-        public static float calculateDamage(float playerMultiplier) {
-            return DAMAGE * Math.max(0.0f, playerMultiplier);
+        public static float calculateDamage(float abilityPower, float playerMultiplier) {
+            return DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
         }
 
         @SubscribePacket
@@ -154,8 +154,11 @@ public class LightningStorm extends Skill {
 
                 var box = new net.minecraft.world.phys.AABB(strikePos).inflate(3);
                 var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
-                var damage = Server.calculateDamage(AbilitySystemServer.getSystem(player)
-                        .getPlayerDamageMultiplier(player.getUUID()));
+                var system = AbilitySystemServer.getSystem(player);
+                var damage = Server.calculateDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID())
+                );
                 var source = SkillDamageSource.of(
                         player, Skills.LIGHTNING_STORM.get(), DamageTypes.LIGHTNING_BOLT);
                 for (var target : targets) {

@@ -54,9 +54,9 @@ public class SpacialExcision extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(0)
-                .iterationTicks(60)
+                .iterationTicks(40)
                 .maxStacks(1)
-                .dependsOn(Skills.COORDINATE_TELEPORT)
+                .dependsOn(Skills.AREA_TELEPORT_START)
         );
     }
 

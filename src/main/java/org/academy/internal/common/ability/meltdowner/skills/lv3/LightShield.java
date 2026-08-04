@@ -15,6 +15,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -79,6 +80,8 @@ public final class LightShield extends Skill {
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
+                .iterationTicks(0)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -293,19 +296,37 @@ public final class LightShield extends Skill {
 
             ticks++;
             var system = AbilitySystemServer.getSystem(player);
-            var actualCost = 5.0f * system.getPlayerCalculationIntensity(player.getUUID());
-            var available = system.getPlayerAvailableCP(player.getUUID());
-            if (available < actualCost) return;
-            if (ticks % CP_INTERVAL_TICKS == 0) {
-                system.setPlayerAvailableCP(player.getUUID(), available - actualCost);
+            if (ticks % CP_INTERVAL_TICKS == 0
+                    && !system.tryTimedOccupation(player.getUUID(), 5.0f, skill)) {
+                end();
+                return;
             }
             player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 10, 1, false, false, true));
+            destroyIncomingProjectiles();
+            var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
             var playerMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
-            if (ticks % ATTACK_INTERVAL_TICKS == 0) applyRadialPulse(skill, playerMultiplier);
+            if (ticks % ATTACK_INTERVAL_TICKS == 0) {
+                applyRadialPulse(skill, abilityPower, playerMultiplier);
+            }
         }
 
-        private void applyRadialPulse(LightShield skill, float playerMultiplier) {
-            var damage = calculateDamage(playerMultiplier);
+        private void destroyIncomingProjectiles() {
+            var origin = player.getEyePosition();
+            var forward = player.getLookAngle().normalize();
+            for (var projectile : initialLevel.getEntitiesOfClass(
+                    Projectile.class,
+                    player.getBoundingBox().inflate(3.0),
+                    projectile -> projectile.isAlive() && projectile.getOwner() != player
+            )) {
+                var delta = projectile.position().subtract(origin);
+                if (delta.lengthSqr() <= 9.0 && delta.dot(forward) > 0.0) {
+                    projectile.discard();
+                }
+            }
+        }
+
+        private void applyRadialPulse(LightShield skill, float abilityPower, float playerMultiplier) {
+            var damage = calculateDamage(abilityPower, playerMultiplier);
             var source = SkillDamageSource.of(player, skill);
             var targets = initialLevel.getEntitiesOfClass(
                     Mob.class,
@@ -343,8 +364,14 @@ public final class LightShield extends Skill {
         }
     }
 
-    static float calculateDamage(float playerMultiplier) {
-        return MeltdownerBeamDamage.calculate(BASE_DAMAGE, 0.0f, 0.0f, playerMultiplier, false);
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(
+                BASE_DAMAGE * Math.max(0.0f, abilityPower),
+                0.0f,
+                0.0f,
+                playerMultiplier,
+                false
+        );
     }
 
     @PacketTarget(ThreadType.SERVER)

@@ -43,7 +43,7 @@ public final class DarkmatterShaping extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(50)
-                .iterationTicks(20)
+                .iterationTicks(40)
                 .maxStacks(1)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );

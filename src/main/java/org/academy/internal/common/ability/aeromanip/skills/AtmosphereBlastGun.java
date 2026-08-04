@@ -162,7 +162,9 @@ public final class AtmosphereBlastGun extends Skill {
                         )
                 );
 
-                var damage = BASE_DAMAGE * context.system().getPlayerDamageMultiplier(player.getUUID());
+                var damage = BASE_DAMAGE
+                        * context.system().getPlayerAbilityPowerMultiplier(player.getUUID())
+                        * context.system().getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, Skills.ATMOSPHERE_BLAST_GUN.get());
                 var direction = look.normalize();
                 for (var target : targets) {

@@ -120,6 +120,7 @@ public class KineticEnergyApplied extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(20)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_ACCEL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition("Vector Acceleration", "academy:vector_accel"))
@@ -341,6 +342,12 @@ public class KineticEnergyApplied extends Skill {
         private static void executeImpact(ServerLevel level, ServerPlayer player, Vec3 center,
                                           Vec3 direction, int impactLevel, BlockPos priorityBlock) {
             var system = AbilitySystemServer.getSystem(player);
+            if (!system.tryTimedOccupation(
+                    player.getUUID(),
+                    impactLevel * 10.0f,
+                    Skills.KINETIC_ENERGY_APPLIED.get(),
+                    20
+            )) return;
             var radius = getImpactRadius(impactLevel);
             var damage = getImpactDamage(
                     impactLevel,
