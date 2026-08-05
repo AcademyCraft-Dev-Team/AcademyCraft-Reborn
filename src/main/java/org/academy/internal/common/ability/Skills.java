@@ -63,6 +63,10 @@ import org.academy.internal.common.ability.meltdowner.skills.lv4.ParticleWaveCan
 import org.academy.internal.common.ability.meltdowner.skills.lv5.ChainFusion;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.AutoCruiseBeamCannon;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
+import org.academy.internal.common.ability.mentalout.skills.MentalStupor;
+import org.academy.internal.common.ability.mentalout.skills.MentalIntervention;
+import org.academy.internal.common.ability.mentalout.skills.ImpressionManipulation;
+import org.academy.internal.common.ability.mentalout.skills.TargetMisidentification;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv1.SpaceFoldingTheorem;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
@@ -176,6 +180,17 @@ public final class Skills {
     public static final DeferredHolder<Skill, PulseCharge> PULSE_CHARGE = SKILLS.register(SkillNames.PULSE_CHARGE, PulseCharge::new);
     public static final DeferredHolder<Skill, Disarm> DISARM = SKILLS.register(SkillNames.DISARM, Disarm::new);
     public static final DeferredHolder<Skill, Shackle> SHACKLE = SKILLS.register(SkillNames.SHACKLE, Shackle::new);
+    /**
+     * Mentalout
+     */
+    public static final DeferredHolder<Skill, MentalIntervention> MENTAL_INTERVENTION =
+            SKILLS.register(SkillNames.MENTAL_INTERVENTION, MentalIntervention::new);
+    public static final DeferredHolder<Skill, TargetMisidentification> TARGET_MISIDENTIFICATION =
+            SKILLS.register(SkillNames.TARGET_MISIDENTIFICATION, TargetMisidentification::new);
+    public static final DeferredHolder<Skill, MentalStupor> MENTAL_STUPOR =
+            SKILLS.register(SkillNames.MENTAL_STUPOR, MentalStupor::new);
+    public static final DeferredHolder<Skill, ImpressionManipulation> IMPRESSION_MANIPULATION =
+            SKILLS.register(SkillNames.IMPRESSION_MANIPULATION, ImpressionManipulation::new);
     /**
      * Phase 2 - Aura and Toggle Skills
      */

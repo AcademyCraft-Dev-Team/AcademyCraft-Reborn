@@ -7,6 +7,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.api.common.entitycontrol.AttackDecision;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,6 +20,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Entity.class)
 public abstract class MixinEntity {
+    @Inject(
+            method = "isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$overrideMentalControlAlliance(
+            Entity other,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (!((Object) this instanceof LivingEntity source) || !(other instanceof LivingEntity target)) return;
+        var decision = MentalControlRuntime.allianceDecision(source, target);
+        var reverseDecision = MentalControlRuntime.allianceDecision(target, source);
+        if (decision == AttackDecision.ALLOW || reverseDecision == AttackDecision.ALLOW) {
+            cir.setReturnValue(false);
+        } else if (decision == AttackDecision.DENY || reverseDecision == AttackDecision.DENY) {
+            cir.setReturnValue(true);
+        }
+    }
+
     @Inject(method = "remove", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionRemoval(Entity.RemovalReason reason, CallbackInfo ci) {
         var protectedByReflection = (Object) this instanceof ServerPlayer player

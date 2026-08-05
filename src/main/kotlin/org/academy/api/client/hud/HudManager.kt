@@ -11,6 +11,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.hud.ability.AbilityInfoHud
+import org.academy.api.client.hud.ability.ControlledTargetsHud
 import org.academy.api.client.hud.ability.ToggleStatusHud
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.render.Render
@@ -36,6 +37,7 @@ object HudManager {
         TerminalHud.initMain()
         AbilityInfoHud.initMain()
         ToggleStatusHud.initMain()
+        ControlledTargetsHud.initMain()
     }
 
     @RenderThread
@@ -58,6 +60,7 @@ object HudManager {
         TerminalHud.INSTANCE.perform(mouseX, mouseY, deltaPartialTick)
         AbilityInfoHud.instance.perform(mouseX, mouseY, deltaPartialTick)
         ToggleStatusHud.instance.perform(mouseX, mouseY, deltaPartialTick)
+        ControlledTargetsHud.instance.perform(mouseX, mouseY, deltaPartialTick)
     }
 
     fun render() {
@@ -87,6 +90,7 @@ object HudManager {
             TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
             AbilityInfoHud.instance.render(ui)
             ToggleStatusHud.instance.render(ui)
+            ControlledTargetsHud.instance.render(ui)
 
             if (drewStencil.get()) {
                 BlurEffect.apply(

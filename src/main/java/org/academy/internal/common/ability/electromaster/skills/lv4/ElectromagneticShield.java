@@ -166,6 +166,10 @@ public final class ElectromagneticShield extends Skill {
         private Server() {
         }
 
+        public static boolean isActive(ServerPlayer player) {
+            return Skills.ELECTROMAGNETIC_SHIELD.get().isEnabled(player);
+        }
+
         @SubscribePacket
         public static void handle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();

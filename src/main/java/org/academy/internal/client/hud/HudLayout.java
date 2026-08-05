@@ -8,6 +8,8 @@ public final class HudLayout {
 
     private static final float TOGGLE_STATUS_WIDTH = 140.0f;
     private static final float TOGGLE_STATUS_HEIGHT = 75.0f;
+    private static final float MENTAL_CONTROL_WIDTH = 168.0f;
+    private static final float MENTAL_CONTROL_HEIGHT = 184.0f;
     private static final float CP_WIDTH = 240.0f;
     private static final float CP_HEIGHT = 27.0f;
     private static final float SKILL_WHEEL_WIDTH = 104.0f;
@@ -24,6 +26,7 @@ public final class HudLayout {
 
     public enum Region {
         TOGGLE_STATUS("hud.academy.layout.region.ability_status"),
+        MENTAL_CONTROL("hud.academy.layout.region.mental_control"),
         CP("hud.academy.layout.region.cp"),
         SKILL_WHEEL("hud.academy.layout.region.skill_name");
 
@@ -41,6 +44,7 @@ public final class HudLayout {
             var config = HudLayoutConfig.get();
             return switch (this) {
                 case TOGGLE_STATUS -> validScale(config.toggleStatusHudScale);
+                case MENTAL_CONTROL -> validScale(config.mentalControlHudScale);
                 case CP -> validScale(config.cpHudScale);
                 case SKILL_WHEEL -> validScale(config.skillWheelHudScale);
             };
@@ -51,6 +55,7 @@ public final class HudLayout {
             var config = HudLayoutConfig.get();
             switch (this) {
                 case TOGGLE_STATUS -> config.toggleStatusHudScale = value;
+                case MENTAL_CONTROL -> config.mentalControlHudScale = value;
                 case CP -> config.cpHudScale = value;
                 case SKILL_WHEEL -> config.skillWheelHudScale = value;
             }
@@ -67,6 +72,12 @@ public final class HudLayout {
                 case TOGGLE_STATUS -> new Rect(
                         8.0f + config.toggleStatusHudOffsetX,
                         8.0f + config.toggleStatusHudOffsetY,
+                        width,
+                        height
+                );
+                case MENTAL_CONTROL -> new Rect(
+                        8.0f + config.mentalControlHudOffsetX,
+                        (screenHeight - height) / 2.0f + config.mentalControlHudOffsetY,
                         width,
                         height
                 );
@@ -97,6 +108,12 @@ public final class HudLayout {
                     config.toggleStatusHudOffsetX = Math.round((float) clampedLeft - 8.0f);
                     config.toggleStatusHudOffsetY = Math.round((float) clampedTop - 8.0f);
                 }
+                case MENTAL_CONTROL -> {
+                    config.mentalControlHudOffsetX = Math.round((float) clampedLeft - 8.0f);
+                    config.mentalControlHudOffsetY = Math.round(
+                            (float) clampedTop - (screenHeight - current.height) / 2.0f
+                    );
+                }
                 case CP -> {
                     config.cpHudOffsetX = Math.round((float) clampedLeft - (screenWidth - 4.0f - current.width));
                     config.cpHudOffsetY = Math.round((float) clampedTop - 4.0f);
@@ -118,6 +135,11 @@ public final class HudLayout {
                     config.toggleStatusHudOffsetY = 0;
                     config.toggleStatusHudScale = 1.0f;
                 }
+                case MENTAL_CONTROL -> {
+                    config.mentalControlHudOffsetX = 0;
+                    config.mentalControlHudOffsetY = 0;
+                    config.mentalControlHudScale = 1.0f;
+                }
                 case CP -> {
                     config.cpHudOffsetX = 0;
                     config.cpHudOffsetY = 0;
@@ -134,6 +156,7 @@ public final class HudLayout {
         private float nominalWidth() {
             return switch (this) {
                 case TOGGLE_STATUS -> TOGGLE_STATUS_WIDTH;
+                case MENTAL_CONTROL -> MENTAL_CONTROL_WIDTH;
                 case CP -> CP_WIDTH;
                 case SKILL_WHEEL -> SKILL_WHEEL_WIDTH;
             };
@@ -142,6 +165,7 @@ public final class HudLayout {
         private float nominalHeight() {
             return switch (this) {
                 case TOGGLE_STATUS -> TOGGLE_STATUS_HEIGHT;
+                case MENTAL_CONTROL -> MENTAL_CONTROL_HEIGHT;
                 case CP -> CP_HEIGHT;
                 case SKILL_WHEEL -> SKILL_WHEEL_HEIGHT;
             };

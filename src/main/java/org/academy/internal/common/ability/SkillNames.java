@@ -81,6 +81,13 @@ public final class SkillNames {
     public static final String CHAIN_FUSION = "chain_fusion";
     public static final String DISINTEGRATE = "disintegrate";
     public static final String SPACIAL_EXCISION = "spacial_excision";
+    public static final String MENTAL_INTRUSION = "mental_intrusion";
+    public static final String MENTAL_INTERVENTION = "mental_intervention";
+    public static final String SENSORY_DISTORTION = "sensory_distortion";
+    public static final String TARGET_MISIDENTIFICATION = "target_misidentification";
+    public static final String IMPRESSION_MANIPULATION = "impression_manipulation";
+    public static final String MENTAL_STUPOR = "mental_stupor";
+    public static final String PRECISION_OPERATION = "precision_operation";
     public static final String LEVEL0_PASSIVE_LV1 = "level0_passive_lv1";
     public static final String LEVEL0_PASSIVE_LV2 = "level0_passive_lv2";
     public static final String LEVEL0_PASSIVE_LV3 = "level0_passive_lv3";

@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 public final class AbilitySystemServer {
@@ -606,6 +607,29 @@ public final class AbilitySystemServer {
         return false;
     }
 
+    public boolean castCpIfActionSucceeds(
+            ServerPlayer player,
+            Skill skill,
+            float cost,
+            BooleanSupplier action
+    ) {
+        if (action == null || !Float.isFinite(cost) || cost < 0) return false;
+        var uuid = player.getUUID();
+        var actualCost = Math.max(0, cost * playerCPManager.getCalculationIntensity(uuid));
+        var level = getPlayerSkillLevel(uuid, skill.getKeyString());
+        if (!playerCPManager.tryOccupationIf(
+                uuid,
+                actualCost,
+                skill,
+                resolveIterationPoints(skill.getIterationTicks(level), cost),
+                action
+        )) {
+            return false;
+        }
+        addPlayerSkillExp(uuid, skill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+        return true;
+    }
+
     public boolean tryPermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
         var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
@@ -638,6 +662,92 @@ public final class AbilitySystemServer {
         if (!Float.isFinite(amount) || amount < 0) return false;
         var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.ensurePermanentOccupation(uuid, actualAmount, skill);
+    }
+
+    public boolean replacePermanentOccupation(UUID uuid, float amount, Skill skill) {
+        return replacePermanentOccupations(uuid, Map.of(skill, amount));
+    }
+
+    public boolean replacePermanentOccupations(UUID uuid, Map<Skill, Float> amounts) {
+        if (amounts == null) return false;
+        var intensity = playerCPManager.getCalculationIntensity(uuid);
+        var actual = new LinkedHashMap<Skill, Float>();
+        for (var entry : amounts.entrySet()) {
+            var amount = entry.getValue();
+            if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
+            actual.put(entry.getKey(), Math.max(0, amount * intensity));
+        }
+        return playerCPManager.replacePermanentOccupationsAndTryOccupation(
+                uuid,
+                actual,
+                null,
+                0,
+                0
+        );
+    }
+
+    public boolean castWithPermanentOccupations(
+            ServerPlayer player,
+            Skill castSkill,
+            float castCost,
+            Map<Skill, Float> permanentAmounts
+    ) {
+        if (castSkill == null || permanentAmounts == null || !Float.isFinite(castCost) || castCost < 0) {
+            return false;
+        }
+        var uuid = player.getUUID();
+        var intensity = playerCPManager.getCalculationIntensity(uuid);
+        var actualPermanent = new LinkedHashMap<Skill, Float>();
+        for (var entry : permanentAmounts.entrySet()) {
+            var amount = entry.getValue();
+            if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
+            actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
+        }
+        var actualCast = Math.max(0, castCost * intensity);
+        if (!playerCPManager.replacePermanentOccupationsAndTryOccupation(
+                uuid,
+                actualPermanent,
+                castSkill,
+                actualCast,
+                resolveIterationPoints(castSkill.getIterationTicks(getPlayerSkillLevel(
+                        uuid,
+                        castSkill.getKeyString()
+                )), castCost)
+        )) {
+            return false;
+        }
+        addPlayerSkillExp(uuid, castSkill, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+        return true;
+    }
+
+    public boolean canCastWithPermanentOccupations(
+            ServerPlayer player,
+            Skill castSkill,
+            float castCost,
+            Map<Skill, Float> permanentAmounts
+    ) {
+        if (castSkill == null || permanentAmounts == null || !Float.isFinite(castCost) || castCost < 0) {
+            return false;
+        }
+        var uuid = player.getUUID();
+        var intensity = playerCPManager.getCalculationIntensity(uuid);
+        var actualPermanent = new LinkedHashMap<Skill, Float>();
+        for (var entry : permanentAmounts.entrySet()) {
+            var amount = entry.getValue();
+            if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
+            actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
+        }
+        var actualCast = Math.max(0, castCost * intensity);
+        return playerCPManager.canReplacePermanentOccupationsAndTryOccupation(
+                uuid,
+                actualPermanent,
+                castSkill,
+                actualCast,
+                resolveIterationPoints(castSkill.getIterationTicks(getPlayerSkillLevel(
+                        uuid,
+                        castSkill.getKeyString()
+                )), castCost)
+        );
     }
 
     public void setPlayerLevel(UUID uuid, int level) {

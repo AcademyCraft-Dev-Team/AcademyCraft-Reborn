@@ -9,7 +9,11 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.util.QuantumUtil;
+import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
@@ -17,6 +21,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAby
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
@@ -30,6 +35,28 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEntity {
+    @Inject(method = "canAttack", at = @At("HEAD"), cancellable = true)
+    private void academy$allowMentalControlTarget(
+            LivingEntity target,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        var decision = MentalControlRuntime.attackDecision((LivingEntity) (Object) this, target);
+        if (decision == AttackDecision.ALLOW) cir.setReturnValue(true);
+        if (decision == AttackDecision.DENY) cir.setReturnValue(false);
+    }
+
+    @Inject(method = "travelRidden", at = @At("HEAD"), cancellable = true)
+    private void academy$blockRiderInputDuringMentalStupor(
+            Player controller,
+            Vec3 selfInput,
+            CallbackInfo ci
+    ) {
+        if ((Object) this instanceof Mob mob && MentalControlRuntime.isFrozen(mob)) {
+            mob.travel(Vec3.ZERO);
+            ci.cancel();
+        }
+    }
+
     @ModifyVariable(method = "setHealth", at = @At("HEAD"), argsOnly = true)
     private float academy$protectVectorReflectionHealth(float health) {
         var entity = (LivingEntity) (Object) this;
