@@ -435,7 +435,7 @@ public final class ReflectionFilter extends Skill {
 
         private void rebuildAllEffects() {
             allEffects.clear();
-            for (MobEffect effect : BuiltInRegistries.MOB_EFFECT) {
+            for (var effect : BuiltInRegistries.MOB_EFFECT) {
                 var id = BuiltInRegistries.MOB_EFFECT.getKey(effect);
                 if (id == null) continue;
                 allEffects.add(new EffectEntry(

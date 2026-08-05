@@ -3,6 +3,7 @@ package org.academy.api.client.render.effect;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import java.util.ArrayDeque;
@@ -101,7 +102,7 @@ public final class TrailRenderer {
     }
 
     private void renderQuadStrip(PoseStack.Pose pose, VertexConsumer vc,
-                                 net.minecraft.world.phys.Vec3 camPos,
+                                 Vec3 camPos,
                                  float r, float g, float b, float baseWidth, float alphaMult) {
         var it = points.iterator();
         var prev = it.next();

@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -54,6 +55,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -225,7 +227,7 @@ public final class PulseCharge extends Skill {
         }
 
         private static synchronized void addArtificialSignal(ServerLevel level, BlockPos pos) {
-            var positions = POWERED_BLOCKS.computeIfAbsent(level, ignored -> new java.util.HashMap<>());
+            var positions = POWERED_BLOCKS.computeIfAbsent(level, ignored -> new HashMap<>());
             var previous = positions.getOrDefault(pos, 0);
             positions.put(pos.immutable(), previous + 1);
             if (previous == 0) refreshRedstoneTarget(level, pos);
@@ -366,12 +368,12 @@ public final class PulseCharge extends Skill {
         }
     }
 
-    private record ChargeTarget(LivingEntity entity, BlockPos blockPos, net.minecraft.core.Direction side) {
+    private record ChargeTarget(LivingEntity entity, BlockPos blockPos, Direction side) {
         private static ChargeTarget forEntity(LivingEntity entity) {
             return new ChargeTarget(entity, null, null);
         }
 
-        private static ChargeTarget forBlock(BlockPos pos, net.minecraft.core.Direction side) {
+        private static ChargeTarget forBlock(BlockPos pos, Direction side) {
             return new ChargeTarget(null, pos.immutable(), side);
         }
     }

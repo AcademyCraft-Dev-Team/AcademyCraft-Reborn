@@ -58,6 +58,7 @@ interface Widget : Tickable {
     fun hasPendingRender(): Boolean {
         return isRenderDirty
     }
+
     fun isVisible(): Boolean
     fun getWidgetState(): Int
     fun isAbsoluteEnabled(): Boolean

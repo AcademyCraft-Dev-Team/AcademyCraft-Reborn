@@ -1,19 +1,18 @@
 package org.academy.internal.client.gui.screen
 
+/*import org.academy.api.client.gui.msdf.atlas.MsdfAtlasDebugger
+import org.academy.api.client.gui.msdf.font.MsdfFontService*/
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.common.NeoForge
-import org.academy.api.client.resources.R
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-/*import org.academy.api.client.gui.msdf.atlas.MsdfAtlasDebugger
-import org.academy.api.client.gui.msdf.font.MsdfFontService*/
 import org.academy.api.client.gui.screen.ContainerUiScreen
 import org.academy.api.client.gui.util.InfoAreaUtil.create
 import org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow
@@ -23,6 +22,7 @@ import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.TextBoxWidget.FocusGainedEvent
 import org.academy.api.client.gui.widget.TextBoxWidget.FocusLostEvent
+import org.academy.api.client.resources.R
 import org.academy.api.client.util.AnimationUtil
 import org.academy.api.common.wireless.SetNodeNamePacket
 import org.academy.api.common.wireless.SetNodePassPacket

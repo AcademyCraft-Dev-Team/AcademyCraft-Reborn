@@ -16,8 +16,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
 import org.academy.AcademyCraft
-import org.academy.api.client.render.Render
-import org.academy.api.client.resources.R
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.drawable.StateListDrawable
@@ -30,6 +28,8 @@ import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.*
+import org.academy.api.client.render.Render
+import org.academy.api.client.resources.R
 
 abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructor(
     menu: T,

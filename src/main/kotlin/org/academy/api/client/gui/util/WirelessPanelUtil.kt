@@ -1,13 +1,13 @@
 package org.academy.api.client.gui.util
 
 import net.minecraft.core.BlockPos
-import org.academy.api.client.resources.R
 import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.drawable.TextureDrawable
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.*
+import org.academy.api.client.resources.R
 import org.academy.api.common.wireless.ConnectNodePacket
 import org.academy.api.common.wireless.DisconnectNodePacket
 import org.academy.api.common.wireless.GetAvailableNodesPacket

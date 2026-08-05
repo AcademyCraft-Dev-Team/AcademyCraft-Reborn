@@ -2,6 +2,7 @@ package org.academy.internal.common.world.item;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.ArmorMaterial;
@@ -33,7 +34,7 @@ public final class DarkmatterArmorMaterial {
                 37,
                 defense,
                 25,
-                net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_NETHERITE,
+                SoundEvents.ARMOR_EQUIP_NETHERITE,
                 3.0f,
                 0.1f,
                 REPAIR_INGREDIENT,

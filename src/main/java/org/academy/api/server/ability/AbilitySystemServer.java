@@ -2,6 +2,7 @@ package org.academy.api.server.ability;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -24,6 +25,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.*;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
@@ -155,22 +157,22 @@ public final class AbilitySystemServer {
     public static StartSkillDevPacket.Response handleStartSkillDev(StartSkillDevPacket payload) {
         var player = payload.getPacketListener().getPlayer();
         var devPos = BlockPos.of(payload.getUserPos());
-        if (player.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(devPos)) > 64.0) {
+        if (player.position().distanceToSqr(Vec3.atCenterOf(devPos)) > 64.0) {
             return new StartSkillDevPacket.Response(false, "Too far away");
         }
 
         var level = player.level();
         var be = level.getBlockEntity(devPos);
-        if (!(be instanceof org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity developer)) {
+        if (!(be instanceof AbilityDeveloperBlockEntity developer)) {
             return new StartSkillDevPacket.Response(false, "Invalid developer");
         }
 
         var skillKey = payload.getSkillName();
-        var skillId = net.minecraft.resources.Identifier.tryParse(skillKey);
+        var skillId = Identifier.tryParse(skillKey);
         if (skillId == null) {
             return new StartSkillDevPacket.Response(false, "Invalid skill id");
         }
-        var skillRef = org.academy.api.common.registries.Registries.SKILLS.get(skillId);
+        var skillRef = Registries.SKILLS.get(skillId);
         if (skillRef.isEmpty()) {
             return new StartSkillDevPacket.Response(false, "Unknown skill");
         }
@@ -198,8 +200,8 @@ public final class AbilitySystemServer {
         }
 
         // Level check
-        int playerLevel = instance.getPlayerLevel(player.getUUID());
-        int recommendedLevel = skill.getRecommendedLevel().getLevelCode();
+        var playerLevel = instance.getPlayerLevel(player.getUUID());
+        var recommendedLevel = skill.getRecommendedLevel().getLevelCode();
         if (playerLevel < recommendedLevel) {
             return new StartSkillDevPacket.Response(false, "Level too low");
         }
@@ -225,7 +227,7 @@ public final class AbilitySystemServer {
             }
 
             @Override
-            public void onComplete(ServerPlayer sp, org.academy.api.common.wireless.WirelessUser dev) {
+            public void onComplete(ServerPlayer sp, WirelessUser dev) {
                 developer.setEnergyStored(developer.getEnergyStored() - skill.getEnergyCostToLearn());
                 instance.addPlayerSkill(sp, skillKey);
             }
@@ -238,13 +240,13 @@ public final class AbilitySystemServer {
     public static StartLevelDevPacket.Response handleStartLevelDev(StartLevelDevPacket payload) {
         var player = payload.getPacketListener().getPlayer();
         var devPos = BlockPos.of(payload.getUserPos());
-        if (player.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(devPos)) > 64.0) {
+        if (player.position().distanceToSqr(Vec3.atCenterOf(devPos)) > 64.0) {
             return new StartLevelDevPacket.Response(false, "Too far away");
         }
 
         var level = player.level();
         var be = level.getBlockEntity(devPos);
-        if (!(be instanceof org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity developer)) {
+        if (!(be instanceof AbilityDeveloperBlockEntity developer)) {
             return new StartLevelDevPacket.Response(false, "Invalid developer");
         }
 
@@ -273,7 +275,7 @@ public final class AbilitySystemServer {
             }
 
             @Override
-            public void onComplete(ServerPlayer sp, org.academy.api.common.wireless.WirelessUser dev) {
+            public void onComplete(ServerPlayer sp, WirelessUser dev) {
                 developer.setEnergyStored(developer.getEnergyStored() - cost);
                 if (instance.getPlayerAbilityCategory(sp.getUUID()) == AbilityCategories.LEVEL0.get()) {
                     var weightedRandom = new MathUtil.WeightedRandom<AbilityCategory>();
@@ -290,7 +292,7 @@ public final class AbilitySystemServer {
                     }
                 } else {
                     instance.setPlayerLevel(sp.getUUID(), currentLevel + 1);
-                    var levels = org.academy.api.common.ability.AbilityLevel.values();
+                    var levels = AbilityLevel.values();
                     if (currentLevel + 1 < levels.length) {
                         instance.setPlayerMaxCP(sp.getUUID(), levels[currentLevel + 1].getBasicCP());
                     }
@@ -303,7 +305,6 @@ public final class AbilitySystemServer {
 
     public static void registerContext(ServerContext serverContext) {
         var player = serverContext.player;
-        if (player == null) return;
 
         var instance = getSystem(player);
         instance.activeContexts.computeIfAbsent(player.getUUID(), _ -> ConcurrentHashMap.newKeySet())
@@ -315,7 +316,6 @@ public final class AbilitySystemServer {
 
     public static void unregisterContext(ServerContext serverContext) {
         var player = serverContext.player;
-        if (player == null) return;
 
         getSystem(player).removeContext(serverContext);
     }
@@ -345,7 +345,7 @@ public final class AbilitySystemServer {
         return DEVELOP_DATA_MAP.computeIfAbsent(uuid, DevelopData::new);
     }
 
-    public static void tickDevelopments(net.minecraft.server.MinecraftServer server) {
+    public static void tickDevelopments(MinecraftServer server) {
         for (var entry : DEVELOP_DATA_MAP.entrySet()) {
             var data = entry.getValue();
             if (!data.isDeveloping()) continue;
@@ -366,15 +366,13 @@ public final class AbilitySystemServer {
         }
     }
 
-    public void schedulePlayerSync(final UUID uuid, final Identifier syncType) {
+    public void schedulePlayerSync(UUID uuid, Identifier syncType) {
         syncManager.schedulePlayerSync(uuid, syncType);
     }
 
     public void onPlayerLogin(ServerPlayer player) {
         syncManager.onPlayerLogin(player);
-        if (playerDataManager != null) {
-            playerDataManager.onPlayerLogin(player);
-        }
+        playerDataManager.onPlayerLogin(player);
         for (var sub : SubsystemRegistry.getSubsystems()) {
             sub.onPlayerLogin(player);
         }
@@ -396,7 +394,7 @@ public final class AbilitySystemServer {
     }
 
     public Player getPlayerData(UUID uuid) {
-        return playerDataManager.getData(uuid);
+        return Objects.requireNonNull(playerDataManager.getData(uuid));
     }
 
     @SubscribeEvent
@@ -416,9 +414,7 @@ public final class AbilitySystemServer {
         var player = event.getEntity();
         var uuid = player.getUUID();
         var playerData = getPlayerData(uuid);
-        if (playerData == null) return;
 
-        // 恢复所有已启用的技能占用
         playerData.getSkillDataMap().forEach((skillId, data) -> {
             if (!data.isEnabled()) return;
             Registries.SKILLS.get(Identifier.parse(skillId)).ifPresent(skillRef -> {
@@ -810,7 +806,7 @@ public final class AbilitySystemServer {
                 if (data == null || data.getState() == DevState.IDLE) continue;
                 var player = server.getPlayerList().getPlayer(uuid);
                 if (player == null) continue;
-                String message = data.getState() == DevState.DEVELOPING
+                var message = data.getState() == DevState.DEVELOPING
                         ? "Developing... " + (int) (data.getProgress() * 100) + "%"
                         : data.getState() == DevState.DONE ? "Success!" : "Failed";
                 MisakaNetworkServer.send(player, new DevSyncPacket(data.getState(), data.getProgress(), message));

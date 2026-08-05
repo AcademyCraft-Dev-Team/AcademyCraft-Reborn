@@ -192,7 +192,7 @@ public class AbilityData {
     }
 
     public void addAbilityExp(float amount) {
-        this.abilityExp += amount;
+        abilityExp += amount;
         markDirty();
     }
 

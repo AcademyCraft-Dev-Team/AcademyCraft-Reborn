@@ -1,8 +1,10 @@
 package org.academy.internal.coremod;
 
+import net.minecraft.server.level.ServerPlayer;
 import sun.misc.Unsafe;
 
 import java.lang.instrument.ClassFileTransformer;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
@@ -40,7 +42,7 @@ public final class VectorReflectionClassPtrTransformer implements ClassFileTrans
         synchronized (LOCK) {
             if (isInstalled()) return;
             try {
-                Field field = Unsafe.class.getDeclaredField("theUnsafe");
+                var field = Unsafe.class.getDeclaredField("theUnsafe");
                 field.setAccessible(true);
                 unsafe = (Unsafe) field.get(null);
                 klassWordBytes = useCompressedClassPointers() ? 4 : 8;
@@ -61,7 +63,7 @@ public final class VectorReflectionClassPtrTransformer implements ClassFileTrans
     }
 
     public static boolean installServerPlayer(Object target) {
-        return install(target, VrServerPlayer.class, net.minecraft.server.level.ServerPlayer.class);
+        return install(target, VrServerPlayer.class, ServerPlayer.class);
     }
 
     public static boolean installLocalPlayer(Object target) {
@@ -82,7 +84,7 @@ public final class VectorReflectionClassPtrTransformer implements ClassFileTrans
     }
 
     public static boolean isServerPlayerIntact(Object target) {
-        return matches(target, VrServerPlayer.class, net.minecraft.server.level.ServerPlayer.class);
+        return matches(target, VrServerPlayer.class, ServerPlayer.class);
     }
 
     public static boolean isLocalPlayerIntact(Object target) {
@@ -148,7 +150,7 @@ public final class VectorReflectionClassPtrTransformer implements ClassFileTrans
         var first = new Object();
         var second = new Object();
         var different = new KlassProbe();
-        for (long offset = 4L; offset <= 24L; offset += 4L) {
+        for (var offset = 4L; offset <= 24L; offset += 4L) {
             var firstWord = rawRead(first, offset);
             var secondWord = rawRead(second, offset);
             var differentWord = rawRead(different, offset);
@@ -176,7 +178,7 @@ public final class VectorReflectionClassPtrTransformer implements ClassFileTrans
     private static boolean useCompressedClassPointers() {
         try {
             var beanType = Class.forName("com.sun.management.HotSpotDiagnosticMXBean");
-            Method platformBean = java.lang.management.ManagementFactory.class
+            var platformBean = ManagementFactory.class
                     .getMethod("getPlatformMXBean", Class.class);
             var bean = platformBean.invoke(null, beanType);
             var option = beanType.getMethod("getVMOption", String.class)

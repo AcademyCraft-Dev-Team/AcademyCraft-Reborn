@@ -49,6 +49,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+
 public class BloodflowReverse extends Skill {
     public static final double RANGE_BONUS = 2.0;
     public static final double TARGET_BOX_INFLATE = 0.2;
@@ -76,9 +77,9 @@ public class BloodflowReverse extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME,
-                        InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_RIGHT,
+                InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_RIGHT,
                                 InputConstants.RELEASE, InputConstants.MOD_ALT)
-                ), ctx -> Client.reverseBloodflow());
+        ), ctx -> Client.reverseBloodflow());
         NeoForge.EVENT_BUS.register(Client.class);
     }
 

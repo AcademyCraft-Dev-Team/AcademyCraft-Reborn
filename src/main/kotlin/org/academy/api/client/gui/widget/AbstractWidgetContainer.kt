@@ -13,7 +13,7 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.util.GlyphCommandGenerator
-import java.util.IdentityHashMap
+import java.util.*
 import kotlin.math.max
 
 abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {

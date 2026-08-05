@@ -14,7 +14,6 @@ import org.academy.api.client.gui.event.KeyEvent
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.render.RenderContext
-import org.lwjgl.glfw.GLFW
 import java.util.function.Consumer
 import java.util.function.Predicate
 import kotlin.math.max

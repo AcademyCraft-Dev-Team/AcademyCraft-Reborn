@@ -14,10 +14,12 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -272,7 +274,7 @@ public final class PlatinumWing extends Skill {
             var source = SkillDamageSource.of(
                     player,
                     Skills.PLATINUM_WING.get(),
-                    net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL
+                    DamageTypes.GENERIC_KILL
             );
             new CTAEntityActuallyHurt(living).actuallyHurt(source, damage, true);
             if (living.isAlive()) EntityControlApi.forceSetTrueHealth(living, 0.0f);
@@ -367,7 +369,7 @@ public final class PlatinumWing extends Skill {
         }
 
         private record ExecutionTombstone(UUID entityId, Identifier typeId, Identifier dimension,
-                                          net.minecraft.world.phys.Vec3 position, long gameTime,
+                                          Vec3 position, long gameTime,
                                           boolean controllerBacked, String className, String displayName,
                                           float width, float height) {
             private boolean matchesControllerRespawn(Entity entity) {

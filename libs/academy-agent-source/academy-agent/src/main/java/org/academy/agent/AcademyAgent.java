@@ -11,6 +11,7 @@ public final class AcademyAgent {
     private static final String HANDLER_CLASS = "org.academy.internal.coremod.AcademyAgentEntrypoint";
     private static final AtomicBoolean HANDOFF_DONE = new AtomicBoolean(false);
     private static final AtomicBoolean HANDOFF_THREAD_STARTED = new AtomicBoolean(false);
+    private static final AtomicBoolean TRANSFORMER_REGISTERED = new AtomicBoolean(false);
 
     public static void premain(String agentArgs, Instrumentation instrumentation) {
         install(instrumentation, agentArgs, false);
@@ -25,12 +26,36 @@ public final class AcademyAgent {
         System.setProperty(INSTALLED_PROPERTY, "true");
         var handler = handlerClassName(agentArgs);
         var internalName = handler.replace('.', '/');
-        instrumentation.addTransformer(new HandoffTransformer(instrumentation, agentArgs, internalName), true);
-        // During premain the JDK is still initializing its class-loader tables. Scanning every
-        // loaded class here can recursively load ConcurrentHashMap internals and abort the VM.
-        // The transformer will schedule the handoff when the mod handler is defined. Dynamic
-        // self-attach happens later, so agentmain must also handle an already-loaded handler.
-        if (handlerMayAlreadyBeLoaded) tryHandoff(instrumentation, agentArgs);
+        if (handlerMayAlreadyBeLoaded) {
+            instrumentation.addTransformer(
+                    new HandoffTransformer(instrumentation, agentArgs, internalName), true);
+            tryHandoff(instrumentation, agentArgs);
+        } else {
+            // During premain the JDK is still initializing its class-loader tables. Calling
+            // addTransformer() here can race with the JDWP debugger agent's
+            // findClass("java/lang/Class") during cbEarlyVMInit and produce
+            // AGENT_ERROR_JNI_EXCEPTION(184) on JBR/JDK 25. Defer the registration until the
+            // VM has finished early initialization; the handler class is not loadable until
+            // NeoForge wires the mods class loader anyway.
+            scheduleTransformerRegistration(instrumentation, agentArgs, internalName);
+        }
+    }
+
+    private static void scheduleTransformerRegistration(Instrumentation instrumentation,
+                                                        String agentArgs, String internalName) {
+        var thread = new Thread(() -> {
+            if (TRANSFORMER_REGISTERED.compareAndSet(false, true)) {
+                try {
+                    instrumentation.addTransformer(
+                            new HandoffTransformer(instrumentation, agentArgs, internalName), true);
+                } catch (Throwable error) {
+                    TRANSFORMER_REGISTERED.set(false);
+                    System.err.println("[AcademyAgent] Transformer registration failed: " + error);
+                }
+            }
+        }, "Academy-Agent-Transformer-Register");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private static String handlerClassName(String agentArgs) {

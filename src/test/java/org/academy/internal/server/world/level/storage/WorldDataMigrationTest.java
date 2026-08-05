@@ -5,6 +5,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilt
 import org.academy.internal.common.skilldata.SkillData;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -116,7 +117,7 @@ class WorldDataMigrationTest {
         var filterData = (ReflectionFilter.Data) data;
         assertEquals(27.0f, filterData.getExp());
         assertEquals(ReflectionFilter.Mode.POSITIVE_FILTER, filterData.getMode());
-        assertEquals(java.util.List.of("minecraft:speed"), filterData.getWhitelist());
-        assertEquals(java.util.List.of("minecraft:poison"), filterData.getBlacklist());
+        assertEquals(List.of("minecraft:speed"), filterData.getWhitelist());
+        assertEquals(List.of("minecraft:poison"), filterData.getBlacklist());
     }
 }

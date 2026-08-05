@@ -39,7 +39,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         fun onWheelScrolled(offset: Float)
 
         fun onScrollStateChanged(state: Int)
-}
+    }
 
     /**
      * Number of items that fit into the widget's height. Must be >= 1.

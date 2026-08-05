@@ -18,8 +18,8 @@ public final class LoopingPlayerSoundInstance extends AbstractTickableSoundInsta
         super(sound, SoundSource.PLAYERS, SoundInstance.createUnseededRandom());
         this.player = player;
         this.shouldPlay = shouldPlay;
-        this.looping = true;
-        this.delay = 0;
+        looping = true;
+        delay = 0;
         this.volume = volume;
         this.pitch = pitch;
         tick();

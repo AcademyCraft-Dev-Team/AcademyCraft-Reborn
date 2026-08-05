@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.rendertype.OutputTarget;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
+import org.academy.api.client.render.vfx.VfxManager;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
@@ -137,7 +138,7 @@ public final class BloomEffect {
     }
 
     public void process() {
-        if (!hasBeenUsed) return;
+        if (!hasBeenUsed && !VfxManager.INSTANCE.hasGlowData()) return;
 
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.gameRenderer.mainRenderTarget();
@@ -178,6 +179,10 @@ public final class BloomEffect {
                     false
             );
             AFTER.draw();
+
+            if (VfxManager.INSTANCE.hasGlowData()) {
+                VfxManager.INSTANCE.renderGlowFrame(inputView, input.getDepthTextureView());
+            }
 
             {
                 ping = resourcePool.acquire(descHalf);

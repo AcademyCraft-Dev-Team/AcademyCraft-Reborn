@@ -225,6 +225,10 @@ neoForge {
         publish(file(path))
     }
     runs {
+        register("client") {
+            client()
+            environment("IS_DEV", "false")
+        }
         register("clientDev") {
             client()
             environment("IS_DEV", "true")

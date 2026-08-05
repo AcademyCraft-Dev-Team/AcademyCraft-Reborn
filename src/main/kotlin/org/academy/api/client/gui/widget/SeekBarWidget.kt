@@ -5,7 +5,6 @@ import net.minecraft.util.Mth
 import org.academy.api.client.gui.event.KeyEvent
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Orientation
-import org.lwjgl.glfw.GLFW
 
 open class SeekBarWidget : ProgressBarWidget() {
     var keyProgressIncrement: Int = 1

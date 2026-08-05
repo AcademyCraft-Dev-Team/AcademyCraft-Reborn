@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -48,6 +49,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public final class LocationTeleport extends Skill {
     public static final int MAX_MARKS = 32;
@@ -151,7 +153,7 @@ public final class LocationTeleport extends Skill {
             if (name.isEmpty()) name = "Mark " + (data.getMarks().size() + 1);
             if (name.length() > 64) name = name.substring(0, 64);
             var pos = packet.useCurrent ? player.blockPosition()
-                    : new net.minecraft.core.BlockPos(packet.x, packet.y, packet.z);
+                    : new BlockPos(packet.x, packet.y, packet.z);
             data.getMarks().add(new Mark(name, player.level().dimension().identifier().toString(),
                     pos.getX(), pos.getY(), pos.getZ()));
             dirtyAndSync(player, data);
@@ -195,7 +197,7 @@ public final class LocationTeleport extends Skill {
                 forceDestinationChunk(level, mark.x(), mark.z(), "location_" + player.getStringUUID());
                 level.getChunk(mark.x() >> 4, mark.z() >> 4);
                 player.teleportTo(level, destination.x, destination.y, destination.z,
-                        java.util.Set.of(), player.getYRot(), player.getXRot(), false);
+                        Set.of(), player.getYRot(), player.getXRot(), false);
                 player.resetFallDistance();
                 data.setSelectedMarkIndex(packet.index);
                 dirtyAndSync(player, data);

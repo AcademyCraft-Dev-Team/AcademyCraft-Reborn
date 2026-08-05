@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 import net.minecraft.util.RandomSource;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
@@ -329,7 +330,7 @@ public final class ParticleEmitter {
                 } else {
                     emissionDirection.cross(worldUp, axis);
                 }
-                var rotation = new org.joml.Quaternionf().rotateTo(worldUp, emissionDirection);
+                var rotation = new Quaternionf().rotateTo(worldUp, emissionDirection);
                 localDir.rotate(rotation);
                 yield localDir;
             }
