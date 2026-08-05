@@ -202,7 +202,7 @@ public class PlasmaGeneration extends Skill {
             var damage = BASE_DAMAGE
                     * AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
                     * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
-            var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player);
+            var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player, Skills.PLASMA_GENERATION.get());
             plasma.launch(
                     player.getUUID(),
                     targetPos,

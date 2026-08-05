@@ -24,6 +24,8 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.ability.Skill
 import org.academy.api.common.ability.LearningHelper
 import org.academy.api.common.registries.Registries
+import org.academy.internal.client.hud.HudLayout
+import org.academy.internal.client.hud.HudLayoutConfig
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier
@@ -56,6 +58,7 @@ class ToggleStatusHud private constructor() {
         private val statuses = LinearLayoutWidget()
         private val root = object : FrameLayoutWidget() {
             override fun tick() {
+                applyHudLayout()
                 refresh()
                 super.tick()
             }
@@ -70,10 +73,19 @@ class ToggleStatusHud private constructor() {
                 .sizeMode(SizeMode.WRAP_CONTENT)
                 .gravity(Gravity.TOP_LEFT)
                 .margin(8f, 8f, 0f, 0f)
+            statuses.originX = 0f
+            statuses.originY = 0f
             root.addChild("toggle_statuses", statuses)
         }
 
         override fun get(): WidgetContainer = root
+
+        private fun applyHudLayout() {
+            val config = HudLayoutConfig.get()
+            statuses.translationX = config.toggleStatusHudOffsetX.toFloat()
+            statuses.translationY = config.toggleStatusHudOffsetY.toFloat()
+            statuses.scale = HudLayout.Region.TOGGLE_STATUS.scale()
+        }
 
         private fun activeSkills(): List<Skill> {
             if (Minecraft.getInstance().player == null) return emptyList()

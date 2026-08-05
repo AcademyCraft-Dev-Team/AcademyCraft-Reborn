@@ -249,7 +249,7 @@ public final class ScatterBomb extends Skill {
                             MAX_HEALTH_DAMAGE_RATIO,
                             damageMultiplier,
                             radiationEnabled,
-                            DestroyBlocksSetting.canDestroyBlocks(player)
+                            DestroyBlocksSetting.canDestroyBlocks(player, skill)
                     );
                     beam.currentChargerTicks = beam.getAttackDelayTicks();
                     beam.setHeldCharge(false);

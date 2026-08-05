@@ -24,6 +24,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.SkillFlightController;
 import org.misaka.MisakaNetworkClient;
@@ -47,9 +49,9 @@ public final class Flight extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(50)
+                .maintenanceCost(60)
                 .iterationTicks(40)
-                .dependsOn(Skills.BREATHING_FILM)
+                .dependsOn(Skills.WIND_CORRIDOR)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
         );
     }
@@ -84,7 +86,7 @@ public final class Flight extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.FLIGHT.get(),
-                        List.of(BreathingFilm.Client.SKILL_INFO),
+                        List.of(WindCorridor.Client.SKILL_INFO),
                         R.textures.flight_icon,
                         150,
                         104
@@ -157,11 +159,32 @@ public final class Flight extends Skill {
                 var system = AbilitySystemServer.getSystem(player);
                 enabled = system.ensurePermanentOccupation(
                         player.getUUID(),
-                        skill.getMaintenanceCost(skill.getLevel(player)),
+                        skill.getMaintenanceCost(skill.getLevel(player))
+                                * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT),
                         skill
                 );
                 if (!enabled && skill.isEnabled(player)) {
                     system.toggleSkill(player.getUUID(), skill.getKeyString());
+                }
+                if (enabled && player.isSprinting()) {
+                    enabled = system.tryTimedOccupation(player.getUUID(),
+                            8.0f * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT), skill, 20);
+                }
+                if (enabled) {
+                    var velocity = player.getDeltaMovement();
+                    var speed = velocity.length();
+                    if (!Double.isFinite(speed) || !Double.isFinite(velocity.x)
+                            || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z)) {
+                        player.setDeltaMovement(0, 0, 0);
+                    } else if (speed > 0.7) {
+                        var highSpeedAllowed = system.tryTimedOccupation(player.getUUID(),
+                                8.0f * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT), skill, 20);
+                        var cap = highSpeedAllowed ? 1.1 : 0.7;
+                        if (speed > cap) {
+                            var desired = velocity.scale(cap / speed);
+                            AeromanipTargeting.addClampedVelocity(player, desired.subtract(velocity));
+                        }
+                    }
                 }
             }
             SkillFlightController.setSource(player, FLIGHT_SOURCE, enabled);

@@ -32,7 +32,7 @@
 
 | 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `airflow_jet` 气流喷射 | 移植 | L1 / 5k / 10 | 服务端按视线施加 1.2 速度和向上推力，重置坠落距离 | `R↑` | 无 | `AirflowJet` |
+| `airflow_jet` 气流喷射 | 完善 | L1 / 5k / 每 10 tick 消耗 10 | 按住时由服务端持续沿视线推进，松开结束；潜行时快速制动并重置坠落距离 | `R` 按住 | 无 | `AirflowJet` |
 | `atmosphere_shield` 大气护盾 | 移植 | L3 / 30k / 维持 50 | 切换压缩空气薄膜，增强近战伤害和击退 | `Alt+N↑` | 气流喷射 | `AtmosphereShield` |
 | `breathing_film` 呼吸薄膜 | 移植 | L2 / 10k / 维持 20 | 学会后自动维持空气，周期恢复水下氧气 | 无 | 大气护盾 | `BreathingFilm` |
 | `atmosphere_blast_gun` 大气爆破枪 | 移植 | L4 / 60k / 40 | 8 格短程气爆，8 基础伤害并强力击飞敌人 | `Alt+鼠标左键↑` | 大气护盾 | `AtmosphereBlastGun` |

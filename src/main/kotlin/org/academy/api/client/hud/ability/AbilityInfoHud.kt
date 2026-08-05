@@ -33,6 +33,8 @@ import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.resources.R
 import org.academy.api.client.vanilla.ResizeDisplayEvent
+import org.academy.internal.client.hud.HudLayout
+import org.academy.internal.client.hud.HudLayoutConfig
 import org.joml.Vector3f
 import kotlin.math.abs
 import kotlin.math.max
@@ -74,6 +76,7 @@ private fun autoLerpColor(progress: Float): Color {
 class AbilityInfoHud private constructor() {
     private val context = Context()
     private val uiContext = UiContext()
+    private var activeSelectedSkill: SkillInfo? = null
 
     fun perform(mouseX: Double, mouseY: Double, deltaPartialTick: Float) {
         if (context.get().alpha == 0f) return
@@ -106,6 +109,15 @@ class AbilityInfoHud private constructor() {
     val selectedSkill: SkillInfo?
         get() = context.skillWheel.selectedSkillInfo
 
+    private fun triggerSelectedSkill(binding: InputSystem.BindingContext) {
+        val info = when (binding.action()) {
+            InputConstants.PRESS -> selectedSkill.also { activeSelectedSkill = it }
+            InputConstants.RELEASE -> (activeSelectedSkill ?: selectedSkill).also { activeSelectedSkill = null }
+            else -> null
+        } ?: return
+        InputSystem.triggerPrimaryBindingForSkill(info.skill, binding)
+    }
+
     @SubscribeEvent
     fun onTick(@Suppress("unused") event: ClientTickEvent.Post) {
         context.get().tick()
@@ -118,6 +130,7 @@ class AbilityInfoHud private constructor() {
 
     private class Context : WidgetContext {
         val skillWheel: SkillWheelWidget = SkillWheelWidget()
+        private val cp = FrameLayoutWidget()
 
         private val root: FrameLayoutWidget = createRoot()
 
@@ -126,14 +139,20 @@ class AbilityInfoHud private constructor() {
         }
 
         fun createRoot(): FrameLayoutWidget {
-            val root = FrameLayoutWidget()
+            val root = object : FrameLayoutWidget() {
+                override fun tick() {
+                    applyHudLayout()
+                    super.tick()
+                }
+            }
             root.alpha = 0f
             run {
-                val cp = FrameLayoutWidget()
                 cp.layoutParams = FrameLayoutWidget.LayoutParams()
                     .size(240f, 27f)
                     .margin(0f, 4f, 4f, 0f)
                     .gravity(Gravity.TOP_RIGHT)
+                cp.originX = 1f
+                cp.originY = 0f
 
                 root.addChild("cp", cp)
                 run {
@@ -467,11 +486,12 @@ class AbilityInfoHud private constructor() {
                             val fullWidth = (sourceRight - sourceLeft) * scale
                             val destHeight = (sourceBottom - sourceTop) * scale
                             val fillWidth = fullWidth * progress
-                            val sourceFillRight = sourceLeft + (sourceRight - sourceLeft) * progress
+                            val destFillLeft = fullWidth - fillWidth
+                            val sourceFillLeft = sourceRight - (sourceRight - sourceLeft) * progress
                             val finalAlpha = alpha * context.accumulatedAlpha
 
                             context.pose().pushPose()
-                            context.pose().translate(destLeft, destTop)
+                            context.pose().translate(destLeft + destFillLeft, destTop)
                             context.submit(object : DrawCommand(
                                 Render.RenderPipelines.IMAGE,
                                 listOf(TextureBinding("Sampler0", view, sampler)),
@@ -480,8 +500,8 @@ class AbilityInfoHud private constructor() {
                                 override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
                                     val matrix = pose.pose()
                                     val dest = Vector3f()
-                                    val u0 = sourceLeft / textureWidth
-                                    val u1 = sourceFillRight / textureWidth
+                                    val u0 = sourceFillLeft / textureWidth
+                                    val u1 = sourceRight / textureWidth
                                     val v0 = sourceTop / textureHeight
                                     val v1 = sourceBottom / textureHeight
                                     val a = (finalAlpha * 255f).toInt()
@@ -523,6 +543,8 @@ class AbilityInfoHud private constructor() {
             skillWheel.layoutParams = FrameLayoutWidget.LayoutParams()
                 .gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
                 .sizeMode(SizeMode.WRAP_CONTENT)
+            skillWheel.originX = 1f
+            skillWheel.originY = 0.5f
             skillWheel.setVisibleItemCount(7)
                 .setCyclic(true)
                 .setCurtain(true)
@@ -530,6 +552,16 @@ class AbilityInfoHud private constructor() {
             root.addChild("skill_wheel", skillWheel)
 
             return root
+        }
+
+        private fun applyHudLayout() {
+            val config = HudLayoutConfig.get()
+            cp.translationX = config.cpHudOffsetX.toFloat()
+            cp.translationY = config.cpHudOffsetY.toFloat()
+            cp.scale = HudLayout.Region.CP.scale()
+            skillWheel.translationX = config.skillWheelHudOffsetX.toFloat()
+            skillWheel.translationY = config.skillWheelHudOffsetY.toFloat()
+            skillWheel.scale = HudLayout.Region.SKILL_WHEEL.scale()
         }
     }
 
@@ -583,6 +615,7 @@ class AbilityInfoHud private constructor() {
             val category = AbilitySystemClient.getCategory()
             return AbilitySystemClient.getSkillInfosForCategory(category)
                 .filter { AbilitySystemClient.isSkillLearned(it.skill) }
+                .filter { InputSystem.hasActiveBindingForSkill(it.skill) }
         }
 
         private fun createSkillItem(info: SkillInfo): Widget {
@@ -615,8 +648,8 @@ class AbilityInfoHud private constructor() {
             binding.setGreen(0.82f)
             binding.setBlue(0.9f)
             binding.layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.BOTTOM_RIGHT)
-                .margin(0f, 0f, 1f, 0f)
+                .gravity(Gravity.BOTTOM_LEFT)
+                .margin(16f, 0f, 0f, 0f)
             row.addChild("binding", binding)
             return row
         }
@@ -629,26 +662,50 @@ class AbilityInfoHud private constructor() {
 
         private const val KEY_NAME_WHEEL_UP = "academy_ability_hud_wheel_up"
         private const val KEY_NAME_WHEEL_DOWN = "academy_ability_hud_wheel_down"
+        const val KEY_NAME_RELEASE_SELECTED = "academy_ability_hud_release_selected"
 
         fun initMain() {
             INSTANCE = AbilityInfoHud()
             NeoForge.EVENT_BUS.register(INSTANCE)
             val config = AcademyCraftClient.Config.INSTANCE
                 .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
+            var migratedLegacyBindings = false
+
+            fun hudBinding(name: String, key: Int, action: Int): InputSystem.KeyCombination {
+                val defaultBinding = InputSystem.combo(
+                    InputSystem.InputType.KEYBOARD,
+                    key,
+                    action,
+                    0
+                )
+                val configured = config.getKeyBinding(name, defaultBinding)
+                val isLegacyDefault = configured.type == InputSystem.InputType.KEYBOARD
+                    && configured.keys == setOf(key)
+                    && configured.action == action
+                    && configured.modifiers == InputSystem.ANY_MODIFIER
+                    && !configured.availableWhenScreen
+                    && !configured.unbound
+                if (!isLegacyDefault) return configured
+                config.setKeyBinding(name, defaultBinding)
+                migratedLegacyBindings = true
+                return defaultBinding
+            }
+
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_UP,
-                config.getKeyBinding(
-                    KEY_NAME_WHEEL_UP,
-                    InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_UP, InputConstants.PRESS)
-                )
+                hudBinding(KEY_NAME_WHEEL_UP, InputConstants.KEY_UP, InputConstants.PRESS)
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(-1) }
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_DOWN,
-                config.getKeyBinding(
-                    KEY_NAME_WHEEL_DOWN,
-                    InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_DOWN, InputConstants.PRESS)
-                )
+                hudBinding(KEY_NAME_WHEEL_DOWN, InputConstants.KEY_DOWN, InputConstants.PRESS)
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(1) }
+            InputSystem.addKeyBinding(
+                KEY_NAME_RELEASE_SELECTED,
+                hudBinding(KEY_NAME_RELEASE_SELECTED, InputConstants.KEY_C, InputSystem.ANY_ACTION)
+            ) { binding ->
+                if (AbilitySystemClient.isActiveHUD()) INSTANCE.triggerSelectedSkill(binding)
+            }
+            if (migratedLegacyBindings) AcademyCraftClient.Config.INSTANCE.save()
         }
     }
 }

@@ -27,10 +27,13 @@ import org.academy.api.client.gui.widget.ToggleButtonWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.hud.ability.AbilityInfoHud
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
 import org.academy.api.common.ability.Skill
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
+import org.misaka.MisakaNetworkClient
 import org.lwjgl.glfw.GLFW
 
 object SkillSettingsApp : App {
@@ -49,13 +52,23 @@ object SkillSettingsApp : App {
     }
 
     private class Context : WidgetContext {
+        companion object {
+            private const val TOOLTIP_WIDTH = 190f
+            private const val TOOLTIP_PADDING = 5f
+            private const val TOOLTIP_FONT_SIZE = 6.2f
+            private const val TOOLTIP_GAP = 4f
+        }
+
         private val pageContainer = FrameLayoutWidget()
+        private val skillIcons = linkedMapOf<Skill, Widget>()
+        private var skillTooltipHeight = 1f
+        private var tooltipSkill: Skill? = null
+        private var tooltipBindingRevision = -1L
         private var capturing: CaptureTarget? = null
         private var pendingType: InputSystem.InputType? = null
         private val pendingKeys: MutableSet<Int> = linkedSetOf()
         private var pendingMouseButton: Int = -1
         private var pendingModifiers: Int = 0
-        private var pendingCancel: Boolean = false
 
         private val captureHint = object : LabelWidget("") {
             override fun tick() {
@@ -63,6 +76,13 @@ object SkillSettingsApp : App {
                 updateCaptureHint()
             }
         }
+        private val skillTooltipText = LabelWidget("").apply {
+            baseFontSize = TOOLTIP_FONT_SIZE
+            setRed(0.9f)
+            setGreen(0.95f)
+            setBlue(1f)
+        }
+        private val skillTooltip = createSkillTooltip()
         private val captureLayer = createCaptureLayer()
         private val root = createRoot()
 
@@ -80,7 +100,12 @@ object SkillSettingsApp : App {
         )
 
         private fun createRoot(): FrameLayoutWidget {
-            val root = FrameLayoutWidget()
+            val root = object : FrameLayoutWidget() {
+                override fun tick() {
+                    super.tick()
+                    updateSkillTooltip()
+                }
+            }
             root.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
 
             val content = LinearLayoutWidget()
@@ -144,10 +169,14 @@ object SkillSettingsApp : App {
             captureLayer.isEnabled = false
             captureLayer.visibility = Widget.Visibility.INVISIBLE
             root.addChild("capture_layer", captureLayer)
+            root.addChild("skill_tooltip", skillTooltip)
             return root
         }
 
         private fun refreshPage() {
+            skillIcons.clear()
+            tooltipSkill = null
+            skillTooltip.visibility = Widget.Visibility.INVISIBLE
             pageContainer.clearChildren()
             pageContainer.addChild("skills", createSkillPage())
         }
@@ -233,10 +262,12 @@ object SkillSettingsApp : App {
             header.orientation = Orientation.HORIZONTAL
             header.spacing = 2f
             header.layoutParams = WidgetContainer.LayoutParams().widthMode(SizeMode.MATCH_PARENT)
-            header.addChild("icon", ImageWidget(resolveSkillIcon(info)).apply {
+            val icon = ImageWidget(resolveSkillIcon(info)).apply {
                 setSampler(FilterMode.LINEAR, false)
                 layoutParams = LinearLayoutWidget.LayoutParams().size(16f, 16f)
-            })
+            }
+            skillIcons[skill] = icon
+            header.addChild("icon", icon)
             header.addChild("name", LabelWidget(skill.translatedName).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
@@ -271,6 +302,9 @@ object SkillSettingsApp : App {
                     .height(10f)
                     .gravity(Gravity.CENTER_LEFT)
             })
+            if (DestroyBlocksSetting.supportsSkillBlockDestruction(skill)) {
+                section.addChild("block_destruction", createSkillDestroyBlocksRow(skill))
+            }
 
             val modules = SkillSettingsRegistry.getModules(skill)
             if (modules.isEmpty()) {
@@ -305,6 +339,135 @@ object SkillSettingsApp : App {
             return section
         }
 
+        private fun createSkillTooltip(): FrameLayoutWidget {
+            val tooltip = FrameLayoutWidget()
+            tooltip.layoutParams = FrameLayoutWidget.LayoutParams().size(TOOLTIP_WIDTH, 1f)
+            tooltip.isEnabled = false
+            tooltip.visibility = Widget.Visibility.INVISIBLE
+            tooltip.addChild("background", FillWidget(0xF00B1115.toInt()).apply {
+                layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            })
+            tooltip.addChild("accent", FillWidget(0xFF55CFE1.toInt()).apply {
+                layoutParams = FrameLayoutWidget.LayoutParams()
+                    .width(2f)
+                    .heightMode(SizeMode.MATCH_PARENT)
+            })
+            skillTooltipText.layoutParams = FrameLayoutWidget.LayoutParams()
+                .size(TOOLTIP_WIDTH - TOOLTIP_PADDING * 2, 1f)
+                .margin(TOOLTIP_PADDING, TOOLTIP_PADDING, TOOLTIP_PADDING, TOOLTIP_PADDING)
+            tooltip.addChild("text", skillTooltipText)
+            return tooltip
+        }
+
+        private fun updateSkillTooltip() {
+            if (capturing != null || root.width <= 0f || root.height <= 0f) {
+                skillTooltip.visibility = Widget.Visibility.INVISIBLE
+                return
+            }
+            val hovered = skillIcons.entries.firstOrNull { it.value.isHovered }
+            if (hovered == null) {
+                skillTooltip.visibility = Widget.Visibility.INVISIBLE
+                return
+            }
+
+            val bindingRevision = InputSystem.getBindingRevision()
+            if (tooltipSkill !== hovered.key || tooltipBindingRevision != bindingRevision) {
+                tooltipSkill = hovered.key
+                tooltipBindingRevision = bindingRevision
+                val text = wrapTooltipText(buildSkillTooltipText(hovered.key))
+                skillTooltipText.text = text
+                val textHeight = LabelWidget.getTextHeight(text, TOOLTIP_FONT_SIZE)
+                skillTooltipHeight = textHeight + TOOLTIP_PADDING * 2
+                skillTooltip.layoutParams = FrameLayoutWidget.LayoutParams()
+                    .size(TOOLTIP_WIDTH, skillTooltipHeight)
+                skillTooltipText.layoutParams = FrameLayoutWidget.LayoutParams()
+                    .size(TOOLTIP_WIDTH - TOOLTIP_PADDING * 2, textHeight)
+                    .margin(TOOLTIP_PADDING, TOOLTIP_PADDING, TOOLTIP_PADDING, TOOLTIP_PADDING)
+            }
+
+            val icon = hovered.value
+            val anchorX = icon.getAbsoluteX() - root.getAbsoluteX()
+            val anchorY = icon.getAbsoluteY() - root.getAbsoluteY()
+            val maxX = maxOf(2f, root.width - TOOLTIP_WIDTH - 2f)
+            val preferredX = anchorX + icon.width + TOOLTIP_GAP
+            val fallbackX = anchorX - TOOLTIP_WIDTH - TOOLTIP_GAP
+            skillTooltip.translationX = (if (preferredX <= maxX) preferredX else fallbackX).coerceIn(2f, maxX)
+            val maxY = maxOf(2f, root.height - skillTooltipHeight - 2f)
+            skillTooltip.translationY = anchorY.coerceIn(2f, maxY)
+            skillTooltip.visibility = Widget.Visibility.VISIBLE
+        }
+
+        private fun buildSkillTooltipText(skill: Skill): String {
+            val language = Language.getInstance()
+            val descriptionKey = "skill.${skill.key.namespace}.${skill.key.path}.desc"
+            val localizedDescription = language.getOrDefault(descriptionKey)
+            val description = if (localizedDescription == descriptionKey) {
+                translate("app.academy.skill_settings.tooltip.description_missing")
+            } else localizedDescription
+
+            val lines = mutableListOf(
+                skill.translatedName,
+                translate("app.academy.skill_settings.tooltip.description"),
+                description,
+                translate("app.academy.skill_settings.tooltip.usage")
+            )
+            val bindings = InputSystem.getKeyBindings()
+                .filter { InputSystem.isBindingForSkill(it.name(), skill) }
+            if (bindings.isEmpty()) {
+                lines += translate("app.academy.skill_settings.tooltip.passive")
+            } else {
+                bindings.forEach { binding ->
+                    val actionKey = "key.academy.${binding.name()}"
+                    val localizedAction = language.getOrDefault(actionKey)
+                    val actionName = if (localizedAction == actionKey) {
+                        binding.name().replace('_', ' ')
+                    } else localizedAction
+                    val phase = translate(
+                        when (binding.combo().action) {
+                            InputConstants.PRESS -> "app.academy.skill_settings.tooltip.phase.press"
+                            InputConstants.RELEASE -> "app.academy.skill_settings.tooltip.phase.release"
+                            InputConstants.REPEAT -> "app.academy.skill_settings.tooltip.phase.repeat"
+                            else -> "app.academy.skill_settings.tooltip.phase.press_release"
+                        }
+                    )
+                    val disabled = if (InputSystem.isKeyBindingEnabled(binding.name())) "" else
+                        " ${translate("app.academy.skill_settings.tooltip.disabled")}"
+                    lines += "- $actionName: ${displayBinding(binding.combo())} ($phase)$disabled"
+                }
+                val selectedKey = InputSystem.getKeyBinding(AbilityInfoHud.KEY_NAME_RELEASE_SELECTED)
+                    ?.let(::displayBinding)
+                    ?: translate("app.academy.settings.keybind.format.none")
+                lines += translate("app.academy.skill_settings.tooltip.selected_cast")
+                    .replace("%s", selectedKey)
+            }
+            return lines.joinToString("\n")
+        }
+
+        private fun wrapTooltipText(text: String): String {
+            val maxWidth = TOOLTIP_WIDTH - TOOLTIP_PADDING * 2
+            return text.lines().flatMap { wrapTooltipLine(it, maxWidth) }.joinToString("\n")
+        }
+
+        private fun wrapTooltipLine(line: String, maxWidth: Float): List<String> {
+            if (line.isEmpty() || LabelWidget.getTextWidth(line, TOOLTIP_FONT_SIZE) <= maxWidth) return listOf(line)
+            val output = mutableListOf<String>()
+            var remaining = line
+            while (remaining.isNotEmpty()) {
+                var end = 1
+                var lastSpace = -1
+                while (end <= remaining.length
+                    && LabelWidget.getTextWidth(remaining.substring(0, end), TOOLTIP_FONT_SIZE) <= maxWidth) {
+                    if (remaining[end - 1].isWhitespace()) lastSpace = end - 1
+                    end++
+                }
+                var split = (end - 1).coerceAtLeast(1)
+                if (split < remaining.length && lastSpace > 0) split = lastSpace
+                output += remaining.substring(0, split).trimEnd()
+                remaining = remaining.substring(split).trimStart()
+            }
+            return output
+        }
+
         private fun createBindingRow(
             section: BindingSection,
             bindingName: String,
@@ -323,7 +486,7 @@ object SkillSettingsApp : App {
                     .height(10f)
                     .gravity(Gravity.CENTER_LEFT)
             })
-            row.addChild("key", LabelWidget(combo.displayName()).apply {
+            row.addChild("key", LabelWidget(displayBinding(combo)).apply {
                 scale = 0.7f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .width(44f)
@@ -357,6 +520,51 @@ object SkillSettingsApp : App {
                     .gravity(Gravity.CENTER)
             })
             row.addChild("rebind", rebind)
+
+            val reset = ButtonWidget()
+            reset.layoutParams = LinearLayoutWidget.LayoutParams()
+                .size(26f, 12f)
+                .gravity(Gravity.CENTER)
+            reset.onClickListener = { resetBinding(section, bindingName) }
+            reset.addChild("text", LabelWidget(translate("app.academy.settings.keybind.reset")).apply {
+                scale = 0.7f
+                layoutParams = FrameLayoutWidget.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT)
+                    .gravity(Gravity.CENTER)
+            })
+            row.addChild("reset", reset)
+            return row
+        }
+
+        private fun createSkillDestroyBlocksRow(skill: Skill): LinearLayoutWidget {
+            val row = LinearLayoutWidget()
+            row.orientation = Orientation.HORIZONTAL
+            row.spacing = 2f
+            row.layoutParams = WidgetContainer.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .paddingLeft(3f)
+            row.addChild("label", LabelWidget(
+                translate("app.academy.skill_settings.advanced.block_destruction")
+            ).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(11f)
+                    .gravity(Gravity.CENTER_LEFT)
+            })
+            row.addChild("control", ToggleButtonWidget().apply {
+                val player = Minecraft.getInstance().player
+                setChecked(player == null || DestroyBlocksSetting.isSkillDestroyBlocksEnabled(player, skill))
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .size(16f, 9f)
+                    .gravity(Gravity.CENTER)
+                setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
+                    override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
+                        val currentPlayer = Minecraft.getInstance().player ?: return
+                        DestroyBlocksSetting.setSkillDestroyBlocksEnabled(currentPlayer, skill, isChecked)
+                        MisakaNetworkClient.send(DestroyBlocksSetting.SetSkillPacket(skill, isChecked))
+                    }
+                })
+            })
             return row
         }
 
@@ -480,7 +688,12 @@ object SkillSettingsApp : App {
                     event.consume()
                     val key = event.keyCode
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
-                        pendingCancel = true
+                        val target = capturing ?: return
+                        val current = target.section.config.getKeyBinding(target.bindingName)
+                            ?: InputSystem.getKeyBinding(target.bindingName)
+                            ?: return
+                        resetCaptureState()
+                        applyCapture(InputSystem.unbound(current))
                         return
                     }
                     if (isModifierKey(key) || pendingType == InputSystem.InputType.MOUSE) return
@@ -493,7 +706,7 @@ object SkillSettingsApp : App {
                 override fun onKeyReleased(event: KeyEvent) {
                     event.consume()
                     if (isModifierKey(event.keyCode)) return
-                    if (pendingCancel || pendingType == InputSystem.InputType.KEYBOARD) finishCapture()
+                    if (pendingType == InputSystem.InputType.KEYBOARD) finishCapture()
                 }
 
                 override fun onMousePressed(event: MouseEvent) {
@@ -507,15 +720,10 @@ object SkillSettingsApp : App {
 
                 override fun onMouseReleased(event: MouseEvent) {
                     event.consume()
-                    if (pendingCancel || pendingType == InputSystem.InputType.MOUSE) finishCapture()
+                    if (pendingType == InputSystem.InputType.MOUSE) finishCapture()
                 }
 
                 private fun finishCapture() {
-                    if (pendingCancel) {
-                        resetCaptureState()
-                        exitCapture()
-                        return
-                    }
                     val combo = buildPendingCombo() ?: return
                     resetCaptureState()
                     applyCapture(combo)
@@ -524,15 +732,19 @@ object SkillSettingsApp : App {
         }
 
         private fun buildPendingCombo(): InputSystem.KeyCombination? {
+            val target = capturing ?: return null
+            val current = target.section.config.getKeyBinding(target.bindingName)
+                ?: InputSystem.getKeyBinding(target.bindingName)
+                ?: return null
             return when (pendingType ?: return null) {
                 InputSystem.InputType.KEYBOARD -> {
                     if (pendingKeys.isEmpty()) return null
                     InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
                         pendingKeys.toSet(),
-                        InputConstants.PRESS,
+                        current.action,
                         pendingModifiers,
-                        false
+                        current.availableWhenScreen
                     )
                 }
 
@@ -541,8 +753,9 @@ object SkillSettingsApp : App {
                     InputSystem.combo(
                         InputSystem.InputType.MOUSE,
                         pendingMouseButton,
-                        InputConstants.PRESS,
-                        pendingModifiers
+                        current.action,
+                        pendingModifiers,
+                        current.availableWhenScreen
                     )
                 }
             }
@@ -553,7 +766,6 @@ object SkillSettingsApp : App {
             pendingKeys.clear()
             pendingMouseButton = -1
             pendingModifiers = 0
-            pendingCancel = false
         }
 
         private fun startCapture(section: BindingSection, bindingName: String) {
@@ -581,12 +793,25 @@ object SkillSettingsApp : App {
             refreshPage()
         }
 
+        private fun resetBinding(section: BindingSection, bindingName: String) {
+            val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
+            section.config.setKeyBinding(bindingName, defaultCombo)
+            InputSystem.updateKeyBinding(bindingName, defaultCombo)
+            section.persist(section.config)
+            AcademyCraftClient.Config.INSTANCE.save()
+            refreshPage()
+        }
+
+        private fun displayBinding(combo: InputSystem.KeyCombination): String {
+            return if (combo.unbound) translate("app.academy.settings.keybind.format.none") else combo.displayName()
+        }
+
         private fun updateCaptureHint() {
             val target = capturing
             captureHint.text = if (target == null) {
                 ""
             } else {
-                val preview = buildPendingCombo()?.displayName()
+                val preview = buildPendingCombo()?.let(::displayBinding)
                     ?: translate("app.academy.skill_settings.capture.key")
                 translate("app.academy.skill_settings.capture.hint")
                     .replace("%1\$s", target.bindingName)

@@ -2,11 +2,20 @@ package org.academy.internal.common.ability;
 
 public final class SkillNames {
     public static final String AIRFLOW_JET = "airflow_jet";
+    public static final String AIR_CUSHION = "air_cushion";
+    public static final String FLOW_SENSE = "flow_sense";
     public static final String ATMOSPHERE_SHIELD = "atmosphere_shield";
     public static final String BREATHING_FILM = "breathing_film";
+    public static final String PNEUMATIC_GRASP = "pneumatic_grasp";
+    public static final String TAILWIND_FIELD = "tailwind_field";
+    public static final String LAMINAR_CUTTER = "laminar_cutter";
+    public static final String VORTEX_PULL = "vortex_pull";
     public static final String ATMOSPHERE_BLAST_GUN = "atmosphere_blast_gun";
+    public static final String WIND_CORRIDOR = "wind_corridor";
+    public static final String PRESSURE_LOCK = "pressure_lock";
     public static final String FLIGHT = "flight";
     public static final String VACUUM_DOMAIN = "vacuum_domain";
+    public static final String ATMOSPHERIC_DOMINION = "atmospheric_dominion";
     public static final String RAILGUN = "railgun";
     public static final String ARC_GENERATE = "arc_generate";
     public static final String ELECTROMAGNETIC_SHIELD = "electromagnetic_shield";

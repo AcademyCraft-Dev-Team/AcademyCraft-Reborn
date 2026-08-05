@@ -4,24 +4,40 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.coremod.VectorReflectionClassPtrTransformer;
+import org.academy.internal.coremod.ClassPointerProtectionManager;
+
+import java.lang.ref.WeakReference;
 
 public final class VectorReflectionClientRuntime {
+    private static WeakReference<LocalPlayer> currentPlayer = new WeakReference<>(null);
+
     public static void tick(Minecraft minecraft) {
         var player = minecraft.player;
+        var previous = currentPlayer.get();
+        if (previous != null && previous != player) {
+            ClassPointerProtectionManager.restore(previous);
+        }
+        currentPlayer = new WeakReference<>(player);
         if (player == null) return;
         if (!isProtected(player)) {
-            VectorReflectionClassPtrTransformer.restoreOriginal(player);
+            ClassPointerProtectionManager.restore(player);
             return;
         }
 
-        VectorReflectionClassPtrTransformer.repairLocalPlayer(player);
+        ClassPointerProtectionManager.ensureClientPlayer(player);
         sanitize(player);
         var level = minecraft.level;
         if (level != null && level.getEntity(player.getId()) != player) {
             player.revive();
             level.addEntity(player);
         }
+    }
+
+    public static void shutdown() {
+        var player = currentPlayer.get();
+        if (player != null) ClassPointerProtectionManager.restore(player);
+        currentPlayer = new WeakReference<>(null);
+        ClassPointerProtectionManager.restoreAllClient();
     }
 
     public static boolean isProtected(LocalPlayer player) {

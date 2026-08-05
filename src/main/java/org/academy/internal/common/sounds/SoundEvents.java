@@ -53,6 +53,14 @@ public class SoundEvents {
             () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("penetrate_teleport")));
     public static final DeferredHolder<SoundEvent, SoundEvent> FLASHING = SOUND_EVENTS.register("flashing",
             () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("flashing")));
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRFLOW_JET = SOUND_EVENTS.register("airflow_jet",
+            () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("airflow_jet")));
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRFLOW_FIELD = SOUND_EVENTS.register("airflow_field",
+            () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("airflow_field")));
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRFLOW_IMPACT = SOUND_EVENTS.register("airflow_impact",
+            () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("airflow_impact")));
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRFLOW_DOMAIN = SOUND_EVENTS.register("airflow_domain",
+            () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("airflow_domain")));
 
     private SoundEvents() {
     }

@@ -54,7 +54,7 @@ public abstract class MixinLevelRenderer {
             CallbackInfo ci
     ) {
         var event = new LevelRenderEvent(
-                Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks(),
+                Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false),
                 new MatrixStack().setFrom(poseStack.last()),
                 poseStack,
                 output

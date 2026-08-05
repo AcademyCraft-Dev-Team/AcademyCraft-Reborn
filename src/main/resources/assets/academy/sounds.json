@@ -124,5 +124,21 @@
     "sounds": [
       "academy:ability/teleport/skill/flashing"
     ]
+  },
+  "airflow_jet": {
+    "subtitle": "academy.airflow_jet_sound",
+    "sounds": []
+  },
+  "airflow_field": {
+    "subtitle": "academy.airflow_field_sound",
+    "sounds": []
+  },
+  "airflow_impact": {
+    "subtitle": "academy.airflow_impact_sound",
+    "sounds": []
+  },
+  "airflow_domain": {
+    "subtitle": "academy.airflow_domain_sound",
+    "sounds": []
   }
 }

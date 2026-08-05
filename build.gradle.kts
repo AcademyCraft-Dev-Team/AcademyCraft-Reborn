@@ -23,29 +23,6 @@ val modId = project.property("mod_id").toString()
 val renderDocVersion = libs.versions.renderdoc.get()
 val renderNurseVersion = libs.versions.rendernurse.get()
 val renderNurseJar = layout.buildDirectory.file("renderdoc/render-nurse/render-nurse.jar")
-val academyAgentBuildJar = layout.projectDirectory.file("academy-agent/build/libs/academy-agent.jar")
-val academyAgentJar = layout.projectDirectory.file("libs/academy-agent.jar")
-
-val updateAcademyAgentJar = tasks.register<Copy>("updateAcademyAgentJar") {
-    description = "Rebuilds the Git-tracked embedded Academy javaagent"
-    group = "academy"
-    dependsOn(":academy-agent:jar")
-    from(academyAgentBuildJar)
-    into(layout.projectDirectory.dir("libs"))
-    rename { "academy-agent.jar" }
-}
-
-val verifyAcademyAgentJar = tasks.register("verifyAcademyAgentJar") {
-    description = "Checks that the Git-tracked embedded Academy javaagent exists"
-    group = "verification"
-    mustRunAfter(updateAcademyAgentJar)
-    inputs.file(academyAgentJar)
-    doLast {
-        require(academyAgentJar.asFile.isFile) {
-            "Missing libs/academy-agent.jar; run ./gradlew updateAcademyAgentJar"
-        }
-    }
-}
 
 val renderDocDownloadDir = layout.buildDirectory.dir("renderdoc/download")
 val renderDocInstallDir = layout.buildDirectory.dir("renderdoc/installation").get().asFile
@@ -288,8 +265,6 @@ neoForge {
                 jvmArgument("-XX:+AllowEnhancedClassRedefinition")
             }
             jvmArgument("-Xverify:none")
-            jvmArgument("-javaagent:${academyAgentJar.asFile.absolutePath}")
-            systemProperty("academy.agent.vr.enabled", "true")
         }
     }
 
@@ -426,24 +401,44 @@ tasks.withType<JavaCompile>().configureEach {
     options.isFork = true
 }
 
-tasks.withType<Jar>().configureEach {
-    if (name == "jar" || name == "noJarJarJar") {
-        dependsOn(verifyAcademyAgentJar)
-        from(zipTree(academyAgentJar)) {
-            exclude("META-INF/MANIFEST.MF")
-        }
-        manifest {
-            attributes(
-                "Premain-Class" to "org.academy.agent.AcademyAgent",
-                "Agent-Class" to "org.academy.agent.AcademyAgent",
-                "Can-Redefine-Classes" to "true",
-                "Can-Retransform-Classes" to "true"
-            )
-        }
-    }
-}
-
-
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+fun registerClassPointerJvmTest(
+    name: String,
+    jvmArguments: List<String> = emptyList(),
+    properties: Map<String, String> = emptyMap()
+) = tasks.register<Test>(name) {
+    description = "Runs Vector Reflection class-pointer tests in an isolated JVM"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter {
+        includeTestsMatching("org.academy.internal.coremod.HotSpotClassPointerAccessTest")
+    }
+    jvmArgs(jvmArguments)
+    properties.forEach(::systemProperty)
+    shouldRunAfter(tasks.test)
+}
+
+val testUncompressedClassPointers = registerClassPointerJvmTest(
+    "testUncompressedClassPointers",
+    listOf("-XX:-UseCompressedClassPointers")
+)
+val testCompactObjectHeaders = registerClassPointerJvmTest(
+    "testCompactObjectHeaders",
+    listOf("-XX:+UseCompactObjectHeaders"),
+    mapOf("academy.test.expect_class_pointer_unsupported" to "true")
+)
+val testClassPointerFallback = registerClassPointerJvmTest(
+    "testClassPointerFallback",
+    properties = mapOf(
+        "academy.vector_reflection.class_pointer.disable" to "true",
+        "academy.test.expect_class_pointer_unsupported" to "true"
+    )
+)
+
+tasks.check {
+    dependsOn(testUncompressedClassPointers, testCompactObjectHeaders, testClassPointerFallback)
 }

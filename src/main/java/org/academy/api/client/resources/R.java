@@ -690,11 +690,20 @@ public final class R {
          * Aeromanip
          */
         public static final Identifier airflow_jet_icon = academy("textures/ability/aeromanip/skill/airflow_jet/icon.png");
+        public static final Identifier air_cushion_icon = academy("textures/ability/aeromanip/skill/air_cushion/icon.png");
+        public static final Identifier flow_sense_icon = academy("textures/ability/aeromanip/skill/flow_sense/icon.png");
         public static final Identifier atmosphere_shield_icon = academy("textures/ability/aeromanip/skill/atmosphere_shield/icon.png");
         public static final Identifier breathing_film_icon = academy("textures/ability/aeromanip/skill/breathing_film/icon.png");
+        public static final Identifier pneumatic_grasp_icon = academy("textures/ability/aeromanip/skill/pneumatic_grasp/icon.png");
+        public static final Identifier tailwind_field_icon = academy("textures/ability/aeromanip/skill/tailwind_field/icon.png");
+        public static final Identifier laminar_cutter_icon = academy("textures/ability/aeromanip/skill/laminar_cutter/icon.png");
+        public static final Identifier vortex_pull_icon = academy("textures/ability/aeromanip/skill/vortex_pull/icon.png");
         public static final Identifier atmosphere_blast_gun_icon = academy("textures/ability/aeromanip/skill/atmosphere_blast_gun/icon.png");
+        public static final Identifier wind_corridor_icon = academy("textures/ability/aeromanip/skill/wind_corridor/icon.png");
+        public static final Identifier pressure_lock_icon = academy("textures/ability/aeromanip/skill/pressure_lock/icon.png");
         public static final Identifier flight_icon = academy("textures/ability/aeromanip/skill/flight/icon.png");
         public static final Identifier vacuum_domain_icon = academy("textures/ability/aeromanip/skill/vacuum_domain/icon.png");
+        public static final Identifier atmospheric_dominion_icon = academy("textures/ability/aeromanip/skill/atmospheric_dominion/icon.png");
         /**
          * Level0
          */

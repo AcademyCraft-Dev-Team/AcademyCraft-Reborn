@@ -11,6 +11,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -32,6 +33,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -44,8 +47,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class AtmosphereShield extends Skill {
-    private static final net.minecraft.resources.Identifier ATTACK_DAMAGE_MODIFIER_ID =
-            AcademyCraft.academy("atmosphere_shield_attack_damage");
+    private static final float[] REDUCTION = {0.20f, 0.28f, 0.35f};
     private static final net.minecraft.resources.Identifier ATTACK_KNOCKBACK_MODIFIER_ID =
             AcademyCraft.academy("atmosphere_shield_attack_knockback");
 
@@ -56,9 +58,9 @@ public final class AtmosphereShield extends Skill {
                 .energyCost(30_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(50)
+                .maintenanceCost(35)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.AIRFLOW_JET)
+                .dependsOn(Skills.BREATHING_FILM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
     }
@@ -93,7 +95,7 @@ public final class AtmosphereShield extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.ATMOSPHERE_SHIELD.get(),
-                        List.of(AirflowJet.Client.SKILL_INFO),
+                        List.of(BreathingFilm.Client.SKILL_INFO),
                         R.textures.atmosphere_shield_icon,
                         20,
                         72
@@ -155,7 +157,8 @@ public final class AtmosphereShield extends Skill {
                 var system = AbilitySystemServer.getSystem(player);
                 enabled = player.isAlive() && !player.hasDisconnected() && system.ensurePermanentOccupation(
                         player.getUUID(),
-                        skill.getMaintenanceCost(skill.getLevel(player)),
+                        skill.getMaintenanceCost(skill.getLevel(player))
+                                * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
                         skill
                 );
                 if (!enabled && skill.isEnabled(player)) {
@@ -166,15 +169,9 @@ public final class AtmosphereShield extends Skill {
                     ? AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
                     : 0;
             syncModifier(
-                    player.getAttribute(Attributes.ATTACK_DAMAGE),
-                    ATTACK_DAMAGE_MODIFIER_ID,
-                    4.0 * power,
-                    enabled
-            );
-            syncModifier(
                     player.getAttribute(Attributes.ATTACK_KNOCKBACK),
                     ATTACK_KNOCKBACK_MODIFIER_ID,
-                    power,
+                    0.5 * power,
                     enabled
             );
         }
@@ -186,10 +183,29 @@ public final class AtmosphereShield extends Skill {
             var skill = Skills.ATMOSPHERE_SHIELD.get();
             if (!skill.isEnabled(player)) return;
             var system = AbilitySystemServer.getSystem(player);
-            if (!system.tryTimedOccupation(player.getUUID(), 20.0f, skill, 10)) return;
-
-            event.setAmount(0.0f);
-            event.setCanceled(true);
+            var level = Math.max(0, Math.min(2, skill.getLevel(player)));
+            var reduction = REDUCTION[level];
+            if (event.getSource().getDirectEntity() instanceof Projectile projectile
+                    && projectile.getDeltaMovement().lengthSqr() <= 0.35 * 0.35
+                    && system.tryTimedOccupation(
+                    player.getUUID(),
+                    Math.min(30.0f, 4.0f + event.getAmount() * 2.0f)
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
+                    skill, 10)) {
+                var velocity = projectile.getDeltaMovement();
+                if (Double.isFinite(velocity.x) && Double.isFinite(velocity.y) && Double.isFinite(velocity.z)
+                        && velocity.lengthSqr() > 1.0e-8) {
+                    AeromanipTargeting.addClampedVelocity(projectile, velocity.scale(-1.35));
+                }
+                event.setCanceled(true);
+                return;
+            }
+            var prevented = event.getAmount() * reduction;
+            if (!system.tryTimedOccupation(player.getUUID(),
+                    Math.min(30.0f, 4.0f + prevented * 2.0f)
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
+                    skill, 10)) return;
+            event.setAmount(event.getAmount() - prevented);
             player.level().playSound(
                     null,
                     player.getX(), player.getY(), player.getZ(),

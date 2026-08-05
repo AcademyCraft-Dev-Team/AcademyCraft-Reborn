@@ -6,18 +6,20 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.golem.AbstractGolem;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -30,11 +32,14 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.AirflowField;
+import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -45,12 +50,11 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import java.util.Map;
 
 public final class VacuumDomain extends Skill {
     static final double RADIUS = 12.0;
     private static final double MAX_TARGET_DISTANCE = 16.0;
-    private static final int DURATION_TICKS = 200;
+    private static final int DURATION_TICKS = 160;
     private static final int DAMAGE_INTERVAL_TICKS = 10;
     private static final float DAMAGE_FRACTION = 0.05f;
 
@@ -59,10 +63,10 @@ public final class VacuumDomain extends Skill {
                 .of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
-                .cpCost(100)
-                .iterationTicks(100)
+                .cpCost(120)
+                .iterationTicks(120)
                 .maxStacks(1)
-                .dependsOn(Skills.BREATHING_FILM)
+                .dependsOn(Skills.PRESSURE_LOCK)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
         );
     }
@@ -93,7 +97,11 @@ public final class VacuumDomain extends Skill {
     }
 
     static boolean isInsideDomain(Vec3 center, Vec3 target) {
-        return target.distanceToSqr(center) <= RADIUS * RADIUS;
+        return isInsideDomain(center, target, RADIUS);
+    }
+
+    static boolean isInsideDomain(Vec3 center, Vec3 target, double radius) {
+        return target.distanceToSqr(center) <= radius * radius;
     }
 
     public static final class Client {
@@ -101,7 +109,7 @@ public final class VacuumDomain extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.VACUUM_DOMAIN.get(),
-                        List.of(BreathingFilm.Client.SKILL_INFO),
+                        List.of(PressureLock.Client.SKILL_INFO),
                         R.textures.vacuum_domain_icon,
                         130,
                         72
@@ -139,21 +147,24 @@ public final class VacuumDomain extends Skill {
     }
 
     public static final class Server {
-        private static final Map<Player, Context> ACTIVE = createContextMap();
-
         private Server() {
         }
 
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (ACTIVE.containsKey(player)) return;
-
-            Skills.VACUUM_DOMAIN.get().executeActive(player, (_, _) -> {
+            var skill = Skills.VACUUM_DOMAIN.get();
+            skill.executeActive(player, context -> skill.getCpCost(context.level())
+                    * AeromanipConfig.cpMultiplier(player, SkillNames.VACUUM_DOMAIN), (_, _) -> {
                 if (!(player.level() instanceof ServerLevel level)) return;
-                var context = new Context(player, resolveTargetPoint(level, player));
-                ACTIVE.put(player, context);
-                AbilitySystemServer.registerContext(context);
+                var center = resolveTargetPoint(level, player);
+                var range = RADIUS * AeromanipConfig.rangeMultiplier(player, SkillNames.VACUUM_DOMAIN);
+                var duration = Math.max(1, Math.round(DURATION_TICKS
+                        * AeromanipConfig.durationMultiplier(player, SkillNames.VACUUM_DOMAIN)));
+                var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(),
+                        AirflowField.Type.VACUUM, AirflowField.Shape.SPHERE, center, player.getLookAngle(),
+                        range, 0.0, 1.0f, duration);
+                AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });
         }
 
@@ -190,65 +201,59 @@ public final class VacuumDomain extends Skill {
                     ? entityHit.getEntity().getBoundingBox().getCenter()
                     : blockPoint;
         }
-    }
-
-    public static final class Context extends ServerContext {
-        private final Vec3 center;
-        private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
-        private int ticks;
-        private boolean ended;
-
-        private Context(ServerPlayer player, Vec3 center) {
-            super(player);
-            this.center = center;
-            dimension = player.level().dimension();
-        }
-
-        @SubscribeEvent
-        public void onTick(ServerTickEvent.Pre event) {
-            ticks++;
-            if (player.hasDisconnected()
-                    || !player.isAlive()
-                    || !player.level().dimension().equals(dimension)
-                    || !Skills.VACUUM_DOMAIN.get().isEnabled(player)
-                    || ticks >= DURATION_TICKS) {
-                end();
-                return;
+        private static void tick(ServerPlayer player, AirflowField field, int ticks) {
+            var level = player.level();
+            var center = field.center();
+            var radius = field.radius();
+            if (ticks <= 40) {
+                for (var entity : level.getEntities(player, field.bounds(), Entity::isAlive)) {
+                    if (!(entity instanceof Projectile)
+                            || !field.contains(entity.getBoundingBox().getCenter(), entity.getBbWidth() * 0.5)) continue;
+                    var velocity = entity.getDeltaMovement();
+                    AeromanipTargeting.addClampedVelocity(entity, velocity.scale(-0.8));
+                }
             }
-            if (ticks == 1 || ticks % DAMAGE_INTERVAL_TICKS == 0) {
-                applyPulse();
-            }
-        }
-
-        private void applyPulse() {
-            var level = level();
+            if (ticks <= 40 || ticks % DAMAGE_INTERVAL_TICKS != 0) return;
             var box = new AABB(
-                    center.subtract(RADIUS, RADIUS, RADIUS),
-                    center.add(RADIUS, RADIUS, RADIUS)
+                    center.subtract(radius, radius, radius),
+                    center.add(radius, radius, radius)
             );
             var targets = level.getEntitiesOfClass(
                     LivingEntity.class,
                     box,
                     target -> isHostileTarget(player, target)
-                            && isInsideDomain(center, target.getBoundingBox().getCenter())
+                            && isInsideDomain(center, target.getBoundingBox().getCenter(), radius)
             );
             var source = SkillDamageSource.of(player, Skills.VACUUM_DOMAIN.get());
             var system = AbilitySystemServer.getSystem(player);
             var power = system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     * system.getPlayerDamageMultiplier(player.getUUID());
             for (var target : targets) {
-                target.setAirSupply(0);
+                if (target instanceof ServerPlayer targetPlayer && Skills.BREATHING_FILM.get().isEnabled(targetPlayer)) {
+                    target.setAirSupply(target.getMaxAirSupply());
+                } else {
+                    target.setAirSupply(Math.max(0, target.getAirSupply() - 4));
+                }
+                if (ticks < 100 || ticks % 20 != 0 || isPercentDamageImmune(target)) continue;
                 target.invulnerableTime = 0;
-                var damage = Math.max(1.0f, target.getMaxHealth() * DAMAGE_FRACTION) * power;
+                var damage = Math.max(1.0f, target.getMaxHealth() * DAMAGE_FRACTION)
+                        * AeromanipConfig.damageMultiplier(player, SkillNames.VACUUM_DOMAIN) * power;
+                if (target instanceof ServerPlayer) damage = Math.min(4.0f, damage * 0.4f);
                 target.hurtServer(level, source, damage);
             }
+        }
+
+        private static boolean isPercentDamageImmune(LivingEntity target) {
+            return AeromanipTargeting.isBoss(target)
+                    || target.getType().builtInRegistryHolder().is(EntityTypeTags.UNDEAD)
+                    || target instanceof AbstractGolem;
         }
 
         private static boolean isHostileTarget(ServerPlayer player, LivingEntity target) {
             if (target == player
                     || !target.isAlive()
                     || target.isRemoved()
-                    || target instanceof Player) {
+                    || target instanceof Player && !AeromanipTargeting.canAffectNegatively(player, target)) {
                 return false;
             }
             if (target instanceof TamableAnimal animal && animal.isOwnedBy(player)) {
@@ -259,17 +264,6 @@ public final class VacuumDomain extends Skill {
             return target instanceof Mob mob && mob.getTarget() == player;
         }
 
-        private void end() {
-            if (ended) return;
-            ended = true;
-            unregister();
-        }
-
-        @Override
-        protected void onUnregistered() {
-            ended = true;
-            Server.ACTIVE.remove(player, this);
-        }
     }
 
     @PacketTarget(ThreadType.SERVER)

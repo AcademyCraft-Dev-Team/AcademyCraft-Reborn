@@ -5,7 +5,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
-import org.academy.internal.coremod.VectorReflectionClassPtrTransformer;
+import org.academy.internal.coremod.ClassPointerProtectionManager;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
@@ -19,8 +19,14 @@ public final class VectorReflectionRuntime {
 
     public static void maintain(ServerPlayer player) {
         if (player == null) return;
-        var repaired = VectorReflectionClassPtrTransformer.repairServerPlayer(player);
         var anchor = ANCHORS.computeIfAbsent(player.getUUID(), ignored -> new Anchor(player));
+        var previous = anchor.player.get();
+        if (previous != null && previous != player) {
+            EntityControlApi.allowExternalRemoval(previous);
+            ClassPointerProtectionManager.restore(previous);
+            anchor.observerRebuildRequested = true;
+        }
+        var repaired = ClassPointerProtectionManager.ensureServerPlayer(player);
         anchor.player = new WeakReference<>(player);
         if (repaired) anchor.observerRebuildRequested = true;
 
@@ -32,9 +38,14 @@ public final class VectorReflectionRuntime {
 
     public static void deactivate(ServerPlayer player) {
         if (player == null) return;
-        ANCHORS.remove(player.getUUID());
+        var anchor = ANCHORS.remove(player.getUUID());
+        var previous = anchor == null ? null : anchor.player.get();
+        if (previous != null && previous != player) {
+            EntityControlApi.allowExternalRemoval(previous);
+            ClassPointerProtectionManager.restore(previous);
+        }
         EntityControlApi.allowExternalRemoval(player);
-        VectorReflectionClassPtrTransformer.restoreOriginal(player);
+        ClassPointerProtectionManager.restore(player);
     }
 
     public static void requestObserverRebuild(ServerPlayer player) {
@@ -47,6 +58,10 @@ public final class VectorReflectionRuntime {
         for (var entry : ANCHORS.entrySet()) {
             var player = entry.getValue().player.get();
             if (player == null || player.connection == null || player.hasDisconnected()) {
+                if (player != null) {
+                    EntityControlApi.allowExternalRemoval(player);
+                    ClassPointerProtectionManager.restore(player);
+                }
                 ANCHORS.remove(entry.getKey(), entry.getValue());
                 continue;
             }
@@ -56,6 +71,17 @@ public final class VectorReflectionRuntime {
             }
             maintain(player);
         }
+    }
+
+    public static void shutdown() {
+        for (var anchor : ANCHORS.values()) {
+            var player = anchor.player.get();
+            if (player == null) continue;
+            EntityControlApi.allowExternalRemoval(player);
+            ClassPointerProtectionManager.restore(player);
+        }
+        ANCHORS.clear();
+        ClassPointerProtectionManager.restoreAllServer();
     }
 
     private static void sanitize(ServerPlayer player, Anchor anchor) {

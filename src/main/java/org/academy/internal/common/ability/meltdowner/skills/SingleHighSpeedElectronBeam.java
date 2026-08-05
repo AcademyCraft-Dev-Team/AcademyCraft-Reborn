@@ -158,7 +158,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                         MAX_HEALTH_DAMAGE_RATIO,
                         system.getPlayerDamageMultiplier(player.getUUID()),
                         Skills.RADIATION_INTENSIFY.get().isEnabled(player),
-                        DestroyBlocksSetting.canDestroyBlocks(player)
+                        DestroyBlocksSetting.canDestroyBlocks(player, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get())
                 );
                 beam.setAttackDelayTicks(getConfiguredAttackDelayTicks(player));
                 beam.setPos(spawnPos);

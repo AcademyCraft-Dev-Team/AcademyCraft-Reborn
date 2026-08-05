@@ -40,6 +40,7 @@ import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
+import org.academy.internal.client.hud.HudLayoutEditorScreen
 import org.misaka.MisakaNetworkClient
 import org.lwjgl.glfw.GLFW
 import java.util.concurrent.atomic.AtomicReference
@@ -69,7 +70,6 @@ object SettingsApp : App {
         private val pendingKeys: MutableSet<Int> = linkedSetOf()
         private var pendingMouseButton: Int = -1
         private var pendingModifiers: Int = 0
-        private var pendingCancel: Boolean = false
 
         private val captureHint: LabelWidget = object : LabelWidget("") {
             override fun tick() {
@@ -265,7 +265,43 @@ object SettingsApp : App {
             ) { enabled ->
                 MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
             })
+            page.addChild("hud_layout", createHudLayoutRow())
             return page
+        }
+
+        private fun createHudLayoutRow(): LinearLayoutWidget {
+            val row = LinearLayoutWidget()
+            row.orientation = Orientation.HORIZONTAL
+            row.spacing = 4f
+            row.layoutParams = WidgetContainer.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(18f)
+            row.addChild("label", LabelWidget(
+                Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout")
+            ).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(0f)
+                    .gravity(Gravity.CENTER_LEFT)
+            })
+            row.addChild("open", ButtonWidget().apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .size(72f, 14f)
+                    .gravity(Gravity.CENTER)
+                onClickListener = {
+                    val minecraft = Minecraft.getInstance()
+                    minecraft.gui.setScreen(HudLayoutEditorScreen(minecraft.gui.screen()))
+                }
+                addChild("text", LabelWidget(
+                    Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout.open")
+                ).apply {
+                    scale = 0.65f
+                    layoutParams = FrameLayoutWidget.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT)
+                        .gravity(Gravity.CENTER)
+                })
+            })
+            return row
         }
 
         private fun createSettingToggle(
@@ -331,6 +367,9 @@ object SettingsApp : App {
                     .gravity(Gravity.CENTER)
             })
             columnHeader.addChild("rebind_spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
+            })
+            columnHeader.addChild("reset_spacer", FillWidget(0).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
             })
             page.addChild("column_header", columnHeader)
@@ -439,7 +478,7 @@ object SettingsApp : App {
                 .gravity(Gravity.CENTER_LEFT)
             row.addChild("name", name)
 
-            val keyLabel = LabelWidget(combo.displayName())
+            val keyLabel = LabelWidget(displayBinding(combo))
             keyLabel.scale = 0.7f
             keyLabel.layoutParams = LinearLayoutWidget.LayoutParams()
                 .width(44f)
@@ -478,6 +517,23 @@ object SettingsApp : App {
                     .gravity(Gravity.CENTER)
             })
             row.addChild("rebind", rebindButton)
+
+            val resetButton = ButtonWidget()
+            resetButton.layoutParams = LinearLayoutWidget.LayoutParams()
+                .size(26f, 12f)
+                .gravity(Gravity.CENTER)
+            resetButton.onClickListener = { _: Widget? ->
+                resetBinding(section, bindingName)
+            }
+            resetButton.addChild("text", LabelWidget(
+                Language.getInstance().getOrDefault("app.academy.settings.keybind.reset")
+            ).apply {
+                scale = 0.7f
+                layoutParams = FrameLayoutWidget.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT)
+                    .gravity(Gravity.CENTER)
+            })
+            row.addChild("reset", resetButton)
 
             return row
         }
@@ -533,7 +589,12 @@ object SettingsApp : App {
                     event.consume()
                     val key = event.keyCode
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
-                        pendingCancel = true
+                        val target = capturing ?: return
+                        val current = target.section.config.getKeyBinding(target.bindingName)
+                            ?: InputSystem.getKeyBinding(target.bindingName)
+                            ?: return
+                        resetCaptureState()
+                        applyCapture(InputSystem.unbound(current))
                         return
                     }
                     if (isModifierKey(key)) return
@@ -547,7 +608,7 @@ object SettingsApp : App {
                 override fun onKeyReleased(event: KeyEvent) {
                     event.consume()
                     if (isModifierKey(event.keyCode)) return
-                    if (pendingCancel || pendingType == InputSystem.InputType.KEYBOARD) {
+                    if (pendingType == InputSystem.InputType.KEYBOARD) {
                         finishCapture()
                     }
                 }
@@ -563,17 +624,12 @@ object SettingsApp : App {
 
                 override fun onMouseReleased(event: MouseEvent) {
                     event.consume()
-                    if (pendingCancel || pendingType == InputSystem.InputType.MOUSE) {
+                    if (pendingType == InputSystem.InputType.MOUSE) {
                         finishCapture()
                     }
                 }
 
                 private fun finishCapture() {
-                    if (pendingCancel) {
-                        resetCaptureState()
-                        exitCapture()
-                        return
-                    }
                     val combo = buildPendingCombo() ?: return
                     resetCaptureState()
                     applyCapture(combo)
@@ -583,19 +639,23 @@ object SettingsApp : App {
 
         private fun buildPendingCombo(): InputSystem.KeyCombination? {
             val type = pendingType ?: return null
+            val target = capturing ?: return null
+            val current = target.section.config.getKeyBinding(target.bindingName)
+                ?: InputSystem.getKeyBinding(target.bindingName)
+                ?: return null
             return when (type) {
                 InputSystem.InputType.KEYBOARD -> {
                     if (pendingKeys.isEmpty()) return null
                     InputSystem.combo(
                         type, pendingKeys.toSet(),
-                        InputConstants.PRESS, pendingModifiers, false
+                        current.action, pendingModifiers, current.availableWhenScreen
                     )
                 }
                 InputSystem.InputType.MOUSE -> {
                     if (pendingMouseButton < 0) return null
                     InputSystem.combo(
                         type, pendingMouseButton,
-                        InputConstants.PRESS, pendingModifiers
+                        current.action, pendingModifiers, current.availableWhenScreen
                     )
                 }
             }
@@ -606,7 +666,6 @@ object SettingsApp : App {
             pendingKeys.clear()
             pendingMouseButton = -1
             pendingModifiers = 0
-            pendingCancel = false
         }
 
         private fun startCapture(section: BindingSection, bindingName: String) {
@@ -635,11 +694,31 @@ object SettingsApp : App {
             showPage(PAGE_KEYBINDINGS)
         }
 
+        private fun resetBinding(section: BindingSection, bindingName: String) {
+            val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
+            section.config.setKeyBinding(bindingName, defaultCombo)
+            InputSystem.updateKeyBinding(bindingName, defaultCombo)
+            section.persist(section.config)
+            AcademyCraftClient.Config.INSTANCE.save()
+            showPage(PAGE_KEYBINDINGS)
+        }
+
+        private fun displayBinding(combo: InputSystem.KeyCombination): String {
+            return if (combo.unbound) {
+                Language.getInstance().getOrDefault("app.academy.settings.keybind.format.none")
+            } else {
+                combo.displayName()
+            }
+        }
+
         private fun updateHint() {
             val target = capturing
             captureHint.text = if (target != null) {
-                val preview = buildPendingCombo()?.displayName() ?: "按键"
-                "正在为 \"${target.bindingName}\" 设置按键：$preview，按 ESC 取消..."
+                val preview = buildPendingCombo()?.let(::displayBinding)
+                    ?: Language.getInstance().getOrDefault("app.academy.skill_settings.capture.key")
+                Language.getInstance().getOrDefault("app.academy.skill_settings.capture.hint")
+                    .replace("%1\$s", Language.getInstance().getOrDefault("key.academy.${target.bindingName}"))
+                    .replace("%2\$s", preview)
             } else {
                 ""
             }

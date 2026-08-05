@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -193,19 +194,21 @@ public class SpacialExcision extends Skill {
                 sl.playSound(null, player.blockPosition(), SoundEvents.PORTAL_TRIGGER,
                         SoundSource.PLAYERS, 0.6f, 0.65f + ticks / (float) MAX_TICKS * 0.5f);
 
-                var intRadius = (int) Math.ceil(radius);
-                var centerBlock = player.blockPosition();
-                var radiusSq = radius * radius;
-                for (var dx = -intRadius; dx <= intRadius; dx++) {
-                    for (var dy = -intRadius; dy <= intRadius; dy++) {
-                        for (var dz = -intRadius; dz <= intRadius; dz++) {
-                            if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
-                            var pos = centerBlock.offset(dx, dy, dz);
-                            if (!sl.hasChunkAt(pos)) continue;
-                            var state = sl.getBlockState(pos);
-                            if (!state.isAir() && state.getDestroySpeed(sl, pos) >= 0
-                                    && canBreak(sl, player, pos, state)) {
-                                sl.removeBlock(pos, false);
+                if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.SPACIAL_EXCISION.get())) {
+                    var intRadius = (int) Math.ceil(radius);
+                    var centerBlock = player.blockPosition();
+                    var radiusSq = radius * radius;
+                    for (var dx = -intRadius; dx <= intRadius; dx++) {
+                        for (var dy = -intRadius; dy <= intRadius; dy++) {
+                            for (var dz = -intRadius; dz <= intRadius; dz++) {
+                                if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
+                                var pos = centerBlock.offset(dx, dy, dz);
+                                if (!sl.hasChunkAt(pos)) continue;
+                                var state = sl.getBlockState(pos);
+                                if (!state.isAir() && state.getDestroySpeed(sl, pos) >= 0
+                                        && canBreak(sl, player, pos, state)) {
+                                    sl.removeBlock(pos, false);
+                                }
                             }
                         }
                     }

@@ -25,6 +25,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -110,10 +111,12 @@ public class Disintegrate extends Skill {
                 var range = LevelUtil.getValidViewDistance(player, 30);
                 var target = eye.add(look.scale(range));
                 if (l instanceof ServerLevel sl) {
-                    LevelUtil.destroyBlocksAlongPath(
-                            sl, eye, target, 0.2f, 999,
-                            true, true, true, false, player
-                    );
+                    if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.DISINTEGRATE.get())) {
+                        LevelUtil.destroyBlocksAlongPath(
+                                sl, eye, target, 0.2f, 999,
+                                true, true, true, false, player
+                        );
+                    }
                     var multiplier = ctx.system().getPlayerDamageMultiplier(player.getUUID());
                     var source = SkillDamageSource.of(player, Skills.DISINTEGRATE.get());
                     var box = new net.minecraft.world.phys.AABB(eye, target).inflate(1.0);

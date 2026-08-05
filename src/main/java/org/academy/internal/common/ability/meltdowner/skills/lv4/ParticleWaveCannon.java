@@ -233,7 +233,7 @@ public final class ParticleWaveCannon extends Skill {
             );
             updateVisual(attack);
 
-            if (DestroyBlocksSetting.canDestroyBlocks(player)) {
+            if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.PARTICLE_WAVE_CANNON.get())) {
                 MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
                         attack.outbound(),
@@ -249,7 +249,7 @@ public final class ParticleWaveCannon extends Skill {
             if (damageTick) {
                 outboundResult = LinearAttackExecutor.executeOutbound(initialLevel, attack, payload);
             }
-            if (DestroyBlocksSetting.canDestroyBlocks(player)) {
+            if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.PARTICLE_WAVE_CANNON.get())) {
                 attack.returnSegment().ifPresent(segment -> MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
                         segment,

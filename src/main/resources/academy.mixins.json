@@ -22,6 +22,7 @@
     "client.MixinGameRenderer",
     "client.MixinHud",
     "client.MixinClientEntity",
+    "client.MixinClientLivingEntity",
     "client.MixinKeyboardHandler",
     "client.MixinLevelRenderer",
     "client.MixinLivingEntityRenderer",

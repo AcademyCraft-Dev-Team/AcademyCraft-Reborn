@@ -48,6 +48,7 @@ import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.gui.screen.Screens;
+import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.particle.VectorBlastParticle;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
@@ -74,6 +75,7 @@ public final class AcademyCraftClient {
     private static boolean renderInitialized = false;
 
     public static void initMain() {
+        HudLayoutConfig.init();
         TerminalHud.Companion.addApp(SettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(SkillSettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(MusicApp.INSTANCE);
