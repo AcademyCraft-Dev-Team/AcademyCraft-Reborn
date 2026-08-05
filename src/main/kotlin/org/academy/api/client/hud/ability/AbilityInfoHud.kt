@@ -83,7 +83,6 @@ class AbilityInfoHud private constructor() {
     fun render(target: RenderTarget) {
         if (context.get().alpha == 0f) return
         uiContext.upload(target, false)
-        context.get().invalidate()
         ImGuiUIDebugger.render(target, context.get())
     }
 
@@ -615,8 +614,8 @@ class AbilityInfoHud private constructor() {
             binding.setGreen(0.82f)
             binding.setBlue(0.9f)
             binding.layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.BOTTOM_RIGHT)
-                .margin(0f, 0f, 1f, 0f)
+                .gravity(Gravity.BOTTOM_LEFT)
+                .margin(16f, 0f, 1f, 0f)
             row.addChild("binding", binding)
             return row
         }

@@ -37,6 +37,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashMap;
 import java.util.Map;
+
 public class Cloudroom extends Skill {
     private static final float RADIUS = 16.0f;
     private static final int TRAIL_LIFETIME = 30;

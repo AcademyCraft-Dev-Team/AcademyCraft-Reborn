@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public final class InputSystem {
     public static final int ANY_ACTION = -1;
@@ -132,7 +133,7 @@ public final class InputSystem {
                 .filter(entry -> isBindingForSkill(entry.getKey(), skill))
                 .map(entry -> formatKeyCombination(entry.getValue().combo))
                 .distinct()
-                .collect(java.util.stream.Collectors.joining(" / "));
+                .collect(Collectors.joining(" / "));
     }
 
     public static boolean isBindingForSkill(String keyName, Skill skill) {
@@ -409,8 +410,12 @@ public final class InputSystem {
             int modifiers,
             boolean availableWhenScreen
     ) {
-        public KeyCombination {
-            keys = keys == null ? Set.of() : keys;
+        private static String keyName(InputType type, int key) {
+            return switch (type) {
+                case MOUSE -> InputConstants.Type.MOUSE.getOrCreate(key).getDisplayName().getString();
+                case KEYBOARD -> InputConstants.getKey(new KeyEvent(key, -1, 0))
+                        .getDisplayName().getString();
+            };
         }
 
         public String displayName() {
@@ -422,19 +427,11 @@ public final class InputSystem {
             if ((modifiers & InputConstants.MOD_CONTROL) != 0) builder.append("Ctrl+");
             if ((modifiers & InputConstants.MOD_ALT) != 0) builder.append("Alt+");
             var keyCodes = keys.stream().sorted().toList();
-            for (int i = 0; i < keyCodes.size(); i++) {
+            for (var i = 0; i < keyCodes.size(); i++) {
                 if (i > 0) builder.append('+');
                 builder.append(keyName(type, keyCodes.get(i)));
             }
             return builder.toString();
-        }
-
-        private static String keyName(InputType type, int key) {
-            return switch (type) {
-                case MOUSE -> InputConstants.Type.MOUSE.getOrCreate(key).getDisplayName().getString();
-                case KEYBOARD -> InputConstants.getKey(new net.minecraft.client.input.KeyEvent(key, -1, 0))
-                        .getDisplayName().getString();
-            };
         }
     }
 

@@ -2,22 +2,23 @@ package org.academy.internal.common.ability.accelerator.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -59,7 +60,6 @@ public class HyperAccelerate extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_PRESS, Client.CONFIG.getKeyBinding(Client.KEY_NAME_PRESS,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.PRESS, InputConstants.MOD_SHIFT)
@@ -80,18 +80,15 @@ public class HyperAccelerate extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onChargeStart() {
-            if (!org.academy.api.client.ability.AbilitySystemClient.canUseSkill(
+            if (!AbilitySystemClient.canUseSkill(
                     Skills.HYPER_ACCELERATE.get())) return;
             MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
 
         public static void onUse() {
-            var mc = net.minecraft.client.Minecraft.getInstance();
+            var mc = Minecraft.getInstance();
             if (mc.player == null) return;
             MisakaNetworkClient.send(LaunchPacket.INSTANCE);
-            var p = mc.player;
-            var trail = TrailEffectWrapper.INSTANCE.createTrail(0.8f, 0.15f, 0.3f, 0.7f, 1.0f);
-            trail.addPoint((float) p.getX(), (float) p.getY(), (float) p.getZ());
         }
 
         public static class Config extends KeyBindingConfig {
@@ -146,7 +143,7 @@ public class HyperAccelerate extends Skill {
                 player.resetFallDistance();
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
 
-                var nearby = player.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                var nearby = player.level().getEntitiesOfClass(LivingEntity.class,
                         player.getBoundingBox().inflate(3.0), e -> e != player && e.isAlive());
                 for (var target : nearby) {
                     target.setDeltaMovement(target.position().subtract(player.position()).normalize().scale(0.5));

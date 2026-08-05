@@ -13,6 +13,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -22,7 +23,6 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -30,8 +30,6 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.DistortionEffectWrapper;
-import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -62,8 +60,6 @@ public class SpacialExcision extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(DistortionEffectWrapper.INSTANCE);
-        RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -83,19 +79,6 @@ public class SpacialExcision extends Skill {
 
         public static void onUse() {
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
-            var p = net.minecraft.client.Minecraft.getInstance().player;
-            if (p == null) return;
-            DistortionEffectWrapper.INSTANCE.trigger(
-                    (float) p.getX(), (float) p.getY(), (float) p.getZ(),
-                    2.0f, 1.5f,
-                    0.7f, 0.1f, 0.5f, 0.8f,
-                    0.2f, 0.0f, 0.5f, 0.0f);
-            var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
-                    (float) p.getX(), (float) p.getY(), (float) p.getZ());
-            emitter.setColor(0.6f, 0.2f, 0.8f);
-            emitter.setEmissionRate(20);
-            emitter.setLifetime(1.0f, 0.5f);
-            emitter.setVelocity(0.8f, 0.4f);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -177,7 +160,7 @@ public class SpacialExcision extends Skill {
                 var source = SkillDamageSource.of(player, Skills.SPACIAL_EXCISION.get());
 
                 var targets = sl.getEntitiesOfClass(LivingEntity.class,
-                        new net.minecraft.world.phys.AABB(
+                        new AABB(
                                 center.x - radius, center.y - radius, center.z - radius,
                                 center.x + radius, center.y + radius, center.z + radius),
                         target -> target != player && target.isAlive()

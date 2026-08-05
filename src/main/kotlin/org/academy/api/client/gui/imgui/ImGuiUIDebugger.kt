@@ -162,7 +162,8 @@ object ImGuiUIDebugger {
             ImGui.sameLine()
             changed = changed or gravityRadio("LEFT", gravity, Gravity.LEFT, Gravity.HORIZONTAL_GRAVITY_MASK)
             ImGui.sameLine()
-            changed = changed or gravityRadio("CENTER_H", gravity, Gravity.CENTER_HORIZONTAL, Gravity.HORIZONTAL_GRAVITY_MASK)
+            changed =
+                changed or gravityRadio("CENTER_H", gravity, Gravity.CENTER_HORIZONTAL, Gravity.HORIZONTAL_GRAVITY_MASK)
             ImGui.sameLine()
             changed = changed or gravityRadio("RIGHT", gravity, Gravity.RIGHT, Gravity.HORIZONTAL_GRAVITY_MASK)
 
@@ -170,7 +171,8 @@ object ImGuiUIDebugger {
             ImGui.sameLine()
             changed = changed or gravityRadio("TOP", gravity, Gravity.TOP, Gravity.VERTICAL_GRAVITY_MASK)
             ImGui.sameLine()
-            changed = changed or gravityRadio("CENTER_V", gravity, Gravity.CENTER_VERTICAL, Gravity.VERTICAL_GRAVITY_MASK)
+            changed =
+                changed or gravityRadio("CENTER_V", gravity, Gravity.CENTER_VERTICAL, Gravity.VERTICAL_GRAVITY_MASK)
             ImGui.sameLine()
             changed = changed or gravityRadio("BOTTOM", gravity, Gravity.BOTTOM, Gravity.VERTICAL_GRAVITY_MASK)
 
@@ -335,12 +337,24 @@ object ImGuiUIDebugger {
         ImGui.separator()
         ImGui.text(String.format("Layout Pos (X/Y): %.2f, %.2f", widget.x, widget.y))
         ImGui.text(String.format("Layout Size (W/H): %.2f, %.2f", widget.width, widget.height))
-        ImGui.text(String.format("Visual Pos (X/Y): %.2f, %.2f", widget.x + widget.translationX, widget.y + widget.translationY))
+        ImGui.text(
+            String.format(
+                "Visual Pos (X/Y): %.2f, %.2f",
+                widget.x + widget.translationX,
+                widget.y + widget.translationY
+            )
+        )
         ImGui.separator()
         ImGui.text(String.format("Measured Size (W/H): %.2f, %.2f", widget.measuredWidth, widget.measuredHeight))
         ImGui.separator()
         ImGui.text(String.format("Absolute Layout Pos (X/Y): %.2f, %.2f", widget.getAbsoluteX(), widget.getAbsoluteY()))
-        ImGui.text(String.format("Absolute Translation (X/Y): %.2f, %.2f", widget.getAbsoluteTranslationX(), widget.getAbsoluteTranslationY()))
+        ImGui.text(
+            String.format(
+                "Absolute Translation (X/Y): %.2f, %.2f",
+                widget.getAbsoluteTranslationX(),
+                widget.getAbsoluteTranslationY()
+            )
+        )
         ImGui.text(String.format("Absolute Alpha: %.2f", widget.getAbsoluteAlpha()))
         ImGui.text(String.format("Absolute Enabled: %b", widget.isAbsoluteEnabled()))
         ImGui.separator()

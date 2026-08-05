@@ -46,8 +46,8 @@ public class PlayerCPManager implements AbilitySubsystem {
     private final Set<UUID> skillDebugPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Float> cpIterationProgress = new ConcurrentHashMap<>();
 
-    private final float CP_RATING_OFFSET;//等级评定修正值(Z)
-    private final float DAMAGE_MULTIPLIER;//伤害修正值(X)
+    private final float CP_RATING_OFFSET;
+    private final float DAMAGE_MULTIPLIER;
 
     public PlayerCPManager(PlayerDataManager manager, AbilityConfig config, SyncManager syncManager) {
         playerDataManager = manager;
@@ -465,7 +465,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             var playerData = playerDataManager.getData(uuid);
             if (playerData == null) return;
 
-            float mul = 1.0f;
+            var mul = 1.0f;
             var categoryId = playerData.getAbilityCategory();
             var categoryRef = Registries.ABILITY_CATEGORIES.get(Identifier.parse(categoryId));
             if (categoryRef.isPresent()) {

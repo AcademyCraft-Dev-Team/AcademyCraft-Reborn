@@ -8,10 +8,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
@@ -20,7 +22,6 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -28,7 +29,6 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.EMFieldEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -41,7 +41,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Comparator;
 import java.util.Map;
+
 public class MagneticWeapon extends Skill {
     public MagneticWeapon() {
         super(Builder.of(AbilityCategories.ELECTROMASTER.get()).level(AbilityLevel.LEVEL3).energyCost(30_000).passive().initiallyDisabled().maintenanceCost(40).iterationTicks(40).dependsOn(Skills.MAGNET_MANIPULATION));
@@ -49,7 +51,6 @@ public class MagneticWeapon extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(EMFieldEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -70,17 +71,6 @@ public class MagneticWeapon extends Skill {
         public static void onToggle() {
             if (!AbilitySystemClient.canToggleSkill(Skills.MAGNETIC_WEAPON.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
-            var p = net.minecraft.client.Minecraft.getInstance().player;
-            if (p == null) return;
-            EMFieldEffectWrapper.INSTANCE.ensureActive();
-            for (var i = 0; i < 3; i++) {
-                var angle = i * Math.PI * 2 / 3;
-                var r = 1.5;
-                EMFieldEffectWrapper.INSTANCE.addFieldLine(
-                        p.position().add(Math.cos(angle) * r, 0, Math.sin(angle) * r),
-                        p.position().add(Math.cos(angle + Math.PI / 3) * r, 0, Math.sin(angle + Math.PI / 3) * r),
-                        0.5f, 0.5f, 1.0f, 0.04f, 0.5f, 0.15f);
-            }
         }
 
         public static class Config extends KeyBindingConfig {
@@ -157,9 +147,9 @@ public class MagneticWeapon extends Skill {
                                 && player.hasLineOfSight(ee));
                 if (!targets.isEmpty()) {
                     var target = targets.stream()
-                            .min(java.util.Comparator.comparingDouble(player::distanceToSqr))
+                            .min(Comparator.comparingDouble(player::distanceToSqr))
                             .orElseThrow();
-                    var weaponDamage = (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+                    var weaponDamage = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
                     var damage = Server.calculateDamage(weaponDamage,
                             AbilitySystemServer.getSystem(player)
                                     .getPlayerDamageMultiplier(player.getUUID()));
@@ -180,7 +170,7 @@ public class MagneticWeapon extends Skill {
         }
     }
 
-    @net.neoforged.fml.common.EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class ShieldEvents {
         @SubscribeEvent
         public static void onIncomingDamage(LivingIncomingDamageEvent event) {

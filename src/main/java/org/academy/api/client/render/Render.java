@@ -199,7 +199,7 @@ public final class Render {
         public static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, int radius) {
             try (var memoryStack = MemoryStack.stackPush()) {
                 var samples = getGaussianSamples(radius);
-                var builder = Std140Builder.onStack(memoryStack, Render.BlurUniforms.UBO_SIZE);
+                var builder = Std140Builder.onStack(memoryStack, UBO_SIZE);
                 new Render.BlurUniforms(outSize, new Vector2f(dirX, dirY), samples.sampleCount(), samples.samples()).write(builder);
                 var byteBuffer = builder.get();
                 RenderSystem.getDevice().createCommandEncoder().writeToBuffer(getBlurUniformsBuffer().slice(), byteBuffer);
@@ -501,7 +501,7 @@ public final class Render {
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .buildSnippet();
 
-        public static final RenderPipeline IMGUI = RenderPipeline.builder()
+        public static final RenderPipeline IMGUI = builder()
                 .withLocation(R.shaders.core.imgui)
                 .withVertexShader(R.shaders.core.imgui)
                 .withFragmentShader(R.shaders.core.imgui)
@@ -1097,7 +1097,7 @@ public final class Render {
         public static final RenderType POS_COLOR_QUADS_BLOOM = create(
                 "pos_color_quads_bloom",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
-                      //  .setOutputTarget(BLOOM_TARGET)
+                        //  .setOutputTarget(BLOOM_TARGET)
                         .createRenderSetup()
         );
 
@@ -1107,7 +1107,7 @@ public final class Render {
         public static final RenderType POS_COLOR_TRANGLES_BLOOM = create(
                 "pos_color_trangles_bloom",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES)
-                        //.setOutputTarget(BLOOM_TARGET)
+                        .setOutputTarget(BLOOM_TARGET)
                         .createRenderSetup()
         );
 
@@ -1117,7 +1117,7 @@ public final class Render {
         public static final RenderType POS_COLOR_QUADS_BLOOM_POST = create(
                 "pos_color_quads_bloom_post",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
-                     //   .setOutputTarget(BLOOM_TARGET)
+                        .setOutputTarget(BLOOM_TARGET)
                         .createRenderSetup()
         );
 

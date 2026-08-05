@@ -43,6 +43,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
+
 public final class ArcGenerate extends Skill {
     public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
     static final float BASE_DAMAGE = 4.0f;

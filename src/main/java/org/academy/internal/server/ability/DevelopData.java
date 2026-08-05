@@ -1,27 +1,27 @@
 package org.academy.internal.server.ability;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.DevState;
 import org.academy.api.common.ability.DevelopAction;
 import org.academy.api.common.wireless.WirelessUser;
+import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
 public class DevelopData {
     private final UUID playerId;
-    private DevelopAction action;
-    private BlockPos developerPos;
+    private @Nullable DevelopAction action;
+    private @Nullable BlockPos developerPos;
     private DevState state;
     private float progress;
     private int elapsedTicks;
 
     public DevelopData(UUID playerId) {
         this.playerId = playerId;
-        this.state = DevState.IDLE;
-        this.progress = 0;
-        this.elapsedTicks = 0;
+        state = DevState.IDLE;
+        progress = 0;
+        elapsedTicks = 0;
     }
 
     public UUID getPlayerId() {
@@ -36,7 +36,7 @@ public class DevelopData {
         return progress;
     }
 
-    public BlockPos getDeveloperPos() {
+    public @Nullable BlockPos getDeveloperPos() {
         return developerPos;
     }
 
@@ -47,9 +47,9 @@ public class DevelopData {
     public void start(DevelopAction action, BlockPos developerPos) {
         this.action = action;
         this.developerPos = developerPos;
-        this.state = DevState.DEVELOPING;
-        this.progress = 0;
-        this.elapsedTicks = 0;
+        state = DevState.DEVELOPING;
+        progress = 0;
+        elapsedTicks = 0;
     }
 
     public void tick(ServerPlayer player) {
@@ -60,7 +60,8 @@ public class DevelopData {
 
         if (elapsedTicks >= action.getTotalTicks()) {
             progress = 1.0f;
-            WirelessUser developer = resolveDeveloper(player);
+            var developer = resolveDeveloper(player);
+            if (developer == null) return;
             try {
                 action.onComplete(player, developer);
                 state = DevState.DONE;
@@ -70,28 +71,28 @@ public class DevelopData {
         }
     }
 
-    private WirelessUser resolveDeveloper(ServerPlayer player) {
+    private @Nullable WirelessUser resolveDeveloper(ServerPlayer player) {
         if (developerPos == null) return null;
-        var be = ((ServerLevel) player.level()).getBlockEntity(developerPos);
+        var be = player.level().getBlockEntity(developerPos);
         if (be instanceof WirelessUser user) return user;
         return null;
     }
 
     public void reset() {
-        this.action = null;
-        this.developerPos = null;
-        this.state = DevState.IDLE;
-        this.progress = 0;
-        this.elapsedTicks = 0;
+        action = null;
+        developerPos = null;
+        state = DevState.IDLE;
+        progress = 0;
+        elapsedTicks = 0;
     }
 
     public void abort() {
         if (state == DevState.DEVELOPING) {
-            this.action = null;
-            this.developerPos = null;
-            this.progress = 0;
-            this.elapsedTicks = 0;
-            this.state = DevState.FAILED;
+            action = null;
+            developerPos = null;
+            progress = 0;
+            elapsedTicks = 0;
+            state = DevState.FAILED;
         }
     }
 }

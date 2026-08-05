@@ -2,7 +2,9 @@ package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -129,7 +131,7 @@ public class PlasmaGeneration extends Skill {
         }
 
         public static void onChargeStart() {
-            if (charging || net.minecraft.client.Minecraft.getInstance().gui.screen() != null
+            if (charging || Minecraft.getInstance().gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.PLASMA_GENERATION.get())) return;
             charging = true;
             MisakaNetworkClient.send(StartPacket.INSTANCE);
@@ -219,7 +221,7 @@ public class PlasmaGeneration extends Skill {
             var look = player.getLookAngle();
             var end = start.add(look.scale(MAX_TARGET_RANGE));
             var searchBox = player.getBoundingBox().expandTowards(look.scale(MAX_TARGET_RANGE)).inflate(1.0);
-            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+            var entityHit = ProjectileUtil.getEntityHitResult(
                     player.level(), player, start, end, searchBox,
                     entity -> entity != player && !entity.isSpectator()
                             && entity.isAlive() && entity.isPickable(),
@@ -275,19 +277,19 @@ public class PlasmaGeneration extends Skill {
         }
 
         private static final class ChargeState {
-            private final net.minecraft.resources.ResourceKey<Level> dimension;
+            private final ResourceKey<Level> dimension;
             private final int plasmaEntityId;
             private final long startTick;
             private long lastConsumedSecond;
 
-            private ChargeState(net.minecraft.resources.ResourceKey<Level> dimension,
+            private ChargeState(ResourceKey<Level> dimension,
                                 int plasmaEntityId, long startTick) {
                 this.dimension = dimension;
                 this.plasmaEntityId = plasmaEntityId;
                 this.startTick = startTick;
             }
 
-            private net.minecraft.resources.ResourceKey<Level> dimension() {
+            private ResourceKey<Level> dimension() {
                 return dimension;
             }
 

@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -9,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -17,7 +19,6 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -25,7 +26,6 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.AuraEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -38,8 +38,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+
 public class IronSandArsenal extends Skill {
     public static final int SWORD_COOLDOWN = 10;
     public static final int WHIP_COOLDOWN = 5;
@@ -68,7 +70,6 @@ public class IronSandArsenal extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(AuraEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -103,21 +104,15 @@ public class IronSandArsenal extends Skill {
         public static void onToggle() {
             if (!AbilitySystemClient.canToggleSkill(Skills.IRON_SAND_ARSENAL.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
-            var p = net.minecraft.client.Minecraft.getInstance().player;
+            var p = Minecraft.getInstance().player;
             if (p == null) return;
-            AuraEffectWrapper.INSTANCE.triggerSphere(
-                    (float) p.getX(), (float) p.getY(), (float) p.getZ(),
-                    2.0f, 0.3f, 0.3f, 0.4f, 0.5f, 0.15f, 0.15f, 0.2f, 0.0f, 3.0f);
         }
 
         public static void onSwitchForm() {
             if (!AbilitySystemClient.canUseSkill(Skills.IRON_SAND_ARSENAL.get())) return;
             MisakaNetworkClient.send(FormSelectPacket.INSTANCE);
-            var p = net.minecraft.client.Minecraft.getInstance().player;
+            var p = Minecraft.getInstance().player;
             if (p == null) return;
-            AuraEffectWrapper.INSTANCE.triggerSphere(
-                    (float) p.getX(), (float) p.getY(), (float) p.getZ(),
-                    1.5f, 0.5f, 0.4f, 0.2f, 0.6f, 0.2f, 0.15f, 0.1f, 0.0f, 1.5f);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -226,7 +221,7 @@ public class IronSandArsenal extends Skill {
                                     && player.hasLineOfSight(e));
                     if (!targets.isEmpty()) {
                         var target = targets.stream()
-                                .min(java.util.Comparator.comparingDouble(player::distanceToSqr))
+                                .min(Comparator.comparingDouble(player::distanceToSqr))
                                 .orElseThrow();
                         target.hurtServer(sl, source, Server.calculateDamage(SWORD_DAMAGE, multiplier));
                         sl.sendParticles(ParticleTypes.CRIT,
@@ -240,7 +235,7 @@ public class IronSandArsenal extends Skill {
                     var startPos = player.getEyePosition();
                     for (var dist = 1.0; dist <= WHIP_RANGE; dist += 1.0) {
                         var checkPos = startPos.add(lookDir.scale(dist));
-                        var box = new net.minecraft.world.phys.AABB(
+                        var box = new AABB(
                                 checkPos.x - 0.5, checkPos.y - 0.5, checkPos.z - 0.5,
                                 checkPos.x + 0.5, checkPos.y + 0.5, checkPos.z + 0.5);
                         var targets = sl.getEntitiesOfClass(LivingEntity.class, box,

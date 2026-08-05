@@ -9,12 +9,15 @@ import java.lang.reflect.Modifier;
 import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Bounded compatibility cleanup for boss bars and controller objects owned by an executed entity.
@@ -83,8 +86,8 @@ final class PlatinumExecutionCleanup {
     }
 
     private static Graph scan(Entity target) {
-        var objects = java.util.Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
-        var bossEvents = java.util.Collections.newSetFromMap(new IdentityHashMap<ServerBossEvent, Boolean>());
+        var objects = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
+        var bossEvents = Collections.newSetFromMap(new IdentityHashMap<ServerBossEvent, Boolean>());
         var controllerBacked = false;
         var queue = new ArrayDeque<Node>();
         queue.add(new Node(target, 0));
@@ -157,7 +160,7 @@ final class PlatinumExecutionCleanup {
     private static void neutralizeController(Object controller, PendingCleanup pending) {
         forEachInstanceField(controller.getClass(), field -> {
             if (Modifier.isFinal(field.getModifiers())) return;
-            var name = field.getName().toLowerCase(java.util.Locale.ROOT);
+            var name = field.getName().toLowerCase(Locale.ROOT);
             var type = field.getType();
             if (type == boolean.class && isDisableFlag(name)) {
                 write(field, controller, false);
@@ -217,7 +220,7 @@ final class PlatinumExecutionCleanup {
     }
 
     private static boolean isControllerLike(Class<?> type) {
-        var name = type.getSimpleName().toLowerCase(java.util.Locale.ROOT);
+        var name = type.getSimpleName().toLowerCase(Locale.ROOT);
         return name.contains("controller") || name.contains("phase")
                 || name.contains("bossstate") || name.contains("bosshandle");
     }
@@ -233,7 +236,7 @@ final class PlatinumExecutionCleanup {
                 || name.equals("lives") || name.equals("currenthealth") || name.equals("truehealth");
     }
 
-    private static void forEachInstanceField(Class<?> type, java.util.function.Consumer<Field> consumer) {
+    private static void forEachInstanceField(Class<?> type, Consumer<Field> consumer) {
         for (var current = type; current != null && current != Object.class; current = current.getSuperclass()) {
             if (current != type && current.getPackageName().startsWith("net.minecraft.")) break;
             for (var field : declaredFields(current)) {

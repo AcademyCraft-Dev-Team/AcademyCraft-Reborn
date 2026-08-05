@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
@@ -23,8 +24,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
-import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
@@ -67,7 +68,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import static org.misaka.MisakaNetworkClient.send;
 
@@ -427,7 +430,7 @@ public final class Railgun extends Skill {
     }
 
     static boolean isVanillaAmmo(ItemStack stack) {
-        return isVanillaAmmoId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()));
+        return isVanillaAmmoId(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     static boolean isVanillaAmmoId(Identifier id) {

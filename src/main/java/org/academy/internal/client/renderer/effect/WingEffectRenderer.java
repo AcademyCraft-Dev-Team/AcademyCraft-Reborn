@@ -159,7 +159,7 @@ public final class WingEffectRenderer implements EffectRenderer {
         var byEntity = SWEEP_ANIMATIONS.get(kind);
         var animations = byEntity.get(entityId);
         if (animations == null || animations.isEmpty()) return;
-        for (Iterator<SweepAnimation> iterator = animations.iterator(); iterator.hasNext(); ) {
+        for (var iterator = animations.iterator(); iterator.hasNext(); ) {
             var animation = iterator.next();
             var progress = (currentTick - animation.startTick) / SWEEP_DURATION_TICKS;
             if (progress >= 1.0f) {
@@ -195,7 +195,7 @@ public final class WingEffectRenderer implements EffectRenderer {
         var byEntity = SWEEP_ANIMATIONS.get(kind);
         var animations = byEntity.get(player.getId());
         if (animations == null || animations.isEmpty()) return;
-        for (Iterator<SweepAnimation> iterator = animations.iterator(); iterator.hasNext(); ) {
+        for (var iterator = animations.iterator(); iterator.hasNext(); ) {
             var animation = iterator.next();
             var progress = (currentTick - animation.startTick) / SWEEP_DURATION_TICKS;
             if (progress >= 1.0f) {

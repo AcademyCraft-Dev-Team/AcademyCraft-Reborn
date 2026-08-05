@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.aeromanip.skills;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
@@ -44,9 +45,9 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class AtmosphereShield extends Skill {
-    private static final net.minecraft.resources.Identifier ATTACK_DAMAGE_MODIFIER_ID =
+    private static final Identifier ATTACK_DAMAGE_MODIFIER_ID =
             AcademyCraft.academy("atmosphere_shield_attack_damage");
-    private static final net.minecraft.resources.Identifier ATTACK_KNOCKBACK_MODIFIER_ID =
+    private static final Identifier ATTACK_KNOCKBACK_MODIFIER_ID =
             AcademyCraft.academy("atmosphere_shield_attack_knockback");
 
     public AtmosphereShield() {
@@ -202,7 +203,7 @@ public final class AtmosphereShield extends Skill {
 
         private static void syncModifier(
                 AttributeInstance attribute,
-                net.minecraft.resources.Identifier id,
+                Identifier id,
                 double amount,
                 boolean enabled
         ) {

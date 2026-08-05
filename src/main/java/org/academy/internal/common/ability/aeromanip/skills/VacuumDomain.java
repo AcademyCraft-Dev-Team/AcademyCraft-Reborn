@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.aeromanip.skills;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -13,6 +14,7 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -194,7 +196,7 @@ public final class VacuumDomain extends Skill {
 
     public static final class Context extends ServerContext {
         private final Vec3 center;
-        private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
+        private final ResourceKey<Level> dimension;
         private int ticks;
         private boolean ended;
 

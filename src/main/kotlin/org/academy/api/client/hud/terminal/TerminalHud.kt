@@ -22,8 +22,6 @@ import net.neoforged.neoforge.client.event.ScreenEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraftClient
 import org.academy.AcademyCraftConfig
-import org.academy.api.client.render.Render
-import org.academy.api.client.resources.R
 import org.academy.api.client.app.App
 import org.academy.api.client.gui.animation.*
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
@@ -46,7 +44,9 @@ import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.*
+import org.academy.api.client.render.Render
 import org.academy.api.client.render.UniformPayload
+import org.academy.api.client.resources.R
 import org.academy.api.client.thread.MainThread
 import org.academy.api.client.util.ClientUtil
 import org.academy.api.common.util.MathUtil

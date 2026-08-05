@@ -75,12 +75,12 @@ public final class QqCredentialManager {
     }
 
     public static boolean hasValidCredential() {
-        QqCredential current = getCredential();
+        var current = getCredential();
         return current != null && current.isValid();
     }
 
     public static String getEffectiveCookie() {
-        QqCredential current = getCredential();
+        var current = getCredential();
         return current != null ? current.toCookieString() : "";
     }
 }

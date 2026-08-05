@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -111,11 +112,11 @@ public final class MineDetect extends Skill {
 
     public static final class Client {
         private static final TagKey<Block> FORGE_ORES = TagKey.create(
-                net.minecraft.core.registries.Registries.BLOCK,
+                Registries.BLOCK,
                 Identifier.fromNamespaceAndPath("forge", "ores")
         );
         private static final TagKey<Block> COMMON_ORES = TagKey.create(
-                net.minecraft.core.registries.Registries.BLOCK,
+                Registries.BLOCK,
                 Identifier.fromNamespaceAndPath("c", "ores")
         );
         private static final LongOpenHashSet ORES = new LongOpenHashSet();

@@ -103,7 +103,7 @@ public final class EMFieldRenderer {
                 new LinePath(line.from, line.to),
                 List.of(
                         new JaggedModifier(dynamicWaviness, 1, lineSeed),
-                        new TaperModifier(new AttributeCurve(java.util.List.of(
+                        new TaperModifier(new AttributeCurve(List.of(
                                 new Knot(0.0f, 0.0f), new Knot(0.1f, 1.0f),
                                 new Knot(0.9f, 1.0f), new Knot(1.0f, 0.0f)
                         )), 1.0f)

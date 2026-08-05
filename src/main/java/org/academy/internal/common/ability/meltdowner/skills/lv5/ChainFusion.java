@@ -2,11 +2,13 @@ package org.academy.internal.common.ability.meltdowner.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -75,11 +77,11 @@ public class ChainFusion extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            var minecraft = Minecraft.getInstance();
             if (minecraft.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.CHAIN_FUSION.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
-            var p = net.minecraft.client.Minecraft.getInstance().player;
+            var p = Minecraft.getInstance().player;
             if (p == null) return;
             EMFieldEffectWrapper.INSTANCE.ensureActive();
             var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
@@ -208,7 +210,7 @@ public class ChainFusion extends Skill {
 
         private void chainFrom(ServerLevel sl, Vec3 pos, float damage) {
             var nearby = sl.getEntitiesOfClass(LivingEntity.class,
-                    new net.minecraft.world.phys.AABB(
+                    new AABB(
                             pos.x - CHAIN_RADIUS, pos.y - CHAIN_RADIUS, pos.z - CHAIN_RADIUS,
                             pos.x + CHAIN_RADIUS, pos.y + CHAIN_RADIUS, pos.z + CHAIN_RADIUS),
                     e -> e != player && e.isAlive() && !player.isAlliedTo(e)

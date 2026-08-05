@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -119,7 +120,7 @@ public final class AreaTeleportStart extends Skill {
             });
         }
 
-        private static boolean validate(ServerLevel level, net.minecraft.server.level.ServerPlayer player,
+        private static boolean validate(ServerLevel level, ServerPlayer player,
                                         AreaTeleportState.Region source, AreaTeleportState.Region destination) {
             if (destination.min().getY() < level.getMinY() || destination.max().getY() >= level.getMaxY()) return false;
             var cursor = new BlockPos.MutableBlockPos();
@@ -137,7 +138,7 @@ public final class AreaTeleportStart extends Skill {
             return true;
         }
 
-        private static boolean canMove(ServerLevel level, net.minecraft.server.level.ServerPlayer player,
+        private static boolean canMove(ServerLevel level, ServerPlayer player,
                                        BlockPos pos, BlockState state) {
             var restricted = player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
                     || state.getBlock() instanceof GameMasterBlock && !player.canUseGameMasterBlocks();
@@ -147,7 +148,7 @@ public final class AreaTeleportStart extends Skill {
             return !event.isCanceled();
         }
 
-        private static boolean move(ServerLevel level, net.minecraft.server.level.ServerPlayer player,
+        private static boolean move(ServerLevel level, ServerPlayer player,
                                     AreaTeleportState.Region source, AreaTeleportState.Region destination) {
             var operation = "area_" + player.getStringUUID();
             TeleportChunkForceManager.forceRegion(level, operation + "_source",
@@ -198,7 +199,7 @@ public final class AreaTeleportStart extends Skill {
                     for (var z = region.min().getZ(); z <= region.max().getZ(); z++) {
                         cursor.set(x, y, z);
                         var entity = level.getBlockEntity(cursor);
-                        CompoundTag tag = entity == null ? null : entity.saveWithFullMetadata(level.registryAccess());
+                        var tag = entity == null ? null : entity.saveWithFullMetadata(level.registryAccess());
                         cells[index++] = new Cell(level.getBlockState(cursor), tag);
                     }
             return cells;
@@ -235,7 +236,7 @@ public final class AreaTeleportStart extends Skill {
         }
 
         private static List<FrozenEntity> freezeEntities(ServerLevel level, AreaTeleportState.Region source,
-                                                         net.minecraft.server.level.ServerPlayer player) {
+                                                         ServerPlayer player) {
             var result = new ArrayList<FrozenEntity>();
             for (var entity : level.getEntities(player, source.box(), entity -> !(entity instanceof Player))) {
                 var frozen = new FrozenEntity(entity);
@@ -256,9 +257,9 @@ public final class AreaTeleportStart extends Skill {
         private final boolean noAi;
         private FrozenEntity(Entity entity) {
             this.entity = entity;
-            this.position = entity.position();
-            this.noGravity = entity.isNoGravity();
-            this.noAi = entity instanceof Mob mob && mob.isNoAi();
+            position = entity.position();
+            noGravity = entity.isNoGravity();
+            noAi = entity instanceof Mob mob && mob.isNoAi();
         }
         private void freeze() {
             entity.setNoGravity(true);

@@ -36,42 +36,42 @@ public final class QqMusicService {
         if (query == null || query.isBlank()) {
             return Collections.emptyList();
         }
-        JsonObject comm = new JsonObject();
+        var comm = new JsonObject();
         comm.addProperty("ct", "19");
         comm.addProperty("cv", "1859");
         comm.addProperty("uin", "0");
 
-        JsonObject param = new JsonObject();
+        var param = new JsonObject();
         param.addProperty("grp", 1);
         param.addProperty("num_per_page", 20);
         param.addProperty("page_num", 1);
         param.addProperty("query", query);
         param.addProperty("search_type", 0);
 
-        JsonObject req = new JsonObject();
+        var req = new JsonObject();
         req.addProperty("method", "DoSearchForQQMusicDesktop");
         req.addProperty("module", "music.search.SearchCgiService");
         req.add("param", param);
 
-        JsonObject request = new JsonObject();
+        var request = new JsonObject();
         request.add("comm", comm);
         request.add("req", req);
 
-        JsonObject root = postJson(request.toString(), defaultHeaders(true));
-        JsonArray list = root.getAsJsonObject("req")
+        var root = postJson(request.toString(), defaultHeaders(true));
+        var list = root.getAsJsonObject("req")
                 .getAsJsonObject("data")
                 .getAsJsonObject("body")
                 .getAsJsonObject("song")
                 .getAsJsonArray("list");
         List<QqSearchResult> results = new ArrayList<>();
-        for (JsonElement element : list) {
-            JsonObject song = element.getAsJsonObject();
-            String id = getString(song, "mid");
-            String title = getString(song, "name");
-            boolean vip = song.has("pay") && song.getAsJsonObject("pay").has("pay_play")
+        for (var element : list) {
+            var song = element.getAsJsonObject();
+            var id = getString(song, "mid");
+            var title = getString(song, "name");
+            var vip = song.has("pay") && song.getAsJsonObject("pay").has("pay_play")
                     && song.getAsJsonObject("pay").get("pay_play").getAsInt() == 1;
             List<String> singers = new ArrayList<>();
-            for (JsonElement singerElement : song.getAsJsonArray("singer")) {
+            for (var singerElement : song.getAsJsonArray("singer")) {
                 singers.add(getString(singerElement.getAsJsonObject(), "name"));
             }
             results.add(new QqSearchResult(id, title, String.join("/", singers), vip));
@@ -83,10 +83,10 @@ public final class QqMusicService {
         if (mid == null || mid.isBlank()) {
             throw new IOException("Missing QQ music track id");
         }
-        TrackInfo trackInfo = getTrackInfo(mid);
-        String mediaMid = trackInfo.mediaMid().isBlank() ? mid : trackInfo.mediaMid();
-        JsonObject data = requestVkeyData(mid, mediaMid);
-        String purl = selectBestPurl(data.getAsJsonArray("midurlinfo"));
+        var trackInfo = getTrackInfo(mid);
+        var mediaMid = trackInfo.mediaMid().isBlank() ? mid : trackInfo.mediaMid();
+        var data = requestVkeyData(mid, mediaMid);
+        var purl = selectBestPurl(data.getAsJsonArray("midurlinfo"));
         if (purl.isBlank()) {
             throw new IOException("QQ music track has no playable ogg source");
         }
@@ -94,12 +94,12 @@ public final class QqMusicService {
     }
 
     public static byte[] downloadOggBytes(String mid) throws IOException {
-        QqResolvedTrack track = resolveOggTrack(mid);
-        HttpURLConnection connection = (HttpURLConnection) URI.create(track.streamUrl()).toURL().openConnection();
+        var track = resolveOggTrack(mid);
+        var connection = (HttpURLConnection) URI.create(track.streamUrl()).toURL().openConnection();
         connection.setRequestProperty("User-Agent", defaultUserAgent());
         connection.setConnectTimeout(15000);
         connection.setReadTimeout(30000);
-        try (InputStream stream = connection.getInputStream()) {
+        try (var stream = connection.getInputStream()) {
             return stream.readAllBytes();
         } finally {
             connection.disconnect();
@@ -107,45 +107,45 @@ public final class QqMusicService {
     }
 
     private static TrackInfo getTrackInfo(String mid) throws IOException {
-        JsonObject param = new JsonObject();
+        var param = new JsonObject();
         param.addProperty("song_mid", mid);
         param.addProperty("song_id", 0);
 
-        JsonObject req = new JsonObject();
+        var req = new JsonObject();
         req.addProperty("module", "music.pf_song_detail_svr");
         req.addProperty("method", "get_song_detail");
         req.add("param", param);
         req.addProperty("loginUin", "0");
 
-        JsonObject comm = new JsonObject();
+        var comm = new JsonObject();
         comm.addProperty("uin", "0");
         comm.addProperty("format", "json");
         comm.addProperty("ct", 24);
         comm.addProperty("cv", 0);
 
-        JsonObject body = new JsonObject();
+        var body = new JsonObject();
         body.add("req_1", req);
         body.add("comm", comm);
 
-        JsonObject root = postJson(body.toString(), defaultHeaders(true));
-        JsonObject trackInfo = root.getAsJsonObject("req_1")
+        var root = postJson(body.toString(), defaultHeaders(true));
+        var trackInfo = root.getAsJsonObject("req_1")
                 .getAsJsonObject("data")
                 .getAsJsonObject("track_info");
-        String title = getString(trackInfo, "name");
-        int interval = trackInfo.has("interval") ? trackInfo.get("interval").getAsInt() : 0;
-        boolean vip = trackInfo.has("pay") && trackInfo.getAsJsonObject("pay").has("pay_play")
+        var title = getString(trackInfo, "name");
+        var interval = trackInfo.has("interval") ? trackInfo.get("interval").getAsInt() : 0;
+        var vip = trackInfo.has("pay") && trackInfo.getAsJsonObject("pay").has("pay_play")
                 && trackInfo.getAsJsonObject("pay").get("pay_play").getAsInt() == 1;
-        String mediaMid = "";
+        var mediaMid = "";
         if (trackInfo.has("file") && trackInfo.getAsJsonObject("file").has("media_mid")) {
             mediaMid = getString(trackInfo.getAsJsonObject("file"), "media_mid");
         }
-        String albumMid = "";
+        var albumMid = "";
         if (trackInfo.has("album") && trackInfo.getAsJsonObject("album").has("mid")) {
             albumMid = getString(trackInfo.getAsJsonObject("album"), "mid");
         }
         List<String> singers = new ArrayList<>();
         if (trackInfo.has("singer")) {
-            for (JsonElement singerElement : trackInfo.getAsJsonArray("singer")) {
+            for (var singerElement : trackInfo.getAsJsonArray("singer")) {
                 singers.add(getString(singerElement.getAsJsonObject(), "name"));
             }
         }
@@ -153,16 +153,16 @@ public final class QqMusicService {
     }
 
     private static JsonObject requestVkeyData(String songMid, String mediaMid) throws IOException {
-        JsonArray filenameList = new JsonArray();
-        JsonArray songMidList = new JsonArray();
-        JsonArray songTypeList = new JsonArray();
-        for (FileCandidate candidate : OGG_CANDIDATES) {
+        var filenameList = new JsonArray();
+        var songMidList = new JsonArray();
+        var songTypeList = new JsonArray();
+        for (var candidate : OGG_CANDIDATES) {
             filenameList.add(candidate.buildFilename(mediaMid));
             songMidList.add(songMid);
             songTypeList.add(0);
         }
 
-        JsonObject param = new JsonObject();
+        var param = new JsonObject();
         param.add("filename", filenameList);
         param.addProperty("guid", "10000");
         param.add("songmid", songMidList);
@@ -171,40 +171,40 @@ public final class QqMusicService {
         param.addProperty("loginflag", 1);
         param.addProperty("platform", "20");
 
-        JsonObject req = new JsonObject();
+        var req = new JsonObject();
         req.addProperty("module", "vkey.GetVkeyServer");
         req.addProperty("method", "CgiGetVkey");
         req.add("param", param);
 
-        JsonObject comm = new JsonObject();
+        var comm = new JsonObject();
         comm.addProperty("uin", "0");
         comm.addProperty("format", "json");
         comm.addProperty("ct", 24);
         comm.addProperty("cv", 0);
 
-        JsonObject body = new JsonObject();
+        var body = new JsonObject();
         body.add("req_1", req);
         body.addProperty("loginUin", "0");
         body.add("comm", comm);
 
-        JsonObject root = postJson(body.toString(), defaultHeaders(true));
+        var root = postJson(body.toString(), defaultHeaders(true));
         return root.getAsJsonObject("req_1").getAsJsonObject("data");
     }
 
     private static JsonObject postJson(String body, Map<String, String> headers) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) new URL(MUSICU_URL).openConnection();
+        var connection = (HttpURLConnection) new URL(MUSICU_URL).openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(12000);
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
+        for (var entry : headers.entrySet()) {
             connection.setRequestProperty(entry.getKey(), entry.getValue());
         }
-        try (OutputStream outputStream = connection.getOutputStream()) {
+        try (var outputStream = connection.getOutputStream()) {
             outputStream.write(body.getBytes(StandardCharsets.UTF_8));
         }
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder result = new StringBuilder();
+        try (var bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+            var result = new StringBuilder();
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 result.append(line);
@@ -223,7 +223,7 @@ public final class QqMusicService {
         headers.put("Content-Type", "application/json;charset=utf-8");
         headers.put("Referer", "https://y.qq.com/");
         if (allowCookie) {
-            String cookie = QqCredentialManager.getEffectiveCookie();
+            var cookie = QqCredentialManager.getEffectiveCookie();
             if (!cookie.isBlank()) {
                 headers.put("Cookie", cookie);
             }
@@ -233,9 +233,9 @@ public final class QqMusicService {
 
     private static String resolveBaseUrl(JsonObject data) {
         if (data != null && data.has("sip")) {
-            JsonArray sip = data.getAsJsonArray("sip");
+            var sip = data.getAsJsonArray("sip");
             if (sip != null && !sip.isEmpty()) {
-                String value = sip.get(0).getAsString();
+                var value = sip.get(0).getAsString();
                 if (value != null && !value.isBlank()) {
                     return value.endsWith("/") ? value : value + "/";
                 }
@@ -248,10 +248,10 @@ public final class QqMusicService {
         if (midurlinfo == null) {
             return "";
         }
-        for (int i = 0; i < midurlinfo.size(); i++) {
-            JsonObject info = midurlinfo.get(i).getAsJsonObject();
+        for (var i = 0; i < midurlinfo.size(); i++) {
+            var info = midurlinfo.get(i).getAsJsonObject();
             if (info != null && info.has("purl")) {
-                String purl = info.get("purl").getAsString();
+                var purl = info.get("purl").getAsString();
                 if (purl != null && !purl.isBlank()) {
                     return purl;
                 }
@@ -281,13 +281,13 @@ public final class QqMusicService {
         if (albumMid == null || albumMid.isBlank()) {
             throw new IOException("Missing album mid for cover download");
         }
-        String coverUrl = "https://y.qq.com/music/photo_new/T002R300x300M000" + albumMid + ".jpg";
-        HttpURLConnection connection = (HttpURLConnection) URI.create(coverUrl).toURL().openConnection();
+        var coverUrl = "https://y.qq.com/music/photo_new/T002R300x300M000" + albumMid + ".jpg";
+        var connection = (HttpURLConnection) URI.create(coverUrl).toURL().openConnection();
         connection.setRequestProperty("User-Agent", defaultUserAgent());
         connection.setRequestProperty("Referer", "https://y.qq.com/");
         connection.setConnectTimeout(10000);
         connection.setReadTimeout(20000);
-        try (InputStream stream = connection.getInputStream()) {
+        try (var stream = connection.getInputStream()) {
             return stream.readAllBytes();
         } finally {
             connection.disconnect();
@@ -295,7 +295,7 @@ public final class QqMusicService {
     }
 
     public static String resolveAlbumMid(String mid) throws IOException {
-        TrackInfo info = getTrackInfo(mid);
+        var info = getTrackInfo(mid);
         return info.albumMid();
     }
 }

@@ -56,19 +56,19 @@ public final class QqOggCache {
         }
 
         synchronized (LOCK) {
-            ByteBuffer cached = MEMORY_CACHE.get(mid);
+            var cached = MEMORY_CACHE.get(mid);
             if (cached != null) {
                 return CompletableFuture.completedFuture(cached);
             }
-            CompletableFuture<ByteBuffer> existing = IN_FLIGHT.get(mid);
+            var existing = IN_FLIGHT.get(mid);
             if (existing != null) {
                 return existing;
             }
-            CompletableFuture<ByteBuffer> future = CompletableFuture.supplyAsync(() -> {
+            var future = CompletableFuture.supplyAsync(() -> {
                 try {
-                    ByteBuffer buffer = loadFromDisk(mid);
+                    var buffer = loadFromDisk(mid);
                     if (buffer == null) {
-                        byte[] bytes = QqMusicService.downloadOggBytes(mid);
+                        var bytes = QqMusicService.downloadOggBytes(mid);
                         buffer = toDirectBuffer(bytes);
                         saveToDisk(mid, bytes);
                     }
@@ -90,11 +90,11 @@ public final class QqOggCache {
 
     private static ByteBuffer loadFromDisk(String mid) {
         try {
-            Path file = resolveFile(mid);
+            var file = resolveFile(mid);
             if (!Files.exists(file)) {
                 return null;
             }
-            byte[] bytes = Files.readAllBytes(file);
+            var bytes = Files.readAllBytes(file);
             if (bytes.length < 4 || bytes[0] != 'O' || bytes[1] != 'g' || bytes[2] != 'g' || bytes[3] != 'S') {
                 deleteCorruptFile(file, mid);
                 AcademyCraft.LOGGER.warn("Corrupt QQ ogg cache for {}, will re-download", mid);
@@ -110,8 +110,8 @@ public final class QqOggCache {
 
     private static void saveToDisk(String mid, byte[] bytes) {
         try {
-            Path file = resolveFile(mid);
-            Path tempFile = file.resolveSibling(file.getFileName() + ".tmp");
+            var file = resolveFile(mid);
+            var tempFile = file.resolveSibling(file.getFileName() + ".tmp");
             Files.createDirectories(file.getParent());
             Files.write(tempFile, bytes);
             Files.move(tempFile, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
@@ -123,7 +123,7 @@ public final class QqOggCache {
     private static void deleteCorruptFile(Path file, String mid) {
         try {
             Files.deleteIfExists(file);
-            Path tempFile = file.resolveSibling(file.getFileName() + ".tmp");
+            var tempFile = file.resolveSibling(file.getFileName() + ".tmp");
             Files.deleteIfExists(tempFile);
         } catch (Exception ignored) {
         }
@@ -138,7 +138,7 @@ public final class QqOggCache {
             return;
         }
         synchronized (LOCK) {
-            ByteBuffer existing = MEMORY_CACHE.remove(mid);
+            var existing = MEMORY_CACHE.remove(mid);
             if (existing != null) {
                 memoryBytes -= existing.capacity();
             }
@@ -150,9 +150,9 @@ public final class QqOggCache {
 
     private static void trimIfNeeded() {
         while (memoryBytes > MAX_IN_MEMORY_BYTES && !MEMORY_CACHE.isEmpty()) {
-            Map.Entry<String, ByteBuffer> eldest = MEMORY_CACHE.entrySet().iterator().next();
+            var eldest = MEMORY_CACHE.entrySet().iterator().next();
             MEMORY_CACHE.remove(eldest.getKey());
-            ByteBuffer buffer = eldest.getValue();
+            var buffer = eldest.getValue();
             if (buffer != null) {
                 memoryBytes -= buffer.capacity();
             }
@@ -162,7 +162,7 @@ public final class QqOggCache {
 
     private static ByteBuffer toDirectBuffer(byte[] bytes) {
         Objects.requireNonNull(bytes);
-        ByteBuffer buffer = ByteBuffer.allocateDirect(bytes.length);
+        var buffer = ByteBuffer.allocateDirect(bytes.length);
         buffer.put(bytes);
         buffer.flip();
         return buffer;

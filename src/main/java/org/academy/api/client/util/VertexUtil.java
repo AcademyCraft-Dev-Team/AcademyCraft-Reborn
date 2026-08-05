@@ -48,11 +48,11 @@ public final class VertexUtil {
 
     public static final class Cylinder {
         public static float[][] getCylinderVertexBuffer(
-                final float yBottom,
-                final float yTop,
-                final float radius,
-                final int faces,
-                final boolean capped) {
+                float yBottom,
+                float yTop,
+                float radius,
+                int faces,
+                boolean capped) {
             if (radius <= 0f || faces < 3) {
                 return new float[0][];
             }
@@ -154,10 +154,10 @@ public final class VertexUtil {
         }
 
         public static float[][] getCylinderWireframeBuffer(
-                final float yBottom,
-                final float yTop,
-                final float radius,
-                final int faces) {
+                float yBottom,
+                float yTop,
+                float radius,
+                int faces) {
             if (radius <= 0f || faces < 3) {
                 return new float[0][];
             }

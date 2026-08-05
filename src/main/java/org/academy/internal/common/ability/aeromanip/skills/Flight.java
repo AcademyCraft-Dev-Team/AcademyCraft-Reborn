@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.aeromanip.skills;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -37,7 +38,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class Flight extends Skill {
-    private static final net.minecraft.resources.Identifier FLIGHT_SOURCE =
+    private static final Identifier FLIGHT_SOURCE =
             AcademyCraft.academy(SkillNames.FLIGHT);
 
     public Flight() {

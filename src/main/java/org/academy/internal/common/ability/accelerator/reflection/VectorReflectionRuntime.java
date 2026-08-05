@@ -145,7 +145,7 @@ public final class VectorReflectionRuntime {
 
         private Anchor(ServerPlayer player) {
             this.player = new WeakReference<>(player);
-            this.lastSafePosition = finite(player.position()) ? player.position() : Vec3.ZERO;
+            lastSafePosition = finite(player.position()) ? player.position() : Vec3.ZERO;
         }
     }
 

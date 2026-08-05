@@ -27,7 +27,7 @@ public final class WindGenBaseSpecialRenderer implements NoDataSpecialModelRende
     }
 
     @Override
-    public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, final int outlineColor) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
         poseStack.translate(0.5f, -0.5f, 0.5f);
         poseStack.scale(0.75F, 0.75F, 0.75F);

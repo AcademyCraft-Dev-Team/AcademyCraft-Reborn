@@ -128,7 +128,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.itemModelOutput.accept(
                 Items.WIND_GEN_BASE.get(),
                 ItemModelUtils.specialModel(
-                        AcademyCraft.academy("wind_gen_base_transforms").withPrefix("block/"),
+                        academy("wind_gen_base_transforms").withPrefix("block/"),
                         WindGenBaseSpecialRenderer.Unbaked.INSTANCE
                 )
         );
