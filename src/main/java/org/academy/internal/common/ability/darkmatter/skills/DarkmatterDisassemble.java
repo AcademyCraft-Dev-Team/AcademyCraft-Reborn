@@ -212,7 +212,7 @@ public final class DarkmatterDisassemble extends Skill {
                     destroyed = level.destroyBlock(pos, true, player);
                 }
                 if (!destroyed) return;
-                for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class,
+                for (var item : level.getEntitiesOfClass(ItemEntity.class,
                         new AABB(pos).inflate(DarkmatterSixWings.Server.isActive(player) ? 4.5 : 1.5),
                         entity -> entity.isAlive())) {
                     item.teleportTo(player.getX(), player.getY() + 0.5, player.getZ());

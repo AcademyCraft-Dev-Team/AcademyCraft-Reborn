@@ -414,12 +414,12 @@ public class KineticEnergyApplied extends Skill {
             var look = normalizeOrDefault(player.getViewVector(1.0f));
             var end = start.add(look.scale(reach));
 
-            BlockHitResult blockHit = level.clip(new ClipContext(
+            var blockHit = level.clip(new ClipContext(
                     start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
             if (blockHit.getType() != HitResult.Type.MISS) return false;
 
             var searchBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0);
-            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+            var entityHit = ProjectileUtil.getEntityHitResult(
                     level, player, start, end, searchBox,
                     entity -> entity instanceof LivingEntity living
                             && living != player
@@ -629,10 +629,10 @@ public class KineticEnergyApplied extends Skill {
                           int impactLevel, BlockPos priorityBlock) {
             this.dimension = dimension;
             this.center = center;
-            this.origin = BlockPos.containing(center);
-            this.radiusSquared = radius * radius;
+            origin = BlockPos.containing(center);
+            radiusSquared = radius * radius;
             this.impactLevel = impactLevel;
-            this.offsets = sphereOffsetsFor(Mth.ceil(radius));
+            offsets = sphereOffsetsFor(Mth.ceil(radius));
             this.priorityBlock = priorityBlock == null ? null : priorityBlock.immutable();
         }
 
@@ -662,7 +662,7 @@ public class KineticEnergyApplied extends Skill {
             if (x * x + y * y + z * z > radiusSquared) return false;
             if (!level.hasChunkAt(pos) || !level.mayInteract(player, pos)) return false;
 
-            BlockState state = level.getBlockState(pos);
+            var state = level.getBlockState(pos);
             if (state.isAir()) return clearFluid(level, player, pos, state);
 
             var bedrock = state.is(Blocks.BEDROCK);
@@ -678,7 +678,7 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private boolean clearFluid(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state) {
-            FluidState fluidState = state.getFluidState();
+            var fluidState = state.getFluidState();
             if (fluidState.isEmpty()) return false;
 
             if (state.getBlock() instanceof BucketPickup bucketPickup

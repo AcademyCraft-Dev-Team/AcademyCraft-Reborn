@@ -10,10 +10,10 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
-import org.academy.api.client.render.Render
 import org.academy.api.client.hud.ability.AbilityInfoHud
 import org.academy.api.client.hud.ability.ToggleStatusHud
 import org.academy.api.client.hud.terminal.TerminalHud
+import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
 import org.academy.api.client.thread.RenderThread

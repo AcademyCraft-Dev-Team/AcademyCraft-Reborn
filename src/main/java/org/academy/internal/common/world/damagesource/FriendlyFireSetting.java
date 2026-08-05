@@ -87,7 +87,7 @@ public final class FriendlyFireSetting {
     private static Object invoke(Entity entity, String name) {
         if (entity == null) return null;
         try {
-            Method method = entity.getClass().getMethod(name);
+            var method = entity.getClass().getMethod(name);
             return method.invoke(entity);
         } catch (Throwable ignored) {
             return null;

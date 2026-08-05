@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -234,7 +235,7 @@ public final class AtmosphereBlastGun extends Skill {
         private static void applyKnockback(
                 LivingEntity target,
                 Vec3 look,
-                net.minecraft.world.damagesource.DamageSource source,
+                DamageSource source,
                 float damage
         ) {
             if (AeromanipTargeting.isBoss(target)) return;

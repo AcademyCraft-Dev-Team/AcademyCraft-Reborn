@@ -26,7 +26,7 @@ public class VrLocalPlayer extends LocalPlayer {
 
     @Override
     public float getHealth() {
-        return academy$protected() ? Math.max(1.0f, super.getMaxHealth()) : super.getHealth();
+        return academy$protected() ? Math.max(1.0f, getMaxHealth()) : super.getHealth();
     }
 
     @Override

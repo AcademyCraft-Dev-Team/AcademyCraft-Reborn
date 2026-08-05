@@ -47,7 +47,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.ArrayList;
 import java.util.List;
+
 public class Thunderclap extends Skill {
     static final double RANGE = 64.0;
     static final double RADIUS = 5.0;
@@ -189,7 +191,7 @@ public class Thunderclap extends Skill {
             if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
             else right = right.normalize();
             var up = right.cross(look).normalize();
-            var arcs = new java.util.ArrayList<ArcPath>();
+            var arcs = new ArrayList<ArcPath>();
             for (var i = 0; i < 10; i++) {
                 var angle = MathUtil.RANDOM.nextDouble() * Math.PI * 2.0;
                 var radius = 3.5 * MathUtil.RANDOM.nextDouble();

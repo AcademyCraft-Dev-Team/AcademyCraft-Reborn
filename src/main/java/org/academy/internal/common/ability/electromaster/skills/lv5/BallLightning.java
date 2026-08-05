@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -113,7 +114,7 @@ public class BallLightning extends Skill {
         public static BallLightningConfig CONFIG = new BallLightningConfig();
 
         public static void handler() {
-            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            var minecraft = Minecraft.getInstance();
             if (minecraft.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.BALL_LIGHTNING.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);

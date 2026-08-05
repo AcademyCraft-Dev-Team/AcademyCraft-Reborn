@@ -8,13 +8,13 @@ import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
-import org.academy.api.client.render.Render
 import org.academy.api.client.gui.event.CharTypedEvent
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.gui.widget.FrameLayoutWidget
+import org.academy.api.client.render.Render
 
 abstract class UiScreen protected constructor(title: Component) : Screen(title), RenderRoot {
     override val root: FrameLayoutWidget = FrameLayoutWidget()

@@ -5,7 +5,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.neoforged.bus.api.SubscribeEvent
-import org.academy.api.client.resources.R
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
@@ -18,6 +17,7 @@ import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.TextBoxWidget.FocusGainedEvent
 import org.academy.api.client.gui.widget.TextBoxWidget.FocusLostEvent
+import org.academy.api.client.resources.R
 import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.WindGenMenu
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity

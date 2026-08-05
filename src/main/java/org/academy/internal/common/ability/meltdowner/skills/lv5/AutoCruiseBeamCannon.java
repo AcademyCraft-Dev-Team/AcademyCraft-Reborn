@@ -38,6 +38,7 @@ import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.misaka.MisakaNetworkClient;
@@ -260,7 +261,7 @@ public final class AutoCruiseBeamCannon extends Skill {
 
         private static void playFireSound(ServerPlayer owner) {
             owner.level().playSound(null, owner.blockPosition(),
-                    org.academy.internal.common.sounds.SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
+                    SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
                     SoundSource.PLAYERS, 0.28f, 1.35f);
         }
 

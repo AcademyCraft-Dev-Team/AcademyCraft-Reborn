@@ -60,7 +60,6 @@ public final class MiningBeam extends Skill {
     static final float BASE_DAMAGE = 12.0f;
     static final float BREAK_RADIUS = 0.35f;
     static final int MINING_TIER = 3;
-
     public MiningBeam() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())

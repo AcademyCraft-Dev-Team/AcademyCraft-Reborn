@@ -33,11 +33,13 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.misaka.MisakaNetworkClient;
@@ -305,11 +307,11 @@ public final class VectorBlast extends Skill {
                     SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0f, 1.0f);
             for (var index = 1; index <= (int) RANGE; index++) {
                 var point = origin.add(direction.scale(index));
-                level.sendParticles(org.academy.internal.common.core.particles.ParticleTypes.VECTOR_BLAST.get(),
+                level.sendParticles(ParticleTypes.VECTOR_BLAST.get(),
                         point.x, point.y, point.z, 1, 0, 0, 0, 0);
             }
 
-            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            var system = AbilitySystemServer.getSystem(player);
             var damage = BASE_DAMAGE
                     * system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     * system.getPlayerDamageMultiplier(player.getUUID());

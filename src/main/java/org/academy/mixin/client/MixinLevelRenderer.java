@@ -14,6 +14,8 @@ import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.vfx.VfxContexts;
+import org.academy.api.client.render.vfx.VfxManager;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -41,18 +43,23 @@ public abstract class MixinLevelRenderer {
             boolean shouldRenderSky,
             CallbackInfo ci
     ) {
+        VfxManager.INSTANCE.renderFrame();
         BloomEffect.getInstance().process();
         PostEffect.pre();
         PostEffect.post();
     }
 
-    @Inject(method = "submitEntities", at = @At("HEAD"))
+    @Inject(method = "submitEntities", at = @At("RETURN"))
     private void submitEntities(
             PoseStack poseStack,
             LevelRenderState levelRenderState,
             SubmitNodeCollector output,
             CallbackInfo ci
     ) {
+        VfxContexts.submit(
+                Minecraft.getInstance().getDeltaTracker(),
+                levelRenderState.cameraRenderState
+        );
         var event = new LevelRenderEvent(
                 Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false),
                 new MatrixStack().setFrom(poseStack.last()),

@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -163,7 +164,7 @@ public final class DarkmatterCut extends Skill {
                     && look.dot(horizontal.normalize()) >= minimumDot;
         }
 
-        private static void spawnSlash(ServerLevel level, net.minecraft.server.level.ServerPlayer player,
+        private static void spawnSlash(ServerLevel level, ServerPlayer player,
                                        float scale) {
             var slash = new DarkmatterCutSlash(EntityTypes.DARKMATTER_CUT_SLASH.get(), level);
             var position = player.position().add(0, player.getBbHeight() * 0.3, 0)

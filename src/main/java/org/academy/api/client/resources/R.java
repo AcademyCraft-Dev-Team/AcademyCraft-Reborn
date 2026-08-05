@@ -55,7 +55,11 @@ public final class R {
         public static final Identifier DISTORTION_RING = academy("core/distortion_ring");
 
         public static final class core {
-            public static final Identifier aura_field = academy("core/aura_field");
+            public static final Identifier vfx_particle = academy("core/vfx_particle");
+            public static final Identifier vfx_beam = academy("core/vfx_beam");
+            public static final Identifier vfx_ring = academy("core/vfx_ring");
+            public static final Identifier vfx_arc_inst = academy("core/vfx_arc_inst");
+            public static final Identifier vfx_tex_billboard = academy("core/vfx_tex_billboard");
             public static final Identifier bloom_blend = academy("core/bloom_blend");
             public static final Identifier distortion_ring = academy("core/distortion_ring");
             public static final Identifier gaussian_blur = academy("core/gaussian_blur");

@@ -21,7 +21,7 @@ public final class WindGenPillarSpecialRenderer implements NoDataSpecialModelRen
     }
 
     @Override
-    public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, final int outlineColor) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, int outlineColor) {
         poseStack.pushPose();
         WindGenPillarRenderer.renderPillar(poseStack, submitNodeCollector, lightCoords);
         poseStack.popPose();

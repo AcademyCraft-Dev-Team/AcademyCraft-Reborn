@@ -8,8 +8,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
@@ -61,7 +64,7 @@ public class Disintegrate extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            if (!org.academy.api.client.ability.AbilitySystemClient.canUseSkill(Skills.DISINTEGRATE.get())) return;
+            if (!AbilitySystemClient.canUseSkill(Skills.DISINTEGRATE.get())) return;
             var p = Minecraft.getInstance().player;
             if (p != null) {
                 var trail = TrailEffectWrapper.INSTANCE.createTrail(0.6f, 0.03f, 0.2f, 1.0f, 0.3f);
@@ -119,7 +122,7 @@ public class Disintegrate extends Skill {
                     }
                     var multiplier = ctx.system().getPlayerDamageMultiplier(player.getUUID());
                     var source = SkillDamageSource.of(player, Skills.DISINTEGRATE.get());
-                    var box = new net.minecraft.world.phys.AABB(eye, target).inflate(1.0);
+                    var box = new AABB(eye, target).inflate(1.0);
                     for (var entity : sl.getEntitiesOfClass(LivingEntity.class, box,
                             entity -> entity != player && entity.isAlive()
                                     && !player.isAlliedTo(entity)
@@ -137,9 +140,9 @@ public class Disintegrate extends Skill {
             });
         }
 
-        private static double distanceToSegmentSqr(net.minecraft.world.phys.Vec3 point,
-                                                   net.minecraft.world.phys.Vec3 start,
-                                                   net.minecraft.world.phys.Vec3 end) {
+        private static double distanceToSegmentSqr(Vec3 point,
+                                                   Vec3 start,
+                                                   Vec3 end) {
             var segment = end.subtract(start);
             var lengthSqr = segment.lengthSqr();
             if (lengthSqr < 1.0e-9) return point.distanceToSqr(start);

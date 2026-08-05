@@ -16,10 +16,9 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
-import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -27,7 +26,6 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.VectorFieldEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -42,6 +40,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+
 public class VectorReduction extends Skill {
     private static final int POTION_DURATION = 30;
 
@@ -72,7 +71,6 @@ public class VectorReduction extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(VectorFieldEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -98,11 +96,6 @@ public class VectorReduction extends Skill {
         public static void onToggle() {
             if (!AbilitySystemClient.canToggleSkill(Skills.VECTOR_REDUCTION.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
-            var p = net.minecraft.client.Minecraft.getInstance().player;
-            if (p == null) return;
-            VectorFieldEffectWrapper.INSTANCE.trigger(
-                    (float) p.getX(), (float) p.getY(), (float) p.getZ(),
-                    6, 6, 0.8f, 0.3f, 0.5f, 0.9f, 5.0f);
         }
 
         public static class Config extends KeyBindingConfig {

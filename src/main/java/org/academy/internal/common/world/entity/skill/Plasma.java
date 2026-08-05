@@ -110,7 +110,7 @@ public class Plasma extends RenderOnlyEntity {
         if (damage > 0.0f && damageRadius > 0.0f) {
             var radiusSquared = damageRadius * damageRadius;
             var area = new AABB(impact, impact).inflate(damageRadius);
-            for (LivingEntity target : level.getEntitiesOfClass(
+            for (var target : level.getEntitiesOfClass(
                     LivingEntity.class,
                     area,
                     target -> target != owner

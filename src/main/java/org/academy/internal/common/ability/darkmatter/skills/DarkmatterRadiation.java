@@ -137,16 +137,16 @@ public final class DarkmatterRadiation extends Skill {
 
     public static final class Server {
         private static final List<ResourceKey<DamageType>> DAMAGE_TYPES = List.of(
-                net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK,
-                net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK,
-                net.minecraft.world.damagesource.DamageTypes.MAGIC,
-                net.minecraft.world.damagesource.DamageTypes.INDIRECT_MAGIC,
-                net.minecraft.world.damagesource.DamageTypes.THORNS,
-                net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT,
-                net.minecraft.world.damagesource.DamageTypes.ON_FIRE,
-                net.minecraft.world.damagesource.DamageTypes.FREEZE,
-                net.minecraft.world.damagesource.DamageTypes.LAVA,
-                net.minecraft.world.damagesource.DamageTypes.HOT_FLOOR
+                DamageTypes.MOB_ATTACK,
+                DamageTypes.PLAYER_ATTACK,
+                DamageTypes.MAGIC,
+                DamageTypes.INDIRECT_MAGIC,
+                DamageTypes.THORNS,
+                DamageTypes.LIGHTNING_BOLT,
+                DamageTypes.ON_FIRE,
+                DamageTypes.FREEZE,
+                DamageTypes.LAVA,
+                DamageTypes.HOT_FLOOR
         );
         private static final Map<UUID, RadiationState> ACTIVE = new ConcurrentHashMap<>();
 

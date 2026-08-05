@@ -4,8 +4,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.resources.R;
+import org.academy.api.common.registries.Registries;
 import org.academy.api.common.wireless.WirelessUser;
-import org.academy.internal.common.ability.Skills;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -34,12 +35,12 @@ public interface DevCondition {
 
         @Override
         public boolean accepts(ServerPlayer player, WirelessUser developer) {
-            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            var system = AbilitySystemServer.getSystem(player);
             return system.getPlayerLevel(player.getUUID()) >= requiredLevel.levelCode;
         }
 
         @Override
-        public Identifier getIcon() {
+        public @Nullable Identifier getIcon() {
             return switch (requiredLevel.levelCode) {
                 case 1 -> R.textures.ability.condition.any1;
                 case 2 -> R.textures.ability.condition.any2;
@@ -68,7 +69,7 @@ public interface DevCondition {
         }
 
         @Override
-        public Identifier getIcon() {
+        public @Nullable Identifier getIcon() {
             return null;
         }
 
@@ -91,12 +92,12 @@ public interface DevCondition {
         @Override
         public boolean accepts(ServerPlayer player, WirelessUser developer) {
             if (depId.isEmpty()) return true;
-            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            var system = AbilitySystemServer.getSystem(player);
             return system.getPlayerData(player.getUUID()).isSkillLearned(depId);
         }
 
         @Override
-        public Identifier getIcon() {
+        public @Nullable Identifier getIcon() {
             return null;
         }
 
@@ -115,16 +116,16 @@ public interface DevCondition {
 
         @Override
         public boolean accepts(ServerPlayer player, WirelessUser developer) {
-            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            var system = AbilitySystemServer.getSystem(player);
             var data = system.getPlayerData(player.getUUID());
-            return org.academy.api.common.registries.Registries.SKILLS.stream()
+            return Registries.SKILLS.stream()
                     .anyMatch(skill -> skill.getRecommendedLevel().levelCode >= requiredLevel
                             && data.isSkillLearned(Objects.requireNonNull(
-                                    org.academy.api.common.registries.Registries.SKILLS.getKey(skill)).toString()));
+                            Registries.SKILLS.getKey(skill)).toString()));
         }
 
         @Override
-        public Identifier getIcon() {
+        public @Nullable Identifier getIcon() {
             return switch (requiredLevel) {
                 case 1 -> R.textures.ability.condition.any1;
                 case 2 -> R.textures.ability.condition.any2;

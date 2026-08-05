@@ -86,7 +86,6 @@ class AbilityInfoHud private constructor() {
     fun render(target: RenderTarget) {
         if (context.get().alpha == 0f) return
         uiContext.upload(target, false)
-        context.get().invalidate()
         ImGuiUIDebugger.render(target, context.get())
     }
 

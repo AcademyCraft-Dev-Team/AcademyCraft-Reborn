@@ -38,6 +38,7 @@ import org.academy.api.client.hud.terminal.TerminalHud;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
@@ -51,14 +52,14 @@ import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.particle.VectorBlastParticle;
-import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
-import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
-import org.academy.internal.client.renderer.effect.WingEffectRenderer;
-import org.academy.internal.client.renderer.effect.DarkmatterSixWingsEffectRenderer;
-import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
+import org.academy.internal.client.renderer.effect.*;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
+import org.academy.internal.client.renderer.vfx.ArcVfxClient;
+import org.academy.internal.client.renderer.vfx.BeamVfxClient;
+import org.academy.internal.client.renderer.vfx.SmokeVfxClient;
+import org.academy.internal.client.renderer.vfx.StormWingVfxClient;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -85,10 +86,15 @@ public final class AcademyCraftClient {
         HudManager.INSTANCE.initMain();
         AbilitySystemClient.init();
         ClientSyncManager.init();
+        BeamVfxClient.register();
+        SmokeVfxClient.register();
+        ArcVfxClient.register();
+        StormWingVfxClient.register();
     }
 
     public static void initRender() {
         Render.init();
+        VfxManager.INSTANCE.init();
         BloomEffect.init();
         ScreenDispatcher.Companion.init();
         HudManager.INSTANCE.initRender();
@@ -138,6 +144,7 @@ public final class AcademyCraftClient {
         MsdfAtlasManager.closeAll();
         PostEffect.close();
         BloomEffect.getInstance().close();
+        VfxManager.INSTANCE.close();
         Render.close();
     }
 

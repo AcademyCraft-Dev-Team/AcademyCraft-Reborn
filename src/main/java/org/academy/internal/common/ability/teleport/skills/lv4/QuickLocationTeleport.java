@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
@@ -36,6 +37,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class QuickLocationTeleport extends Skill {
     private static final double PICK_REACH = 32.0;
@@ -111,7 +113,7 @@ public final class QuickLocationTeleport extends Skill {
             if (level == null) return;
             var picked = pickEntity(player);
             Entity target = player;
-            Vec3 destination = LocationTeleport.Server.safeDestination(player, level, mark);
+            var destination = LocationTeleport.Server.safeDestination(player, level, mark);
             if (picked != null && picked.level() == level) {
                 LocationTeleport.Server.forceDestinationChunk(level, mark.x(), mark.z(),
                         "quick_location_" + player.getStringUUID());
@@ -130,7 +132,7 @@ public final class QuickLocationTeleport extends Skill {
             Skills.QUICK_LOCATION_TELEPORT.get().executeActive(player, (ctx, actualCost) -> {
                 if (finalTarget == player) {
                     player.teleportTo(level, finalDestination.x, finalDestination.y, finalDestination.z,
-                            java.util.Set.of(), player.getYRot(), player.getXRot(), false);
+                            Set.of(), player.getYRot(), player.getXRot(), false);
                 } else {
                     TeleportSync.teleportInstantly(finalTarget, finalDestination);
                 }
@@ -138,7 +140,7 @@ public final class QuickLocationTeleport extends Skill {
             });
         }
 
-        private static Entity pickEntity(net.minecraft.server.level.ServerPlayer player) {
+        private static Entity pickEntity(ServerPlayer player) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle().normalize();
             var end = eye.add(look.scale(PICK_REACH));
@@ -147,7 +149,7 @@ public final class QuickLocationTeleport extends Skill {
             Entity best = null;
             for (var entity : player.level().getEntities(player, search,
                     entity -> entity != player && entity.isPickable())) {
-                Optional<Vec3> hit = entity.getBoundingBox().inflate(0.3).clip(eye, end);
+                var hit = entity.getBoundingBox().inflate(0.3).clip(eye, end);
                 if (hit.isEmpty()) continue;
                 var distance = eye.distanceToSqr(hit.get());
                 if (distance < closest) {

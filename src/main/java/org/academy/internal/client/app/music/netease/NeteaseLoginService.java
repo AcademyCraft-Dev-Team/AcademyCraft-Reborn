@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -56,10 +57,10 @@ public final class NeteaseLoginService {
     }
 
     private static void updateCookie(Map<String, List<String>> headerFields) {
-        List<String> setCookies = headerFields.get("Set-Cookie");
+        var setCookies = headerFields.get("Set-Cookie");
         if (setCookies != null) {
-            for (String cookie : setCookies) {
-                String value = cookie.split(";")[0];
+            for (var cookie : setCookies) {
+                var value = cookie.split(";")[0];
                 if (sessionCookie.isBlank()) {
                     sessionCookie = value;
                 } else if (!sessionCookie.contains(value.split("=")[0] + "=")) {
@@ -71,16 +72,16 @@ public final class NeteaseLoginService {
     }
 
     private static JsonObject getJson(String url, Map<String, String> headers) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
+        var connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
         connection.setRequestMethod("GET");
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(12000);
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
+        for (var entry : headers.entrySet()) {
             connection.setRequestProperty(entry.getKey(), entry.getValue());
         }
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+        try (var reader = new BufferedReader(new InputStreamReader(
                 connection.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder result = new StringBuilder();
+            var result = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 result.append(line);
@@ -93,15 +94,15 @@ public final class NeteaseLoginService {
     }
 
     private static byte[] getBytes(String url, Map<String, String> headers) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
+        var connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
         connection.setRequestMethod("GET");
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(12000);
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
+        for (var entry : headers.entrySet()) {
             connection.setRequestProperty(entry.getKey(), entry.getValue());
         }
-        try (InputStream stream = connection.getInputStream()) {
-            byte[] bytes = stream.readAllBytes();
+        try (var stream = connection.getInputStream()) {
+            var bytes = stream.readAllBytes();
             updateCookie(connection.getHeaderFields());
             return bytes;
         } finally {
@@ -112,21 +113,21 @@ public final class NeteaseLoginService {
     public static CompletableFuture<QrCodeSession> fetchQrCode() {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Map<String, String> headers = defaultHeaders();
-                JsonObject keyResponse = getJson(BASE_URL + "/api/login/qrcode/unikey?type=1&timestamp=" + System.currentTimeMillis(), headers);
+                var headers = defaultHeaders();
+                var keyResponse = getJson(BASE_URL + "/api/login/qrcode/unikey?type=1&timestamp=" + System.currentTimeMillis(), headers);
                 if (keyResponse == null || !keyResponse.has("unikey")) {
                     throw new IOException("Failed to get QR code key, response: " + (keyResponse != null ? keyResponse : "null"));
                 }
-                String uniKey = keyResponse.get("unikey").getAsString();
+                var uniKey = keyResponse.get("unikey").getAsString();
 
-                String qrUrl = BASE_URL + "/login?codekey=" + uniKey;
+                var qrUrl = BASE_URL + "/login?codekey=" + uniKey;
                 byte[] imageBytes;
                 try {
-                    String qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + java.net.URLEncoder.encode(qrUrl, StandardCharsets.UTF_8);
+                    var qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + URLEncoder.encode(qrUrl, StandardCharsets.UTF_8);
                     imageBytes = getBytes(qrApiUrl, headers);
                 } catch (Exception e) {
                     try {
-                        String qrApiUrl2 = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + java.net.URLEncoder.encode(qrUrl, StandardCharsets.UTF_8);
+                        var qrApiUrl2 = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + URLEncoder.encode(qrUrl, StandardCharsets.UTF_8);
                         imageBytes = getBytes(qrApiUrl2, headers);
                     } catch (Exception e2) {
                         throw new IOException("All QR code generation APIs failed: " + e.getMessage(), e2);
@@ -144,14 +145,14 @@ public final class NeteaseLoginService {
     public static CompletableFuture<LoginState> pollLogin(String uniKey) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Map<String, String> headers = defaultHeaders();
-                JsonObject response = getJson(BASE_URL + "/api/login/qrcode/client/login?type=1&key=" + uniKey + "&timestamp=" + System.currentTimeMillis(), headers);
+                var headers = defaultHeaders();
+                var response = getJson(BASE_URL + "/api/login/qrcode/client/login?type=1&key=" + uniKey + "&timestamp=" + System.currentTimeMillis(), headers);
 
                 if (response == null) {
                     return LoginState.FAILED;
                 }
 
-                int code = response.has("code") ? response.get("code").getAsInt() : -1;
+                var code = response.has("code") ? response.get("code").getAsInt() : -1;
                 switch (code) {
                     case 800:
                         lastStatusText = "二维码已过期";
@@ -167,7 +168,7 @@ public final class NeteaseLoginService {
                         updateLoginStatus();
                         return LoginState.SUCCESS;
                     default:
-                        String message = response.has("message") ? response.get("message").getAsString() : "未知状态";
+                        var message = response.has("message") ? response.get("message").getAsString() : "未知状态";
                         lastStatusText = "登录状态: " + message;
                         return LoginState.WAITING_SCAN;
                 }
@@ -180,17 +181,17 @@ public final class NeteaseLoginService {
 
     private static void updateLoginStatus() {
         try {
-            Map<String, String> headers = defaultHeaders();
-            JsonObject response = getJson(BASE_URL + "/api/w/nuser/account/get?timestamp=" + System.currentTimeMillis(), headers);
+            var headers = defaultHeaders();
+            var response = getJson(BASE_URL + "/api/w/nuser/account/get?timestamp=" + System.currentTimeMillis(), headers);
 
             if (response != null && response.has("account") && !response.get("account").isJsonNull()) {
-                JsonObject profile = response.getAsJsonObject("profile");
-                String uid = String.valueOf(profile.get("userId").getAsLong());
-                String nickname = profile.has("nickname") ? profile.get("nickname").getAsString() : "";
-                boolean defaultAvatar = profile.has("defaultAvatar") && profile.get("defaultAvatar").getAsBoolean();
-                String avatarUrl = defaultAvatar ? "" : (profile.has("avatarUrl") ? profile.get("avatarUrl").getAsString() : "");
+                var profile = response.getAsJsonObject("profile");
+                var uid = String.valueOf(profile.get("userId").getAsLong());
+                var nickname = profile.has("nickname") ? profile.get("nickname").getAsString() : "";
+                var defaultAvatar = profile.has("defaultAvatar") && profile.get("defaultAvatar").getAsBoolean();
+                var avatarUrl = defaultAvatar ? "" : (profile.has("avatarUrl") ? profile.get("avatarUrl").getAsString() : "");
 
-                NeteaseCredential credential = new NeteaseCredential(uid, nickname, avatarUrl);
+                var credential = new NeteaseCredential(uid, nickname, avatarUrl);
                 NeteaseCredentialManager.save(credential);
             }
         } catch (Exception e) {
@@ -200,7 +201,7 @@ public final class NeteaseLoginService {
 
     public static void logout() {
         try {
-            Map<String, String> headers = defaultHeaders();
+            var headers = defaultHeaders();
             getJson(BASE_URL + "/api/logout", headers);
         } catch (Exception ignored) {
         }

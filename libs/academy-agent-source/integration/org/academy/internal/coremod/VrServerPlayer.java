@@ -27,7 +27,7 @@ public class VrServerPlayer extends ServerPlayer {
 
     @Override
     public float getHealth() {
-        var max = super.getMaxHealth();
+        var max = getMaxHealth();
         var original = super.getHealth();
         return academy$protected() ? VectorReflection.Server.protectHealthRead(this, max) : original;
     }

@@ -7,6 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -142,7 +143,7 @@ public class ElectricalContact extends Skill {
 
             if (!(level instanceof ServerLevel serverLevel)) return;
             var damageSource = SkillDamageSource.of(player, skill,
-                    net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT);
+                    DamageTypes.LIGHTNING_BOLT);
             var system = AbilitySystemServer.getSystem(player);
             var damage = calculateDamage(
                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
@@ -174,7 +175,7 @@ public class ElectricalContact extends Skill {
                     );
                     livingAttacker.hurtServer(serverLevel,
                             SkillDamageSource.of(player, skill,
-                                    net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT),
+                                    DamageTypes.LIGHTNING_BOLT),
                             damage);
                 }
             }

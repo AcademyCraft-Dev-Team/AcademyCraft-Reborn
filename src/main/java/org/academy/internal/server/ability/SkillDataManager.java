@@ -20,7 +20,7 @@ public class SkillDataManager implements AbilitySubsystem {
     private final SyncManager syncManager;
     private final PlayerDataManager playerDataManager;
 
-    private BiConsumer<UUID, Integer> onSkillLevelUp = (uuid, level) -> {
+    private BiConsumer<UUID, Integer> onSkillLevelUp = (_, _) -> {
     };
     private Consumer<UUID> onSkillSetChanged = uuid -> {
     };
@@ -78,7 +78,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public int getSkillLevel(UUID uuid, String skillKey) {
-        final var result = new int[]{0};
+        var result = new int[]{0};
         query(uuid, skillKey, data -> result[0] = data.getLevel());
         return result[0];
     }
@@ -104,7 +104,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public float getSkillExp(UUID uuid, String skillKey) {
-        final var result = new float[]{0.0f};
+        var result = new float[]{0.0f};
         query(uuid, skillKey, data -> result[0] = data.getExp());
         return result[0];
     }

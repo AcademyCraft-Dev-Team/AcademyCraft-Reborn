@@ -32,6 +32,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.AreaTeleportState;
+import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -82,7 +83,7 @@ public final class AreaTeleportSelect extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.TELEPORT.get(),
                 new AbilitySystemClient.SkillInfo(Skills.AREA_TELEPORT_SELECT.get(),
-                        List.of(org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport.Client.SKILL_INFO),
+                        List.of(LocationTeleport.Client.SKILL_INFO),
                         R.textures.area_teleport_select_icon, 146, 60)
         );
         public static final String KEY_NAME_MARK = SkillNames.AREA_TELEPORT_SELECT + "_mark";
