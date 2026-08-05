@@ -19,6 +19,7 @@ import org.academy.internal.server.world.level.storage.WorldData;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.network.MusicSyncPackets;
+import org.academy.api.common.profiler.AcademyProfiler;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -83,6 +84,7 @@ public final class AcademyCraftServer {
     @SubscribeEvent
     public static void init(ServerStartedEvent event) {
         new AcademyCraftServer(event.getServer());
+        AcademyProfiler.registerThread(event.getServer().getRunningThread());
     }
 
     @SubscribeEvent
@@ -93,6 +95,9 @@ public final class AcademyCraftServer {
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();
         instance.serverConfig.save();
+        AcademyProfiler.stopSampling();
+        AcademyProfiler.stopZoneCapture();
+        AcademyProfiler.unregisterThread(context.getRunningThread());
     }
 
     public AbilitySystemServer getAbilitySystemServer() {

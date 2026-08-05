@@ -16,7 +16,7 @@ iris = "1.11.2+26.2-neoforge"
 jade = "26.2.8+neoforge"
 jei = "30.11.0.66"
 misaka = "26.2.0.1"
-jmsdfgen = "0.0.1"
+jmsdfgen = "0.0.2"
 
 auto = "1.1.1"
 jflac = "1.5.2"
