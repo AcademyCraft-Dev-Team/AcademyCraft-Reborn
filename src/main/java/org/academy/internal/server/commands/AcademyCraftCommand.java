@@ -25,9 +25,15 @@ import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.data.AbilityData;
+import org.academy.api.common.profiler.AcademyProfiler;
+import org.academy.api.common.profiler.ProfileDump;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
@@ -93,6 +99,7 @@ public final class AcademyCraftCommand {
                                 .then(Commands.argument("target", EntityArgument.player())
                                         .executes(ctx -> AbilityExpCommands.info(ctx, EntityArgument.getPlayer(ctx, "target")))))
                 )
+                .then(ProfileCommands.register())
         );
     }
 
@@ -456,6 +463,102 @@ public final class AcademyCraftCommand {
                     Arrays.stream(AbilityData.Status.values()).map(Enum::name),
                     builder
             );
+        }
+    }
+
+    private static final class ProfileCommands {
+        static LiteralArgumentBuilder<CommandSourceStack> register() {
+            return Commands.literal("profile")
+                    .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                    .then(Commands.literal("start")
+                            .executes(ctx -> start(ctx, 1))
+                            .then(Commands.argument("interval_ms", IntegerArgumentType.integer(1, 1000))
+                                    .executes(ctx -> start(ctx, IntegerArgumentType.getInteger(ctx, "interval_ms")))))
+                    .then(Commands.literal("stop").executes(ctx -> stop(ctx)))
+                    .then(Commands.literal("reset").executes(ctx -> reset(ctx)))
+                    .then(Commands.literal("snapshot").executes(ctx -> snapshot(ctx)))
+                    .then(Commands.literal("dump").executes(ctx -> dump(ctx)));
+        }
+
+        private static int start(CommandContext<CommandSourceStack> ctx, int intervalMs) {
+            var server = ctx.getSource().getServer();
+            AcademyProfiler.registerThread(server.getRunningThread());
+            AcademyProfiler.startSampling(intervalMs * 1000L);
+            AcademyProfiler.startZoneCapture();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "§e[AC Profiler]§r Sampling started (interval " + intervalMs + " ms) + zone capture on."
+            ), true);
+            return 1;
+        }
+
+        private static int stop(CommandContext<CommandSourceStack> ctx) {
+            AcademyProfiler.stopSampling();
+            AcademyProfiler.stopZoneCapture();
+            ctx.getSource().sendSuccess(() -> Component.literal("§e[AC Profiler]§r Stopped."), true);
+            return 1;
+        }
+
+        private static int reset(CommandContext<CommandSourceStack> ctx) {
+            AcademyProfiler.resetSampling();
+            AcademyProfiler.resetZones();
+            ctx.getSource().sendSuccess(() -> Component.literal("§e[AC Profiler]§r Data cleared."), true);
+            return 1;
+        }
+
+        private static int snapshot(CommandContext<CommandSourceStack> ctx) {
+            var snap = AcademyProfiler.snapshot();
+            StringBuilder sb = new StringBuilder();
+            sb.append("§e[AC Profiler Snapshot]§r\n");
+            var sampler = snap.getSampler();
+            if (sampler != null) {
+                sb.append("Sampler: ").append(sampler.getTotalSamples()).append(" samples, ")
+                        .append(String.format("%.1f s", sampler.getDurationSeconds())).append("\n");
+            } else {
+                sb.append("Sampler: off (use /academy profile start)\n");
+            }
+            var zones = snap.getZones();
+            if (!zones.isEmpty()) {
+                for (var entry : zones.entrySet()) {
+                    sb.append("-- ").append(entry.getKey()).append(" --\n");
+                    for (var slice : entry.getValue().topSlices(10, true)) {
+                        sb.append("  ").append(slice.getName())
+                                .append(" - ").append(String.format("%.2f%%", slice.getGlobalPercent()))
+                                .append(" - ").append(String.format("%.2f ms", slice.getTotalMs()))
+                                .append(" - ").append(slice.getCount()).append(" calls\n");
+                    }
+                }
+            }
+            ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), true);
+            return 1;
+        }
+
+        private static int dump(CommandContext<CommandSourceStack> ctx) {
+            var snap = AcademyProfiler.snapshot();
+            var logsDir = ctx.getSource().getServer().getServerDirectory().resolve("logs").toFile();
+            logsDir.mkdirs();
+            var file = new File(logsDir, "academy-profile-" + ProfileDump.timestamp() + ".txt");
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("AcademyCraft Performance Profile\n");
+            sb.append("Time: ").append(ProfileDump.timestamp()).append("\n\n");
+            var sampler = snap.getSampler();
+            if (sampler != null) {
+                sb.append(ProfileDump.dumpSampler(sampler, 30)).append("\n\n");
+            }
+            for (var entry : snap.getZones().entrySet()) {
+                sb.append(ProfileDump.dumpZones(entry.getValue(), 8)).append("\n\n");
+            }
+            try {
+                Files.writeString(file.toPath(), sb.toString(), StandardCharsets.UTF_8);
+                ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§e[AC Profiler]§r Dumped to " + file.getAbsolutePath()
+                ), true);
+            } catch (IOException e) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "§e[AC Profiler]§r Failed to write: " + e.getMessage()
+                ));
+            }
+            return 1;
         }
     }
 

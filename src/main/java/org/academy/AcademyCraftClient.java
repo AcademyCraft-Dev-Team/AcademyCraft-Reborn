@@ -51,6 +51,7 @@ import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.HudLayoutConfig;
+import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.particle.VectorBlastParticle;
 import org.academy.internal.client.renderer.effect.*;
@@ -78,6 +79,7 @@ public final class AcademyCraftClient {
 
     public static void initMain() {
         HudLayoutConfig.init();
+        ProfilerClientHooks.INSTANCE.initMain();
         TerminalHud.Companion.addApp(SettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(SkillSettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(MusicApp.INSTANCE);

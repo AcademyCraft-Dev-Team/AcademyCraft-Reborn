@@ -19,6 +19,8 @@ import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
 import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.MainLoopEvent
+import org.academy.api.common.profiler.AcademyProfiler
+import org.academy.internal.client.profiler.ProfilerClientHooks
 import org.joml.Vector4f
 import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicBoolean
@@ -87,10 +89,14 @@ object HudManager {
 
             val drewStencil = AtomicBoolean()
 
+            AcademyProfiler.push("academy.hud.terminal")
             TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
+            AcademyProfiler.popPush("academy.hud.ability")
             AbilityInfoHud.instance.render(ui)
+            AcademyProfiler.popPush("academy.hud.toggle")
             ToggleStatusHud.instance.render(ui)
             ControlledTargetsHud.instance.render(ui)
+            AcademyProfiler.pop()
 
             if (drewStencil.get()) {
                 BlurEffect.apply(
@@ -124,6 +130,8 @@ object HudManager {
                 ), mutableListOf(),
                 false
             )
+
+            ProfilerClientHooks.renderOverlay()
         } finally {
             pool.release(descTemp, ui)
             pool.release(descBlur, blur)

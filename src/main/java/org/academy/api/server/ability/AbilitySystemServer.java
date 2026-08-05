@@ -18,6 +18,7 @@ import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.event.AbilityOverloadEvent;
 import org.academy.api.common.ability.event.AbilityRecoveryEvent;
 import org.academy.api.common.data.AbilityData;
+import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
@@ -894,36 +895,46 @@ public final class AbilitySystemServer {
     public static final class ServerLifecycleHooks {
         @SubscribeEvent
         public static void tickMinecraftServerThread(ServerTickEvent.Pre event) {
-            var server = event.getServer();
-            var instance = server.getAcademyCraftServer().getAbilitySystemServer();
+            AcademyProfiler.runZone("academy.server.tick", () -> {
+                var server = event.getServer();
+                var instance = server.getAcademyCraftServer().getAbilitySystemServer();
 
-            var syncManager = instance.getSyncManager();
-            syncManager.processPendingTasks();
+                AcademyProfiler.runZone("academy.server.sync.pending", () -> {
+                    var syncManager = instance.getSyncManager();
+                    syncManager.processPendingTasks();
+                });
 
-            tickDevelopments(server);
+                AcademyProfiler.runZone("academy.server.dev", () -> tickDevelopments(server));
 
-            var playerList = server.getPlayerList().getPlayers();
-            playerList.forEach(serverPlayer -> {
-                SubsystemRegistry.getSubsystems().forEach(abilitySubsystem -> abilitySubsystem.tick(serverPlayer));
-                instance.getSyncManager().tick(serverPlayer);
+                var playerList = server.getPlayerList().getPlayers();
+                AcademyProfiler.runZone("academy.server.players", () -> {
+                    playerList.forEach(serverPlayer -> {
+                        AcademyProfiler.runZone("academy.server.ability.tick", () ->
+                                SubsystemRegistry.getSubsystems().forEach(abilitySubsystem -> abilitySubsystem.tick(serverPlayer)));
+                        AcademyProfiler.runZone("academy.server.sync.tick", () ->
+                                instance.getSyncManager().tick(serverPlayer));
+                    });
+                });
+
+                AcademyProfiler.runZone("academy.server.dev.sync", () -> {
+                    // Send DevSyncPacket for all developing/completed players
+                    var devMap = DEVELOP_DATA_MAP;
+                    var keys = List.copyOf(devMap.keySet());
+                    for (var uuid : keys) {
+                        var data = devMap.get(uuid);
+                        if (data == null || data.getState() == DevState.IDLE) continue;
+                        var player = server.getPlayerList().getPlayer(uuid);
+                        if (player == null) continue;
+                        var message = data.getState() == DevState.DEVELOPING
+                                ? "Developing... " + (int) (data.getProgress() * 100) + "%"
+                                : data.getState() == DevState.DONE ? "Success!" : "Failed";
+                        MisakaNetworkServer.send(player, new DevSyncPacket(data.getState(), data.getProgress(), message));
+                        if (data.getState() != DevState.DEVELOPING) {
+                            devMap.remove(uuid);
+                        }
+                    }
+                });
             });
-
-            // Send DevSyncPacket for all developing/completed players
-            var devMap = DEVELOP_DATA_MAP;
-            var keys = List.copyOf(devMap.keySet());
-            for (var uuid : keys) {
-                var data = devMap.get(uuid);
-                if (data == null || data.getState() == DevState.IDLE) continue;
-                var player = server.getPlayerList().getPlayer(uuid);
-                if (player == null) continue;
-                var message = data.getState() == DevState.DEVELOPING
-                        ? "Developing... " + (int) (data.getProgress() * 100) + "%"
-                        : data.getState() == DevState.DONE ? "Success!" : "Failed";
-                MisakaNetworkServer.send(player, new DevSyncPacket(data.getState(), data.getProgress(), message));
-                if (data.getState() != DevState.DEVELOPING) {
-                    devMap.remove(uuid);
-                }
-            }
         }
     }
 }
