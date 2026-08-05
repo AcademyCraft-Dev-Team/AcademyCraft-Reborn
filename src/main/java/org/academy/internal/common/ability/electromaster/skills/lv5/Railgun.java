@@ -340,7 +340,7 @@ public final class Railgun extends Skill {
                     );
                     player.level().addFreshEntity(railgunRay);
 
-                    if (DestroyBlocksSetting.canDestroyBlocks(player)) {
+                    if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.RAILGUN.get())) {
                         destroyBlocksAlongSegment(resolved.outbound(), player);
                     }
                     var outboundResult = LinearAttackExecutor.executeOutbound(
@@ -348,7 +348,7 @@ public final class Railgun extends Skill {
                             resolved,
                             payload
                     );
-                    if (DestroyBlocksSetting.canDestroyBlocks(player)) {
+                    if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.RAILGUN.get())) {
                         resolved.returnSegment().ifPresent(returnSegment -> resolved.reflectionCandidate()
                                 .ifPresent(candidate -> destroyBlocksAlongSegment(
                                         returnSegment,

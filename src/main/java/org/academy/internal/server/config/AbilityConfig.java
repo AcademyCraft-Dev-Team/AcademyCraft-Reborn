@@ -24,6 +24,19 @@ public class AbilityConfig {
     public float cpRatingOffset = 0.0f;
     @SerializedName("brainDevelopment")
     public final BrainDevelopmentSettings brainDevelopment = new BrainDevelopmentSettings();
+    @SerializedName("aeromanip")
+    public final AeromanipSettings aeromanip = new AeromanipSettings();
+
+    public static class AeromanipSettings {
+        @SerializedName("pvpForceMultiplier")
+        public float pvpForceMultiplier = 0.5f;
+        @SerializedName("pvpControlDurationMultiplier")
+        public float pvpControlDurationMultiplier = 0.4f;
+        @SerializedName("maxPlacedFieldsPerPlayer")
+        public int maxPlacedFieldsPerPlayer = 1;
+        @SerializedName("allowSoftBlockInteraction")
+        public boolean allowSoftBlockInteraction = true;
+    }
 
     public static class BrainDevelopmentSettings {
         @SerializedName("level1MaxCpBonus")
@@ -93,6 +106,18 @@ public class AbilityConfig {
             var singleBeamSettings = new SkillSettings();
             singleBeamSettings.floatMap.put("attackDelayTicks", 10.0f);
             defaultConfig.skills.put("single_high_speed_electron_beam", singleBeamSettings);
+
+            for (var skillId : List.of(
+                    "airflow_jet", "air_cushion", "flow_sense", "breathing_film", "pneumatic_grasp",
+                    "tailwind_field", "atmosphere_shield", "laminar_cutter", "vortex_pull", "atmosphere_blast_gun",
+                    "wind_corridor", "pressure_lock", "flight", "vacuum_domain", "atmospheric_dominion")) {
+                var settings = new SkillSettings();
+                settings.floatMap.put("damageMultiplier", 1.0f);
+                settings.floatMap.put("rangeMultiplier", 1.0f);
+                settings.floatMap.put("durationMultiplier", 1.0f);
+                settings.floatMap.put("cpMultiplier", 1.0f);
+                defaultConfig.skills.put(skillId, settings);
+            }
 
             return defaultConfig;
         }

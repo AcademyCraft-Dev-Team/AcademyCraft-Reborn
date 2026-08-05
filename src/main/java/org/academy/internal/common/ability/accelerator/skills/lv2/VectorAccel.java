@@ -7,6 +7,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
@@ -14,14 +15,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -59,9 +60,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+
 public final class VectorAccel extends Skill {
-    public static final long MAX_CHARGE_TIME_MS = 2000;
     public static final long MAX_CHARGE_TICKS = 40;
+    public static final long MAX_CHARGE_TIME_MS = MAX_CHARGE_TICKS * 50L;
 
     public VectorAccel() {
         super(Builder
@@ -142,7 +144,7 @@ public final class VectorAccel extends Skill {
 
         public static final class Context extends ClientContext {
             private final LocalPlayer player;
-            private final long chargeStartTime;
+            private final double chargeStartTick;
             private final List<Vec3> trajectoryPath = new ArrayList<>();
             private boolean released = false;
             private float chargeRatio;
@@ -153,7 +155,8 @@ public final class VectorAccel extends Skill {
 
             public Context(LocalPlayer player) {
                 this.player = player;
-                chargeStartTime = System.nanoTime();
+                chargeStartTick = player.tickCount
+                        + Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
             }
 
             public void release() {
@@ -171,24 +174,7 @@ public final class VectorAccel extends Skill {
             }
 
             private Vec3 calculateDashDirection(float partialTick) {
-                var mc = Minecraft.getInstance();
-                var camera = mc.gameRenderer.mainCamera();
-                var cameraPos = camera.position();
-                var lookVec = new Vec3(camera.forwardVector());
-                var farPoint = cameraPos.add(lookVec.scale(100.0));
-
-                var hitResult = player.level().clip(new ClipContext(cameraPos, farPoint, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, player));
-                var targetPoint = hitResult.getLocation();
-
-                var trajectoryStartPos = player.getPosition(partialTick);
-                var direction = targetPoint.subtract(trajectoryStartPos).normalize();
-
-                final var maxDownwardY = -0.5;
-                if (direction.y < maxDownwardY) {
-                    direction = new Vec3(direction.x, maxDownwardY, direction.z).normalize();
-                }
-
-                return direction;
+                return Server.normalizeDashDirection(player.getViewVector(partialTick));
             }
 
             private Vec3 calculateInitSpeed() {
@@ -196,8 +182,7 @@ public final class VectorAccel extends Skill {
             }
 
             private double calculateSpeedScalar() {
-                var prog = Mth.lerp(chargeRatio, 0.4f, 1.0f);
-                return Math.sin(prog) * Server.MAX_VELOCITY_SCALAR;
+                return Server.getSpeed(chargeRatio);
             }
 
             private void simulatePath(float partialTick) {
@@ -209,6 +194,7 @@ public final class VectorAccel extends Skill {
                 var currentPos = startPos;
                 var currentVel = calculateInitSpeed();
                 var startBox = player.getBoundingBox().move(startPos.subtract(player.position()));
+                var simulatedOnGround = player.onGround();
 
                 for (var i = 0; i < 300; i++) {
                     trajectoryPath.add(currentPos);
@@ -218,71 +204,86 @@ public final class VectorAccel extends Skill {
                     var collisions = level.getEntityCollisions(player, collisionBox);
                     var adjustedVel = currentVel.lengthSqr() == 0.0D
                             ? currentVel
-                            : collideWithShapes(currentVel, currentBox, collisions);
+                            : Entity.collideBoundingBox(player, currentVel, currentBox, level, collisions);
 
                     var nextPos = currentPos.add(adjustedVel);
-
-                    var blockHit = level.clip(new ClipContext(currentPos, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-                    if (blockHit.getType() != HitResult.Type.MISS) {
-                        nextPos = blockHit.getLocation();
-                    }
-
-                    var searchBox = currentBox.expandTowards(adjustedVel).inflate(1.0);
-                    var entityHit = ProjectileUtil.getEntityHitResult(level, player, currentPos, nextPos, searchBox, e -> !e.isSpectator() && e.isPickable() && !e.is(player), 0.3f);
-
-                    if (entityHit != null) {
-                        lastHitResult = entityHit;
-                        trajectoryPath.add(entityHit.getLocation());
-                        return;
-                    }
-
-                    if (blockHit.getType() != HitResult.Type.MISS) {
-                        lastHitResult = blockHit;
-                        trajectoryPath.add(blockHit.getLocation());
-                        return;
+                    var collidedX = !Mth.equal(currentVel.x, adjustedVel.x);
+                    var collidedY = !Mth.equal(currentVel.y, adjustedVel.y);
+                    var collidedZ = !Mth.equal(currentVel.z, adjustedVel.z);
+                    var landed = collidedY && currentVel.y < 0.0;
+                    if (collidedX || collidedY || collidedZ) {
+                        var center = currentBox.getCenter();
+                        var rayStartY = collidedY
+                                ? currentVel.y < 0.0 ? currentBox.minY + 1.0e-4 : currentBox.maxY - 1.0e-4
+                                : center.y;
+                        var rayStart = new Vec3(center.x, rayStartY, center.z);
+                        var blockHit = level.clip(new ClipContext(
+                                rayStart,
+                                rayStart.add(currentVel),
+                                ClipContext.Block.COLLIDER,
+                                ClipContext.Fluid.NONE,
+                                player
+                        ));
+                        if (blockHit.getType() != HitResult.Type.MISS) {
+                            lastHitResult = blockHit;
+                        }
+                        currentVel = new Vec3(
+                                collidedX ? 0.0 : currentVel.x,
+                                collidedY ? 0.0 : currentVel.y,
+                                collidedZ ? 0.0 : currentVel.z
+                        );
                     }
 
                     currentPos = nextPos;
-                    currentVel = adjustedVel.multiply(0.91, 0.98, 0.91);
-                    currentVel = currentVel.subtract(0, 0.08, 0);
+                    var movedBox = currentBox.move(adjustedVel);
+                    var nextOnGround = landed
+                            || (currentVel.y <= 0.0
+                            && !level.noCollision(player, movedBox.move(0.0, -1.0e-4, 0.0)));
+                    currentVel = advanceVelocity(currentVel, currentPos, movedBox, simulatedOnGround);
+                    simulatedOnGround = nextOnGround;
+                    if (currentVel.lengthSqr() < 1.0e-4) {
+                        trajectoryPath.add(currentPos);
+                        return;
+                    }
                 }
             }
 
-            private Vec3 collideWithShapes(Vec3 pDeltaMovement, AABB pEntityBB, List<VoxelShape> pShapes) {
-                if (pShapes.isEmpty()) {
-                    return pDeltaMovement;
+            private Vec3 advanceVelocity(Vec3 movement, Vec3 position, AABB boundingBox, boolean onGround) {
+                var movementY = movement.y;
+                var levitation = player.getEffect(MobEffects.LEVITATION);
+                if (levitation != null) {
+                    movementY += (0.05 * (levitation.getAmplifier() + 1) - movement.y) * 0.2;
                 } else {
-                    var d0 = pDeltaMovement.x;
-                    var d1 = pDeltaMovement.y;
-                    var d2 = pDeltaMovement.z;
-                    if (d1 != 0.0D) {
-                        d1 = Shapes.collide(Direction.Axis.Y, pEntityBB, pShapes, d1);
-                        if (d1 != 0.0D) {
-                            pEntityBB = pEntityBB.move(0.0D, d1, 0.0D);
-                        }
+                    var gravity = player.getAttributeValue(Attributes.GRAVITY);
+                    if (movement.y <= 0.0 && player.hasEffect(MobEffects.SLOW_FALLING)) {
+                        gravity = Math.min(gravity, 0.01);
                     }
-
-                    var flag = Math.abs(d0) < Math.abs(d2);
-                    if (flag && d2 != 0.0D) {
-                        d2 = Shapes.collide(Direction.Axis.Z, pEntityBB, pShapes, d2);
-                        if (d2 != 0.0D) {
-                            pEntityBB = pEntityBB.move(0.0D, 0.0D, d2);
-                        }
-                    }
-
-                    if (d0 != 0.0D) {
-                        d0 = Shapes.collide(Direction.Axis.X, pEntityBB, pShapes, d0);
-                        if (!flag && d0 != 0.0D) {
-                            pEntityBB = pEntityBB.move(d0, 0.0D, 0.0D);
-                        }
-                    }
-
-                    if (!flag && d2 != 0.0D) {
-                        d2 = Shapes.collide(Direction.Axis.Z, pEntityBB, pShapes, d2);
-                    }
-
-                    return new Vec3(d0, d1, d2);
+                    movementY -= gravity;
                 }
+
+                var frictionModifier = (float) player.getAttributeValue(Attributes.FRICTION_MODIFIER);
+                var blockFriction = 1.0f;
+                if (onGround) {
+                    var below = BlockPos.containing(position.x, boundingBox.minY - 0.500001, position.z);
+                    blockFriction = modifiedFriction(
+                            player.level().getBlockState(below).getBlock().getFriction(),
+                            frictionModifier
+                    );
+                }
+
+                var airDragModifier = (float) player.getAttributeValue(Attributes.AIR_DRAG_MODIFIER);
+                var airDrag = modifiedFriction(0.91f, airDragModifier);
+                var horizontalFriction = blockFriction * airDrag;
+                var verticalFriction = modifiedFriction(0.98f, airDragModifier);
+                return new Vec3(
+                        movement.x * horizontalFriction,
+                        movementY * verticalFriction,
+                        movement.z * horizontalFriction
+                );
+            }
+
+            private static float modifiedFriction(float friction, float modifier) {
+                return Mth.clamp(1.0f - (1.0f - friction) * modifier, 0.0f, 1.0f);
             }
 
             private Vec3 calculateLeftHandOffset(float partialTick) {
@@ -380,17 +381,16 @@ public final class VectorAccel extends Skill {
                     return;
                 }
 
-                var currentTime = System.nanoTime();
-                var elapsedMillis = (currentTime - chargeStartTime) / 1_000_000;
-                chargeRatio = Mth.clamp((float) elapsedMillis / MAX_CHARGE_TIME_MS, 0f, 1f);
+                var partialTick = event.getPartialTick();
+                chargeRatio = Server.getChargeRatio(chargeStartTick, player.tickCount + partialTick);
 
-                lastCalculatedDirection = calculateDashDirection(event.getPartialTick());
-                simulatePath(event.getPartialTick());
+                lastCalculatedDirection = calculateDashDirection(partialTick);
+                simulatePath(partialTick);
 
                 var matrixStack = event.getMatrixStack();
                 var camera = Minecraft.getInstance().gameRenderer.mainCamera();
                 var camPos = camera.position();
-                var renderOffset = calculateLeftHandOffset(event.getPartialTick());
+                var renderOffset = calculateLeftHandOffset(partialTick);
 
                 matrixStack.pushPose();
                 matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
@@ -402,7 +402,7 @@ public final class VectorAccel extends Skill {
 
                 matrixStack.popPose();
 
-                if (elapsedMillis >= MAX_CHARGE_TIME_MS) {
+                if (chargeRatio >= 1.0f) {
                     release();
                 }
             }
@@ -413,8 +413,24 @@ public final class VectorAccel extends Skill {
         public static final double MAX_VELOCITY_SCALAR = 7.0;
         private static final Map<ServerPlayer, Long> CHARGE_START_TICKS = new WeakHashMap<>();
 
-        public static float getChargeRatio(long startTick, long releaseTick) {
+        public static float getChargeRatio(double startTick, double releaseTick) {
             return Mth.clamp((float) Math.max(0, releaseTick - startTick) / MAX_CHARGE_TICKS, 0.0f, 1.0f);
+        }
+
+        public static Vec3 normalizeDashDirection(Vec3 direction) {
+            if (direction == null
+                    || !Double.isFinite(direction.x)
+                    || !Double.isFinite(direction.y)
+                    || !Double.isFinite(direction.z)
+                    || direction.lengthSqr() < 1.0e-8) {
+                return Vec3.ZERO;
+            }
+
+            direction = direction.normalize();
+            if (direction.y < -0.5) {
+                direction = new Vec3(direction.x, -0.5, direction.z).normalize();
+            }
+            return direction;
         }
 
         public static double getSpeed(float chargeRatio) {
@@ -436,11 +452,8 @@ public final class VectorAccel extends Skill {
             if (startTick == null) return;
             var chargeRatio = getChargeRatio(startTick, player.level().getGameTime());
             Skills.VECTOR_ACCEL.get().executeActive(player, (_, _) -> {
-                var direction = player.getLookAngle();
-                if (direction.y < -0.5) {
-                    direction = new Vec3(direction.x, -0.5, direction.z).normalize();
-                }
-                player.setDeltaMovement(direction.normalize().scale(getSpeed(chargeRatio)));
+                var direction = normalizeDashDirection(player.getLookAngle());
+                player.setDeltaMovement(direction.scale(getSpeed(chargeRatio)));
                 player.resetFallDistance();
                 player.level().playSound(null, player.blockPosition(), SoundEvents.VECTOR_ACCEL.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);

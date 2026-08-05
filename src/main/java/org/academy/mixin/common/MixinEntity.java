@@ -4,6 +4,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -63,6 +64,17 @@ public abstract class MixinEntity {
             return 0;
         }
         return ticks;
+    }
+
+    @Inject(method = "kill", at = @At("HEAD"), cancellable = true)
+    private void academy$protectVectorReflectionKill(ServerLevel level, CallbackInfo ci) {
+        if ((Object) this instanceof ServerPlayer player
+                && VectorReflection.Server.isActive(player)
+                && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
+            VectorReflectionRuntime.requestObserverRebuild(player);
+            VectorReflection.Server.maintainProtection(player);
+            ci.cancel();
+        }
     }
 
 

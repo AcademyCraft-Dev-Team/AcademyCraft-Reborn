@@ -10,6 +10,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkServer;
@@ -19,8 +20,24 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.HashMap;
+import java.util.Set;
+
 public final class DestroyBlocksSetting {
     public static final String TAG_KEY_DESTROY_BLOCKS = "academy_destroy_blocks_enabled";
+    private static final Set<String> BLOCK_DESTRUCTIVE_SKILLS = Set.of(
+            "academy:kinetic_energy_applied",
+            "academy:plasma_generation",
+            "academy:spacial_excision",
+            "academy:darkmatter_disassemble",
+            "academy:mining_beam",
+            "academy:scatter_bomb",
+            "academy:particle_wave_cannon",
+            "academy:railgun",
+            "academy:single_high_speed_electron_beam",
+            "academy:disintegrate",
+            "academy:laminar_cutter"
+    );
     private static boolean serverInitialized;
 
     private DestroyBlocksSetting() {
@@ -42,11 +59,38 @@ public final class DestroyBlocksSetting {
         }
     }
 
+    public static boolean isSkillDestroyBlocksEnabled(Player player, Skill skill) {
+        if (player == null || skill == null) return true;
+        return player.getData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get())
+                .getOrDefault(skill.getKeyString(), true);
+    }
+
+    public static boolean supportsSkillBlockDestruction(Skill skill) {
+        return skill != null && BLOCK_DESTRUCTIVE_SKILLS.contains(skill.getKeyString());
+    }
+
+    public static boolean canDestroyBlocks(ServerPlayer player, Skill skill) {
+        return supportsSkillBlockDestruction(skill)
+                && isSkillDestroyBlocksEnabled(player, skill)
+                && canDestroyBlocks(player);
+    }
+
     public static void setDestroyBlocksEnabled(Player player, boolean enabled) {
         if (player == null) return;
         player.setData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get(), enabled);
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.syncData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get());
+        }
+    }
+
+    public static void setSkillDestroyBlocksEnabled(Player player, Skill skill, boolean enabled) {
+        if (player == null || !supportsSkillBlockDestruction(skill)) return;
+        var settings = new HashMap<>(player.getData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get()));
+        if (enabled) settings.remove(skill.getKeyString());
+        else settings.put(skill.getKeyString(), false);
+        player.setData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get(), settings);
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.syncData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get());
         }
     }
 
@@ -63,6 +107,11 @@ public final class DestroyBlocksSetting {
         @SubscribePacket
         public static void setDestroyBlocks(SetPacket packet) {
             setDestroyBlocksEnabled(packet.getPacketListener().getPlayer(), packet.enabled);
+        }
+
+        @SubscribePacket
+        public static void setSkillDestroyBlocks(SetSkillPacket packet) {
+            setSkillDestroyBlocksEnabled(packet.getPacketListener().getPlayer(), packet.skill, packet.enabled);
         }
     }
 
@@ -84,6 +133,7 @@ public final class DestroyBlocksSetting {
             } else {
                 player.syncData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get());
             }
+            player.syncData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get());
         }
     }
 
@@ -100,6 +150,29 @@ public final class DestroyBlocksSetting {
         @Override
         public PacketType<ServerGamePacketListenerImpl, SetPacket> getPacketType() {
             return PacketTypes.DESTROY_BLOCKS_SET.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class SetSkillPacket extends Packet<ServerGamePacketListenerImpl, SetSkillPacket> {
+        public static final StreamCodec<ByteBuf, SetSkillPacket> CODEC = StreamCodec.composite(
+                Skill.STREAM_CODEC,
+                packet -> packet.skill,
+                ByteBufCodecs.BOOL,
+                packet -> packet.enabled,
+                SetSkillPacket::new
+        );
+        private final Skill skill;
+        private final boolean enabled;
+
+        public SetSkillPacket(Skill skill, boolean enabled) {
+            this.skill = skill;
+            this.enabled = enabled;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SetSkillPacket> getPacketType() {
+            return PacketTypes.DESTROY_BLOCKS_SKILL_SET.get();
         }
     }
 }

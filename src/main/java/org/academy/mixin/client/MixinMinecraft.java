@@ -27,6 +27,11 @@ public abstract class MixinMinecraft {
         VectorReflectionClientRuntime.tick((Minecraft) (Object) this);
     }
 
+    @Inject(method = "destroy", at = @At("HEAD"), require = 0)
+    private void academy$restoreVectorReflectionPlayer(CallbackInfo ci) {
+        VectorReflectionClientRuntime.shutdown();
+    }
+
     /**
      * For ResizeDisplayEvent
      */

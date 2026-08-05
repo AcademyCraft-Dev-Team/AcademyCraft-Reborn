@@ -9,6 +9,8 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import static org.academy.AcademyCraft.MODID;
@@ -40,6 +42,15 @@ public final class AttachmentTypes {
                     .serialize(Codec.BOOL.fieldOf("enabled"))
                     .copyOnDeath()
                     .sync(ByteBufCodecs.BOOL)
+                    .build()
+    );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Map<String, Boolean>>> SKILL_DESTROY_BLOCKS_ENABLED = REGISTER.register(
+            "skill_destroy_blocks_enabled",
+            () -> AttachmentType
+                    .<Map<String, Boolean>>builder(() -> new HashMap<>())
+                    .serialize(Codec.unboundedMap(Codec.STRING, Codec.BOOL).fieldOf("skills"))
+                    .copyOnDeath()
+                    .sync(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.BOOL))
                     .build()
     );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> ACTIVATED_STORM_WING = REGISTER.register("activated_storm_wing",

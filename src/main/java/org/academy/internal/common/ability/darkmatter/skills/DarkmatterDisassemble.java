@@ -199,7 +199,7 @@ public final class DarkmatterDisassemble extends Skill {
         }
 
         private static void destroy(ServerPlayer player, ServerLevel level, BlockPos pos) {
-            if (!DestroyBlocksSetting.canDestroyBlocks(player)) return;
+            if (!DestroyBlocksSetting.canDestroyBlocks(player, Skills.DARKMATTER_DISASSEMBLE.get())) return;
             Skills.DARKMATTER_DISASSEMBLE.get().executeActive(player, (context, actualCost) -> {
                 var destroyed = false;
                 if (DarkmatterSixWings.Server.isActive(player)) {

@@ -3,6 +3,7 @@ package org.academy.mixin.common;
 import net.minecraft.server.MinecraftServer;
 import org.academy.AcademyCraftServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -19,6 +20,7 @@ public abstract class MixinMinecraftServer implements MinecraftServerContext {
 
     @Inject(method = "halt", at = @At("HEAD"))
     private void halt(boolean wait, CallbackInfo ci) {
+        VectorReflectionRuntime.shutdown();
         getAcademyCraftServer().getAbilitySystemServer().halt();
     }
 

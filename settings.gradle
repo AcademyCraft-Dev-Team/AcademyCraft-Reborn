@@ -25,5 +25,3 @@ plugins {
 }
 
 rootProject.name = "AcademyCraft-Reborn"
-
-include("academy-agent")

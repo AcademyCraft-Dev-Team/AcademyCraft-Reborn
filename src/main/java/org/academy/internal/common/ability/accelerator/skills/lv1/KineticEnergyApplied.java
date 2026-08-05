@@ -434,7 +434,7 @@ public class KineticEnergyApplied extends Skill {
 
         private static boolean canDestroyBlocks(ServerPlayer player) {
             return player.getData(AttachmentTypes.KINETIC_BLOCK_BREAK_ENABLED.get())
-                    && DestroyBlocksSetting.canDestroyBlocks(player);
+                    && DestroyBlocksSetting.canDestroyBlocks(player, Skills.KINETIC_ENERGY_APPLIED.get());
         }
 
         private static void enqueueBreakTask(ServerLevel level, ServerPlayer player, Vec3 center,

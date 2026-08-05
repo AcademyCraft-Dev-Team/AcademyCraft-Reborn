@@ -10,6 +10,7 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -61,9 +62,13 @@ public final class InputSystem {
                 .toList();
     }
 
-    public static KeyCombination getKeyBinding(String keyName) {
+    public static @Nullable KeyCombination getKeyBinding(String keyName) {
         var binding = KEY_BINDINGS.get(keyName);
         return binding == null ? null : binding.combo;
+    }
+
+    public static @Nullable KeyCombination getDefaultKeyBinding(String keyName) {
+        return DEFAULT_BINDINGS.get(keyName);
     }
 
     public static boolean matchesKeyBinding(
@@ -116,6 +121,7 @@ public final class InputSystem {
     }
 
     public static String formatKeyCombination(KeyCombination combo) {
+        if (combo.unbound) return "None";
         var parts = new ArrayList<String>();
         if (combo.modifiers != ANY_MODIFIER) {
             if ((combo.modifiers & GLFW.GLFW_MOD_CONTROL) != 0) parts.add("Ctrl");
@@ -153,6 +159,29 @@ public final class InputSystem {
         );
     }
 
+    public static boolean hasActiveBindingForSkill(Skill skill) {
+        return KEY_BINDINGS.entrySet().stream().anyMatch(entry ->
+                entry.getValue().enabled && isBindingForSkill(entry.getKey(), skill)
+        );
+    }
+
+    /**
+     * Invokes the first enabled handler for a skill that matches the supplied press/release phase.
+     * The binding's physical key is deliberately ignored so an unbound skill remains usable from
+     * the selected-skill HUD binding.
+     */
+    public static boolean triggerPrimaryBindingForSkill(Skill skill, BindingContext context) {
+        for (var entry : KEY_BINDINGS.entrySet()) {
+            var binding = entry.getValue();
+            if (!binding.enabled || !isBindingForSkill(entry.getKey(), skill)) continue;
+            var configuredAction = binding.combo.action;
+            if (configuredAction != ANY_ACTION && configuredAction != context.action) continue;
+            binding.handler.accept(context);
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Replaces the KeyCombination of an existing binding, keeping its handler intact.
      */
@@ -172,6 +201,11 @@ public final class InputSystem {
             KEY_BINDINGS.put(keyName, new KeyBinding(existing.combo, existing.handler, enabled));
             bindingRevision++;
         }
+    }
+
+    public static boolean isKeyBindingEnabled(String keyName) {
+        var binding = KEY_BINDINGS.get(keyName);
+        return binding != null && binding.enabled;
     }
 
     public static boolean isDown(InputType type, int key) {
@@ -219,7 +253,13 @@ public final class InputSystem {
     }
 
     public static KeyCombination combo(InputType type, Set<Integer> keys, int action, int modifiers, boolean availableWhenScreen) {
-        return new KeyCombination(type, keys, action, modifiers, availableWhenScreen);
+        return new KeyCombination(type, keys, action, modifiers, availableWhenScreen, false);
+    }
+
+    public static KeyCombination unbound(KeyCombination template) {
+        return new KeyCombination(
+                template.type, Set.of(), template.action, template.modifiers, template.availableWhenScreen, true
+        );
     }
 
     public static void handleMouseMove(double xpos, double ypos, CallbackInfo ci) {
@@ -314,7 +354,10 @@ public final class InputSystem {
 
         if (type == InputType.KEYBOARD && input == InputConstants.KEY_ESCAPE) {
             SUPPRESSED_RELEASES.add(inputKey);
-            cancelRebind();
+            var oldCombo = getKeyBinding(session.keyName);
+            rebindSession = null;
+            if (oldCombo != null) setKeyBinding(session.keyName, unbound(oldCombo));
+            session.onFinished.run();
             ci.cancel();
             return true;
         }
@@ -383,6 +426,7 @@ public final class InputSystem {
     }
 
     private static boolean matches(KeyCombination combo, InputType eventType, int input, int action, int modifiers) {
+        if (combo.unbound) return false;
         if (combo.type != eventType) return false;
         if (!combo.availableWhenScreen && ClientUtil.hasScreen()) return false;
         if (combo.action != ANY_ACTION && combo.action != action) return false;
@@ -390,6 +434,11 @@ public final class InputSystem {
                 && normalizeModifiers(combo.modifiers) != normalizeModifiers(modifiers)) return false;
         if (combo.keys.isEmpty()) return true;
         if (!combo.keys.contains(input)) return false;
+        if (combo.action == ANY_ACTION || action == InputConstants.RELEASE) {
+            return combo.keys.stream().allMatch(key ->
+                    key == input || stateOf(eventType).getOrDefault(key, InputConstants.RELEASE) != InputConstants.RELEASE
+            );
+        }
         return combo.keys.stream().allMatch(key -> stateOf(eventType).getOrDefault(key, InputConstants.RELEASE) == combo.action);
     }
 
@@ -407,13 +456,17 @@ public final class InputSystem {
             Set<Integer> keys,
             int action,
             int modifiers,
-            boolean availableWhenScreen
+            boolean availableWhenScreen,
+            boolean unbound
     ) {
         public KeyCombination {
             keys = keys == null ? Set.of() : keys;
         }
 
         public String displayName() {
+            if (unbound) {
+                return "None";
+            }
             if (keys.isEmpty()) {
                 return "Any";
             }
