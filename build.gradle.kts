@@ -248,6 +248,10 @@ neoForge {
         publish(file(path))
     }
     runs {
+        register("client") {
+            client()
+            environment("IS_DEV", "false")
+        }
         register("clientDev") {
             client()
             environment("IS_DEV", "true")
@@ -287,7 +291,6 @@ neoForge {
             ) {
                 jvmArgument("-XX:+AllowEnhancedClassRedefinition")
             }
-            jvmArgument("-Xverify:none")
             jvmArgument("-javaagent:${academyAgentJar.asFile.absolutePath}")
             systemProperty("academy.agent.vr.enabled", "true")
         }

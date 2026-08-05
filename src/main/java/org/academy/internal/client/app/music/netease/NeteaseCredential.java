@@ -13,7 +13,7 @@ public final class NeteaseCredential {
         this.uid = uid;
         this.nickname = nickname;
         this.avatarUrl = avatarUrl;
-        this.loginTime = System.currentTimeMillis();
+        loginTime = System.currentTimeMillis();
     }
 
     public String getUid() {

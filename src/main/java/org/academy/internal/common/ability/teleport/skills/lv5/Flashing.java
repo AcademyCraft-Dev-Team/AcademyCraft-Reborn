@@ -45,6 +45,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -154,7 +155,7 @@ public final class Flashing extends Skill {
         }
 
         private static void resetHolds() {
-            java.util.Arrays.fill(HOLD_TICKS, 0);
+            Arrays.fill(HOLD_TICKS, 0);
         }
 
         public static class Config extends KeyBindingConfig {

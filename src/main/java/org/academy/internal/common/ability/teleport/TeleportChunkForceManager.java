@@ -90,7 +90,7 @@ public final class TeleportChunkForceManager {
 
     @SubscribeEvent
     public static synchronized void onServerStopping(ServerStoppingEvent event) {
-        Iterator<String> iterator = LEASES.keySet().iterator();
+        var iterator = LEASES.keySet().iterator();
         while (iterator.hasNext()) {
             var lease = LEASES.get(iterator.next());
             iterator.remove();

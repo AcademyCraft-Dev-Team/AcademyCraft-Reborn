@@ -2,11 +2,13 @@ package org.academy.internal.common.ability.electromaster.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -71,7 +73,7 @@ public class LightningNova extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            var minecraft = Minecraft.getInstance();
             if (minecraft.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.LIGHTNING_NOVA.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
@@ -149,7 +151,7 @@ public class LightningNova extends Skill {
                         system.getPlayerDamageMultiplier(player.getUUID())
                 );
                 var source = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
-                        net.minecraft.world.damagesource.DamageTypes.LIGHTNING_BOLT);
+                        DamageTypes.LIGHTNING_BOLT);
                 for (var target : targets) {
                     var dist = target.distanceTo(player);
                     if (dist <= currentRadius && dist >= innerRadius) {

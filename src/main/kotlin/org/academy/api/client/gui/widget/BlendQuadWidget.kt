@@ -6,12 +6,12 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
-import org.academy.api.client.render.Render
-import org.academy.api.client.resources.R
 import org.academy.api.client.gui.command.ImageDrawCommand
 import org.academy.api.client.gui.command.PosTexRectDrawCommand
 import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.render.Render
 import org.academy.api.client.render.UniformPayload
+import org.academy.api.client.resources.R
 import org.joml.Vector2f
 import org.joml.Vector4f
 import java.nio.ByteBuffer

@@ -38,6 +38,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.Locale;
 
 public final class ElectromagneticShield extends Skill {
     static final float BASE_CAPACITY = 100.0f;
@@ -138,7 +139,7 @@ public final class ElectromagneticShield extends Skill {
             if (data.isEmpty()) return "0 / 0";
             var shield = data.get();
             var remaining = Math.max(0.0f, shield.getCapacity() - shield.getAbsorbedDamage());
-            return String.format(java.util.Locale.ROOT, "%.0f / %.0f", remaining, shield.getCapacity());
+            return String.format(Locale.ROOT, "%.0f / %.0f", remaining, shield.getCapacity());
         }
 
         public static final class Config extends KeyBindingConfig {

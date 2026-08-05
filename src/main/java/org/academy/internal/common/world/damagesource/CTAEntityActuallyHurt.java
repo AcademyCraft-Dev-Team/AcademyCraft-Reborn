@@ -68,9 +68,9 @@ public final class CTAEntityActuallyHurt {
     }
 
     private static ServerPlayer resolveOwnerPlayer(DamageSource source) {
-        Entity attacker = source.getEntity();
+        var attacker = source.getEntity();
         if (attacker instanceof ServerPlayer player) return player;
-        Entity direct = source.getDirectEntity();
+        var direct = source.getDirectEntity();
         if (direct instanceof ServerPlayer player) return player;
         if (direct instanceof Projectile projectile && projectile.getOwner() instanceof ServerPlayer player) {
             return player;

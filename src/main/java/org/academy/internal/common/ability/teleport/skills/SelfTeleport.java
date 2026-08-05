@@ -7,6 +7,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityDimensions;
@@ -110,8 +111,8 @@ public final class SelfTeleport extends Skill {
             });
         }
 
-        private static @Nullable Vec3 resolveTargetCenter(net.minecraft.server.level.ServerPlayer player,
-                                                           Vec3 requested) {
+        private static @Nullable Vec3 resolveTargetCenter(ServerPlayer player,
+                                                          Vec3 requested) {
             if (!Double.isFinite(requested.x()) || !Double.isFinite(requested.y())
                     || !Double.isFinite(requested.z())) {
                 return null;

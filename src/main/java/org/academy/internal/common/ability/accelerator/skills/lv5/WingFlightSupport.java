@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
@@ -21,6 +22,7 @@ import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.mixin.common.EntitySharedFlagInvoker;
+import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
 import java.util.UUID;
@@ -175,7 +177,7 @@ final class WingFlightSupport {
         var source = SkillDamageSource.of(
                 player,
                 skill,
-                net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL
+                DamageTypes.GENERIC_KILL
         );
         var hitCount = new int[1];
 
@@ -223,7 +225,7 @@ final class WingFlightSupport {
         );
         for (var other : ((ServerLevel) player.level()).players()) {
             if (other.distanceToSqr(player) <= 128.0 * 128.0) {
-                org.misaka.MisakaNetworkServer.send(other, packet);
+                MisakaNetworkServer.send(other, packet);
             }
         }
     }

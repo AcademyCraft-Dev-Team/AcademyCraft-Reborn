@@ -6,6 +6,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_L;
 import static org.lwjgl.glfw.GLFW.GLFW_MOD_ALT;
@@ -261,7 +264,7 @@ public final class CrossingTheAbyss extends Skill {
             var source = SkillDamageSource.of(
                     attacker,
                     Skills.CROSSING_THE_ABYSS.get(),
-                    net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL
+                    DamageTypes.GENERIC_KILL
             );
             var trueHealth = CTAEntityActuallyHurt.readTrueHealth(target);
             new CTAEntityActuallyHurt(target).actuallyHurt(
@@ -311,7 +314,7 @@ public final class CrossingTheAbyss extends Skill {
             }
         }
 
-        private static ServerPlayer resolvePlayer(net.minecraft.world.damagesource.DamageSource source) {
+        private static ServerPlayer resolvePlayer(DamageSource source) {
             if (source == null) return null;
             if (source.getEntity() instanceof ServerPlayer player) return player;
             if (source.getDirectEntity() instanceof ServerPlayer player) return player;
@@ -325,7 +328,7 @@ public final class CrossingTheAbyss extends Skill {
             var targetIds = PENDING_HITS.entrySet().stream()
                     .filter(entry -> entry.getValue().attackerId.equals(attackerId))
                     .map(Map.Entry::getKey)
-                    .collect(java.util.stream.Collectors.toSet());
+                    .collect(Collectors.toSet());
             PENDING_HITS.entrySet().removeIf(entry -> entry.getValue().attackerId.equals(attackerId));
             targetIds.addAll(HEAL_LOCKS.entrySet().stream()
                     .filter(entry -> entry.getValue().attackerId.equals(attackerId))

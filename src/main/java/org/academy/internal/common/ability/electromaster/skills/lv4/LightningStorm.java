@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -12,6 +13,8 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -75,7 +78,7 @@ public class LightningStorm extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            var mc = net.minecraft.client.Minecraft.getInstance();
+            var mc = Minecraft.getInstance();
             if (mc.player == null || mc.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.LIGHTNING_STORM.get())) return;
             MisakaNetworkClient.send(ActivatePacket.INSTANCE);
@@ -117,12 +120,12 @@ public class LightningStorm extends Skill {
     }
 
     public static final class Context extends ServerContext {
-        private final net.minecraft.world.phys.Vec3 center;
+        private final Vec3 center;
         private int strikesLeft = STRIKE_COUNT;
         private int cooldown;
         private boolean ended;
 
-        private Context(ServerPlayer player, net.minecraft.world.phys.Vec3 center) {
+        private Context(ServerPlayer player, Vec3 center) {
             super(player);
             this.center = center;
         }
@@ -152,7 +155,7 @@ public class LightningStorm extends Skill {
                 entity.setPos(topPos.getX(), topPos.getY(), topPos.getZ());
                 serverLevel.addFreshEntity(entity);
 
-                var box = new net.minecraft.world.phys.AABB(strikePos).inflate(3);
+                var box = new AABB(strikePos).inflate(3);
                 var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
                 var system = AbilitySystemServer.getSystem(player);
                 var damage = Server.calculateDamage(

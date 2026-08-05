@@ -6,6 +6,7 @@ import org.academy.AcademyCraft;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,7 +55,7 @@ public final class QqLoginService {
 
         @Override
         public Thread newThread(Runnable runnable) {
-            Thread thread = new Thread(runnable, "academy-qq-login-" + counter.getAndIncrement());
+            var thread = new Thread(runnable, "academy-qq-login-" + counter.getAndIncrement());
             thread.setDaemon(true);
             return thread;
         }
@@ -83,13 +85,13 @@ public final class QqLoginService {
             try {
                 updateStatus("QQ 音乐：阶段 1/4 获取二维码");
                 clearAuthSessionCookies();
-                StringBuilder urlBuilder = new StringBuilder(QR_SHOW_URL);
+                var urlBuilder = new StringBuilder(QR_SHOW_URL);
                 urlBuilder.append("?appid=").append(APPID);
                 urlBuilder.append("&e=2&l=M&s=3&d=72&v=4&t=0.787&daid=383");
                 urlBuilder.append("&pt_3rd_aid=").append(THIRD_APPID);
                 urlBuilder.append("&u1=").append(URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8));
 
-                HttpURLConnection connection = (HttpURLConnection) new URL(urlBuilder.toString()).openConnection();
+                var connection = (HttpURLConnection) new URL(urlBuilder.toString()).openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(15000);
@@ -97,12 +99,12 @@ public final class QqLoginService {
                 connection.connect();
 
                 String qrsig = null;
-                for (Map.Entry<String, java.util.List<String>> entry : connection.getHeaderFields().entrySet()) {
+                for (var entry : connection.getHeaderFields().entrySet()) {
                     if (!"Set-Cookie".equalsIgnoreCase(entry.getKey())) {
                         continue;
                     }
-                    for (String cookieStr : entry.getValue()) {
-                        String value = extractCookieValue(cookieStr, "qrsig");
+                    for (var cookieStr : entry.getValue()) {
+                        var value = extractCookieValue(cookieStr, "qrsig");
                         if (value != null) {
                             qrsig = value;
                             break;
@@ -113,7 +115,7 @@ public final class QqLoginService {
                     }
                 }
 
-                byte[] imageData = connection.getInputStream().readAllBytes();
+                var imageData = connection.getInputStream().readAllBytes();
                 connection.disconnect();
                 if (qrsig == null || qrsig.isBlank()) {
                     AcademyCraft.LOGGER.error("QQ music login stage fetchQrCode failed: missing qrsig");
@@ -138,8 +140,8 @@ public final class QqLoginService {
                     return LoginState.FAILED;
                 }
                 updateStatus("QQ 音乐：阶段 2/4 等待扫码确认");
-                long ptqrtoken = calculatePtqrtoken(qrsig);
-                StringBuilder urlBuilder = new StringBuilder(QR_LOGIN_URL);
+                var ptqrtoken = calculatePtqrtoken(qrsig);
+                var urlBuilder = new StringBuilder(QR_LOGIN_URL);
                 urlBuilder.append("?u1=").append(URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8));
                 urlBuilder.append("&ptqrtoken=").append(ptqrtoken);
                 urlBuilder.append("&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052");
@@ -148,24 +150,24 @@ public final class QqLoginService {
                 urlBuilder.append("&daid=383");
                 urlBuilder.append("&pt_3rd_aid=").append(THIRD_APPID);
 
-                HttpURLConnection connection = (HttpURLConnection) new URL(urlBuilder.toString()).openConnection();
+                var connection = (HttpURLConnection) new URL(urlBuilder.toString()).openConnection();
                 connection.setRequestMethod("GET");
                 connection.setRequestProperty("Cookie", "qrsig=" + qrsig);
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(10000);
 
-                int responseCode = connection.getResponseCode();
-                String body = readResponse(connection);
+                var responseCode = connection.getResponseCode();
+                var body = readResponse(connection);
                 connection.disconnect();
                 AcademyCraft.LOGGER.debug("QQ music login stage ptqrlogin code={}, body={}", responseCode, summarize(body));
 
-                Matcher matcher = PTUI_CB.matcher(body);
+                var matcher = PTUI_CB.matcher(body);
                 if (!matcher.find()) {
                     AcademyCraft.LOGGER.error("QQ music login stage ptqrlogin failed: ptuiCB missing, body={}", summarize(body));
                     updateStatus("QQ 音乐：阶段 2/4 轮询响应异常");
                     return LoginState.WAITING_SCAN;
                 }
-                String code = matcher.group(1);
+                var code = matcher.group(1);
                 if ("65".equals(code)) {
                     updateStatus("QQ 音乐：二维码已过期");
                     return LoginState.QR_EXPIRED;
@@ -174,7 +176,7 @@ public final class QqLoginService {
                     updateStatus("QQ 音乐：阶段 2/4 等待手机确认");
                     return LoginState.WAITING_SCAN;
                 }
-                String checkSigUrl = matcher.group(2);
+                var checkSigUrl = matcher.group(2);
                 if (checkSigUrl == null || checkSigUrl.isBlank()) {
                     checkSigUrl = matcher.group(3);
                 }
@@ -191,7 +193,7 @@ public final class QqLoginService {
     private static LoginState processLoginSuccess(String checkSigUrl) {
         try {
             updateStatus("QQ 音乐：阶段 3/4 获取授权票据");
-            HttpURLConnection connection = (HttpURLConnection) new URL(checkSigUrl).openConnection();
+            var connection = (HttpURLConnection) new URL(checkSigUrl).openConnection();
             connection.setRequestMethod("GET");
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
@@ -199,16 +201,16 @@ public final class QqLoginService {
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
             connection.connect();
-            int responseCode = connection.getResponseCode();
+            var responseCode = connection.getResponseCode();
 
             String uin = null;
             String ptOauthToken = null;
             String pSkey = null;
-            for (Map.Entry<String, java.util.List<String>> entry : connection.getHeaderFields().entrySet()) {
+            for (var entry : connection.getHeaderFields().entrySet()) {
                 if (!"Set-Cookie".equalsIgnoreCase(entry.getKey())) {
                     continue;
                 }
-                for (String cookieStr : entry.getValue()) {
+                for (var cookieStr : entry.getValue()) {
                     String value;
                     if ((value = extractCookieValue(cookieStr, "pt2gguin")) != null) {
                         uin = value;
@@ -222,7 +224,7 @@ public final class QqLoginService {
                 }
             }
             captureCookies(connection, AUTH_SESSION_COOKIES);
-            String checkSigRedirect = connection.getHeaderField("Location");
+            var checkSigRedirect = connection.getHeaderField("Location");
             connection.disconnect();
             AcademyCraft.LOGGER.info("QQ music login stage checkSig code={}, hasUin={}, hasOauthToken={}, hasPSkey={}, hasLocation={}, cookies={}",
                     responseCode, uin != null, ptOauthToken != null, pSkey != null, checkSigRedirect != null, AUTH_SESSION_COOKIES.keySet());
@@ -234,7 +236,7 @@ public final class QqLoginService {
             }
             followAuthorizeSessionRedirects(checkSigRedirect);
 
-            String authCode = authorizeViaConcertoFlow();
+            var authCode = authorizeViaConcertoFlow();
             if (authCode == null || authCode.isBlank()) {
                 authCode = requestXloginCode();
             }
@@ -252,7 +254,7 @@ public final class QqLoginService {
                 return LoginState.FAILED;
             }
             updateStatus("QQ 音乐：阶段 4/4 登录 QQ 音乐");
-            QqCredential credential = qqConnectLoginServer(authCode);
+            var credential = qqConnectLoginServer(authCode);
             if (credential == null) {
                 updateStatus("QQ 音乐：阶段 4/4 登录凭据交换失败");
                 return LoginState.FAILED;
@@ -271,7 +273,7 @@ public final class QqLoginService {
 
     private static String authorize(String uin, String ptOauthToken, String pSkey) throws IOException {
         updateStatus("QQ 音乐：阶段 3/4 请求 authorize");
-        long gtk = calculateGtk(pSkey);
+        var gtk = calculateGtk(pSkey);
         Map<String, String> formData = new LinkedHashMap<>();
         formData.put("response_type", "code");
         formData.put("client_id", THIRD_APPID);
@@ -286,8 +288,8 @@ public final class QqLoginService {
         formData.put("g_tk", String.valueOf(gtk));
         formData.put("auth_time", String.valueOf(System.currentTimeMillis() / 1000));
 
-        StringBuilder formBody = new StringBuilder();
-        for (Map.Entry<String, String> entry : formData.entrySet()) {
+        var formBody = new StringBuilder();
+        for (var entry : formData.entrySet()) {
             if (formBody.length() > 0) {
                 formBody.append('&');
             }
@@ -296,7 +298,7 @@ public final class QqLoginService {
             formBody.append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
         }
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(AUTHORIZE_URL).openConnection();
+        var connection = (HttpURLConnection) new URL(AUTHORIZE_URL).openConnection();
         connection.setRequestMethod("POST");
         connection.setInstanceFollowRedirects(false);
         connection.setDoOutput(true);
@@ -312,13 +314,13 @@ public final class QqLoginService {
         ));
         connection.setConnectTimeout(10000);
         connection.setReadTimeout(10000);
-        try (OutputStream outputStream = connection.getOutputStream()) {
+        try (var outputStream = connection.getOutputStream()) {
             outputStream.write(formBody.toString().getBytes(StandardCharsets.UTF_8));
         }
-        int responseCode = connection.getResponseCode();
-        String location = connection.getHeaderField("Location");
-        String body = location == null ? safeReadResponse(connection) : "";
-        String refresh = connection.getHeaderField("Refresh");
+        var responseCode = connection.getResponseCode();
+        var location = connection.getHeaderField("Location");
+        var body = location == null ? safeReadResponse(connection) : "";
+        var refresh = connection.getHeaderField("Refresh");
         captureCookies(connection, AUTH_SESSION_COOKIES);
         connection.disconnect();
         AcademyCraft.LOGGER.info("QQ music login stage authorize code={}, hasLocation={}, hasRefresh={}, cookies={}, body={}",
@@ -327,13 +329,13 @@ public final class QqLoginService {
             AcademyCraft.LOGGER.error("QQ music login stage authorize failed: no redirect location, body={}", summarize(body));
             return null;
         }
-        Matcher matcher = CODE_PATTERN.matcher(location);
+        var matcher = CODE_PATTERN.matcher(location);
         if (matcher.find()) {
-            String authCode = matcher.group(1);
+            var authCode = matcher.group(1);
             AcademyCraft.LOGGER.info("QQ music login stage authorize ok: codeLength={}", authCode.length());
             return authCode;
         }
-        String authCode = followAuthorizeCodeRedirects(location);
+        var authCode = followAuthorizeCodeRedirects(location);
         if (authCode == null || authCode.isBlank()) {
             AcademyCraft.LOGGER.error("QQ music login stage authorize failed: no code found after follow, location={}, refresh={}, body={}",
                     location, refresh, summarize(body));
@@ -346,15 +348,15 @@ public final class QqLoginService {
     private static String authorizeViaConcertoFlow() {
         try {
             updateStatus("QQ 音乐：阶段 3/4 请求 authorize");
-            String pSkey = AUTH_SESSION_COOKIES.get("p_skey");
+            var pSkey = AUTH_SESSION_COOKIES.get("p_skey");
             if (pSkey == null || pSkey.isBlank()) {
                 pSkey = AUTH_SESSION_COOKIES.getOrDefault("p_skey", "");
             }
-            long gtk = calculateGtk(pSkey);
-            String ui = AUTH_SESSION_COOKIES.computeIfAbsent("ui", ignored -> java.util.UUID.randomUUID().toString().toUpperCase());
+            var gtk = calculateGtk(pSkey);
+            var ui = AUTH_SESSION_COOKIES.computeIfAbsent("ui", ignored -> UUID.randomUUID().toString().toUpperCase());
             AUTH_SESSION_COOKIES.put("gtk", String.valueOf(gtk));
 
-            StringBuilder formBody = new StringBuilder();
+            var formBody = new StringBuilder();
             appendFormField(formBody, "response_type", "code");
             appendFormField(formBody, "client_id", THIRD_APPID);
             appendFormField(formBody, "redirect_uri", CONCERTO_REDIRECT_URI);
@@ -369,7 +371,7 @@ public final class QqLoginService {
             appendFormField(formBody, "auth_time", String.valueOf(System.currentTimeMillis() / 1000));
             appendFormField(formBody, "ui", ui);
 
-            HttpURLConnection connection = (HttpURLConnection) new URL(AUTHORIZE_URL).openConnection();
+            var connection = (HttpURLConnection) new URL(AUTHORIZE_URL).openConnection();
             connection.setRequestMethod("POST");
             connection.setInstanceFollowRedirects(false);
             connection.setDoOutput(true);
@@ -377,22 +379,22 @@ public final class QqLoginService {
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
             connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             connection.setRequestProperty("Referer", "https://graph.qq.com");
-            String cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
+            var cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
             if (!cookieHeader.isBlank()) {
                 connection.setRequestProperty("Cookie", cookieHeader);
             }
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
-            try (OutputStream outputStream = connection.getOutputStream()) {
+            try (var outputStream = connection.getOutputStream()) {
                 outputStream.write(formBody.toString().getBytes(StandardCharsets.UTF_8));
             }
-            int responseCode = connection.getResponseCode();
-            String location = connection.getHeaderField("Location");
-            String body = location == null ? safeReadResponse(connection) : "";
+            var responseCode = connection.getResponseCode();
+            var location = connection.getHeaderField("Location");
+            var body = location == null ? safeReadResponse(connection) : "";
             captureCookies(connection, AUTH_SESSION_COOKIES);
             connection.disconnect();
 
-            String authCode = extractPortalCode(location, body);
+            var authCode = extractPortalCode(location, body);
             AcademyCraft.LOGGER.info("QQ music login stage concerto-authorize code={}, nextLocation={}, cookies={}, body={}",
                     responseCode, location, AUTH_SESSION_COOKIES.keySet(), summarize(body));
             if (authCode == null || authCode.isBlank()) {
@@ -409,21 +411,21 @@ public final class QqLoginService {
     private static QqCredential qqConnectLoginServer(String code) {
         HttpURLConnection connection = null;
         try {
-            JsonObject comm = new JsonObject();
+            var comm = new JsonObject();
             comm.addProperty("g_tk", Long.parseLong(AUTH_SESSION_COOKIES.getOrDefault("gtk", "5381")));
             comm.addProperty("platform", "yqq");
             comm.addProperty("ct", 24);
             comm.addProperty("cv", 0);
 
-            JsonObject param = new JsonObject();
+            var param = new JsonObject();
             param.addProperty("code", code);
 
-            JsonObject req = new JsonObject();
+            var req = new JsonObject();
             req.addProperty("module", "QQConnectLogin.LoginServer");
             req.addProperty("method", "QQLogin");
             req.add("param", param);
 
-            JsonObject body = new JsonObject();
+            var body = new JsonObject();
             body.add("comm", comm);
             body.add("req", req);
 
@@ -437,17 +439,17 @@ public final class QqLoginService {
             connection.setRequestProperty("Accept", "application/json, text/plain, */*");
             connection.setRequestProperty("Origin", "https://y.qq.com");
             connection.setRequestProperty("Referer", "https://y.qq.com/");
-            String cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
+            var cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
             if (!cookieHeader.isBlank()) {
                 connection.setRequestProperty("Cookie", cookieHeader);
             }
-            try (OutputStream outputStream = connection.getOutputStream()) {
+            try (var outputStream = connection.getOutputStream()) {
                 outputStream.write(body.toString().getBytes(StandardCharsets.UTF_8));
             }
-            int responseCode = connection.getResponseCode();
-            String responseBody = readResponse(connection);
+            var responseCode = connection.getResponseCode();
+            var responseBody = readResponse(connection);
             captureCookies(connection, AUTH_SESSION_COOKIES);
-            LoginExchangeResult result = parseLoginExchangeResponse(responseBody, AUTH_SESSION_COOKIES);
+            var result = parseLoginExchangeResponse(responseBody, AUTH_SESSION_COOKIES);
             AcademyCraft.LOGGER.info(
                     "QQ music login stage QQConnectLogin httpCode={}, rootCode={}, serviceCode={}, responseKey={}, credentialSource={}, cookies={}",
                     responseCode, result.rootCode(), result.serviceCode(), result.responseKey(),
@@ -469,16 +471,16 @@ public final class QqLoginService {
     }
 
     static LoginExchangeResult parseLoginExchangeResponse(String responseBody, Map<String, String> cookies) {
-        int rootCode = Integer.MIN_VALUE;
-        int serviceCode = Integer.MIN_VALUE;
-        String responseKey = "";
+        var rootCode = Integer.MIN_VALUE;
+        var serviceCode = Integer.MIN_VALUE;
+        var responseKey = "";
         JsonObject data = null;
         try {
             var parsed = JsonParser.parseString(responseBody == null ? "" : responseBody);
             if (parsed.isJsonObject()) {
-                JsonObject root = parsed.getAsJsonObject();
+                var root = parsed.getAsJsonObject();
                 rootCode = getInt(root, "code", Integer.MIN_VALUE);
-                JsonObject serviceResponse = getObject(root, "req");
+                var serviceResponse = getObject(root, "req");
                 if (serviceResponse != null) {
                     responseKey = "req";
                 } else {
@@ -498,11 +500,11 @@ public final class QqLoginService {
             // A cookie-only response is still valid for older QQ Music login servers.
         }
 
-        QqCredential jsonCredential = credentialFromData(data, cookies);
+        var jsonCredential = credentialFromData(data, cookies);
         if (jsonCredential != null) {
             return new LoginExchangeResult(rootCode, serviceCode, responseKey, CredentialSource.JSON, jsonCredential);
         }
-        QqCredential cookieCredential = credentialFromCookies(cookies);
+        var cookieCredential = credentialFromCookies(cookies);
         if (cookieCredential != null) {
             return new LoginExchangeResult(rootCode, serviceCode, responseKey, CredentialSource.COOKIE, cookieCredential);
         }
@@ -513,7 +515,7 @@ public final class QqLoginService {
         if (data == null) {
             return null;
         }
-        String musicId = normalizeUin(firstNonBlank(
+        var musicId = normalizeUin(firstNonBlank(
                 getString(data, "str_musicid"),
                 getString(data, "musicid"),
                 cookies == null ? null : cookies.get("uin"),
@@ -522,13 +524,13 @@ public final class QqLoginService {
         if ("0".equals(musicId)) {
             musicId = null;
         }
-        String musicKey = firstNonBlank(
+        var musicKey = firstNonBlank(
                 getString(data, "musickey"),
                 getString(data, "musicKey"),
                 cookies == null ? null : cookies.get("qm_keyst"),
                 cookies == null ? null : cookies.get("qqmusic_key")
         );
-        QqCredential credential = new QqCredential(
+        var credential = new QqCredential(
                 musicId,
                 musicKey,
                 getLong(data, "keyExpiresIn", 0L),
@@ -543,9 +545,9 @@ public final class QqLoginService {
         if (cookies == null || cookies.isEmpty()) {
             return null;
         }
-        String musicId = normalizeUin(firstNonBlank(cookies.get("uin"), cookies.get("wxuin")));
-        String musicKey = firstNonBlank(cookies.get("qm_keyst"), cookies.get("qqmusic_key"));
-        QqCredential credential = new QqCredential(
+        var musicId = normalizeUin(firstNonBlank(cookies.get("uin"), cookies.get("wxuin")));
+        var musicKey = firstNonBlank(cookies.get("qm_keyst"), cookies.get("qqmusic_key"));
+        var credential = new QqCredential(
                 musicId, musicKey, 0L, System.currentTimeMillis() / 1000, "", "");
         return credential.isValid() ? credential : null;
     }
@@ -606,12 +608,12 @@ public final class QqLoginService {
     }
 
     private static String readResponse(HttpURLConnection connection) throws IOException {
-        java.io.InputStream stream = connection.getResponseCode() >= 400 ? connection.getErrorStream() : connection.getInputStream();
+        var stream = connection.getResponseCode() >= 400 ? connection.getErrorStream() : connection.getInputStream();
         if (stream == null) {
             throw new IOException("Empty HTTP response body");
         }
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            StringBuilder builder = new StringBuilder();
+        try (var bufferedReader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            var builder = new StringBuilder();
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 builder.append(line);
@@ -625,9 +627,9 @@ public final class QqLoginService {
             AcademyCraft.LOGGER.warn("QQ music login stage session follow skipped: empty redirect url");
             return;
         }
-        String currentUrl = redirectUrl;
-        String referer = LOGIN_JUMP_URL;
-        for (int step = 0; step < 5 && currentUrl != null && !currentUrl.isBlank(); step++) {
+        var currentUrl = redirectUrl;
+        var referer = LOGIN_JUMP_URL;
+        for (var step = 0; step < 5 && currentUrl != null && !currentUrl.isBlank(); step++) {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(currentUrl).openConnection();
@@ -638,16 +640,16 @@ public final class QqLoginService {
                 if (referer != null && !referer.isBlank()) {
                     connection.setRequestProperty("Referer", referer);
                 }
-                String cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
+                var cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
                 if (!cookieHeader.isBlank()) {
                     connection.setRequestProperty("Cookie", cookieHeader);
                 }
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(10000);
-                int responseCode = connection.getResponseCode();
+                var responseCode = connection.getResponseCode();
                 captureCookies(connection, AUTH_SESSION_COOKIES);
-                String location = connection.getHeaderField("Location");
-                String body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
+                var location = connection.getHeaderField("Location");
+                var body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
                 AcademyCraft.LOGGER.info("QQ music login stage session follow step={}, code={}, nextLocation={}, cookies={}, body={}",
                         step + 1, responseCode, location, AUTH_SESSION_COOKIES.keySet(), summarize(body));
                 if (location == null || responseCode < 300 || responseCode >= 400) {
@@ -667,9 +669,9 @@ public final class QqLoginService {
     }
 
     private static String followAuthorizeCodeRedirects(String startUrl) {
-        String currentUrl = startUrl;
-        String referer = LOGIN_JUMP_URL;
-        for (int step = 0; step < 5 && currentUrl != null && !currentUrl.isBlank(); step++) {
+        var currentUrl = startUrl;
+        var referer = LOGIN_JUMP_URL;
+        for (var step = 0; step < 5 && currentUrl != null && !currentUrl.isBlank(); step++) {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(currentUrl).openConnection();
@@ -680,20 +682,20 @@ public final class QqLoginService {
                 if (referer != null && !referer.isBlank()) {
                     connection.setRequestProperty("Referer", referer);
                 }
-                String cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
+                var cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
                 if (!cookieHeader.isBlank()) {
                     connection.setRequestProperty("Cookie", cookieHeader);
                 }
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(10000);
-                int responseCode = connection.getResponseCode();
-                String location = connection.getHeaderField("Location");
-                String refresh = connection.getHeaderField("Refresh");
-                String body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
+                var responseCode = connection.getResponseCode();
+                var location = connection.getHeaderField("Location");
+                var refresh = connection.getHeaderField("Refresh");
+                var body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
                 captureCookies(connection, AUTH_SESSION_COOKIES);
                 connection.disconnect();
 
-                String foundCode = extractCode(location, refresh);
+                var foundCode = extractCode(location, refresh);
                 if (foundCode == null || foundCode.isBlank()) {
                     foundCode = extractCallbackCode(body);
                 }
@@ -703,7 +705,7 @@ public final class QqLoginService {
                     return foundCode;
                 }
 
-                String nextUrl = location;
+                var nextUrl = location;
                 if (nextUrl == null || nextUrl.isBlank()) {
                     nextUrl = extractNextUrl(body, refresh);
                 }
@@ -733,19 +735,19 @@ public final class QqLoginService {
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
             connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             connection.setRequestProperty("Referer", "https://graph.qq.com/");
-            String cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
+            var cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
             if (!cookieHeader.isBlank()) {
                 connection.setRequestProperty("Cookie", cookieHeader);
             }
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
-            int responseCode = connection.getResponseCode();
-            String location = connection.getHeaderField("Location");
-            String refresh = connection.getHeaderField("Refresh");
-            String body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
+            var responseCode = connection.getResponseCode();
+            var location = connection.getHeaderField("Location");
+            var refresh = connection.getHeaderField("Refresh");
+            var body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
             captureCookies(connection, AUTH_SESSION_COOKIES);
             connection.disconnect();
-            String authCode = extractCode(location, refresh);
+            var authCode = extractCode(location, refresh);
             if (authCode == null || authCode.isBlank()) {
                 authCode = extractCallbackCode(body);
             }
@@ -754,7 +756,7 @@ public final class QqLoginService {
             if (authCode != null && !authCode.isBlank()) {
                 return authCode;
             }
-            String nextUrl = location;
+            var nextUrl = location;
             if (nextUrl == null || nextUrl.isBlank()) {
                 nextUrl = extractNextUrl(body, refresh);
             }
@@ -773,14 +775,14 @@ public final class QqLoginService {
     }
 
     private static String requestLocalJumpCode(String uin) {
-        String normalizedUin = normalizeUin(uin);
-        String ptLocalToken = AUTH_SESSION_COOKIES.get("pt_local_token");
+        var normalizedUin = normalizeUin(uin);
+        var ptLocalToken = AUTH_SESSION_COOKIES.get("pt_local_token");
         if (normalizedUin == null || normalizedUin.isBlank() || ptLocalToken == null || ptLocalToken.isBlank()) {
             AcademyCraft.LOGGER.info("QQ music login stage local_jump skipped: hasUin={}, hasPtLocalToken={}",
                     normalizedUin != null && !normalizedUin.isBlank(), ptLocalToken != null && !ptLocalToken.isBlank());
             return null;
         }
-        PtLocalSession session = fetchPtLocalSession(normalizedUin, ptLocalToken);
+        var session = fetchPtLocalSession(normalizedUin, ptLocalToken);
         if (session == null) {
             return null;
         }
@@ -789,13 +791,13 @@ public final class QqLoginService {
 
     private static PtLocalSession fetchPtLocalSession(String normalizedUin, String ptLocalToken) {
         List<Integer> ports = new ArrayList<>();
-        for (int port = 4301; port <= 4309; port += 2) {
+        for (var port = 4301; port <= 4309; port += 2) {
             ports.add(port);
         }
         for (int port : ports) {
             HttpURLConnection connection = null;
             try {
-                StringBuilder builder = new StringBuilder(LOCAL_PTLOGIN_HOST)
+                var builder = new StringBuilder(LOCAL_PTLOGIN_HOST)
                         .append(':').append(port)
                         .append("/pt_get_st?clientuin=").append(normalizedUin)
                         .append("&r=").append(Math.random())
@@ -813,9 +815,9 @@ public final class QqLoginService {
                 connection.setRequestProperty("Accept", "*/*");
                 connection.setConnectTimeout(2000);
                 connection.setReadTimeout(2000);
-                String body = readResponse(connection);
-                String localTk = extractNumericField(body, "pt_local_tk");
-                String keyIndex = extractNumericField(body, "keyindex");
+                var body = readResponse(connection);
+                var localTk = extractNumericField(body, "pt_local_tk");
+                var keyIndex = extractNumericField(body, "keyindex");
                 AcademyCraft.LOGGER.info("QQ music login stage pt_get_st port={}, hasLocalTk={}, keyIndex={}, body={}",
                         port, localTk != null, keyIndex, summarize(body));
                 if (localTk != null && keyIndex != null) {
@@ -836,7 +838,7 @@ public final class QqLoginService {
     private static String requestPtloginJumpCode(String normalizedUin, PtLocalSession session) {
         HttpURLConnection connection = null;
         try {
-            StringBuilder builder = new StringBuilder(PTLOGIN_JUMP_URL)
+            var builder = new StringBuilder(PTLOGIN_JUMP_URL)
                     .append("?clientuin=").append(normalizedUin)
                     .append("&keyindex=").append(session.keyIndex())
                     .append("&pt_aid=").append(APPID)
@@ -851,19 +853,19 @@ public final class QqLoginService {
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
             connection.setRequestProperty("Referer", buildXloginUrl());
             connection.setRequestProperty("Accept", "*/*");
-            String cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
+            var cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
             if (!cookieHeader.isBlank()) {
                 connection.setRequestProperty("Cookie", cookieHeader);
             }
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
-            int responseCode = connection.getResponseCode();
-            String location = connection.getHeaderField("Location");
-            String refresh = connection.getHeaderField("Refresh");
-            String body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
+            var responseCode = connection.getResponseCode();
+            var location = connection.getHeaderField("Location");
+            var refresh = connection.getHeaderField("Refresh");
+            var body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
             captureCookies(connection, AUTH_SESSION_COOKIES);
             connection.disconnect();
-            String authCode = extractCode(location, refresh);
+            var authCode = extractCode(location, refresh);
             if (authCode == null || authCode.isBlank()) {
                 authCode = extractCallbackCode(body);
             }
@@ -872,7 +874,7 @@ public final class QqLoginService {
             if (authCode != null && !authCode.isBlank()) {
                 return authCode;
             }
-            String nextUrl = location;
+            var nextUrl = location;
             if (nextUrl == null || nextUrl.isBlank()) {
                 nextUrl = extractNextUrl(body, refresh);
             }
@@ -893,26 +895,26 @@ public final class QqLoginService {
     private static String requestXloginCode() {
         HttpURLConnection connection = null;
         try {
-            String xloginUrl = buildXloginUrl();
+            var xloginUrl = buildXloginUrl();
             connection = (HttpURLConnection) new URL(xloginUrl).openConnection();
             connection.setRequestMethod("GET");
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
             connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             connection.setRequestProperty("Referer", "https://graph.qq.com/");
-            String cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
+            var cookieHeader = buildCookieHeader(AUTH_SESSION_COOKIES);
             if (!cookieHeader.isBlank()) {
                 connection.setRequestProperty("Cookie", cookieHeader);
             }
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
-            int responseCode = connection.getResponseCode();
-            String location = connection.getHeaderField("Location");
-            String refresh = connection.getHeaderField("Refresh");
-            String body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
+            var responseCode = connection.getResponseCode();
+            var location = connection.getHeaderField("Location");
+            var refresh = connection.getHeaderField("Refresh");
+            var body = responseCode >= 400 || location == null ? safeReadResponse(connection) : "";
             captureCookies(connection, AUTH_SESSION_COOKIES);
             connection.disconnect();
-            String authCode = extractCode(location, refresh);
+            var authCode = extractCode(location, refresh);
             if (authCode == null || authCode.isBlank()) {
                 authCode = extractCallbackCode(body);
             }
@@ -921,7 +923,7 @@ public final class QqLoginService {
             if (authCode != null && !authCode.isBlank()) {
                 return authCode;
             }
-            String nextUrl = location;
+            var nextUrl = location;
             if (nextUrl == null || nextUrl.isBlank()) {
                 nextUrl = extractNextUrl(body, refresh);
             }
@@ -940,7 +942,7 @@ public final class QqLoginService {
     }
 
     private static String buildXloginUrl() {
-        StringBuilder builder = new StringBuilder(XLOGIN_URL);
+        var builder = new StringBuilder(XLOGIN_URL);
         builder.append("?appid=").append(APPID);
         builder.append("&daid=383");
         builder.append("&style=33");
@@ -976,7 +978,7 @@ public final class QqLoginService {
         if (text == null) {
             return "";
         }
-        String normalized = text.replace('\n', ' ').replace('\r', ' ').trim();
+        var normalized = text.replace('\n', ' ').replace('\r', ' ').trim();
         if (normalized.length() <= 240) {
             return normalized;
         }
@@ -984,9 +986,9 @@ public final class QqLoginService {
     }
 
     private static String extractCookieValue(String cookie, String key) {
-        String prefix = key + "=";
-        for (String part : cookie.split(";")) {
-            String trimmed = part.trim();
+        var prefix = key + "=";
+        for (var part : cookie.split(";")) {
+            var trimmed = part.trim();
             if (trimmed.startsWith(prefix)) {
                 return trimmed.substring(prefix.length());
             }
@@ -998,11 +1000,11 @@ public final class QqLoginService {
         if (candidates == null) {
             return null;
         }
-        for (String candidate : candidates) {
+        for (var candidate : candidates) {
             if (candidate == null || candidate.isBlank()) {
                 continue;
             }
-            Matcher matcher = CODE_PATTERN.matcher(candidate);
+            var matcher = CODE_PATTERN.matcher(candidate);
             if (matcher.find()) {
                 return matcher.group(1);
             }
@@ -1014,11 +1016,11 @@ public final class QqLoginService {
         if (candidates == null) {
             return null;
         }
-        for (String candidate : candidates) {
+        for (var candidate : candidates) {
             if (candidate == null || candidate.isBlank()) {
                 continue;
             }
-            Matcher matcher = Pattern.compile("code=([A-Z0-9]+)").matcher(candidate);
+            var matcher = Pattern.compile("code=([A-Z0-9]+)").matcher(candidate);
             if (matcher.find()) {
                 return matcher.group(1);
             }
@@ -1030,17 +1032,17 @@ public final class QqLoginService {
         if (body == null || body.isBlank() || fieldName == null || fieldName.isBlank()) {
             return null;
         }
-        Pattern quotedPattern = Pattern.compile(Pattern.quote(fieldName) + "[\"']?\\s*[:=]\\s*[\"']?(\\d+)");
-        Matcher quotedMatcher = quotedPattern.matcher(body);
+        var quotedPattern = Pattern.compile(Pattern.quote(fieldName) + "[\"']?\\s*[:=]\\s*[\"']?(\\d+)");
+        var quotedMatcher = quotedPattern.matcher(body);
         if (quotedMatcher.find()) {
             return quotedMatcher.group(1);
         }
-        Pattern callbackPattern = Pattern.compile(Pattern.quote(fieldName) + ".*?(\\d+)");
-        Matcher callbackMatcher = callbackPattern.matcher(body);
+        var callbackPattern = Pattern.compile(Pattern.quote(fieldName) + ".*?(\\d+)");
+        var callbackMatcher = callbackPattern.matcher(body);
         if (callbackMatcher.find()) {
             return callbackMatcher.group(1);
         }
-        Matcher numericMatcher = NUMERIC_PATTERN.matcher(body);
+        var numericMatcher = NUMERIC_PATTERN.matcher(body);
         return numericMatcher.find() ? numericMatcher.group(1) : null;
     }
 
@@ -1048,11 +1050,11 @@ public final class QqLoginService {
         if (body == null || body.isBlank()) {
             return null;
         }
-        Matcher callbackCodeMatcher = CALLBACK_CODE_PATTERN.matcher(body);
+        var callbackCodeMatcher = CALLBACK_CODE_PATTERN.matcher(body);
         if (callbackCodeMatcher.find()) {
             return callbackCodeMatcher.group(1);
         }
-        Matcher callbackUrlMatcher = CALLBACK_URL_PATTERN.matcher(body);
+        var callbackUrlMatcher = CALLBACK_URL_PATTERN.matcher(body);
         if (callbackUrlMatcher.find()) {
             return extractCode(callbackUrlMatcher.group());
         }
@@ -1063,7 +1065,7 @@ public final class QqLoginService {
         if (rawUin == null || rawUin.isBlank()) {
             return rawUin;
         }
-        Matcher matcher = NUMERIC_PATTERN.matcher(rawUin);
+        var matcher = NUMERIC_PATTERN.matcher(rawUin);
         return matcher.find() ? matcher.group(1) : rawUin;
     }
 
@@ -1080,7 +1082,7 @@ public final class QqLoginService {
         if (values == null) {
             return null;
         }
-        for (String value : values) {
+        for (var value : values) {
             if (value != null && !value.isBlank()) {
                 return value;
             }
@@ -1093,7 +1095,7 @@ public final class QqLoginService {
 
     private static String extractNextUrl(String body, String refresh) {
         if (refresh != null && !refresh.isBlank()) {
-            Matcher refreshMatcher = META_REFRESH_PATTERN.matcher(refresh);
+            var refreshMatcher = META_REFRESH_PATTERN.matcher(refresh);
             if (refreshMatcher.find()) {
                 return refreshMatcher.group(1);
             }
@@ -1101,17 +1103,17 @@ public final class QqLoginService {
         if (body == null || body.isBlank()) {
             return null;
         }
-        Matcher ptuiMatcher = PTUI_REDIRECT_PATTERN.matcher(body);
+        var ptuiMatcher = PTUI_REDIRECT_PATTERN.matcher(body);
         if (ptuiMatcher.find()) {
             return ptuiMatcher.group(1);
         }
-        Matcher jsMatcher = JS_URL_PATTERN.matcher(body);
+        var jsMatcher = JS_URL_PATTERN.matcher(body);
         if (jsMatcher.find()) {
             return jsMatcher.group(1);
         }
-        Matcher urlMatcher = URL_PATTERN.matcher(body);
+        var urlMatcher = URL_PATTERN.matcher(body);
         while (urlMatcher.find()) {
-            String url = urlMatcher.group();
+            var url = urlMatcher.group();
             if (url.contains("code=") || url.contains("oauth2.0/show") || url.contains("common_login.html")) {
                 return url;
             }
@@ -1123,17 +1125,17 @@ public final class QqLoginService {
         if (connection == null || target == null) {
             return;
         }
-        for (Map.Entry<String, java.util.List<String>> entry : connection.getHeaderFields().entrySet()) {
+        for (var entry : connection.getHeaderFields().entrySet()) {
             if (!"Set-Cookie".equalsIgnoreCase(entry.getKey())) {
                 continue;
             }
-            for (String cookieStr : entry.getValue()) {
-                int separator = cookieStr.indexOf('=');
+            for (var cookieStr : entry.getValue()) {
+                var separator = cookieStr.indexOf('=');
                 if (separator <= 0) {
                     continue;
                 }
-                String key = cookieStr.substring(0, separator).trim();
-                String value = extractCookieValue(cookieStr, key);
+                var key = cookieStr.substring(0, separator).trim();
+                var value = extractCookieValue(cookieStr, key);
                 if (value != null && !value.isBlank()) {
                     target.put(key, value);
                 }
@@ -1145,8 +1147,8 @@ public final class QqLoginService {
         if (cookies == null || cookies.isEmpty()) {
             return "";
         }
-        StringBuilder builder = new StringBuilder();
-        for (Map.Entry<String, String> entry : cookies.entrySet()) {
+        var builder = new StringBuilder();
+        for (var entry : cookies.entrySet()) {
             if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null || entry.getValue().isBlank()) {
                 continue;
             }
@@ -1159,11 +1161,11 @@ public final class QqLoginService {
     }
 
     private static String buildCookieHeader(String... parts) {
-        StringBuilder builder = new StringBuilder();
+        var builder = new StringBuilder();
         if (parts == null) {
             return "";
         }
-        for (String part : parts) {
+        for (var part : parts) {
             if (part == null || part.isBlank()) {
                 continue;
             }
@@ -1177,7 +1179,7 @@ public final class QqLoginService {
 
     private static long calculatePtqrtoken(String qrsig) {
         long value = 0;
-        for (int i = 0; i < qrsig.length(); i++) {
+        for (var i = 0; i < qrsig.length(); i++) {
             value += (value << 5) + qrsig.charAt(i);
             value &= 0x7FFFFFFF;
         }
@@ -1186,7 +1188,7 @@ public final class QqLoginService {
 
     private static long calculateGtk(String skey) {
         long hash = 5381;
-        for (int i = 0; i < skey.length(); i++) {
+        for (var i = 0; i < skey.length(); i++) {
             hash += (hash << 5) + skey.charAt(i);
         }
         return hash & 0x7fffffff;

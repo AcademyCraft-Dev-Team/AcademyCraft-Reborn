@@ -102,7 +102,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
         public static final String KEY_NAME_SHOOT = SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM + "_shoot";
 
         public static void handleKey() {
-            if (!org.academy.api.client.ability.AbilitySystemClient.canUseSkill(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()))
+            if (!AbilitySystemClient.canUseSkill(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()))
                 return;
             MisakaNetworkClient.send(ShootPacket.INSTANCE);
         }

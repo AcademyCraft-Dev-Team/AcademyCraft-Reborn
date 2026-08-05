@@ -13,6 +13,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -44,7 +45,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.ArrayList;
 import java.util.Random;
+
 public class Disarm extends Skill {
     private static final double MAX_RANGE = 14.0;
 
@@ -82,7 +85,7 @@ public class Disarm extends Skill {
 
         // Priority 3: armor (random piece)
         var armorSlots = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
-        var armorItems = new java.util.ArrayList<EquipmentSlot>();
+        var armorItems = new ArrayList<EquipmentSlot>();
         for (var slot : armorSlots) {
             if (!target.getItemBySlot(slot).isEmpty()) armorItems.add(slot);
         }
@@ -115,7 +118,7 @@ public class Disarm extends Skill {
         }
     }
 
-    private static void dropItem(net.minecraft.world.level.Level level, LivingEntity target, ItemStack stack, Random rng) {
+    private static void dropItem(Level level, LivingEntity target, ItemStack stack, Random rng) {
         var item = new ItemEntity(level, target.getX(), target.getY() + 1, target.getZ(), stack.copy());
         level.addFreshEntity(item);
         item.setDeltaMovement(new Vec3(

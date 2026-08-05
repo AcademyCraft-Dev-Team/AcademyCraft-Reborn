@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.meltdowner.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -102,7 +103,7 @@ public final class JetStrike extends Skill {
 
         public static void onUse() {
             if (!AbilitySystemClient.canUseSkill(Skills.JET_STRIKE.get())) return;
-            var player = net.minecraft.client.Minecraft.getInstance().player;
+            var player = Minecraft.getInstance().player;
             if (player == null) return;
             MisakaNetworkClient.send(DashPacket.INSTANCE);
             TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.1f, 1.0f, 0.4f, 0.1f)

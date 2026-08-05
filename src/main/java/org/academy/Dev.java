@@ -1,6 +1,5 @@
 package org.academy;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import imgui.ImGui;
 
 @SuppressWarnings("ResultOfMethodCallIgnored")

@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.util.VertexUtil;
@@ -47,7 +48,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
             SubmitNodeCollector nodeCollector,
             PoseStack poseStack,
             float radius,
-            net.minecraft.client.renderer.rendertype.RenderType renderType,
+            RenderType renderType,
             float red,
             float green,
             float blue,

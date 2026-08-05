@@ -181,7 +181,7 @@ public class VectorReflection extends Skill {
             if (!(originalDamage > 0.0f) || !Float.isFinite(originalDamage)) return Pair.of(true, 0.0f);
             var serverPlayer = (ServerPlayer) player;
             var skill = Skills.VECTOR_REFLECTION.get();
-            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(serverPlayer);
+            var system = AbilitySystemServer.getSystem(serverPlayer);
             var result = calculateReflection(
                     originalDamage,
                     system.getPlayerAvailableCP(player.getUUID()),
