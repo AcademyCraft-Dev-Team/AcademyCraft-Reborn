@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.common.profiler.AcademyProfiler;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -64,12 +65,17 @@ public final class VfxManager {
     public void renderFrame() {
         if (!initialized) return;
         if (frameData.isEmpty()) return;
-        VfxRegistry.renderPhase(VfxPhase.WORLD_TRANSLUCENT, frameData, renderContext);
-        VfxRegistry.renderPhase(VfxPhase.WORLD_ALWAYS_ON_TOP, frameData, renderContext);
-        VfxRegistry.renderPhase(VfxPhase.SCREEN_SPACE_POST, frameData, renderContext);
-        if (!hasPhaseData(VfxPhase.WORLD_GLOW)) {
-            frameData.clear();
-        }
+        AcademyProfiler.runZone("academy.vfx.frame", () -> {
+            AcademyProfiler.runZone("academy.vfx.translucent", () ->
+                    VfxRegistry.renderPhase(VfxPhase.WORLD_TRANSLUCENT, frameData, renderContext));
+            AcademyProfiler.runZone("academy.vfx.top", () ->
+                    VfxRegistry.renderPhase(VfxPhase.WORLD_ALWAYS_ON_TOP, frameData, renderContext));
+            AcademyProfiler.runZone("academy.vfx.screen", () ->
+                    VfxRegistry.renderPhase(VfxPhase.SCREEN_SPACE_POST, frameData, renderContext));
+            if (!hasPhaseData(VfxPhase.WORLD_GLOW)) {
+                frameData.clear();
+            }
+        });
     }
 
     public boolean hasGlowData() {
@@ -80,7 +86,8 @@ public final class VfxManager {
         if (!initialized) return;
         renderContext.setBloomInput(color, depth);
         try {
-            VfxRegistry.renderPhase(VfxPhase.WORLD_GLOW, frameData, renderContext);
+            AcademyProfiler.runZone("academy.vfx.glow", () ->
+                    VfxRegistry.renderPhase(VfxPhase.WORLD_GLOW, frameData, renderContext));
         } finally {
             renderContext.setBloomInput(null, null);
             frameData.clear();
