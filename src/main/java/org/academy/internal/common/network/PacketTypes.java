@@ -70,6 +70,11 @@ import org.academy.internal.common.ability.meltdowner.skills.lv4.ParticleWaveCan
 import org.academy.internal.common.ability.meltdowner.skills.lv5.ChainFusion;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.AutoCruiseBeamCannon;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
+import org.academy.internal.common.ability.mentalout.skills.MentalStupor;
+import org.academy.internal.common.ability.mentalout.skills.MentalIntervention;
+import org.academy.internal.common.ability.mentalout.skills.ImpressionManipulation;
+import org.academy.internal.common.ability.mentalout.skills.TargetMisidentification;
+import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
@@ -578,6 +583,43 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpacialExcision.ActivatePacket>>
             SPACIAL_EXCISION_ACTIVATE = PACKET_TYPES.register("spacial_excision_activate",
             () -> new PacketType<>(SpacialExcision.ActivatePacket.class, SpacialExcision.ActivatePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TargetMisidentification.UsePacket>>
+            TARGET_MISIDENTIFICATION_USE = PACKET_TYPES.register("target_misidentification_use",
+            () -> new PacketType<>(TargetMisidentification.UsePacket.class, TargetMisidentification.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntervention.UsePacket>>
+            MENTAL_INTERVENTION_USE = PACKET_TYPES.register("mental_intervention_use",
+            () -> new PacketType<>(MentalIntervention.UsePacket.class, MentalIntervention.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalStupor.UsePacket>>
+            MENTAL_STUPOR_USE = PACKET_TYPES.register("mental_stupor_use",
+            () -> new PacketType<>(MentalStupor.UsePacket.class, MentalStupor.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ImpressionManipulation.UsePacket>>
+            IMPRESSION_MANIPULATION_USE = PACKET_TYPES.register("impression_manipulation_use",
+            () -> new PacketType<>(ImpressionManipulation.UsePacket.class, ImpressionManipulation.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.FullStartPacket>>
+            MENTALOUT_ROSTER_FULL_START = PACKET_TYPES.register("mentalout_roster_full_start",
+            () -> new PacketType<>(MentaloutRosterPackets.FullStartPacket.class,
+                    MentaloutRosterPackets.FullStartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.FullChunkPacket>>
+            MENTALOUT_ROSTER_FULL_CHUNK = PACKET_TYPES.register("mentalout_roster_full_chunk",
+            () -> new PacketType<>(MentaloutRosterPackets.FullChunkPacket.class,
+                    MentaloutRosterPackets.FullChunkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.DeltaPacket>>
+            MENTALOUT_ROSTER_DELTA = PACKET_TYPES.register("mentalout_roster_delta",
+            () -> new PacketType<>(MentaloutRosterPackets.DeltaPacket.class,
+                    MentaloutRosterPackets.DeltaPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.ClearPacket>>
+            MENTALOUT_ROSTER_CLEAR = PACKET_TYPES.register("mentalout_roster_clear",
+            () -> new PacketType<>(MentaloutRosterPackets.ClearPacket.class,
+                    MentaloutRosterPackets.ClearPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentaloutRosterPackets.ResyncPacket>>
+            MENTALOUT_ROSTER_RESYNC = PACKET_TYPES.register("mentalout_roster_resync",
+            () -> new PacketType<>(MentaloutRosterPackets.ResyncPacket.class,
+                    MentaloutRosterPackets.ResyncPacket.CODEC));
 
     /**
      * Development packets

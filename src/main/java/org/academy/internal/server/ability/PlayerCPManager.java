@@ -26,11 +26,13 @@ import org.misaka.MisakaNetworkServer;
 import org.slf4j.Logger;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.BooleanSupplier;
 
 public class PlayerCPManager implements AbilitySubsystem {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -323,6 +325,193 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         releaseMaintenanceOccupation(uuid, skill.getKeyString());
         return tryOccupation(uuid, amount, skill, 0, true);
+    }
+
+    /**
+     * Atomically replaces the permanent occupations for the supplied skills and optionally adds one
+     * timed occupation. Existing permanent reservations remain untouched when the complete change
+     * cannot be afforded.
+     */
+    public boolean replacePermanentOccupationsAndTryOccupation(
+            UUID uuid,
+            Map<Skill, Float> permanentAmounts,
+            Skill timedSkill,
+            float timedAmount,
+            int iterationTicks
+    ) {
+        var plan = createAtomicOccupationPlan(
+                uuid,
+                permanentAmounts,
+                timedSkill,
+                timedAmount,
+                iterationTicks
+        );
+        if (plan == null) return false;
+
+        var playerData = plan.playerData();
+        var cpData = playerData.getCpData();
+        var occupations = playerData.getCpOccupations();
+        occupations.removeIf(occupation -> occupation.isPermanent()
+                && plan.replacementIds().contains(occupation.getSkillId()));
+        for (var entry : plan.permanentAmounts().entrySet()) {
+            if (entry.getValue() <= 0) continue;
+            occupations.add(new AbilityData.CpOccupationData(
+                    entry.getValue(),
+                    0,
+                    entry.getKey().getKeyString(),
+                    true
+            ));
+        }
+        if (plan.timedAmount() > 0) {
+            occupations.add(new AbilityData.CpOccupationData(
+                    plan.timedAmount(),
+                    plan.iterationTicks(),
+                    plan.timedSkill().getKeyString(),
+                    false
+            ));
+        }
+        cpData.setAvailableCP(plan.availableAfterRelease() - plan.totalRequired(), getMaxCP(uuid));
+        playerData.markDirty();
+        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+        return true;
+    }
+
+    public boolean canReplacePermanentOccupationsAndTryOccupation(
+            UUID uuid,
+            Map<Skill, Float> permanentAmounts,
+            Skill timedSkill,
+            float timedAmount,
+            int iterationTicks
+    ) {
+        return createAtomicOccupationPlan(
+                uuid,
+                permanentAmounts,
+                timedSkill,
+                timedAmount,
+                iterationTicks
+        ) != null;
+    }
+
+    private AtomicOccupationPlan createAtomicOccupationPlan(
+            UUID uuid,
+            Map<Skill, Float> permanentAmounts,
+            Skill timedSkill,
+            float timedAmount,
+            int iterationTicks
+    ) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null || permanentAmounts == null) return null;
+
+        var cpData = playerData.getCpData();
+        if (cpData.getStatus() == AbilityData.Status.OVERLOAD) return null;
+        if (!Float.isFinite(timedAmount) || timedAmount < 0) return null;
+        if (timedAmount > 0 && timedSkill == null) return null;
+
+        var replacementIds = new java.util.HashSet<String>();
+        var replacementTotal = 0.0f;
+        for (var entry : permanentAmounts.entrySet()) {
+            var skill = entry.getKey();
+            var amount = entry.getValue();
+            if (skill == null || amount == null || !Float.isFinite(amount) || amount < 0) return null;
+            if (!replacementIds.add(skill.getKeyString())) return null;
+            replacementTotal += amount;
+            if (!Float.isFinite(replacementTotal)) return null;
+        }
+
+        var occupations = playerData.getCpOccupations();
+        if (timedAmount > 0) {
+            var maxStacks = timedSkill.getMaxStacks(getSkillLevel(playerData, timedSkill));
+            if (maxStacks != Skill.NO_STACK_LIMIT) {
+                var currentStacks = occupations.stream()
+                        .filter(occupation -> !occupation.isPermanent())
+                        .filter(occupation -> timedSkill.getKeyString().equals(occupation.getSkillId()))
+                        .count();
+                if (currentStacks >= maxStacks) return null;
+            }
+        }
+
+        var released = 0.0f;
+        for (var occupation : occupations) {
+            if (occupation.isPermanent() && replacementIds.contains(occupation.getSkillId())) {
+                released += occupation.getAmount();
+            }
+        }
+        var totalRequired = replacementTotal + timedAmount;
+        if (!Float.isFinite(totalRequired)
+                || !isAtomicReplacementAffordable(cpData.getAvailableCP(), released, totalRequired)) {
+            return null;
+        }
+        var effectiveIterationTicks = timedAmount <= 0
+                ? 0
+                : iterationTicks > 0
+                ? iterationTicks
+                : Math.max(1, (int) Math.ceil(timedAmount * 0.5f));
+        return new AtomicOccupationPlan(
+                playerData,
+                Map.copyOf(permanentAmounts),
+                Set.copyOf(replacementIds),
+                timedSkill,
+                timedAmount,
+                effectiveIterationTicks,
+                cpData.getAvailableCP() + released,
+                totalRequired
+        );
+    }
+
+    public boolean tryOccupationIf(
+            UUID uuid,
+            float amount,
+            Skill skill,
+            int iterationTicks,
+            BooleanSupplier action
+    ) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null || action == null || !Float.isFinite(amount) || amount < 0) return false;
+        var cpData = playerData.getCpData();
+        if (cpData.getStatus() == AbilityData.Status.OVERLOAD || cpData.getAvailableCP() < amount) return false;
+
+        var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
+        var level = skillData == null ? 0 : skillData.getLevel();
+        if (skill.getMaxStacks(level) != Skill.NO_STACK_LIMIT) {
+            var currentStacks = playerData.getCpOccupations().stream()
+                    .filter(occupation -> !occupation.isPermanent())
+                    .filter(occupation -> skill.getKeyString().equals(occupation.getSkillId()))
+                    .count();
+            if (currentStacks >= skill.getMaxStacks(level)) return false;
+        }
+        if (!action.getAsBoolean()) return false;
+        return tryOccupation(uuid, amount, skill, iterationTicks, false);
+    }
+
+    static boolean isAtomicReplacementAffordable(float available, float released, float required) {
+        if (!Float.isFinite(available)
+                || !Float.isFinite(released) || released < 0
+                || !Float.isFinite(required) || required < 0) {
+            return false;
+        }
+        if (required <= released) return true;
+        var additionalRequired = required - released;
+        return Float.isFinite(additionalRequired) && available >= additionalRequired;
+    }
+
+    private static int getSkillLevel(
+            org.academy.internal.server.world.level.storage.Player playerData,
+            Skill skill
+    ) {
+        var data = playerData.getSkillDataMap().get(skill.getKeyString());
+        return data == null ? 0 : data.getLevel();
+    }
+
+    private record AtomicOccupationPlan(
+            org.academy.internal.server.world.level.storage.Player playerData,
+            Map<Skill, Float> permanentAmounts,
+            Set<String> replacementIds,
+            Skill timedSkill,
+            float timedAmount,
+            int iterationTicks,
+            float availableAfterRelease,
+            float totalRequired
+    ) {
     }
 
 

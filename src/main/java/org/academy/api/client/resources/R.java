@@ -352,6 +352,46 @@ public final class R {
                 }
             }
 
+            public static final class mentalout {
+                public static final Identifier icon = academy("textures/ability/mentalout/icon.png");
+
+                public static final class skill {
+                    public static final class impression_manipulation {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/impression_manipulation/icon.png");
+
+                        private impression_manipulation() {
+                        }
+                    }
+
+                    public static final class mental_intervention {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/mental_intervention/icon.png");
+
+                        private mental_intervention() {
+                        }
+                    }
+
+                    public static final class mental_stupor {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/mental_stupor/icon.png");
+
+                        private mental_stupor() {
+                        }
+                    }
+
+                    public static final class target_misidentification {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/target_misidentification/icon.png");
+
+                        private target_misidentification() {
+                        }
+                    }
+
+                    private skill() {
+                    }
+                }
+
+                private mentalout() {
+                }
+            }
+
             public static final class teleport {
                 public static final Identifier icon = academy("textures/ability/teleport/icon.png");
                 public static final Identifier icon_glow = academy("textures/ability/teleport/icon_glow.png");

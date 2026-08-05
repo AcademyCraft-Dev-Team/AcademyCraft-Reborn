@@ -36,6 +36,13 @@ public final class HudLayoutConfig {
         @SerializedName("toggleStatusHudScale")
         public float toggleStatusHudScale = 1.0f;
 
+        @SerializedName("mentalControlHudOffsetX")
+        public int mentalControlHudOffsetX;
+        @SerializedName("mentalControlHudOffsetY")
+        public int mentalControlHudOffsetY;
+        @SerializedName("mentalControlHudScale")
+        public float mentalControlHudScale = 1.0f;
+
         @SerializedName("cpHudOffsetX")
         public int cpHudOffsetX;
         @SerializedName("cpHudOffsetY")
