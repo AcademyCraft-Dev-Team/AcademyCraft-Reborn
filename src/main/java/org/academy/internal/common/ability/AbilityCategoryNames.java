@@ -8,4 +8,5 @@ public final class AbilityCategoryNames {
     public static final String MELTDOWNER = "meltdowner";
     public static final String AEROMANIP = "aeromanip";
     public static final String DARKMATTER = "darkmatter";
+    public static final String MENTALOUT = "mentalout";
 }

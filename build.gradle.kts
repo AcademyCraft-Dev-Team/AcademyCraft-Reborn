@@ -255,6 +255,11 @@ neoForge {
                 file("src/main/resources/").absolutePath
             )
         }
+        register("gameTestServer") {
+            type.set("gameTestServer")
+            environment("IS_DEV", "true")
+            gameDirectory.set(file("run/gametest"))
+        }
         configureEach {
             logLevel.set(Level.DEBUG)
             systemProperty("terminal.ansi", "true")

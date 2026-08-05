@@ -48,6 +48,7 @@ import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
+import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
@@ -139,6 +140,7 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onClientStopped(ClientStoppedEvent event) {
+        MentaloutRosterClientState.clearLocal();
         ImGuiUtilApi.INSTANCE.close();
         MsdfFontService.INSTANCE.close();
         MsdfAtlasManager.closeAll();

@@ -2,6 +2,7 @@ package org.academy;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
@@ -13,9 +14,14 @@ import net.neoforged.neoforge.registries.NewRegistryEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
+import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.AbilityRegistrationValidator;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.mentalout.control.EnderDragonMentalControlAdapter;
+import org.academy.internal.common.ability.mentalout.control.VanillaMobMentalControlAdapter;
+import org.academy.internal.common.ability.mentalout.control.WardenMentalControlAdapter;
+import org.academy.internal.common.ability.mentalout.control.WitherMentalControlAdapter;
 import org.academy.internal.common.arc.PathModifierTypes;
 import org.academy.internal.common.arc.PathTypes;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -96,6 +102,26 @@ public final class AcademyCraftRegister {
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            MentalControlApi.registerAdapter(
+                    Identifier.fromNamespaceAndPath(MODID, "warden"),
+                    100,
+                    new WardenMentalControlAdapter()
+            );
+            MentalControlApi.registerAdapter(
+                    Identifier.fromNamespaceAndPath(MODID, "wither"),
+                    100,
+                    new WitherMentalControlAdapter()
+            );
+            MentalControlApi.registerAdapter(
+                    Identifier.fromNamespaceAndPath(MODID, "ender_dragon"),
+                    100,
+                    new EnderDragonMentalControlAdapter()
+            );
+            MentalControlApi.registerAdapter(
+                    Identifier.fromNamespaceAndPath(MODID, "vanilla_mob"),
+                    Integer.MIN_VALUE,
+                    new VanillaMobMentalControlAdapter()
+            );
             NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
             AbilityRegistrationValidator.validate();
             ABILITY_CATEGORIES.forEach(AbilityCategory::seal);

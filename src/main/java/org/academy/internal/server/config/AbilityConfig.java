@@ -26,6 +26,8 @@ public class AbilityConfig {
     public final BrainDevelopmentSettings brainDevelopment = new BrainDevelopmentSettings();
     @SerializedName("aeromanip")
     public final AeromanipSettings aeromanip = new AeromanipSettings();
+    @SerializedName("mentalout")
+    public final MentaloutSettings mentalout = new MentaloutSettings();
 
     public static class AeromanipSettings {
         @SerializedName("pvpForceMultiplier")
@@ -36,6 +38,19 @@ public class AbilityConfig {
         public int maxPlacedFieldsPerPlayer = 1;
         @SerializedName("allowSoftBlockInteraction")
         public boolean allowSoftBlockInteraction = true;
+    }
+
+    public static class MentaloutSettings {
+        @SerializedName("mentalInterventionCost")
+        public float mentalInterventionCost = 10.0f;
+        @SerializedName("targetMisidentificationCost")
+        public float targetMisidentificationCost = 40.0f;
+        @SerializedName("mentalStuporCostPerTarget")
+        public float mentalStuporCostPerTarget = 30.0f;
+        @SerializedName("impressionManipulationCostPerTarget")
+        public float impressionManipulationCostPerTarget = 20.0f;
+        @SerializedName("bossCostMultiplier")
+        public float bossCostMultiplier = 2.0f;
     }
 
     public static class BrainDevelopmentSettings {
