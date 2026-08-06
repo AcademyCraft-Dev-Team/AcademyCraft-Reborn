@@ -18,6 +18,7 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.PLASMA.get(), PlasmaRenderer::new);
         event.registerEntityRenderer(EntityTypes.ARC.get(), ArcRenderer::new);
         event.registerEntityRenderer(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), HighSpeedElectronBeamRenderer::new);
+        event.registerEntityRenderer(EntityTypes.MAGNETIC_WEAPON_BLADE.get(), MagneticWeaponBladeRenderer::new);
         event.registerEntityRenderer(EntityTypes.LIGHT_ORB.get(), LightOrbRenderer::new);
         event.registerEntityRenderer(EntityTypes.GLOW_CIRCLE.get(), GlowCircleRenderer::new);
         event.registerEntityRenderer(EntityTypes.KINETIC_SHOCKWAVE.get(), KineticShockwaveRenderer::new);
