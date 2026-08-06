@@ -3,7 +3,7 @@ package org.academy.internal.common.world.damagesource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 
 public final class CTADamageUtil {
     public static final float CTA_DAMAGE_AMOUNT = 4.0f;
@@ -44,11 +44,8 @@ public final class CTADamageUtil {
                                             DamageSource source, float damage) {
         if (target == null || attacker == null || source == null || damage <= 0.0f) return;
         if (target == attacker || !target.isAlive()) return;
+        if (target instanceof Player player && DamageTypes.isImmunePlayer(player)) return;
         if (attacker instanceof Player player && CtaFriendlyFireWhitelist.shouldProtect(player, target)) return;
-        var before = EntityControlApi.getTrueHealth(target);
-        if (Float.isFinite(before) && before > 0.0f) {
-            EntityControlApi.capTrueHealthTemporarily(target, Math.max(0.0f, before - damage), 2L);
-        }
         new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true);
     }
 }

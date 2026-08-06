@@ -32,11 +32,11 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv3.ThunderLance;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -161,11 +161,7 @@ public class Thunderclap extends Skill {
         }
 
         private static void strike(ServerPlayer player, ServerLevel level, Vec3 targetPos) {
-            var bolt = new LightningBolt(EntityTypes.LIGHTNING_BOLT, level);
-            bolt.setPos(targetPos);
-            bolt.setCause(player);
-            bolt.setVisualOnly(true);
-            level.addFreshEntity(bolt);
+            ElectromasterArcEffects.spawnSkyStrike(level, targetPos);
 
             var system = AbilitySystemServer.getSystem(player);
             var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
@@ -179,9 +175,11 @@ public class Thunderclap extends Skill {
                             && entity.distanceToSqr(targetPos) <= radiusSquared
             );
             for (var target : targets) {
-                target.hurtServer(level, source, 1.0f);
-                new CTAEntityActuallyHurt(target).actuallyHurt(
-                        source, calculateDamage(target.getMaxHealth(), abilityPower), true);
+                target.hurtServer(
+                        level,
+                        source,
+                        1.0f + calculateDamage(target.getMaxHealth(), abilityPower)
+                );
             }
             spawnArcs(level, targetPos, player.getLookAngle());
         }

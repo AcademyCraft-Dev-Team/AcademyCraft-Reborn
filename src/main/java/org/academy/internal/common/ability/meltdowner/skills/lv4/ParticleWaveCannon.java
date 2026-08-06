@@ -267,8 +267,14 @@ public final class ParticleWaveCannon extends Skill {
         }
 
         private void updateVisual(ResolvedLinearAttack attack) {
-            if (attack.isReflected()) visual.setReflection((float) attack.outbound().length());
-            else visual.clearReflection();
+            if (attack.isReflected()) {
+                var returnSegment = attack.returnSegment().orElseThrow();
+                visual.setReflection(
+                        (float) attack.outbound().length(),
+                        (float) attack.returnVisualLength(),
+                        returnSegment.direction()
+                );
+            } else visual.clearReflection();
         }
 
         private void beginBeam() {

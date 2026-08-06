@@ -67,6 +67,18 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             HighSpeedElectronBeam.class,
             EntityDataSerializers.FLOAT
     );
+    private static final EntityDataAccessor<Float> REFLECTION_DIRECTION_X = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.FLOAT
+    );
+    private static final EntityDataAccessor<Float> REFLECTION_DIRECTION_Y = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.FLOAT
+    );
+    private static final EntityDataAccessor<Float> REFLECTION_DIRECTION_Z = SynchedEntityData.defineId(
+            HighSpeedElectronBeam.class,
+            EntityDataSerializers.FLOAT
+    );
     public static final int MAX_CHARGE_TICKS = 40;
     public static final int MAX_RAY_LIFE_TICKS = 15;
 
@@ -138,6 +150,9 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         builder.define(REFLECTION_ACTIVE, false);
         builder.define(REFLECTION_DISTANCE, 0.0f);
         builder.define(REFLECTION_RETURN_LENGTH, 0.0f);
+        builder.define(REFLECTION_DIRECTION_X, 0.0f);
+        builder.define(REFLECTION_DIRECTION_Y, 0.0f);
+        builder.define(REFLECTION_DIRECTION_Z, 0.0f);
     }
 
     @Override
@@ -265,7 +280,11 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             attack = attack.limitReturnLength(returnLength);
         }
         if (attack.isReflected()) {
-            setReflection((float) attack.outbound().length(), (float) attack.returnVisualLength());
+            setReflection(
+                    (float) attack.outbound().length(),
+                    (float) attack.returnVisualLength(),
+                    attack.returnSegment().orElseThrow().direction()
+            );
         } else clearReflection();
         LinearAttackExecutor.executeReturn(level, attack, payload, outboundResult);
         if (betaTrailOnFire) {
@@ -390,18 +409,30 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     }
 
     public void setReflection(float distance) {
-        setReflection(distance, getBeamLength());
+        setReflection(distance, getBeamLength(), getLookAngle().scale(-1.0));
     }
 
     public void setReflection(float distance, float returnLength) {
-        if (!Float.isFinite(distance) || !Float.isFinite(returnLength)) {
+        setReflection(distance, returnLength, getLookAngle().scale(-1.0));
+    }
+
+    public void setReflection(float distance, float returnLength, Vec3 returnDirection) {
+        if (!Float.isFinite(distance)
+                || !Float.isFinite(returnLength)
+                || returnDirection == null
+                || !Double.isFinite(returnDirection.lengthSqr())
+                || returnDirection.lengthSqr() < 1.0E-12) {
             clearReflection();
             return;
         }
         var safeDistance = Math.max(0.0f, distance);
         var safeReturnLength = Math.max(0.0f, returnLength);
+        var normalizedDirection = returnDirection.normalize();
         entityData.set(REFLECTION_DISTANCE, safeDistance);
         entityData.set(REFLECTION_RETURN_LENGTH, safeReturnLength);
+        entityData.set(REFLECTION_DIRECTION_X, (float) normalizedDirection.x);
+        entityData.set(REFLECTION_DIRECTION_Y, (float) normalizedDirection.y);
+        entityData.set(REFLECTION_DIRECTION_Z, (float) normalizedDirection.z);
         entityData.set(REFLECTION_ACTIVE, true);
     }
 
@@ -409,6 +440,9 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         entityData.set(REFLECTION_ACTIVE, false);
         entityData.set(REFLECTION_DISTANCE, 0.0f);
         entityData.set(REFLECTION_RETURN_LENGTH, 0.0f);
+        entityData.set(REFLECTION_DIRECTION_X, 0.0f);
+        entityData.set(REFLECTION_DIRECTION_Y, 0.0f);
+        entityData.set(REFLECTION_DIRECTION_Z, 0.0f);
     }
 
     public boolean isReflectionActive() {
@@ -421,6 +455,14 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
 
     public float getReflectionReturnLength() {
         return entityData.get(REFLECTION_RETURN_LENGTH);
+    }
+
+    public Vec3 getReflectionReturnDirection() {
+        return new Vec3(
+                entityData.get(REFLECTION_DIRECTION_X),
+                entityData.get(REFLECTION_DIRECTION_Y),
+                entityData.get(REFLECTION_DIRECTION_Z)
+        );
     }
 
     public boolean hasFired() {

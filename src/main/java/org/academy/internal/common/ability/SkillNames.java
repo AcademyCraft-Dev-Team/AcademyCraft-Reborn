@@ -62,7 +62,6 @@ public final class SkillNames {
     public static final String ELECTRICAL_CONTACT = "electrical_contact";
     public static final String VECTOR_REDUCTION = "vector_reduction";
     public static final String SPATIAL_SYNERGY = "spatial_synergy";
-    public static final String HYPER_ACCELERATE = "hyper_accelerate";
     public static final String THUNDER_LANCE = "thunder_lance";
     public static final String MINING_BEAM = "mining_beam";
     public static final String LIGHT_SHIELD = "light_shield";
@@ -78,7 +77,6 @@ public final class SkillNames {
     public static final String IRON_SAND_ARSENAL = "iron_sand_arsenal";
     public static final String MAGNETIC_WEAPON = "magnetic_weapon";
     public static final String THUNDERCLAP = "thunderclap";
-    public static final String CHAIN_FUSION = "chain_fusion";
     public static final String DISINTEGRATE = "disintegrate";
     public static final String SPACIAL_EXCISION = "spacial_excision";
     public static final String MENTAL_INTRUSION = "mental_intrusion";

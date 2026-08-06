@@ -17,7 +17,6 @@ import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -99,9 +98,12 @@ public final class DarkmatterBeetle extends Monster {
 
         if (tickCount % 20 == 0 && getHealth() < getMaxHealth()) heal(1.0f);
 
+        if (getTarget() != null && !isCommandedTarget(owner, getTarget())) {
+            setTarget(null);
+        }
         if (tickCount % 10 == 0 && (getTarget() == null || !getTarget().isAlive())) {
             var target = serverLevel.getEntitiesOfClass(LivingEntity.class,
-                            getBoundingBox().inflate(16), candidate -> isHostile(owner, candidate))
+                            getBoundingBox().inflate(16), candidate -> isCommandedTarget(owner, candidate))
                     .stream()
                     .min(Comparator.comparingDouble(this::distanceToSqr))
                     .orElse(null);
@@ -109,17 +111,21 @@ public final class DarkmatterBeetle extends Monster {
         }
     }
 
-    private static boolean isHostile(ServerPlayer owner, LivingEntity target) {
-        if (target == owner || target instanceof Player || !target.isAlive()
+    private boolean isCommandedTarget(ServerPlayer owner, LivingEntity target) {
+        if (target == this || target == owner || !target.isAlive()
                 || target.isRemoved() || owner.isAlliedTo(target)) return false;
-        return target instanceof Enemy || target instanceof Mob mob && mob.getTarget() == owner;
+        if (target instanceof Player player && (player.isCreative() || player.isSpectator())) return false;
+        return target == getLastHurtByMob()
+                || target == owner.getLastHurtByMob()
+                || target == owner.getLastHurtMob()
+                || target instanceof Mob mob && mob.getTarget() == owner;
     }
 
     @Override
     public boolean doHurtTarget(ServerLevel serverLevel, Entity entity) {
         if (!(entity instanceof LivingEntity target)) return false;
         var owner = getOwnerPlayer();
-        if (owner == null || !isHostile(owner, target)) return false;
+        if (owner == null || !isCommandedTarget(owner, target)) return false;
         var multiplier = AbilitySystemServer.getSystem(owner)
                 .getPlayerDamageMultiplier(owner.getUUID());
         var hurt = target.hurtServer(serverLevel,

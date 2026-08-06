@@ -4,12 +4,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.damagesource.DamageType;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
@@ -136,18 +133,6 @@ public final class DarkmatterRadiation extends Skill {
     }
 
     public static final class Server {
-        private static final List<ResourceKey<DamageType>> DAMAGE_TYPES = List.of(
-                DamageTypes.MOB_ATTACK,
-                DamageTypes.PLAYER_ATTACK,
-                DamageTypes.MAGIC,
-                DamageTypes.INDIRECT_MAGIC,
-                DamageTypes.THORNS,
-                DamageTypes.LIGHTNING_BOLT,
-                DamageTypes.ON_FIRE,
-                DamageTypes.FREEZE,
-                DamageTypes.LAVA,
-                DamageTypes.HOT_FLOOR
-        );
         private static final Map<UUID, RadiationState> ACTIVE = new ConcurrentHashMap<>();
 
         private Server() {
@@ -190,6 +175,7 @@ public final class DarkmatterRadiation extends Skill {
         private static void pulse(ServerLevel level, ServerPlayer player, RadiationState state) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle().normalize();
+            spawnRadiationVisual(level, player, eye, look);
             var targets = level.getEntitiesOfClass(LivingEntity.class,
                     new AABB(eye, eye).inflate(RANGE),
                     target -> isHostileTarget(player, target)
@@ -200,15 +186,10 @@ public final class DarkmatterRadiation extends Skill {
             var skill = Skills.DARKMATTER_RADIATION.get();
             var power = AbilitySystemServer.getSystem(player)
                     .getPlayerAbilityPowerMultiplier(player.getUUID());
-            var vanillaSource = SkillDamageSource.of(
-                    player,
-                    skill,
-                    DAMAGE_TYPES.get(state.cursor++ % DAMAGE_TYPES.size())
-            );
             var darkmatterSource = SkillDamageSource.of(player, skill);
             for (var target : targets) {
                 target.invulnerableTime = 0;
-                var hit = target.hurtServer(level, vanillaSource, FLAT_DAMAGE);
+                var hit = target.hurtServer(level, darkmatterSource, FLAT_DAMAGE);
                 if (target.isAlive()) {
                     target.invulnerableTime = 0;
                     hit |= target.hurtServer(
@@ -221,6 +202,26 @@ public final class DarkmatterRadiation extends Skill {
                 level.sendParticles(ParticleTypes.PORTAL,
                         target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
                         6, 0.2, 0.25, 0.2, 0.02);
+            }
+        }
+
+        private static void spawnRadiationVisual(ServerLevel level, ServerPlayer player,
+                                                 Vec3 eye, Vec3 look) {
+            var right = look.cross(new Vec3(0.0, 1.0, 0.0));
+            if (right.lengthSqr() < 1.0E-8) right = new Vec3(1.0, 0.0, 0.0);
+            right = right.normalize();
+            var up = right.cross(look).normalize();
+            for (var index = 0; index < 20; index++) {
+                var distance = 2.0 + player.getRandom().nextDouble() * (RANGE - 2.0);
+                var spread = distance * 0.28;
+                var point = eye.add(look.scale(distance))
+                        .add(right.scale((player.getRandom().nextDouble() - 0.5) * spread))
+                        .add(up.scale((player.getRandom().nextDouble() - 0.5) * spread));
+                level.sendParticles(
+                        index % 3 == 0 ? ParticleTypes.WITCH : ParticleTypes.REVERSE_PORTAL,
+                        point.x, point.y, point.z,
+                        1, 0.02, 0.02, 0.02, 0.0
+                );
             }
         }
 

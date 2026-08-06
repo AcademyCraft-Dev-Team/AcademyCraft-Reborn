@@ -58,6 +58,19 @@ class ReflectedBeamVisualGeometryTest {
         ));
     }
 
+    @Test
+    void directionalReturnFollowsRefractionInsteadOfGoingBackToTheSource() {
+        var reflectionPoint = new Vec3(1.0, 2.0, 3.0);
+        var direction = new Vec3(1.0, 0.0, 1.0).normalize();
+
+        var returnEnd = ReflectedBeamVisualGeometry.directionalEnd(
+                reflectionPoint, direction, 8.0f
+        );
+
+        assertVecEquals(direction, returnEnd.subtract(reflectionPoint).normalize());
+        assertEquals(8.0, returnEnd.distanceTo(reflectionPoint), EPSILON);
+    }
+
     private static void assertVecEquals(Vec3 expected, Vec3 actual) {
         assertEquals(expected.x, actual.x, EPSILON);
         assertEquals(expected.y, actual.y, EPSILON);

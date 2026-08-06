@@ -44,6 +44,7 @@ import org.academy.api.server.sync.ServerSyncManager;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
@@ -339,9 +340,16 @@ public final class Railgun extends Skill {
                     railgunRay.setBeamPath(
                             (float) resolved.original().length(),
                             resolved.isReflected(),
-                            (float) resolved.outbound().length()
+                            (float) resolved.outbound().length(),
+                            (float) resolved.returnVisualLength(),
+                            resolved.returnSegment()
+                                    .map(LinearSegment::direction)
+                                    .orElse(Vec3.ZERO)
                     );
                     player.level().addFreshEntity(railgunRay);
+                    ElectromasterArcEffects.spawnBeamCoils(player.level(), resolved.outbound());
+                    resolved.returnSegment().ifPresent(segment ->
+                            ElectromasterArcEffects.spawnBeamCoils(player.level(), segment));
 
                     if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.RAILGUN.get())) {
                         destroyBlocksAlongSegment(resolved.outbound(), player);

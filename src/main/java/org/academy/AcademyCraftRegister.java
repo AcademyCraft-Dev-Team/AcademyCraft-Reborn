@@ -12,6 +12,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent;
+import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.entitycontrol.MentalControlApi;
@@ -72,6 +74,7 @@ public final class AcademyCraftRegister {
         SoundEvents.SOUND_EVENTS.register(modEventBus);
         MenuTypes.MENU_TYPES.register(modEventBus);
         ParticleTypes.PARTICLE_TYPES.register(modEventBus);
+        PlayerAttributes.ATTRIBUTES.register(modEventBus);
 
         CREATIVE_MODE_TABS.register(modEventBus);
 
@@ -89,6 +92,7 @@ public final class AcademyCraftRegister {
         modEventBus.addListener(AcademyCraftRegister::onNewRegistry);
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
         modEventBus.addListener(AcademyCraftRegister::onEntityAttributes);
+        modEventBus.addListener(AcademyCraftRegister::onEntityAttributeModification);
     }
 
     private static void onNewRegistry(NewRegistryEvent event) {
@@ -130,5 +134,14 @@ public final class AcademyCraftRegister {
 
     private static void onEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(EntityTypes.DARKMATTER_BEETLE.get(), DarkmatterBeetle.createAttributes().build());
+    }
+
+    private static void onEntityAttributeModification(EntityAttributeModificationEvent event) {
+        event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.MUSCLE_STRENGTH);
+        event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.ENDURANCE);
+        event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.DEXTERITY);
+        event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.PERCEPTION);
+        event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.NEURAL_ACTIVITY);
+        event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.TRUE_RESISTANCE);
     }
 }

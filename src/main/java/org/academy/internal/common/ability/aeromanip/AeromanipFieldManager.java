@@ -77,6 +77,11 @@ public final class AeromanipFieldManager {
         if (context != null) context.end();
     }
 
+    public static void endPlaced(ServerPlayer player) {
+        var context = ACTIVE.get(player);
+        if (context != null) context.end();
+    }
+
     public static float rangeMultiplier(ServerPlayer player) {
         return hasActiveField(player, AirflowField.Type.ATMOSPHERIC_DOMINION) ? 1.25f : 1.0f;
     }

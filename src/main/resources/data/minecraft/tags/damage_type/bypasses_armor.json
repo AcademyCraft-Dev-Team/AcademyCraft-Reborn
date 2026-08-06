@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "academy:electrodamage",
+    "academy:vec",
+    "academy:cta"
+  ]
+}

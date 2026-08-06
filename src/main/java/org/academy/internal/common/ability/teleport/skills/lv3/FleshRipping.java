@@ -35,7 +35,6 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportDamage;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -212,10 +211,10 @@ public final class FleshRipping extends Skill {
                 ) * ctx.system().getPlayerDamageMultiplier(player.getUUID());
                 player.level().playSound(null, target.blockPosition(), SoundEvents.FLESH_RIPPING.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
-                new CTAEntityActuallyHurt(target).actuallyHurt(
+                target.hurtServer(
+                        player.level(),
                         SkillDamageSource.of(player, Skills.FLESH_RIPPING.get()),
-                        damage,
-                        true
+                        damage
                 );
             });
         }

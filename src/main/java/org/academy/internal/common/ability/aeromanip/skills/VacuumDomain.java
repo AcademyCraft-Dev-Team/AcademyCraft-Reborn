@@ -2,6 +2,8 @@ package org.academy.internal.common.ability.aeromanip.skills;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -54,7 +56,6 @@ import java.util.List;
 public final class VacuumDomain extends Skill {
     static final double RADIUS = 12.0;
     private static final double MAX_TARGET_DISTANCE = 16.0;
-    private static final int DURATION_TICKS = 160;
     private static final int DAMAGE_INTERVAL_TICKS = 10;
     private static final float DAMAGE_FRACTION = 0.05f;
 
@@ -83,11 +84,11 @@ public final class VacuumDomain extends Skill {
                         InputSystem.combo(
                                 InputSystem.InputType.KEYBOARD,
                                 InputConstants.KEY_Y,
-                                InputConstants.RELEASE,
+                                InputSystem.ANY_ACTION,
                                 0
                         )
                 ),
-                _ -> Client.cast()
+                Client::handleInput
         );
     }
 
@@ -117,13 +118,20 @@ public final class VacuumDomain extends Skill {
         );
         public static final String KEY_NAME_CAST = SkillNames.VACUUM_DOMAIN + "_cast";
         public static Config CONFIG = new Config();
+        private static boolean maintaining;
 
         private Client() {
         }
 
-        private static void cast() {
-            if (!AbilitySystemClient.canUseSkill(Skills.VACUUM_DOMAIN.get())) return;
-            MisakaNetworkClient.send(CastPacket.INSTANCE);
+        private static void handleInput(InputSystem.BindingContext context) {
+            if (context.action() == InputConstants.PRESS) {
+                if (maintaining || !AbilitySystemClient.canUseSkill(Skills.VACUUM_DOMAIN.get())) return;
+                maintaining = true;
+                MisakaNetworkClient.send(new CastPacket(true));
+            } else if (context.action() == InputConstants.RELEASE && maintaining) {
+                maintaining = false;
+                MisakaNetworkClient.send(new CastPacket(false));
+            }
         }
 
         public static final class Config extends KeyBindingConfig {
@@ -153,17 +161,19 @@ public final class VacuumDomain extends Skill {
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            if (!packet.active()) {
+                AeromanipFieldManager.endPlaced(player);
+                return;
+            }
             var skill = Skills.VACUUM_DOMAIN.get();
             skill.executeActive(player, context -> skill.getCpCost(context.level())
                     * AeromanipConfig.cpMultiplier(player, SkillNames.VACUUM_DOMAIN), (_, _) -> {
                 if (!(player.level() instanceof ServerLevel level)) return;
                 var center = resolveTargetPoint(level, player);
                 var range = RADIUS * AeromanipConfig.rangeMultiplier(player, SkillNames.VACUUM_DOMAIN);
-                var duration = Math.max(1, Math.round(DURATION_TICKS
-                        * AeromanipConfig.durationMultiplier(player, SkillNames.VACUUM_DOMAIN)));
                 var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(),
                         AirflowField.Type.VACUUM, AirflowField.Shape.SPHERE, center, player.getLookAngle(),
-                        range, 0.0, 1.0f, duration);
+                        range, 0.0, 1.0f, Integer.MAX_VALUE);
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });
         }
@@ -205,6 +215,7 @@ public final class VacuumDomain extends Skill {
             var level = player.level();
             var center = field.center();
             var radius = field.radius();
+            spawnVisual(level, center, radius, ticks);
             if (ticks <= 40) {
                 for (var entity : level.getEntities(player, field.bounds(), Entity::isAlive)) {
                     if (!(entity instanceof Projectile)
@@ -243,6 +254,19 @@ public final class VacuumDomain extends Skill {
             }
         }
 
+        private static void spawnVisual(ServerLevel level, Vec3 center, double radius, int ticks) {
+            if (ticks % 4 != 0) return;
+            for (var segment = 0; segment < 24; segment++) {
+                var angle = segment * Math.PI * 2.0 / 24.0 + ticks * 0.025;
+                var point = center.add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+                level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                        point.x, point.y, point.z, 1, 0.08, 0.25, 0.08, 0.02);
+            }
+            level.sendParticles(ParticleTypes.CLOUD,
+                    center.x, center.y, center.z, 6,
+                    radius * 0.28, radius * 0.18, radius * 0.28, 0.0);
+        }
+
         private static boolean isPercentDamageImmune(LivingEntity target) {
             return AeromanipTargeting.isBoss(target)
                     || target.getType().builtInRegistryHolder().is(EntityTypeTags.UNDEAD)
@@ -268,10 +292,18 @@ public final class VacuumDomain extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
-        public static final CastPacket INSTANCE = new CastPacket();
-        public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE);
+        public static final StreamCodec<ByteBuf, CastPacket> CODEC = ByteBufCodecs.BOOL.map(
+                CastPacket::new,
+                CastPacket::active
+        );
+        private final boolean active;
 
-        private CastPacket() {
+        private CastPacket(boolean active) {
+            this.active = active;
+        }
+
+        public boolean active() {
+            return active;
         }
 
         @Override

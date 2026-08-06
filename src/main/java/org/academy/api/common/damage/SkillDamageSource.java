@@ -9,6 +9,7 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.Skill;
 import org.jetbrains.annotations.Nullable;
+import org.academy.internal.common.world.damagesource.SkillDamageTypeResolver;
 
 public class SkillDamageSource extends DamageSource {
 
@@ -27,6 +28,8 @@ public class SkillDamageSource extends DamageSource {
      * @return 技能伤害源
      */
     public static SkillDamageSource of(ServerPlayer player, Skill skill) {
+        var categoryType = SkillDamageTypeResolver.resolve(skill);
+        if (categoryType != null) return of(player, skill, categoryType);
         var original = player.damageSources().playerAttack(player);
         return new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
     }
@@ -54,6 +57,10 @@ public class SkillDamageSource extends DamageSource {
      * @return 技能伤害源
      */
     public static SkillDamageSource from(DamageSource original, Skill skill) {
+        var categoryType = SkillDamageTypeResolver.resolve(skill);
+        if (categoryType != null && original.getEntity() instanceof ServerPlayer player) {
+            return of(player, skill, categoryType);
+        }
         return new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
     }
 

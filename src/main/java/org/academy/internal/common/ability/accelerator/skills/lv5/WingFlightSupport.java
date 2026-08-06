@@ -177,7 +177,7 @@ final class WingFlightSupport {
         var source = SkillDamageSource.of(
                 player,
                 skill,
-                DamageTypes.GENERIC_KILL
+                org.academy.internal.common.world.damagesource.DamageTypes.CTA
         );
         var hitCount = new int[1];
 
