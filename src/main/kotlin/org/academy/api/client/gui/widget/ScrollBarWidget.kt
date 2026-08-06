@@ -6,10 +6,20 @@ import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.render.RenderContext
 
-open class ScrollBarWidget(protected val panel: ScrollPanelWidget, orientation: Orientation) :
+open class ScrollBarWidget(orientation: Orientation) :
     DragBarWidget(orientation) {
-    init {
-        panel.addScrollChangeListener { invalidate() }
+    var panel: ScrollPanelWidget? = null
+        set(value) {
+            if (field !== value) {
+                field = value
+                if (value != null) {
+                    value.addScrollChangeListener { invalidate() }
+                }
+            }
+        }
+
+    constructor(panel: ScrollPanelWidget, orientation: Orientation) : this(orientation) {
+        this.panel = panel
     }
 
     override fun render(context: RenderContext) {
@@ -61,9 +71,10 @@ open class ScrollBarWidget(protected val panel: ScrollPanelWidget, orientation: 
 
     override val thumbSize: Float
         get() {
-            val maxScroll = panel.maxScroll
+            val p = panel ?: return 0f
+            val maxScroll = p.maxScroll
 
-            val viewSize = if (orientation == Orientation.HORIZONTAL) panel.width else panel.height
+            val viewSize = if (orientation == Orientation.HORIZONTAL) p.width else p.height
             val contentSize = maxScroll + viewSize
             val ratio = viewSize / contentSize
             return Mth.clamp(ratio * trackSize, 16.0f, trackSize)
@@ -71,22 +82,24 @@ open class ScrollBarWidget(protected val panel: ScrollPanelWidget, orientation: 
 
     override val thumbPosition: Float
         get() {
-            val maxScroll = panel.maxScroll
+            val p = panel ?: return 0f
+            val maxScroll = p.maxScroll
             if (maxScroll <= 0.0f) return 0.0f
 
             val track = trackSize - thumbSize
-            val ratio = panel.scrollY / maxScroll
+            val ratio = p.scrollY / maxScroll
             return Mth.clamp(ratio * track, 0f, track)
         }
 
     override fun updateTargetFromMouse(mouse: Float) {
-        val maxScroll = panel.maxScroll
+        val p = panel ?: return
+        val maxScroll = p.maxScroll
         if (maxScroll <= 0.0f) return
 
         val track = trackSize - thumbSize
         if (track <= 0.0f) return
 
         val ratio = Mth.clamp((mouse - dragOffset) / track, 0.0f, 1.0f)
-        panel.setScrollTarget(ratio * maxScroll)
+        p.setScrollTarget(ratio * maxScroll)
     }
 }
