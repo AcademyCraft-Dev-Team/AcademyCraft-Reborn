@@ -21,14 +21,17 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
+import net.minecraft.commands.Commands;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.gui.editor.UiLayoutEditor;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
@@ -122,6 +125,28 @@ public final class AcademyCraftClient {
         ImGuiUtilApi.INSTANCE.init();
         initMain();
         initRender();
+    }
+
+    @SubscribeEvent
+    public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
+        event.getDispatcher().register(
+                Commands.literal("academy")
+                        .then(
+                                Commands.literal("uieditor")
+                                        .executes(ctx -> {
+                                            UiLayoutEditor.INSTANCE.open();
+                                            return 1;
+                                        })
+                                        .then(
+                                                Commands.argument("file", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                                        .executes(ctx -> {
+                                                            String file = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "file");
+                                                            UiLayoutEditor.INSTANCE.open(file);
+                                                            return 1;
+                                                        })
+                                        )
+                        )
+        );
     }
 
     @SubscribeEvent

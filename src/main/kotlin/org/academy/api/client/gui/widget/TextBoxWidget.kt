@@ -605,6 +605,8 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         return this
     }
 
+    fun getTextMaxLength(): Int = maxLength
+
     class FocusGainedEvent(val textBoxWidget: TextBoxWidget) : Event(), ICancellableEvent
 
     class FocusLostEvent(val textBoxWidget: TextBoxWidget) : Event(), ICancellableEvent

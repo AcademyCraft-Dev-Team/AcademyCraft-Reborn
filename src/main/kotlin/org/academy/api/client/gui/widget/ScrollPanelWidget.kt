@@ -281,6 +281,10 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         return this
     }
 
+    fun getPanelOrientation(): Orientation? = orientation
+
+    fun getPanelScrollSpeed(): Float = scrollSpeed
+
     override fun scrollTo(x: Float, y: Float) {
         if (content == null) {
             val changed = scrollX != x || scrollY != y

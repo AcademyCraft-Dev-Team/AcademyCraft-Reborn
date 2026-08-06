@@ -9,10 +9,16 @@ import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
 import net.minecraft.util.ARGB
+import org.academy.AcademyCraft
+import org.academy.api.client.gui.editor.UiLayoutEditorScreen
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.serialize.WidgetSerializer
 import org.academy.api.client.gui.widget.*
+import java.nio.file.Files
+import java.text.SimpleDateFormat
+import java.util.Date
 
 object ImGuiUIDebugger {
     private val SIZE_MODE_NAMES = arrayOf("FIXED", "MATCH_PARENT", "WRAP_CONTENT")
@@ -20,12 +26,36 @@ object ImGuiUIDebugger {
     private val VISIBILITY_NAMES = arrayOf("VISIBLE", "INVISIBLE", "GONE")
 
     fun render(renderTarget: RenderTarget, root: WidgetContainer) {
-        ImGuiUtilApi.render(renderTarget) {
-            if (ImGui.begin("ImGui UI Debugger")) {
-                ImGui.setWindowSize(450f, 700f, ImGuiCond.FirstUseEver)
-                renderWidgetNode(root, root.hoveredWidget)
+        ImGuiUtilApi.render(renderTarget) { renderContent(root) }
+    }
+
+    /** ImGui 帧内的内容部分, 供 [org.academy.api.client.gui.screen.ScreenDispatcher] 与其他窗口共享同一帧. */
+    fun renderContent(root: WidgetContainer) {
+        if (ImGui.begin("ImGui UI Debugger")) {
+            ImGui.setWindowSize(450f, 700f, ImGuiCond.FirstUseEver)
+            if (ImGui.button("Export Layout JSON")) {
+                exportLayout(root)
             }
-            ImGui.end()
+            ImGui.sameLine()
+            if (ImGui.button("Open UI Layout Editor")) {
+                UiLayoutEditorScreen.open()
+            }
+            ImGui.separator()
+            renderWidgetNode(root, root.hoveredWidget)
+        }
+        ImGui.end()
+    }
+
+    private fun exportLayout(root: WidgetContainer) {
+        try {
+            val dir = WidgetSerializer.layoutDir().resolve("dump")
+            Files.createDirectories(dir)
+            val stamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
+            val file = dir.resolve("layout-$stamp.json")
+            WidgetSerializer.export(root, file)
+            AcademyCraft.getLogger().info("[UiLayout] Exported current screen layout to {}", file)
+        } catch (e: Exception) {
+            AcademyCraft.getLogger().error("[UiLayout] Failed to export layout", e)
         }
     }
 
