@@ -5,13 +5,13 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -29,6 +29,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -42,7 +44,10 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public class VectorReduction extends Skill {
-    private static final int POTION_DURATION = 30;
+    private static final double INTERCEPT_MARGIN = 1.0;
+    private static final double COS_60 = 0.5;
+    private static final double SIN_60 = 0.8660254037844386;
+    private static final double MAX_REFRACTION_VERTICAL_COMPONENT = 0.5;
 
     public VectorReduction() {
         super(Builder
@@ -59,14 +64,54 @@ public class VectorReduction extends Skill {
         );
     }
 
-    public static float getRadius(int level) {
-        if (level >= 3) return 10.0f;
-        return 6.0f;
+    public static Vec3 refractedDirection(Vec3 viewDirection, Vec3 incomingDirection) {
+        var view = normalizeOrZero(viewDirection);
+        var incoming = normalizeOrZero(incomingDirection);
+        if (view == Vec3.ZERO || incoming == Vec3.ZERO) return Vec3.ZERO;
+
+        var tangent = incoming.subtract(view.scale(incoming.dot(view)));
+        if (tangent.lengthSqr() < 1.0E-8) {
+            tangent = view.cross(new Vec3(0.0, 1.0, 0.0));
+            if (tangent.lengthSqr() < 1.0E-8) {
+                tangent = view.cross(new Vec3(1.0, 0.0, 0.0));
+            }
+        }
+        tangent = tangent.normalize();
+        var rawDirection = view.scale(COS_60).add(tangent.scale(SIN_60)).normalize();
+        return projectToUpwardElevationBand(rawDirection, view, incoming);
     }
 
-    public static double getSlowdownPercent(int level) {
-        if (level >= 2) return 0.80;
-        return 0.50;
+    private static Vec3 projectToUpwardElevationBand(
+            Vec3 direction,
+            Vec3 viewDirection,
+            Vec3 incomingDirection
+    ) {
+        var clampedY = Math.clamp(direction.y, 0.0, MAX_REFRACTION_VERTICAL_COMPONENT);
+        var horizontal = new Vec3(direction.x, 0.0, direction.z);
+        if (horizontal.lengthSqr() < 1.0E-8) {
+            horizontal = horizontalOrZero(viewDirection);
+        }
+        if (horizontal.lengthSqr() < 1.0E-8) {
+            horizontal = horizontalOrZero(incomingDirection);
+        }
+        if (horizontal.lengthSqr() < 1.0E-8) {
+            horizontal = new Vec3(0.0, 0.0, 1.0);
+        }
+        var horizontalLength = Math.sqrt(Math.max(0.0, 1.0 - clampedY * clampedY));
+        return horizontal.normalize().scale(horizontalLength).add(0.0, clampedY, 0.0);
+    }
+
+    private static Vec3 horizontalOrZero(Vec3 direction) {
+        if (direction == null) return Vec3.ZERO;
+        var horizontal = new Vec3(direction.x, 0.0, direction.z);
+        return horizontal.lengthSqr() < 1.0E-8 ? Vec3.ZERO : horizontal.normalize();
+    }
+
+    private static Vec3 normalizeOrZero(Vec3 value) {
+        if (value == null || !Double.isFinite(value.lengthSqr()) || value.lengthSqr() < 1.0E-8) {
+            return Vec3.ZERO;
+        }
+        return value.normalize();
     }
 
     @Override
@@ -124,11 +169,97 @@ public class VectorReduction extends Skill {
             var player = packet.getPacketListener().getPlayer();
             Skills.VECTOR_REDUCTION.get().toggle(player);
         }
+
+        public static boolean isActive(ServerPlayer player) {
+            return player != null
+                    && player.connection != null
+                    && !player.isSpectator()
+                    && Skills.VECTOR_REDUCTION.get().isEnabled(player)
+                    && AbilitySystemServer.getSystem(player)
+                    .getPlayerAvailableCP(player.getUUID()) > 0.0f;
+        }
+
+        public static boolean tryRefractLinearAttack(
+                ServerPlayer player,
+                float incomingDamage,
+                Vec3 mirrorPoint,
+                Vec3 incomingDirection
+        ) {
+            if (!isActive(player)
+                    || VectorReflection.Server.isActive(player)
+                    || !(incomingDamage > 0.0f)
+                    || !Float.isFinite(incomingDamage)
+                    || !isFiniteVector(mirrorPoint)
+                    || normalizeOrZero(incomingDirection) == Vec3.ZERO) {
+                return false;
+            }
+            var skill = Skills.VECTOR_REDUCTION.get();
+            return skill.executeActive(
+                    player,
+                    _ -> Math.max(1.0f, incomingDamage),
+                    (_, _) -> {
+                        var direction = refractedDirection(player.getLookAngle(), incomingDirection);
+                        VectorReflection.Server.spawnGlowCircle(player, direction, mirrorPoint);
+                        VectorReflection.Server.playReflectionSound(player);
+                    }
+            );
+        }
+
+        private static boolean isFiniteVector(Vec3 value) {
+            return value != null
+                    && Double.isFinite(value.x)
+                    && Double.isFinite(value.y)
+                    && Double.isFinite(value.z);
+        }
+
+        public static boolean shouldRefractProjectileFor(ServerPlayer player, Projectile projectile) {
+            if (!isActive(player)
+                    || VectorReflection.Server.isActive(player)
+                    || projectile == null
+                    || projectile.isRemoved()
+                    || projectile.getData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get())) {
+                return false;
+            }
+            var owner = projectile.getOwner();
+            if (owner == player || owner != null && owner.getUUID().equals(player.getUUID())) return false;
+            var velocity = projectile.getDeltaMovement();
+            if (normalizeOrZero(velocity) == Vec3.ZERO) return false;
+            var toPlayer = player.getBoundingBox().getCenter().subtract(projectile.position());
+            return toPlayer.lengthSqr() <= 1.0E-8 || velocity.dot(toPlayer) > 0.0;
+        }
+
+        public static boolean refractProjectile(ServerPlayer player, Projectile projectile) {
+            if (!shouldRefractProjectileFor(player, projectile)) return false;
+            var speed = projectile.getDeltaMovement().length();
+            if (!Double.isFinite(speed)) return false;
+            var refracted = refractedDirection(player.getLookAngle(), projectile.getDeltaMovement())
+                    .scale(Math.max(speed, 1.5) * 1.2);
+            if (normalizeOrZero(refracted) == Vec3.ZERO) return false;
+
+            var skill = Skills.VECTOR_REDUCTION.get();
+            return skill.executeActive(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
+                projectile.setData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get(), true);
+                projectile.setOwner(player);
+                projectile.setDeltaMovement(refracted);
+                var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
+                projectile.setPos(player.getBoundingBox().getCenter()
+                        .add(refracted.normalize().scale(pushDistance)));
+                projectile.hurtMarked = true;
+                VectorReflection.Server.spawnGlowCircle(player, refracted, projectile.position());
+                VectorReflection.Server.playReflectionSound(player);
+            });
+        }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        private static final double PROJECTILE_SLOW_FACTOR = 0.1;
+        @SubscribeEvent(priority = EventPriority.HIGHEST)
+        public static void onIncomingProjectileDamage(LivingIncomingDamageEvent event) {
+            if (event.isCanceled()
+                    || !(event.getEntity() instanceof ServerPlayer player)
+                    || !(event.getSource().getDirectEntity() instanceof Projectile projectile)) return;
+            if (Server.refractProjectile(player, projectile)) event.setCanceled(true);
+        }
 
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
@@ -140,31 +271,10 @@ public class VectorReduction extends Skill {
                 if (skill.isEnabled(player)) skill.toggle(player);
                 return;
             }
-            var level = skill.getLevel(player);
-            var radius = skill.getRadius(level);
-            var slowdown = skill.getSlowdownPercent(level);
-
-            var box = player.getBoundingBox().inflate(radius);
-
-            var livingTargets = player.level().getEntitiesOfClass(LivingEntity.class, box,
-                    e -> e != player && e.isAlive());
-            for (var target : livingTargets) {
-                var distance = target.distanceTo(player);
-                if (distance > radius) continue;
-                var factor = Math.clamp(1.0 - slowdown * (1.0 - distance / radius), 0.05, 1.0);
-                target.setDeltaMovement(target.getDeltaMovement().scale(factor));
-
-                if (level >= 1) {
-                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, POTION_DURATION, 0, false, false));
-                    target.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, POTION_DURATION, 0, false, false));
-                }
-            }
-
-            var projectileTargets = player.level().getEntitiesOfClass(Projectile.class, box,
-                    Entity::isAlive);
-            for (var proj : projectileTargets) {
-                if (proj.distanceTo(player) > radius) continue;
-                proj.setDeltaMovement(proj.getDeltaMovement().scale(PROJECTILE_SLOW_FACTOR));
+            if (!Server.isActive(player) || VectorReflection.Server.isActive(player)) return;
+            var box = player.getBoundingBox().inflate(INTERCEPT_MARGIN);
+            for (var projectile : player.level().getEntitiesOfClass(Projectile.class, box, Entity::isAlive)) {
+                if (Server.refractProjectile(player, projectile)) break;
             }
         }
     }

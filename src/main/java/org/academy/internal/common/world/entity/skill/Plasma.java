@@ -14,6 +14,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.util.LevelUtil;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
@@ -104,10 +105,12 @@ public class Plasma extends RenderOnlyEntity {
         level.playSound(null, impact.x, impact.y, impact.z,
                 SoundEvents.PLASMA_GENERATION_BOOM.get(), SoundSource.PLAYERS, 1.0f, 1.0f);
 
-        var source = owner == null
-                ? level.damageSources().magic()
-                : SkillDamageSource.of(owner, Skills.PLASMA_GENERATION.get());
-        if (damage > 0.0f && damageRadius > 0.0f) {
+        if (owner != null && damage > 0.0f && damageRadius > 0.0f) {
+            var source = SkillDamageSource.of(
+                    owner,
+                    Skills.PLASMA_GENERATION.get(),
+                    org.academy.internal.common.world.damagesource.DamageTypes.VEC
+            );
             var radiusSquared = damageRadius * damageRadius;
             var area = new AABB(impact, impact).inflate(damageRadius);
             for (var target : level.getEntitiesOfClass(
@@ -121,17 +124,39 @@ public class Plasma extends RenderOnlyEntity {
             }
         }
 
-        if (explosionPower > 0.0f) {
-            level.explode(
-                    owner,
-                    null,
-                    null,
-                    impact.x,
-                    impact.y,
-                    impact.z,
-                    explosionPower,
+        if (destroyBlocks && owner != null && explosionPower > 0.0f) {
+            destroyExplosionBlocks(level, owner, impact, explosionPower);
+        }
+    }
+
+    private static void destroyExplosionBlocks(
+            ServerLevel level,
+            net.minecraft.server.level.ServerPlayer owner,
+            Vec3 center,
+            float radius
+    ) {
+        final var rayCount = 24;
+        final var goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
+        for (var index = 0; index < rayCount; index++) {
+            var y = 1.0 - 2.0 * (index + 0.5) / rayCount;
+            var horizontal = Math.sqrt(Math.max(0.0, 1.0 - y * y));
+            var angle = index * goldenAngle;
+            var direction = new Vec3(
+                    Math.cos(angle) * horizontal,
+                    y,
+                    Math.sin(angle) * horizontal
+            );
+            LevelUtil.destroyBlocksAlongPath(
+                    level,
+                    center,
+                    center.add(direction.scale(radius)),
+                    0.7f,
+                    3,
                     false,
-                    destroyBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE
+                    true,
+                    true,
+                    false,
+                    owner
             );
         }
     }

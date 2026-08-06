@@ -9,6 +9,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -31,6 +32,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.SkillFlightController;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -45,6 +47,8 @@ public final class DarkmatterSixWings extends Skill {
     public static final float RESERVED_CP = 70.0f;
     private static final Identifier FLIGHT_SOURCE =
             AcademyCraft.academy(SkillNames.DARKMATTER_SIX_WINGS);
+    private static final Identifier TRUE_RESISTANCE_MODIFIER_ID =
+            AcademyCraft.academy("darkmatter_six_wings_true_resistance");
 
     public DarkmatterSixWings() {
         super(Builder
@@ -139,6 +143,12 @@ public final class DarkmatterSixWings extends Skill {
                 player.syncData(type);
             }
             SkillFlightController.setSource(player, FLIGHT_SOURCE, active);
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player,
+                    TRUE_RESISTANCE_MODIFIER_ID,
+                    4.0,
+                    active
+            );
         }
 
         private static void tick(ServerPlayer player) {
@@ -161,6 +171,23 @@ public final class DarkmatterSixWings extends Skill {
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.tick(player);
+        }
+
+        @SubscribeEvent
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)
+                    || event.isCanceled()
+                    || !(event.getAmount() > 0.0f)
+                    || event.getAmount() >= 2.0f
+                    || !Server.isActive(player)) return;
+            if (AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                    player.getUUID(),
+                    10.0f,
+                    Skills.DARKMATTER_SIX_WINGS.get(),
+                    5
+            )) {
+                event.setCanceled(true);
+            }
         }
     }
 

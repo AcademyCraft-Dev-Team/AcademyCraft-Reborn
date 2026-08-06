@@ -12,6 +12,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -36,6 +37,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
@@ -228,7 +230,9 @@ public final class CutThrough extends Skill {
 
             Skills.CUT_THROUGH.get().executeActive(player, (ctx, actualCost) -> {
                 var direction = player.getLookAngle().normalize();
-                player.teleportTo(center.x, center.y - dimensions.height() / 2.0, center.z);
+                var destination = new Vec3(center.x, center.y - dimensions.height() / 2.0, center.z);
+                SpatialSynergy.Server.teleportNearbyTeam(player, player.level(), destination);
+                player.teleportTo(destination.x, destination.y, destination.z);
                 player.resetFallDistance();
                 player.setDeltaMovement(direction.scale(0.1));
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));

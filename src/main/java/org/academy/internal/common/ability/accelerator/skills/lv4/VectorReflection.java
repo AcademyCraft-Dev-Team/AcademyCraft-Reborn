@@ -432,7 +432,11 @@ public class VectorReflection extends Skill {
                 CTADamageUtil.applyCompositeDamage(
                         attacker,
                         player,
-                        SkillDamageSource.of(player, Skills.VECTOR_REFLECTION.get()),
+                        SkillDamageSource.of(
+                                player,
+                                Skills.VECTOR_REFLECTION.get(),
+                                org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                        ),
                         reflectedDamage
                 );
             }
@@ -447,7 +451,7 @@ public class VectorReflection extends Skill {
                     player.getBoundingBox().getCenter().add(normalized.scale(offset)));
         }
 
-        private static void spawnGlowCircle(ServerPlayer player, Vec3 direction, Vec3 position) {
+        public static void spawnGlowCircle(ServerPlayer player, Vec3 direction, Vec3 position) {
             var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
             glowCircle.setPos(position);
             var yaw = (float) Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90.0f;

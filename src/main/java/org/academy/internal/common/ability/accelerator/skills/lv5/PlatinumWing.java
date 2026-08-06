@@ -274,7 +274,7 @@ public final class PlatinumWing extends Skill {
             var source = SkillDamageSource.of(
                     player,
                     Skills.PLATINUM_WING.get(),
-                    DamageTypes.GENERIC_KILL
+                    org.academy.internal.common.world.damagesource.DamageTypes.CTA
             );
             new CTAEntityActuallyHurt(living).actuallyHurt(source, damage, true);
             if (living.isAlive()) EntityControlApi.forceSetTrueHealth(living, 0.0f);

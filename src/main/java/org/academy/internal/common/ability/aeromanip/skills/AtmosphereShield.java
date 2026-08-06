@@ -35,8 +35,8 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -51,6 +51,8 @@ public final class AtmosphereShield extends Skill {
     private static final float[] REDUCTION = {0.20f, 0.28f, 0.35f};
     private static final Identifier ATTACK_KNOCKBACK_MODIFIER_ID =
             AcademyCraft.academy("atmosphere_shield_attack_knockback");
+    private static final Identifier TRUE_RESISTANCE_MODIFIER_ID =
+            AcademyCraft.academy("atmosphere_shield_true_resistance");
 
     public AtmosphereShield() {
         super(Builder
@@ -141,6 +143,10 @@ public final class AtmosphereShield extends Skill {
         public static void handle(TogglePacket packet) {
             Skills.ATMOSPHERE_SHIELD.get().toggle(packet.getPacketListener().getPlayer());
         }
+
+        public static boolean isActive(ServerPlayer player) {
+            return player != null && Skills.ATMOSPHERE_SHIELD.get().isEnabled(player);
+        }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -175,32 +181,37 @@ public final class AtmosphereShield extends Skill {
                     0.5 * power,
                     enabled
             );
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player,
+                    TRUE_RESISTANCE_MODIFIER_ID,
+                    6.0,
+                    enabled
+            );
+            if (enabled) stopNearbyProjectiles(player);
         }
 
         @SubscribeEvent(priority = EventPriority.HIGH)
         public static void onIncomingDamage(LivingIncomingDamageEvent event) {
             if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
-            if (!(event.getAmount() > 0.0f) || event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
+            if (!(event.getAmount() > 0.0f)) return;
             var skill = Skills.ATMOSPHERE_SHIELD.get();
             if (!skill.isEnabled(player)) return;
-            var system = AbilitySystemServer.getSystem(player);
-            var level = Math.max(0, Math.min(2, skill.getLevel(player)));
-            var reduction = REDUCTION[level];
-            if (event.getSource().getDirectEntity() instanceof Projectile projectile
-                    && projectile.getDeltaMovement().lengthSqr() <= 0.35 * 0.35
-                    && system.tryTimedOccupation(
-                    player.getUUID(),
-                    Math.min(30.0f, 4.0f + event.getAmount() * 2.0f)
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
-                    skill, 10)) {
-                var velocity = projectile.getDeltaMovement();
-                if (Double.isFinite(velocity.x) && Double.isFinite(velocity.y) && Double.isFinite(velocity.z)
-                        && velocity.lengthSqr() > 1.0e-8) {
-                    AeromanipTargeting.addClampedVelocity(projectile, velocity.scale(-1.35));
-                }
+            if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
+                projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                projectile.hurtMarked = true;
                 event.setCanceled(true);
                 return;
             }
+            if (event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
+            var system = AbilitySystemServer.getSystem(player);
+            if (event.getAmount() < 4.0f && system.tryTimedOccupation(
+                    player.getUUID(), 10.0f, skill, 5
+            )) {
+                event.setCanceled(true);
+                return;
+            }
+            var level = Math.max(0, Math.min(2, skill.getLevel(player)));
+            var reduction = REDUCTION[level];
             var prevented = event.getAmount() * reduction;
             if (!system.tryTimedOccupation(player.getUUID(),
                     Math.min(30.0f, 4.0f + prevented * 2.0f)
@@ -215,6 +226,17 @@ public final class AtmosphereShield extends Skill {
                     1.0f,
                     0.9f + player.getRandom().nextFloat() * 0.2f
             );
+        }
+
+        private static void stopNearbyProjectiles(ServerPlayer player) {
+            for (var projectile : player.level().getEntitiesOfClass(
+                    Projectile.class,
+                    player.getBoundingBox().inflate(1.0),
+                    projectile -> projectile.isAlive() && projectile.getOwner() != player
+            )) {
+                projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                projectile.hurtMarked = true;
+            }
         }
 
         private static void syncModifier(

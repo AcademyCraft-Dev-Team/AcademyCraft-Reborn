@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -50,6 +51,7 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -69,6 +71,8 @@ public final class LightShield extends Skill {
     static final int ATTACK_INTERVAL_TICKS = 4;
     static final double ATTACK_RADIUS = 3.5;
     static final float BASE_DAMAGE = 3.0f;
+    private static final Identifier TRUE_RESISTANCE_MODIFIER_ID =
+            AcademyCraft.academy("light_shield_true_resistance");
     private static final String LEGACY_ELECTRON_BARRIER = "academy:electron_barrier";
     private static final List<String> REMOVED_SKILLS = List.of(
             "academy:trace_ring",
@@ -271,6 +275,12 @@ public final class LightShield extends Skill {
             initialLevel = player.level();
             player.setData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get(), true);
             player.syncData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get());
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player,
+                    TRUE_RESISTANCE_MODIFIER_ID,
+                    2.0,
+                    true
+            );
             initialLevel.playSound(
                     null,
                     player.getX(),
@@ -313,13 +323,19 @@ public final class LightShield extends Skill {
         private void destroyIncomingProjectiles() {
             var origin = player.getEyePosition();
             var forward = player.getLookAngle().normalize();
+            var right = forward.cross(new Vec3(0.0, 1.0, 0.0));
+            if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1.0, 0.0, 0.0);
+            else right = right.normalize();
             for (var projectile : initialLevel.getEntitiesOfClass(
                     Projectile.class,
-                    player.getBoundingBox().inflate(3.0),
+                    player.getBoundingBox().inflate(4.0),
                     projectile -> projectile.isAlive() && projectile.getOwner() != player
             )) {
                 var delta = projectile.position().subtract(origin);
-                if (delta.lengthSqr() <= 9.0 && delta.dot(forward) > 0.0) {
+                var forwardDistance = delta.dot(forward);
+                var sideDistance = Math.abs(delta.dot(right));
+                if (forwardDistance >= 0.0 && forwardDistance <= 3.0
+                        && sideDistance <= 1.0 && Math.abs(delta.y) <= 1.5) {
                     projectile.discard();
                 }
             }
@@ -360,6 +376,12 @@ public final class LightShield extends Skill {
             ended = true;
             player.setData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get(), false);
             player.syncData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get());
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player,
+                    TRUE_RESISTANCE_MODIFIER_ID,
+                    2.0,
+                    false
+            );
             Server.CONTEXT_MAP.remove(player, this);
         }
     }

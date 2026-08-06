@@ -295,7 +295,12 @@ public final class MiningBeam extends Skill {
 
         private void updateVisual(ResolvedLinearAttack attack) {
             if (attack.isReflected()) {
-                visual.setReflection((float) attack.outbound().length(), (float) attack.returnVisualLength());
+                var returnSegment = attack.returnSegment().orElseThrow();
+                visual.setReflection(
+                        (float) attack.outbound().length(),
+                        (float) attack.returnVisualLength(),
+                        returnSegment.direction()
+                );
             } else visual.clearReflection();
         }
 

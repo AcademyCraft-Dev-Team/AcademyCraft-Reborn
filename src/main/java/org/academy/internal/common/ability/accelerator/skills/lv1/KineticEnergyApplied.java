@@ -365,7 +365,11 @@ public class KineticEnergyApplied extends Skill {
         private static void applyAreaDamage(ServerLevel level, ServerPlayer player, Vec3 center,
                                             Vec3 direction, float radius, float damage, int impactLevel) {
             var radiusSquared = radius * radius;
-            var source = SkillDamageSource.of(player, Skills.KINETIC_ENERGY_APPLIED.get());
+            var source = SkillDamageSource.of(
+                    player,
+                    Skills.KINETIC_ENERGY_APPLIED.get(),
+                    org.academy.internal.common.world.damagesource.DamageTypes.CTA
+            );
             var targets = level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius),
                     target -> target != player
                             && target.isAlive()
@@ -796,7 +800,15 @@ public class KineticEnergyApplied extends Skill {
                     * system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     * system.getPlayerDamageMultiplier(player.getUUID());
             CTADamageUtil.applyCompositeDamage(
-                    event.getEntity(), player, SkillDamageSource.of(player, skill), bonusDamage);
+                    event.getEntity(),
+                    player,
+                    SkillDamageSource.of(
+                            player,
+                            skill,
+                            org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                    ),
+                    bonusDamage
+            );
         }
     }
 }

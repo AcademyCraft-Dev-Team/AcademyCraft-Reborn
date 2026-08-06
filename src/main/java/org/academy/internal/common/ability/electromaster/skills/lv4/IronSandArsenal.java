@@ -2,23 +2,25 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -26,9 +28,12 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.ElectromasterWeaponEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -38,34 +43,26 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
 public class IronSandArsenal extends Skill {
-    public static final int SWORD_COOLDOWN = 10;
-    public static final int WHIP_COOLDOWN = 5;
-    public static final int HAMMER_COOLDOWN = 40;
-
-    public static final float SWORD_DAMAGE = 15.0f;
-    public static final float WHIP_DAMAGE = 8.0f;
-    public static final float HAMMER_DAMAGE = 25.0f;
-
-    public static final double SWORD_RANGE = 3.0;
-    public static final double WHIP_RANGE = 8.0;
-    public static final double HAMMER_RADIUS = 3.0;
+    public static final float PROXIMITY_DAMAGE = 4.0f;
+    public static final float SWEEP_DAMAGE = 10.0f;
+    public static final double PROXIMITY_RADIUS = 2.0;
+    public static final double SWEEP_RADIUS = 12.0;
+    private static final double SWEEP_HALF_ANGLE_COS = Math.cos(Math.toRadians(60.0));
+    private static final int HIT_COOLDOWN = 10;
 
     public IronSandArsenal() {
-        super(Builder
-                .of(AbilityCategories.ELECTROMASTER.get())
+        super(Builder.of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(50)
                 .iterationTicks(40)
-                .dependsOn(Skills.MAGNETIC_WEAPON)
-        );
+                .dependsOn(Skills.MAGNETIC_WEAPON));
     }
 
     @Override
@@ -73,46 +70,32 @@ public class IronSandArsenal extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-
         InputSystem.addKeyBinding(Client.KEY_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_TOGGLE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_I, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
-                , ctx -> Client.onToggle());
-
-        InputSystem.addKeyBinding(Client.KEY_FORM, Client.CONFIG.getKeyBinding(Client.KEY_FORM,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_J, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
-                , ctx -> Client.onSwitchForm());
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_I,
+                                InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)),
+                _ -> Client.onToggle());
+        ToggleStatusHud.registerStateProvider(Skills.IRON_SAND_ARSENAL.get(), Client::isActive);
+        RendererManager.registerEffectRenderer(ElectromasterWeaponEffectRenderer.INSTANCE);
     }
 
     @Override
-    public void initServer(MinecraftServerContext c) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    public enum IronSandForm {
-        SWORD, WHIP, HAMMER, SHIELD;
-
-        public IronSandForm next() {
-            return values()[(ordinal() + 1) % values().length];
-        }
     }
 
     public static final class Client {
         public static final String KEY_TOGGLE = SkillNames.IRON_SAND_ARSENAL + "_toggle";
-        public static final String KEY_FORM = SkillNames.IRON_SAND_ARSENAL + "_form";
         public static Config CONFIG = new Config();
 
-        public static void onToggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.IRON_SAND_ARSENAL.get())) return;
-            MisakaNetworkClient.send(TogglePacket.INSTANCE);
-            var p = Minecraft.getInstance().player;
-            if (p == null) return;
+        private static void onToggle() {
+            if (AbilitySystemClient.canToggleSkill(Skills.IRON_SAND_ARSENAL.get())) {
+                MisakaNetworkClient.send(TogglePacket.INSTANCE);
+            }
         }
 
-        public static void onSwitchForm() {
-            if (!AbilitySystemClient.canUseSkill(Skills.IRON_SAND_ARSENAL.get())) return;
-            MisakaNetworkClient.send(FormSelectPacket.INSTANCE);
-            var p = Minecraft.getInstance().player;
-            if (p == null) return;
+        private static boolean isActive() {
+            var player = net.minecraft.client.Minecraft.getInstance().player;
+            return player != null && player.getData(AttachmentTypes.IRON_SAND_DATA.get()).active();
         }
 
         public static class Config extends KeyBindingConfig {
@@ -123,7 +106,7 @@ public class IronSandArsenal extends Skill {
                 }
 
                 @Override
-                public IronSandArsenal.Client.Config getDefault() {
+                public Config getDefault() {
                     return new Config();
                 }
 
@@ -138,154 +121,157 @@ public class IronSandArsenal extends Skill {
     public static final class Server {
         private static final Map<Player, Context> CONTEXT_MAP = createContextMap();
 
+        private Server() {
+        }
+
         public static float calculateDamage(float baseDamage, float playerMultiplier) {
             return Math.max(0.0f, baseDamage) * Math.max(0.0f, playerMultiplier);
         }
 
-        @SubscribePacket
-        public static void handleToggle(TogglePacket p) {
-            var player = p.getPacketListener().getPlayer();
+        public static boolean isActive(ServerPlayer player) {
+            return CONTEXT_MAP.containsKey(player) && Skills.IRON_SAND_ARSENAL.get().isEnabled(player);
+        }
+
+        public static void forceDisable(ServerPlayer player) {
+            var context = CONTEXT_MAP.remove(player);
+            if (context != null) context.end(false);
             var skill = Skills.IRON_SAND_ARSENAL.get();
-            skill.toggle(player);
-            if (!skill.isEnabled(player)) {
-                var ctx = CONTEXT_MAP.remove(player);
-                if (ctx != null) ctx.end();
-                return;
-            }
-            if (CONTEXT_MAP.containsKey(player)) return;
-            var ctx = new Context(player);
-            CONTEXT_MAP.put(player, ctx);
-            AbilitySystemServer.registerContext(ctx);
+            if (skill.isEnabled(player)) skill.toggle(player);
+            clearData(player);
+        }
+
+        public static void onEntitySwing(ServerPlayer player, InteractionHand hand) {
+            if (hand != InteractionHand.MAIN_HAND) return;
+            var context = CONTEXT_MAP.get(player);
+            if (context != null) context.sweep();
         }
 
         @SubscribePacket
-        public static void handleFormSelect(FormSelectPacket p) {
-            var player = p.getPacketListener().getPlayer();
-            var ctx = CONTEXT_MAP.get(player);
-            if (ctx != null) {
-                ctx.currentForm = ctx.currentForm.next();
+        public static void handleToggle(TogglePacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            if (isActive(player)) {
+                forceDisable(player);
+                return;
             }
+            MagneticWeapon.Server.forceDisable(player);
+            var skill = Skills.IRON_SAND_ARSENAL.get();
+            if (!skill.isEnabled(player)) skill.toggle(player);
+            if (!skill.isEnabled(player)) return;
+            var context = new Context(player);
+            CONTEXT_MAP.put(player, context);
+            AbilitySystemServer.registerContext(context);
+        }
+
+        private static void clearData(ServerPlayer player) {
+            player.setData(AttachmentTypes.IRON_SAND_DATA.get(), Data.DEFAULT);
+            player.syncData(AttachmentTypes.IRON_SAND_DATA.get());
         }
     }
 
     public static final class Context extends ServerContext {
-        private final Map<IronSandForm, Integer> cooldowns = new HashMap<>();
-        private IronSandForm currentForm = IronSandForm.SWORD;
+        private final Map<Integer, Integer> hitCooldowns = new HashMap<>();
+        private int sweepCooldown;
+        private int swingTicks;
         private boolean ended;
 
-        private Context(ServerPlayer p) {
-            super(p);
-            for (var form : IronSandForm.values()) {
-                cooldowns.put(form, 0);
-            }
+        private Context(ServerPlayer player) {
+            super(player);
+            syncData();
         }
 
         @SubscribeEvent
-        public void onTick(ServerTickEvent.Pre ev) {
+        public void onTick(ServerTickEvent.Pre event) {
             var skill = Skills.IRON_SAND_ARSENAL.get();
             if (!skill.isEnabled(player) || !player.isAlive() || player.hasDisconnected()) {
-                end();
+                end(true);
                 return;
             }
-            if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
+            var system = AbilitySystemServer.getSystem(player);
+            if (!system.ensurePermanentOccupation(
                     player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
-                if (skill.isEnabled(player)) skill.toggle(player);
-                end();
+                end(true);
                 return;
             }
 
-            for (var entry : new HashMap<>(cooldowns).entrySet()) {
-                if (entry.getValue() > 0) {
-                    cooldowns.put(entry.getKey(), entry.getValue() - 1);
-                }
-            }
+            hitCooldowns.replaceAll((_, ticks) -> ticks - 1);
+            hitCooldowns.values().removeIf(ticks -> ticks <= 0);
+            if (sweepCooldown > 0) sweepCooldown--;
+            if (swingTicks > 0) swingTicks++;
+            if (swingTicks > 10) swingTicks = 0;
 
-            if (currentForm == IronSandForm.SHIELD) return;
-
-            var cooldown = cooldowns.get(currentForm);
-            if (cooldown > 0) return;
-
-            var level = player.level();
-            if (!(level instanceof ServerLevel sl)) return;
-            var multiplier = AbilitySystemServer.getSystem(player)
-                    .getPlayerDamageMultiplier(player.getUUID());
-            var source = SkillDamageSource.of(player, skill);
-
-            switch (currentForm) {
-                case SWORD -> {
-                    var lookDir = player.getLookAngle();
-                    var attackPos = player.getEyePosition().add(lookDir.scale(SWORD_RANGE));
-                    var targets = sl.getEntitiesOfClass(LivingEntity.class,
-                            player.getBoundingBox().expandTowards(lookDir.scale(SWORD_RANGE)).inflate(1.0),
-                            e -> e != player && e.isAlive() && !player.isAlliedTo(e)
-                                    && player.hasLineOfSight(e));
-                    if (!targets.isEmpty()) {
-                        var target = targets.stream()
-                                .min(Comparator.comparingDouble(player::distanceToSqr))
-                                .orElseThrow();
-                        target.hurtServer(sl, source, Server.calculateDamage(SWORD_DAMAGE, multiplier));
-                        sl.sendParticles(ParticleTypes.CRIT,
-                                target.getX(), target.getY(0.6), target.getZ(),
-                                12, 0.25, 0.4, 0.25, 0.08);
-                        cooldowns.put(IronSandForm.SWORD, SWORD_COOLDOWN);
-                    }
-                }
-                case WHIP -> {
-                    var lookDir = player.getLookAngle();
-                    var startPos = player.getEyePosition();
-                    for (var dist = 1.0; dist <= WHIP_RANGE; dist += 1.0) {
-                        var checkPos = startPos.add(lookDir.scale(dist));
-                        var box = new AABB(
-                                checkPos.x - 0.5, checkPos.y - 0.5, checkPos.z - 0.5,
-                                checkPos.x + 0.5, checkPos.y + 0.5, checkPos.z + 0.5);
-                        var targets = sl.getEntitiesOfClass(LivingEntity.class, box,
-                                e -> e != player && e.isAlive() && !player.isAlliedTo(e));
-                        if (!targets.isEmpty()) {
-                            targets.getFirst().hurtServer(sl, source,
-                                    Server.calculateDamage(WHIP_DAMAGE, multiplier));
-                            var knockback = lookDir.scale(0.5);
-                            targets.getFirst().setDeltaMovement(targets.getFirst().getDeltaMovement().add(knockback));
-                            sl.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                                    targets.getFirst().getX(), targets.getFirst().getY(0.6), targets.getFirst().getZ(),
-                                    8, 0.25, 0.4, 0.25, 0.05);
-                            cooldowns.put(IronSandForm.WHIP, WHIP_COOLDOWN);
-                            break;
+            if (player.level() instanceof ServerLevel level) {
+                var multiplier = system.getPlayerDamageMultiplier(player.getUUID());
+                for (var target : level.getEntitiesOfClass(
+                        LivingEntity.class,
+                        player.getBoundingBox().inflate(PROXIMITY_RADIUS),
+                        entity -> entity != player && entity.isAlive()
+                                && entity instanceof Enemy && !player.isAlliedTo(entity)
+                )) {
+                    if (hitCooldowns.containsKey(target.getId())) continue;
+                    if (target.hurtServer(level, SkillDamageSource.of(player, skill),
+                            Server.calculateDamage(PROXIMITY_DAMAGE, multiplier))) {
+                        var direction = target.position().subtract(player.position());
+                        direction = new Vec3(direction.x, 0, direction.z);
+                        if (direction.lengthSqr() > 1.0e-8) {
+                            direction = direction.normalize().scale(0.8);
+                            target.push(direction.x, 0.18, direction.z);
                         }
                     }
-                }
-                case HAMMER -> {
-                    var targets = sl.getEntitiesOfClass(LivingEntity.class,
-                            player.getBoundingBox().inflate(HAMMER_RADIUS),
-                            e -> e != player && e.isAlive() && !player.isAlliedTo(e));
-                    for (var t : targets) {
-                        t.hurtServer(sl, source, Server.calculateDamage(HAMMER_DAMAGE, multiplier));
-                        var knockback = t.position().subtract(player.position()).normalize().scale(1.5);
-                        t.setDeltaMovement(t.getDeltaMovement().add(knockback.x, 0.4, knockback.z));
-                        t.hurtMarked = true;
-                    }
-                    if (!targets.isEmpty()) {
-                        sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
-                                player.getX(), player.getY(), player.getZ(),
-                                20, HAMMER_RADIUS * 0.5, 0.2, HAMMER_RADIUS * 0.5, 0.05);
-                        cooldowns.put(IronSandForm.HAMMER, HAMMER_COOLDOWN);
-                    }
+                    hitCooldowns.put(target.getId(), HIT_COOLDOWN);
                 }
             }
+            syncData();
         }
 
-        @SubscribeEvent
-        public void onLivingHurt(LivingIncomingDamageEvent ev) {
-            if (currentForm != IronSandForm.SHIELD) return;
-            if (ev.getEntity() != player) return;
-            ev.setAmount(ev.getAmount() * 0.5f);
+        private void sweep() {
+            if (ended || sweepCooldown > 0 || !(player.level() instanceof ServerLevel level)) return;
+            var forward = player.getLookAngle();
+            forward = new Vec3(forward.x, 0, forward.z);
+            if (forward.lengthSqr() <= 1.0e-8) forward = new Vec3(0, 0, 1);
+            else forward = forward.normalize();
+            var multiplier = AbilitySystemServer.getSystem(player)
+                    .getPlayerDamageMultiplier(player.getUUID());
+            var source = SkillDamageSource.of(player, Skills.IRON_SAND_ARSENAL.get());
+            var radiusSquared = SWEEP_RADIUS * SWEEP_RADIUS;
+            for (var target : level.getEntitiesOfClass(
+                    LivingEntity.class,
+                    player.getBoundingBox().inflate(SWEEP_RADIUS),
+                    entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity)
+            )) {
+                var delta = target.position().subtract(player.position());
+                var horizontal = new Vec3(delta.x, 0, delta.z);
+                if (horizontal.lengthSqr() > radiusSquared || horizontal.lengthSqr() <= 1.0e-8) continue;
+                if (forward.dot(horizontal.normalize()) < SWEEP_HALF_ANGLE_COS) continue;
+                target.hurtServer(level, source, Server.calculateDamage(SWEEP_DAMAGE, multiplier));
+            }
+            sweepCooldown = HIT_COOLDOWN;
+            swingTicks = 1;
+            syncData();
         }
 
-        private void end() {
+        private void syncData() {
+            player.setData(AttachmentTypes.IRON_SAND_DATA.get(), new Data(true, swingTicks));
+        }
+
+        private void end(boolean disableSkill) {
             if (ended) return;
             ended = true;
-            Server.CONTEXT_MAP.remove(player);
+            Server.CONTEXT_MAP.remove(player, this);
+            if (disableSkill && Skills.IRON_SAND_ARSENAL.get().isEnabled(player)) {
+                Skills.IRON_SAND_ARSENAL.get().toggle(player);
+            }
+            Server.clearData(player);
             unregister();
         }
+    }
+
+    public record Data(boolean active, int swingTicks) {
+        public static final Data DEFAULT = new Data(false, 0);
+        public static final StreamCodec<ByteBuf, Data> CODEC = StreamCodec.composite(
+                ByteBufCodecs.BOOL, Data::active,
+                ByteBufCodecs.VAR_INT, Data::swingTicks,
+                Data::new
+        );
     }
 
     @PacketTarget(ThreadType.SERVER)
@@ -302,6 +288,7 @@ public class IronSandArsenal extends Skill {
         }
     }
 
+    /** Kept for protocol compatibility with older clients; forms no longer exist. */
     @PacketTarget(ThreadType.SERVER)
     public static final class FormSelectPacket extends Packet<ServerGamePacketListenerImpl, FormSelectPacket> {
         public static final FormSelectPacket INSTANCE = new FormSelectPacket();

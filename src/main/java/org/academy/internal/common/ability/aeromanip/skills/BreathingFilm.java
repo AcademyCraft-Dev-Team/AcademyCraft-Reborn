@@ -7,11 +7,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -24,12 +24,10 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.ability.ServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -40,8 +38,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 public final class BreathingFilm extends Skill {
     private static final int REFRESH_INTERVAL_TICKS = 10;
@@ -92,8 +88,8 @@ public final class BreathingFilm extends Skill {
             CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(skill.getKey());
             InputSystem.addKeyBinding(KEY_NAME_CAST,
                     CONFIG.getKeyBinding(KEY_NAME_CAST,
-                            InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_O,
-                                    InputConstants.RELEASE, InputConstants.MOD_ALT)),
+                            InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
+                                    InputConstants.RELEASE, 0)),
                     _ -> cast());
         }
 
@@ -156,63 +152,30 @@ public final class BreathingFilm extends Skill {
     }
 
     public static final class Server {
-        private static final Map<ServerPlayer, FilmContext> ACTIVE_FILMS = new WeakHashMap<>();
+        private static final double ACTIVE_RADIUS = 16.0;
 
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.BREATHING_FILM.get();
-            if (!skill.isEnabled(player) || skill.getLevel(player) < 3 || ACTIVE_FILMS.containsKey(player)) return;
-            var target = player.level().getEntities(player,
-                            new AABB(player.getEyePosition(), player.getEyePosition().add(player.getLookAngle().scale(10))).inflate(1.0),
-                            entity -> entity instanceof LivingEntity living
-                                    && living.isAlive()
-                                    && living != player
-                                    && player.hasLineOfSight(living)
-                                    && !AeromanipTargeting.canAffectNegatively(player, living))
-                    .stream().min((a, b) -> Double.compare(a.distanceToSqr(player), b.distanceToSqr(player)))
-                    .map(LivingEntity.class::cast).orElse(null);
-            if (target == null) return;
+            if (!skill.isEnabled(player)) return;
             if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player.getUUID(),
                     25.0f * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_FILM), skill, 1)) return;
-            var context = new FilmContext(player, target);
-            ACTIVE_FILMS.put(player, context);
-            AbilitySystemServer.registerContext(context);
-        }
-
-        private static final class FilmContext extends ServerContext {
-            private final LivingEntity target;
-            private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
-            private int age;
-            private boolean ended;
-
-            private FilmContext(ServerPlayer player, LivingEntity target) {
-                super(player);
-                this.target = target;
-                this.dimension = player.level().dimension();
-            }
-
-            @SubscribeEvent
-            public void onTick(ServerTickEvent.Pre event) {
-                if (ended || age++ >= 600 || !player.isAlive() || !target.isAlive()
-                        || !player.level().dimension().equals(dimension)
-                        || !Skills.BREATHING_FILM.get().isEnabled(player)) {
-                    end();
-                    return;
-                }
+            for (var target : player.level().getEntitiesOfClass(
+                    LivingEntity.class,
+                    player.getBoundingBox().inflate(ACTIVE_RADIUS),
+                    target -> target.isAlive()
+                            && target.distanceToSqr(player) <= ACTIVE_RADIUS * ACTIVE_RADIUS
+                            && isSupportedTarget(player, target)
+            )) {
                 target.setAirSupply(target.getMaxAirSupply());
             }
+        }
 
-            private void end() {
-                if (ended) return;
-                ended = true;
-                unregister();
-            }
-
-            @Override protected void onUnregistered() {
-                ended = true;
-                ACTIVE_FILMS.remove(player, this);
-            }
+        private static boolean isSupportedTarget(ServerPlayer owner, LivingEntity target) {
+            if (target == owner) return true;
+            if (target instanceof Player) return owner.isAlliedTo(target);
+            return target instanceof TamableAnimal animal && animal.isOwnedBy(owner);
         }
     }
 

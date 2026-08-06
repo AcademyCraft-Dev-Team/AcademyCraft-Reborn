@@ -2,6 +2,8 @@ package org.academy.internal.common.ability.aeromanip.skills;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
@@ -13,6 +15,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -26,6 +29,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -62,6 +66,12 @@ public final class TailwindField extends Skill {
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(Skills.TAILWIND_FIELD.get(), List.of(AirCushion.Client.SKILL_INFO),
                         R.textures.tailwind_field_icon, 20, 72));
+        ToggleStatusHud.registerStateProvider(Skills.TAILWIND_FIELD.get(), () -> {
+            var player = Minecraft.getInstance().player;
+            return player != null && AeromanipFieldSyncPacket.Client.snapshot().values().stream()
+                    .anyMatch(field -> field.ownerId().equals(player.getUUID())
+                            && field.type() == AirflowField.Type.TAILWIND);
+        });
     }
 
     @Override
@@ -123,6 +133,7 @@ public final class TailwindField extends Skill {
             var currentField = new AirflowField(field.id(), field.ownerId(), field.dimension(), field.type(), field.shape(),
                     player.position().add(direction.scale(-2.0)), direction, field.radius(), 14.0,
                     field.strength(), field.durationTicks());
+            spawnVisual(player, currentField, age);
             boostFriendly(player, player, direction, field.strength());
             var box = new AABB(currentField.center(), currentField.center().add(direction.scale(currentField.length())))
                     .inflate(currentField.radius());
@@ -140,6 +151,23 @@ public final class TailwindField extends Skill {
                             (0.08 + field.strength() * 0.12) * multiplier,
                             (0.45 + field.strength() * 0.6) * multiplier);
                 }
+            }
+        }
+
+        private static void spawnVisual(net.minecraft.server.level.ServerPlayer player,
+                                        AirflowField field, int age) {
+            if ((age & 1) != 0) return;
+            for (var step = 0; step <= 8; step++) {
+                var point = field.center().add(field.direction().scale(field.length() * step / 8.0));
+                player.level().sendParticles(
+                        ParticleTypes.CLOUD,
+                        point.x, point.y + 0.5, point.z,
+                        2,
+                        field.radius() * 0.18,
+                        field.radius() * 0.1,
+                        field.radius() * 0.18,
+                        0.015
+                );
             }
         }
 

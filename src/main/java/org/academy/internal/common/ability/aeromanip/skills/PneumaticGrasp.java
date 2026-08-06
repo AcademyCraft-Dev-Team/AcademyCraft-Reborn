@@ -165,7 +165,7 @@ public final class PneumaticGrasp extends Skill {
                 var look = player.getLookAngle().normalize();
                 if (look.lengthSqr() <= 1.0e-8) return;
                 var skillLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
-                var range = 10.0 + skillLevel * 2.0;
+                var range = 20.0 + skillLevel * 2.0;
                 if (!isValidTarget(controlledTarget, skillLevel, range)) {
                     controlledTarget = findTarget(eye, look, skillLevel, range);
                 }

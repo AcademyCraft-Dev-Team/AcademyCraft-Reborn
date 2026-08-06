@@ -30,6 +30,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
@@ -150,12 +151,10 @@ public class LightningStorm extends Skill {
             if (level() instanceof ServerLevel serverLevel) {
                 var strikePos = new BlockPos((int) strikeX, (int) center.y, (int) strikeZ);
                 var topPos = serverLevel.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, strikePos);
-                var entity = new LightningBolt(
-                        EntityTypes.LIGHTNING_BOLT, serverLevel);
-                entity.setPos(topPos.getX(), topPos.getY(), topPos.getZ());
-                serverLevel.addFreshEntity(entity);
+                var impact = Vec3.atBottomCenterOf(topPos);
+                ElectromasterArcEffects.spawnSkyStrike(serverLevel, impact);
 
-                var box = new AABB(strikePos).inflate(3);
+                var box = new AABB(topPos).inflate(3);
                 var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
                 var system = AbilitySystemServer.getSystem(player);
                 var damage = Server.calculateDamage(
@@ -163,7 +162,10 @@ public class LightningStorm extends Skill {
                         system.getPlayerDamageMultiplier(player.getUUID())
                 );
                 var source = SkillDamageSource.of(
-                        player, Skills.LIGHTNING_STORM.get(), DamageTypes.LIGHTNING_BOLT);
+                        player,
+                        Skills.LIGHTNING_STORM.get(),
+                        org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE
+                );
                 for (var target : targets) {
                     target.hurtServer(serverLevel, source, damage);
                 }

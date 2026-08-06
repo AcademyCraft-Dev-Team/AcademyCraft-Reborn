@@ -78,6 +78,12 @@ public final class VfxManager {
         });
     }
 
+    public void renderAfterSkyFrame() {
+        if (!initialized || frameData.isEmpty()) return;
+        AcademyProfiler.runZone("academy.vfx.after_sky", () ->
+                VfxRegistry.renderPhase(VfxPhase.WORLD_AFTER_SKY, frameData, renderContext));
+    }
+
     public boolean hasGlowData() {
         return hasPhaseData(VfxPhase.WORLD_GLOW);
     }

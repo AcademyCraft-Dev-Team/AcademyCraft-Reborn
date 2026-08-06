@@ -6,6 +6,7 @@
   "plugin": "org.academy.mixin.plugin.MixinPlugin",
   "mixins": [
     "common.EntitySharedFlagInvoker",
+    "common.LivingEntityDamageInvoker",
     "common.MixinCombatTracker",
     "common.MixinCreeper",
     "common.MixinDragonStrafePlayerPhase",
