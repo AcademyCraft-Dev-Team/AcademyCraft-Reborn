@@ -370,6 +370,13 @@ public final class R {
                         }
                     }
 
+                    public static final class mental_intrusion {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/mental_intrusion/icon.png");
+
+                        private mental_intrusion() {
+                        }
+                    }
+
                     public static final class mental_stupor {
                         public static final Identifier icon = academy("textures/ability/mentalout/skill/mental_stupor/icon.png");
 
@@ -381,6 +388,20 @@ public final class R {
                         public static final Identifier icon = academy("textures/ability/mentalout/skill/target_misidentification/icon.png");
 
                         private target_misidentification() {
+                        }
+                    }
+
+                    public static final class sensory_distortion {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/sensory_distortion/icon.png");
+
+                        private sensory_distortion() {
+                        }
+                    }
+
+                    public static final class precision_operation {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/precision_operation/icon.png");
+
+                        private precision_operation() {
                         }
                     }
 

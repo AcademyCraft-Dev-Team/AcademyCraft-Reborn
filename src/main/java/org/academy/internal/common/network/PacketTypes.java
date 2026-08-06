@@ -75,6 +75,8 @@ import org.academy.internal.common.ability.mentalout.skills.MentalIntervention;
 import org.academy.internal.common.ability.mentalout.skills.ImpressionManipulation;
 import org.academy.internal.common.ability.mentalout.skills.TargetMisidentification;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
+import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
@@ -599,6 +601,55 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ImpressionManipulation.UsePacket>>
             IMPRESSION_MANIPULATION_USE = PACKET_TYPES.register("impression_manipulation_use",
             () -> new PacketType<>(ImpressionManipulation.UsePacket.class, ImpressionManipulation.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.TogglePacket>>
+            MENTAL_INTRUSION_TOGGLE = PACKET_TYPES.register("mental_intrusion_toggle",
+            () -> new PacketType<>(MentalIntrusionManager.TogglePacket.class,
+                    MentalIntrusionManager.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.DistortionPacket>>
+            SENSORY_DISTORTION_TOGGLE = PACKET_TYPES.register("sensory_distortion_toggle",
+            () -> new PacketType<>(MentalIntrusionManager.DistortionPacket.class,
+                    MentalIntrusionManager.DistortionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.ReadyPacket>>
+            MENTAL_INTRUSION_READY = PACKET_TYPES.register("mental_intrusion_ready",
+            () -> new PacketType<>(MentalIntrusionManager.ReadyPacket.class,
+                    MentalIntrusionManager.ReadyPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.ClientStopPacket>>
+            MENTAL_INTRUSION_CLIENT_STOP = PACKET_TYPES.register("mental_intrusion_client_stop",
+            () -> new PacketType<>(MentalIntrusionManager.ClientStopPacket.class,
+                    MentalIntrusionManager.ClientStopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalIntrusionManager.BeginPacket>>
+            MENTAL_INTRUSION_BEGIN = PACKET_TYPES.register("mental_intrusion_begin",
+            () -> new PacketType<>(MentalIntrusionManager.BeginPacket.class,
+                    MentalIntrusionManager.BeginPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalIntrusionManager.EndPacket>>
+            MENTAL_INTRUSION_END = PACKET_TYPES.register("mental_intrusion_end",
+            () -> new PacketType<>(MentalIntrusionManager.EndPacket.class,
+                    MentalIntrusionManager.EndPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalIntrusionManager.PerceptionPacket>>
+            MENTAL_PERCEPTION_UPDATE = PACKET_TYPES.register("mental_perception_update",
+            () -> new PacketType<>(MentalIntrusionManager.PerceptionPacket.class,
+                    MentalIntrusionManager.PerceptionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.RequestPacket>>
+            PRECISION_OPERATION_REQUEST = PACKET_TYPES.register("precision_operation_request",
+            () -> new PacketType<>(PrecisionOperationManager.RequestPacket.class,
+                    PrecisionOperationManager.RequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.SavePacket>>
+            PRECISION_OPERATION_SAVE = PACKET_TYPES.register("precision_operation_save",
+            () -> new PacketType<>(PrecisionOperationManager.SavePacket.class,
+                    PrecisionOperationManager.SavePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.ExecutePacket>>
+            PRECISION_OPERATION_EXECUTE = PACKET_TYPES.register("precision_operation_execute",
+            () -> new PacketType<>(PrecisionOperationManager.ExecutePacket.class,
+                    PrecisionOperationManager.ExecutePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PrecisionOperationManager.SyncPacket>>
+            PRECISION_OPERATION_SYNC = PACKET_TYPES.register("precision_operation_sync",
+            () -> new PacketType<>(PrecisionOperationManager.SyncPacket.class,
+                    PrecisionOperationManager.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PrecisionOperationManager.ResultPacket>>
+            PRECISION_OPERATION_RESULT = PACKET_TYPES.register("precision_operation_result",
+            () -> new PacketType<>(PrecisionOperationManager.ResultPacket.class,
+                    PrecisionOperationManager.ResultPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.FullStartPacket>>
             MENTALOUT_ROSTER_FULL_START = PACKET_TYPES.register("mentalout_roster_full_start",

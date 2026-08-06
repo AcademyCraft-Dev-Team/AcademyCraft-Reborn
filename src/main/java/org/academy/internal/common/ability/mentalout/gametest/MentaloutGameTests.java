@@ -32,7 +32,10 @@ import org.academy.api.common.entitycontrol.ControlDirective;
 import org.academy.api.common.entitycontrol.ControlHandle;
 import org.academy.api.common.entitycontrol.ControlRequest;
 import org.academy.api.common.entitycontrol.MentalControlApi;
+import org.academy.api.common.entitycontrol.MentalPerceptionApi;
+import org.academy.api.common.entitycontrol.PerceptionDecision;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +45,7 @@ public final class MentaloutGameTests {
     private static final Identifier TEST_ENVIRONMENT = AcademyCraft.academy("mentalout");
     private static final Identifier TEST_INSTANCE_TYPE = AcademyCraft.academy("mentalout_function");
     private static final Identifier SOURCE = AcademyCraft.academy("gametest_mental_control");
+    private static final Identifier PERCEPTION_SOURCE = AcademyCraft.academy("gametest_mental_perception");
     private static final Identifier IMPRESSION_GUARD_SOURCE = AcademyCraft.academy("impression_guard_target");
 
     private MentaloutGameTests() {
@@ -264,6 +268,73 @@ public final class MentaloutGameTests {
                             "Zombie AI did not resume movement after freeze expiry"
                     );
                     finish(helper, controller, handle);
+                });
+            }
+        },
+        PERCEPTION_MULTI_SOURCE_OVERRIDE("perception_multi_source_override", 40) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var zombie = helper.spawn(EntityTypes.ZOMBIE, 1, 2, 1);
+                var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
+                zombie.setPersistenceRequired();
+                cow.setPersistenceRequired();
+                zombie.setTarget(cow);
+                var first = MentalPerceptionRuntime.apply(
+                        controller,
+                        zombie,
+                        cow,
+                        PERCEPTION_SOURCE,
+                        100,
+                        Long.MAX_VALUE
+                );
+                var second = MentalPerceptionRuntime.apply(
+                        controller,
+                        zombie,
+                        cow,
+                        AcademyCraft.academy("gametest_mental_perception_secondary"),
+                        100,
+                        Long.MAX_VALUE
+                );
+                var forced = new ControlHandle[1];
+
+                helper.runAtTickTime(3L, () -> {
+                    helper.assertValueEqual(
+                            MentalPerceptionApi.perceptionDecision(zombie, cow),
+                            PerceptionDecision.HIDDEN,
+                            "Layered perception decision"
+                    );
+                    helper.assertFalse(
+                            zombie.getSensing().hasLineOfSight(cow),
+                            "Hidden target remained visible through Mob sensing"
+                    );
+                    helper.assertTrue(
+                            zombie.getTarget() == null,
+                            "Perception mask retained the hidden natural target"
+                    );
+                    forced[0] = forceTarget(controller, zombie, cow, 20L);
+                });
+                helper.runAtTickTime(6L, () -> {
+                    helper.assertValueEqual(
+                            MentalPerceptionApi.perceptionDecision(zombie, cow),
+                            PerceptionDecision.PASS,
+                            "Explicit target did not override perception masking"
+                    );
+                    forced[0].close();
+                    first.close();
+                    helper.assertValueEqual(
+                            MentalPerceptionApi.perceptionDecision(zombie, cow),
+                            PerceptionDecision.HIDDEN,
+                            "Closing one source removed the remaining perception mask"
+                    );
+                    second.close();
+                    helper.assertValueEqual(
+                            MentalPerceptionApi.perceptionDecision(zombie, cow),
+                            PerceptionDecision.PASS,
+                            "Closing every source did not restore perception"
+                    );
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
                 });
             }
         },

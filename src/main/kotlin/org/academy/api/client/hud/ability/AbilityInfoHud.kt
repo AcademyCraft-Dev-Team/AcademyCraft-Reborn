@@ -13,6 +13,7 @@ import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
+import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.ability.AbilitySystemClient.SkillInfo
@@ -21,7 +22,6 @@ import org.academy.api.client.gui.animation.AnimatorListener
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.command.DrawCommand
-import org.academy.api.client.gui.imgui.ImGuiUIDebugger
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
@@ -34,7 +34,7 @@ import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.resources.R
 import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.internal.client.hud.HudLayout
-import org.academy.internal.client.hud.HudLayoutConfig
+import org.academy.internal.client.gui.SerializedUiLayout
 import org.joml.Vector3f
 import kotlin.math.abs
 import kotlin.math.max
@@ -86,7 +86,6 @@ class AbilityInfoHud private constructor() {
     fun render(target: RenderTarget) {
         if (context.get().alpha == 0f) return
         uiContext.upload(target, false)
-        ImGuiUIDebugger.render(target, context.get())
     }
 
     fun toggleActive() {
@@ -130,6 +129,10 @@ class AbilityInfoHud private constructor() {
     private class Context : WidgetContext {
         val skillWheel: SkillWheelWidget = SkillWheelWidget()
         private val cp = FrameLayoutWidget()
+        private lateinit var cpLayout: FrameLayoutWidget
+        private lateinit var cpMount: FrameLayoutWidget
+        private lateinit var skillWheelLayout: FrameLayoutWidget
+        private lateinit var skillWheelMount: FrameLayoutWidget
 
         private val root: FrameLayoutWidget = createRoot()
 
@@ -145,15 +148,24 @@ class AbilityInfoHud private constructor() {
                 }
             }
             root.alpha = 0f
+            cpLayout = SerializedUiLayout.load(
+                AcademyCraft.academy("ui/layout/ability_cp_hud.json"),
+                listOf("cp")
+            ) { hudFallback("cp", 240f, 27f) }
+            cpMount = SerializedUiLayout.require(cpLayout, "cp") as FrameLayoutWidget
+            root.addChild("cp_layout", cpLayout)
+
+            skillWheelLayout = SerializedUiLayout.load(
+                AcademyCraft.academy("ui/layout/ability_skill_wheel_hud.json"),
+                listOf("skill_wheel")
+            ) { hudFallback("skill_wheel", 104f, 119f) }
+            skillWheelMount = SerializedUiLayout.require(skillWheelLayout, "skill_wheel") as FrameLayoutWidget
+            root.addChild("skill_wheel_layout", skillWheelLayout)
             run {
                 cp.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .size(240f, 27f)
-                    .margin(0f, 4f, 4f, 0f)
-                    .gravity(Gravity.TOP_RIGHT)
-                cp.originX = 1f
-                cp.originY = 0f
+                    .sizeMode(SizeMode.MATCH_PARENT)
 
-                root.addChild("cp", cp)
+                cpMount.addChild("runtime_content", cp)
                 run {
                     val sampler: GpuSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                     val back = ImageWidget(R.textures.hud.cp_bar_background)
@@ -540,27 +552,35 @@ class AbilityInfoHud private constructor() {
             }
 
             skillWheel.layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
-                .sizeMode(SizeMode.WRAP_CONTENT)
-            skillWheel.originX = 1f
-            skillWheel.originY = 0.5f
+                .sizeMode(SizeMode.MATCH_PARENT)
             skillWheel.setVisibleItemCount(7)
                 .setCyclic(true)
                 .setCurtain(true)
                 .setAtmospheric(true)
-            root.addChild("skill_wheel", skillWheel)
+            skillWheelMount.addChild("runtime_content", skillWheel)
 
             return root
         }
 
         private fun applyHudLayout() {
-            val config = HudLayoutConfig.get()
-            cp.translationX = config.cpHudOffsetX.toFloat()
-            cp.translationY = config.cpHudOffsetY.toFloat()
-            cp.scale = HudLayout.Region.CP.scale()
-            skillWheel.translationX = config.skillWheelHudOffsetX.toFloat()
-            skillWheel.translationY = config.skillWheelHudOffsetY.toFloat()
-            skillWheel.scale = HudLayout.Region.SKILL_WHEEL.scale()
+            val minecraft = Minecraft.getInstance()
+            val cpRect = HudLayout.Region.CP.rect(minecraft)
+            cpMount.translationX = cpRect.x()
+            cpMount.translationY = cpRect.y()
+            cpMount.scale = HudLayout.Region.CP.scale()
+            val wheelRect = HudLayout.Region.SKILL_WHEEL.rect(minecraft)
+            skillWheelMount.translationX = wheelRect.x()
+            skillWheelMount.translationY = wheelRect.y()
+            skillWheelMount.scale = HudLayout.Region.SKILL_WHEEL.scale()
+        }
+
+        private fun hudFallback(name: String, width: Float, height: Float): FrameLayoutWidget {
+            val layout = FrameLayoutWidget()
+            layout.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            val mount = FrameLayoutWidget()
+            mount.layoutParams = FrameLayoutWidget.LayoutParams().size(width, height)
+            layout.addChild(name, mount)
+            return layout
         }
     }
 

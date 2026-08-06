@@ -8,6 +8,7 @@ import imgui.flag.ImGuiTreeNodeFlags
 import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
+import net.minecraft.network.chat.Component
 import net.minecraft.util.ARGB
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.editor.UiLayoutEditorScreen
@@ -21,27 +22,23 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 object ImGuiUIDebugger {
-    private val SIZE_MODE_NAMES = arrayOf("FIXED", "MATCH_PARENT", "WRAP_CONTENT")
-    private val ORIENTATION_NAMES = arrayOf("HORIZONTAL", "VERTICAL")
-    private val VISIBILITY_NAMES = arrayOf("VISIBLE", "INVISIBLE", "GONE")
-
     fun render(renderTarget: RenderTarget, root: WidgetContainer) {
         ImGuiUtilApi.render(renderTarget) { renderContent(root) }
     }
 
     /** ImGui 帧内的内容部分, 供 [org.academy.api.client.gui.screen.ScreenDispatcher] 与其他窗口共享同一帧. */
-    fun renderContent(root: WidgetContainer) {
-        if (ImGui.begin("ImGui UI Debugger")) {
+    fun renderContent(root: WidgetContainer, lockNames: Boolean = false, title: String? = null) {
+        if (ImGui.begin((title ?: tr("screen.academy.ui_debug.inspector.title")) + "##academy_ui_inspector")) {
             ImGui.setWindowSize(450f, 700f, ImGuiCond.FirstUseEver)
-            if (ImGui.button("Export Layout JSON")) {
+            if (ImGui.button(tr("screen.academy.ui_debug.inspector.export_json"))) {
                 exportLayout(root)
             }
             ImGui.sameLine()
-            if (ImGui.button("Open UI Layout Editor")) {
+            if (ImGui.button(tr("screen.academy.ui_debug.inspector.open_editor"))) {
                 UiLayoutEditorScreen.open()
             }
             ImGui.separator()
-            renderWidgetNode(root, root.hoveredWidget)
+            renderWidgetNode(root, root.hoveredWidget, lockNames)
         }
         ImGui.end()
     }
@@ -59,7 +56,7 @@ object ImGuiUIDebugger {
         }
     }
 
-    private fun renderWidgetNode(widget: Widget, hoveredWidget: Widget?) {
+    private fun renderWidgetNode(widget: Widget, hoveredWidget: Widget?, lockNames: Boolean) {
         val nodeFlags = ImGuiTreeNodeFlags.DefaultOpen or ImGuiTreeNodeFlags.FramePadding
         val isHovered = (widget === hoveredWidget)
 
@@ -75,22 +72,22 @@ object ImGuiUIDebugger {
 
         if (nodeOpen) {
             ImGui.indent()
-            if (ImGui.collapsingHeader("Basic Properties")) {
-                renderBasicProperties(widget)
+            if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.basic"))) {
+                renderBasicProperties(widget, lockNames)
             }
-            if (ImGui.collapsingHeader("Layout Properties")) {
+            if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.layout"))) {
                 renderLayoutParams(widget)
             }
-            if (ImGui.collapsingHeader("Transform")) {
+            if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.transform"))) {
                 renderTransform(widget)
             }
-            if (ImGui.collapsingHeader("Appearance")) {
+            if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.appearance"))) {
                 renderAppearance(widget)
             }
-            if (ImGui.collapsingHeader("Widget-Specific Properties")) {
+            if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.widget"))) {
                 renderWidgetSpecificProperties(widget)
             }
-            if (ImGui.collapsingHeader("Read-only Info")) {
+            if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.read_only"))) {
                 renderReadOnlyInfo(widget)
             }
             ImGui.unindent()
@@ -98,50 +95,55 @@ object ImGuiUIDebugger {
             if (widget is WidgetContainer) {
                 ImGui.separator()
                 for (child in widget.children.values) {
-                    renderWidgetNode(child, hoveredWidget)
+                    renderWidgetNode(child, hoveredWidget, lockNames)
                 }
             }
             ImGui.treePop()
         }
     }
 
-    private fun renderBasicProperties(widget: Widget) {
-        val nameBuffer = ImString(widget.name, 256)
-        if (ImGui.inputText("Name", nameBuffer)) {
-            widget.name = nameBuffer.get()
+    private fun renderBasicProperties(widget: Widget, lockNames: Boolean) {
+        if (lockNames) {
+            ImGui.textDisabled(tr("screen.academy.ui_debug.inspector.name_value", widget.name))
+        } else {
+            val nameBuffer = ImString(widget.name, 256)
+            if (ImGui.inputText(label("screen.academy.ui_debug.inspector.name", "name"), nameBuffer)) {
+                widget.name = nameBuffer.get()
+            }
         }
 
         val coverAllPrev = ImBoolean(widget.coverAllPrev)
-        if (ImGui.checkbox("CoverAllPrev", coverAllPrev)) {
+        if (ImGui.checkbox(label("screen.academy.ui_debug.inspector.cover_previous", "cover_previous"), coverAllPrev)) {
             widget.coverAllPrev = coverAllPrev.get()
         }
 
         val enabled = ImBoolean(widget.isEnabled)
-        if (ImGui.checkbox("Enabled", enabled)) {
+        if (ImGui.checkbox(label("screen.academy.ui_debug.inspector.enabled", "enabled"), enabled)) {
             widget.isEnabled = enabled.get()
         }
 
         val clickable = ImBoolean(widget.isClickable)
-        if (ImGui.checkbox("Clickable", clickable)) {
+        if (ImGui.checkbox(label("screen.academy.ui_debug.inspector.clickable", "clickable"), clickable)) {
             widget.isClickable = clickable.get()
         }
 
         val selected = ImBoolean(widget.isSelected)
-        if (ImGui.checkbox("Selected", selected)) {
+        if (ImGui.checkbox(label("screen.academy.ui_debug.inspector.selected", "selected"), selected)) {
             widget.isSelected = selected.get()
         }
 
         val currentVisibility = ImInt(widget.visibility.ordinal)
-        if (ImGui.combo("Visibility", currentVisibility, VISIBILITY_NAMES)) {
+        if (ImGui.combo(label("screen.academy.ui_debug.inspector.visibility", "visibility"), currentVisibility,
+                visibilityNames())) {
             widget.visibility = Widget.Visibility.entries[currentVisibility.get()]
             widget.requestLayout()
         }
 
-        if (ImGui.button("Force Focus")) {
+        if (ImGui.button(tr("screen.academy.ui_debug.inspector.force_focus"))) {
             widget.parent?.focusedChild = widget
         }
         ImGui.sameLine()
-        if (ImGui.button("Request Layout")) {
+        if (ImGui.button(tr("screen.academy.ui_debug.inspector.request_layout"))) {
             widget.requestLayout()
         }
     }
@@ -151,28 +153,30 @@ object ImGuiUIDebugger {
         var changed = false
 
         val currentWidthMode = ImInt(lp.widthMode.ordinal)
-        if (ImGui.combo("Width Mode", currentWidthMode, SIZE_MODE_NAMES)) {
+        if (ImGui.combo(label("screen.academy.ui_debug.inspector.width_mode", "width_mode"), currentWidthMode,
+                sizeModeNames())) {
             lp.widthMode = SizeMode.entries[currentWidthMode.get()]
             changed = true
         }
 
         if (lp.widthMode == SizeMode.FIXED) {
             val width = floatArrayOf(lp.width)
-            if (ImGui.dragFloat("Fixed Width", width, 0.5f)) {
+            if (ImGui.dragFloat(label("screen.academy.ui_debug.inspector.fixed_width", "fixed_width"), width, 0.5f)) {
                 lp.width = width[0]
                 changed = true
             }
         }
 
         val currentHeightMode = ImInt(lp.heightMode.ordinal)
-        if (ImGui.combo("Height Mode", currentHeightMode, SIZE_MODE_NAMES)) {
+        if (ImGui.combo(label("screen.academy.ui_debug.inspector.height_mode", "height_mode"), currentHeightMode,
+                sizeModeNames())) {
             lp.heightMode = SizeMode.entries[currentHeightMode.get()]
             changed = true
         }
 
         if (lp.heightMode == SizeMode.FIXED) {
             val height = floatArrayOf(lp.height)
-            if (ImGui.dragFloat("Fixed Height", height, 0.5f)) {
+            if (ImGui.dragFloat(label("screen.academy.ui_debug.inspector.fixed_height", "fixed_height"), height, 0.5f)) {
                 lp.height = height[0]
                 changed = true
             }
@@ -180,38 +184,44 @@ object ImGuiUIDebugger {
 
         if (lp is LinearLayoutWidget.LayoutParams) {
             val weight = floatArrayOf(lp.weight)
-            if (ImGui.dragFloat("Weight", weight, 0.1f, 0.0f, 10.0f)) {
+            if (ImGui.dragFloat(label("screen.academy.ui_debug.inspector.weight", "weight"), weight, 0.1f, 0.0f, 10.0f)) {
                 lp.weight = weight[0]
                 changed = true
             }
         }
 
-        if (ImGui.treeNode("Gravity")) {
+        if (ImGui.treeNode(tr("screen.academy.ui_debug.inspector.gravity") + "##gravity")) {
             val gravity = ImInt(lp.gravity)
-            ImGui.text("Horizontal:")
+            ImGui.text(tr("screen.academy.ui_debug.inspector.horizontal"))
             ImGui.sameLine()
-            changed = changed or gravityRadio("LEFT", gravity, Gravity.LEFT, Gravity.HORIZONTAL_GRAVITY_MASK)
+            changed = changed or gravityRadio(tr("screen.academy.ui_debug.direction.left") + "##left", gravity,
+                Gravity.LEFT, Gravity.HORIZONTAL_GRAVITY_MASK)
             ImGui.sameLine()
             changed =
-                changed or gravityRadio("CENTER_H", gravity, Gravity.CENTER_HORIZONTAL, Gravity.HORIZONTAL_GRAVITY_MASK)
+                changed or gravityRadio(tr("screen.academy.ui_debug.direction.center") + "##center_h", gravity,
+                    Gravity.CENTER_HORIZONTAL, Gravity.HORIZONTAL_GRAVITY_MASK)
             ImGui.sameLine()
-            changed = changed or gravityRadio("RIGHT", gravity, Gravity.RIGHT, Gravity.HORIZONTAL_GRAVITY_MASK)
+            changed = changed or gravityRadio(tr("screen.academy.ui_debug.direction.right") + "##right", gravity,
+                Gravity.RIGHT, Gravity.HORIZONTAL_GRAVITY_MASK)
 
-            ImGui.text("Vertical:  ")
+            ImGui.text(tr("screen.academy.ui_debug.inspector.vertical"))
             ImGui.sameLine()
-            changed = changed or gravityRadio("TOP", gravity, Gravity.TOP, Gravity.VERTICAL_GRAVITY_MASK)
+            changed = changed or gravityRadio(tr("screen.academy.ui_debug.direction.top") + "##top", gravity,
+                Gravity.TOP, Gravity.VERTICAL_GRAVITY_MASK)
             ImGui.sameLine()
             changed =
-                changed or gravityRadio("CENTER_V", gravity, Gravity.CENTER_VERTICAL, Gravity.VERTICAL_GRAVITY_MASK)
+                changed or gravityRadio(tr("screen.academy.ui_debug.direction.center") + "##center_v", gravity,
+                    Gravity.CENTER_VERTICAL, Gravity.VERTICAL_GRAVITY_MASK)
             ImGui.sameLine()
-            changed = changed or gravityRadio("BOTTOM", gravity, Gravity.BOTTOM, Gravity.VERTICAL_GRAVITY_MASK)
+            changed = changed or gravityRadio(tr("screen.academy.ui_debug.direction.bottom") + "##bottom", gravity,
+                Gravity.BOTTOM, Gravity.VERTICAL_GRAVITY_MASK)
 
             lp.gravity = gravity.get()
             ImGui.treePop()
         }
 
         val margin = floatArrayOf(lp.marginTop, lp.marginRight, lp.marginBottom, lp.marginLeft)
-        if (ImGui.dragFloat4("Margin (T/R/B/L)", margin, 0.5f)) {
+        if (ImGui.dragFloat4(label("screen.academy.ui_debug.inspector.margin", "margin"), margin, 0.5f)) {
             lp.marginTop = margin[0]
             lp.marginRight = margin[1]
             lp.marginBottom = margin[2]
@@ -220,7 +230,7 @@ object ImGuiUIDebugger {
         }
 
         val padding = floatArrayOf(lp.paddingTop, lp.paddingRight, lp.paddingBottom, lp.paddingLeft)
-        if (ImGui.dragFloat4("Padding (T/R/B/L)", padding, 0.5f)) {
+        if (ImGui.dragFloat4(label("screen.academy.ui_debug.inspector.padding", "padding"), padding, 0.5f)) {
             lp.paddingTop = padding[0]
             lp.paddingRight = padding[1]
             lp.paddingBottom = padding[2]
@@ -237,40 +247,42 @@ object ImGuiUIDebugger {
         var changed = false
 
         val translation = floatArrayOf(widget.translationX, widget.translationY)
-        if (ImGui.dragFloat2("Translation", translation, 0.5f)) {
+        if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.translation", "translation"), translation, 0.5f)) {
             widget.translationX = translation[0]
             widget.translationY = translation[1]
             changed = true
         }
 
         val scaleArr = floatArrayOf(widget.scaleX, widget.scaleY)
-        if (ImGui.dragFloat2("Scale", scaleArr, 0.01f, 0.01f, 10.0f)) {
+        if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.scale", "scale"), scaleArr, 0.01f, 0.01f, 10.0f)) {
             widget.scaleX = scaleArr[0]
             widget.scaleY = scaleArr[1]
             changed = true
         }
 
         val uniformScale = floatArrayOf(widget.scale)
-        if (ImGui.dragFloat("Uniform Scale", uniformScale, 0.01f, 0.01f, 10.0f)) {
+        if (ImGui.dragFloat(label("screen.academy.ui_debug.inspector.uniform_scale", "uniform_scale"),
+                uniformScale, 0.01f, 0.01f, 10.0f)) {
             widget.scale = uniformScale[0]
             changed = true
         }
 
         val rotation = floatArrayOf(widget.rotation)
-        if (ImGui.dragFloat("Rotation", rotation, 1.0f, -360.0f, 360.0f)) {
+        if (ImGui.dragFloat(label("screen.academy.ui_debug.inspector.rotation", "rotation"),
+                rotation, 1.0f, -360.0f, 360.0f)) {
             widget.rotation = rotation[0]
             changed = true
         }
 
         val origin = floatArrayOf(widget.originX, widget.originY)
-        if (ImGui.dragFloat2("Transform Origin", origin, 0.5f)) {
+        if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.origin", "origin"), origin, 0.5f)) {
             widget.originX = origin[0]
             widget.originY = origin[1]
             changed = true
         }
 
         val scroll = floatArrayOf(widget.scrollX, widget.scrollY)
-        if (ImGui.dragFloat2("Scroll", scroll, 0.5f)) {
+        if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.scroll", "scroll"), scroll, 0.5f)) {
             widget.scrollTo(scroll[0], scroll[1])
             changed = true
         }
@@ -282,58 +294,63 @@ object ImGuiUIDebugger {
 
     private fun renderAppearance(widget: Widget) {
         val alpha = floatArrayOf(widget.alpha)
-        if (ImGui.sliderFloat("Alpha", alpha, 0.0f, 1.0f)) {
+        if (ImGui.sliderFloat(label("screen.academy.ui_debug.inspector.alpha", "alpha"), alpha, 0.0f, 1.0f)) {
             widget.alpha = alpha[0]
         }
 
         val hasBackground = widget.background != null
-        ImGui.text("Background: ${if (hasBackground) widget.background!!.javaClass.simpleName else "None"}")
+        ImGui.text(tr("screen.academy.ui_debug.inspector.background",
+            if (hasBackground) widget.background!!.javaClass.simpleName else tr("screen.academy.ui_debug.value.none")))
         val hasForeground = widget.foreground != null
-        ImGui.text("Foreground: ${if (hasForeground) widget.foreground!!.javaClass.simpleName else "None"}")
-        ImGui.text("StateListAnimator: ${if (widget.stateListAnimator != null) "Present" else "None"}")
+        ImGui.text(tr("screen.academy.ui_debug.inspector.foreground",
+            if (hasForeground) widget.foreground!!.javaClass.simpleName else tr("screen.academy.ui_debug.value.none")))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.animator",
+            tr(if (widget.stateListAnimator != null) "screen.academy.ui_debug.value.present" else "screen.academy.ui_debug.value.none")))
     }
 
     private fun renderWidgetSpecificProperties(widget: Widget) {
         if (widget is LabelWidget) {
             val textBuffer = ImString(widget.text, 256)
-            if (ImGui.inputText("Text", textBuffer)) {
+            if (ImGui.inputText(label("screen.academy.ui_debug.inspector.text", "text"), textBuffer)) {
                 widget.text = textBuffer.get()
             }
 
             val scale = floatArrayOf(widget.scale)
-            if (ImGui.dragFloat("Font Scale", scale, 0.05f, 0.1f, 5.0f)) {
+            if (ImGui.dragFloat(label("screen.academy.ui_debug.inspector.font_scale", "font_scale"),
+                    scale, 0.05f, 0.1f, 5.0f)) {
                 widget.scale = scale[0]
             }
         }
 
         if (widget is ButtonWidget) {
-            ImGui.text("OnClickListener: ${if (widget.onClickListener != null) "Set" else "None"}")
+            ImGui.text(tr("screen.academy.ui_debug.inspector.click_listener",
+                tr(if (widget.onClickListener != null) "screen.academy.ui_debug.value.set" else "screen.academy.ui_debug.value.none")))
             val pressed = ImBoolean(widget.isPressed)
-            ImGui.checkbox("Pressed State", pressed) // readonly effectively
+            ImGui.checkbox(label("screen.academy.ui_debug.inspector.pressed_state", "pressed_state"), pressed)
         }
 
         if (widget is ImageWidget) {
             val rgb = floatArrayOf(widget.brightness, widget.green, widget.blue)
-            if (ImGui.colorEdit3("Image Tint", rgb)) {
+            if (ImGui.colorEdit3(label("screen.academy.ui_debug.inspector.image_tint", "image_tint"), rgb)) {
                 widget.setColor(rgb[0], rgb[1], rgb[2])
             }
 
-            if (ImGui.treeNode("UV Coordinates")) {
+            if (ImGui.treeNode(tr("screen.academy.ui_debug.inspector.uv") + "##uv")) {
                 val uv0 = floatArrayOf(widget.u0, widget.v0)
                 val uv1 = floatArrayOf(widget.u1, widget.v1)
                 val uv2 = floatArrayOf(widget.u2, widget.v2)
                 val uv3 = floatArrayOf(widget.u3, widget.v3)
 
                 var uvChanged = false
-                if (ImGui.dragFloat2("Top-Left (u0,v0)", uv0, 0.001f)) uvChanged = true
-                if (ImGui.dragFloat2("Bottom-Left (u1,v1)", uv1, 0.001f)) uvChanged = true
-                if (ImGui.dragFloat2("Bottom-Right (u2,v2)", uv2, 0.001f)) uvChanged = true
-                if (ImGui.dragFloat2("Top-Right (u3,v3)", uv3, 0.001f)) uvChanged = true
+                if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.uv_top_left", "uv0"), uv0, 0.001f)) uvChanged = true
+                if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.uv_bottom_left", "uv1"), uv1, 0.001f)) uvChanged = true
+                if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.uv_bottom_right", "uv2"), uv2, 0.001f)) uvChanged = true
+                if (ImGui.dragFloat2(label("screen.academy.ui_debug.inspector.uv_top_right", "uv3"), uv3, 0.001f)) uvChanged = true
 
                 if (uvChanged) {
                     widget.setUv(uv0[0], uv0[1], uv1[0], uv1[1], uv2[0], uv2[1], uv3[0], uv3[1])
                 }
-                if (ImGui.button("Rotate UV")) {
+                if (ImGui.button(tr("screen.academy.ui_debug.inspector.rotate_uv"))) {
                     widget.rotateUv()
                 }
                 ImGui.treePop()
@@ -342,20 +359,21 @@ object ImGuiUIDebugger {
 
         if (widget is FillWidget) {
             val color = colorToFloat4(widget.color)
-            if (ImGui.colorEdit4("Fill Color", color)) {
+            if (ImGui.colorEdit4(label("screen.academy.ui_debug.inspector.fill_color", "fill_color"), color)) {
                 widget.setColor(float4ToColor(color))
             }
         }
 
         if (widget is LinearLayoutWidget) {
             val currentOrientation = ImInt(widget.orientation.ordinal)
-            if (ImGui.combo("Orientation", currentOrientation, ORIENTATION_NAMES)) {
+            if (ImGui.combo(label("screen.academy.ui_debug.inspector.orientation", "orientation"),
+                    currentOrientation, orientationNames())) {
                 widget.orientation = if (currentOrientation.get() == 0) Orientation.HORIZONTAL else Orientation.VERTICAL
                 widget.requestLayout()
             }
 
             val spacing = floatArrayOf(widget.spacing)
-            if (ImGui.dragFloat("Spacing", spacing, 0.5f)) {
+            if (ImGui.dragFloat(label("screen.academy.ui_debug.inspector.spacing", "spacing"), spacing, 0.5f)) {
                 widget.spacing = spacing[0]
                 widget.requestLayout()
             }
@@ -363,40 +381,60 @@ object ImGuiUIDebugger {
     }
 
     private fun renderReadOnlyInfo(widget: Widget) {
-        ImGui.text(String.format("Class: %s", widget.javaClass.getName()))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.class", widget.javaClass.name))
         ImGui.separator()
-        ImGui.text(String.format("Layout Pos (X/Y): %.2f, %.2f", widget.x, widget.y))
-        ImGui.text(String.format("Layout Size (W/H): %.2f, %.2f", widget.width, widget.height))
-        ImGui.text(
-            String.format(
-                "Visual Pos (X/Y): %.2f, %.2f",
-                widget.x + widget.translationX,
-                widget.y + widget.translationY
-            )
-        )
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.layout_position", format(widget.x), format(widget.y)))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.layout_size", format(widget.width), format(widget.height)))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.visual_position",
+            format(widget.x + widget.translationX), format(widget.y + widget.translationY)))
         ImGui.separator()
-        ImGui.text(String.format("Measured Size (W/H): %.2f, %.2f", widget.measuredWidth, widget.measuredHeight))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.measured_size",
+            format(widget.measuredWidth), format(widget.measuredHeight)))
         ImGui.separator()
-        ImGui.text(String.format("Absolute Layout Pos (X/Y): %.2f, %.2f", widget.getAbsoluteX(), widget.getAbsoluteY()))
-        ImGui.text(
-            String.format(
-                "Absolute Translation (X/Y): %.2f, %.2f",
-                widget.getAbsoluteTranslationX(),
-                widget.getAbsoluteTranslationY()
-            )
-        )
-        ImGui.text(String.format("Absolute Alpha: %.2f", widget.getAbsoluteAlpha()))
-        ImGui.text(String.format("Absolute Enabled: %b", widget.isAbsoluteEnabled()))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.absolute_position",
+            format(widget.getAbsoluteX()), format(widget.getAbsoluteY())))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.absolute_translation",
+            format(widget.getAbsoluteTranslationX()), format(widget.getAbsoluteTranslationY())))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.absolute_alpha", format(widget.getAbsoluteAlpha())))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.absolute_enabled", booleanText(widget.isAbsoluteEnabled())))
         ImGui.separator()
-        ImGui.text(String.format("Focused: %b", widget.isFocused))
-        ImGui.text(String.format("Hovered: %b", widget.isHovered))
-        ImGui.text(String.format("Pressed: %b", widget.isPressed))
-        ImGui.text(String.format("Selected: %b", widget.isSelected))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.focused", booleanText(widget.isFocused)))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.hovered", booleanText(widget.isHovered)))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.pressed", booleanText(widget.isPressed)))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.selected", booleanText(widget.isSelected)))
         ImGui.separator()
         val parent = widget.parent
-        ImGui.text(String.format("Parent: %s", parent?.name ?: "None"))
-        ImGui.text(String.format("Attached: %b", widget.isAttached()))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.parent",
+            parent?.name ?: tr("screen.academy.ui_debug.value.none")))
+        ImGui.text(tr("screen.academy.ui_debug.inspector.info.attached", booleanText(widget.isAttached())))
     }
+
+    private fun sizeModeNames() = arrayOf(
+        tr("screen.academy.ui_debug.size_mode.fixed"),
+        tr("screen.academy.ui_debug.size_mode.match_parent"),
+        tr("screen.academy.ui_debug.size_mode.wrap_content")
+    )
+
+    private fun orientationNames() = arrayOf(
+        tr("screen.academy.ui_debug.orientation.horizontal"),
+        tr("screen.academy.ui_debug.orientation.vertical")
+    )
+
+    private fun visibilityNames() = arrayOf(
+        tr("screen.academy.ui_debug.visibility.visible"),
+        tr("screen.academy.ui_debug.visibility.invisible"),
+        tr("screen.academy.ui_debug.visibility.gone")
+    )
+
+    private fun booleanText(value: Boolean): String = tr(
+        if (value) "screen.academy.ui_debug.value.yes" else "screen.academy.ui_debug.value.no"
+    )
+
+    private fun format(value: Float): String = String.format(java.util.Locale.ROOT, "%.2f", value)
+
+    private fun label(key: String, id: String): String = tr(key) + "##$id"
+
+    private fun tr(key: String, vararg args: Any): String = Component.translatable(key, *args).string
 
     private fun gravityRadio(label: String, flags: ImInt, flagValue: Int, mask: Int): Boolean {
         if (ImGui.radioButton(label, (flags.get() and mask) == flagValue)) {

@@ -25,15 +25,21 @@ public final class HudLayout {
     }
 
     public enum Region {
-        TOGGLE_STATUS("hud.academy.layout.region.ability_status"),
-        MENTAL_CONTROL("hud.academy.layout.region.mental_control"),
-        CP("hud.academy.layout.region.cp"),
-        SKILL_WHEEL("hud.academy.layout.region.skill_name");
+        TOGGLE_STATUS("toggle_status", "hud.academy.layout.region.ability_status"),
+        MENTAL_CONTROL("mental_control", "hud.academy.layout.region.mental_control"),
+        CP("cp", "hud.academy.layout.region.cp"),
+        SKILL_WHEEL("skill_wheel", "hud.academy.layout.region.skill_name");
 
+        private final String configKey;
         private final String nameKey;
 
-        Region(String nameKey) {
+        Region(String configKey, String nameKey) {
+            this.configKey = configKey;
             this.nameKey = nameKey;
+        }
+
+        public String configKey() {
+            return configKey;
         }
 
         public String nameKey() {
@@ -42,16 +48,18 @@ public final class HudLayout {
 
         public float scale() {
             var config = HudLayoutConfig.get();
-            return switch (this) {
+            var userScale = switch (this) {
                 case TOGGLE_STATUS -> validScale(config.toggleStatusHudScale);
                 case MENTAL_CONTROL -> validScale(config.mentalControlHudScale);
                 case CP -> validScale(config.cpHudScale);
                 case SKILL_WHEEL -> validScale(config.skillWheelHudScale);
             };
+            return validScale(HudLayoutDefaults.region(configKey).getScale() * userScale);
         }
 
         public void setScale(float scale) {
-            var value = Math.clamp(scale, MIN_SCALE, MAX_SCALE);
+            var baseScale = HudLayoutDefaults.region(configKey).getScale();
+            var value = Math.clamp(scale / Math.max(MIN_SCALE, baseScale), MIN_SCALE, MAX_SCALE);
             var config = HudLayoutConfig.get();
             switch (this) {
                 case TOGGLE_STATUS -> config.toggleStatusHudScale = value;
@@ -62,38 +70,31 @@ public final class HudLayout {
         }
 
         public Rect rect(Minecraft minecraft) {
+            return rect(minecraft, HudLayoutDefaults.get(), true);
+        }
+
+        public Rect rect(Minecraft minecraft, HudLayoutDefaults.Config defaults, boolean includePlayerConfig) {
             var screenWidth = minecraft.getWindow().getGuiScaledWidth();
             var screenHeight = minecraft.getWindow().getGuiScaledHeight();
-            var scale = scale();
+            var defaultsValue = defaults.getRegions().get(configKey);
+            if (defaultsValue == null) defaultsValue = HudLayoutDefaults.defaults().getRegions().get(configKey);
+            var userScale = includePlayerConfig ? userScale() : 1.0f;
+            var scale = validScale(defaultsValue.getScale() * userScale);
             var width = nominalWidth() * scale;
             var height = nominalHeight() * scale;
-            var config = HudLayoutConfig.get();
-            return switch (this) {
-                case TOGGLE_STATUS -> new Rect(
-                        8.0f + config.toggleStatusHudOffsetX,
-                        8.0f + config.toggleStatusHudOffsetY,
-                        width,
-                        height
-                );
-                case MENTAL_CONTROL -> new Rect(
-                        8.0f + config.mentalControlHudOffsetX,
-                        (screenHeight - height) / 2.0f + config.mentalControlHudOffsetY,
-                        width,
-                        height
-                );
-                case CP -> new Rect(
-                        screenWidth - 4.0f - width + config.cpHudOffsetX,
-                        4.0f + config.cpHudOffsetY,
-                        width,
-                        height
-                );
-                case SKILL_WHEEL -> new Rect(
-                        screenWidth - width + config.skillWheelHudOffsetX,
-                        (screenHeight - height) / 2.0f + config.skillWheelHudOffsetY,
-                        width,
-                        height
-                );
+            var x = switch (defaultsValue.getAnchor()) {
+                case TOP_LEFT, CENTER_LEFT -> defaultsValue.getOffsetX();
+                case TOP_RIGHT, CENTER_RIGHT -> screenWidth - width + defaultsValue.getOffsetX();
             };
+            var y = switch (defaultsValue.getAnchor()) {
+                case TOP_LEFT, TOP_RIGHT -> defaultsValue.getOffsetY();
+                case CENTER_LEFT, CENTER_RIGHT -> (screenHeight - height) / 2.0f + defaultsValue.getOffsetY();
+            };
+            if (includePlayerConfig) {
+                x += offsetX();
+                y += offsetY();
+            }
+            return new Rect(x, y, width, height);
         }
 
         public void setTopLeft(double left, double top, Minecraft minecraft) {
@@ -102,29 +103,20 @@ public final class HudLayout {
             var screenHeight = minecraft.getWindow().getGuiScaledHeight();
             var clampedLeft = Math.clamp(left, 0.0, Math.max(0.0, screenWidth - current.width));
             var clampedTop = Math.clamp(top, 0.0, Math.max(0.0, screenHeight - current.height));
-            var config = HudLayoutConfig.get();
-            switch (this) {
-                case TOGGLE_STATUS -> {
-                    config.toggleStatusHudOffsetX = Math.round((float) clampedLeft - 8.0f);
-                    config.toggleStatusHudOffsetY = Math.round((float) clampedTop - 8.0f);
-                }
-                case MENTAL_CONTROL -> {
-                    config.mentalControlHudOffsetX = Math.round((float) clampedLeft - 8.0f);
-                    config.mentalControlHudOffsetY = Math.round(
-                            (float) clampedTop - (screenHeight - current.height) / 2.0f
-                    );
-                }
-                case CP -> {
-                    config.cpHudOffsetX = Math.round((float) clampedLeft - (screenWidth - 4.0f - current.width));
-                    config.cpHudOffsetY = Math.round((float) clampedTop - 4.0f);
-                }
-                case SKILL_WHEEL -> {
-                    config.skillWheelHudOffsetX = Math.round((float) clampedLeft - (screenWidth - current.width));
-                    config.skillWheelHudOffsetY = Math.round(
-                            (float) clampedTop - (screenHeight - current.height) / 2.0f
-                    );
-                }
-            }
+            var defaultsValue = HudLayoutDefaults.region(configKey);
+            var baseX = switch (defaultsValue.getAnchor()) {
+                case TOP_LEFT, CENTER_LEFT -> defaultsValue.getOffsetX();
+                case TOP_RIGHT, CENTER_RIGHT -> screenWidth - current.width + defaultsValue.getOffsetX();
+            };
+            var baseY = switch (defaultsValue.getAnchor()) {
+                case TOP_LEFT, TOP_RIGHT -> defaultsValue.getOffsetY();
+                case CENTER_LEFT, CENTER_RIGHT -> (screenHeight - current.height) / 2.0f
+                        + defaultsValue.getOffsetY();
+            };
+            setOffsets(
+                    Math.round((float) clampedLeft - baseX),
+                    Math.round((float) clampedTop - baseY)
+            );
         }
 
         public void reset() {
@@ -153,7 +145,7 @@ public final class HudLayout {
             }
         }
 
-        private float nominalWidth() {
+        public float nominalWidth() {
             return switch (this) {
                 case TOGGLE_STATUS -> TOGGLE_STATUS_WIDTH;
                 case MENTAL_CONTROL -> MENTAL_CONTROL_WIDTH;
@@ -162,13 +154,65 @@ public final class HudLayout {
             };
         }
 
-        private float nominalHeight() {
+        public float nominalHeight() {
             return switch (this) {
                 case TOGGLE_STATUS -> TOGGLE_STATUS_HEIGHT;
                 case MENTAL_CONTROL -> MENTAL_CONTROL_HEIGHT;
                 case CP -> CP_HEIGHT;
                 case SKILL_WHEEL -> SKILL_WHEEL_HEIGHT;
             };
+        }
+
+        private float userScale() {
+            var config = HudLayoutConfig.get();
+            return switch (this) {
+                case TOGGLE_STATUS -> validScale(config.toggleStatusHudScale);
+                case MENTAL_CONTROL -> validScale(config.mentalControlHudScale);
+                case CP -> validScale(config.cpHudScale);
+                case SKILL_WHEEL -> validScale(config.skillWheelHudScale);
+            };
+        }
+
+        private int offsetX() {
+            var config = HudLayoutConfig.get();
+            return switch (this) {
+                case TOGGLE_STATUS -> config.toggleStatusHudOffsetX;
+                case MENTAL_CONTROL -> config.mentalControlHudOffsetX;
+                case CP -> config.cpHudOffsetX;
+                case SKILL_WHEEL -> config.skillWheelHudOffsetX;
+            };
+        }
+
+        private int offsetY() {
+            var config = HudLayoutConfig.get();
+            return switch (this) {
+                case TOGGLE_STATUS -> config.toggleStatusHudOffsetY;
+                case MENTAL_CONTROL -> config.mentalControlHudOffsetY;
+                case CP -> config.cpHudOffsetY;
+                case SKILL_WHEEL -> config.skillWheelHudOffsetY;
+            };
+        }
+
+        private void setOffsets(int x, int y) {
+            var config = HudLayoutConfig.get();
+            switch (this) {
+                case TOGGLE_STATUS -> {
+                    config.toggleStatusHudOffsetX = x;
+                    config.toggleStatusHudOffsetY = y;
+                }
+                case MENTAL_CONTROL -> {
+                    config.mentalControlHudOffsetX = x;
+                    config.mentalControlHudOffsetY = y;
+                }
+                case CP -> {
+                    config.cpHudOffsetX = x;
+                    config.cpHudOffsetY = y;
+                }
+                case SKILL_WHEEL -> {
+                    config.skillWheelHudOffsetX = x;
+                    config.skillWheelHudOffsetY = y;
+                }
+            }
         }
     }
 

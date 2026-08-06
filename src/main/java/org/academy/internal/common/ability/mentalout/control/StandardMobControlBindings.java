@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.mentalout.control;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import org.academy.api.common.entitycontrol.ControlBinding;
+import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.api.common.entitycontrol.ControlDirective;
 
 import java.util.UUID;
@@ -16,6 +17,8 @@ final class StandardMobControlBindings {
             case ControlDirective.ForceTarget forceTarget -> new ForceTargetBinding(mob, forceTarget.targetUuid());
             case ControlDirective.FreezeAi ignored -> new FreezeBinding(mob);
             case ControlDirective.ImpressionAlliance ignored -> new RelationBinding(mob);
+            case ControlDirective.MoveTo moveTo -> new PathBinding(mob, moveTo.targetUuid());
+            case ControlDirective.LookAt lookAt -> new LookBinding(mob, lookAt.targetUuid());
         };
     }
 
@@ -84,6 +87,57 @@ final class StandardMobControlBindings {
             if (mob.isAlive() && !mob.isRemoved()) {
                 MentalControlRuntime.enforceTargetWhitelist(mob);
             }
+        }
+
+        @Override
+        public void close() {
+        }
+    }
+
+    private static final class PathBinding implements ControlBinding {
+        private final Mob mob;
+        private final UUID targetId;
+
+        private PathBinding(Mob mob, UUID targetId) {
+            this.mob = mob;
+            this.targetId = targetId;
+        }
+
+        @Override
+        public void tick() {
+            if (!mob.isAlive() || mob.isRemoved()) return;
+            var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), targetId);
+            if (target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()) return;
+            var navigation = mob.getNavigation();
+            var path = navigation.getPath();
+            if (path == null || navigation.isDone() || !path.getTarget().equals(target.blockPosition())) {
+                navigation.moveTo(target, 1.0);
+            }
+        }
+
+        @Override
+        public void close() {
+            if (MentalControlRuntime.effectiveDirective(mob, ControlCapability.PATH_CONTROL).isEmpty()) {
+                mob.getNavigation().stop();
+            }
+        }
+    }
+
+    private static final class LookBinding implements ControlBinding {
+        private final Mob mob;
+        private final UUID targetId;
+
+        private LookBinding(Mob mob, UUID targetId) {
+            this.mob = mob;
+            this.targetId = targetId;
+        }
+
+        @Override
+        public void tick() {
+            if (!mob.isAlive() || mob.isRemoved()) return;
+            var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), targetId);
+            if (target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()) return;
+            mob.getLookControl().setLookAt(target, 30.0f, 30.0f);
         }
 
         @Override

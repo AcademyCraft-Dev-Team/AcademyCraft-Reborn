@@ -49,8 +49,24 @@ public class AbilityConfig {
         public float mentalStuporCostPerTarget = 30.0f;
         @SerializedName("impressionManipulationCostPerTarget")
         public float impressionManipulationCostPerTarget = 20.0f;
+        @SerializedName("precisionPathCostPerTarget")
+        public float precisionPathCostPerTarget = 10.0f;
+        @SerializedName("precisionViewCostPerTarget")
+        public float precisionViewCostPerTarget = 8.0f;
         @SerializedName("bossCostMultiplier")
         public float bossCostMultiplier = 2.0f;
+        @SerializedName("mentalIntrusionMaintenanceCost")
+        public float mentalIntrusionMaintenanceCost = 20.0f;
+        @SerializedName("sensoryDistortionMaintenanceCost")
+        public float sensoryDistortionMaintenanceCost = 30.0f;
+        @SerializedName("mentalIntrusionRange")
+        public float mentalIntrusionRange = 16.0f;
+        @SerializedName("mentalIntrusionMaxDistance")
+        public float mentalIntrusionMaxDistance = 96.0f;
+        @SerializedName("playerIntrusionMaxTicks")
+        public int playerIntrusionMaxTicks = 100;
+        @SerializedName("playerIntrusionCooldownTicks")
+        public int playerIntrusionCooldownTicks = 200;
     }
 
     public static class BrainDevelopmentSettings {

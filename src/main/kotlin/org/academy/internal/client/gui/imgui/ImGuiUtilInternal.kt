@@ -46,8 +46,21 @@ object ImGuiUtilInternal {
         val io = ImGui.getIO()
         io.fontGlobalScale = 1f
         io.configFlags = ImGuiConfigFlags.DockingEnable or ImGuiConfigFlags.NavEnableKeyboard
+        loadLocalizedFont()
 
         imGuiImplGlfw.init(handle, true)
+    }
+
+    private fun loadLocalizedFont() {
+        val fontBytes = ImGuiUtilInternal::class.java
+            .getResourceAsStream("/assets/academy/fonts/wqy-microhei-modified.ttf")
+            ?.use { it.readAllBytes() }
+        if (fontBytes == null) {
+            org.academy.AcademyCraft.getLogger().warn("[ImGui] Localized font resource is missing")
+            return
+        }
+        val fonts = ImGui.getIO().fonts
+        fonts.addFontFromMemoryTTF(fontBytes, 14f, fonts.glyphRangesChineseSimplifiedCommon)
     }
 
     fun render(renderTarget: RenderTarget, renderCommand: () -> Unit) {

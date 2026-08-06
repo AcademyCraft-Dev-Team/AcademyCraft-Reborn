@@ -236,6 +236,18 @@ public final class MentalControlRuntime {
         return inspect(subject, capability).map(ControlInspection::directive);
     }
 
+
+    public static boolean hasActiveControl(LivingEntity subject) {
+        Objects.requireNonNull(subject, "subject");
+        var state = stateIfPresent(subject.level().getServer());
+        if (state != null) {
+            var now = subject.level().getGameTime();
+            for (var capability : ControlCapability.values()) {
+                if (state.leases.effective(subject.getUUID(), capability, now) != null) return true;
+            }
+        }
+        return MentalPerceptionRuntime.isAffected(subject);
+    }
     public static boolean isFrozen(Mob mob) {
         return isFrozen((LivingEntity) mob);
     }
@@ -274,7 +286,12 @@ public final class MentalControlRuntime {
             return AttackDecision.PASS;
         }
         var state = stateIfPresent(attacker.level().getServer());
-        if (state == null) return AttackDecision.PASS;
+        if (state == null) {
+            return MentalPerceptionRuntime.decision(attacker, target)
+                    == org.academy.api.common.entitycontrol.PerceptionDecision.HIDDEN
+                    ? AttackDecision.DENY
+                    : AttackDecision.PASS;
+        }
         var now = attacker.level().getGameTime();
         var controlledDecision = controlledAttackDecision(
                 state.leases,
@@ -284,6 +301,10 @@ public final class MentalControlRuntime {
                 now
         );
         if (controlledDecision != AttackDecision.PASS) return controlledDecision;
+        if (MentalPerceptionRuntime.decision(attacker, target)
+                == org.academy.api.common.entitycontrol.PerceptionDecision.HIDDEN) {
+            return AttackDecision.DENY;
+        }
 
         return allianceDecision(attacker, target);
     }
@@ -494,6 +515,10 @@ public final class MentalControlRuntime {
         return MentalControlProtection.isBossCost(subject);
     }
 
+    public static boolean isProtectedTarget(LivingEntity subject) {
+        return subject == null || MentalControlProtection.rejectionReason(subject) != null;
+    }
+
     public static void maintainTarget(Mob mob) {
         var target = getForcedTarget(mob);
         if (target == null) return;
@@ -658,6 +683,25 @@ public final class MentalControlRuntime {
         removeEmptyState(server, state);
     }
 
+
+    public static void releaseByControllerSourceAndSubject(
+            MinecraftServer server,
+            UUID controllerId,
+            Identifier source,
+            UUID subjectId
+    ) {
+        Objects.requireNonNull(server, "server");
+        Objects.requireNonNull(controllerId, "controllerId");
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(subjectId, "subjectId");
+        var state = stateIfPresent(server);
+        if (state == null) return;
+        synchronized (state) {
+            var removal = state.leases.removeByControllerSourceSubject(controllerId, source, subjectId);
+            reconcileRecovering(server, state, removal);
+        }
+        removeEmptyState(server, state);
+    }
     public static void clear(MinecraftServer server) {
         Objects.requireNonNull(server, "server");
         ServerState state;
@@ -842,18 +886,31 @@ public final class MentalControlRuntime {
             LivingEntity subject,
             ControlDirective directive
     ) {
-        if (!(directive instanceof ControlDirective.ForceTarget forceTarget)) return;
-        var target = findLivingEntity(server, forceTarget.targetUuid());
+        if (directive instanceof ControlDirective.ForceTarget forceTarget) {
+            validateTarget(server, subject, forceTarget.targetUuid(), directive.capability());
+        } else if (directive instanceof ControlDirective.MoveTo moveTo) {
+            validateTarget(server, subject, moveTo.targetUuid(), directive.capability());
+        } else if (directive instanceof ControlDirective.LookAt lookAt) {
+            validateTarget(server, subject, lookAt.targetUuid(), directive.capability());
+        }
+    }
+
+    private static void validateTarget(
+            MinecraftServer server,
+            LivingEntity subject,
+            UUID targetId,
+            ControlCapability capability
+    ) {
+        var target = findLivingEntity(server, targetId);
         if (target == null || !target.isAlive() || target.isRemoved() || target == subject
                 || target.level() != subject.level()) {
             throw new ControlApplyException(
                     ControlRejectionReason.INVALID_DIRECTIVE,
-                    directive.capability(),
-                    "Forced target must be a different loaded living entity in the subject level"
+                    capability,
+                    "Directive target must be a different loaded living entity in the subject level"
             );
         }
     }
-
     private static void releaseLease(MinecraftServer server, UUID leaseId) {
         var state = stateIfPresent(server);
         if (state == null) return;
@@ -1460,6 +1517,20 @@ public final class MentalControlRuntime {
             return removeAll(Set.copyOf(ids));
         }
 
+
+        synchronized RemovalResult removeByControllerSourceSubject(
+                UUID controllerId,
+                Identifier source,
+                UUID subjectId
+        ) {
+            var ids = leases.values().stream()
+                    .filter(lease -> lease.input().subjectId().equals(subjectId))
+                    .filter(lease -> lease.input().controllerId().equals(controllerId))
+                    .filter(lease -> lease.input().source().equals(source))
+                    .map(LeaseRecord::id)
+                    .toList();
+            return removeAll(Set.copyOf(ids));
+        }
         synchronized RemovalResult expire(long now) {
             var result = new RemovalResult();
             while (!expirations.isEmpty() && expirations.peek().expiresAt() <= now) {

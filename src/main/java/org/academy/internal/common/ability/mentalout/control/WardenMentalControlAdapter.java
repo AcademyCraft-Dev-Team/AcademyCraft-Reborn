@@ -17,7 +17,10 @@ public final class WardenMentalControlAdapter implements MentalControlAdapter {
 
     @Override
     public ControlSupport support(LivingEntity subject, ControlCapability capability) {
-        return matches(subject) ? ControlSupport.FULL : ControlSupport.UNSUPPORTED;
+        if (!matches(subject)) return ControlSupport.UNSUPPORTED;
+        return capability == ControlCapability.PATH_CONTROL || capability == ControlCapability.VIEW_CONTROL
+                ? ControlSupport.UNSUPPORTED
+                : ControlSupport.FULL;
     }
 
     @Override

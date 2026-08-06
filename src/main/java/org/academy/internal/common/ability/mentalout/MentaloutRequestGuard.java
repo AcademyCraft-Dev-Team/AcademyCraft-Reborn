@@ -61,7 +61,10 @@ public final class MentaloutRequestGuard {
         MENTAL_INTERVENTION,
         TARGET_MISIDENTIFICATION,
         MENTAL_STUPOR,
-        IMPRESSION_MANIPULATION
+        IMPRESSION_MANIPULATION,
+        MENTAL_INTRUSION,
+        SENSORY_DISTORTION,
+        PRECISION_OPERATION
     }
 
     static final class SequenceCounter {

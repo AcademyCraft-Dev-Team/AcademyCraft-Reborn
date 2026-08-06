@@ -4,10 +4,12 @@ import com.mojang.blaze3d.GpuFormat
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.pipeline.TextureTarget
 import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
+import org.academy.AcademyCraftClient
 import org.academy.api.client.gui.editor.UiLayoutImGuiEditor
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger
 import org.academy.api.client.gui.imgui.ImGuiUtilApi
@@ -16,6 +18,8 @@ import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.api.client.vanilla.RenderLoopEvent
 import org.academy.api.client.vanilla.ResizeDisplayEvent
+import org.academy.internal.client.gui.debug.SerializedUiDebugHost
+import org.academy.internal.client.gui.debug.UiDebugSession
 
 class ScreenDispatcher private constructor() {
     private val renderTarget: RenderTarget
@@ -59,7 +63,18 @@ class ScreenDispatcher private constructor() {
         if (screen is RenderRoot) {
             uiContext.upload(renderTarget, true)
             ImGuiUtilApi.render(renderTarget) {
-                ImGuiUIDebugger.renderContent(screen.root)
+                val host = screen as? SerializedUiDebugHost
+                if (AcademyCraftClient.isUiDebugEnvironment() && host != null && UiDebugSession.shouldAttach(host)) {
+                    ImGuiUIDebugger.renderContent(
+                        host.debugLayoutRoot(),
+                        true,
+                        Component.translatable(
+                            "screen.academy.ui_debug.inspector.live_title",
+                            host.debugLayoutId()
+                        ).string
+                    )
+                    UiDebugSession.capture(host)
+                }
                 UiLayoutImGuiEditor.renderContent(screen)
             }
         }

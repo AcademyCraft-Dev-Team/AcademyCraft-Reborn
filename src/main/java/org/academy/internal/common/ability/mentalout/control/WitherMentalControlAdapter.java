@@ -25,6 +25,9 @@ public final class WitherMentalControlAdapter implements MentalControlAdapter {
         if (capability == ControlCapability.FREEZE_AI && wither.getInvulnerableTicks() > 0) {
             return ControlSupport.UNSUPPORTED;
         }
+        if (capability == ControlCapability.PATH_CONTROL || capability == ControlCapability.VIEW_CONTROL) {
+            return ControlSupport.UNSUPPORTED;
+        }
         return ControlSupport.FULL;
     }
 
@@ -50,6 +53,10 @@ public final class WitherMentalControlAdapter implements MentalControlAdapter {
             case ControlDirective.ForceTarget forceTarget -> new ForceTargetBinding(wither, forceTarget.targetUuid());
             case ControlDirective.FreezeAi ignored -> new FreezeBinding(wither);
             case ControlDirective.ImpressionAlliance ignored -> new RelationBinding(wither);
+            case ControlDirective.MoveTo ignored -> throw new IllegalArgumentException(
+                    "Wither does not support path control");
+            case ControlDirective.LookAt ignored -> throw new IllegalArgumentException(
+                    "Wither does not support view control");
         };
     }
 

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "root": {
+    "type": "frame_layout", "name": "layout_root",
+    "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" },
+    "children": [
+      {
+        "type": "frame_layout", "name": "panel",
+        "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT", "margin_left": 2, "margin_top": 2, "margin_right": 2, "margin_bottom": 2 },
+        "children": [
+          { "type": "fill", "name": "panel_background", "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" }, "props": { "color": -267249632 } },
+          {
+            "type": "linear_layout", "name": "body",
+            "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT", "margin_top": 22, "margin_bottom": 18 },
+            "props": { "orientation": "HORIZONTAL", "spacing": 3 },
+            "children": [
+              { "type": "frame_layout", "name": "palette", "layout": { "width_mode": "FIXED", "height_mode": "MATCH_PARENT", "width": 18 }, "children": [ { "type": "fill", "name": "palette_background", "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" }, "props": { "color": -266656466 } } ] },
+              { "type": "frame_layout", "name": "canvas", "layout": { "width_mode": "FIXED", "height_mode": "MATCH_PARENT", "width": 0, "weight": 1 }, "children": [ { "type": "fill", "name": "canvas_background", "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" }, "props": { "color": -267578342 } } ] },
+              { "type": "frame_layout", "name": "inspector", "layout": { "width_mode": "FIXED", "height_mode": "MATCH_PARENT", "width": 18 }, "children": [ { "type": "fill", "name": "inspector_background", "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" }, "props": { "color": -266656466 } } ] }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

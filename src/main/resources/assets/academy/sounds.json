@@ -140,5 +140,17 @@
   "airflow_domain": {
     "subtitle": "academy.airflow_domain_sound",
     "sounds": []
+  },
+  "mental_intrusion": {
+    "subtitle": "academy.mental_intrusion_sound",
+    "sounds": []
+  },
+  "sensory_distortion": {
+    "subtitle": "academy.sensory_distortion_sound",
+    "sounds": []
+  },
+  "precision_operation": {
+    "subtitle": "academy.precision_operation_sound",
+    "sounds": []
   }
 }
