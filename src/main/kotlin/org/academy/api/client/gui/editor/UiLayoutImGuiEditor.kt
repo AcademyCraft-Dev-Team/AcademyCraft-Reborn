@@ -7,6 +7,7 @@ import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.network.chat.Component
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.serialize.PropSpec
 import org.academy.api.client.gui.serialize.PropType
@@ -17,6 +18,7 @@ import org.academy.api.client.gui.serialize.WidgetNode
 import org.academy.api.client.gui.serialize.WidgetSerializer
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.internal.client.gui.debug.UiDebugSession
 import java.nio.file.Files
 
 /**
@@ -26,12 +28,91 @@ import java.nio.file.Files
 object UiLayoutImGuiEditor {
     private val SIZE_MODE_NAMES = arrayOf("FIXED", "MATCH_PARENT", "WRAP_CONTENT")
     private val VISIBILITY_NAMES = arrayOf("VISIBLE", "INVISIBLE", "GONE")
+    private val FIELD_KEYS = mapOf(
+        "file name" to "screen.academy.ui_debug.editor.field.file_name",
+        "name" to "screen.academy.ui_debug.editor.field.name",
+        "type" to "screen.academy.ui_debug.editor.field.type",
+        "width_mode" to "screen.academy.ui_debug.editor.field.width_mode",
+        "height_mode" to "screen.academy.ui_debug.editor.field.height_mode",
+        "width" to "screen.academy.ui_debug.editor.field.width",
+        "height" to "screen.academy.ui_debug.editor.field.height",
+        "margin_left" to "screen.academy.ui_debug.editor.field.margin_left",
+        "margin_top" to "screen.academy.ui_debug.editor.field.margin_top",
+        "margin_right" to "screen.academy.ui_debug.editor.field.margin_right",
+        "margin_bottom" to "screen.academy.ui_debug.editor.field.margin_bottom",
+        "padding_left" to "screen.academy.ui_debug.editor.field.padding_left",
+        "padding_top" to "screen.academy.ui_debug.editor.field.padding_top",
+        "padding_right" to "screen.academy.ui_debug.editor.field.padding_right",
+        "padding_bottom" to "screen.academy.ui_debug.editor.field.padding_bottom",
+        "weight" to "screen.academy.ui_debug.editor.field.weight",
+        "visibility" to "screen.academy.ui_debug.editor.field.visibility",
+        "enabled" to "screen.academy.ui_debug.editor.field.enabled",
+        "clickable" to "screen.academy.ui_debug.editor.field.clickable",
+        "selected" to "screen.academy.ui_debug.editor.field.selected",
+        "cover_all_prev" to "screen.academy.ui_debug.editor.field.cover_all_prev",
+        "alpha" to "screen.academy.ui_debug.editor.field.alpha",
+        "translation_x" to "screen.academy.ui_debug.editor.field.translation_x",
+        "translation_y" to "screen.academy.ui_debug.editor.field.translation_y",
+        "scale_x" to "screen.academy.ui_debug.editor.field.scale_x",
+        "scale_y" to "screen.academy.ui_debug.editor.field.scale_y",
+        "rotation" to "screen.academy.ui_debug.editor.field.rotation",
+        "origin_x" to "screen.academy.ui_debug.editor.field.origin_x",
+        "origin_y" to "screen.academy.ui_debug.editor.field.origin_y",
+        "tooltip_text" to "screen.academy.ui_debug.editor.field.tooltip",
+        "orientation" to "screen.academy.ui_debug.editor.field.orientation",
+        "spacing" to "screen.academy.ui_debug.editor.field.spacing",
+        "gravity" to "screen.academy.ui_debug.editor.field.gravity",
+        "weight_sum" to "screen.academy.ui_debug.editor.field.weight_sum",
+        "measure_all_children" to "screen.academy.ui_debug.editor.field.measure_all_children",
+        "scroll_speed" to "screen.academy.ui_debug.editor.field.scroll_speed",
+        "visible_item_count" to "screen.academy.ui_debug.editor.field.visible_item_count",
+        "item_space" to "screen.academy.ui_debug.editor.field.item_space",
+        "cyclic" to "screen.academy.ui_debug.editor.field.cyclic",
+        "curtain" to "screen.academy.ui_debug.editor.field.curtain",
+        "curtain_color" to "screen.academy.ui_debug.editor.field.curtain_color",
+        "indicator" to "screen.academy.ui_debug.editor.field.indicator",
+        "indicator_color" to "screen.academy.ui_debug.editor.field.indicator_color",
+        "indicator_size" to "screen.academy.ui_debug.editor.field.indicator_size",
+        "item_align" to "screen.academy.ui_debug.editor.field.item_align",
+        "atmospheric" to "screen.academy.ui_debug.editor.field.atmospheric",
+        "selected_scale_enabled" to "screen.academy.ui_debug.editor.field.selected_scale_enabled",
+        "allow_reselect" to "screen.academy.ui_debug.editor.field.allow_reselect",
+        "min" to "screen.academy.ui_debug.editor.field.min",
+        "max" to "screen.academy.ui_debug.editor.field.max",
+        "progress" to "screen.academy.ui_debug.editor.field.progress",
+        "background_color" to "screen.academy.ui_debug.editor.field.background_color",
+        "progress_color" to "screen.academy.ui_debug.editor.field.progress_color",
+        "key_progress_increment" to "screen.academy.ui_debug.editor.field.key_progress_increment",
+        "checked" to "screen.academy.ui_debug.editor.field.checked",
+        "track_color" to "screen.academy.ui_debug.editor.field.track_color",
+        "checked_track_color" to "screen.academy.ui_debug.editor.field.checked_track_color",
+        "thumb_color" to "screen.academy.ui_debug.editor.field.thumb_color",
+        "checked_thumb_color" to "screen.academy.ui_debug.editor.field.checked_thumb_color",
+        "id" to "screen.academy.ui_debug.editor.field.id",
+        "show_background" to "screen.academy.ui_debug.editor.field.show_background",
+        "texture" to "screen.academy.ui_debug.editor.field.texture",
+        "sheet_width" to "screen.academy.ui_debug.editor.field.sheet_width",
+        "sheet_height" to "screen.academy.ui_debug.editor.field.sheet_height",
+        "frame_width" to "screen.academy.ui_debug.editor.field.frame_width",
+        "frame_height" to "screen.academy.ui_debug.editor.field.frame_height",
+        "frame_count" to "screen.academy.ui_debug.editor.field.frame_count",
+        "frame_index" to "screen.academy.ui_debug.editor.field.frame_index",
+        "draw_line" to "screen.academy.ui_debug.editor.field.draw_line",
+        "red" to "screen.academy.ui_debug.editor.field.red",
+        "green" to "screen.academy.ui_debug.editor.field.green",
+        "blue" to "screen.academy.ui_debug.editor.field.blue",
+        "text" to "screen.academy.ui_debug.editor.field.text",
+        "base_font_size" to "screen.academy.ui_debug.editor.field.base_font_size",
+        "max_length" to "screen.academy.ui_debug.editor.field.max_length",
+        "allow_line_break" to "screen.academy.ui_debug.editor.field.allow_line_break",
+        "color" to "screen.academy.ui_debug.editor.field.color"
+    )
 
     fun renderContent(screen: Screen) {
         val editor = screen as? UiLayoutEditorScreen ?: return
         UiLayoutCodecs.ensureRegistered()
 
-        if (!ImGui.begin("UI Layout Editor")) {
+        if (!ImGui.begin(tr("screen.academy.ui_debug.editor.title") + "##academy_layout_editor")) {
             ImGui.end()
             return
         }
@@ -49,17 +130,47 @@ object UiLayoutImGuiEditor {
     // ============ 工具栏 / 文件 ============
 
     private fun renderToolbar(editor: UiLayoutEditorScreen) {
-        if (ImGui.button("New")) {
+        if (editor.debugLayoutId != null) {
+            ImGui.text(tr("screen.academy.ui_debug.editor.layout", editor.debugLayoutId))
+            val state = UiDebugSession.status(editor.debugLayoutId)
+            ImGui.sameLine()
+            ImGui.textColored(
+                if (state.dirty) 1f else 0.4f,
+                if (state.dirty) 0.75f else 1f,
+                0.4f,
+                1f,
+                tr(if (state.dirty) "screen.academy.ui_debug.status.modified" else "screen.academy.ui_debug.status.clean")
+            )
+            if (ImGui.button(tr("screen.academy.ui_debug.action.publish"))) UiDebugSession.publish()
+            ImGui.sameLine()
+            if (ImGui.button(tr("screen.academy.ui_debug.action.revert"))) editor.revertDebugDocument()
+            ImGui.sameLine()
+            if (ImGui.button(tr("screen.academy.ui_debug.action.reload"))) editor.reloadDebugDocument()
+            ImGui.sameLine()
+            val attached = UiDebugSession.attachedLayoutId == editor.debugLayoutId
+            if (ImGui.button(tr(if (attached) {
+                    "screen.academy.ui_debug.action.detach_live"
+                } else {
+                    "screen.academy.ui_debug.action.attach_live"
+                }))) {
+                UiDebugSession.attach(if (attached) null else editor.debugLayoutId)
+            }
+            editor.validationError?.let {
+                ImGui.textColored(1f, 0.3f, 0.3f, 1f, it)
+            }
+            return
+        }
+        if (ImGui.button(tr("screen.academy.ui_debug.action.new"))) {
             editor.setDoc(WidgetNode("frame_layout", "root"))
         }
         ImGui.sameLine()
-        if (ImGui.button("Save")) saveDoc(editor)
+        if (ImGui.button(tr("screen.academy.ui_debug.action.save"))) saveDoc(editor)
         ImGui.sameLine()
-        if (ImGui.button("Load")) loadDoc(editor)
+        if (ImGui.button(tr("screen.academy.ui_debug.action.load"))) loadDoc(editor)
 
         val nameBuf = ImString(editor.fileName, 64)
-        if (ImGui.inputText("file name", nameBuf)) editor.fileName = nameBuf.get()
-        ImGui.textDisabled("layouts dir: " + WidgetSerializer.layoutDir())
+        if (ImGui.inputText(localizedLabel("file name"), nameBuf)) editor.fileName = nameBuf.get()
+        ImGui.textDisabled(tr("screen.academy.ui_debug.editor.layouts_dir", WidgetSerializer.layoutDir()))
     }
 
     private fun saveDoc(editor: UiLayoutEditorScreen) {
@@ -70,7 +181,8 @@ object UiLayoutImGuiEditor {
             Files.createDirectories(file.parent)
             Files.writeString(file, UiJson.GSON.toJson(editor.documentJson()))
         } catch (e: Exception) {
-            ImGui.textColored(1f, 0.3f, 0.3f, 1f, "Save failed: ${e.message}")
+            ImGui.textColored(1f, 0.3f, 0.3f, 1f,
+                tr("screen.academy.ui_debug.editor.save_failed", e.message ?: ""))
         }
     }
 
@@ -83,7 +195,8 @@ object UiLayoutImGuiEditor {
                 ?: return
             editor.setDoc(WidgetNode.fromJson(parsed.getAsJsonObject("root") ?: parsed))
         } catch (e: Exception) {
-            ImGui.textColored(1f, 0.3f, 0.3f, 1f, "Load failed: ${e.message}")
+            ImGui.textColored(1f, 0.3f, 0.3f, 1f,
+                tr("screen.academy.ui_debug.editor.load_failed", e.message ?: ""))
         }
     }
 
@@ -98,16 +211,20 @@ object UiLayoutImGuiEditor {
         }
         ImGui.endChild()
 
+        if (editor.structureLocked) {
+            ImGui.textDisabled(tr("screen.academy.ui_debug.editor.structure_locked"))
+            return
+        }
         ImGui.separator()
-        if (ImGui.button("+ Add Child")) addChild(editor)
+        if (ImGui.button(tr("screen.academy.ui_debug.action.add_child"))) addChild(editor)
         ImGui.sameLine()
-        if (ImGui.button("Delete")) deleteNode(editor)
+        if (ImGui.button(tr("screen.academy.ui_debug.action.delete"))) deleteNode(editor)
         ImGui.sameLine()
-        if (ImGui.button("Duplicate")) duplicateNode(editor)
+        if (ImGui.button(tr("screen.academy.ui_debug.action.duplicate"))) duplicateNode(editor)
         ImGui.sameLine()
-        if (ImGui.button("Move Up")) reorderNode(editor, -1)
+        if (ImGui.button(tr("screen.academy.ui_debug.action.move_up"))) reorderNode(editor, -1)
         ImGui.sameLine()
-        if (ImGui.button("Move Down")) reorderNode(editor, +1)
+        if (ImGui.button(tr("screen.academy.ui_debug.action.move_down"))) reorderNode(editor, +1)
     }
 
     private fun renderNode(editor: UiLayoutEditorScreen, node: WidgetNode, path: List<String>, selPath: List<String>) {
@@ -202,20 +319,25 @@ object UiLayoutImGuiEditor {
 
     private fun renderProperties(editor: UiLayoutEditorScreen) {
         val node = editor.currentNode() ?: run {
-            ImGui.text("No selection.")
+            ImGui.text(tr("screen.academy.ui_debug.editor.no_selection"))
             return
         }
 
-        val nameBuf = ImString(node.name, 64)
-        if (ImGui.inputText("name", nameBuf)) editor.renameSelectedNode(nameBuf.get())
+        if (editor.structureLocked) {
+            ImGui.textDisabled(tr("screen.academy.ui_debug.editor.node_name", node.name))
+            ImGui.textDisabled(tr("screen.academy.ui_debug.editor.node_type", node.type))
+        } else {
+            val nameBuf = ImString(node.name, 64)
+            if (ImGui.inputText(localizedLabel("name"), nameBuf)) editor.renameSelectedNode(nameBuf.get())
 
-        val types = WidgetCodecRegistry.types().toTypedArray()
-        val typeIdx = ImInt(types.indexOf(node.type).coerceAtLeast(0))
-        if (ImGui.combo("type", typeIdx, types)) {
-            changeType(editor, types[typeIdx.get()])
+            val types = WidgetCodecRegistry.types().toTypedArray()
+            val typeIdx = ImInt(types.indexOf(node.type).coerceAtLeast(0))
+            if (ImGui.combo(localizedLabel("type"), typeIdx, types)) {
+                changeType(editor, types[typeIdx.get()])
+            }
         }
 
-        if (ImGui.collapsingHeader("Layout")) {
+        if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.editor.section.layout"))) {
             val layout = node.layout
             enumField(editor, "width_mode##layout", layout, "width_mode", SIZE_MODE_NAMES)
             enumField(editor, "height_mode##layout", layout, "height_mode", SIZE_MODE_NAMES)
@@ -233,7 +355,7 @@ object UiLayoutImGuiEditor {
             floatField(editor, "weight##layout", layout, "weight", -1f, 1.0E6f)
         }
 
-        if (ImGui.collapsingHeader("Common")) {
+        if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.editor.section.common"))) {
             val common = node.common
             enumField(editor, "visibility##common", common, "visibility", VISIBILITY_NAMES)
             boolField(editor, "enabled##common", common, "enabled")
@@ -251,14 +373,14 @@ object UiLayoutImGuiEditor {
             textField(editor, "tooltip_text##common", common, "tooltip_text")
         }
 
-        if (ImGui.collapsingHeader("Properties")) {
+        if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.editor.section.properties"))) {
             val codec = WidgetCodecRegistry.byType<Widget>(node.type)
             if (codec != null) {
                 for (spec in codec.propertySchema) {
                     renderPropField(editor, spec, node.props)
                 }
             } else {
-                ImGui.textDisabled("no codec registered")
+                ImGui.textDisabled(tr("screen.academy.ui_debug.editor.no_codec"))
             }
         }
     }
@@ -302,25 +424,33 @@ object UiLayoutImGuiEditor {
         val gravity = ImInt(old)
         var changed = false
 
-        ImGui.text("gravity_h")
+        ImGui.text(tr("screen.academy.ui_debug.editor.gravity.horizontal"))
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK, "LEFT##gh", Gravity.LEFT) || changed
+        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.left") + "##gh", Gravity.LEFT) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK, "CENTER##gh", Gravity.CENTER_HORIZONTAL) || changed
+        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.center") + "##gh", Gravity.CENTER_HORIZONTAL) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK, "RIGHT##gh", Gravity.RIGHT) || changed
+        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.right") + "##gh", Gravity.RIGHT) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK, "FILL_H##gh", Gravity.FILL_HORIZONTAL) || changed
+        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.fill") + "##gh", Gravity.FILL_HORIZONTAL) || changed
 
-        ImGui.text("gravity_v")
+        ImGui.text(tr("screen.academy.ui_debug.editor.gravity.vertical"))
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK, "TOP##gv", Gravity.TOP) || changed
+        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.top") + "##gv", Gravity.TOP) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK, "CENTER##gv", Gravity.CENTER_VERTICAL) || changed
+        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.center") + "##gv", Gravity.CENTER_VERTICAL) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK, "BOTTOM##gv", Gravity.BOTTOM) || changed
+        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.bottom") + "##gv", Gravity.BOTTOM) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK, "FILL_V##gv", Gravity.FILL_VERTICAL) || changed
+        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.fill") + "##gv", Gravity.FILL_VERTICAL) || changed
 
         if (changed) {
             obj.addProperty("gravity", gravity.get())
@@ -339,7 +469,7 @@ object UiLayoutImGuiEditor {
         var idx = obj.get(key)?.asString?.let { options.indexOf(it) } ?: -1
         if (idx < 0) idx = 0
         val ref = ImInt(idx)
-        if (ImGui.combo(label, ref, options)) {
+        if (ImGui.combo(localizedLabel(label), ref, localizedOptions(options))) {
             obj.addProperty(key, options[ref.get()])
             editor.notifyChanged()
         }
@@ -355,7 +485,7 @@ object UiLayoutImGuiEditor {
     ) {
         val v = obj.get(key)?.asFloat ?: 0f
         val ref = floatArrayOf(v)
-        if (ImGui.dragFloat(label, ref, 0.1f, min, max)) {
+        if (ImGui.dragFloat(localizedLabel(label), ref, 0.1f, min, max)) {
             obj.addProperty(key, ref[0])
             editor.notifyChanged()
         }
@@ -371,7 +501,7 @@ object UiLayoutImGuiEditor {
     ) {
         val v = obj.get(key)?.asInt ?: 0
         val ref = intArrayOf(v)
-        if (ImGui.dragInt(label, ref, 1f, min, max)) {
+        if (ImGui.dragInt(localizedLabel(label), ref, 1f, min, max)) {
             obj.addProperty(key, ref[0])
             editor.notifyChanged()
         }
@@ -381,7 +511,7 @@ object UiLayoutImGuiEditor {
     private fun colorField(editor: UiLayoutEditorScreen, label: String, obj: JsonObject, key: String) {
         val v = obj.get(key)?.asInt ?: 0xFFFFFFFF.toInt()
         val ref = ImString(String.format("%08X", v), 16)
-        if (ImGui.inputText(label, ref)) {
+        if (ImGui.inputText(localizedLabel(label), ref)) {
             val parsed = runCatching { java.lang.Long.parseLong(ref.get().removePrefix("0x"), 16).toInt() }.getOrNull()
             if (parsed != null) {
                 obj.addProperty(key, parsed)
@@ -393,7 +523,7 @@ object UiLayoutImGuiEditor {
     private fun boolField(editor: UiLayoutEditorScreen, label: String, obj: JsonObject, key: String) {
         val b = obj.get(key)?.asBoolean ?: false
         val ref = ImBoolean(b)
-        if (ImGui.checkbox(label, ref)) {
+        if (ImGui.checkbox(localizedLabel(label), ref)) {
             obj.addProperty(key, ref.get())
             editor.notifyChanged()
         }
@@ -402,7 +532,7 @@ object UiLayoutImGuiEditor {
     private fun textField(editor: UiLayoutEditorScreen, label: String, obj: JsonObject, key: String) {
         val v = obj.get(key)?.asString ?: ""
         val ref = ImString(v, 1024)
-        if (ImGui.inputText(label, ref)) {
+        if (ImGui.inputText(localizedLabel(label), ref)) {
             obj.addProperty(key, ref.get())
             editor.notifyChanged()
         }
@@ -411,19 +541,21 @@ object UiLayoutImGuiEditor {
     // ============ JSON 文本 ============
 
     private fun renderJsonSection(editor: UiLayoutEditorScreen) {
-        if (!ImGui.collapsingHeader("JSON Text")) return
+        if (editor.structureLocked) return
+        if (!ImGui.collapsingHeader(tr("screen.academy.ui_debug.editor.section.json"))) return
 
-        if (ImGui.button("Load current doc into text box")) {
+        if (ImGui.button(tr("screen.academy.ui_debug.editor.load_json_text"))) {
             editor.jsonText = UiJson.GSON.toJson(editor.documentJson())
         }
         ImGui.sameLine()
-        if (ImGui.button("Apply JSON")) {
+        if (ImGui.button(tr("screen.academy.ui_debug.editor.apply_json"))) {
             try {
                 val parsed = UiJson.GSON.fromJson(editor.jsonText, JsonObject::class.java)
                     ?: throw IllegalArgumentException("empty json")
                 editor.setDoc(WidgetNode.fromJson(parsed.getAsJsonObject("root") ?: parsed))
             } catch (e: Exception) {
-                ImGui.textColored(1f, 0.3f, 0.3f, 1f, "JSON error: ${e.message}")
+                ImGui.textColored(1f, 0.3f, 0.3f, 1f,
+                    tr("screen.academy.ui_debug.editor.json_error", e.message ?: ""))
             }
         }
         val text = ImString(editor.jsonText, 131072)
@@ -431,4 +563,35 @@ object UiLayoutImGuiEditor {
             editor.jsonText = text.get()
         }
     }
+
+    private fun localizedLabel(label: String): String {
+        val split = label.split("##", limit = 2)
+        val visible = FIELD_KEYS[split[0]]?.let { tr(it) } ?: split[0]
+        return if (split.size == 2) "$visible##${split[1]}" else visible
+    }
+
+    private fun localizedOptions(options: Array<String>): Array<String> = when {
+        options.contentEquals(SIZE_MODE_NAMES) -> arrayOf(
+            tr("screen.academy.ui_debug.size_mode.fixed"),
+            tr("screen.academy.ui_debug.size_mode.match_parent"),
+            tr("screen.academy.ui_debug.size_mode.wrap_content")
+        )
+        options.contentEquals(VISIBILITY_NAMES) -> arrayOf(
+            tr("screen.academy.ui_debug.visibility.visible"),
+            tr("screen.academy.ui_debug.visibility.invisible"),
+            tr("screen.academy.ui_debug.visibility.gone")
+        )
+        options.contentEquals(arrayOf("HORIZONTAL", "VERTICAL")) -> arrayOf(
+            tr("screen.academy.ui_debug.orientation.horizontal"),
+            tr("screen.academy.ui_debug.orientation.vertical")
+        )
+        options.contentEquals(arrayOf("CENTER", "LEFT", "RIGHT")) -> arrayOf(
+            tr("screen.academy.ui_debug.direction.center"),
+            tr("screen.academy.ui_debug.direction.left"),
+            tr("screen.academy.ui_debug.direction.right")
+        )
+        else -> options
+    }
+
+    private fun tr(key: String, vararg args: Any): String = Component.translatable(key, *args).string
 }

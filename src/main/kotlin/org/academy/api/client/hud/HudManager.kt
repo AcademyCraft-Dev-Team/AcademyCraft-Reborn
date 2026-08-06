@@ -21,6 +21,7 @@ import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.api.common.profiler.AcademyProfiler
 import org.academy.internal.client.profiler.ProfilerClientHooks
+import org.academy.internal.client.gui.debug.UiDebugSession
 import org.joml.Vector4f
 import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicBoolean
@@ -33,6 +34,10 @@ object HudManager {
     val logger: Logger = AcademyCraft.getLogger()
 
     fun initRender() {
+    }
+
+    private fun isHudEditorOpen(): Boolean {
+        return AcademyCraftClient.isUiDebugEnvironment() && UiDebugSession.hudEditorOpen
     }
 
     fun initMain() {
@@ -60,6 +65,7 @@ object HudManager {
         val mouseY = m.getScaledYPos(w)
         val deltaPartialTick = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
         TerminalHud.INSTANCE.perform(mouseX, mouseY, deltaPartialTick)
+        if (isHudEditorOpen()) return
         AbilityInfoHud.instance.perform(mouseX, mouseY, deltaPartialTick)
         ToggleStatusHud.instance.perform(mouseX, mouseY, deltaPartialTick)
         ControlledTargetsHud.instance.perform(mouseX, mouseY, deltaPartialTick)
@@ -91,11 +97,13 @@ object HudManager {
 
             AcademyProfiler.push("academy.hud.terminal")
             TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
-            AcademyProfiler.popPush("academy.hud.ability")
-            AbilityInfoHud.instance.render(ui)
-            AcademyProfiler.popPush("academy.hud.toggle")
-            ToggleStatusHud.instance.render(ui)
-            ControlledTargetsHud.instance.render(ui)
+            if (!isHudEditorOpen()) {
+                AcademyProfiler.popPush("academy.hud.ability")
+                AbilityInfoHud.instance.render(ui)
+                AcademyProfiler.popPush("academy.hud.toggle")
+                ToggleStatusHud.instance.render(ui)
+                ControlledTargetsHud.instance.render(ui)
+            }
             AcademyProfiler.pop()
 
             if (drewStencil.get()) {

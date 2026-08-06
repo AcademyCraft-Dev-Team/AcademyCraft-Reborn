@@ -24,8 +24,9 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.ability.Skill
 import org.academy.api.common.ability.LearningHelper
 import org.academy.api.common.registries.Registries
+import org.academy.AcademyCraft
+import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
-import org.academy.internal.client.hud.HudLayoutConfig
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier
@@ -55,7 +56,7 @@ class ToggleStatusHud private constructor() {
     }
 
     private class Context : WidgetContext {
-        private val statuses = LinearLayoutWidget()
+        private lateinit var statuses: LinearLayoutWidget
         private val root = object : FrameLayoutWidget() {
             override fun tick() {
                 applyHudLayout()
@@ -66,25 +67,33 @@ class ToggleStatusHud private constructor() {
         private var cachedSignature: String? = null
 
         init {
-            statuses.orientation = Orientation.VERTICAL
-            statuses.spacing = 2f
+            val layout = SerializedUiLayout.load(
+                AcademyCraft.academy("ui/layout/toggle_status_hud.json"),
+                listOf("toggle_statuses")
+            ) { fallbackLayout() }
+            statuses = SerializedUiLayout.require(layout, "toggle_statuses") as LinearLayoutWidget
             statuses.visibility = Widget.Visibility.GONE
-            statuses.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.WRAP_CONTENT)
-                .gravity(Gravity.TOP_LEFT)
-                .margin(8f, 8f, 0f, 0f)
-            statuses.originX = 0f
-            statuses.originY = 0f
-            root.addChild("toggle_statuses", statuses)
+            root.addChild("serialized_layout", layout)
         }
 
         override fun get(): WidgetContainer = root
 
         private fun applyHudLayout() {
-            val config = HudLayoutConfig.get()
-            statuses.translationX = config.toggleStatusHudOffsetX.toFloat()
-            statuses.translationY = config.toggleStatusHudOffsetY.toFloat()
+            val rect = HudLayout.Region.TOGGLE_STATUS.rect(Minecraft.getInstance())
+            statuses.translationX = rect.x()
+            statuses.translationY = rect.y()
             statuses.scale = HudLayout.Region.TOGGLE_STATUS.scale()
+        }
+
+        private fun fallbackLayout(): FrameLayoutWidget {
+            val layout = FrameLayoutWidget()
+            layout.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            val mount = LinearLayoutWidget()
+            mount.orientation = Orientation.VERTICAL
+            mount.spacing = 2f
+            mount.layoutParams = FrameLayoutWidget.LayoutParams().size(140f, 75f)
+            layout.addChild("toggle_statuses", mount)
+            return layout
         }
 
         private fun activeSkills(): List<Skill> {

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "regions": {
+    "toggle_status": { "anchor": "TOP_LEFT", "offset_x": 8, "offset_y": 8, "scale": 1 },
+    "mental_control": { "anchor": "CENTER_LEFT", "offset_x": 8, "offset_y": 0, "scale": 1 },
+    "cp": { "anchor": "TOP_RIGHT", "offset_x": -4, "offset_y": 4, "scale": 1 },
+    "skill_wheel": { "anchor": "CENTER_RIGHT", "offset_x": 0, "offset_y": 0, "scale": 1 }
+  }
+}

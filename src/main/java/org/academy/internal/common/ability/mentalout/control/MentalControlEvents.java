@@ -17,6 +17,9 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -70,6 +73,8 @@ public final class MentalControlEvents {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onServerTick(ServerTickEvent.Pre event) {
         MentalControlRuntime.tick(event.getServer());
+        MentalIntrusionManager.tick(event.getServer());
+        PrecisionOperationRuntime.tick(event.getServer());
     }
 
     @SubscribeEvent
@@ -79,9 +84,13 @@ public final class MentalControlEvents {
         MentaloutControlContext.releaseMisidentificationTarget(entityId);
         MentaloutControlContext.releaseSubject(entityId);
         MentalControlRuntime.releaseBySubject(level.getServer(), entityId);
+        MentalIntrusionManager.releaseEntity(entityId);
+        PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
         if (event.getEntity() instanceof ServerPlayer) {
             MentaloutControlContext.releaseController(entityId);
             MentalControlRuntime.releaseByController(level.getServer(), entityId);
+            MentalIntrusionManager.releaseController(entityId);
+            PrecisionOperationManager.releaseController((ServerPlayer) event.getEntity());
         }
     }
 
@@ -92,9 +101,13 @@ public final class MentalControlEvents {
         MentaloutControlContext.releaseMisidentificationTarget(entityId);
         MentaloutControlContext.releaseSubject(entityId);
         MentalControlRuntime.releaseBySubject(level.getServer(), entityId);
+        MentalIntrusionManager.releaseEntity(entityId);
+        PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
         if (event.getEntity() instanceof ServerPlayer) {
             MentaloutControlContext.releaseController(entityId);
             MentalControlRuntime.releaseByController(level.getServer(), entityId);
+            MentalIntrusionManager.releaseController(entityId);
+            PrecisionOperationManager.releaseController((ServerPlayer) event.getEntity());
         }
     }
 
@@ -104,6 +117,10 @@ public final class MentalControlEvents {
         MentaloutRequestGuard.release(player.getUUID());
         MentaloutControlContext.releaseController(player.getUUID());
         MentalControlRuntime.releaseByController(player.level().getServer(), player.getUUID());
+        MentalIntrusionManager.releaseEntity(player.getUUID());
+        MentalIntrusionManager.releaseController(player.getUUID());
+        PrecisionOperationRuntime.releaseEntity(player.level().getServer(), player.getUUID());
+        PrecisionOperationManager.releaseController(player);
     }
 
     @SubscribeEvent
@@ -113,6 +130,10 @@ public final class MentalControlEvents {
         MentaloutControlContext.releaseController(player.getUUID());
         MentalControlRuntime.releaseByController(player.level().getServer(), player.getUUID());
         MentalControlRuntime.releaseBySubject(player.level().getServer(), player.getUUID());
+        MentalIntrusionManager.releaseEntity(player.getUUID());
+        MentalIntrusionManager.releaseController(player.getUUID());
+        PrecisionOperationRuntime.releaseEntity(player.level().getServer(), player.getUUID());
+        PrecisionOperationManager.releaseController(player);
     }
 
     @SubscribeEvent
@@ -120,5 +141,7 @@ public final class MentalControlEvents {
         MentaloutRequestGuard.clear();
         MentaloutControlContext.clearAll();
         MentalControlRuntime.clear(event.getServer());
+        MentalIntrusionManager.clear();
+        PrecisionOperationManager.clear(event.getServer());
     }
 }

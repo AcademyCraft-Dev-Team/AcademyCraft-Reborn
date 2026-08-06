@@ -7,6 +7,8 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.gameevent.vibrations.VibrationSystem;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.api.common.entitycontrol.MentalPerceptionApi;
+import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,8 +30,15 @@ public abstract class MixinVibrationSystemListener {
             Vec3 sourcePosition,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        if (system instanceof Warden warden && MentalControlRuntime.isFrozen(warden)) {
-            cir.setReturnValue(false);
+        if (system instanceof Warden warden) {
+            if (MentalControlRuntime.isFrozen(warden)) {
+                cir.setReturnValue(false);
+                return;
+            }
+            if (context.sourceEntity() instanceof LivingEntity source
+                    && !MentalPerceptionApi.canPerceive(warden, source)) {
+                cir.setReturnValue(false);
+            }
         }
     }
 }

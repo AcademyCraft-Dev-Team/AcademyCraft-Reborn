@@ -3,6 +3,7 @@ package org.academy.api.client.gui.editor
 import com.google.gson.JsonObject
 import org.academy.api.client.gui.serialize.UiJson
 import org.academy.api.client.gui.serialize.WidgetSerializer
+import org.academy.internal.client.gui.debug.UiDebugLayoutRegistry
 import java.nio.file.Files
 
 /**
@@ -16,6 +17,10 @@ object UiLayoutEditor {
 
     @JvmStatic
     fun open(fileName: String) {
+        if (UiDebugLayoutRegistry.find(fileName) != null) {
+            UiLayoutEditorScreen.openDebug(fileName)
+            return
+        }
         val json = try {
             val path = WidgetSerializer.layoutDir().resolve("$fileName.json")
             UiJson.GSON.fromJson(Files.readString(path), JsonObject::class.java)

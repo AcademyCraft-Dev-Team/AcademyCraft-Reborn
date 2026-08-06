@@ -7,6 +7,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
+import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
@@ -24,6 +25,7 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState.Entry
 import org.academy.internal.client.hud.HudLayout
+import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.common.ability.AbilityCategories
 import java.util.Locale
 
@@ -62,8 +64,8 @@ class ControlledTargetsHud private constructor() {
     }
 
     private class Context : WidgetContext {
-        private val panel = FrameLayoutWidget()
-        private val content = LinearLayoutWidget()
+        private val panel: FrameLayoutWidget
+        private val content: LinearLayoutWidget
         private val root = object : FrameLayoutWidget() {
             override fun tick() {
                 applyHudLayout()
@@ -74,20 +76,34 @@ class ControlledTargetsHud private constructor() {
         private var cachedSignature: String? = null
 
         init {
-            panel.visibility = Widget.Visibility.GONE
-            panel.origin = 0f
-            panel.layoutParams = FrameLayoutWidget.LayoutParams().size(PANEL_WIDTH, PANEL_HEIGHT)
-            panel.addChild("background", FillWidget(PANEL_BACKGROUND).also {
+            val layout = SerializedUiLayout.load(
+                AcademyCraft.academy("ui/layout/mental_control_hud.json"),
+                listOf("mental_control", "content")
+            ) { fallbackLayout() }
+            panel = SerializedUiLayout.require(layout, "mental_control") as FrameLayoutWidget
+            content = SerializedUiLayout.require(layout, "content") as LinearLayoutWidget
+            root.addChild("serialized_layout", layout)
+        }
+
+        private fun fallbackLayout(): FrameLayoutWidget {
+            val layout = FrameLayoutWidget()
+            layout.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            val fallbackPanel = FrameLayoutWidget()
+            fallbackPanel.visibility = Widget.Visibility.GONE
+            fallbackPanel.origin = 0f
+            fallbackPanel.layoutParams = FrameLayoutWidget.LayoutParams().size(PANEL_WIDTH, PANEL_HEIGHT)
+            fallbackPanel.addChild("background", FillWidget(PANEL_BACKGROUND).also {
                 it.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             })
-
-            content.orientation = Orientation.VERTICAL
-            content.spacing = 1f
-            content.layoutParams = FrameLayoutWidget.LayoutParams()
+            val fallbackContent = LinearLayoutWidget()
+            fallbackContent.orientation = Orientation.VERTICAL
+            fallbackContent.spacing = 1f
+            fallbackContent.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .padding(5f, 4f, 5f, 4f)
-            panel.addChild("content", content)
-            root.addChild("mental_control", panel)
+            fallbackPanel.addChild("content", fallbackContent)
+            layout.addChild("mental_control", fallbackPanel)
+            return layout
         }
 
         override fun get(): WidgetContainer = root

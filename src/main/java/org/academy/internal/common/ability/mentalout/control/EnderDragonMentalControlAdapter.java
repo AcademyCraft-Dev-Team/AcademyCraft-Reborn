@@ -21,7 +21,10 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
 
     @Override
     public ControlSupport support(LivingEntity subject, ControlCapability capability) {
-        return matches(subject) ? ControlSupport.FULL : ControlSupport.UNSUPPORTED;
+        if (!matches(subject)) return ControlSupport.UNSUPPORTED;
+        return capability == ControlCapability.PATH_CONTROL || capability == ControlCapability.VIEW_CONTROL
+                ? ControlSupport.UNSUPPORTED
+                : ControlSupport.FULL;
     }
 
     @Override
@@ -33,6 +36,10 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
             case ControlDirective.ForceTarget forceTarget -> new ForceTargetBinding(dragon, forceTarget.targetUuid());
             case ControlDirective.FreezeAi ignored -> new FreezeBinding(dragon);
             case ControlDirective.ImpressionAlliance ignored -> ControlBinding.noop();
+            case ControlDirective.MoveTo ignored -> throw new IllegalArgumentException(
+                    "Ender Dragon does not support path control");
+            case ControlDirective.LookAt ignored -> throw new IllegalArgumentException(
+                    "Ender Dragon does not support view control");
         };
     }
 
