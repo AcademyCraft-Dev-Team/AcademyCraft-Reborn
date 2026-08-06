@@ -17,7 +17,13 @@ open class ImageWidget : AbstractWidget {
 
     protected var textureView: GpuTextureView? = null
 
-    private var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+    private var sampler: GpuSampler? = null
+
+    fun getSampler(): GpuSampler {
+        return sampler ?: RenderSystem.getSamplerCache()?.getClampToEdge(FilterMode.NEAREST)?.also {
+            sampler = it
+        } ?: throw IllegalStateException("Sampler cache unavailable")
+    }
 
     var u0: Float = 0f
     var v0: Float = 0f
@@ -84,7 +90,7 @@ open class ImageWidget : AbstractWidget {
         run {
             context.pose().translate(lp.paddingLeft, lp.paddingTop)
             val command = generateDrawCommand(
-                textureView!!, sampler, paddedWidth, paddedHeight, u0, v0, u1, v1, u2, v2, u3, v3,
+                textureView!!, getSampler(), paddedWidth, paddedHeight, u0, v0, u1, v1, u2, v2, u3, v3,
                 this.brightness, green, blue, finalAlpha
             )
             context.submit(command)
@@ -129,16 +135,18 @@ open class ImageWidget : AbstractWidget {
     }
 
     fun setSampler(mode: FilterMode, useMipmap: Boolean): ImageWidget {
-        return setSampler(RenderSystem.getSamplerCache().getClampToEdge(mode, useMipmap))
+        return setSampler(RenderSystem.getSamplerCache()?.getClampToEdge(mode, useMipmap))
     }
 
-    fun setSampler(sampler: GpuSampler): ImageWidget {
+    fun setSampler(sampler: GpuSampler?): ImageWidget {
         if (this.sampler != sampler) {
             this.sampler = sampler
             invalidate()
         }
         return this
     }
+
+    fun getTextureLocation(): Identifier? = textureIdentifier
 
     fun setTexture(textureView: GpuTextureView?): ImageWidget {
         this.textureView = textureView

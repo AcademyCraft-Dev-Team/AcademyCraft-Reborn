@@ -26,6 +26,8 @@ abstract class DragBarWidget(protected val orientation: Orientation) : AbstractW
     protected val trackSize: Float
         get() = if (orientation == Orientation.HORIZONTAL) width else height
 
+    fun getDragBarOrientation(): Orientation = orientation
+
     protected fun getMouseRelative(mouseX: Float, mouseY: Float): Float {
         return if (orientation == Orientation.HORIZONTAL) (mouseX - getAbsoluteX()) else (mouseY - getAbsoluteY())
     }

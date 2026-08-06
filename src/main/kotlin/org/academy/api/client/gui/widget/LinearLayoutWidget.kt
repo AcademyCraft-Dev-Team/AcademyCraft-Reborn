@@ -355,6 +355,8 @@ open class LinearLayoutWidget : AbstractWidgetContainer() {
         return this
     }
 
+    fun getLayoutGravity(): Int = gravity
+
     fun setWeightSum(weightSum: Float): LinearLayoutWidget {
         if (this.weightSum != weightSum) {
             this.weightSum = weightSum
@@ -362,6 +364,8 @@ open class LinearLayoutWidget : AbstractWidgetContainer() {
         }
         return this
     }
+
+    fun getLayoutWeightSum(): Float = weightSum
 
     class LayoutParams : WidgetContainer.LayoutParams {
         var weight: Float = 0f

@@ -8,7 +8,9 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
+import org.academy.api.client.gui.editor.UiLayoutImGuiEditor
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger
+import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.MainLoopEvent
@@ -56,7 +58,10 @@ class ScreenDispatcher private constructor() {
         val screen = mc.gui.screen()
         if (screen is RenderRoot) {
             uiContext.upload(renderTarget, true)
-            ImGuiUIDebugger.render(renderTarget, screen.root)
+            ImGuiUtilApi.render(renderTarget) {
+                ImGuiUIDebugger.renderContent(screen.root)
+                UiLayoutImGuiEditor.renderContent(screen)
+            }
         }
     }
 

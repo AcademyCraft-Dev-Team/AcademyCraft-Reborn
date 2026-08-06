@@ -29,6 +29,13 @@ open class SpriteSheetWidget(
             computeUV(index)
         }
 
+    fun getSpriteSheetOrientation(): Orientation = orientation
+    fun getSpriteSheetWidth(): Int = sheetWidth
+    fun getSpriteSheetHeight(): Int = sheetHeight
+    fun getSpriteSheetFrameWidth(): Int = frameWidth
+    fun getSpriteSheetFrameHeight(): Int = frameHeight
+    fun getSpriteSheetFrameCount(): Int = frameCount
+
     init {
         frameIndex = 0
     }
