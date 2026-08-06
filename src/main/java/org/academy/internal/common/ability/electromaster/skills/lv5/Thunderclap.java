@@ -190,7 +190,7 @@ public class Thunderclap extends Skill {
             else right = right.normalize();
             var up = right.cross(look).normalize();
             var arcs = new ArrayList<ArcPath>();
-            for (var i = 0; i < 10; i++) {
+            for (var i = 0; i < 20; i++) {
                 var angle = MathUtil.RANDOM.nextDouble() * Math.PI * 2.0;
                 var radius = 3.5 * MathUtil.RANDOM.nextDouble();
                 var height = (MathUtil.RANDOM.nextDouble() - 0.5) * 2.0;
@@ -203,12 +203,7 @@ public class Thunderclap extends Skill {
                         (MathUtil.RANDOM.nextDouble() - 0.5) * 0.8,
                         (MathUtil.RANDOM.nextDouble() - 0.5) * 0.8
                 );
-                arcs.add(new ArcPath(
-                        new LinePath(start.toVector3f(), end.toVector3f()),
-                        List.of(new JaggedModifier(1, 3, MathUtil.RANDOM.nextLong())),
-                        2.0f,
-                        List.of()
-                ));
+                arcs.add(ElectromasterArcEffects.thickArc(start, end, 0.58f, 2.6f));
             }
             var effect = new ArcEffect(level, 8);
             effect.setPos(targetPos);

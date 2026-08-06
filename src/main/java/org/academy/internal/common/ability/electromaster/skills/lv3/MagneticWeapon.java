@@ -8,12 +8,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -37,6 +38,8 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -46,6 +49,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
 
 public class MagneticWeapon extends Skill {
@@ -130,6 +134,33 @@ public class MagneticWeapon extends Skill {
             return Math.max(0.0f, attackDamage) * 0.6f * Math.max(0.0f, playerMultiplier);
         }
 
+        static float calculateWeaponAttackDamage(ServerPlayer player, ItemStack stack) {
+            var playerAttack = player.getAttribute(Attributes.ATTACK_DAMAGE);
+            if (playerAttack == null) return 0.0f;
+
+            var heldModifierIds = new HashSet<net.minecraft.resources.Identifier>();
+            player.getMainHandItem().forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
+                if (attribute.equals(Attributes.ATTACK_DAMAGE)) {
+                    heldModifierIds.add(modifier.id());
+                }
+            });
+
+            var calculated = new AttributeInstance(Attributes.ATTACK_DAMAGE, _ -> {
+            });
+            calculated.setBaseValue(playerAttack.getBaseValue());
+            for (var modifier : playerAttack.getModifiers()) {
+                if (!heldModifierIds.contains(modifier.id())) {
+                    calculated.addOrUpdateTransientModifier(modifier);
+                }
+            }
+            stack.forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
+                if (attribute.equals(Attributes.ATTACK_DAMAGE)) {
+                    calculated.addOrUpdateTransientModifier(modifier);
+                }
+            });
+            return (float) Math.max(0.0, calculated.getValue());
+        }
+
         public static boolean isActive(ServerPlayer player) {
             return CONTEXT_MAP.containsKey(player) && Skills.MAGNETIC_WEAPON.get().isEnabled(player);
         }
@@ -149,15 +180,23 @@ public class MagneticWeapon extends Skill {
                 forceDisable(player);
                 return;
             }
-            if (!isSword(player.getMainHandItem())) return;
+            var weaponSlot = findFirstHotbarSwordSlot(player);
+            if (weaponSlot < 0) return;
 
             IronSandArsenal.Server.forceDisable(player);
             var skill = Skills.MAGNETIC_WEAPON.get();
             if (!skill.isEnabled(player)) skill.toggle(player);
             if (!skill.isEnabled(player)) return;
-            var context = new Context(player, player.getMainHandItem().getItem());
+            var context = new Context(player, weaponSlot);
             CONTEXT_MAP.put(player, context);
             AbilitySystemServer.registerContext(context);
+        }
+
+        private static int findFirstHotbarSwordSlot(ServerPlayer player) {
+            for (var slot = 0; slot < 9; slot++) {
+                if (isSword(player.getInventory().getItem(slot))) return slot;
+            }
+            return -1;
         }
 
         private static void clearData(ServerPlayer player) {
@@ -167,26 +206,38 @@ public class MagneticWeapon extends Skill {
     }
 
     public static final class Context extends ServerContext {
-        private final Item weapon;
+        private final MagneticWeaponBlade blade;
+        private int weaponSlot;
         private int attackCooldown;
-        private int animationTicks;
-        private int animationTarget = -1;
         private boolean ended;
 
-        private Context(ServerPlayer player, Item weapon) {
+        private Context(ServerPlayer player, int weaponSlot) {
             super(player);
-            this.weapon = weapon;
+            this.weaponSlot = weaponSlot;
+            blade = new MagneticWeaponBlade(EntityTypes.MAGNETIC_WEAPON_BLADE.get(), player.level());
+            blade.configure(player, player.getInventory().getItem(weaponSlot));
+            player.level().addFreshEntity(blade);
             syncData();
         }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             var skill = Skills.MAGNETIC_WEAPON.get();
-            if (!skill.isEnabled(player) || !player.isAlive() || player.hasDisconnected()
-                    || player.getMainHandItem().getItem() != weapon || !isSword(player.getMainHandItem())) {
+            if (!skill.isEnabled(player)
+                    || !player.isAlive()
+                    || player.hasDisconnected()
+                    || blade.isRemoved()) {
                 end(true);
                 return;
             }
+            weaponSlot = Server.findFirstHotbarSwordSlot(player);
+            if (weaponSlot < 0) {
+                end(true);
+                return;
+            }
+            var stack = player.getInventory().getItem(weaponSlot);
+            blade.setWeapon(stack);
+
             var system = AbilitySystemServer.getSystem(player);
             if (!system.ensurePermanentOccupation(
                     player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
@@ -194,12 +245,8 @@ public class MagneticWeapon extends Skill {
                 return;
             }
 
-            player.getCooldowns().addCooldown(player.getMainHandItem(), 3);
+            player.getCooldowns().addCooldown(stack, 3);
             if (attackCooldown > 0) attackCooldown--;
-            if (animationTicks > 0 && ++animationTicks > ATTACK_COOLDOWN) {
-                animationTicks = 0;
-                animationTarget = -1;
-            }
 
             if (attackCooldown <= 0 && player.level() instanceof ServerLevel level) {
                 var target = level.getEntitiesOfClass(
@@ -209,7 +256,7 @@ public class MagneticWeapon extends Skill {
                         ).stream()
                         .min(Comparator.comparingDouble(player::distanceToSqr))
                         .orElse(null);
-                if (target != null) attack(level, target, system);
+                if (target != null) attack(level, target, system, stack);
             }
             syncData();
         }
@@ -223,25 +270,26 @@ public class MagneticWeapon extends Skill {
                     || entity instanceof Mob mob && mob.getTarget() == player;
         }
 
-        private void attack(ServerLevel level, LivingEntity target, AbilitySystemServer system) {
-            var stack = player.getMainHandItem();
+        private void attack(ServerLevel level, LivingEntity target,
+                            AbilitySystemServer system, ItemStack stack) {
             var damage = Server.calculateDamage(
-                    (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE),
+                    Server.calculateWeaponAttackDamage(player, stack),
                     system.getPlayerDamageMultiplier(player.getUUID())
             );
             if (target.hurtServer(level,
                     SkillDamageSource.of(player, Skills.MAGNETIC_WEAPON.get()), damage)) {
                 stack.hurtEnemy(target, player);
-                player.swing(InteractionHand.MAIN_HAND, true);
+                stack.postHurtEnemy(target, player);
             }
             attackCooldown = ATTACK_COOLDOWN;
-            animationTarget = target.getId();
-            animationTicks = 1;
+            blade.startAttack(target.getId());
         }
 
         private void syncData() {
-            player.setData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get(),
-                    new Data(true, animationTarget, animationTicks));
+            var data = new Data(true, -1, 0);
+            if (data.equals(player.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get()))) return;
+            player.setData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get(), data);
+            player.syncData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get());
         }
 
         private void end(boolean disableSkill) {
@@ -251,6 +299,7 @@ public class MagneticWeapon extends Skill {
             if (disableSkill && Skills.MAGNETIC_WEAPON.get().isEnabled(player)) {
                 Skills.MAGNETIC_WEAPON.get().toggle(player);
             }
+            blade.discard();
             Server.clearData(player);
             unregister();
         }
